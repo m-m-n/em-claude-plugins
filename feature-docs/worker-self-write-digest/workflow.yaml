@@ -122,7 +122,8 @@ workflow:
   completed_at_commit: 3d771133ca3173e44e2e76655db036127bddf9d4
   base_commit: b7cdbfac5dcc9418a5f8159cde371ed3626922ff
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 523c17b7d0475b3890a13c3c956b69315aa1dd1d
 - id: verify
   status: pending
   result: null
@@ -222,8 +223,8 @@ tasks:
     notes: null
     branch: em-workflow/worker-self-write-digest/task0003
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
   residual_critical_high: 0
   needs_rework: false
   plan:
@@ -235,6 +236,12 @@ review:
     - spec
     discretionary: []
     cross_validation: true
+  perspectives:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
 requirements:
   FR1:
     title: Substitute dispatch-time digests for self-writes

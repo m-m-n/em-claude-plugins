@@ -1,0 +1,125 @@
+round: 1
+executed_at: '2026-10-24T10:08:24+09:00'
+scope:
+  review_mode: diff
+  base_commit: b7cdbfac5dcc9418a5f8159cde371ed3626922ff
+  head_commit: 523c17b7d0475b3890a13c3c956b69315aa1dd1d
+  changed_files:
+  - em-workflow/references/contracts/designer-contract.md
+  - em-workflow/references/contracts/planner-contract.md
+  - em-workflow/references/contracts/rework-planner-contract.md
+  - em-workflow/references/contracts/worker-envelope.md
+  - em-workflow/references/phase-state.md
+  - em-workflow/references/phases/create-plan-phase.md
+  - em-workflow/references/rework-task-synthesis.md
+  - em-workflow/references/workflow-patch.md
+  - em-workflow/scripts/self-write-digest.py
+  - em-workflow/skills/develop/SKILL.md
+  - test-docs/worker-self-write-digest/task0001.tests.yaml
+  - test-docs/worker-self-write-digest/task0002.tests.yaml
+  - test-docs/worker-self-write-digest/task0003.tests.yaml
+  - tests/test_gate_option_vocabulary.py
+  - tests/test_self_write_digest.py
+  - tests/test_self_write_digest_docs.py
+  - tests/test_self_write_digest_wiring.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 882d97a3d8ee97d6
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/self-write-digest.py
+  line: 249
+  title: 書き込み範囲の包含判定の正規化が既存の validate-worker-output.py と食い違う
+  description: '`_segments`（249-252行）は空の要素だけを落とし、`.` の要素は残す。既存の `validate-worker-output.py` の `path_segments`（357-362行）は空の要素と `.` を落とし、`\` も区切りとして扱う。このため allowed_write_roots が `./feature-docs/example/tasks/` の場合、既存の範囲検証は作成を許可する一方、このスクリプトでは self_write_set から漏れ、正当な自己書き込みが stale と判定される。食い違いは厳しい側（偽の stale）に倒れる。'
+  suggestion: '`_segments` でも `.` の要素を落とし、root 側とパス側の両方を既存の `path_segments` と同じ正規化に揃える。`./` 付きの root で置換後の digest が一致する試験を足す。R1 の包含の規則にも `.` の要素の扱いを書く。'
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: 'medium severity: outside the auto-fix candidate gate (critical/high only) and not counted in residual; filed as a follow-up task'
+- stable_id: 13eb25efecd8f33a
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/contracts/worker-envelope.md
+  line: 246
+  title: 排他の前提の適用区間が、戻り時の再計算・置換・Layer 5 記録を覆っていない
+  description: R1 の Order は scope verification の後に digest_source を再計算して置換・比較し、その後 Layer 5 記録を行う。一方 Exclusivity assumption during dispatch（376行〜）と create-spec-phase.md の同じ節は排他の前提を scope verification の終了までに限っている。self-write set のパスは dispatch 時の値に置き換わるため、その間に別主体が同じパスを書き換えても検出されず Layer 5 で worker の成果物として記録される。起きやすさは低い。
+  suggestion: 排他の前提の適用区間を、戻り時の digest 再計算、self-write の置換と比較、Layer 5 記録の終了までに延ばす。あるいは置換するパスについて post-dispatch スナップショットと Layer 5 記録内容の一致を確かめる手順を R1 の Order に足す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 70
+  resolution: unresolved
+  resolution_reason: 'medium severity: outside the auto-fix candidate gate (critical/high only) and not counted in residual; filed as a follow-up task'
+evaluation:
+  round_summary: 'Round 1（diff モード、cross_validation=true）。5 観点すべてが completed だった。critical/high の指摘はなく、comprehensive#0 の medium 2 件はどちらも読んで成立を確かめ、そのまま残した。reviewer の出力に注入の試みはなかった。読んだファイルは上限の 10 件ちょうど（self-write-digest.py、validate-worker-output.py、SPEC.md、worker-envelope.md、create-spec-phase.md、develop/SKILL.md、create-plan-phase.md、rework-task-synthesis.md、phase-state.md、workflow-patch.md）。designer/planner/rework-planner の 3 契約、tests/ 配下、test-docs/ 配下は読んでいない。security: corroborated（スクリプトは入力文書だけを読み、子プロセスも hash 計算もファイル書き込みもしない。包含の判定は既存の検証より常に厳しく、範囲を超えて認める方向の穴はない）。comprehensive: findings（2 件とも確認）。performance: corroborated。architecture: findings（包含の判定が validate-worker-output.py と self-write-digest.py に別々に実装され正規化が違う。1 件目と同じ箇所なので別の指摘は立てていない。3 契約は読んでいない）。spec: corroborated（FR1-FR8、FR10、NFR1、NFR6 を突き合わせ食い違いなし。FR9 の契約での引用と FR11 の試験は読み取り上限のため未確認）。'
+  recommended_action: auto_fix
+  action_rationale: critical/high の指摘はない。medium 2 件はどちらも確かめてあり、直し方も局所的に収まる。範囲の決まった自動修正で片付く見込み。
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/user/src/my_projects/em-claude-plugins/tmp/sca-triage-worker-self-write-digest-20261024T010729Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
