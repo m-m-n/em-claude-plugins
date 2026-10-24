@@ -777,7 +777,12 @@ design 専用の phase protocol は作らないため、ここが design 側の�
    スクリプトが返した digest_source から計算した digest を dispatch 時の
    `input_digest` と比較し、不一致、またはスクリプトの終了コードが `0` 以外なら
    stale として扱う（stale の扱いは、scope verification が定める stale
-   handling（`references/phases/create-spec-phase.md`）に従う）。一致したら
+   handling（`references/phases/create-spec-phase.md`）に従う）。
+   オーケストレーターは、phase-state への記録の書き込みの前に、
+   `references/contracts/worker-envelope.md` の Rule R1
+   「Recomputation and comparison timing」が定める return-time recheck
+   （再確認）を行い、再確認が不一致、または再確認を実行できない場合は
+   stale として扱う。一致したら
    `references/artifact-digest.md` の `Layer 5 recording` に従って、
    `written_artifacts` の各 path の digest を `phase-state/design.yaml`
    （`phase: design`。スキーマは `references/phase-state.md`）の
