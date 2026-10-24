@@ -1,0 +1,95 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac1_a_non_zero_exit_makes_the_result_stale_tm3
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac1_actions_meaning_is_cited_not_restated
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac1_allowed_write_roots_admit_creation_only_tm2
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac1_blocks_sit_inside_the_r1_section_after_the_timing_paragraph
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac1_change_kinds_follow_the_scope_verification
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac1_condition_has_the_orchestrator_as_the_actor
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac1_condition_names_the_overlap_and_the_no_op_for_other_workers
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac1_deletion_is_never_admitted_tm2
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac1_document_is_never_assembled_through_shell_interpolation_tm3
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac1_every_block_label_appears_exactly_once_in_the_document
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac1_known_limit_rests_on_the_exclusivity_assumption
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac1_matrix_is_written_out_exactly_once_in_the_document
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac1_matrix_notes_target_precedence_segments_and_unsafe_paths
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac1_membership_matrix_every_row_tm2
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac1_membership_matrix_header_and_row_set
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac1_membership_needs_the_observed_change_set_and_the_covering_action
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac1_orchestrator_runs_the_script_with_one_json_document_tm3
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac1_order_lists_the_four_steps_in_sequence
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac1_other_changes_stay_stale_and_the_aggregate_comparison_is_kept
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac1_persistence_and_resume_point_at_phase_state
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac1_preserve_is_never_admitted_tm2
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac1_recomputation_follows_the_scope_verification_fr8
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac1_regenerate_is_admitted_only_with_its_source_tm2
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac1_script_computes_no_digest_and_hashing_stays_with_the_orchestrator
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac1_substitution_keeps_everything_else_current
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac1_substitution_names_the_orchestrator_as_the_actor
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac1_substitution_takes_the_dispatch_time_value_or_an_absent_key
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac1_written_artifacts_never_decides_membership_tm1
+    red_confirmed: true
+    red_reason: "setUpClass of TestRuleR1SelfWriteRule errored with AssertionError: R1 must hold the block label **Condition.** exactly once (found 0) -- worker-envelope.md Rule R1 carried no self-write rule, so every AC-1 test in the class failed"
+  AC-2:
+    tests:
+      - tests.test_self_write_digest_docs.TestContractCitations.test_ac2_citation_paragraph_has_the_orchestrator_as_the_actor
+      - tests.test_self_write_digest_docs.TestContractCitations.test_ac2_citation_paragraph_names_exactly_the_overlapping_paths
+      - tests.test_self_write_digest_docs.TestContractCitations.test_ac2_citation_paragraph_restates_neither_matrix_nor_substitution
+      - tests.test_self_write_digest_docs.TestContractCitations.test_ac2_designer_project_native_exclusion_is_kept
+      - tests.test_self_write_digest_docs.TestContractCitations.test_ac2_each_contract_has_one_citing_paragraph_in_its_digest_inputs_section
+      - tests.test_self_write_digest_docs.TestContractCitations.test_ac2_no_contract_carries_the_membership_matrix
+    red_confirmed: true
+    red_reason: "AssertionError: 0 != 1 (no paragraph in the digest_inputs section held the worker-envelope.md path, \"Rule R1\" and \"Recomputation and comparison timing\") and IndexError: list index out of range in the path-set, orchestrator-subject and no-restatement tests, for all three contracts"
+  AC-3:
+    tests:
+      - tests.test_self_write_digest_docs.TestWorkflowPatchRule1.test_ac3_all_eighteen_rules_still_apply_in_order
+      - tests.test_self_write_digest_docs.TestWorkflowPatchRule1.test_ac3_rule_1_cites_r1_by_path_and_name
+      - tests.test_self_write_digest_docs.TestWorkflowPatchRule1.test_ac3_rule_1_cites_rather_than_restates
+      - tests.test_self_write_digest_docs.TestWorkflowPatchRule1.test_ac3_rule_1_has_the_orchestrator_as_the_actor_of_the_added_sentence
+      - tests.test_self_write_digest_docs.TestWorkflowPatchRule1.test_ac3_rule_1_states_the_recomputed_source_is_built_under_the_self_write_rule
+      - tests.test_self_write_digest_docs.TestWorkflowPatchRule1.test_ac3_rule_1_still_rejects_on_a_base_input_digest_mismatch
+    red_confirmed: true
+    red_reason: "AssertionError: 'references/contracts/worker-envelope.md' not found in '1. Reject unless `base_input_digest` matches the digest recomputed from the current input (rule R1).'"
+  AC-4:
+    tests:
+      - tests.test_self_write_digest_docs.TestPhaseStateRunFields.test_ac4_dispatch_map_is_written_with_the_entry_at_dispatch
+      - tests.test_self_write_digest_docs.TestPhaseStateRunFields.test_ac4_entries_without_the_fields_stay_valid
+      - tests.test_self_write_digest_docs.TestPhaseStateRunFields.test_ac4_field_table_row_names_both_fields
+      - tests.test_self_write_digest_docs.TestPhaseStateRunFields.test_ac4_idempotency_exception_allows_status_plus_the_one_time_addition
+      - tests.test_self_write_digest_docs.TestPhaseStateRunFields.test_ac4_idempotency_exception_no_longer_says_status_alone
+      - tests.test_self_write_digest_docs.TestPhaseStateRunFields.test_ac4_resume_read_input_4_applies_r1_substitution_with_the_selected_entry
+      - tests.test_self_write_digest_docs.TestPhaseStateRunFields.test_ac4_resume_read_input_5_still_compares_artifact_bodies_tm4
+      - tests.test_self_write_digest_docs.TestPhaseStateRunFields.test_ac4_resume_states_a_post_record_edit_is_still_detected_tm4
+      - tests.test_self_write_digest_docs.TestPhaseStateRunFields.test_ac4_resume_substitutes_nothing_when_a_field_is_missing
+      - tests.test_self_write_digest_docs.TestPhaseStateRunFields.test_ac4_schema_block_example_entry_shows_both_fields
+      - tests.test_self_write_digest_docs.TestPhaseStateRunFields.test_ac4_self_write_set_is_written_once_with_the_layer_5_artifacts_entries_tm4
+      - tests.test_self_write_digest_docs.TestPhaseStateRunFields.test_ac4_sentences_that_mention_a_digest_name_the_orchestrator_or_are_negated
+    red_confirmed: true
+    red_reason: "AssertionError: 'dispatch_digest_inputs:' not found in the schema block's worker_runs example; '`self_write_set`' not found in the idempotency bullet (still \"`status` field alone\"); read input 4 held no citation of worker-envelope.md and no substitution"
+  AC-5:
+    tests:
+      - tests.test_self_write_digest_docs.TestDigestStanceInvariants.test_ac5_contract_paragraphs_carry_no_worker_directed_digest_instruction
+      - tests.test_self_write_digest_docs.TestDigestStanceInvariants.test_ac5_envelope_contains_no_expect_digest_token
+      - tests.test_self_write_digest_docs.TestDigestStanceInvariants.test_ac5_every_digest_sentence_of_the_self_write_rule_names_the_orchestrator_or_is_negated
+      - tests.test_self_write_digest_docs.TestDigestStanceInvariants.test_ac5_self_write_rule_carries_no_worker_directed_digest_instruction
+      - tests.test_self_write_digest_docs.TestDigestStanceInvariants.test_ac5_worker_digest_stance_passes_on_the_real_repository
+      - tests.test_self_write_digest_docs.TestDigestStanceInvariants.test_ac5_written_artifacts_reporting_keeps_the_stance_sentence
+      - tests.test_check_plugin_invariants.TestWorkerDigestStanceCheck.test_passes_on_the_real_repository
+    red_confirmed: false
+    red_reason: "Regression guard: the real-repository worker_digest_stance run, the \"The worker does not compute digests\" sentence and the absent expect_digest token passed before any edit, so no red state occurred for them; the existing tests.test_check_plugin_invariants.TestWorkerDigestStanceCheck.test_passes_on_the_real_repository detects a worker-directed digest sentence in a cited contract and was green before this change. The per-sentence orchestrator-subject tests (test_ac5_every_digest_sentence_of_the_self_write_rule_names_the_orchestrator_or_is_negated, test_ac5_self_write_rule_carries_no_worker_directed_digest_instruction, test_ac5_contract_paragraphs_carry_no_worker_directed_digest_instruction) were observed red before the R1 text existed (AssertionError: R1 must hold the block label **Condition.** exactly once (found 0); IndexError: list index out of range)"
+  AC-6:
+    tests:
+      - tests.test_self_write_digest_docs.TestUnchangedStructure.test_ac6_digest_source_example_keeps_its_seven_structural_keys
+      - tests.test_self_write_digest_docs.TestUnchangedStructure.test_ac6_normalization_paragraph_is_unchanged
+      - tests.test_self_write_digest_docs.TestUnchangedStructure.test_ac6_opening_sentence_about_write_policy_structure_is_kept
+      - tests.test_self_write_digest_docs.TestUnchangedStructure.test_ac6_pinned_headings_still_exist
+      - tests.test_self_write_digest_docs.TestUnchangedStructure.test_ac6_r1_names_the_actions_only_to_say_which_kinds_count
+      - tests.test_self_write_digest_docs.TestUnchangedStructure.test_ac6_timing_paragraph_keeps_its_existing_sentences
+      - tests.test_worker_contract_docs.TestWorkerEnvelopeDigestRuleIsShipped.test_states_every_digest_source_structural_key
+      - tests.test_worker_contract_docs.TestWorkerEnvelopeDigestRuleIsShipped.test_states_the_normalization_separator_literal
+    red_confirmed: false
+    red_reason: "Regression guard for unchanged text: the normalization paragraph, the seven digest_source keys, the timing paragraph's existing sentences and the pinned headings were already green before any edit and cannot go red without a change; the existing tests.test_worker_contract_docs.TestWorkerEnvelopeDigestRuleIsShipped checks detect the structural keys and the separator literal, and no red state occurred for this change. test_ac6_r1_names_the_actions_only_to_say_which_kinds_count was observed red (Regex didn't match) before the opening paragraph gained its sentence. The full-suite outcome is verified by the unchanged project test command, which had no failure before and after"

@@ -68,6 +68,14 @@ worker_runs:                   # status: dispatched | needs_user_input | complet
     status: needs_user_input
     input_digest: sha256:...
     output_digest: sha256:...
+  - request_id: create-plan-run-0002
+    status: completed
+    input_digest: sha256:...
+    output_digest: sha256:...
+    dispatch_digest_inputs:    # optional; per-path digest_inputs map at dispatch, written with the entry
+      feature-docs/example/SPEC.md: sha256:...
+    self_write_set:            # optional; written once, with this run's layer-5 artifacts entries
+      - feature-docs/example/IMPLEMENTATION.md
 artifacts:
   - path: feature-docs/example/IMPLEMENTATION.md
     sha256: sha256:...
@@ -123,7 +131,7 @@ Every top-level field:
 | `active_request_id` | The current worker run's `request_id`, or `null`. See "active_request_id lifecycle". |
 | `packets` | Map keyed by `packet_id`. Each value: `status` (`issued` \| `answered` \| `obsolete`), `issued_at`, `questions[]` (each: `question_id`, `status`). |
 | `answers` | Map keyed by `question_id`. Each value: `packet_id`, `answered_at`, `source`, `answer_mode`, `selected_option_ids`, `freeform`, `normalized_answer`. |
-| `worker_runs` | List. Each entry: `request_id`, `status` (see transitions below), `input_digest`, `output_digest` (digest only — see Size management). |
+| `worker_runs` | List. Each entry: `request_id`, `status` (see transitions below), `input_digest`, `output_digest` (digest only — see Size management), and two optional fields. `dispatch_digest_inputs` is the per-path `digest_inputs` map of the dispatch's `digest_source`; it is written with the entry when the orchestrator creates the entry at dispatch (`status: dispatched`) and never changed afterwards. `self_write_set` is the ascending list of paths the orchestrator's self-write rule (`references/contracts/worker-envelope.md`, Rule R1) identified for the run; it is absent until the run's return-time sequence completes and is then written once in the same phase-state write as the run's layer-5 `artifacts` entries (for a run with no written artifacts, the write that records its returned `status`), and never changed afterwards. An entry written before these fields existed carries neither and stays valid. |
 | `artifacts` | List. Each entry: `path`, `sha256`, `produced_by` (a `request_id`). `sha256` is the digest `references/artifact-digest.md` "Digest definition" defines — not a git blob id; a value recorded by the earlier git-blob method is handled as `references/artifact-digest.md` "Legacy records" states. |
 | `patches` | List. Each entry: `patch_id`, `status` (`proposed` \| `validated` \| `applied` \| `rejected`), `base_input_digest`, `base_workflow_blob`. |
 | `progress_fingerprint` | Digest summarizing dialogue+worker progress; used for the loop-termination check. |
@@ -144,9 +152,11 @@ content matches, it is a no-op; if it diverges, it is a **protocol error**.
   requires a new question ID with `supersedes` pointing at the original.
 - Appending to `artifacts` / `patches`: same ID + matching content → no-op;
   same ID + diverging content → protocol error.
-- `worker_runs` follows the same rule, **except that its `status` field
-  alone may be updated** along the transitions below (any other field
-  differing is a protocol error).
+- `worker_runs` follows the same rule, **except that two things may
+  change**: its `status` field, along the transitions below, and the
+  one-time addition of `self_write_set` (absent, then written once; a
+  second write with a different value is a protocol error). Any other
+  field differing is a protocol error.
 - `spec_change` is **not** subject to this content-invariance rule: each
   occurrence of rework's spec-change transition replaces the record wholesale
   (see the `spec_change` row above), which is expected overwrite behavior,
@@ -336,7 +346,14 @@ Resume reads state in this order — never from memory:
 1. integration branch / worktree
 2. `workflow.yaml` step status
 3. phase-state
-4. recomputed `input_digest` vs. phase-state's `last_input_digest`
+4. recomputed `input_digest` vs. phase-state's `last_input_digest`, with
+   the orchestrator applying the self-write substitution of
+   `references/contracts/worker-envelope.md`, Rule R1, to the
+   recomputation. It takes `dispatch_digest_inputs` and `self_write_set`
+   from the last `worker_runs` entry whose `input_digest` equals
+   `last_input_digest`, and there is no substitution when that entry lacks
+   either field. Input 5 is unchanged, so the orchestrator still detects
+   an edit made to a self-written artifact after its digest was recorded.
 5. artifact bodies vs. their recorded digest
 6. whether a patch is already applied
 
