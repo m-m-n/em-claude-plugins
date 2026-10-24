@@ -1,7 +1,7 @@
 schema_version: 1
 feature: codex-guard-funcname-anon-always
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: 2f7aa8e92fc51b6ecb0a09c9782fe31de3c58845
 last_input_digest: sha256:63bcb7138d59672be3bd8f3a8f0c6998185cd012da4e772ab6dd897da7e5956b
