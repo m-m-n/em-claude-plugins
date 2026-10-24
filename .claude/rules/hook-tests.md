@@ -94,3 +94,12 @@ python3 -m unittest tests.test_doc_redaction_guard
 
 - ケースは `tests/test_doc_redaction_guard.py` の `CASES` に
   `(期待する判定, ラベル, ペイロード)` で並べる。期待する判定は `deny` か `silent`。
+
+## gitleaks のガード
+
+`em-workflow/hooks/gitleaks-write-guard.sh` と `em-workflow/hooks/gitleaks-precommit.sh` を
+変更したら、同じ変更の中で次を走らせる。
+
+```
+python3 -m unittest tests.test_gitleaks_user_configs tests.test_guardrail_hooks_migration
+```

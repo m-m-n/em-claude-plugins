@@ -139,7 +139,35 @@ workflow.yaml の build / test / format / e2e コマンドはリポジトリ管�
 
 PreToolUse(Bash) の 10 本は `hooks.json` に次の順で登録している（gitleaks-precommit.sh → kill-guard.py → bash_guard.py → failed-run-cleanup-guard.py → muse_guard.py → interpreter-mismatch-guard.py → loop-command-guard.py → cross-repo-write-guard.py → destructive-guard.py → heredoc-stdin-guard.py）。複数の hook が判定を返したときの優先順位は deny > defer > ask > allow。`heredoc-stdin-guard.py` は判定を返さず `updatedInput` の書き換えのみなので最後に置く。
 
-gitleaks 系 2 本はバイナリを `command -v gitleaks` → `$HOME/.local/share/mise/shims/gitleaks` の順で解決し、どちらにも無ければスキャンせず通す（fail-open）。gitleaks 未インストール環境で全コミット・全書き込みがブロックされるのを避けるため。develop の Step 0（git-setup ゲート）が gitleaks 不在で workflow ごと中断するのとは判断が異なる — この hook は develop の外でも動くため。
+gitleaks 系 2 本はバイナリを `command -v gitleaks` → `$HOME/.local/share/mise/shims/gitleaks` の順で解決し、どちらにも無ければ警告を出してスキャンせず通す（fail-open）。gitleaks 未インストール環境で全コミット・全書き込みがブロックされるのを避けるため。develop の Step 0（git-setup ゲート）が gitleaks 不在で workflow ごと中断するのとは判断が異なる — この hook は develop の外でも動くため。
+
+### gitleaks の設定の読まれ方
+
+gitleaks ガード hook 2 本と、`/em-workflow:git-setup` が置く pre-commit hook は、同じ順で設定を使う。
+
+1. `--config` 無しで 1 回検査する。リポジトリのルートに `.gitleaks.toml` があればそれを、無ければ gitleaks の標準ルールを使う
+2. `~/.config/gitleaks/*.toml` を名前順に 1 つずつ `--config` で渡して検査する
+3. どれか 1 回でも検出したら、書き込み・コミットを止める
+
+- 2 で gitleaks がエラーで終わった設定は、警告を出して飛ばす
+- `~/.config/gitleaks/` が無い・toml が 1 つも無いときは、1 だけを行う
+- `--config` で渡した設定には標準ルールが入らない。2 の toml に `[extend] useDefault = true` を書くと、1 と同じ標準ルールの検出が重複する
+- 標準ルールには、`/home/...` などで始まるパスそのものの文字列を検出から外す除外リストがある。この除外リストは、2 の toml には効かない
+
+例: `~/.config/gitleaks/pii.toml`
+
+```toml
+title = "pii"
+
+[[rules]]
+id = "home-path"
+description = "Absolute path under the home directory"
+regex = '''/home/(alice)(?:[^A-Za-z0-9._-]|$)'''
+secretGroup = 1
+keywords = ["/home/alice"]
+```
+
+`/em-workflow:git-setup` は、この順序に対応していない旧版の pre-commit hook を見つけると、新しい版に置き換える。
 
 ### 副作用: Bash の auto mode 分類器が無効になる
 

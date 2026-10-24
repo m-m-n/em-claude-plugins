@@ -135,8 +135,8 @@ dispatch する。プロンプトには次を渡す:
 guard は gitleaks の存在を確認し（PATH または mise shims）、あれば gitleaks
 pre-commit hook を冪等セットアップする。JSON 報告の status で分岐する:
 
-- `already_configured` / `created` / `appended` → そのまま Step A へ
-  （`created` / `appended` は終了報告時に 1 行添える）
+- `already_configured` / `created` / `appended` / `updated` → そのまま Step A へ
+  （`created` / `appended` / `updated` は終了報告時に 1 行添える）
 - `gitleaks_missing` → **中断**:
   `gitleaks が見つからないため中断した。インストールしてから /em-workflow:develop を再実行してね`
   と報告してターンを終える（停止条件 6）
