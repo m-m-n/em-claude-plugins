@@ -2,85 +2,50 @@ schema_version: 1
 feature: rework-recheck-before-patch-write
 created: '2026-10-24'
 base_branch: main
-goal: '# rework-task-synthesis.md §10 の return-time recheck が step 3 のパッチ適用（workflow.yaml
-  の書き込みとコミット）の後に置かれ、stale になっても適用済みの rework タスクが残る
-
+goal: |
+  # rework-task-synthesis.md §10 の return-time recheck が step 3 のパッチ適用（workflow.yaml の書き込みとコミット）の後に置かれ、stale になっても適用済みの rework タスクが残る
 
   種別: バグ
-
   Notion: <notion-url>
-
 
   ## 現象 (必須)
 
+  `em-workflow/references/rework-task-synthesis.md` の §10（245 行付近）は、step 3 でパッチを検証・適用し、その後に Rule R1 の return-time recheck を行うと定めている。`references/workflow-patch.md` の適用規則 15（workflow.yaml への 1 回の Write）と規則 16（R2 のコミット列）は step 3 の適用に含まれるため、再確認が走る時点で新しい rework タスクと `implement: pending` は既に integration ブランチにコミットされている。
 
-  `em-workflow/references/rework-task-synthesis.md` の §10（245 行付近）は、step 3 でパッチを検証・適用し、その後に
-  Rule R1 の return-time recheck を行うと定めている。`references/workflow-patch.md` の適用規則 15（workflow.yaml
-  への 1 回の Write）と規則 16（R2 のコミット列）は step 3 の適用に含まれるため、再確認が走る時点で新しい rework タスクと `implement:
-  pending` は既に integration ブランチにコミットされている。
-
-
-  再確認が stale を返したとき、create-spec-phase.md の Stale handling は出力を捨てて `reset --hard em-workflow/{feature}/integration`
-  を行うだけなので、ブランチ先端は適用済みのコミットを含んだまま残る。stale として捨てたはずの結果がワークフローに残る。
-
+  再確認が stale を返したとき、create-spec-phase.md の Stale handling は出力を捨てて `reset --hard em-workflow/{feature}/integration` を行うだけなので、ブランチ先端は適用済みのコミットを含んだまま残る。stale として捨てたはずの結果がワークフローに残る。
 
   ## 再現手順 (必須)
 
-
   1. rework-planner を dispatch し、`append_rework` パッチを返させる
-
   2. scope verification の後、再確認の前に、self-write set 内の成果物を別プロセスが書き換える
-
   3. step 3 でパッチが適用・コミットされた後に再確認が不一致を検出し、stale handling が走る
-
   4. コミット済みの rework タスクとステップの変更が integration ブランチに残る
-
 
   ## 期待する挙動 (必須)
 
-
   再確認が stale を返したとき、rework パッチによる workflow.yaml の書き込みとコミットが残らない。
-
 
   ## 完了の定義 (必須)
 
-
   - [ ] 再現手順で現象が起きない
-
   - [ ] 再発を検出するテストがある
-
 
   ## 該当箇所 (任意)
 
-
   - `em-workflow/references/rework-task-synthesis.md:245`（§10、再確認の位置）
-
   - `em-workflow/references/workflow-patch.md`（適用規則 15・16）
-
   - `tests/test_recheck_dispatch_sites_docs.py`（順序の probe）
-
   - `em-workflow/references/phases/create-plan-phase.md` §8 にも同じ構造が無いか確認する
-
 
   ## 実害・発生条件 (任意)
 
-
-  feature self-write-exclusivity-window の review round 1（comprehensive 観点、medium、stable_id
-  `0793fc85d7214deb`）で見つかった。scope verification 後の狭い区間で worktree に直接書き込む他のプロセスが要るため、起きやすさは低い。修正案は、再確認を
-  step 3 の検証（適用規則 1〜14）の後、規則 15 の書き込みより前に置くこと。
-
+  feature self-write-exclusivity-window の review round 1（comprehensive 観点、medium、stable_id `0793fc85d7214deb`）で見つかった。scope verification 後の狭い区間で worktree に直接書き込む他のプロセスが要るため、起きやすさは低い。修正案は、再確認を step 3 の検証（適用規則 1〜14）の後、規則 15 の書き込みより前に置くこと。
 
   ## 追加指示（起動引数より）
 
-
-  - 実装完了後、integration ブランチを remote に push し、base_branch に対して gh pr create で PR を作る。integration
-  ブランチはローカル・リモートとも残す（base_branch へ自動マージしない）。
-
+  - 実装完了後、integration ブランチを remote に push し、base_branch に対して gh pr create で PR を作る。integration ブランチはローカル・リモートとも残す（base_branch へ自動マージしない）。
   - 不明点は Codex に相談し、比較的よいと判断された選択肢を採用する。
-
   - その議論内容を Notion に記録する。
-
-  '
 parent_branch: em-workflow/rework-recheck-before-patch-write/integration
 tier: reduced
 tier_decision:
@@ -123,15 +88,14 @@ workflow:
   - DESIGN.md
   - design/
   status: skipped
-  skipped_reason: 'tier reduced removes the design step; protocol prose change in
-    rework-task-synthesis.md plus a unittest, no UI, zero design-system candidates
-    (create-spec.design-step: decide_autonomously -> skipped)'
+  skipped_reason: 'tier reduced removes the design step; protocol prose change in rework-task-synthesis.md plus a unittest, no UI, zero design-system candidates (create-spec.design-step: decide_autonomously -> skipped)'
 - id: create-plan
   artifacts:
   - VERIFICATION.md
   - THREAT-MODEL.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: c9bc15bfe5355fac144d07a65d77314b610f8059
 - id: implement
   status: pending
 - id: review
@@ -142,8 +106,7 @@ workflow:
   status: pending
 tasks:
   task0001:
-    title: 'Rework section 10: return-time recheck before the patch write, with an
-      order probe'
+    title: 'Rework section 10: return-time recheck before the patch write, with an order probe'
     plan: tasks/task0001.md
     files:
     - em-workflow/references/rework-task-synthesis.md
