@@ -150,6 +150,18 @@ tasks:
     branch: em-workflow/codex-guard-funcname-anon-always/task0002
 review:
   status: pending
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary:
+    - perspective: performance
+      reason: NFR1 requires linear time and no recursion in the substitution reader's new state transitions
+    cross_validation: true
+    diff_base: cac662fb721c0dc93010b2cbfbb51c441211813d
+    diff_base_reason: the integration branch absorbed main (cac662fb) via an accidental merge in task0001's first attempt; implement.base_commit ef7b32a8 is not an ancestor of main, so diffing from it would put main's unrelated commits under review. The merge-base with main is used instead.
 requirements:
   FR1:
     title: 2 つ目以降の関数名の後の語を名前として読む
