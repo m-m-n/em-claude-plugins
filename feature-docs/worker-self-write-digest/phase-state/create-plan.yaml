@@ -1,7 +1,7 @@
 schema_version: 1
 feature: worker-self-write-digest
 phase: create-plan
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: 7048eb2937536d8e675bf1f27a41d58e42e967d9
 last_input_digest: sha256:ff7143e45051b2f1c99bf70393d4aedc4eb00aee7b20de9131af070cd12cdb28
@@ -10,11 +10,33 @@ packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:ff7143e45051b2f1c99bf70393d4aedc4eb00aee7b20de9131af070cd12cdb28
-  output_digest: null
-artifacts: []
-patches: []
+  output_digest: sha256:5700f41abd8b4e96b9a14549b930b20fd88f239336de2e6913bc02e11293b376
+artifacts:
+- path: feature-docs/worker-self-write-digest/IMPLEMENTATION.md
+  sha256: sha256:087e39b244f5776fb03eb9b94388b23bc41fd084e72906f7437d1c3c45a3b51a
+  produced_by: create-plan-run-0001
+- path: feature-docs/worker-self-write-digest/VERIFICATION.md
+  sha256: sha256:87de5c8629bd4cdb1096bfb798af1740883011ecd31320b6dd05ce5336f278b3
+  produced_by: create-plan-run-0001
+- path: feature-docs/worker-self-write-digest/THREAT-MODEL.md
+  sha256: sha256:faf83ea926b3d2a3ce78d5bf016c0955357528eb45cd3f442a1b017fadf6d58e
+  produced_by: create-plan-run-0001
+- path: feature-docs/worker-self-write-digest/tasks/task0001.md
+  sha256: sha256:a62d70d9b6009e778f424f45cbe34c953a218cd7b60d67620014bd488425e432
+  produced_by: create-plan-run-0001
+- path: feature-docs/worker-self-write-digest/tasks/task0002.md
+  sha256: sha256:4b91823d622d36150b6d63bea14ca6bed11baaa97bd7cd4dc5d1c5ec4d0dbd0d
+  produced_by: create-plan-run-0001
+- path: feature-docs/worker-self-write-digest/tasks/task0003.md
+  sha256: sha256:a3e323b67249bb870533f1d7a6c34ba7b22ef5657ecac290ea60341246af09b7
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: create-plan-p0001
+  status: validated
+  base_input_digest: sha256:ff7143e45051b2f1c99bf70393d4aedc4eb00aee7b20de9131af070cd12cdb28
+  base_workflow_blob: 241ebfa61eb4c675a970e03a75e8d58388f4ac62
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
