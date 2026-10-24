@@ -1,0 +1,12 @@
+schema_version: 1
+feature: self-write-digest-path-normalization
+records:
+  - question_id: develop.completion-pr-base
+    packet_id: null
+    answered_at: "2026-10-24T12:16:26+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "Open the PR against main without rebasing"
+    normalized_answer: "Open the PR against main without rebasing"
+    resolution_note: "gate: Step C PR base (unlisted, no gate_id); base_branch em-workflow/worker-self-write-digest/integration no longer exists locally or on origin and its content is merged into main (base_commit b6ffd657 is an ancestor of origin/main); options: A) PR against main, B) recreate base_branch on origin at b6ffd657 and PR against it, C) stop without PR; codex_consulted: true; Codex chose A (base content already in main; keeps the 19 commits without rebase); risks noted by Codex: PR base differs from workflow.yaml base_branch, verify did not run on top of main-only commit 4506603e (version bump)"

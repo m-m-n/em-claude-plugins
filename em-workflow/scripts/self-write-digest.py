@@ -43,7 +43,15 @@ Member shapes:
                   path is repeated.
   allowed_write_roots
                   the envelope's top-level list of strings. Roots and paths
-                  are compared lexically, segment by segment.
+                  are compared lexically, segment by segment; no path is
+                  resolved against the filesystem. `\\` is equivalent to `/`
+                  as a separator, and empty and `.` segments are dropped. A
+                  root or a path that is empty, starts with `/`, contains
+                  NUL or has a `..` segment never contains and is never
+                  contained. A root with no segments left after that
+                  normalization contains every relative path that is
+                  otherwise safe; any other root contains only the paths
+                  below it, never the root itself.
   dispatch_digest_inputs
                   a mapping of string to string.
   self_write_set  a list of strings.
@@ -229,17 +237,21 @@ def _check_write_policy(value):
 
 
 def _check_allowed_roots(value):
-    """The allowed write roots as a list of segment tuples that can contain
-    a relative path; a root that cannot (empty, absolute, or holding a `..`
-    segment) is kept out and so admits nothing."""
+    """The allowed write roots as a list of segment tuples, in the given
+    order. The input shape is checked first: a non-list, or an entry that is
+    not a string, is invalid input.
+
+    Every root is normalized like a path: `\\` is equivalent to `/` as a
+    separator, and empty and `.` segments are dropped. A root that is empty,
+    starts with `/`, contains NUL or has a `..` segment never contains and
+    is never contained, so it is kept out and admits nothing. A safe root
+    with no segments left after that normalization (`.`, `./`, `\\`) is
+    kept, as an empty tuple: it contains every relative path that is
+    otherwise safe."""
     roots = []
     for root in _check_str_list(value, "allowed_write_roots"):
-        if root.startswith("/"):
-            continue
-        segments = _segments(root)
-        if not segments or ".." in segments:
-            continue
-        roots.append(segments)
+        if _is_safe_relative(root):
+            roots.append(_segments(root))
     return roots
 
 
@@ -247,9 +259,22 @@ def _check_allowed_roots(value):
 
 
 def _segments(path):
-    """The path's segments, empty ones (doubled or trailing slashes) dropped,
-    so a trailing slash never changes what a root or a path names."""
-    return tuple(part for part in path.split("/") if part)
+    """The path's segments: `\\` is equivalent to `/` as a separator, and
+    empty and `.` segments are dropped (doubled or trailing slashes, `./`
+    prefixes), so they never change what a root or a path names. The
+    comparison is lexical; nothing is resolved against the filesystem."""
+    return tuple(
+        part for part in path.replace("\\", "/").split("/") if part not in ("", ".")
+    )
+
+
+def _is_safe_relative(path):
+    """False for a path that is empty, starts with `/`, contains NUL or has a
+    `..` segment (`\\` being a separator equivalent to `/`): such a path
+    never contains and is never contained."""
+    if not path or path.startswith("/") or "\x00" in path:
+        return False
+    return ".." not in path.replace("\\", "/").split("/")
 
 
 def _is_relative_and_clean(path):
@@ -258,9 +283,17 @@ def _is_relative_and_clean(path):
 
 
 def _inside_a_root(path, roots):
-    """Segment-wise containment: strictly inside, never the root itself."""
+    """Containment in some root, as scope validation decides it: false for an
+    unsafe path; true when some root has no segments (it contains every safe
+    relative path); otherwise true when some root's segments are a strict
+    prefix of the path's segments, so a path equal to the root, and a sibling
+    whose name extends the root's last segment, are not inside it."""
+    if not _is_safe_relative(path):
+        return False
     parts = _segments(path)
     for root in roots:
+        if not root:
+            return True
         if len(parts) > len(root) and parts[: len(root)] == root:
             return True
     return False
