@@ -1,0 +1,48 @@
+task_id: task0002
+baseline_failures: []          # run inside the task worktree before any change: 11238 tests, OK (skipped=1)
+final_failures: []             # full suite re-executed after the implementation and this record: OK
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_exclusivity_interval_docs.TestEnvelopeExclusivityInterval.test_ac1_interval_runs_from_snapshot_start_through_the_recording_write
+      - tests.test_exclusivity_interval_docs.TestEnvelopeExclusivityInterval.test_ac1_interval_no_longer_ends_at_the_scope_verification
+    red_confirmed: true
+    red_reason: "before the change the section still ended the interval at the end of that dispatch's scope verification: assertEqual failed with [\"end of that dispatch's scope verification\"] != [] for the absence probe, and with ['no interval \"from the start of the dispatch's scope snapshot capture\" through the completion of the phase-state write that records ...'] != [] for the interval probe. The forged-text controls (TestProbesFireOnForgedText: pre-change envelope sentence, shortened ending, recording write missing artifacts / self_write_set / the phase-state write, wrong start) exercise only the probes and were green before the change, so they are not listed."
+  AC-2:
+    tests:
+      - tests.test_exclusivity_interval_docs.TestEnvelopeExclusivityInterval.test_ac2_empty_written_artifacts_and_stale_variants_are_both_stated
+    red_confirmed: true
+    red_reason: "assertEqual failed with ['no variant for a run whose `written_artifacts` is empty (through the write that records ...)', 'no variant for a result judged stale (through that judgment)'] != [] because the section stated neither variant. The forged-text controls for a missing empty variant, an empty variant naming only one of status / self_write_set, status appearing only in the main clause, a missing stale variant and a stale variant that ends elsewhere are green before and after and are not listed."
+  AC-3:
+    tests:
+      - tests.test_exclusivity_interval_docs.TestEnvelopeExclusivityInterval.test_ac3_section_keeps_the_restriction_clauses_and_the_quoted_assumption
+      - tests.test_exclusivity_interval_docs.TestEnvelopeExclusivityInterval.test_ac3_section_keeps_its_heading_after_the_known_limit_label
+      - tests.test_worker_contract_docs.TestWorkerEnvelopeRules.test_states_exclusivity_assumption_and_its_interval
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac1_known_limit_rests_on_the_exclusivity_assumption
+    red_confirmed: false
+    red_reason: "the criterion pins text the change must leave in place (five-worker restriction, not-a-standing-constraint clause, review exception citing references/review-phase.md, the quoted assumption, the heading and its position after the Known limit label), so the new tests passed on their first run and no red state exists for it; the existing tests.test_worker_contract_docs and tests.test_self_write_digest_docs tests listed here also detect the interval statement and the heading position staying intact. Forged-text controls for each kept element are in TestProbesFireOnForgedText."
+  AC-4:
+    tests:
+      - tests.test_exclusivity_interval_docs.TestCreateSpecExclusivityInterval.test_ac4_interval_runs_from_snapshot_start_through_the_recording_write
+      - tests.test_exclusivity_interval_docs.TestCreateSpecExclusivityInterval.test_ac4_interval_no_longer_ends_at_the_end_of_verification
+      - tests.test_exclusivity_interval_docs.TestCreateSpecExclusivityInterval.test_ac4_both_variants_are_stated
+      - tests.test_exclusivity_interval_docs.TestCreateSpecExclusivityInterval.test_ac4_every_create_spec_probe_is_quiet_on_the_real_paragraph
+    red_confirmed: true
+    red_reason: "the Scope of applicability paragraph still read 'through the end of verification': assertEqual failed with ['end of verification'] != [] for the absence probe, with [\"no interval 'from taking the scope snapshot' through the completion of the phase-state write that records ...\"] != [] for the interval probe, and with both missing-variant messages for the variants probe. The tests that the paragraph keeps the five-worker restriction and the not-a-standing-constraint clause and that the subsection keeps its quote, review-phase exception and enforcement note pin existing text, were green before, and are not listed; the forged-text controls are green before and are not listed either."
+  AC-5:
+    tests:
+      - tests.test_exclusivity_interval_docs.TestEndPointAgreesAcrossDocuments.test_ac5_both_slices_carry_every_end_point_element
+      - tests.test_exclusivity_interval_docs.TestEndPointAgreesAcrossDocuments.test_ac5_both_slices_carry_the_same_element_set
+    red_confirmed: true
+    red_reason: "the shared extractor found no end-point element in either slice: the first test failed on the missing five-element set, the second with a non-empty mismatch list naming every element as stated in neither document (both slices were empty, so plain set equality alone would have passed; the mismatch probe also compares against the full element set). The forged pairs (one document lacking stale judgment / status / the phase-state write, both lacking the same element, both pre-change) are green before and are not listed."
+  AC-6:
+    tests:
+      - tests.test_exclusivity_interval_docs.TestThisFileFollowsTheTestConventions.test_ac6_the_file_imports_only_standard_library_modules
+      - tests.test_exclusivity_interval_docs.TestThisFileFollowsTheTestConventions.test_ac6_the_file_is_named_per_the_test_readme
+      - tests.test_exclusivity_interval_docs.TestThisFileFollowsTheTestConventions.test_ac6_classes_and_methods_follow_the_naming_rules
+      - tests.test_exclusivity_interval_docs.TestThisFileFollowsTheTestConventions.test_ac6_every_probe_is_named_in_the_forged_text_controls
+      - tests.test_exclusivity_interval_docs.TestEnvelopeCarriesNoExpectDigestToken.test_ac6_worker_envelope_has_no_expect_digest_token
+      - tests.test_self_write_digest_docs.TestDigestStanceInvariants.test_ac5_worker_digest_stance_passes_on_the_real_repository
+      - tests.test_self_write_digest_docs.TestDigestStanceInvariants.test_ac5_envelope_contains_no_expect_digest_token
+    red_confirmed: false
+    red_reason: "the criterion pins properties of the new test file (standard library only, naming, a forged-text control for every probe) and the existing absence of an expect_digest token in worker-envelope.md, so the new tests passed on their first run and no executable red state exists; a dedicated new module is out of scope for the existing worker_digest_stance and expect_digest tests, but they detect a worker-directed digest instruction or an expect_digest token entering worker-envelope.md, and no red state occurred for this change. That every existing test passes unchanged is checked by the full suite (python3 -m unittest discover -s tests) run before and after."
