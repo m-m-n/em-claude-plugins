@@ -17,3 +17,15 @@ records:
     as a closing brace; `{ function { echo argc=$#; } } always { echo ALWAYS; }` prints
     argc=0 and ALWAYS; all three anonymous forms behave the same. Opus escalation:
     not run. Discussion recorded as a Notion comment on the task page.'
+- question_id: create-spec.command-approval
+  packet_id: null
+  answered_at: '2026-10-24T18:42:00+09:00'
+  source: batch-decision-table
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: auto_record
+  normalized_answer: auto_record
+  resolution_note: 'gate: create-spec.command-approval (batch policy action auto_record).
+    workflow.yaml project.components のコマンドは ''python3 em-workflow/hooks/tests/run-destructive-guard.py
+    && python3 -m unittest discover -s tests'' の 1 本。bash_guard.py --list で既に承認済みであることを確認したため、この走行で新たに自動承認したコマンドは
+    0 本。refusal パターンの検出なし。'
