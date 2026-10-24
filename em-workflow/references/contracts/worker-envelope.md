@@ -262,6 +262,26 @@ because membership needs it. At rule level:
    with the dispatch-time `input_digest`. A mismatch, or a script exit
    other than `0`, makes the result stale.
 
+When step 4's comparison has not made the result stale and, if
+`written_artifacts` is non-empty, Layer 5's `Calculation`
+(`references/artifact-digest.md`) has run, the orchestrator runs the
+return-time recheck. For each path of the self-write set, the orchestrator
+reads the current git blob id (`git hash-object --`), mode and kind (file,
+symlink or absent) and compares them with the values the same run's scope
+verification observed for that path after the dispatch
+(`references/phases/create-spec-phase.md`, "Scope verification"). The
+orchestrator compares no raw-byte sha256 here, neither the artifact digest of
+`references/artifact-digest.md` nor a `digest_inputs` value. Any mismatch, or
+a recheck that cannot run (a read failure included), makes the result stale,
+handled as the stale handling of that scope verification states
+(`references/phases/create-spec-phase.md`, "Scope verification", "Stale
+handling"). An empty self-write set passes with nothing to do. The
+return-time recheck runs before the phase-state write that records the run's
+`artifacts` and `self_write_set` (for a run whose `written_artifacts` is
+empty, the write that records the returned `status` and `self_write_set`),
+and that write follows only a passing recheck: a stale result reaches no such
+write.
+
 **Means.** The orchestrator runs `scripts/self-write-digest.py` with
 `python3`, giving it exactly one argument, the path of its input
 document. The orchestrator writes that one JSON input document with its
@@ -280,6 +300,11 @@ there instead of identifying the self-write set again.
 permitted path, the two changes cannot be told apart and the path joins
 the self-write set; this case rests on the exclusivity assumption stated
 below.
+A change made after the scope verification is detected by the return-time
+recheck of "Order" above. The remaining window, from that recheck through the
+phase-state write that records the run's `artifacts` and `self_write_set`,
+rests on the exclusivity assumption, whose interval the section "Exclusivity
+assumption during dispatch" below states.
 
 (Provenance: design-input.md 5.0 R1. The rule is stated in full above; the
 design document is not required reading to apply it.)
