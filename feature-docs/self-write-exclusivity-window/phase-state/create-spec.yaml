@@ -4,7 +4,7 @@ phase: create-spec
 status: dispatching
 generation: 1
 base_revision: 5ec9bf3bf93a049e5919ef1f123122a7350e12e0
-last_input_digest: sha256:ca27bbbc911e9766aa9121e68daa8f49414103ff27800674a56778b0683b85d5
+last_input_digest: sha256:adfbe8e71c3da3cb959b80feb232ea8c15151a3ba2fc809e497e3113955aa1c2
 active_request_id: null
 packets:
   create-spec-q0001:
@@ -63,7 +63,25 @@ worker_runs:
   status: completed
   input_digest: sha256:ca27bbbc911e9766aa9121e68daa8f49414103ff27800674a56778b0683b85d5
   output_digest: sha256:506c2bb27c8820fa638b586b938f57bba6ff355813dd1ae53209187fd171622d
-artifacts: []
+- request_id: create-spec-run-0003
+  worker: spec-writer
+  status: completed
+  input_digest: sha256:adfbe8e71c3da3cb959b80feb232ea8c15151a3ba2fc809e497e3113955aa1c2
+  output_digest: sha256:604888b628a72cf6f55deb71610cb9c555e9fcbfa98783c0c1fafef3df39fb71
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/spec-writer-contract.md: sha256:9032c6287d75f4a88e556bd3962c32ab8b4905cf3b6ececa895206788bcd0b63
+    em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
+    em-workflow/references/templates/spec-document.md: sha256:203dfcddbe507886ce861694fccd20ae25e5af0bd1b0efa5e935991add950cbd
+  self_write_set:
+  - feature-docs/self-write-exclusivity-window/REQUIREMENTS.md
+  - feature-docs/self-write-exclusivity-window/SPEC.md
+artifacts:
+- path: feature-docs/self-write-exclusivity-window/REQUIREMENTS.md
+  sha256: sha256:2e70f2cdd5b3eef1b9afed072a943fafd7b8b8a94120154242c19efc3f5881dd
+  produced_by: create-spec-run-0003
+- path: feature-docs/self-write-exclusivity-window/SPEC.md
+  sha256: sha256:7884b6719e6925b52414406a1deec34cc10ab56b6d95316ed14605f57ee21f99
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
