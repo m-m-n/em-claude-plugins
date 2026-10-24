@@ -248,7 +248,10 @@ record is copied verbatim, the invariance check (rule 14) holds.
 All eighteen rules apply, in order, to every patch:
 
 1. Reject unless `base_input_digest` matches the digest recomputed from the
-   current input (rule R1).
+   current input (rule R1). The orchestrator builds the recomputed
+   `digest_source` under the self-write rule of
+   `references/contracts/worker-envelope.md`, Rule R1, "Recomputation and
+   comparison timing".
 2. Reject unless `base_workflow_blob` matches the current `workflow.yaml`
    blob hash.
 3. Reject unless every `expected` value matches the corresponding current

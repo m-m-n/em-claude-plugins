@@ -93,6 +93,13 @@ that definition and restates none of it.
 - `references/templates/task-plan.md`, `skills/plan-writing/SKILL.md`
 - this contract document itself
 
+The orchestrator applies the self-write rule of
+`references/contracts/worker-envelope.md`, Rule R1, "Recomputation and
+comparison timing", when it recomputes `input_digest` on this worker's
+return. The overlap between this worker's `digest_inputs` and the paths its
+`write_policy` lets it write is `IMPLEMENTATION.md`, `VERIFICATION.md` and
+`tasks/`.
+
 ## Grouping rule
 
 Findings are not converted 1:1 into "one task per file". Findings that

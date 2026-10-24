@@ -20,7 +20,10 @@ also does not restate the workflow patch's operations or fields
 (`references/workflow-patch.md`, design-input.md 5.5) or the phase-state
 persistence schema (`references/phase-state.md`, design-input.md 5.6); the
 envelope's `workflow_patch` output field and `prior_packets` input field
-are pointers into those SSOTs, not copies of them.
+are pointers into those SSOTs, not copies of them. Rule R1's self-write
+rule (below) names `write_policy`'s six actions only to say which observed
+change kinds make a path a self-write; what each action lets the worker do
+stays with the owners named above.
 
 ## Applicability (design-input.md 2.3)
 
@@ -184,6 +187,93 @@ and the result is treated as stale. This only works if dispatch-time and
 return-time computation both follow the identical normalization procedure
 above — an implementation that diverges on either side silently defeats
 staleness detection.
+
+**Condition.** The orchestrator applies the self-write rule below when it
+recomputes `input_digest` on a worker's return. The rule matters for a
+worker whose `digest_inputs` overlap the paths its `write_policy` (its
+targets or its `allowed_write_roots`) lets it write: that worker's own
+writes would otherwise make its result look stale. For any other worker
+the substitution below changes nothing.
+
+**Self-write set.** A path is in the self-write set only when the change
+set the orchestrator observed for the dispatch window lists it (the
+pre/post-dispatch comparison of `references/phases/create-spec-phase.md`,
+"Scope verification") and the action of the `write_policy` entry covering
+it permits that kind of change. The worker's `written_artifacts` never
+decides membership, and neither does a plain intersection of its paths
+with `write_policy`. The change kinds are those of the scope
+verification: `created` (absent at the pre-dispatch snapshot, present
+now), `modified` (present at both, with changed content, mode or file
+kind) and `deleted` (present at the snapshot, absent now). What each
+action means is owned by `references/contracts/spec-writer-contract.md`
+("The six `write_policy` actions"); this table says only which kinds count
+as a self-write:
+
+| Covering entry | `created` | `modified` | `deleted` |
+|---|---|---|---|
+| target `create` | member | not a member | not a member |
+| target `replace_own` | not a member | member | not a member |
+| target `replace_authorized` | not a member | member | not a member |
+| target `extend_only` | not a member | member | not a member |
+| target `regenerate` | not a member | member only when its `source` is a member | not a member |
+| target `preserve` | not a member | not a member | not a member |
+| not a target, inside an `allowed_write_roots` entry | member | not a member | not a member |
+| neither | not a member | not a member | not a member |
+
+- A path listed in `targets` is judged by its target even when it also
+  lies under an allowed write root.
+- Containment in an allowed write root compares path segments, never
+  string prefixes (`feature-docs/x2/a.md` is not inside `feature-docs/x`);
+  a root written with or without a trailing slash names the same
+  directory; a path equal to the root itself is not inside it.
+- An absolute path, or a path with a `..` segment, is never a member.
+- A `regenerate` target is decided after every other path; one whose
+  `source` is itself a `regenerate` target is not a member.
+
+**Substitution.** The orchestrator builds the return-time `digest_source`
+from the current one and changes only its `digest_inputs`: for each path
+of the self-write set it uses the dispatch-time value of that path, and
+when the dispatch-time `digest_inputs` holds no key for the path, the key
+stays absent. Every other `digest_inputs` path, and `value_inputs`,
+`answers_digest`, `write_policy_digest` and `workflow_blob`, are taken
+from the current state as before. The orchestrator then compares the
+normalized digest of that `digest_source` with the dispatch-time
+`input_digest`, so the aggregate comparison is kept: a change to any path
+outside the self-write set, and any change to `value_inputs`,
+`answers_digest`, `write_policy_digest` or `workflow_blob`, still makes
+the result stale.
+
+**Order.** The orchestrator recomputes `input_digest` on a return only
+after the scope verification has produced the observed change set,
+because membership needs it. At rule level:
+
+1. The scope verification yields the observed change set (violations are
+   handled there).
+2. The orchestrator recomputes the current `digest_source` from the
+   current state, exactly as at dispatch.
+3. The orchestrator runs the self-write script on it.
+4. The orchestrator compares the substituted `digest_source`'s digest
+   with the dispatch-time `input_digest`. A mismatch, or a script exit
+   other than `0`, makes the result stale.
+
+**Means.** The orchestrator runs `scripts/self-write-digest.py` with
+`python3`, giving it exactly one argument, the path of its input
+document. The orchestrator writes that one JSON input document with its
+file-writing tool to a location outside the integration worktree, and
+never assembles it through shell interpolation; no path taken from the
+document appears on the command line. An exit code other than `0` makes
+the result stale. The script computes no digest: hashing stays with the
+orchestrator (`references/artifact-digest.md`, "Calculation").
+
+**Persistence and resume.** The orchestrator persists the dispatch-time
+`digest_inputs` map and the self-write set of each run as
+`references/phase-state.md` defines them. A resumed run takes both from
+there instead of identifying the self-write set again.
+
+**Known limit.** When the worker and another actor change the same
+permitted path, the two changes cannot be told apart and the path joins
+the self-write set; this case rests on the exclusivity assumption stated
+below.
 
 (Provenance: design-input.md 5.0 R1. The rule is stated in full above; the
 design document is not required reading to apply it.)
