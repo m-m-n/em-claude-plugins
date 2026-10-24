@@ -3,7 +3,7 @@ feature: codex-guard-funcname-anon-always
 created: '2026-10-24'
 base_branch: main
 goal: "# codex-hook-interactive-guard: 2 つ目以降の関数名の後の case と、匿名関数の本体の後の always を構文として読み、python3 -i を見逃す（回帰）\n\
-  \nNotion: https://www.notion.so/4033509ec8ee81499249deb7c8cbac6e\n\n## 現象 (必須)\n\nfeature `codex-guard-brace-case-group-depth`\
+  \nNotion: <notion-url>\n\n## 現象 (必須)\n\nfeature `codex-guard-brace-case-group-depth`\
   \ の review round 1 で出た security の medium 2 件。どちらも同 feature の変更（FR2 / FR3）で生じた回帰で、変更前は deny だった入力が無出力（判定不能）になる。\n\
   \n`codex-hook-interactive-guard.py`（em-workflow / em-review の両コピー）の `$( )` の中の読みで、関数定義の頭部の状態の扱いが zsh\
   \ の文法と合わない。\n\n1. 2 つ目以降の関数名の後の `case` を case 文として読む（拒否漏れの回帰）\n   - FR3 の実装は、2 つ目以降の名前を読んだ後も `HEAD_FUNCTION_NAME`\
@@ -96,7 +96,7 @@ workflow:
   summary: 'Full test command exit 0 (11538 tests OK, 1 skipped; destructive-guard cases all ok). Reproduction steps 2-5 deny on both copies; copies byte-identical; no .claude-plugin/ file changed since base_commit. TS16 and the docstring cross-check were read against the merged code (review round 1 completed). Excluded requirements: none.'
   completed_at_commit: 45e1dc9c67628a4d81ead1f778dab4b2c54eef63
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: Read further function names and anonymous-function arguments in the substitution reader
