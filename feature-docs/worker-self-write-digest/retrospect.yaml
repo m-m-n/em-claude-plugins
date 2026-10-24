@@ -1,0 +1,33 @@
+feature: worker-self-write-digest
+collected_at: "2026-10-24T10:18:03+09:00"
+session_ids: [01a16b7b-ac76-72ed-9d15-c33d9e1bf262]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の最終読みがバケット 2（新しいロジック・外部契約の変更）を確率 0.9 で選び、full を採用した"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.56, confidence: 0.55, probabilities: {'0': 0.0, '1': 0.44, '2': 0.55, '3': 0.01}}
+        observed_at: "2026-10-24T08:38:00+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.9, confidence: 0.9, probabilities: {'0': 0.0, '1': 0.1, '2': 0.9, '3': 0.0}}
+        observed_at: "2026-10-24T08:46:00+09:00"
+    pre_survey_estimate:
+      files_expected_count: 6
+      changed_lines_approx: 100
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: false
+      changes_external_contract: true
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "事前調査は new_files_needed: 0 と見積もったが、実際は em-workflow/scripts/self-write-digest.py と tests 3 本を新規に作った"
+  - "review round 1 の medium 2 件（882d97a3d8ee97d6、13eb25efecd8f33a）は unresolved のまま、triage の report 分岐で記録した"
+  - "implement の journal は launched / merged の event のみで、implementer 報告の conflict_retries / deviations は残っていない。conflict_reworks / file_prediction_misses は journal 上の記録が無いため空にした"
