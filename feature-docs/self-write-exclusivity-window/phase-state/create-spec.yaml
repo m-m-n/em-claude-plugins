@@ -4,7 +4,7 @@ phase: create-spec
 status: dispatching
 generation: 1
 base_revision: 5ec9bf3bf93a049e5919ef1f123122a7350e12e0
-last_input_digest: sha256:1145c69d11f8013b63682e0ef51933b83429104018a9c5b845d1fe76558e131e
+last_input_digest: sha256:ca27bbbc911e9766aa9121e68daa8f49414103ff27800674a56778b0683b85d5
 active_request_id: null
 packets:
   create-spec-q0001:
@@ -58,6 +58,11 @@ worker_runs:
   input_digest: sha256:1145c69d11f8013b63682e0ef51933b83429104018a9c5b845d1fe76558e131e
   output_digest: sha256:3473b645ec1f5e568659189ec143d64487017388289a9e7f882ddd205990ff33
   note: first return failed validation (design-step options); corrected by the same worker
+- request_id: create-spec-run-0002
+  worker: requirements-analyst
+  status: completed
+  input_digest: sha256:ca27bbbc911e9766aa9121e68daa8f49414103ff27800674a56778b0683b85d5
+  output_digest: sha256:506c2bb27c8820fa638b586b938f57bba6ff355813dd1ae53209187fd171622d
 artifacts: []
 patches: []
 progress_fingerprint: null
