@@ -171,7 +171,7 @@ tasks:
     - NFR3
     - NFR5
     - NFR7
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/self-write-exclusivity-window/task0002
   task0003:
