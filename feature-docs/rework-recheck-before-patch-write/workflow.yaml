@@ -111,7 +111,8 @@ workflow:
   excluded_scenarios: []
   summary: 'python3 -m unittest discover -s tests: 11529 tests OK (skipped=1); TS-1..TS-4, AC-1..AC-5, SC-1, SC-2, TM-1 pass; change set limited to rework-task-synthesis.md, the probe test, test-docs and feature-docs; no plugin version file touched; manual checks (paragraph ordering, unchanged documents) pass'
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: 2b88a2765241078fb5f5f1337e2f6dc2bdb9d2a8
 tasks:
   task0001:
     title: 'Rework section 10: return-time recheck before the patch write, with an order probe'
