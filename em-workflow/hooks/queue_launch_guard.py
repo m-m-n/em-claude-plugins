@@ -16,6 +16,12 @@ per-feature journal (`journal.jsonl`) machine-written by:
     journal event is `launched` (already in flight);
   - denying a `Task()` launch that would relaunch a task whose last journal
     event is `merged` (terminal — always a mistake);
+  - denying a `Task()` launch while the orchestrator's cwd is not the
+    project root: a subagent inherits that cwd, and the cross-repo write
+    guard judges every write against the git toplevel of it, so an
+    implementer started inside another worktree has its writes to its own
+    worktree denied. Checked before the journal is touched, so a denied
+    launch leaves no `launched` event behind;
   - allowing every other em-workflow implementer launch (no events yet, or
     last event `failed` — the retry path) and appending exactly one
     `launched` event before the call proceeds.
@@ -35,7 +41,9 @@ concern: exit 0, no output, no journal write.
 
 Fail-open convention: this hook is a net, not an authority. Any unexpected
 state — malformed stdin, an invalid task id or worktree path, an unreadable
-journal, an uncreatable journal location — exits 0 silently rather than
+journal, an uncreatable journal location, a missing cwd, a worktree path
+outside the `.claude/worktrees/em-workflow/` layout, a cwd whose git
+toplevel cannot be resolved — exits 0 silently rather than
 risk blocking (or crashing) the user's session. The orchestrator protocol
 and the resume guard remain authoritative.
 """
@@ -44,6 +52,7 @@ import fcntl
 import json
 import os
 import re
+import subprocess
 import sys
 from datetime import datetime
 
@@ -53,6 +62,11 @@ TASK_ID_LINE_RE = re.compile(r"(?m)^task_id:\s*(\S+)\s*$")
 WORKTREE_PATH_LINE_RE = re.compile(r"(?m)^worktree_path:\s*(\S.*?)\s*$")
 
 IMPLEMENTER_SUBAGENT_TYPE = "em-workflow:implementer"
+
+# Task worktrees live at `{project_root}/.claude/worktrees/em-workflow/{feature}/{T}`.
+WORKTREES_SEGMENT = "/.claude/worktrees/em-workflow/"
+
+GIT_TIMEOUT_SECONDS = 5
 
 # The subagent-launch tool's name: `Agent` in current Claude Code versions,
 # `Task` in older ones. Both are guarded.
@@ -98,6 +112,50 @@ def valid_worktree_path(worktree_path):
         and os.path.isabs(worktree_path)
         and ".." not in worktree_path.split("/")
     )
+
+
+def project_root_for(worktree_path):
+    """The project root a task worktree belongs to, or None when the path
+    does not follow the worktree layout."""
+    norm = os.path.normpath(worktree_path)
+    index = norm.rfind(WORKTREES_SEGMENT)
+    if index <= 0:
+        return None
+    return norm[:index]
+
+
+def git_toplevel(cwd):
+    """The output of `git rev-parse --show-toplevel` in `cwd`, or None."""
+    try:
+        proc = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            timeout=GIT_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if proc.returncode != 0:
+        return None
+    top = proc.stdout.strip()
+    return top or None
+
+
+def cwd_outside_project_root(cwd, worktree_path):
+    """The project root when `cwd`'s git toplevel is resolvable and is not
+    it (the launch must be denied); None otherwise."""
+    if not isinstance(cwd, str) or not cwd:
+        return None
+    project_root = project_root_for(worktree_path)
+    if project_root is None:
+        return None
+    top = git_toplevel(cwd)
+    if top is None:
+        return None
+    if os.path.realpath(top) == os.path.realpath(project_root):
+        return None
+    return project_root
 
 
 def journal_path_for(worktree_path):
@@ -190,6 +248,17 @@ def deny_already_merged(task_id):
     )
 
 
+def deny_cwd_outside_project_root(task_id, cwd, project_root):
+    emit_deny(
+        f"em-workflow queue guard: 作業ディレクトリ（{cwd}）がプロジェクトのルート"
+        f"（{project_root}）じゃないから、タスク {task_id} を起動しないよ。"
+        "implementer は今の作業ディレクトリを引き継ぐから、このまま起動すると"
+        "自分の worktree への書き込みが cross-repo-write-guard に拒否されちゃう。",
+        f"Bash で単独の cd \"{project_root}\" を実行してプロジェクトのルートに戻ってから、"
+        "同じ Task() を起動し直して。",
+    )
+
+
 def hook_main():
     try:
         data = json.load(sys.stdin)
@@ -211,6 +280,13 @@ def hook_main():
 
         if not valid_task_id(task_id) or not valid_worktree_path(worktree_path):
             return 0  # fail-open: the orchestrator's own fail-closed gate governs real launches
+
+        # Before the journal: a denied launch must not leave `launched` behind.
+        cwd = data.get("cwd")
+        project_root = cwd_outside_project_root(cwd, worktree_path)
+        if project_root is not None:
+            deny_cwd_outside_project_root(task_id, cwd, project_root)
+            return 0
 
         path = journal_path_for(worktree_path)
 

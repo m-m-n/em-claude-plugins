@@ -109,6 +109,9 @@ commands **byte-for-byte as recorded**:
 
 - Never prefix `cd {dir} && …` or environment assignments — change directory
   with a separate `cd` call first (shell cwd persists between Bash calls).
+- The orchestrator returns to the project root with a separate `cd` call
+  after the command finishes. Do not move on to the next step or to another
+  worktree while the cwd is still inside a worktree.
 - Never split, join, quote-wrap, or "improve" the string.
 - A mutated string no longer matches its approval and falls through to the
   normal permission prompt (or is denied if it still matches a declared

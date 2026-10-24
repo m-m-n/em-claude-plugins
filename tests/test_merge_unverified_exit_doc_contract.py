@@ -921,7 +921,7 @@ class TestNoSC6CodeLeaksFromThisTasksEditedRegions(unittest.TestCase):
 # (eabf7278) -- a byte-identity regression guard, cheaper than a git
 # subprocess call, proving this task never touched either file (NFR7).
 EXPECTED_LAUNCH_GUARD_SHA256 = (
-    "30077f34c762cf980c2743b66c8b4c328ac7f746492ed6150db21b9d5ca204ac"
+    "fb0b4d1a9b2729aee510ab7f7d643a72381df7604ac6bcb4cee2488d7dcf9521"
 )
 EXPECTED_MERGE_TASK_SH_SHA256 = (
     "f8af1da2e7712a656fe70020fa9c71e53275342d46d96abd2b20b432c10eb84f"

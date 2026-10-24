@@ -39,12 +39,13 @@ is your operating discipline; deviations are bugs.
 
 ## merge-task.sh contract
 
-Invocation (clean tree; chain the `cd` in the SAME Bash call — cwd does not
-persist between calls, and running this from the main tree would merge the
+Invocation (clean tree; run a separate `cd "{worktree_path}"` call
+immediately before, and never chain it with `&&` — the cwd may have reset
+since an earlier call, and running this from the main tree would merge the
 wrong HEAD):
 
 ```bash
-cd "{worktree_path}" && "{merge_script}" "{parent_branch}" "{task_id}"
+"{merge_script}" "{parent_branch}" "{task_id}"
 ```
 
 Exit codes:
@@ -122,7 +123,8 @@ approval rule below exactly as stated there. Your obligations:
 
 - Run each `project_commands` string **verbatim** (byte-for-byte). Never
   prefix `cd …` or environment assignments — change directory with a
-  separate `cd` call first (shell cwd persists). A mutated string no longer
+  separate `cd "{worktree_path}"` call immediately before each command (the
+  cwd may have reset since an earlier call). A mutated string no longer
   matches its approval.
 - If the hook denies a command: do NOT retry, rephrase, or restructure the
   command to evade the match. Run nothing, set `tests: "fail"`, and explain
