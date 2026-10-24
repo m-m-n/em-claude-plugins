@@ -123,7 +123,7 @@ workflow:
   excluded: []
   summary: 'test command passed (11243 tests, OK, skipped=1); TS-1..TS-18 rows present; copies byte-identical; no version files touched; NFR4 no new imports; NFR5 all guard hunks in the substitution reader, its helper docstring and the head-state constants'
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: 'Brace-form case group depth: argument-position }, always groups, multi-name function'
