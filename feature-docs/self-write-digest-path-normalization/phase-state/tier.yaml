@@ -1,0 +1,64 @@
+schema_version: 2
+feature: self-write-digest-path-normalization
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.06
+    confidence: 0.92
+    legend:
+      '0': '0: Only a wording or rule-text change: no new logic, and no test change.'
+      '1': '1: A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.'
+      '2': '2: New logic, a change reaching across several modules, or a change to
+        an external contract.'
+      '3': '3: A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.01
+      '1': 0.9299999999999999
+      '2': 0.05
+      '3': 0.01
+  observed_at: '2026-10-24T11:05:29+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.13
+    confidence: 0.85
+    legend:
+      '0': '0: Only a wording or rule-text change: no new logic, and no test change.'
+      '1': '1: A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.'
+      '2': '2: New logic, a change reaching across several modules, or a change to
+        an external contract.'
+      '3': '3: A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.01
+      '1': 0.85
+      '2': 0.14
+      '3': 0.0
+  observed_at: '2026-10-24T11:08:57+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/scripts/self-write-digest.py
+  - tests/test_self_write_digest.py
+  changed_lines_approx: 0
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 0
+  body_change_kind: new_logic
+  change_containment: single_module
+  caller_and_dependency_count: 2
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: ファイル変更・テスト追加は未実施で、行数・追加件数の0は見積もりではない。self-write-digest.py:252 は空要素だけを除外し、validate-worker-output.py:362
+    は空要素・「.」を除外して逆斜線も区切りにする。メモリ上で ./ 付きroot、途中に「.」を含むroot、root「.」「./」、逆斜線区切りについて、検証側は包含を認める一方、self_write_set=[]・digest不一致になることを確認した。空文字rootは両方とも拒否し、この条件の食い違いは再現しなかった（validate-worker-output.py:339、self-write-digest.py:240）。_segments
+    の直接呼出しは2か所（self-write-digest.py:239、:262）。正規化後の空要素列を除外する処理も存在するため、_segments 以外のroot処理も確認対象になる（:240）。契約はroot配下の新規作成を含め、dispatch時に存在しないキーを置換後も省くと定める（em-workflow/references/contracts/worker-envelope.md:220、:233）。既存の包含表とplannerのdigest比較はあるが、上記の正規化例は含まれていない（tests/test_self_write_digest.py:643、:912、tests/test_validate_worker_output.py:908）。関連する既存テスト39件はファイル書込みなしで成功した。
+decided_at: '2026-10-24T11:09:30+09:00'
