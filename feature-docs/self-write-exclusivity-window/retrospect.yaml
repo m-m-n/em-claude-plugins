@@ -1,0 +1,29 @@
+feature: self-write-exclusivity-window
+collected_at: "2026-10-24T18:00:00+09:00"
+session_ids: [01a16d0d-44ce-7284-8780-b1f7d494f4a6]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の最終読みでバケット 1 が 0.72（スコア 1.28）だったが、外部契約の変更と複数モジュールへの波及があり、閾値表の判定で full になった"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.02, confidence: 0.95}
+        observed_at: "2026-10-24T16:13:00+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.28, confidence: 0.72}
+        observed_at: "2026-10-24T16:20:00+09:00"
+    pre_survey_estimate:
+      changed_lines_approx: 60
+      new_files_needed: 0
+      change_containment: multiple_modules
+      changes_external_contract: true
+      work_still_required: true
+follow_up_drafts: []
+lessons_candidates:
+  - "事前調査はテスト変更を既存テストの拡張（2 件程度）と見積もったが、実際は新規テストファイル 4 本・4 タスクになった"
