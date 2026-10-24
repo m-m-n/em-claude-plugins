@@ -30,6 +30,18 @@ Covers task0001 Acceptance Criteria
 - AC-7 (FR10; TM-3): the command line contract (TestCliContract,
   TestCliRejections, TestIsolation, TestScriptFileProperties).
 
+Also covers task0001 of feature-docs/self-write-digest-path-normalization
+(allowed-root containment agrees with scope validation):
+
+- AC-1 (TS-1): TestPathNormalizationReproduction.
+- AC-2 (TS-2, TS-3): the later rows of CONTAINMENT_CASES.
+- AC-3 (TS-4): TestNoSegmentRoots.
+- AC-4 (TS-5; TM-1): TestContainmentAgreesWithScopeValidation, which loads
+  `validate-worker-output.py` by file path (only this module does).
+- AC-5 (TS-7): TestNormalizationDocstrings (the document half is in
+  test_self_write_digest_docs.py).
+- AC-6 (TS-6): TestIsolation, the module-loading facility checks.
+
 Every child process carries a timeout, so a hang becomes a failure.
 """
 
@@ -100,6 +112,28 @@ def script_module():
         spec.loader.exec_module(module)
         _LOADED = module
     return _LOADED
+
+
+_VALIDATOR_LOADED = None
+
+
+def validator_module():
+    """`validate-worker-output.py`, loaded by file path on first use.
+
+    It is the reference for allowed-root containment
+    (`path_is_contained_in_root`). Only the tests load it: the script under
+    test never does. Loading is lazy so that importing this test module
+    executes neither script.
+    """
+    global _VALIDATOR_LOADED
+    if _VALIDATOR_LOADED is None:
+        spec = importlib.util.spec_from_file_location(
+            "validate_worker_output_reference", VALIDATOR
+        )
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        _VALIDATOR_LOADED = module
+    return _VALIDATOR_LOADED
 
 
 # ------------------------------------------------------------- builders ----
@@ -662,6 +696,26 @@ CONTAINMENT_CASES = [
     ("a leading dot-dot segment", ["docs/x"], "../docs/x/a.md", False),
     ("dot-dot only inside a file name", ["docs/x"], "docs/x/a..b.md", True),
     ("a root containing a dot-dot segment", ["docs/../x"], "x/a.md", False),
+    # task0001 of self-write-digest-path-normalization (AC-2): the root and
+    # the path are normalized like validate-worker-output.py does it.
+    ("a dot-prefixed root, file directly inside", ["./docs/x"], "docs/x/a.md", True),
+    ("a dot-prefixed root, extending sibling", ["./docs/x"], "docs/x2/a.md", False),
+    ("a dot-prefixed root, the root itself", ["./docs/x"], "docs/x", False),
+    ("a dot-prefixed root, a dot-dot segment", ["./docs/x"], "docs/x/../y/a.md", False),
+    ("a dot segment in the path", ["docs/x"], "docs/./x/a.md", True),
+    ("a backslash-separated root", ["docs\\x"], "docs/x/a.md", True),
+    ("a backslash-separated path", ["docs/x"], "docs\\x\\a.md", True),
+    ("a backslash-separated path with a dot-dot segment", ["docs/x"], "docs\\x\\..\\y.md", False),
+    (
+        "the reproduction pair: a dot-prefixed root with a trailing slash",
+        ["./feature-docs/example/tasks/"],
+        "feature-docs/example/tasks/task0004.md",
+        True,
+    ),
+    ("a dot-only root admits a top-level file", ["."], "a.md", True),
+    ("a dot-only root admits a nested file", ["."], "docs/x/a.md", True),
+    ("a dot-slash-only root admits a top-level file", ["./"], "a.md", True),
+    ("a dot-slash-only root admits a nested file", ["./"], "docs/x/a.md", True),
 ]
 
 
@@ -697,6 +751,238 @@ class TestAllowedRootContainment(unittest.TestCase):
             [],
         )
         self.assertEqual(got, [])
+
+
+class TestNoSegmentRoots(unittest.TestCase):
+    """task0001 of self-write-digest-path-normalization, AC-3: a safe root
+    that keeps no segment (`.`, `./`) contains every safe relative path, but
+    still admits creations only; an empty or absolute root admits nothing."""
+
+    PATHS = ("a.md", "docs/x/a.md")
+
+    def test_ac3_a_no_segment_root_admits_a_created_file(self):
+        for root in (".", "./"):
+            for path in self.PATHS:
+                with self.subTest(root=root, path=path):
+                    got = identify([change(path, "created")], [], [root])
+                    self.assertEqual(got, [path])
+
+    def test_ac3_a_no_segment_root_does_not_admit_a_modified_file(self):
+        for root in (".", "./"):
+            for path in self.PATHS:
+                with self.subTest(root=root, path=path):
+                    got = identify([change(path, "modified")], [], [root])
+                    self.assertEqual(got, [])
+
+    def test_ac3_a_no_segment_root_does_not_admit_a_deleted_file(self):
+        for root in (".", "./"):
+            with self.subTest(root=root):
+                got = identify([change("a.md", "deleted")], [], [root])
+                self.assertEqual(got, [])
+
+    def test_ac3_an_empty_root_admits_nothing(self):
+        self.assertEqual(identify([change("a.md", "created")], [], [""]), [])
+
+    def test_ac3_a_slash_only_root_admits_nothing(self):
+        self.assertEqual(identify([change("a.md", "created")], [], ["/"]), [])
+
+
+# (path, root): every row is judged by `path_is_contained_in_root` of
+# validate-worker-output.py, whatever its result. Both results occur.
+ROOT_CROSS_CHECK = [
+    # dot segments in a root and in a path
+    ("docs/x/a.md", "./docs/x"),
+    ("docs/x/a.md", "docs/./x"),
+    ("docs/x/a.md", "docs/x/."),
+    ("docs/./x/a.md", "docs/x"),
+    ("./docs/x/a.md", "docs/x"),
+    ("./docs/x/a.md", "./docs/x/"),
+    ("docs/x2/a.md", "./docs/x"),
+    ("docs/x", "./docs/x"),
+    # empty segments: doubled and trailing slashes
+    ("docs//x/a.md", "docs/x"),
+    ("docs/x/a.md", "docs//x//"),
+    ("docs/x/a.md", "docs/x/"),
+    ("docs/x/", "docs/x"),
+    ("docs/x/", "docs/x/"),
+    ("docs/x//a.md", "docs//x"),
+    # backslash separators on each side
+    ("docs\\x\\a.md", "docs/x"),
+    ("docs/x/a.md", "docs\\x"),
+    ("docs\\x\\a.md", "docs\\x\\"),
+    ("docs\\x2\\a.md", "docs\\x"),
+    ("docs/x\\a.md", "docs\\x/"),
+    ("\\docs\\x\\a.md", "docs/x"),
+    # a root that keeps no segment
+    ("a.md", "."),
+    ("docs/x/a.md", "."),
+    ("a.md", "./"),
+    ("docs/x/a.md", "./"),
+    ("a.md", "\\"),
+    ("docs/x/a.md", "\\"),
+    ("a.md", ".\\"),
+    ("a.md", "./."),
+    ("docs/x/a.md", ".//"),
+    # a path that keeps no segment
+    (".", "."),
+    ("./", "./"),
+    ("./.", "docs/x"),
+    (".", "docs/x"),
+    ("\\", "docs/x"),
+    # NUL in a path and in a root
+    ("docs/x/a\x00.md", "docs/x"),
+    ("docs/x/a.md", "docs/\x00x"),
+    ("docs/x/a.md", "docs\x00"),
+    ("a.md", "\x00"),
+    ("a\x00.md", "."),
+    # dot-dot segments, written with `/` and with `\`
+    ("docs/x/../y/a.md", "docs/x"),
+    ("docs/x/../y/a.md", "."),
+    ("docs\\x\\..\\y.md", "docs/x"),
+    ("docs/x/..\\y.md", "docs/x"),
+    ("docs/x/a.md", "docs/../x"),
+    ("docs/x/a.md", "docs\\..\\x"),
+    ("../docs/x/a.md", "docs/x"),
+    ("docs/x/a.md", ".."),
+    ("a.md", "../"),
+    ("docs/x/a..b.md", "docs/x"),
+    # an absolute path and an absolute root
+    ("/docs/x/a.md", "docs/x"),
+    ("/docs/x/a.md", "/docs/x"),
+    ("docs/x/a.md", "/docs/x"),
+    ("/a.md", "."),
+    ("a.md", "/"),
+    # the empty-string root
+    ("a.md", ""),
+    ("docs/x/a.md", ""),
+    # plain containment, for reference
+    ("docs/x/a.md", "docs/x"),
+    ("docs/x/sub/deep/a.md", "docs/x"),
+    ("docs/x2/a.md", "docs/x"),
+    ("docs/xa.md", "docs/x"),
+    ("docs/x", "docs/x"),
+    ("docs", "docs/x"),
+    ("feature-docs/example/tasks/task0004.md", "./feature-docs/example/tasks/"),
+]
+
+
+class TestContainmentAgreesWithScopeValidation(unittest.TestCase):
+    """task0001 of self-write-digest-path-normalization, AC-4 (TM-1): a
+    `created` non-target path is a self-write exactly when scope validation
+    (`validate-worker-output.py`) holds it contained in the root, so no path
+    the reference refuses enters the self-write set."""
+
+    def member(self, path, root):
+        return identify([change(path, "created")], [], [root]) == [path]
+
+    def test_ac4_membership_equals_the_reference_for_every_row(self):
+        reference = validator_module().path_is_contained_in_root
+        for path, root in ROOT_CROSS_CHECK:
+            with self.subTest(path=path, root=root):
+                self.assertEqual(
+                    self.member(path, root),
+                    reference(path, root),
+                )
+
+    def test_ac4_the_table_holds_rows_of_both_reference_results(self):
+        # Non-vacuity: a table of one result would pass a constant function.
+        reference = validator_module().path_is_contained_in_root
+        results = {reference(path, root) for path, root in ROOT_CROSS_CHECK}
+        self.assertEqual(results, {True, False})
+
+    def test_ac4_the_table_covers_every_required_shape(self):
+        paths_and_roots = ROOT_CROSS_CHECK
+        shapes = {
+            "dot segment in a root": any(
+                "." in root.replace("\\", "/").split("/") and root != "."
+                for _, root in paths_and_roots
+            ),
+            "dot segment in a path": any(
+                "." in path.replace("\\", "/").split("/") for path, _ in paths_and_roots
+            ),
+            "doubled slash": any(
+                "//" in path or "//" in root for path, root in paths_and_roots
+            ),
+            "trailing slash": any(
+                path.endswith("/") or root.endswith("/") for path, root in paths_and_roots
+            ),
+            "backslash in a path": any("\\" in path for path, _ in paths_and_roots),
+            "backslash in a root": any("\\" in root for _, root in paths_and_roots),
+            "dot-only root": any(root == "." for _, root in paths_and_roots),
+            "dot-slash-only root": any(root == "./" for _, root in paths_and_roots),
+            "backslash-only root": any(root == "\\" for _, root in paths_and_roots),
+            "NUL in a path": any("\x00" in path for path, _ in paths_and_roots),
+            "NUL in a root": any("\x00" in root for _, root in paths_and_roots),
+            "dot-dot written with a slash": any(
+                ".." in path.split("/") or ".." in root.split("/")
+                for path, root in paths_and_roots
+            ),
+            "dot-dot written with a backslash": any(
+                ".." in path.split("\\") or ".." in root.split("\\")
+                for path, root in paths_and_roots
+            ),
+            "absolute path": any(path.startswith("/") for path, _ in paths_and_roots),
+            "absolute root": any(root.startswith("/") for _, root in paths_and_roots),
+            "empty root": any(root == "" for _, root in paths_and_roots),
+        }
+        self.assertEqual([name for name, found in shapes.items() if not found], [])
+
+    def test_ac4_single_root_containment_cases_agree_with_the_reference(self):
+        reference = validator_module().path_is_contained_in_root
+        for label, roots, path, is_member in CONTAINMENT_CASES:
+            if len(roots) != 1:
+                continue
+            with self.subTest(case=label):
+                self.assertEqual(is_member, reference(path, roots[0]))
+
+
+class TestPathNormalizationReproduction(TempDirCase):
+    """task0001 of self-write-digest-path-normalization, AC-1 (TS-1): a
+    worker's own `created` file under a `./`-prefixed allowed write root is a
+    self-write, so the return-time digest equals the dispatch-time one."""
+
+    ROOT = "./feature-docs/example/tasks/"
+    CREATED = "feature-docs/example/tasks/task0004.md"
+
+    def scenario(self):
+        dispatch = {
+            SPEC: fake("spec"),
+            IMPLEMENTATION: fake("implementation v1"),
+        }
+        current = dict(dispatch)
+        current[self.CREATED] = fake("task0004 v1")
+        return Scenario(
+            dispatch,
+            current,
+            [change(self.CREATED, "created")],
+            [],
+            [self.ROOT],
+        )
+
+    def test_ac1_a_created_file_under_a_dot_prefixed_root_is_a_self_write(self):
+        scenario = self.scenario()
+        proc = self.cli(scenario.document())
+        self.assert_succeeded(proc)
+        output = decode_output(proc)
+        self.assertIn(self.CREATED, output["self_write_set"])
+        self.assertEqual(r1_digest(output["digest_source"]), scenario.dispatch_digest)
+
+    def test_ac1_the_current_digest_differs_so_the_check_is_not_vacuous(self):
+        scenario = self.scenario()
+        self.assertNotIn(self.CREATED, scenario.dispatch["digest_inputs"])
+        self.assertIn(self.CREATED, scenario.current["digest_inputs"])
+        self.assertNotEqual(scenario.current_digest, scenario.dispatch_digest)
+
+    def test_ac1_a_root_that_does_not_cover_the_file_leaves_the_result_stale(self):
+        scenario = self.scenario()
+        scenario.roots = ["./feature-docs/example/other/"]
+        proc = self.cli(scenario.document())
+        self.assert_succeeded(proc)
+        output = decode_output(proc)
+        self.assertEqual(output["self_write_set"], [])
+        self.assertNotEqual(
+            r1_digest(output["digest_source"]), scenario.dispatch_digest
+        )
 
 
 class TestObservedChangesOnly(unittest.TestCase):
@@ -1818,6 +2104,18 @@ def open_modes(source):
     return modes
 
 
+LOADING_MODULES = frozenset({"importlib", "runpy", "imp", "pkgutil", "zipimport"})
+
+
+def loading_facilities(source):
+    """The module-loading facilities `source` imports or calls."""
+    found = set(imported_modules(source) & LOADING_MODULES)
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.Name) and node.id == "__import__":
+            found.add("__import__")
+    return found
+
+
 def file_writing_calls(source):
     return {
         node.attr
@@ -1845,6 +2143,21 @@ class TestIsolation(unittest.TestCase):
 
     def test_ac7_the_script_imports_no_hashing_module(self):
         self.assertEqual(imported_modules(self.source) & HASHING_MODULES, set())
+
+    def test_ac6_the_script_imports_no_module_loading_facility(self):
+        # task0001 of self-write-digest-path-normalization, AC-6 (NFR1): the
+        # script cannot load validate-worker-output.py at runtime.
+        self.assertEqual(loading_facilities(self.source), set())
+
+    def test_ac6_forged_sources_trip_the_module_loading_check(self):
+        self.assertEqual(
+            loading_facilities(
+                "import importlib.util\nfrom runpy import run_path\n"
+                "import pkgutil\n__import__('x')\n"
+            ),
+            {"importlib", "runpy", "pkgutil", "__import__"},
+        )
+        self.assertEqual(loading_facilities("import json\nimport sys\n"), set())
 
     def test_ac7_the_script_only_opens_files_for_binary_reading(self):
         self.assertEqual(open_modes(self.source), {"rb"})
@@ -1941,6 +2254,61 @@ class TestScriptFileProperties(unittest.TestCase):
     def test_the_script_does_not_compute_a_digest_in_its_docstring_contract(self):
         normalised = " ".join(self.docstring.split())
         self.assertIn("computes no", normalised)
+
+
+class TestNormalizationDocstrings(unittest.TestCase):
+    """task0001 of self-write-digest-path-normalization, AC-5: the module
+    docstring (its `allowed_write_roots` description) and the docstrings of
+    `_segments` and `_check_allowed_roots` state the normalization the
+    allowed-root containment applies."""
+
+    SEPARATOR = "`\\` is equivalent to `/`"
+    DROPPED = "empty and `.` segments are dropped"
+    UNSAFE = "empty, starts with `/`, contains NUL or has a `..` segment"
+    NEVER = r"never contains.{0,40}never contained"
+    NO_SEGMENTS = r"no segments left.{0,80}contains every relative path"
+
+    @classmethod
+    def setUpClass(cls):
+        tree = ast.parse(SCRIPT.read_text(encoding="utf-8"))
+        cls.module_doc = " ".join((ast.get_docstring(tree) or "").split())
+        cls.function_docs = {
+            node.name: " ".join((ast.get_docstring(node) or "").split())
+            for node in tree.body
+            if isinstance(node, ast.FunctionDef)
+        }
+
+    def assert_states_separator_and_dropped(self, text):
+        self.assertIn(self.SEPARATOR, text)
+        self.assertIn(self.DROPPED, text)
+
+    def assert_states_whole_rule(self, text):
+        self.assert_states_separator_and_dropped(text)
+        self.assertIn(self.UNSAFE, text)
+        self.assertRegex(text, self.NEVER)
+        self.assertRegex(text, self.NO_SEGMENTS)
+
+    def test_ac5_the_module_docstring_states_the_normalization(self):
+        self.assert_states_whole_rule(self.module_doc)
+
+    def test_ac5_the_module_docstring_keeps_the_comparison_lexical(self):
+        self.assertIn("compared lexically, segment by segment", self.module_doc)
+        self.assertRegex(self.module_doc, r"no path is resolved against the filesystem")
+
+    def test_ac5_segments_states_the_separator_and_the_dropped_segments(self):
+        self.assert_states_separator_and_dropped(self.function_docs["_segments"])
+
+    def test_ac5_check_allowed_roots_states_the_normalization(self):
+        self.assert_states_whole_rule(self.function_docs["_check_allowed_roots"])
+
+    def test_ac5_the_docstring_probe_fires_on_text_without_the_rule(self):
+        # Control: the old wording states none of it.
+        old = (
+            "the envelope's top-level list of strings. Roots and paths are "
+            "compared lexically, segment by segment."
+        )
+        with self.assertRaises(AssertionError):
+            self.assert_states_whole_rule(old)
 
 
 if __name__ == "__main__":

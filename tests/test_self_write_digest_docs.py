@@ -32,6 +32,11 @@ Covers task0002 Acceptance Criteria
   structural keys of the `digest_source` example are unchanged, and the
   headings pinned by IMPLEMENTATION.md still exist.
 
+Also covers AC-5 of self-write-digest-path-normalization/task0001: the
+allowed-write-root containment bullet of "Self-write set" states the path
+normalization (`\\` as a separator, dropped empty and `.` segments, the
+unsafe-side rule, a root with no segments left).
+
 All assertions run on whitespace-normalized, section-sliced text; none depends
 on line-break positions and none compares a whole document. Each absence probe
 has a forged-text control showing that the probe fires. The script
@@ -341,6 +346,35 @@ def _bullet(section_text, start_prefix):
     return _normalize_ws(" ".join(lines[start:end]))
 
 
+# Statements the allowed-write-root containment bullet makes about how the
+# root and the path are normalized (self-write-digest-path-normalization,
+# task0001, AC-5). Each is (description, regex over whitespace-normalized
+# text).
+CONTAINMENT_STATEMENTS = (
+    ("`\\` is a separator equivalent to `/`", r"`\\` is equivalent to `/` as a separator"),
+    ("empty and `.` segments are dropped", r"empty and `\.` segments are dropped"),
+    (
+        "a root with no segments left contains every relative path",
+        r"root with no segments left .{0,80}contains every relative path",
+    ),
+    (
+        "an empty, absolute, NUL-holding or `..`-holding root or path is never contained",
+        r"empty, starts with `/`, contains NUL or has a `\.\.` segment .{0,60}"
+        r"never contains.{0,40}never contained",
+    ),
+)
+
+
+def _missing_containment_statements(bullet_text):
+    """Descriptions of the normalization statements `bullet_text` lacks."""
+    flat = _normalize_ws(bullet_text)
+    return [
+        description
+        for description, pattern in CONTAINMENT_STATEMENTS
+        if not re.search(pattern, flat)
+    ]
+
+
 # ---------------------------------------------------------------------------
 # AC-1: Rule R1 states the self-write rule once
 # ---------------------------------------------------------------------------
@@ -441,6 +475,47 @@ class TestRuleR1SelfWriteRule(unittest.TestCase):
         self.assertRegex(block, r"compares path segments, never string prefixes")
         self.assertRegex(block, r"absolute path, or a path with a `\.\.` segment, is never a member")
         self.assertRegex(block, r"`regenerate` target is decided after every other path")
+
+    def test_ac5_the_containment_bullet_states_the_path_normalization(self):
+        # self-write-digest-path-normalization task0001, AC-5 (FR3; TS-7).
+        bullet = _bullet(self.blocks["Self-write set"], "- Containment in an allowed write root")
+        self.assertEqual(_missing_containment_statements(bullet), [])
+
+    def test_ac5_each_normalization_statement_is_asserted_inside_the_block(self):
+        block = self.flat["Self-write set"]
+        for description, pattern in CONTAINMENT_STATEMENTS:
+            with self.subTest(statement=description):
+                self.assertRegex(block, pattern)
+
+    def test_ac5_the_containment_bullet_keeps_its_existing_content(self):
+        bullet = _bullet(self.blocks["Self-write set"], "- Containment in an allowed write root")
+        self.assertIn("compares path segments, never string prefixes", bullet)
+        self.assertIn("`feature-docs/x2/a.md` is not inside `feature-docs/x`", bullet)
+        self.assertRegex(bullet, r"with or without a trailing slash names the same directory")
+        self.assertRegex(bullet, r"a path equal to the root itself is not inside it")
+
+    def test_ac5_the_absolute_or_dot_dot_bullet_stays_a_separate_bullet(self):
+        block = self.flat["Self-write set"]
+        self.assertIn("An absolute path, or a path with a `..` segment, is never a member", block)
+        bullet = _bullet(self.blocks["Self-write set"], "- An absolute path")
+        self.assertEqual(bullet, "- An absolute path, or a path with a `..` segment, is never a member.")
+
+    def test_ac5_the_normalization_is_stated_once_in_the_document(self):
+        flat = _normalize_ws(self.text)
+        self.assertEqual(flat.count("is equivalent to `/` as a separator"), 1)
+        self.assertEqual(flat.count("segments are dropped"), 1)
+
+    def test_ac5_the_probe_fires_on_the_bullet_without_the_normalization(self):
+        # Control: the bullet as it read before the normalization was added.
+        old = (
+            "- Containment in an allowed write root compares path segments, never\n"
+            "  string prefixes (`feature-docs/x2/a.md` is not inside `feature-docs/x`);\n"
+            "  a root written with or without a trailing slash names the same\n"
+            "  directory; a path equal to the root itself is not inside it.\n"
+        )
+        self.assertEqual(
+            len(_missing_containment_statements(old)), len(CONTAINMENT_STATEMENTS)
+        )
 
     def test_ac1_substitution_takes_the_dispatch_time_value_or_an_absent_key(self):
         block = self.flat["Substitution"]
