@@ -1,7 +1,7 @@
 schema_version: 1
 feature: self-write-digest-path-normalization
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 68f508cfb3709252a00566d1def34f1143dd1dcb
 last_input_digest: sha256:425e1dd1cefb7d1c6a247f70757aab73d89a905aad94b20989912c121f5698a3
