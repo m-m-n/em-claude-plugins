@@ -1,0 +1,21 @@
+schema_version: 1
+feature: rework-recheck-before-patch-write
+phase: create-spec
+status: in_progress
+generation: 1
+base_revision: 1ece7dfbdbd323e339cb793a6e16197c550f92a0
+last_input_digest: sha256:0e5a40066c9a9491ed9b576d43929abb45a39f84376c297dc94e9d9f0e303ddf
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:0e5a40066c9a9491ed9b576d43929abb45a39f84376c297dc94e9d9f0e303ddf
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
