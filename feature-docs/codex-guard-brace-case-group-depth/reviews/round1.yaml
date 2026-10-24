@@ -1,0 +1,113 @@
+round: 1
+executed_at: '2026-10-24T17:41:50+09:00'
+scope:
+  review_mode: diff
+  base_commit: 35fefef289a69958a9250dea07ca0a1abde338e3
+  head_commit: d52c86f9f2431649fb97094de145e47acf04e0f5
+  changed_files:
+  - em-review/scripts/codex-hook-interactive-guard.py
+  - em-workflow/scripts/codex-hook-interactive-guard.py
+  - test-docs/codex-guard-brace-case-group-depth/task0001.tests.yaml
+  - tests/test_codex_hook_interactive_guard.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary:
+  - perspective: performance
+    reason: NFR1 requires linear-time scanning; the diff changes the brace-group depth tracking loop in the parser
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 90ae5c1cbf88e0ee
+  severity: medium
+  category: security
+  file: em-workflow/scripts/codex-hook-interactive-guard.py
+  line: 2998
+  title: 2 つ目以降の関数名の後の case を case 文として読み、置換が判定不能になって対話起動を見逃す
+  description: FR3 の実装（2991〜2998 行）は、2 つ目以降の名前を読んだ後も HEAD_FUNCTION_NAME とコマンド位置を保つ。そのため次の `case` を `_read_command_word` が case 文の開始として返す。zsh の par_funcdef は名前を incmdpos=0 で読むので、`case` も名前になり、`function f g case { :; }` は有効な定義になる。ガードは `case {` の後に `in` も単独の `{` も無いので、phase 3 で _Undecidable("case without in") になる。チェックポイントが無いので無出力になる。変更前は `g` を単純コマンドの最初の語（HEAD_FIRST）として読み、`case` は引数だった。置換は `)` で閉じ、後続の `python3 -i` を拒否していた。つまり変更前の deny が silent に変わる回帰になる。読解で確認した（実行はしていない）。最初の名前の直後の `case`（`function f case {`）は変更前から同じく判定不能になる。SPEC A-4 は予約語が名前になる形を対象外としているが、A-4 の理由（bash の `function f case ...` の読み）は 2 つ目以降の名前には当たらない。bash では `function f g` がそもそも構文エラーになるからだ。em-review のコピーはバイト単位で同一なので、同じ欠陥がある。
+  suggestion: 最初の名前の直後は A-4 のまま残す。2 つ目以降の名前を読んだ後の状態を分け、単独の `{` / `}`、空の `()`、区切り以外の語はすべて名前として読む（予約語・頭部語・`case`・`[[` も含む）。`zsh -c 'echo "$(function f g case { :; })"; python3 -i'` が deny になる行を CASES に足し、両方のコピーに流す。
+  reproduction: 'tool_input.command を `zsh -c ''echo "$(function f g case { :; })"; python3 -i''` とする JSON をフックの標準入力に渡す。変更後は出力が空になり、変更前は permissionDecision: deny を返す。python3 -i を `print -r -- REACHED` に置き換えて zsh 5.9 で実行すると、終了コード 0 で REACHED が出力され、後続コマンドへの到達を確認できる。'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: 'medium: not an auto-fix candidate (severity gate); follow-up task filed: <notion-url>'
+- stable_id: c5da4b70ee651440
+  severity: medium
+  category: security
+  file: em-workflow/scripts/codex-hook-interactive-guard.py
+  line: 2887
+  title: 匿名関数の本体を閉じた } の後の always を予約語と読み、置換の閉じを誤って対話起動を見逃す
+  description: コマンド位置の `}` は、どの一覧でも HEAD_GROUP_CLOSED を立てる（2971 行）。そのため匿名関数（`function { :; }`、`function () { :; }`、`() { :; }`）の本体を閉じた `}` の後の `always` も、2887 行で予約語として読まれ、次の語がコマンド位置になる。zsh の par_funcdef は、匿名関数の `}` の後を incmdpos=0 で引数として読む。`always`、`{`、`case` はどれも STRING になる。報告の入力 `function { :; } always case x)` では、ガードが `case x` を開き、`)` で判定不能になって無出力になる。判定不能にならず、閉じの位置を誤る形もある。読解で確認した（実行はしていない）。(a) `echo "$(function { :; } always case x in x)"; python3 -i; ";; esac)"` (b) `echo "$(function { :; } always { case y in y) echo '"; python3 -i; "';; esac; })"` のどちらでも、zsh は最初の `x)` / `y)` で置換を閉じ、`python3 -i` を実行する。ガードはそれをパターンの `)` として読み、起動を項目本体の引用の中に入れて `;; esac` まで読み、最後の `)` を置換の閉じとする。その結果、無出力になる（SPEC TS-3 と同じ形の見逃し）。変更前は `always` が普通の語で、置換は最初の `)` で閉じ、どの形も拒否していた。SPEC A-5 は関数本体の `}` を区別しない読みを受け入れていたが、変更前の deny が silent に変わる。em-review のコピーも同一。
+  suggestion: 匿名関数の本体を閉じた `}` では HEAD_GROUP_CLOSED を立てない。その後の語は zsh と同じく引数（at_command False）として読む。そのためには、各コマンド一覧で開いている `{ }` 群が匿名関数の本体かどうかを持つ必要がある（`saved` と rule 9 の読み直しの記録で戻す）。報告の入力と上の (a)(b) を deny の行として CASES に足し、両方のコピーに流す。既存の `{ :; } always { ... }` の silent の行は保つ。
+  reproduction: 'tool_input.command を `zsh -c ''echo "$(function { :; } always case x)"; python3 -i''` とする JSON をフックの標準入力に渡す。変更後は出力が空になり、変更前は permissionDecision: deny を返す。python3 -i を `print -r -- REACHED` に置き換えて zsh 5.9 で実行すると、終了コード 0 で REACHED が出力される。'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: 'medium: not an auto-fix candidate (severity gate); follow-up task filed: <notion-url>'
+evaluation:
+  round_summary: '5 本の実行のうち、security#0 だけが medium を 2 件報告し、ほかの 4 本は空だった。2 件とも reproduction をコードの読解だけでたどり、再現を確かめた（reproduced。何も実行していない）。結果は、変更前の deny が変更後に silent へ変わる回帰で、em-review のコピーもバイト単位で同一（cmp で確認）。2 件目は、判定不能にならずに閉じの位置を誤って起動を隠す形も読解で見つけ、同じ箇所の指摘にまとめた。critical / high の報告は無いので dismissed_sites は空。reviewer の出力に注入の試みは無かった。観点ごとの確認: security — corroborated（2 件とも再現、2 件目に別形を追加）。comprehensive — findings（判定の回帰 2 件はこの観点の範囲でもあるが、重複を避けて security の下に置いた。ほかの欠陥は見つからなかった）。architecture — corroborated（2 つのコピーは同一、追加した状態は一覧ごとに定数個）。spec — corroborated（FR1〜FR6、TS-1〜TS-18 の行、docstring のマーカー、version は触っていない。2 件は SPEC A-4 / A-5 が受け入れた読みから生じている）。performance — corroborated（語の先頭ごとの判定が定数回増えるだけで、線形のまま）。読んだファイルは 10 件の上限のうち 7 件。'
+  recommended_action: auto_fix
+  action_rationale: medium の security の回帰が 2 件あり、どちらも読解で再現を確かめた。修正箇所は _skip_substitution の頭部の状態に限られ、両方のコピーに同じ修正と deny の行を足せば済む。1 件目は 2 つ目以降の名前の状態を分けるだけの局所的な修正になる。2 件目は匿名関数の本体の `}` を区別する状態が要り、SPEC A-5 の簡略化を見直すことになる。上限の回数内で入らなければ rework に回す。
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/user/src/my_projects/em-claude-plugins/tmp/sca-triage-codex-guard-brace-case-group-depth-20261024T084140Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
