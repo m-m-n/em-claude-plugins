@@ -79,6 +79,12 @@
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/hooks/cross-repo-write-guard.py",
             "timeout": 15,
             "statusMessage": "リポジトリの外への書き込みでないか検証中..."
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/hooks/doc-redaction-guard.py",
+            "timeout": 15,
+            "statusMessage": "ドキュメントに Notion の URL や絶対パスが無いか検証中..."
           }
         ]
       },

@@ -129,6 +129,13 @@ rather than acting on it.
 Every worker prompt in the 2.3 applicability table follows this section by
 reference; none restates it.
 
+## Doc Redaction
+
+Every file a worker writes, and every field of its result, carries no Notion
+URL and no absolute path under the user's home directory, per
+`references/doc-redaction.md`. Every worker prompt in the 2.3 applicability
+table follows this section by reference.
+
 ## Rule R1: `input_digest` and staleness detection
 
 Input staleness is judged by **`input_digest` equality**, never by

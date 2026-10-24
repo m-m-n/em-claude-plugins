@@ -176,6 +176,13 @@ when `/em-workflow:develop` was invoked, stored **verbatim** as a YAML block
 scalar: no summarizing, normalizing, or truncation is applied, and no size
 limit exists — a very long description is stored whole.
 
+**Redaction before storing.** The replacements of
+`references/doc-redaction.md` (Notion URL, absolute path under the user's
+home directory) are applied to the description before it is stored. They
+are the only change made to it; the stored value is the description after
+those replacements, and the post-write verification below compares against
+that value.
+
 **Verbatimness constrains the value, not the serialization.** The rule
 above fixes what the VALUE must be; it says nothing about how the block
 scalar is serialized. Every line of the value — including a blank line, and
