@@ -122,7 +122,7 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: failed
+    status: in_progress
     branch: em-workflow/codex-guard-funcname-anon-always/task0001
     notes: 'batch retry-consumed: 1. First attempt: merge-task.sh ran outside the
       task worktree (cwd = main working tree, HEAD = main), so commit cc2f0fa6 "merge:
