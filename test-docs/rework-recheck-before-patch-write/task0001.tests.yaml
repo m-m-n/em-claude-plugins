@@ -1,0 +1,64 @@
+task_id: task0001
+# Run before any edit, in the task worktree (the working directory was reset
+# before the command): python3 -m unittest discover -s tests ran 11495 tests,
+# OK, 1 skipped, no failure.
+baseline_failures: []
+# The project test command re-executed in full in the task worktree after the
+# implementation and after this record was written: 11529 tests (the 11495 of
+# the baseline plus the 34 this task adds), OK, 1 skipped, no failure. The
+# record is itself checked by tests.test_tests_yaml_id_resolution: no failure.
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_recheck_dispatch_sites_docs.TestReworkSection10ApplicationOrder.test_real_paragraph_has_no_order_defect
+      - tests.test_recheck_dispatch_sites_docs.TestReworkSection10ApplicationOrder.test_recheck_follows_the_step_3_validation_token
+      - tests.test_recheck_dispatch_sites_docs.TestReworkSection10ApplicationOrder.test_recheck_follows_the_end_of_the_rule_1_compare_and_stale_sentence
+      - tests.test_recheck_dispatch_sites_docs.TestReworkSection10ApplicationOrder.test_at_least_one_application_token_is_present
+      - tests.test_recheck_dispatch_sites_docs.TestReworkSection10ApplicationOrder.test_every_application_token_present_follows_the_recheck
+      - tests.test_recheck_dispatch_sites_docs.TestReworkSection10ApplicationOrder.test_validation_sentence_names_rules_1_to_14_and_the_rule_1_comparison
+      - tests.test_recheck_dispatch_sites_docs.TestReworkSection10ApplicationOrder.test_validation_sentence_no_longer_says_that_step_3_applies_the_patch
+      - tests.test_recheck_dispatch_sites_docs.TestReworkSection10ApplicationOrder.test_application_tokens_never_match_the_validation_wording
+    red_confirmed: true
+    red_reason: "Run against the unedited document (new tests added, paragraph not yet reworded): test_real_paragraph_has_no_order_defect failed with 'Lists differ: [application-order: validates and applies comes before the recheck] != []' because the base paragraph says 'Step 3 validates and applies' before the recheck; test_every_application_token_present_follows_the_recheck failed for the token 'validates and applies'; test_validation_sentence_no_longer_says_that_step_3_applies_the_patch failed with 'True is not false' on the sentence 'Step 3 validates and applies the patch against ...'; test_validation_sentence_names_rules_1_to_14_and_the_rule_1_comparison failed for the token 'application rules 1-14'. test_recheck_follows_the_step_3_validation_token, test_recheck_follows_the_end_of_the_rule_1_compare_and_stale_sentence and test_at_least_one_application_token_is_present already passed before the edit (the base paragraph already had the recheck after its validation sentence and held the 'validates and applies' token); test_application_tokens_never_match_the_validation_wording pins that the token set stays clear of the validation wording and is green by design."
+  AC-2:
+    tests:
+      - tests.test_recheck_dispatch_sites_docs.TestReworkSection10ApplicationOrder.test_application_sentence_follows_the_recheck_sentence
+      - tests.test_recheck_dispatch_sites_docs.TestReworkSection10ApplicationOrder.test_application_sentence_names_the_workflow_yaml_write_and_the_commit
+      - tests.test_recheck_dispatch_sites_docs.TestReworkSection10ApplicationOrder.test_application_sentence_without_it_makes_the_statement_probe_fire
+      - tests.test_recheck_dispatch_sites_docs.TestReworkSection10ApplicationOrder.test_application_sentence_before_the_recheck_makes_the_statement_probe_fire
+      - tests.test_recheck_dispatch_sites_docs.TestReworkSection10ApplicationOrder.test_application_sentence_without_the_commit_makes_the_statement_probe_fire
+      - tests.test_recheck_dispatch_sites_docs.TestReworkSection10ApplicationOrder.test_statement_probe_on_text_without_the_recheck_fires_as_missing
+    red_confirmed: true
+    red_reason: "Run against the unedited document: test_application_sentence_follows_the_recheck_sentence failed with 'Lists differ: [statement: no sentence contains all of (applied only after a passing recheck, stale, workflow.yaml, commit)] != []' because the base paragraph has no sentence that says when the patch is applied; the three forged-copy tests that derive their text from that sentence (without it, before the recheck, without the commit) and test_application_sentence_names_the_workflow_yaml_write_and_the_commit failed with 'no sentence contains all of ...' for the same reason. test_statement_probe_on_text_without_the_recheck_fires_as_missing passed before the edit: it feeds the probe the kept-sentence text, which never held the recheck."
+  AC-3:
+    tests:
+      - tests.test_recheck_dispatch_sites_docs.TestReworkSection10ApplicationOrder.test_base_revision_paragraph_makes_the_order_probe_fire
+      - tests.test_recheck_dispatch_sites_docs.TestReworkSection10ApplicationOrder.test_base_revision_paragraph_holds_the_recheck_after_validates_and_applies
+      - tests.test_recheck_dispatch_sites_docs.TestReworkSection10ApplicationOrder.test_base_revision_paragraph_passes_the_other_site_checks
+      - tests.test_recheck_dispatch_sites_docs.TestReworkSection10ApplicationOrder.test_application_sentence_moved_before_the_recheck_makes_the_order_probe_fire
+      - tests.test_recheck_dispatch_sites_docs.TestReworkSection10ApplicationOrder.test_application_sentence_removed_makes_the_order_probe_fire
+      - tests.test_recheck_dispatch_sites_docs.TestReworkSection10ApplicationOrder.test_recheck_moved_before_the_validation_makes_the_order_probe_fire
+      - tests.test_recheck_dispatch_sites_docs.TestReworkSection10ApplicationOrder.test_text_without_the_recheck_makes_the_order_probe_fire_as_missing
+    red_confirmed: true
+    red_reason: "Run against the unedited document: the control derived from the real paragraph, test_application_sentence_moved_before_the_recheck_makes_the_order_probe_fire (and its removed-sentence sibling), failed with 'no sentence contains all of (applied only after a passing recheck, stale, workflow.yaml, commit)' because the real paragraph had no application sentence to move or remove. test_base_revision_paragraph_makes_the_order_probe_fire and the other base-revision tests passed from the start: the base-revision control is a verbatim frozen copy of the paragraph as it stood at the feature base, so it fires the probe (exactly one application-order defect for 'validates and applies') independent of the document edit; it is the control for the 'recheck after Step 3 validates and applies' ordering."
+  AC-4:
+    tests:
+      - tests.test_recheck_dispatch_sites_docs.TestReworkSection10RecheckReference
+      - tests.test_recheck_dispatch_sites_docs.TestSitesDoNotRestateTheRecheck
+      - tests.test_self_write_digest_wiring.TestAC4ReworkSection10
+    red_confirmed: true
+    red_reason: "After the paragraph was reworded and before the rework site's kept-sentence text was updated, test_site_keeps_every_pre_change_sentence of TestReworkSection10RecheckReference failed (sentence 'Step 3 validates and applies the patch against the digest_so...' is no longer in the real paragraph), which is the failure this criterion removes by updating the kept-sentence text. After the update the class passes, including test_pre_change_text_makes_the_probe_fire_as_missing (the kept-sentence text yields exactly the 'missing' code) and test_pre_change_sites_are_quiet in TestSitesDoNotRestateTheRecheck (quiet under the no-restatement probes). TestAC4ReworkSection10 of the existing wiring suite reads the same paragraph unchanged and stays green; it was not red."
+  AC-5:
+    tests:
+      - tests.test_recheck_dispatch_sites_docs.TestReworkSection10StepNumbering
+      - tests.test_recheck_dispatch_sites_docs.TestReworkSection10ApplicationOrder.test_paragraph_adds_no_numbered_step
+      - tests.test_rework_synthesis_contract.TestReworkSynthesisSSOTStateTransition.test_states_review_sourced_ordering
+    red_confirmed: false
+    red_reason: "The behavior pre-existed: section 10's review-sourced steps 1-4 and the two citations of their numbers are not changed by this task, so the step-numbering probe is a guard that passed on the real document from the start and no red state occurred for this change. The forged-list controls in TestReworkSection10StepNumbering (a step inserted between steps 3 and 4, a missing step, a changed citation) show that the probe fires, but they are green tests by design. The existing tests.test_rework_synthesis_contract test_states_review_sourced_ordering reads step 3's wording and stays green."
+  AC-6:
+    tests:
+      - tests.test_recheck_dispatch_sites_docs
+      - tests.test_return_time_recheck_docs
+    red_confirmed: false
+    red_reason: "The criterion states conformance (standard library only, unittest naming, whitespace-insensitive token positions, unchanged design-step-5 and create-plan-section-8 site data, existing test files unchanged, suite green, only the files in Scope touched). The suite was green at baseline and stays green, so no red state occurred for it; the existing tests.test_recheck_dispatch_sites_docs and tests.test_return_time_recheck_docs detect a changed site check or a broken document contract, and the file scope was checked by reading git diff --stat of the branch."

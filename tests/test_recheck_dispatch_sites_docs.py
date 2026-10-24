@@ -33,6 +33,24 @@ forged pre-change texts below are the sites' wording as it stood before this
 task. The tests assert the sites' citation text only; they never assert that
 `worker-envelope.md` already contains the recheck (that text lands in another
 worktree).
+
+Document tests for rework-recheck-before-patch-write task0001
+(feature-docs/rework-recheck-before-patch-write/tasks/task0001.md). In rework
+section 10's "Return-time digest" paragraph the return-time recheck sits after
+step 3's validation and before step 3's application of the rework patch:
+
+- the order probe (`_application_order_defects`): the recheck follows the
+  "step 3 validates" token and the rule-1 compare/stale sentence, and every
+  application token (`APPLICATION_TOKENS`) follows the recheck. Its forged
+  controls are `BASE_REVISION_RW_RETURN_TIME`, the paragraph as it stood at the
+  feature's base (the recheck follows "Step 3 validates and applies"), and the
+  real paragraph with the application sentence moved before the recheck;
+- the application-sentence probe (`_application_statement_defects`): one
+  sentence after the recheck sentence says the patch is applied only after a
+  passing recheck and names the workflow.yaml write and the commit;
+- the step-numbering probe (`_step_numbering_defects`): section 10's
+  review-sourced steps 1-4 keep their numbers and meaning, and the two
+  citations of those numbers still exist.
 """
 
 import re
@@ -45,6 +63,7 @@ PLUGIN_ROOT = REPO_ROOT / "em-workflow"
 DEVELOP_SKILL_PATH = PLUGIN_ROOT / "skills" / "develop" / "SKILL.md"
 CREATE_PLAN_PATH = PLUGIN_ROOT / "references" / "phases" / "create-plan-phase.md"
 REWORK_SYNTHESIS_PATH = PLUGIN_ROOT / "references" / "rework-task-synthesis.md"
+REVIEW_PHASE_PATH = PLUGIN_ROOT / "references" / "review-phase.md"
 
 SCRIPT_TOKEN = "scripts/self-write-digest.py"
 RECHECK_TOKEN = "return-time recheck"
@@ -341,6 +360,7 @@ def _calculation_after_recheck_hits(text):
 _DEVELOP = _read(DEVELOP_SKILL_PATH)
 _CREATE_PLAN = _read(CREATE_PLAN_PATH)
 _REWORK = _read(REWORK_SYNTHESIS_PATH)
+_REVIEW_PHASE = _read(REVIEW_PHASE_PATH)
 
 DESIGN_BRANCH = _section(_DEVELOP, "design ステップ分岐", 3)
 DESIGN_STEP_5 = _numbered_item(DESIGN_BRANCH, 5)
@@ -368,7 +388,10 @@ SITE_SLICES = (
 )
 
 # The sites' wording as it stood before this task: forged controls on which
-# the recheck probe must fire, and the sentences the task keeps.
+# the recheck probe must fire, and the sentences the task keeps. The rework
+# site's text is the paragraph without the recheck sentence and without the
+# sentence that says when the patch is applied; its validation sentence follows
+# the rewording of rework-recheck-before-patch-write task0001.
 PRE_CHANGE_DESIGN_STEP_5 = """5. 完了後、scope verification（layer 4。
    `references/phases/create-spec-phase.md` の「Scope verification」）を行う。
    通ったら、オーケストレーターが現在の digest_source を dispatch 時と同じ
@@ -421,13 +444,13 @@ the scope verification (layer 4) of rework-planner's result passes, the
 orchestrator recomputes the current digest_source and runs
 `scripts/self-write-digest.py` (operation `identify_and_substitute`), as
 `references/contracts/worker-envelope.md`, Rule R1, "Recomputation and
-comparison timing" states. Step 3 validates and applies the patch against the
-digest_source the script returned: application rule 1 of
-`references/workflow-patch.md` compares that substituted digest_source with the
-dispatch-time `input_digest`, and a mismatch, or a script exit other than `0`,
-makes the result stale. The orchestrator records `self_write_set` in the same
-phase-state write as the `Layer 5 recording` of `written_artifacts` into
-`phase-state/rework.yaml`."""
+comparison timing" states. Step 3 validates the patch against the
+digest_source the script returned, by application rules 1-14 of
+`references/workflow-patch.md`: rule 1 compares that substituted digest_source
+with the dispatch-time `input_digest`, and a mismatch, or a script exit other
+than `0`, makes the result stale. The orchestrator records `self_write_set` in
+the same phase-state write as the `Layer 5 recording` of `written_artifacts`
+into `phase-state/rework.yaml`."""
 
 DESIGN_SITE = _Site(
     label="design step 5",
@@ -690,6 +713,367 @@ class TestSitesDoNotRestateTheRecheck(unittest.TestCase):
             'Rule R1, "Recomputation and comparison timing" states.'
         )
         self.assertEqual(_restatement_hits(citing), [])
+
+
+# ---------------------------------------------------------------------------
+# Rework section 10: the recheck sits between step 3's validation and step 3's
+# application of the patch (rework-recheck-before-patch-write task0001)
+# ---------------------------------------------------------------------------
+
+VALIDATION_TOKEN = "step 3 validates"
+# The first mention of the patch application, as one named set: the verb
+# wording with which the base revision says step 3 applies the patch, rule 15's
+# write to workflow.yaml and rule 16's commits. None of them may match the
+# validation wording ("application rule 1", "application rules 1-14"); on the
+# squashed text "rules1-14" holds neither "rule15" nor "rule16".
+APPLICATION_TOKENS = ("validates and applies", "rule 15", "rule 16")
+# The sentence after the recheck that says when the patch is applied.
+APPLIED_ONLY_AFTER_TOKENS = (
+    "applied only after a passing recheck",
+    "stale",
+    "workflow.yaml",
+    "commit",
+)
+
+# The "Return-time digest" paragraph exactly as it stood at this feature's base
+# (copied verbatim before the document was edited): the recheck follows "Step 3
+# validates and applies". Forged control for the order probe.
+BASE_REVISION_RW_RETURN_TIME = """**Return-time digest (steps 2 and 3, all four routes)**: the rework-planner
+run's entry in `phase-state/rework.yaml` carries `dispatch_digest_inputs`, the
+per-path `digest_inputs` map of the dispatch's digest_source
+(`references/phase-state.md` defines the field and when it is written). After
+the scope verification (layer 4) of rework-planner's result passes, the
+orchestrator recomputes the current digest_source and runs
+`scripts/self-write-digest.py` (operation `identify_and_substitute`), as
+`references/contracts/worker-envelope.md`, Rule R1, "Recomputation and
+comparison timing" states. Step 3 validates and applies the patch against the
+digest_source the script returned: application rule 1 of
+`references/workflow-patch.md` compares that substituted digest_source with the
+dispatch-time `input_digest`, and a mismatch, or a script exit other than `0`,
+makes the result stale. The orchestrator then runs the return-time recheck
+before the recording phase-state write, as
+`references/contracts/worker-envelope.md`, Rule R1, "Recomputation and
+comparison timing" states; a recheck mismatch, or a recheck that cannot run,
+makes the result stale. The orchestrator records `self_write_set` in the same
+phase-state write as the `Layer 5 recording` of `written_artifacts` into
+`phase-state/rework.yaml`."""
+
+
+def _application_order_defects(text):
+    """Everything wrong with the order of validation, recheck and application
+    in `text`, as a list of strings starting with a code: missing / order /
+    application-missing / application-order. An empty list means the recheck
+    follows the step 3 validation and the rule-1 compare/stale sentence, and
+    every application token follows the recheck."""
+    recheck_pos = _pos(text, RECHECK_TOKEN)
+    if recheck_pos < 0:
+        return [f"missing: no text names {RECHECK_TOKEN!r}"]
+    defects = []
+
+    validation_pos = _pos(text, VALIDATION_TOKEN)
+    if validation_pos < 0:
+        defects.append(f"order: {VALIDATION_TOKEN!r} not found")
+    elif recheck_pos <= validation_pos:
+        defects.append(f"order: the recheck does not come after {VALIDATION_TOKEN!r}")
+
+    stale_tokens = REWORK_SITE.stale_tokens
+    stale_end = _sentence_end(text, *stale_tokens)
+    if stale_end < 0:
+        defects.append(f"order: compare/stale sentence {stale_tokens!r} not found")
+    elif recheck_pos < stale_end:
+        defects.append("order: the recheck is inside or before the compare/stale sentence")
+
+    positions = {token: _pos(text, token) for token in APPLICATION_TOKENS}
+    present = {token: pos for token, pos in positions.items() if pos >= 0}
+    if not present:
+        defects.append(f"application-missing: none of {APPLICATION_TOKENS!r} is present")
+    for token, pos in present.items():
+        if pos < recheck_pos:
+            defects.append(f"application-order: {token!r} comes before the recheck")
+    return defects
+
+
+def _application_statement_defects(text):
+    """What is wrong with the sentence that says the patch is applied only
+    after a passing recheck, as a list of strings starting with a code:
+    missing / statement / order. The sentence names the workflow.yaml write
+    and the commit, and comes after the recheck sentence."""
+    if not [s for s in _sentences(text) if _has(s, RECHECK_TOKEN)]:
+        return [f"missing: no sentence names {RECHECK_TOKEN!r}"]
+    recheck_end = _sentence_end(text, RECHECK_TOKEN)
+    matches = [
+        s for s in _sentences(text)
+        if all(_has(s, t) for t in APPLIED_ONLY_AFTER_TOKENS)
+    ]
+    if not matches:
+        return [f"statement: no sentence contains all of {APPLIED_ONLY_AFTER_TOKENS!r}"]
+    if not [s for s in matches if _pos(text, s) >= recheck_end]:
+        return ["order: the application sentence does not come after the recheck sentence"]
+    return []
+
+
+def _application_sentence(text):
+    return _sentence_with(text, *APPLIED_ONLY_AFTER_TOKENS)
+
+
+def _without_sentence(text, *tokens):
+    """`text`, normalized, with the first sentence that holds `tokens` removed."""
+    flat = _norm(text)
+    return flat.replace(_sentence_with(flat, *tokens), "", 1)
+
+
+def _with_sentence_moved_before(text, moved_tokens, anchor_tokens):
+    """`text`, normalized, with the sentence holding `moved_tokens` placed
+    directly before the sentence holding `anchor_tokens`."""
+    flat = _norm(text)
+    moved = _sentence_with(flat, *moved_tokens)
+    anchor = _sentence_with(flat, *anchor_tokens)
+    rest = flat.replace(moved, "", 1)
+    if anchor not in rest:
+        raise AssertionError("anchor sentence is not a substring of the remaining text")
+    return rest.replace(anchor, moved + " " + anchor, 1)
+
+
+# Section 10's review-sourced steps and the passages that cite their numbers.
+REVIEW_SOURCED_STEPS = (
+    (1, "review.needs_rework"),
+    (2, "dispatches rework-planner"),
+    (3, "validates and applies rework-planner's patch"),
+    (4, "`implement` returning to `pending`"),
+)
+VERIFY_SOURCED_MARKER = "**Verify-sourced rework**"
+REVIEW_PHASE_STEP_CITATION = (
+    "after step 1 of `references/rework-task-synthesis.md` Section 10"
+)
+DEVELOP_STEP_CITATION = "step 1 は行わず step 2 から"
+
+
+def _step_numbering_defects(section, review_phase, develop):
+    """What is wrong with section 10's numbered steps, as a list of strings
+    starting with a code: list / meaning / citation. An empty list means items
+    1-4 of the review-sourced list exist in order before the "Verify-sourced
+    rework" sentence, each with its meaning token, and the review-phase and
+    develop citations of those numbers still exist."""
+    cut = section.find(VERIFY_SOURCED_MARKER)
+    if cut < 0:
+        return [f"list: {VERIFY_SOURCED_MARKER!r} not found in the section"]
+    head = section[:cut]
+    defects = []
+    numbers = [int(m.group(1)) for m in re.finditer(r"^(\d+)\.\s", head, re.M)]
+    expected = [number for number, _token in REVIEW_SOURCED_STEPS]
+    if numbers != expected:
+        defects.append(f"list: items are numbered {numbers}, expected {expected}")
+    for number, token in REVIEW_SOURCED_STEPS:
+        try:
+            item = _numbered_item(head, number)
+        except AssertionError:
+            defects.append(f"list: no item numbered {number}")
+            continue
+        if not _has(item, token):
+            defects.append(f"meaning: item {number} lacks {token!r}")
+    if not _has(review_phase, REVIEW_PHASE_STEP_CITATION):
+        defects.append(f"citation: review-phase.md lacks {REVIEW_PHASE_STEP_CITATION!r}")
+    if not _has(develop, DEVELOP_STEP_CITATION):
+        defects.append(f"citation: develop SKILL.md lacks {DEVELOP_STEP_CITATION!r}")
+    return defects
+
+
+class TestReworkSection10ApplicationOrder(unittest.TestCase):
+    """AC-1 (FR1, TM-1): the recheck follows step 3's validation and precedes
+    every mention of the patch application."""
+
+    def test_real_paragraph_has_no_order_defect(self):
+        self.assertEqual(_application_order_defects(RW_RETURN_TIME), [])
+
+    def test_recheck_follows_the_step_3_validation_token(self):
+        validation_pos = _pos(RW_RETURN_TIME, VALIDATION_TOKEN)
+        self.assertGreaterEqual(validation_pos, 0)
+        self.assertLess(validation_pos, _pos(RW_RETURN_TIME, RECHECK_TOKEN))
+
+    def test_recheck_follows_the_end_of_the_rule_1_compare_and_stale_sentence(self):
+        stale_end = _sentence_end(RW_RETURN_TIME, *REWORK_SITE.stale_tokens)
+        self.assertGreater(stale_end, 0)
+        self.assertGreaterEqual(_pos(RW_RETURN_TIME, RECHECK_TOKEN), stale_end)
+
+    def test_at_least_one_application_token_is_present(self):
+        present = [t for t in APPLICATION_TOKENS if _has(RW_RETURN_TIME, t)]
+        self.assertNotEqual(present, [])
+
+    def test_every_application_token_present_follows_the_recheck(self):
+        recheck_pos = _pos(RW_RETURN_TIME, RECHECK_TOKEN)
+        for token in APPLICATION_TOKENS:
+            if _has(RW_RETURN_TIME, token):
+                with self.subTest(token=token):
+                    self.assertGreater(_pos(RW_RETURN_TIME, token), recheck_pos)
+
+    def test_validation_sentence_names_rules_1_to_14_and_the_rule_1_comparison(self):
+        sentence = _sentence_with(RW_RETURN_TIME, VALIDATION_TOKEN)
+        for token in (
+            "application rules 1-14",
+            "references/workflow-patch.md",
+            "rule 1",
+            "substituted digest_source",
+            "dispatch-time `input_digest`",
+            "script exit",
+            "stale",
+        ):
+            with self.subTest(token=token):
+                self.assertTrue(_has(sentence, token), sentence)
+
+    def test_validation_sentence_no_longer_says_that_step_3_applies_the_patch(self):
+        sentence = _sentence_with(RW_RETURN_TIME, VALIDATION_TOKEN)
+        self.assertFalse(_has(sentence, "applies"), sentence)
+
+    def test_application_tokens_never_match_the_validation_wording(self):
+        validation_wording = (
+            "Step 3 validates the patch by application rules 1-14 of "
+            "`references/workflow-patch.md`.",
+            "Application rule 1 of `references/workflow-patch.md` compares the digest.",
+        )
+        for wording in validation_wording:
+            for token in APPLICATION_TOKENS:
+                with self.subTest(token=token):
+                    self.assertFalse(_has(wording, token), wording)
+
+    def test_paragraph_adds_no_numbered_step(self):
+        self.assertIsNone(re.search(r"^\d+\.\s", RW_RETURN_TIME, re.M))
+
+    # -- AC-2: the sentence that says when the patch is applied ------------
+
+    def test_application_sentence_follows_the_recheck_sentence(self):
+        self.assertEqual(_application_statement_defects(RW_RETURN_TIME), [])
+
+    def test_application_sentence_names_the_workflow_yaml_write_and_the_commit(self):
+        sentence = _application_sentence(RW_RETURN_TIME)
+        for token in ("rule 15", "rule 16", "workflow.yaml", "commit", "stale"):
+            with self.subTest(token=token):
+                self.assertTrue(_has(sentence, token), sentence)
+
+    def test_application_sentence_without_it_makes_the_statement_probe_fire(self):
+        forged = _without_sentence(RW_RETURN_TIME, *APPLIED_ONLY_AFTER_TOKENS)
+        defects = _application_statement_defects(forged)
+        self.assertEqual(_defect_codes(defects), ["statement"], defects)
+
+    def test_application_sentence_before_the_recheck_makes_the_statement_probe_fire(self):
+        forged = _with_sentence_moved_before(
+            RW_RETURN_TIME, APPLIED_ONLY_AFTER_TOKENS, (RECHECK_TOKEN,)
+        )
+        defects = _application_statement_defects(forged)
+        self.assertEqual(_defect_codes(defects), ["order"], defects)
+
+    def test_application_sentence_without_the_commit_makes_the_statement_probe_fire(self):
+        sentence = _application_sentence(RW_RETURN_TIME)
+        forged = _norm(RW_RETURN_TIME).replace(sentence, sentence.replace("commit", "step"))
+        defects = _application_statement_defects(forged)
+        self.assertEqual(_defect_codes(defects), ["statement"], defects)
+
+    def test_statement_probe_on_text_without_the_recheck_fires_as_missing(self):
+        defects = _application_statement_defects(PRE_CHANGE_RW_RETURN_TIME)
+        self.assertEqual(_defect_codes(defects), ["missing"], defects)
+
+    # -- AC-3: forged controls make the order probe fire -------------------
+
+    def test_base_revision_paragraph_makes_the_order_probe_fire(self):
+        defects = _application_order_defects(BASE_REVISION_RW_RETURN_TIME)
+        self.assertEqual(_defect_codes(defects), ["application-order"], defects)
+
+    def test_base_revision_paragraph_holds_the_recheck_after_validates_and_applies(self):
+        self.assertGreaterEqual(_pos(BASE_REVISION_RW_RETURN_TIME, "Step 3 validates and applies"), 0)
+        self.assertLess(
+            _pos(BASE_REVISION_RW_RETURN_TIME, "Step 3 validates and applies"),
+            _pos(BASE_REVISION_RW_RETURN_TIME, RECHECK_TOKEN),
+        )
+
+    def test_base_revision_paragraph_passes_the_other_site_checks(self):
+        self.assertEqual(_recheck_defects(BASE_REVISION_RW_RETURN_TIME, REWORK_SITE), [])
+
+    def test_application_sentence_moved_before_the_recheck_makes_the_order_probe_fire(self):
+        forged = _with_sentence_moved_before(
+            RW_RETURN_TIME, APPLIED_ONLY_AFTER_TOKENS, (RECHECK_TOKEN,)
+        )
+        defects = _application_order_defects(forged)
+        self.assertEqual(_defect_codes(defects), ["application-order"], defects)
+
+    def test_application_sentence_removed_makes_the_order_probe_fire(self):
+        forged = _without_sentence(RW_RETURN_TIME, *APPLIED_ONLY_AFTER_TOKENS)
+        defects = _application_order_defects(forged)
+        self.assertEqual(_defect_codes(defects), ["application-missing"], defects)
+
+    def test_recheck_moved_before_the_validation_makes_the_order_probe_fire(self):
+        forged = _with_sentence_moved_before(
+            RW_RETURN_TIME, (RECHECK_TOKEN,), (VALIDATION_TOKEN,)
+        )
+        defects = _application_order_defects(forged)
+        self.assertIn("order", _defect_codes(defects), defects)
+
+    def test_text_without_the_recheck_makes_the_order_probe_fire_as_missing(self):
+        defects = _application_order_defects(PRE_CHANGE_RW_RETURN_TIME)
+        self.assertEqual(_defect_codes(defects), ["missing"], defects)
+
+
+class TestReworkSection10StepNumbering(unittest.TestCase):
+    """AC-5 (FR3): section 10's review-sourced steps 1-4 keep their numbers and
+    meaning; the citations of those numbers still resolve."""
+
+    def test_real_section_has_no_step_numbering_defect(self):
+        self.assertEqual(_step_numbering_defects(RW_SECTION_10, _REVIEW_PHASE, _DEVELOP), [])
+
+    def test_steps_1_to_4_come_in_order_before_the_verify_sourced_sentence(self):
+        head = RW_SECTION_10[: RW_SECTION_10.index(VERIFY_SOURCED_MARKER)]
+        found = [int(m.group(1)) for m in re.finditer(r"^(\d+)\.\s", head, re.M)]
+        self.assertEqual(found, [1, 2, 3, 4])
+
+    def test_each_step_keeps_its_meaning_token(self):
+        head = RW_SECTION_10[: RW_SECTION_10.index(VERIFY_SOURCED_MARKER)]
+        for number, token in REVIEW_SOURCED_STEPS:
+            with self.subTest(step=number):
+                self.assertTrue(_has(_numbered_item(head, number), token))
+
+    def test_review_phase_cites_step_1_of_section_10(self):
+        self.assertTrue(_has(_REVIEW_PHASE, REVIEW_PHASE_STEP_CITATION))
+
+    def test_develop_skill_cites_starting_from_step_2(self):
+        self.assertTrue(_has(_DEVELOP, DEVELOP_STEP_CITATION))
+
+    def test_step_inserted_between_steps_3_and_4_makes_the_probe_fire(self):
+        forged = RW_SECTION_10.replace(
+            "\n4. ", "\n4. The orchestrator runs the return-time recheck.\n5. ", 1
+        )
+        self.assertNotEqual(forged, RW_SECTION_10)
+        defects = _step_numbering_defects(forged, _REVIEW_PHASE, _DEVELOP)
+        self.assertEqual(_defect_codes(defects), ["list", "meaning"], defects)
+
+    def test_missing_step_makes_the_probe_fire(self):
+        forged = RW_SECTION_10.replace("\n3. ", "\n- ", 1)
+        self.assertNotEqual(forged, RW_SECTION_10)
+        defects = _step_numbering_defects(forged, _REVIEW_PHASE, _DEVELOP)
+        self.assertIn("list", _defect_codes(defects), defects)
+
+    def test_section_without_the_verify_sourced_sentence_makes_the_probe_fire(self):
+        forged = RW_SECTION_10.replace(VERIFY_SOURCED_MARKER, "**Other**", 1)
+        defects = _step_numbering_defects(forged, _REVIEW_PHASE, _DEVELOP)
+        self.assertEqual(_defect_codes(defects), ["list"], defects)
+
+    def test_changed_citations_make_the_probe_fire(self):
+        review_phase = _REVIEW_PHASE.replace("after step 1 of", "after step 2 of", 1)
+        develop = _DEVELOP.replace("step 1 は行わず", "step 2 は行わず", 1)
+        self.assertNotEqual(review_phase, _REVIEW_PHASE)
+        self.assertNotEqual(develop, _DEVELOP)
+        defects = _step_numbering_defects(RW_SECTION_10, review_phase, _DEVELOP)
+        self.assertEqual(_defect_codes(defects), ["citation"], defects)
+        defects = _step_numbering_defects(RW_SECTION_10, _REVIEW_PHASE, develop)
+        self.assertEqual(_defect_codes(defects), ["citation"], defects)
+
+
+class TestApplicationOrderHelpers(unittest.TestCase):
+    def test_sentence_moved_before_puts_the_sentence_directly_before_the_anchor(self):
+        text = "alpha one. beta two. gamma three."
+        moved = _with_sentence_moved_before(text, ("gamma",), ("beta",))
+        self.assertEqual([s.split()[0] for s in _sentences(moved)], ["alpha", "gamma", "beta"])
+
+    def test_without_sentence_removes_only_the_first_matching_sentence(self):
+        text = "alpha one. beta two. gamma three."
+        self.assertEqual(_sentences(_without_sentence(text, "beta")), ["alpha one.", "gamma three."])
 
 
 # ---------------------------------------------------------------------------

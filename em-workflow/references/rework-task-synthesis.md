@@ -238,16 +238,20 @@ the scope verification (layer 4) of rework-planner's result passes, the
 orchestrator recomputes the current digest_source and runs
 `scripts/self-write-digest.py` (operation `identify_and_substitute`), as
 `references/contracts/worker-envelope.md`, Rule R1, "Recomputation and
-comparison timing" states. Step 3 validates and applies the patch against the
-digest_source the script returned: application rule 1 of
-`references/workflow-patch.md` compares that substituted digest_source with the
-dispatch-time `input_digest`, and a mismatch, or a script exit other than `0`,
-makes the result stale. The orchestrator then runs the return-time recheck
-before the recording phase-state write, as
-`references/contracts/worker-envelope.md`, Rule R1, "Recomputation and
+comparison timing" states. Step 3 validates the patch against the
+digest_source the script returned, by application rules 1-14 of
+`references/workflow-patch.md`: rule 1 compares that substituted digest_source
+with the dispatch-time `input_digest`, and a mismatch, or a script exit other
+than `0`, makes the result stale. The orchestrator then runs the return-time
+recheck before step 3's application and before the recording phase-state write,
+as `references/contracts/worker-envelope.md`, Rule R1, "Recomputation and
 comparison timing" states; a recheck mismatch, or a recheck that cannot run,
-makes the result stale. The orchestrator records `self_write_set` in the same
-phase-state write as the `Layer 5 recording` of `written_artifacts` into
+makes the result stale. The patch is applied only after a passing recheck:
+step 3's application, which is rule 15's single Write to workflow.yaml and
+rule 16's R2 commit sequence, follows it, so a stale result (from rule 1's
+comparison, the script exit or the recheck) reaches no workflow.yaml write and
+no commit made by the patch. The orchestrator records `self_write_set` in the
+same phase-state write as the `Layer 5 recording` of `written_artifacts` into
 `phase-state/rework.yaml`.
 
 **When rework needs a SPEC.md change**: the synthesizing worker creates no
