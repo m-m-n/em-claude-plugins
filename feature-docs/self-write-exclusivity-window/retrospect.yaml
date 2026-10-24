@@ -1,5 +1,5 @@
 feature: self-write-exclusivity-window
-collected_at: "2026-10-24T18:00:00+09:00"
+collected_at: "2026-10-24T17:36:41+09:00"
 session_ids: [01a16d0d-44ce-7284-8780-b1f7d494f4a6]
 signals:
   review_critical_high: []
