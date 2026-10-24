@@ -544,8 +544,12 @@ directly. This is stated as an explicit assumption:
 
 **Scope of applicability**: this assumption applies only to the five
 workers in design-input.md 2.3, for the interval from taking the scope
-snapshot through the end of verification — it is not a standing constraint
-on the plugin as a whole.
+snapshot through the completion of the phase-state write that records the
+run's `artifacts` and `self_write_set` — it is not a standing constraint
+on the plugin as a whole. For a run whose `written_artifacts` is empty,
+the interval runs through the write that records its returned `status` and
+`self_write_set`; when the result is judged stale, it runs through that
+judgment.
 
 The review phase's auto-fix loop runs multiple `review-editor` workers
 concurrently against different files in the same integration worktree, in
