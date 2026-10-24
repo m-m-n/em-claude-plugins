@@ -146,7 +146,7 @@ tasks:
     - NFR1
     - NFR4
     - NFR5
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/worker-self-write-digest/task0001
   task0002:
