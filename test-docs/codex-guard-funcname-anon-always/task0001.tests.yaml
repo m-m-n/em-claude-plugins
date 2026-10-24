@@ -1,0 +1,53 @@
+task_id: task0001
+# Run before any edit, in the task worktree: python3
+# em-workflow/hooks/tests/run-destructive-guard.py (943/943 passed) and
+# python3 -m unittest discover -s tests (11495 tests, OK, 1 skipped, no failure).
+baseline_failures: []
+# The project test command re-executed in full in the task worktree after the
+# implementation and after this record was written: run-destructive-guard.py
+# 943/943 passed and unittest discover ran every test with no failure (the
+# record is itself checked by tests.test_tests_yaml_id_resolution).
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "The new test module was run against copies of the unmodified guard (both copies as of HEAD placed under the paths the test module reads). test_cases_run_against_both_copies errored on both copies for the deny rows of reproduction step 2 (function f g case { :; }, with and without zsh -c), the three-name form and the case row of TS2, the subshell, in-form and brace-form item body rows, with 'json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)': the guard printed nothing for a command it must deny, because the case after the second name was read as a keyword and the reader stopped undecidable. It failed with an AssertionError (standard output a deny object, expected the empty string) for the silent TS2 rows built by quoted_launch_in_a_later_item for for, select, repeat and [[ and for the [[ row built by quoted_launch_in_a_later_case, where the keyword was read and the quoted launch became code. The TS2 deny rows for if, then, do, while, !, for, select, coproc, repeat, function, [[, esac and always, the quoted and substituted extra-name rows and the separator and empty () rows already passed before the change: they pin the verdict that stays."
+  AC-2:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "Against the unmodified guard test_cases_run_against_both_copies errored on both copies with 'json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)' for all nine TS4 and TS5 rows (reproduction steps 3, 4 and 5 written with function { :; }, function () { :; } and () { :; }), for the three TS6 rows (an always after an anonymous body's } in a brace-form item body read as a reserved word, so the { raised the depth and the ;; was undecidable), and for the argument-position, nested and in-form variants of those rows. The TS10 rows (always after a separator that follows anonymous arguments) already passed before the change (deny): they pin that always stays an ordinary word there. The () { :; } rows carry a blank after $( because $(( opens an arithmetic expansion, which this task does not change."
+  AC-3:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: true
+    red_reason: "Against the unmodified guard test_cases_run_against_both_copies errored with 'json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)' for the TS8 rows (the argument-position } that closes the outer anonymous body, in the three forms and in a brace-form item body) and for the A2 rows with no open group in a plain list and in a subshell; it failed with an AssertionError (a deny object where the empty string is expected) for the rows that keep the anonymous-arguments state across a word, a redirection, a heredoc operator, a here-string, a word parenthesis, a process substitution, a substitution, quoted words, ${ } and a continuation pair, and then close the outer ordinary group with a standalone }. The TS7 rows, the TS9 rows (a quoted \"}\", a single-quoted '}', an escaped \\}, a} and }a stay arguments) and the A2 row at depth 0 of a brace-form item body already passed before the change: they pin readings the change must not widen (each is built so that the rejected reading would flip its verdict)."
+  AC-4:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_are_unique
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies runs every CASES row of the base revision (the { :; } always { ... } silent rows and the always rows of codex-guard-brace-case-group-depth included) and the existing test classes of the module keep their results; no red state occurred for this change, because these rows pin the verdicts the guard already had. The TS3 shapes are pinned by the existing function a b { ... }, function a b () { ... } and function a b ((echo a) ) { ... } rows of codex-guard-brace-case-group-depth and by the two new rows for a case right after the first name, whose verdicts are the base guard's (silent for the quoted-launch form, deny for the plain form). git diff of the test module removes no CASES row."
+  AC-5:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing tests.test_codex_hook_interactive_guard.TestCasesTable.test_cases_run_against_both_copies runs the TS12 rows added by this task (an arithmetic re-read after a second name, function a b ((echo a) ) case ..., and after an anonymous function, function { :; } ((echo a) ) always ..., in the three forms and in a brace-form item body); each row records the verdict the base guard gives for that command and both copies give it; no red state occurred for this change, because the rows pin an unchanged verdict (IMPLEMENTATION.md D3). After an anonymous body the ( is a word parenthesis, so no re-read happens there."
+  AC-6:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestCaseStatementsInASubstitution.test_ts11_depth_anonymous_functions_in_a_row_are_read_in_time
+      - tests.test_codex_hook_interactive_guard.TestCaseStatementsInASubstitution.test_ts11_depth_anonymous_functions_nested_are_read_in_time
+      - tests.test_codex_hook_interactive_guard.TestCaseStatementsInASubstitution.test_ts11_a_function_head_with_depth_names_followed_by_case_is_read_in_time
+      - tests.test_codex_hook_interactive_guard.TestNoRecursion
+    red_confirmed: true
+    red_reason: "Against the unmodified guard the three test_ts11 tests errored on both copies with 'json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)': DEPTH anonymous functions in a row, DEPTH nested anonymous functions (closed at a command position and closed by a } among the arguments) and a function head with DEPTH names followed by case all ended undecidable, so the launch after the substitution was not denied. After the change each denies within the class timeout on both copies. TestNoRecursion is an existing test that passes before and after (guard for no recursion; no red state)."
+  AC-7:
+    tests:
+      - tests.test_codex_hook_interactive_guard.TestHeadStateComment.test_the_comment_names_the_three_new_states_and_their_lifetimes
+      - tests.test_codex_hook_interactive_guard.TestHeadStateComment.test_each_new_state_has_a_constant_after_the_comment
+      - tests.test_codex_hook_interactive_guard.TestCopies.test_the_two_copies_are_byte_identical
+      - tests.test_codex_hook_interactive_guard.TestStaticConstraints
+    red_confirmed: true
+    red_reason: "Against the unmodified guard the two TestHeadStateComment tests failed on both copies with 'AssertionError: ... not found in ...' for the further-name, anonymous-head and anonymous-arguments states and their lifetimes in the module comment before the head-state constants, and for the missing HEAD_FURTHER_NAME, HEAD_ANON and HEAD_ANON_ARGS constants. TestCopies and TestStaticConstraints are existing tests that pass before and after (guards for the byte-identical copies and the standard-library-only constraints; no red state). That the change set holds no file under .claude-plugin/ and that python3 -m unittest tests.test_codex_hook_interactive_guard and python3 -m unittest discover -s tests pass are checked by git diff --name-only and by running the commands; they have no test that can be made to fail first."
