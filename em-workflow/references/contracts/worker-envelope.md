@@ -388,11 +388,14 @@ orchestrator's job, done before dispatch; that rule is owned by
 
 This assumption applies only to the five workers in the 2.3 applicability
 table, and only for the interval from the start of the dispatch's scope
-snapshot capture through the end of that dispatch's scope verification —
-it is not a standing constraint on the plugin as a whole. The review
-phase's wave-parallel auto-fix loop (`references/review-phase.md`) is an
-explicit exception governed by its own per-wave verification rules, not by
-this assumption.
+snapshot capture through the completion of the phase-state write that
+records the run's `artifacts` and `self_write_set` — it is not a standing
+constraint on the plugin as a whole. For a run whose `written_artifacts` is
+empty, the interval runs through the write that records its returned
+`status` and `self_write_set`; when the result is judged stale, it runs
+through that judgment. The review phase's wave-parallel auto-fix loop
+(`references/review-phase.md`) is an explicit exception governed by its own
+per-wave verification rules, not by this assumption.
 
 ## Cross-references
 
