@@ -268,7 +268,11 @@ comparison timing" states. Then the orchestrator runs
 `scripts/validate-worker-output.py` with the substituted digest_source the
 script returned as `--digest-source`, so that application rule 1 compares the
 substituted digest_source with the dispatch-time `input_digest`. A mismatch,
-or a script exit other than `0`, makes the result stale. When the result is
+or a script exit other than `0`, makes the result stale. The orchestrator then
+runs the return-time recheck before the recording phase-state write, as
+`references/contracts/worker-envelope.md`, Rule R1, "Recomputation and
+comparison timing" states; a recheck mismatch, or a recheck that cannot run,
+makes the result stale. When the result is
 not stale, the orchestrator records layer 5 (`Layer 5 recording`) together
 with `self_write_set`, in the same phase-state write.
 

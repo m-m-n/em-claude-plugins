@@ -242,6 +242,10 @@ comparison timing" states. Step 3 validates and applies the patch against the
 digest_source the script returned: application rule 1 of
 `references/workflow-patch.md` compares that substituted digest_source with the
 dispatch-time `input_digest`, and a mismatch, or a script exit other than `0`,
+makes the result stale. The orchestrator then runs the return-time recheck
+before the recording phase-state write, as
+`references/contracts/worker-envelope.md`, Rule R1, "Recomputation and
+comparison timing" states; a recheck mismatch, or a recheck that cannot run,
 makes the result stale. The orchestrator records `self_write_set` in the same
 phase-state write as the `Layer 5 recording` of `written_artifacts` into
 `phase-state/rework.yaml`.

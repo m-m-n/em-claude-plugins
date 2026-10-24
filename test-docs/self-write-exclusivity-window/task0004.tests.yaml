@@ -1,0 +1,68 @@
+task_id: task0004
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests, run before any edit -> Ran 11238 tests, OK (skipped=1)
+final_failures: []             # re-executed after the document edits and after this record: Ran 11307 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_recheck_dispatch_sites_docs.TestDesignStep5RecheckReference.test_site_names_the_recheck_in_one_sentence
+      - tests.test_recheck_dispatch_sites_docs.TestDesignStep5RecheckReference.test_site_recheck_reference_has_no_defect
+      - tests.test_recheck_dispatch_sites_docs.TestDesignStep5RecheckReference.test_recheck_follows_the_comparison_and_precedes_the_recording_write
+      - tests.test_recheck_dispatch_sites_docs.TestDesignStep5RecheckReference.test_recheck_sentence_cites_rule_r1_with_the_timing_paragraph
+      - tests.test_recheck_dispatch_sites_docs.TestDesignStep5RecheckReference.test_recheck_sentence_makes_a_mismatch_or_a_failed_recheck_stale
+      - tests.test_recheck_dispatch_sites_docs.TestDesignStep5RecheckReference.test_recheck_sentence_names_the_orchestrator_as_the_actor
+      - tests.test_recheck_dispatch_sites_docs.TestDesignStep5RecheckReference.test_pre_change_text_makes_the_probe_fire_as_missing
+    red_confirmed: true
+    red_reason: "Before any document edit, with the new module in place, the design step 5 class failed: test_site_recheck_reference_has_no_defect -> AssertionError: Lists differ: [\"missing: no sentence names 'return-time recheck'\"] != []; test_recheck_follows_the_comparison_and_precedes_the_recording_write -> -1 not greater than or equal to 0; the citation, stale-statement and actor tests -> AssertionError: no sentence contains all of ('return-time recheck',). test_pre_change_text_makes_the_probe_fire_as_missing is the forged control built from the pre-change item; it is green by design (the probe fires on the old wording and returns only the missing code)."
+  AC-2:
+    tests:
+      - tests.test_recheck_dispatch_sites_docs.TestCreatePlanSection8RecheckReference.test_site_names_the_recheck_in_one_sentence
+      - tests.test_recheck_dispatch_sites_docs.TestCreatePlanSection8RecheckReference.test_site_recheck_reference_has_no_defect
+      - tests.test_recheck_dispatch_sites_docs.TestCreatePlanSection8RecheckReference.test_recheck_follows_the_comparison_and_precedes_the_recording_write
+      - tests.test_recheck_dispatch_sites_docs.TestCreatePlanSection8RecheckReference.test_recheck_sentence_cites_rule_r1_with_the_timing_paragraph
+      - tests.test_recheck_dispatch_sites_docs.TestCreatePlanSection8RecheckReference.test_recheck_sentence_makes_a_mismatch_or_a_failed_recheck_stale
+      - tests.test_recheck_dispatch_sites_docs.TestCreatePlanSection8RecheckReference.test_recheck_sentence_names_the_orchestrator_as_the_actor
+      - tests.test_recheck_dispatch_sites_docs.TestCreatePlanSection8RecheckReference.test_pre_change_text_makes_the_probe_fire_as_missing
+      - tests.test_recheck_dispatch_sites_docs.TestCreatePlanSection8RecheckReference.test_order_is_script_then_validator_then_recheck_then_recording
+    red_confirmed: true
+    red_reason: "Before any document edit the section 8 class failed the same way: test_site_recheck_reference_has_no_defect -> Lists differ: [\"missing: no sentence names 'return-time recheck'\"] != []; test_order_is_script_then_validator_then_recheck_then_recording -> -1 unexpectedly found in the position list; the citation, stale-statement and actor tests -> no sentence contains all of ('return-time recheck',). test_pre_change_text_makes_the_probe_fire_as_missing is the green-by-design forged control built from the pre-change paragraph."
+  AC-3:
+    tests:
+      - tests.test_recheck_dispatch_sites_docs.TestReworkSection10RecheckReference.test_site_names_the_recheck_in_one_sentence
+      - tests.test_recheck_dispatch_sites_docs.TestReworkSection10RecheckReference.test_site_recheck_reference_has_no_defect
+      - tests.test_recheck_dispatch_sites_docs.TestReworkSection10RecheckReference.test_recheck_follows_the_comparison_and_precedes_the_recording_write
+      - tests.test_recheck_dispatch_sites_docs.TestReworkSection10RecheckReference.test_recheck_sentence_cites_rule_r1_with_the_timing_paragraph
+      - tests.test_recheck_dispatch_sites_docs.TestReworkSection10RecheckReference.test_recheck_sentence_makes_a_mismatch_or_a_failed_recheck_stale
+      - tests.test_recheck_dispatch_sites_docs.TestReworkSection10RecheckReference.test_recheck_sentence_names_the_orchestrator_as_the_actor
+      - tests.test_recheck_dispatch_sites_docs.TestReworkSection10RecheckReference.test_pre_change_text_makes_the_probe_fire_as_missing
+      - tests.test_recheck_dispatch_sites_docs.TestReworkSection10RecheckReference.test_order_is_script_then_step_3_then_recheck_then_recording
+    red_confirmed: true
+    red_reason: "Before any document edit the rework class failed the same way: test_site_recheck_reference_has_no_defect -> Lists differ: [\"missing: no sentence names 'return-time recheck'\"] != []; test_order_is_script_then_step_3_then_recheck_then_recording -> -1 unexpectedly found in [374, 532, -1]; the citation, stale-statement and actor tests -> no sentence contains all of ('return-time recheck',). test_pre_change_text_makes_the_probe_fire_as_missing is the green-by-design forged control built from the pre-change paragraph."
+  AC-4:
+    tests:
+      - tests.test_recheck_dispatch_sites_docs.TestSitesDoNotRestateTheRecheck.test_no_site_slice_restates_the_comparison_matrix_or_substitution
+      - tests.test_recheck_dispatch_sites_docs.TestSitesDoNotRestateTheRecheck.test_no_site_slice_names_git_hash_object
+      - tests.test_recheck_dispatch_sites_docs.TestSitesDoNotRestateTheRecheck.test_each_recheck_sentence_stays_clear_of_the_comparison_values
+      - tests.test_recheck_dispatch_sites_docs.TestSitesDoNotRestateTheRecheck.test_pre_change_sites_are_quiet
+      - tests.test_recheck_dispatch_sites_docs.TestSitesDoNotRestateTheRecheck.test_enumerating_blob_id_mode_and_kind_makes_the_probe_fire
+      - tests.test_recheck_dispatch_sites_docs.TestSitesDoNotRestateTheRecheck.test_naming_git_hash_object_makes_the_probe_fire
+      - tests.test_recheck_dispatch_sites_docs.TestSitesDoNotRestateTheRecheck.test_forged_site_text_that_restates_the_comparison_makes_the_probe_fire
+      - tests.test_recheck_dispatch_sites_docs.TestSitesDoNotRestateTheRecheck.test_forged_matrix_wording_makes_the_probe_fire
+      - tests.test_recheck_dispatch_sites_docs.TestSitesDoNotRestateTheRecheck.test_forged_substitution_wording_makes_the_probe_fire
+      - tests.test_recheck_dispatch_sites_docs.TestSitesDoNotRestateTheRecheck.test_a_citing_sentence_keeps_the_probes_quiet
+    red_confirmed: false
+    red_reason: "A negative guard: before the edit no site had anything to restate, so the document-level absence probes and the forged-text controls (the probes fire on forged blob id / mode / kind, git hash-object, matrix and substitution wording, and on a forged site text that restates the comparison) were green when first run. The only test of this entry observed failing before the edit is test_each_recheck_sentence_stays_clear_of_the_comparison_values, and it failed because the recheck sentence did not exist yet (no sentence contains all of ('return-time recheck',)), not because of a restatement; a dedicated new module is out of scope for the matrix and substitution halves, but the existing tests.test_self_write_digest_wiring.TestAC5CitationsAndNoRestatement detects those; no red state occurred for this change."
+  AC-5:
+    tests:
+      - tests.test_recheck_dispatch_sites_docs.TestDesignStep5RecheckReference.test_site_keeps_every_pre_change_sentence
+      - tests.test_recheck_dispatch_sites_docs.TestCreatePlanSection8RecheckReference.test_site_keeps_every_pre_change_sentence
+      - tests.test_recheck_dispatch_sites_docs.TestReworkSection10RecheckReference.test_site_keeps_every_pre_change_sentence
+      - tests.test_self_write_digest_wiring
+      - tests.test_artifact_digest_docs
+      - tests.test_check_plugin_invariants
+    red_confirmed: false
+    red_reason: "The criterion keeps behavior that pre-existed: the existing wording and the order scope verification -> scripts/self-write-digest.py -> Layer 5 recording (rework: -> step 3 validates) were already green before the edit and stay green, so no red state occurred for this change; a dedicated new module is out of scope, but the existing tests.test_self_write_digest_wiring, tests.test_artifact_digest_docs and tests.test_check_plugin_invariants read the three edited documents and detect a lost anchor or order, and the new test_site_keeps_every_pre_change_sentence tests (green when first run) detect any rewritten pre-change sentence. Those three existing modules pass unmodified."
+  AC-6:
+    tests:
+      - tests.test_recheck_dispatch_sites_docs
+    red_confirmed: false
+    red_reason: "The criterion is the existence and shape of the new test file itself (standard library only, naming per test/README.md, heading / list item / paragraph slices, whitespace-insensitive token positions, a forged-text control for every probe) plus the whole-suite command python3 -m unittest discover -s tests; the whole suite was green at baseline, and I did not observe the module's ID failing to resolve before the file existed, so no executable red was observed for it. The module's probes themselves were observed red in AC-1 to AC-3 before the document edits."
