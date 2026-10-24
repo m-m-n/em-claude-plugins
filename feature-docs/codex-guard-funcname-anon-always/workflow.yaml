@@ -122,8 +122,13 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: in_progress
+    status: failed
     branch: em-workflow/codex-guard-funcname-anon-always/task0001
+    notes: 'batch retry-consumed: 1. First attempt: merge-task.sh ran outside the
+      task worktree (cwd = main working tree, HEAD = main), so commit cc2f0fa6 "merge:
+      task0001" merged main (cac662fb) into the integration branch instead of the
+      task branch; task commit ace81a71 was not merged and no merged journal event
+      was appended. Ancestor check failed -> failed.'
   task0002:
     title: State the further-name and anonymous-argument reading in the substitution-skip
       docstring
