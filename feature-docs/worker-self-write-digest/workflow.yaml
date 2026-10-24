@@ -125,9 +125,14 @@ workflow:
   status: completed
   completed_at_commit: 523c17b7d0475b3890a13c3c956b69315aa1dd1d
 - id: verify
-  status: in_progress
-  result: null
+  status: completed
+  result: pass
   failed_items: []
+  summary: 'python3 -m unittest discover -s tests: 11206 tests OK (skipped=1). check-plugin-invariants.py:
+    all 9 checks PASS. TS-1..TS-13, TS-15 covered by passing tests; TS-14 plugin.json / marketplace.json
+    version unchanged from base_commit. Manual reproduction items (2) not executed; the designer
+    extend_only reproduction is covered at unit level by TS-1. Excluded requirements: none.'
+  completed_at_commit: 10e4eaa9ee6de13b708c02a6f8194aa2525b68f7
 - id: retrospect
   status: pending
 tasks:
