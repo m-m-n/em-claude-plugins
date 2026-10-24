@@ -1122,8 +1122,15 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # allocation" gains `routeback_failed_journal_line`, the
     # orchestrator-only route-back record. Same rationale: refresh, don't
     # remove.
+    #
+    # Refreshed again by worker-self-write-digest/task0002 (FR5): application
+    # rule 1 gains one sentence stating that the recomputed `digest_source`
+    # is built under Rule R1's self-write rule
+    # (`references/contracts/worker-envelope.md`). Rule numbering, the "All
+    # eighteen rules" count and every other rule are unchanged. Same
+    # rationale: refresh, don't remove.
     WORKFLOW_PATCH_SHA256 = (
-        "e36584aeb348e9a1ae5a3f73dc8674c79d06800df4d0fe31e322ba91b441cda2"
+        "b2ba75c7e26851169c44b84013a26f3cedc0bda5ec4efa439436fefe2b04b373"
     )
     # Updated by goal-vs-spec-divergence/task0016 (review round1 rework),
     # which the user's SPEC.md/REQUIREMENTS.md Declared Change Set extension
