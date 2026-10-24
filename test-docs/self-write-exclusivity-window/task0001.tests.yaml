@@ -1,0 +1,46 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests before any edit: Ran 11238 tests, OK (skipped=1)
+final_failures: []             # python3 -m unittest discover -s tests re-executed after the implementation and this record
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_return_time_recheck_docs.TestOrderRecheckPlacement.test_ac1_calculation_is_cited_to_artifact_digest_md
+      - tests.test_return_time_recheck_docs.TestOrderRecheckPlacement.test_ac1_calculation_is_mentioned_before_the_recheck_term
+      - tests.test_return_time_recheck_docs.TestOrderRecheckPlacement.test_ac1_four_anchors_then_recheck_term_then_recording_write_phrase_in_sequence
+      - tests.test_return_time_recheck_docs.TestOrderRecheckPlacement.test_ac1_recheck_text_exists_after_step_4
+      - tests.test_return_time_recheck_docs.TestOrderRecheckPlacement.test_ac1_recheck_text_states_when_it_runs_and_who_runs_it
+    red_confirmed: true
+    red_reason: "Before editing worker-envelope.md the order probe failed with AssertionError: Lists differ: ['missing: return-time recheck', ...] and test_ac1_recheck_text_exists_after_step_4 failed with 'no text after step 4's stale sentence'. The forged-text controls (the pre-change Order block, a recheck placed before the four steps, a recording-write phrase placed before the recheck, one deleted step anchor, one deleted when-element each) are green by design and are not listed; test_ac1_order_block_keeps_its_intro_and_step_4_stale_sentence is green before and after because the intro and step 4 are kept."
+  AC-2:
+    tests:
+      - tests.test_return_time_recheck_docs.TestRecheckComparison.test_ac2_recheck_text_names_paths_blob_id_mode_kind_and_the_observed_baseline
+      - tests.test_return_time_recheck_docs.TestRecheckComparison.test_ac2_recheck_text_states_in_a_negated_sentence_that_no_raw_sha256_is_compared
+      - tests.test_return_time_recheck_docs.TestRecheckComparison.test_ac2_the_negated_sentence_names_the_artifact_digest_and_digest_inputs
+    red_confirmed: true
+    red_reason: "Before editing worker-envelope.md the element probe failed with AssertionError: Lists differ: [\"names the self-write set's paths\", 'names the current git blob id', ...] != [], the negation probe failed with AssertionError: [] is not true, and the sentence-content test raised IndexError: list index out of range. The single-element-deletion controls are green by design and are not listed; test_ac2_baseline_is_held_within_the_run_and_never_persisted is green before and after (a D3 guard)."
+  AC-3:
+    tests:
+      - tests.test_return_time_recheck_docs.TestRecheckOutcome.test_ac3_a_mismatch_or_a_recheck_that_cannot_run_makes_the_result_stale
+      - tests.test_return_time_recheck_docs.TestRecheckOutcome.test_ac3_recheck_text_cites_the_stale_handling_states_the_empty_set_and_no_write
+      - tests.test_return_time_recheck_docs.TestRecheckOutcome.test_ac3_stale_handling_citation_points_at_create_spec_phase_md
+    red_confirmed: true
+    red_reason: "Before editing worker-envelope.md the stale-outcome probe failed with AssertionError: Lists differ: ['no sentence makes the result stale'] != [] (step 4's own stale sentence is excluded from the recheck text), the element probe failed with the stale-handling citation, empty-set and no-write elements missing, and the citation test failed with the create-spec-phase.md path 'not found in'. The forged controls (missing failure case, missing mismatch case, missing empty-set case, pre-change Order block) are green by design and are not listed."
+  AC-4:
+    tests:
+      - tests.test_return_time_recheck_docs.TestKnownLimit.test_ac4_known_limit_adds_the_recheck_detection_and_the_remaining_window
+    red_confirmed: true
+    red_reason: "Before editing worker-envelope.md the Known limit probe failed with AssertionError: Lists differ: ['a change after the scope verification is detected by the return-time recheck', 'the remaining window ...', 'points at the Exclusivity section for the interval'] != []. The existing sentence's three phrases and its position before '## Exclusivity assumption during dispatch' are green before and after and are also pinned by the existing tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac1_known_limit_rests_on_the_exclusivity_assumption; the pre-change Known limit control is green by design and is not listed."
+  AC-5:
+    tests:
+      - tests.test_return_time_recheck_docs.TestR1Invariants
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule
+      - tests.test_self_write_digest_docs.TestDigestStanceInvariants
+      - tests.test_self_write_digest_docs.TestUnchangedStructure
+    red_confirmed: false
+    red_reason: "A preservation criterion: the label set, the digest-sentence convention, the absence of expect_digest and the Means sentence all held before the change, so no red state occurred for them; a dedicated new module is out of scope beyond TestR1Invariants, and the existing tests.test_self_write_digest_docs classes detect label, digest-sentence, worker-directed-instruction and structure regressions. The only new-text-dependent guard (TestR1Invariants.test_ac5_the_recheck_names_git_hash_object_in_an_orchestrator_sentence) was observed red but guards a different point, so the criterion is recorded unconfirmed."
+  AC-6:
+    tests:
+      - tests.test_return_time_recheck_docs.TestTestFileForm
+      - tests.test_return_time_recheck_docs.TestSlicers
+    red_confirmed: false
+    red_reason: "The form checks (standard-library-only imports, naming, heading and R1-label slicing, whitespace independence) describe the new test file itself, so they were green the moment the file existed and no red state occurred; the pairing of every probe with a forged-text control is reviewed manually (VERIFICATION.md TS-11). The criterion's last clause is the full-suite run."
