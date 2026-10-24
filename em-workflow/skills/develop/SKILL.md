@@ -71,6 +71,9 @@ batch: 停止条件 5 の待機ターンは、(a)(b) いずれの形でも最後
 - ❌ 「進めてよいですか？」と確認を挟む（各フェーズ内の guard が必要な確認を行う）
 - ❌ workflow.yaml を読み直さずに応答を返す
 - ❌ `base_branch`（ユーザーのブランチ）へのコミット・reset・checkout
+- ❌ `feature-docs/`・`test-docs/`・コミットメッセージに Notion の URL や
+  ホームディレクトリの絶対パスを書く。サブエージェントの出力を書き写すときも
+  置き換える（`${CLAUDE_PLUGIN_ROOT}/references/doc-redaction.md`）
 - ❌ `/branch` で分岐したセッションからこのワークフローを起動・継続する。
   分岐セッションはサブエージェントのディスパッチ・worktree の状態変更・
   workflow.yaml の更新・コミット/マージを行わない（メインセッションが同じ

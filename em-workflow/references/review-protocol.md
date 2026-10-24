@@ -273,6 +273,13 @@ Every skip object sets `skip_reason` to a short machine-stable
 The orchestrator treats `skipped: true` as a non-failure and renders
 `⏭️ SKIPPED (理由)`.
 
+## Doc Redaction
+
+Findings are persisted into committed files. Paths in a finding are written
+relative to the repository root, and a finding carries no Notion URL and no
+absolute path under the user's home directory, per
+`references/doc-redaction.md`.
+
 ## Read-only Constraint
 
 - No `git commit`, `git checkout`, `git stash`, `git reset`, branch switches.

@@ -135,6 +135,7 @@ workflow.yaml の build / test / format / e2e コマンドはリポジトリ管�
 | `hooks/loop-command-guard.py` | PreToolUse(Bash) | コマンド位置（`-c` 文字列・eval 引数・コマンド置換・bash/sh/zsh に渡したヒアドキュメント/ヒアストリングなど、入れ子になったシェルテキストを含む）にある `while` / `until` ループを拒否する。構造を確定できない入力には判定しない |
 | `hooks/cross-repo-write-guard.py` | PreToolUse(Bash) / PreToolUse(Write\|Edit\|MultiEdit) | ファイルの書き込み先がカレントディレクトリの git toplevel の外にあれば確認（`ask`）に回す（無人実行では `deny` に降格）。Write / Edit / MultiEdit は `file_path`、Bash は静的に解決できるリダイレクト・`tee`・`sed -i`・`cp` / `mv` の書き込み先を見る。`/tmp` 配下・`~/.claude/` 配下・`/dev/null` など列挙した `/dev` 配下の書き込み先と、静的に解決できない書き込み先は判定しない |
 | `hooks/gitleaks-write-guard.sh` | PreToolUse(Write\|Edit\|MultiEdit) | 書き込む内容を gitleaks でスキャンし、シークレットを含むなら書き込みをブロックする |
+| `hooks/doc-redaction-guard.py` | PreToolUse(Write\|Edit\|MultiEdit) | `feature-docs/` / `test-docs/` 配下に書く新しい内容に Notion の URL か、ホームディレクトリの絶対パスがあれば拒否する。規則は `references/doc-redaction.md` |
 
 PreToolUse(Bash) の 10 本は `hooks.json` に次の順で登録している（gitleaks-precommit.sh → kill-guard.py → bash_guard.py → failed-run-cleanup-guard.py → muse_guard.py → interpreter-mismatch-guard.py → loop-command-guard.py → cross-repo-write-guard.py → destructive-guard.py → heredoc-stdin-guard.py）。複数の hook が判定を返したときの優先順位は deny > defer > ask > allow。`heredoc-stdin-guard.py` は判定を返さず `updatedInput` の書き換えのみなので最後に置く。
 

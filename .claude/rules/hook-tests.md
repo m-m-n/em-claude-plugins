@@ -83,3 +83,14 @@ python3 -m unittest tests.test_cross_repo_write_guard
   `(期待する判定, ラベル, コマンド)` で並べる。期待する判定は `ask` か `silent`。
 - `CASES` は Bash の判定。Write / Edit / MultiEdit、`CLAUDE_BATCH` による `deny` への降格、
   不正な入力は別のテストで確かめる。
+
+## doc-redaction-guard
+
+`em-workflow/hooks/doc-redaction-guard.py` を変更したら、同じ変更の中で次を走らせる。
+
+```
+python3 -m unittest tests.test_doc_redaction_guard
+```
+
+- ケースは `tests/test_doc_redaction_guard.py` の `CASES` に
+  `(期待する判定, ラベル, ペイロード)` で並べる。期待する判定は `deny` か `silent`。

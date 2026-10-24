@@ -515,12 +515,14 @@ class TestCrossRepoWriteGuardIsRegisteredForBothWriteToolPaths(unittest.TestCase
         entries = self._group("Write|Edit|MultiEdit")
         names = [e.get("command", "").rsplit("/", 1)[-1] for e in entries]
         self.assertEqual(
-            names, ["gitleaks-write-guard.sh", CROSS_REPO_WRITE_GUARD], names
+            names,
+            ["gitleaks-write-guard.sh", CROSS_REPO_WRITE_GUARD, "doc-redaction-guard.py"],
+            names,
         )
 
     def test_both_registrations_are_the_same_standard_entry(self):
         bash_entry = self._group("Bash")[-3]
-        write_entry = self._group("Write|Edit|MultiEdit")[-1]
+        write_entry = self._group("Write|Edit|MultiEdit")[1]
         self.assertEqual(write_entry, bash_entry)
         self.assertEqual(
             write_entry["command"],
