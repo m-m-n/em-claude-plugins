@@ -77,6 +77,31 @@ def delimiter_command(wrap, lines):
     return text
 
 
+def quoted_launch_in_a_later_item(body):
+    """The shape of TS-3 and TS-4 of codex-guard-brace-case-group-depth: a
+    `zsh -c` string whose brace-form case statement has `body` as its first
+    item body and, in a later item, a launch that stands inside single quotes.
+    Silent means the close of `body` was placed where zsh places it (the item
+    ends at its `;;`); deny means the reader closed the statement early, so
+    the `)` of the later pattern closed the substitution and the quoted
+    launch was read as code."""
+    return "zsh -c " + shlex.quote(
+        'echo "$(case x { x) ' + body + ';; y) echo \'"; python3 -i; "\';; })"'
+    )
+
+
+def quoted_launch_in_a_later_case(body):
+    """The shape of the `always` and function-head rows that read `body` in a
+    command list of the substitution that holds no brace-form item body: the
+    launch stands inside single quotes in the item of a nested `case`. Silent
+    means the `{` after `body` was read at a command position, so the `case`
+    behind it opened a statement; deny means it was read as an argument, so
+    the `)` of the pattern closed the substitution."""
+    return "zsh -c " + shlex.quote(
+        'echo "$(' + body + ' { case y in y) echo \'"; python3 -i; "\';; esac; } )"'
+    )
+
+
 # codex-guard-delim-brace-quote-per-shell (SPEC.md Test Scenarios TS1 to TS32):
 # the `${ ... }` ranges of a heredoc delimiter in a nested `-c` string are read
 # by the shell that directly holds the string. Each entry is (id, expected,
@@ -1074,15 +1099,18 @@ CASES = [
     ("silent", "波括弧形式の case 単独の語でない { は in の代わりにならず判定不能", 'echo "$(case x {x x) :;; })"; python3 -i'),
     ("silent", "波括弧形式の case { の直後が ; のときは単独の語でなく判定不能", 'echo "$(case x {; x) :;; })"; python3 -i'),
     # The body of a brace-form item: a `{ }` group opened and closed there is no
-    # close (TS-14), nor is a quoted or escaped brace (TS-15), a `}` at an
-    # argument position (TS-16), a brace in `${ }` or a subshell, or a brace of a
-    # nested case statement, which keeps a form and a depth of its own (TS-17,
-    # TS-18)
+    # close (TS-14), nor is a quoted or escaped brace (TS-15), a brace in `${ }`
+    # or a subshell, or a brace of a nested case statement, which keeps a form and
+    # a depth of its own (TS-17, TS-18). A standalone `}` at an argument position
+    # of the item body list itself is a closing brace like the one at a command
+    # position (codex-guard-brace-case-group-depth FR1): it lowers the depth, and
+    # at depth 0 it closes the statement (TS-16, the row below, which is TS-14 of
+    # that feature)
     ("deny", "波括弧形式の case TS-14 項目の本体の { } 群は閉じではない", 'echo "$(case x { x) { :; };; })"; python3 -i'),
     ("deny", "波括弧形式の case 項目の本体の入れ子の { } 群の中の ; を挟んでも深さが戻れば閉じる", 'echo "$(case x { x) { { :; }; };; })"; python3 -i'),
     ("deny", "波括弧形式の case 項目の本体の { } 群を閉じた後の ; のあとの } で閉じる", 'echo "$(case x { x) { :; }; })"; python3 -i'),
     ("deny", "波括弧形式の case TS-15 引用符で囲んだ括弧とエスケープした括弧は数えない", 'echo "$(case x { x) echo "}" \'{\' \\{;; })"; python3 -i'),
-    ("deny", "波括弧形式の case TS-16 引数の位置の } は閉じない", 'echo "$(case x { x) echo };; })"; python3 -i'),
+    ("deny", "波括弧形式の case TS-16 引数の位置の } も深さ 0 では文を閉じる (群の深さ TS-14)", 'echo "$(case x { x) echo };; })"; python3 -i'),
     ("deny", "波括弧形式の case 引数の位置の { は深さを上げない", 'echo "$(case x { x) echo {;; })"; python3 -i'),
     ("deny", "波括弧形式の case TS-17 波括弧形式の中の in 形式", 'echo "$(case x { x) case y in y) :;; esac;; })"; python3 -i'),
     ("deny", "波括弧形式の case TS-18 in 形式の中の波括弧形式", 'echo "$(case x in x) case y { y) :;; };; esac)"; python3 -i'),
@@ -1097,6 +1125,84 @@ CASES = [
     ("deny", "波括弧形式の case 項目の本体の置換の中のコマンド位置の } は閉じない", 'echo "$(case x { x) echo "$(: ; })";; })"; python3 -i'),
     ("deny", "in 形式の case のパターンの位置の } はパターンで、閉じない", 'echo "$(case x in } ) :;; esac)"; python3 -i'),
     ("deny", "in 形式の case の本体のコマンド位置の } は閉じない", 'echo "$(case x in x) :; }; esac)"; python3 -i'),
+    # codex-guard-brace-case-group-depth (SPEC.md Test Scenarios TS-1 to TS-15 and
+    # the edge cases): the substitution reader counts the `{ }` groups of a
+    # brace-form item body the way zsh does. A standalone `}` read in the item
+    # body list itself closes a group at an argument position as well; an
+    # `always` right after a group-closing `}` is a reserved word and the word
+    # after it is at a command position; the words after the first name of
+    # `function` are names too, except after the `{` of an anonymous function.
+    # TS-14 and TS-15 are the existing rows above (TS-14 relabelled). The rows
+    # built by `quoted_launch_in_a_later_item` and `quoted_launch_in_a_later_case`
+    # keep a launch in quoted text, so silent means the close was placed where
+    # zsh places it and deny means the reader closed early; the other rows keep
+    # the launch after the substitution, so deny means the close was placed right
+    # and silent means the reader could not place it
+    ("deny", "群の深さ TS-1 引数の位置の } は深さを 1 下げ、;; で項目が終わる", "zsh -c " + shlex.quote('echo "$(case x { x) { : };; })"; python3 -i')),
+    ("deny", "群の深さ TS-2 区切りを付けた { :; } は従来どおり深さを戻す (zsh -c)", "zsh -c " + shlex.quote('echo "$(case x { x) { :; };; })"; python3 -i')),
+    ("silent", "群の深さ TS-3 { } 群の直後の always は予約語で、その後の { が深さを上げる", "zsh -c " + shlex.quote('echo "$(case x { x) { :; } always { :; };; y) echo \'"; python3 -i; "\';; })"')),
+    ("silent", "群の深さ TS-4 複数名の function の { はコマンド位置で、深さを上げる", "zsh -c " + shlex.quote('echo "$(case x { x) function a b { :; };; y) echo \'"; python3 -i; "\';; })"')),
+    ("deny", "群の深さ TS-5 always 群を読んだ後に ;; で項目が終わる", 'echo "$(case x { x) { :; } always { :; };; })"; python3 -i'),
+    ("deny", "群の深さ TS-6 引数の位置の } の直後の always も予約語", 'echo "$(case x { x) { : } always { : };; })"; python3 -i'),
+    ("deny", "群の深さ TS-7 複数名の function の { が深さを上げ、その } で閉じない", 'echo "$(case x { x) function a b { :; };; })"; python3 -i'),
+    ("deny", "群の深さ TS-8 複数名の function の空の () の後の { が深さを上げる", 'echo "$(case x { x) function a b () { :; };; })"; python3 -i'),
+    ("deny", "群の深さ TS-9 深さ 0 の引数の位置の } が文を閉じ、置換は ) で閉じる", 'echo "$(case x { x) echo }; :)"; python3 -i'),
+    ("deny", "群の深さ TS-10 入れ子の群を引数の位置の } で閉じる", 'echo "$(case x { x) { { : }; : };; })"; python3 -i'),
+    ("silent", "群の深さ TS-11 引用符で囲んだ } は数えず、開いたままの群の ;; は判定不能", 'echo "$(case x { x) { : "}" ;; })"; python3 -i'),
+    ("silent", "群の深さ TS-12 エスケープした } は数えない", 'echo "$(case x { x) { : \\} ;; })"; python3 -i'),
+    ("silent", "群の深さ TS-13 単独の語でない } は数えない", 'echo "$(case x { x) { : a} ;; })"; python3 -i'),
+    # FR1: where the argument-position `}` applies, and what it does not touch
+    ("deny", "群の深さ 引数の位置の } の直後の語はコマンド位置で、case 文を開く", 'echo "$(case x { x) { : } case y in y) :;; esac;; })"; python3 -i'),
+    ("deny", "群の深さ 深さ 0 の引数の位置の } が文を閉じた後の語はコマンド位置で、case 文を開く", 'echo "$(case x { x) echo } case y in y) :;; esac)"; python3 -i'),
+    ("deny", "群の深さ リダイレクトの対象の位置の } も数える", 'echo "$(case x { x) { : > } ;; })"; python3 -i'),
+    ("deny", "群の深さ [[ ]] の中の } も数える", 'echo "$(case x { x) { [[ a == } ]] ;; })"; python3 -i'),
+    ("deny", "群の深さ 行継続の後の単独の } も引数の位置で数える", 'echo "$(case x { x) { : \\\n} ;; })"; python3 -i'),
+    ("deny", "群の深さ 引数の位置の { は深さを上げない", 'echo "$(case x { x) echo { ;; })"; python3 -i'),
+    ("silent", "群の深さ 単引用符で囲んだ } は数えない", 'echo "$(case x { x) { : \'}\' ;; })"; python3 -i'),
+    ("silent", "群の深さ } で始まる語 }a は数えない", 'echo "$(case x { x) { : }a ;; })"; python3 -i'),
+    ("silent", "群の深さ サブシェルの中の } は数えない", 'echo "$(case x { x) { ( echo } ) ;; })"; python3 -i'),
+    ("silent", "群の深さ 置換の中の } は数えない", 'echo "$(case x { x) { echo $(echo }) ;; })"; python3 -i'),
+    ("silent", "群の深さ in 形式の項目の本体の } は数えない", 'echo "$(case x { x) { case y in y) echo } ;; esac ;; })"; python3 -i'),
+    ("silent", "群の深さ function の名前の位置の } は数えない", 'echo "$(case x { x) { function } ;; })"; python3 -i'),
+    ("silent", "群の深さ for の名前の位置の } は数えない", 'echo "$(case x { x) { for } ;; })"; python3 -i'),
+    ("silent", "群の深さ select の名前の位置の } は数えない", 'echo "$(case x { x) { select } ;; })"; python3 -i'),
+    ("silent", "群の深さ zsh の repeat の名前の位置の } は数えない", "zsh -c " + shlex.quote('echo "$(case x { x) { repeat } ;; })"; python3 -i')),
+    # FR2: `always` is a reserved word only right after a group-closing `}`
+    ("deny", "群の深さ always は区切りの後では予約語にならない", quoted_launch_in_a_later_item("{ :; }; always { :; }")),
+    ("deny", "群の深さ always は改行の後では予約語にならない", quoted_launch_in_a_later_item("{ :; }\nalways { :; }")),
+    ("deny", "群の深さ always は他の語の後では予約語にならない", quoted_launch_in_a_later_item("{ :; } x always { :; }")),
+    ("deny", "群の深さ 二重引用符で囲んだ always は予約語にならない", quoted_launch_in_a_later_item('{ :; } "always" { :; }')),
+    ("deny", "群の深さ 単引用符で囲んだ always は予約語にならない", quoted_launch_in_a_later_item("{ :; } 'always' { :; }")),
+    ("deny", "群の深さ エスケープした always は予約語にならない", quoted_launch_in_a_later_item("{ :; } \\always { :; }")),
+    ("deny", "群の深さ 単独の語でない alwaysx は予約語にならない", quoted_launch_in_a_later_item("{ :; } alwaysx { :; }")),
+    ("silent", "群の深さ } の直後の行継続の対を省いて always を予約語に読む", quoted_launch_in_a_later_item("{ :; }\\\n always { :; }")),
+    ("silent", "群の深さ 空白の後の行継続の対を省いて always を予約語に読む", quoted_launch_in_a_later_item("{ :; } \\\nalways { :; }")),
+    ("silent", "群の深さ always の文字の間の行継続の対を省いて予約語に読む", quoted_launch_in_a_later_item("{ :; } al\\\nways { :; }")),
+    ("silent", "群の深さ } と always の間のタブを挟んでも予約語に読む", quoted_launch_in_a_later_item("{ :; }\talways { :; }")),
+    ("silent", "群の深さ 引数の位置の } の直後の always も予約語で、その後の { が深さを上げる", quoted_launch_in_a_later_item("{ : } always { :; }")),
+    ("deny", "群の深さ 引数の位置の } の後の区切りの後の always は予約語にならない", quoted_launch_in_a_later_item("{ : }; always { :; }")),
+    ("silent", "群の深さ 入れ子の群を閉じた } の直後の always も予約語", quoted_launch_in_a_later_item("{ { :; } always { :; } }")),
+    ("deny", "群の深さ 本体の深さ 0 の } で文を閉じた後の always は予約語にならない", quoted_launch_in_a_later_case("case x { x) :; } always")),
+    ("deny", "群の深さ パターンの位置の } で文を閉じた後の always は予約語にならない", quoted_launch_in_a_later_case("case x { x) :;; } always")),
+    ("silent", "群の深さ 置換の中のコマンド位置の } の直後の always も予約語で、その後の { はコマンド位置", quoted_launch_in_a_later_case(": ; { :; } always")),
+    ("deny", "群の深さ 置換の中の } の後の区切りの後の always は予約語にならない", quoted_launch_in_a_later_case(": ; { :; }; always")),
+    ("deny", "群の深さ in 形式の項目の本体の } の直後の always も予約語", 'echo "$(case x in x) { :; } always { case y in y) echo \'"; python3 -i; "\';; esac; };; esac)"; python3 -i'),
+    # FR3 and FR4: the names of a `function` head, and the anonymous function
+    ("silent", "群の深さ 3 つの名前の function の { もコマンド位置で、深さを上げる", quoted_launch_in_a_later_item("function a b c { :; }")),
+    ("silent", "群の深さ 引用符で囲んだ追加の名前の後の { はコマンド位置", quoted_launch_in_a_later_item('function a "b" { :; }')),
+    ("silent", "群の深さ 空の () の前の追加の名前の後の { もコマンド位置", quoted_launch_in_a_later_item("function a b () { :; }")),
+    ("silent", "群の深さ 置換を含む追加の名前の後の { もコマンド位置", quoted_launch_in_a_later_item("function a $(:) { :; }")),
+    ("silent", "群の深さ 置換の中の複数名の function の { はコマンド位置で、case 文を開く", quoted_launch_in_a_later_case("function a b")),
+    ("deny", "群の深さ 頭部を終えた { の後の語は追加の名前にならず、後の { は引数", 'echo "$(case x { x) function a b { x { :; } ;; })"; python3 -i'),
+    ("deny", "群の深さ 匿名関数の { の後の語は追加の名前にならず、後の { は引数", 'echo "$(case x { x) function { echo { :; } ;; })"; python3 -i'),
+    ("deny", "群の深さ 置換の中の匿名関数の { の後の語は追加の名前にならず、後の { は引数", quoted_launch_in_a_later_case("function { echo")),
+    # Rule 9: the re-read of an arithmetic command returns the state added by
+    # this feature to its value at the `((`, and a subshell closing leaves no
+    # group-closed state behind
+    ("deny", "群の深さ 群を閉じた } の後の算術コマンドを読み直しても、その後の always は予約語にならない", quoted_launch_in_a_later_item("{ : } ((echo a) ) always { :; }")),
+    ("deny", "群の深さ 群を閉じた } の後の算術コマンドの後の always は予約語にならない", quoted_launch_in_a_later_item("{ : } ((1+1)) always { :; }")),
+    ("deny", "群の深さ 群を閉じた } の後のサブシェルの後の always は予約語にならない", quoted_launch_in_a_later_item("{ : } (echo a) always { :; }")),
+    ("silent", "群の深さ 複数名の function の後の算術コマンドを読み直しても、その後の { はコマンド位置", quoted_launch_in_a_later_item("function a b ((echo a) ) { :; }")),
     # Forms whose close is not certain: a heredoc in a brace-form statement
     # (TS-19, rule 8), no close (TS-20), an `esac` at a command position of the
     # item body (TS-21), an item terminator while a `{ }` group is open (TS-22,
@@ -2165,6 +2271,23 @@ class TestCaseStatementsInASubstitution(HookCopiesMixin, unittest.TestCase):
         depth = self.DEPTH
         statement = "case x { x) " + "{ " * depth + ":" + "; }" * depth + "; }"
         self.assert_every_copy_denies('echo "$(' + statement + ')"; python3 -i')
+
+    # codex-guard-brace-case-group-depth (SPEC.md TS-16 and TS-17, NFR1): DEPTH
+    # groups nested in one brace-form item body and closed by a `}` at an
+    # argument position, a `function` head with DEPTH names, and DEPTH `always`
+    # groups in a row are read in time. The launch after the substitution is
+    # denied.
+    def test_ts16_depth_groups_closed_by_argument_position_braces_are_read_in_time(self):
+        command = 'echo "$(case x { x) ' + '{ ' * self.DEPTH + ':' + ' }' * self.DEPTH + ';; })"; python3 -i'
+        self.assert_every_copy_denies(command)
+
+    def test_ts17_a_function_head_with_depth_names_is_read_in_time(self):
+        command = 'echo "$(case x { x) function' + ' a' * self.DEPTH + ' { :; };; })"; python3 -i'
+        self.assert_every_copy_denies(command)
+
+    def test_depth_always_groups_in_a_row_are_read_in_time(self):
+        command = 'echo "$(case x { x) ' + '{ :; } always ' * self.DEPTH + '{ :; };; })"; python3 -i'
+        self.assert_every_copy_denies(command)
 
     # codex-guard-case-reading-fixes (SPEC.md TS20 to TS22, NFR1): long runs of
     # continuation pairs and long runs of words whose keyword match fails are
@@ -4137,15 +4260,21 @@ class TestSubstitutionSkipDocumentation(unittest.TestCase):
             "brace-form statement closes in one of three ways",
             "(a) a standalone, unquoted, unescaped `}` at a pattern position",
             "(b) a standalone `esac` at a pattern position",
-            "(c) a standalone `}` read at a command position of the item body list itself while no `{ }` group is open in that body",
+            "(c) a standalone `}` read in the item body list itself, at a command position or at an argument position, while no `{ }` group is open in that body",
             "In the `in` form a `}` at a pattern position starts a pattern",
         ),
         "rule 2 depth": (
             "Each brace-form statement keeps the depth of the `{ }` groups open in its item body",
             "a standalone `{` read at a command position of the item body list itself raises it by one",
             "and so does the standalone `{` right after `function` (a zsh anonymous function reads it as its name)",
-            "a standalone `}` read there lowers it by one while it is 1 or more",
+            "a standalone `}` read there lowers it by one while it is 1 or more and closes the statement otherwise",
+            "In the item body list itself a standalone `}` is a closing brace at an argument position as well as at a command position",
+            "a redirection target and a word inside `[[ ... ]]` are argument positions",
+            "at depth 0 the statement closes as `esac` closes it and the list that holds the statement gets a command position",
+            "An argument-position `{` stays an ordinary word",
             "A quoted or escaped `}` or `esac` starts a pattern at a pattern position and is an ordinary word in a body",
+            "and so is a `}` in the middle of a word (`a}`) and a word that only starts with `}` (`}a`)",
+            "so a `}` at an argument position of any other list (an in-form body, a subshell, a substitution) is an ordinary word, and so is a `}` in the name position of `function`, `for`, `select` or `repeat`",
             "a nested case statement keeps a form and a depth of its own",
         ),
         "rule 5 closing": (
@@ -4238,7 +4367,7 @@ class TestSubstitutionSkipDocumentation(unittest.TestCase):
             "a standalone `]]` while a `[[` read as a standalone word at a command position is open in the same list",
             "the `esac` that closes a case statement, whether it is read in an item body or at a pattern position",
             "a standalone, unquoted `fi`, `done` or `}` read at a command position",
-            "A `]]` with no open `[[`, and a `fi`, `done` or `}` at an argument position, are ordinary words",
+            "A `]]` with no open `[[`, and a `fi`, `done` or `}` at an argument position, are ordinary words, except that in the item body list itself of a brace-form case statement a standalone `}` at an argument position is a closing brace (rule 2)",
             "the word after the target is not at a command position",
             "the `[[` is tracked only to recognise its `]]`",
         ),
@@ -4248,7 +4377,19 @@ class TestSubstitutionSkipDocumentation(unittest.TestCase):
             "A standalone, unquoted, unescaped `function` read at a command position starts a head",
             "an ordinary word that is never read as a keyword or reserved word",
             "an empty `()` directly after the name or after blanks belongs to the head",
-            "Multi-name zsh definitions and function-name validity are not considered",
+            "Function-name validity is not considered",
+            "After the first name, a word for which the command-word decision at a command position gives no kind is one more name",
+            "the function-name state and the command position are kept, so a later `{` or an empty `()` ends the head as it does after the first name",
+            "A standalone `{` or `}`, a reserved word, a head word, `case`, `[[`, an empty `()` and a separator are read as they are everywhere else",
+            "The standalone `{` right after `function` is zsh's anonymous function: it is read in the name position, and the function-name state does not go on after it, so the next ordinary word is the first word of a simple command and no name",
+            "This holds in every command list",
+            "the `}` that closed a brace-form statement, at a pattern position or at depth 0 of the body, is no group-closing `}`",
+            "A standalone, unquoted, unescaped `always`, decided on the characters with the continuation pairs left out, that follows a group-closing `}` after only spaces, tabs and continuation pairs is a reserved word, and the word after it is at a command position",
+            "In every other position `always` is an ordinary word: after a separator or a newline, after any other word, quoted, escaped, or as part of a longer word",
+        ),
+        "head state rule": (
+            "after the function name (which goes on through each further name, rule 6)",
+            "after a `}` that closed a group (an `always` may follow, rule 6)",
         ),
         "loop and coproc head rule": (
             "starts only from a standalone word that is unquoted, unescaped, read at a command position",
@@ -4341,6 +4482,23 @@ class TestSubstitutionSkipDocumentation(unittest.TestCase):
                 for marker in markers:
                     with self.subTest(copy=plugin, rule=rule, marker=marker):
                         self.assertIn(marker, doc)
+
+    # codex-guard-brace-case-group-depth (FR5, SPEC.md TS-18): the two sentences
+    # of the earlier reading stay out of both copies. One said a `}` at an
+    # argument position is an ordinary word in a brace-form item body, the
+    # other that multi-name zsh definitions are not considered.
+    STALE_GROUP_DEPTH_SENTENCES = (
+        "and so is a `}` at an argument position",
+        "Multi-name zsh definitions and function-name validity are not considered",
+    )
+
+    def test_the_docstring_no_longer_says_an_argument_position_brace_is_ordinary_or_multi_name_definitions_are_ignored(self):
+        for plugin, path in HOOK_PATHS.items():
+            doc = parser_docstring(path, "_skip_substitution") or ""
+            self.assertNotEqual(doc, "")
+            for sentence in self.STALE_GROUP_DEPTH_SENTENCES:
+                with self.subTest(copy=plugin, stale=sentence):
+                    self.assertNotIn(sentence, doc)
 
     # codex-guard-for-wordlist-glob-qualifier (FR1, FR2): the docstring says
     # where a `#` starts a comment in the word list of a zsh `for`: only in the
