@@ -487,5 +487,87 @@ class TestWorktreePathValidationConsistency(unittest.TestCase):
             self.assertEqual(read_journal_lines(worktree_path), [])
 
 
+@contextlib.contextmanager
+def _tmp_project():
+    """A git repository standing in for the project root, with the feature's
+    worktree root under `.claude/worktrees/em-workflow/f/`. The integration
+    worktree is its own git repository, so its toplevel is itself, as a real
+    worktree's is. Yields (project_root, integration_path, worktree_path)."""
+    with tempfile.TemporaryDirectory() as tmp:
+        project_root = os.path.realpath(tmp)
+        feature_root = os.path.join(project_root, ".claude", "worktrees", "em-workflow", "f")
+        integration_path = os.path.join(feature_root, "integration")
+        worktree_path = os.path.join(feature_root, "task0001")
+        os.makedirs(integration_path)
+        os.makedirs(worktree_path)
+        for path in (project_root, integration_path):
+            subprocess.run(["git", "init", "-q", path], check=True, timeout=15)
+        yield project_root, integration_path, worktree_path
+
+
+def cwd_payload(worktree_path, cwd):
+    payload = task_payload("task0001", worktree_path)
+    payload["cwd"] = cwd
+    return payload
+
+
+class TestCwdOutsideProjectRoot(unittest.TestCase):
+    """A launch is denied while the cwd's git toplevel is not the project
+    root; the denial leaves the journal untouched."""
+
+    def test_cwd_inside_integration_worktree_is_denied_without_journal_write(self):
+        with _tmp_project() as (project_root, integration_path, worktree_path):
+            proc = run_hook_payload(cwd_payload(worktree_path, integration_path))
+
+            self.assertEqual(proc.returncode, 0)
+            output = json.loads(proc.stdout)["hookSpecificOutput"]
+            self.assertEqual(output["permissionDecision"], "deny")
+            self.assertIn("task0001", output["permissionDecisionReason"])
+            self.assertIn(project_root, output["additionalContext"])
+            self.assertEqual(read_journal_lines(worktree_path), [])
+
+    def test_cwd_at_project_root_is_allowed(self):
+        with _tmp_project() as (project_root, _integration_path, worktree_path):
+            proc = run_hook_payload(cwd_payload(worktree_path, project_root))
+
+            self.assertEqual(proc.returncode, 0)
+            self.assertEqual(proc.stdout, "")
+            self.assertEqual(read_journal_lines(worktree_path)[-1]["event"], "launched")
+
+    def test_cwd_in_project_root_subdirectory_is_allowed(self):
+        with _tmp_project() as (project_root, _integration_path, worktree_path):
+            subdir = os.path.join(project_root, "src")
+            os.makedirs(subdir)
+            proc = run_hook_payload(cwd_payload(worktree_path, subdir))
+
+            self.assertEqual(proc.returncode, 0)
+            self.assertEqual(proc.stdout, "")
+            self.assertEqual(read_journal_lines(worktree_path)[-1]["event"], "launched")
+
+    def test_missing_cwd_fails_open(self):
+        with _tmp_project() as (_project_root, _integration_path, worktree_path):
+            proc = run_hook_payload(task_payload("task0001", worktree_path))
+
+            self.assertEqual(proc.returncode, 0)
+            self.assertEqual(proc.stdout, "")
+            self.assertEqual(read_journal_lines(worktree_path)[-1]["event"], "launched")
+
+    def test_cwd_outside_any_git_repository_fails_open(self):
+        with _tmp_project() as (_project_root, _integration_path, worktree_path), \
+                tempfile.TemporaryDirectory() as outside:
+            proc = run_hook_payload(cwd_payload(worktree_path, outside))
+
+            self.assertEqual(proc.returncode, 0)
+            self.assertEqual(proc.stdout, "")
+
+    def test_worktree_path_outside_layout_fails_open(self):
+        with _tmp_project() as (_project_root, integration_path, _worktree_path), \
+                _tmp_worktree() as worktree_path:
+            proc = run_hook_payload(cwd_payload(worktree_path, integration_path))
+
+            self.assertEqual(proc.returncode, 0)
+            self.assertEqual(proc.stdout, "")
+
+
 if __name__ == "__main__":
     unittest.main()

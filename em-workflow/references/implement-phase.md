@@ -397,6 +397,12 @@ call. Synchronous fan-out-and-wait for a batch of implementers is explicitly
 FORBIDDEN: it reintroduces the barrier this feature removes, and it starves
 the Stop hook of the turn-end event it needs to catch a forgotten refill.
 
+Launch from the project root. An implementer inherits the orchestrator's
+cwd, and the cross-repo write guard judges its writes against that cwd's
+git toplevel. If an earlier `cd` left the cwd inside a worktree, return
+with a separate `cd {project_root}` call first; the launch guard denies the
+launch otherwise.
+
 Prompt payload per task:
 
 ```
@@ -458,7 +464,8 @@ The PreToolUse(Task|Agent) launch guard (`queue_launch_guard.py`) records
 each allowed launch as a `launched` journal event as the call goes through
 (the only writer of `launched`); it also denies double-launching a task
 that is already in flight or already merged, as a net under the
-orchestrator's own bookkeeping.
+orchestrator's own bookkeeping. It also denies the launch while the cwd's
+git toplevel is not the project root; a denied launch records no event.
 
 **Journal re-read and write set**: after the launch loop, re-read the latest
 journal (the same replay as at the top of this section, last event per
@@ -1304,7 +1311,9 @@ Stop-hook bullet below cite it as this classification's source.
   Code versions, `Task` in older ones — both are matched); identifies
   em-workflow implementer launches and
   denies double-launching an already in-flight or already-merged task (a
-  retry after `failed` is allowed). The sole writer of `launched` events.
+  retry after `failed` is allowed). Also denies the launch while the cwd's
+  git toplevel is not the project root, before touching the journal. The
+  sole writer of `launched` events.
 - **Agent index writer** (`queue_agent_index.py`) — fires on the same
   subagent-launch call as the launch guard above, after the tool completes.
   For em-workflow implementer launches it appends one entry to that

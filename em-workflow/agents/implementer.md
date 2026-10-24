@@ -90,9 +90,9 @@ task branch and `git -C "{worktree_path}" status` is clean. Do NOT rely on a
 `cd` persisting between Bash calls — your cwd may reset on every call, and a
 bare `git commit` / merge run from the main tree would mutate `base_branch`.
 Target the worktree explicitly in EVERY command: use
-`git -C "{worktree_path}" ...` for git, and chain
-`cd "{worktree_path}" && <cmd>` within a single Bash call for everything
-else (tests, builds, `merge_script`). You MUST NOT read from or write to any
+`git -C "{worktree_path}" ...` for git, and for everything else (tests,
+builds, `merge_script`) run a separate `cd "{worktree_path}"` call
+immediately before the command. Never chain the `cd` with `&&`. You MUST NOT read from or write to any
 path outside `worktree_path` except: reading `task_plan_path` /
 `implementation_md_path` / `lessons_path`, and executing `merge_script`.
 
@@ -228,8 +228,9 @@ implementation it describes, not as a separate bookkeeping commit.
 
 ### Step 6: Merge (and the conflict loop)
 
-Run `cd "{worktree_path}" && "{merge_script}" "{parent_branch}" "{task_id}"`
-(the `cd` chained in the SAME Bash call — never assume the cwd carried over)
+Run a separate `cd "{worktree_path}"` call, then
+`"{merge_script}" "{parent_branch}" "{task_id}"` (the `cd` immediately
+before, never chained with `&&` — never assume an earlier cwd carried over)
 and branch on its exit code exactly as `worktree-task-workflow` specifies:
 
 - `0` → merged. Done.

@@ -815,7 +815,8 @@ verify step の status 遷移は対話時と変わらない）:
 2. workflow.yaml `project.components` の build / test / format コマンドを
    integration worktree で実行。コマンドは Step A.5 で承認済み —
    **承認された文字列を一字一句そのまま**実行する（cd 前置禁止。作業
-   ディレクトリは事前に単独の cd で移動）。PreToolUse hook が機械的に
+   ディレクトリは事前に単独の cd で移動し、実行後は単独の cd で
+   プロジェクトのルートに戻る）。PreToolUse hook が機械的に
    allow/deny を強制する。deny されたら Step A.5 を再実行
    （`${CLAUDE_PLUGIN_ROOT}/references/command-execution-protocol.md` 参照）
 3. `minimal` tier では TASK.md の Expected Result を評価する（pass/fail の
