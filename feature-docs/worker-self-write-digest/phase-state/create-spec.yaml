@@ -1,7 +1,7 @@
 schema_version: 1
 feature: worker-self-write-digest
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 32070b74a3a5ab16181b027b4826d87b1d1d5e3c
 last_input_digest: sha256:f59018ff1c11768303647fc6680156dad80940a5dd25047c094ede85bfada51b
