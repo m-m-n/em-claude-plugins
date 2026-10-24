@@ -1,7 +1,7 @@
 schema_version: 1
 feature: self-write-exclusivity-window
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 5ec9bf3bf93a049e5919ef1f123122a7350e12e0
 last_input_digest: sha256:adfbe8e71c3da3cb959b80feb232ea8c15151a3ba2fc809e497e3113955aa1c2
