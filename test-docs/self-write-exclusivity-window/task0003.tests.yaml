@@ -1,0 +1,56 @@
+task_id: task0003
+baseline_failures: []          # python3 -m unittest discover -s tests before any change: 11238 tests, OK (1 skipped)
+final_failures: []             # re-run after implementation and after this record was written
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_layer5_recording_when_docs.TestWhenParagraphLayer4.test_ac1_when_paragraph_still_follows_layer_4_passing_for_the_completed_result
+      - tests.test_layer5_recording_when_docs.TestWhenParagraphLayer4.test_ac1_when_paragraph_is_still_the_first_block_of_the_section
+      - tests.test_artifact_digest_docs.TestLayer5Recording.test_runs_after_layer_4_passes
+    red_confirmed: false
+    red_reason: "the criterion keeps a statement the When paragraph already carried, so the new AC-1 tests were green on their first run and no red state exists for it; the existing tests.test_artifact_digest_docs.TestLayer5Recording.test_runs_after_layer_4_passes also detects the statement being lost. The probe is shown to fire by the forged-text control tests.test_layer5_recording_when_docs.TestProbesFireOnForgedText.test_every_probe_fires_on_each_of_its_forged_texts."
+  AC-2:
+    tests:
+      - tests.test_layer5_recording_when_docs.TestWhenParagraphR1Citation.test_ac2_when_paragraph_cites_the_owner_path_rule_r1_and_the_timing_name_together
+      - tests.test_layer5_recording_when_docs.TestWhenParagraphR1Citation.test_ac2_calculation_runs_only_after_the_return_time_comparison_has_not_made_the_result_stale
+      - tests.test_layer5_recording_when_docs.TestWhenParagraphR1Citation.test_ac2_recording_write_happens_only_after_the_return_time_recheck_has_not_made_the_result_stale
+      - tests.test_layer5_recording_when_docs.TestWhenParagraphR1Citation.test_ac2_the_orchestrator_is_the_actor_of_both_statements
+      - tests.test_layer5_recording_when_docs.TestWhenParagraphR1Citation.test_ac2_the_recheck_term_is_written_in_code_format
+      - tests.test_layer5_recording_when_docs.TestProbesFireOnForgedText.test_the_pre_change_paragraph_fires_each_probe_for_the_added_statements
+    red_confirmed: true
+    red_reason: "with the When paragraph as it read before the change (one sentence), the citation, Calculation-statement and recording-statement tests failed with 'True is not false' on the probe result, the actor test failed because no sentence names Calculation or the recording write (assertIn orchestrator against an empty sentence), and the term test failed because the paragraph does not contain the return-time recheck term in code format. The forged-text control test_the_pre_change_paragraph_fires_each_probe_for_the_added_statements is green by design (it asserts the probes fire on forged text) and was not a red."
+  AC-3:
+    tests:
+      - tests.test_layer5_recording_when_docs.TestWhenParagraphOrder.test_ac3_calculation_mention_precedes_the_recheck_mention_which_precedes_the_recording_write_mention
+      - tests.test_layer5_recording_when_docs.TestWhenParagraphOrder.test_ac3_the_calculation_sentence_never_implies_calculation_follows_the_recheck
+      - tests.test_layer5_recording_when_docs.TestProbesFireOnForgedText.test_every_probe_fires_on_each_of_its_forged_texts
+    red_confirmed: true
+    red_reason: "the order test failed with 'True is not false' (the pre-change paragraph holds none of the three mentions) and the no-implication test failed on assertTrue of the empty Calculation sentence; the forged paragraphs that put Calculation after the recheck, name the recheck in the Calculation sentence, or mention the recording write first make the order probe fire (the control test listed here is green by design and was not a red)"
+  AC-4:
+    tests:
+      - tests.test_layer5_recording_when_docs.TestWhenParagraphDoesNotRestateTheRecheck.test_ac4_when_paragraph_restates_neither_the_compared_values_nor_membership_nor_substitution
+      - tests.test_layer5_recording_when_docs.TestWhenParagraphDoesNotRestateTheRecheck.test_ac4_when_paragraph_never_names_the_hashing_command
+      - tests.test_layer5_recording_when_docs.TestProbesFireOnForgedText.test_every_probe_fires_on_each_of_its_forged_texts
+      - tests.test_layer5_recording_when_docs.TestProbesFireOnForgedText.test_the_restatement_forgeries_cover_every_restatement_marker_group
+    red_confirmed: false
+    red_reason: "the criterion forbids restating the recheck in text that is added by this task; the pre-change paragraph restated nothing, so the real-document tests were green on their first run and no red state exists for them. The forged paragraphs that enumerate blob id, mode and kind, name git hash-object, or word out membership and substitution make the restatement probe fire (control test above)."
+  AC-5:
+    tests:
+      - tests.test_layer5_recording_when_docs.TestAddedSentencesFollowTheDigestConvention.test_ac5_the_paragraph_adds_sentences_and_each_digest_sentence_among_them_complies
+      - tests.test_layer5_recording_when_docs.TestAddedSentencesFollowTheDigestConvention.test_ac5_the_added_sentences_carry_no_instruction_to_a_worker
+      - tests.test_layer5_recording_when_docs.TestRestOfTheDocumentIsUnchanged.test_ac5_layer_5_recording_holds_the_when_paragraph_and_the_three_unchanged_blocks
+      - tests.test_layer5_recording_when_docs.TestRestOfTheDocumentIsUnchanged.test_ac5_the_final_paragraph_of_pre_dispatch_verification_is_unchanged
+      - tests.test_artifact_digest_docs.TestLayer5Recording
+      - tests.test_artifact_digest_docs.TestLayer5ZeroArtifacts
+      - tests.test_artifact_digest_docs.TestPreDispatchVerification
+    red_confirmed: false
+    red_reason: "both constraints are negative: added sentences name the orchestrator or are negated, and the rest of Layer 5 recording and the final paragraph of Pre-dispatch verification stay as they were. They hold before the change, so no red state exists for them. Only the vacuity guard in the first test (the paragraph must add at least one sentence) failed before the change, which repeats the AC-2 red and does not show the convention itself failing; the forged worker-directed and no-actor digest sentences and the altered neighbour paragraphs make the probes fire (control test tests.test_layer5_recording_when_docs.TestProbesFireOnForgedText.test_every_probe_fires_on_each_of_its_forged_texts)."
+  AC-6:
+    tests:
+      - tests.test_layer5_recording_when_docs.TestThisFileConventions.test_ac6_this_file_imports_only_standard_library_modules
+      - tests.test_layer5_recording_when_docs.TestThisFileConventions.test_ac6_this_file_follows_the_naming_rules_of_the_test_readme
+      - tests.test_layer5_recording_when_docs.TestProbesFireOnForgedText.test_every_probe_function_has_a_control_entry
+      - tests.test_layer5_recording_when_docs.TestProbesFireOnForgedText.test_every_probe_fires_on_each_of_its_forged_texts
+      - tests.test_layer5_recording_when_docs.TestProbesFireOnForgedText.test_every_probe_stays_quiet_on_the_conforming_text
+    red_confirmed: false
+    red_reason: "the criterion describes the new test file itself (standard library only, README naming, heading slice with whitespace normalization, a forged-text control per probe), so there is no earlier state in which the file existed and failed; these tests passed on their first run. The full-suite command python3 -m unittest discover -s tests is the check that it passes."
