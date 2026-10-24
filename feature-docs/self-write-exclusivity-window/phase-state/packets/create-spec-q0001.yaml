@@ -1,0 +1,127 @@
+schema_version: 1
+packet_id: create-spec-q0001
+phase: create-spec
+worker: requirements-analyst
+iteration: 1
+input_revision:
+  workflow_blob: null
+  input_digest: sha256:1145c69d11f8013b63682e0ef51933b83429104018a9c5b845d1fe76558e131e
+summary: R1 の Order（worker-envelope.md:252-263）は、scope verification（layer 4）の後に digest_source の再計算、self-write
+  の置換、比較を行う。各 dispatch 箇所（develop SKILL.md の design step 5、create-plan-phase.md の §8、rework-task-synthesis.md
+  の §10）は、その後に Layer 5 記録と self_write_set の記録を同じ phase-state 書き込みで行う。一方、排他の前提の適用区間は scope verification
+  の終了で切れている（worker-envelope.md:389-392、create-spec-phase.md:545-548）。修正の方向は 2 案あり、入力からは 1 つに決められない。
+confirmed_facts:
+- fact_id: F1
+  statement: worker-envelope.md の『Exclusivity assumption during dispatch』では、適用区間は『the start of the dispatch's
+    scope snapshot capture through the end of that dispatch's scope verification』になっている。
+  source: em-workflow/references/contracts/worker-envelope.md:389-392
+- fact_id: F2
+  statement: create-spec-phase.md の『Scope of applicability』では、適用区間は『from taking the scope snapshot through
+    the end of verification』になっている。
+  source: em-workflow/references/phases/create-spec-phase.md:545-548
+- fact_id: F3
+  statement: R1 の Order は 4 段で、scope verification が observed change set を出した後に、再計算、self-write スクリプト、比較の順に進む。
+  source: em-workflow/references/contracts/worker-envelope.md:252-263
+- fact_id: F4
+  statement: 3 つの dispatch 箇所は、どれも比較で stale にならなかった後に Layer 5 記録と self_write_set の記録を行う。
+  source: em-workflow/skills/develop/SKILL.md:770-788; em-workflow/references/phases/create-plan-phase.md:258-273;
+    em-workflow/references/rework-task-synthesis.md:233-247
+- fact_id: F5
+  statement: artifact-digest.md の Layer 5 recording の『When』は『after layer 4 (scope verification) passes』と書いており、比較の後とは書いていない。
+  source: em-workflow/references/artifact-digest.md:123-124
+- fact_id: F6
+  statement: scope verification は、変更された候補パスの新しい blob id を git hash-object で求める。一方、Layer 5 と digest_inputs
+    は raw-byte の sha256 を使う（artifact-digest.md の Calculation）。
+  source: em-workflow/references/phases/create-spec-phase.md:640-658; em-workflow/references/phases/create-spec-phase.md:630-633
+- fact_id: F7
+  statement: Known limit は、scope verification より前に worker と別の主体が同じパスを書く場合を排他の前提に委ねている。この部分は今回の不具合とは別に残る。
+  source: em-workflow/references/contracts/worker-envelope.md:279-282
+assumptions:
+- assumption_id: A1
+  statement: requirements-analyst 自身の『Exclusivity assumption』節（analyst-contract.md:215-220）は書き込みを伴わないため、変更しない。
+  reason: analyst は self-write の置換も Layer 5 記録も受けない。
+  impact: low
+  reversible: true
+  related_question_ids:
+  - requirement.fix-approach
+- assumption_id: A2
+  statement: spec-writer-contract.md:88-91 と artifact-digest.md:116-119 にある『verification から worker の書き込みまで排他の前提が守る』という記述は、延ばした区間にもそのまま含まれるので書き換えない。
+  reason: その窓は scope snapshot の取得後、scope verification の前にあり、今の区間にも新しい区間にも入る。
+  impact: low
+  reversible: true
+  related_question_ids:
+  - requirement.fix-approach
+- assumption_id: A3
+  statement: plugin の version は触らない（patch は Actions が上げる）。SPEC にも version の変更を書かない。
+  reason: .claude/rules/core-plugin-version-bump.md
+  impact: low
+  reversible: true
+  related_question_ids: []
+questions:
+- question_id: requirement.fix-approach
+  gate_id: create-spec.requirement-clarification
+  category: technical-requirement
+  priority: high
+  blocking: true
+  header: 修正方針
+  prompt: scope verification の後に入った外部の書き換えを、どう扱う？
+  answer_mode: single_select
+  options:
+  - option_id: detect_and_extend
+    label: 検出を足し、区間も延ばす
+    description: R1 の Order に手順を 1 つ足す。オーケストレーターは Layer 5 の Calculation の後、self-write set の各パスの現在の内容（git
+      hash-object の blob id）が、scope verification で観測した内容と一致するかを確かめる。不一致なら stale にする。あわせて、排他の前提の適用区間を Layer
+      5 記録（self_write_set を記録する phase-state 書き込み）の終了まで延ばし、確認の後に残るわずかな窓を覆う。再現手順の書き換えは stale として検出される。
+    recommended: true
+  - option_id: detect_only
+    label: 検出だけを足す
+    description: R1 に上と同じ確認の手順を足す。排他の前提の適用区間は scope verification の終了までのまま変えない。確認の後から Layer 5 記録までの窓は、どの規則にも覆われないまま残る。
+    recommended: false
+  - option_id: extend_interval_only
+    label: 区間だけを延ばす
+    description: worker-envelope.md と create-spec-phase.md の適用区間を、再計算・置換・比較・Layer 5 記録の終了まで延ばす。機構は足さない。再現手順の書き換えは前提違反として扱われ、置換で隠れたまま記録される（Known
+      limit と同じ扱い）。
+    recommended: false
+  why_needed: 期待する挙動は『置換で隠されない』こと、完了の定義は『再現手順で現象が起きない』ことになっている。区間を延ばすだけだと、再現手順の書き換えは前提違反と宣言されるだけで、実際には隠れたまま
+    Layer 5 に記録される。一方で、scope verification より前の同種の競合は、既存の設計（Known limit）が前提に委ねている。どちらに寄せるかは入力から決められない。
+  evidence:
+  - path: em-workflow/references/contracts/worker-envelope.md
+    line: 389
+    detail: 適用区間が scope verification の終了で切れている
+  - path: em-workflow/references/contracts/worker-envelope.md
+    line: 252
+    detail: 'R1 Order: 再計算は scope verification の後'
+  - path: em-workflow/references/contracts/worker-envelope.md
+    line: 279
+    detail: Known limit は排他の前提に委ねている
+  - path: em-workflow/references/phases/create-spec-phase.md
+    line: 545
+    detail: 同じ区間を言い換えて書いている
+  depends_on: []
+  supersedes: []
+  on_unanswered: use_batch_policy
+- question_id: design-step.recommendation
+  gate_id: create-spec.design-step
+  category: design-step
+  priority: low
+  blocking: true
+  header: design
+  prompt: design ステップはスキップを推奨するよ（変更はプロトコルの Markdown とドキュメントテストだけで、UI が無い）。この推奨をどう確定する？
+  answer_mode: single_select
+  options:
+  - option_id: decide_autonomously
+    label: 推奨をそのまま採る
+    description: design_step_recommendation（skip）を、ユーザーに聞かずに採る。
+    recommended: true
+  - option_id: ask_user
+    label: ユーザーに確認する
+    description: 推奨を AskUserQuestion でユーザーに示し、ユーザーが確定するか上書きする。
+    recommended: false
+  why_needed: design ステップを実行するかどうかの推奨を確定させるため。
+  evidence:
+  - path: em-workflow/references/contracts/worker-envelope.md
+    line: 382
+    detail: 対象はプロトコル文書の節
+  depends_on: []
+  supersedes: []
+  on_unanswered: use_batch_policy
