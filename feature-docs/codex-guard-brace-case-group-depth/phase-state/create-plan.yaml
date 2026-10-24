@@ -1,7 +1,7 @@
 schema_version: 1
 feature: codex-guard-brace-case-group-depth
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: ad1db070f89ccb124e50f83bdfb116becaaf0cfb
 last_input_digest: sha256:7c455ae576b4efa53beb61a539d88203bb185ca38f236976b2ee848a729c1b1d
@@ -45,7 +45,7 @@ artifacts:
   produced_by: create-plan-run-0001
 patches:
 - patch_id: codex-guard-brace-case-group-depth-plan-p0001
-  status: pending
+  status: applied
   base_input_digest: sha256:7c455ae576b4efa53beb61a539d88203bb185ca38f236976b2ee848a729c1b1d
   base_workflow_blob: 6900956dd6759031762ee83bd922915046547034
 progress_fingerprint: null
