@@ -136,7 +136,7 @@ triage_filing:
   filed: []
   appended: []
   duplicates_suppressed: []
-  report_path: /home/user/src/my_projects/em-claude-plugins/tmp/sca-triage-codex-guard-funcname-anon-always-20261024T113649Z.md
+  report_path: tmp/sca-triage-codex-guard-funcname-anon-always-20261024T113649Z.md
   failed_package: null
   failure_reason: null
   malformed_findings: []
