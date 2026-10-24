@@ -1,0 +1,26 @@
+schema_version: 1
+feature: self-write-exclusivity-window
+phase: create-spec
+status: in_progress
+generation: 1
+base_revision: 5ec9bf3bf93a049e5919ef1f123122a7350e12e0
+last_input_digest: null
+active_request_id: null
+packets: {}
+answers:
+  create-spec.feature-identity:
+    packet_id: null
+    answered_at: '2026-10-24T16:22:00+09:00'
+    source: batch-policy
+    answer_mode: select
+    selected_option_ids:
+    - derive_from_task_description
+    freeform: null
+    normalized_answer: feature name self-write-exclusivity-window derived from the task title (R1 exclusivity window)
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
