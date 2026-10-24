@@ -113,7 +113,8 @@ workflow:
   completed_at_commit: 544986c0759be0890aa341ae8e0efbd3323db819
   base_commit: 35fefef289a69958a9250dea07ca0a1abde338e3
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 588d34c1c43437af6446ffe4b43764f38b2dc893
 - id: verify
   status: pending
 - id: retrospect
@@ -147,7 +148,16 @@ tasks:
     status: merged
     branch: em-workflow/codex-guard-brace-case-group-depth/task0001
 review:
-  status: pending
+  status: completed
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  - performance
+  residual_critical_high: 0
+  needs_rework: false
   plan:
     floor:
     - comprehensive
