@@ -1,7 +1,7 @@
 schema_version: 1
 feature: self-write-exclusivity-window
 phase: create-spec
-status: in_progress
+status: dispatching
 generation: 1
 base_revision: 5ec9bf3bf93a049e5919ef1f123122a7350e12e0
 last_input_digest: sha256:1145c69d11f8013b63682e0ef51933b83429104018a9c5b845d1fe76558e131e
@@ -14,18 +14,19 @@ answers:
   create-spec.feature-identity:
     packet_id: null
     answered_at: '2026-10-24T16:22:00+09:00'
-    source: batch-policy
-    answer_mode: select
+    source: batch-decision-table
+    answer_mode: single_select
     selected_option_ids:
     - derive_from_task_description
     freeform: null
     normalized_answer: feature name self-write-exclusivity-window derived from the task title (R1 exclusivity
       window)
+    question_id: create-spec.feature-identity
   requirement.fix-approach:
     packet_id: create-spec-q0001
     answered_at: '2026-10-24T16:33:00+09:00'
     source: batch-codex-consultation
-    answer_mode: select
+    answer_mode: single_select
     selected_option_ids:
     - detect_and_extend
     freeform: null
@@ -37,17 +38,19 @@ answers:
       done), detect-only leaves the check-to-record window uncovered; keeps the existing Known limit for
       pre-verification races. Risks noted: exclusivity still unenforced after the re-check; extra re-read
       cost. Orchestrator mapped the suggestion to detect_and_extend (also the worker''s recommendation).'
+    question_id: requirement.fix-approach
   design-step.recommendation:
     packet_id: create-spec-q0001
     answered_at: '2026-10-24T16:33:00+09:00'
     source: batch-decision-table
-    answer_mode: select
+    answer_mode: single_select
     selected_option_ids:
     - decide_autonomously
     freeform: null
     normalized_answer: 'accept design_step_recommendation: skip (protocol Markdown and doc tests only,
       no UI)'
     resolution_note: batch-policies.yaml create-spec.design-step -> decide_autonomously
+    question_id: design-step.recommendation
 worker_runs:
 - request_id: create-spec-run-0001
   worker: requirements-analyst
