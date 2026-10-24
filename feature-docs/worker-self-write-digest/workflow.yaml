@@ -134,7 +134,7 @@ workflow:
     extend_only reproduction is covered at unit level by TS-1. Excluded requirements: none.'
   completed_at_commit: 10e4eaa9ee6de13b708c02a6f8194aa2525b68f7
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: self-write digest script and regression tests
