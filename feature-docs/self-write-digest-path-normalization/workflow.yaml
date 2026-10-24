@@ -124,7 +124,7 @@ workflow:
   completed_at_commit: bd3d762b154dce00e6d4efaea0061d5bc36316e0
   base_commit: b6ffd65728f8d968c201b02b61111762c4d5f898
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -157,10 +157,18 @@ tasks:
     status: merged
     branch: em-workflow/self-write-digest-path-normalization/task0001
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
   residual_critical_high: 0
   needs_rework: false
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
 requirements:
   FR1:
     title: Align the allowed_write_roots containment normalization with scope validation
