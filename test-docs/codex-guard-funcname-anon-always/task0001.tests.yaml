@@ -1,12 +1,22 @@
 task_id: task0001
-# Run before any edit, in the task worktree: python3
-# em-workflow/hooks/tests/run-destructive-guard.py (943/943 passed) and
-# python3 -m unittest discover -s tests (11495 tests, OK, 1 skipped, no failure).
-baseline_failures: []
+# The first full run of the project test command in this worktree when it was
+# handed over with the implementation already committed (python3
+# em-workflow/hooks/tests/run-destructive-guard.py 943/943 passed; python3 -m
+# unittest discover -s tests ran 11501 tests, 1 skipped, 1 failure). The one
+# failure comes from the working tree, not from the revision: an ignored,
+# untracked bytecode file em-workflow/scripts/__pycache__/
+# codex-hook-interactive-guard.cpython-314.pyc, left in the worktree before the
+# commit, made the existing TestCopies test see a bytecode cache in a plugin
+# directory. The base revision itself gave a clean run (11495 tests, no failure)
+# in the first session, before any edit. The file was moved to the trash; the
+# hook is run as a separate process by the tests and leaves no bytecode.
+baseline_failures:
+  - tests.test_codex_hook_interactive_guard.TestCopies.test_a_run_leaves_no_bytecode_cache_in_a_plugin_directory
 # The project test command re-executed in full in the task worktree after the
-# implementation and after this record was written: run-destructive-guard.py
-# 943/943 passed and unittest discover ran every test with no failure (the
-# record is itself checked by tests.test_tests_yaml_id_resolution).
+# stale bytecode file was removed and this record was written:
+# run-destructive-guard.py 943/943 passed and unittest discover ran every test
+# with no failure (the record is itself checked by
+# tests.test_tests_yaml_id_resolution).
 final_failures: []
 acceptance_tests:
   AC-1:
