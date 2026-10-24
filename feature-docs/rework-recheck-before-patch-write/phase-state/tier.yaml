@@ -1,0 +1,65 @@
+schema_version: 2
+feature: rework-recheck-before-patch-write
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 0.96
+    confidence: 0.94
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.05
+      '1': 0.94
+      '2': 0.01
+      '3': 0.0
+  observed_at: '2026-10-24T18:07:09+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.05
+    confidence: 0.91
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.02
+      '1': 0.91
+      '2': 0.07
+      '3': 0.0
+  observed_at: '2026-10-24T18:10:43+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/references/rework-task-synthesis.md
+  - tests/test_recheck_dispatch_sites_docs.py
+  changed_lines_approx: 60
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules:
+  - em-workflow/references/review-phase.md
+  - em-workflow/skills/develop/SKILL.md
+  work_still_required: true
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 2
+  body_change_kind: new_logic
+  change_containment: single_module
+  caller_and_dependency_count: 7
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: em-workflow/references/rework-task-synthesis.md:241では検証・適用後に再確認する。em-workflow/references/workflow-patch.md:277では書き込み、同:280ではコミットを規定する。em-workflow/references/contracts/worker-envelope.md:275は再確認失敗をstaleとし、em-workflow/references/phases/create-spec-phase.md:711の復元先はintegration先端である。create-planはem-workflow/references/phases/create-plan-phase.md:272で再確認し、同:353以降で書き込み・コミットする。tests/test_recheck_dispatch_sites_docs.py:610はstep
+    3→再確認→記録を検査し、同:515は旧文維持を要求する。同テストの68件は成功した。呼出元4経路と上記参照規則3文書を関連数に数えた（em-workflow/references/review-phase.md:1175、em-workflow/skills/develop/SKILL.md:853）。行数と追加ケース数は既存検査を拡張する場合の概算である。ファイル変更は行っていない
+decided_at: '2026-10-24T18:10:58+09:00'
