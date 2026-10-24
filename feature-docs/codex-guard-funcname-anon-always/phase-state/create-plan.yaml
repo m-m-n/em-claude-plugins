@@ -1,0 +1,58 @@
+schema_version: 1
+feature: codex-guard-funcname-anon-always
+phase: create-plan
+status: completed
+generation: 1
+base_revision: d7bf9ef290b3aca20e6388a90554c865df5fafe3
+last_input_digest: sha256:96a8414a4457ede6ba35c5814f3eefa7b5f6719cf980dc855a321a46e307b0fb
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: completed
+  input_digest: sha256:96a8414a4457ede6ba35c5814f3eefa7b5f6719cf980dc855a321a46e307b0fb
+  output_digest: sha256:c6801c248746bd5a2b2bb0d17656b6b761c55c4743a5dae9a414444e0419de35
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/planner-contract.md: sha256:6476cc99ea8a1d2d4f376d1702bd636b1ab9898655397ec80ab1d6fb47cbe9e8
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
+    em-workflow/references/workflow-schema.md: sha256:48f38d6b84e9878974f9b59f6c296fbdb28ee1ccc9f47332ebaa0e7a6bba5889
+    em-workflow/skills/plan-writing/SKILL.md: sha256:880bd01ad6c60af5695495e0a6784de7fe98e1ea9463dc6703164f8ffffdbccb
+    feature-docs/codex-guard-funcname-anon-always/REQUIREMENTS.md: sha256:fa6ae3ced2e4f92714f017972588636ef1f7daad8d37f0e02377dee84276b72c
+    feature-docs/codex-guard-funcname-anon-always/SPEC.md: sha256:4e266edbbc3fe1ba42d77d4e6075708821ca2d972f53a6f7399dd66fdc5f2b5a
+    feature-docs/codex-guard-funcname-anon-always/workflow.yaml: sha256:1153cff0f6570eb2b89e17fdca1485aeceade0170abd1da7c7ff8a1ddff17ec2
+  self_write_set:
+  - feature-docs/codex-guard-funcname-anon-always/IMPLEMENTATION.md
+  - feature-docs/codex-guard-funcname-anon-always/THREAT-MODEL.md
+  - feature-docs/codex-guard-funcname-anon-always/VERIFICATION.md
+  - feature-docs/codex-guard-funcname-anon-always/tasks/task0001.md
+  - feature-docs/codex-guard-funcname-anon-always/tasks/task0002.md
+artifacts:
+- path: feature-docs/codex-guard-funcname-anon-always/IMPLEMENTATION.md
+  sha256: sha256:0d95d79280bf36c75bec9161470d24c5009456639da821a7f01fc3706f2c455b
+  produced_by: create-plan-run-0001
+- path: feature-docs/codex-guard-funcname-anon-always/THREAT-MODEL.md
+  sha256: sha256:d0ad93026d2b1f273afad7ae10be86cde624f2f985e37a2ec8a3e0981bb9189c
+  produced_by: create-plan-run-0001
+- path: feature-docs/codex-guard-funcname-anon-always/VERIFICATION.md
+  sha256: sha256:23e81789e5616b4a6e40c38424816dbba6a0c1e1dffda24421192d272cd4e365
+  produced_by: create-plan-run-0001
+- path: feature-docs/codex-guard-funcname-anon-always/tasks/task0001.md
+  sha256: sha256:298d72754346814736fecb09bff5723ffcfcac4168573dc240de9d610e9b0f11
+  produced_by: create-plan-run-0001
+- path: feature-docs/codex-guard-funcname-anon-always/tasks/task0002.md
+  sha256: sha256:1be8bdb910d859aa753dde0893799623e431d2e320f222e631008ff856769ddc
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: codex-guard-funcname-anon-always-p0001
+  status: applied
+  base_input_digest: sha256:96a8414a4457ede6ba35c5814f3eefa7b5f6719cf980dc855a321a46e307b0fb
+  base_workflow_blob: e5b9eae21dd8e5e9c51852029a50aa551b0f3e8b
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
