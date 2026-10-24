@@ -1,0 +1,72 @@
+task_id: task0003
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 10983 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: Ran 11031 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_self_write_digest_wiring.TestAC1DesignStepBranch.test_ac1_dispatch_step_records_dispatch_digest_inputs
+      - tests.test_self_write_digest_wiring.TestAC1DesignStepBranch.test_ac1_dispatch_step_points_at_phase_state_for_the_field
+      - tests.test_self_write_digest_wiring.TestAC1DesignStepBranch.test_ac1_script_is_named_after_scope_verification_before_layer_5
+      - tests.test_self_write_digest_wiring.TestAC1DesignStepBranch.test_ac1_step_5_names_the_identify_and_substitute_operation
+      - tests.test_self_write_digest_wiring.TestAC1DesignStepBranch.test_ac1_step_5_cites_rule_r1_with_the_timing_paragraph
+      - tests.test_self_write_digest_wiring.TestAC1DesignStepBranch.test_ac1_step_5_says_mismatch_or_nonzero_exit_is_stale
+      - tests.test_self_write_digest_wiring.TestAC1DesignStepBranch.test_ac1_stale_handling_points_at_scope_verification_section
+      - tests.test_self_write_digest_wiring.TestAC1DesignStepBranch.test_ac1_self_write_set_shares_the_layer_5_phase_state_write
+      - tests.test_self_write_digest_wiring.TestAC1DesignStepBranch.test_ac1_self_write_set_is_recorded_before_artifact_verification
+      - tests.test_self_write_digest_wiring.TestAC1DesignStepBranch.test_ac1_orchestrator_is_the_actor
+    red_confirmed: true
+    red_reason: "All ten failed before any document edit: step 4 lacked dispatch_digest_inputs (False is not true), step 5 reported 'scripts/self-write-digest.py not found' and 'R1 citation lacks references/contracts/worker-envelope.md' and 'self_write_set not found'; the stale-sentence test raised ValueError: substring not found"
+  AC-2:
+    tests:
+      - tests.test_self_write_digest_wiring.TestAC2Section4PlannerDispatch.test_ac2_section_4_records_dispatch_digest_inputs
+      - tests.test_self_write_digest_wiring.TestAC2Section4PlannerDispatch.test_ac2_section_4_points_at_phase_state_for_the_field
+      - tests.test_self_write_digest_wiring.TestAC2Section8Validation.test_ac2_section_8_order_scope_script_validator_layer_5
+      - tests.test_self_write_digest_wiring.TestAC2Section8Validation.test_ac2_section_8_runs_the_identify_and_substitute_operation
+      - tests.test_self_write_digest_wiring.TestAC2Section8Validation.test_ac2_section_8_validator_run_takes_the_substituted_digest_source
+      - tests.test_self_write_digest_wiring.TestAC2Section8Validation.test_ac2_section_8_cites_rule_r1_with_the_timing_paragraph
+      - tests.test_self_write_digest_wiring.TestAC2Section8Validation.test_ac2_section_8_says_mismatch_or_nonzero_exit_is_stale
+      - tests.test_self_write_digest_wiring.TestAC2Section8Validation.test_ac2_section_8_self_write_set_shares_the_layer_5_write
+      - tests.test_self_write_digest_wiring.TestAC2Section8Validation.test_ac2_section_8_orchestrator_is_the_actor
+      - tests.test_self_write_digest_wiring.TestAC2Section9CanonicalInvocation.test_ac2_section_9_names_the_substituted_digest_source_for_the_flag
+    red_confirmed: true
+    red_reason: "Section 4 tests failed with False is not true (no dispatch_digest_inputs); the section 8 class errored in setUpClass with AssertionError: no paragraph contains 'scripts/self-write-digest.py'; the section 9 test failed with AssertionError: no sentence contains all of ('--digest-source', 'substituted digest_source', 'returned'). test_ac2_section_9_canonical_command_block_is_unchanged is a guard that passed before and is not listed."
+  AC-3:
+    tests:
+      - tests.test_self_write_digest_wiring.TestAC3CreatePlanResume.test_ac3_resume_comparison_uses_substitute_only
+      - tests.test_self_write_digest_wiring.TestAC3CreatePlanResume.test_ac3_pending_patch_rule_1_check_uses_substitute_only
+      - tests.test_self_write_digest_wiring.TestAC3CreatePlanResume.test_ac3_persisted_fields_are_selected_per_phase_state
+      - tests.test_self_write_digest_wiring.TestAC3CreatePlanResume.test_ac3_artifact_body_comparison_still_runs
+      - tests.test_self_write_digest_wiring.TestAC3CreatePlanResume.test_ac3_resume_cites_rule_r1
+      - tests.test_self_write_digest_wiring.TestAC3CreatePlanResume.test_ac3_orchestrator_is_the_actor
+    red_confirmed: true
+    red_reason: "The class errored in setUpClass with AssertionError: no paragraph contains 'substitute_only' (section 3 had no resume substitution paragraph). test_ac3_existing_resume_decision_table_sentence_is_kept is a guard on the untouched first paragraph and is not listed."
+  AC-4:
+    tests:
+      - tests.test_self_write_digest_wiring.TestAC4ReworkSection10.test_ac4_dispatch_digest_inputs_is_recorded_for_rework_planner
+      - tests.test_self_write_digest_wiring.TestAC4ReworkSection10.test_ac4_script_follows_scope_verification_and_precedes_patch_validation
+      - tests.test_self_write_digest_wiring.TestAC4ReworkSection10.test_ac4_rule_1_is_validated_against_the_substituted_digest_source
+      - tests.test_self_write_digest_wiring.TestAC4ReworkSection10.test_ac4_self_write_set_is_recorded_with_the_layer_5_write
+      - tests.test_self_write_digest_wiring.TestAC4ReworkSection10.test_ac4_mismatch_or_nonzero_exit_is_stale
+      - tests.test_self_write_digest_wiring.TestAC4ReworkSection10.test_ac4_names_the_identify_and_substitute_operation
+      - tests.test_self_write_digest_wiring.TestAC4ReworkSection10.test_ac4_orchestrator_is_the_actor
+    red_confirmed: true
+    red_reason: "The class errored in setUpClass with AssertionError: no paragraph contains 'scripts/self-write-digest.py' (section 10 had no return-time paragraph)"
+  AC-5:
+    tests:
+      - tests.test_self_write_digest_wiring.TestAC5CitationsAndNoRestatement.test_ac5_each_site_cites_r1_instead_of_restating_it
+      - tests.test_self_write_digest_wiring.TestAC5CitationsAndNoRestatement.test_ac5_dispatch_digest_wiring_passes_on_the_real_repository
+      - tests.test_self_write_digest_wiring.TestAC5CitationsAndNoRestatement.test_ac5_registered_sections_still_cite_the_digest_owner
+      - tests.test_self_write_digest_wiring.TestAC5CitationsAndNoRestatement.test_ac5_no_site_names_git_hash_object
+      - tests.test_self_write_digest_wiring.TestAC5CitationsAndNoRestatement.test_ac5_no_site_restates_the_membership_matrix_or_the_substitution
+      - tests.test_self_write_digest_wiring.TestAC5CitationsAndNoRestatement.test_ac5_probes_fire_on_forged_matrix_wording
+      - tests.test_self_write_digest_wiring.TestAC5CitationsAndNoRestatement.test_ac5_probes_fire_on_forged_substitution_wording
+      - tests.test_self_write_digest_wiring.TestAC5CitationsAndNoRestatement.test_ac5_probes_stay_quiet_on_a_citing_sentence
+      - tests.test_check_plugin_invariants.TestDispatchDigestWiring.test_passes_on_the_real_repository
+    red_confirmed: true
+    red_reason: "Only the citation half went red: test_ac5_each_site_cites_r1_instead_of_restating_it failed (False is not true : design step 5: R1 citation lacks 'references/contracts/worker-envelope.md') before the edits. The remaining tests of this entry are regression guards (dispatch_digest_wiring on the real repository, owner citations, no git hash-object, no restatement, probe self-tests) that were already green before the change and stay green; the existing tests.test_check_plugin_invariants.TestDispatchDigestWiring.test_passes_on_the_real_repository detects a lost owner citation, and no red state occurred for it."
+  AC-6:
+    tests:
+      - tests.test_artifact_digest_docs.TestEverySiteCitesTheOwner
+      - tests.test_artifact_digest_docs.TestDesignStepBranchDigestWiring
+    red_confirmed: false
+    red_reason: "The criterion is the whole-suite command python3 -m unittest discover -s tests, which was green at baseline (10983 tests, 0 failures), so no executable red exists for it; a dedicated new module is out of scope, but the existing tests.test_artifact_digest_docs classes read the three edited documents and detect a lost owner citation or a restated owner definition in them; no red state occurred for this change. Final run after implementation: 11031 tests, OK (skipped=1)."

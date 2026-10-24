@@ -762,14 +762,30 @@ design 専用の phase protocol は作らないため、ここが design 側の�
    `Task(subagent_type="em-workflow:designer")` を、確定した `design_inputs`
    （requirements_path / spec_path / workflow_path / design_token_template）
    と `write_policy` を渡して dispatch する。designer は完全自律で question
-   packet も workflow patch も返さない
+   packet も workflow patch も返さない。dispatch 時に
+   `phase-state/design.yaml` の `worker_runs` へ作る、この run のエントリ
+   （`status: dispatched`）は `dispatch_digest_inputs`（dispatch 時点の
+   digest_source の `digest_inputs`）を持つ（フィールドの定義と書き込み時期は
+   `references/phase-state.md`）
 5. 完了後、scope verification（layer 4。
-   `references/phases/create-spec-phase.md` の「Scope verification」）を行い、
-   通ったら `references/artifact-digest.md` の `Layer 5 recording` に従って、
+   `references/phases/create-spec-phase.md` の「Scope verification」）を行う。
+   通ったら、オーケストレーターが現在の digest_source を dispatch 時と同じ
+   手順で再計算し、`scripts/self-write-digest.py`（operation
+   `identify_and_substitute`）を実行する。実行方法・比較の規則・順序は
+   `references/contracts/worker-envelope.md` の Rule R1
+   「Recomputation and comparison timing」に従い、ここでは繰り返さない。
+   スクリプトが返した digest_source から計算した digest を dispatch 時の
+   `input_digest` と比較し、不一致、またはスクリプトの終了コードが `0` 以外なら
+   stale として扱う（stale の扱いは、scope verification が定める stale
+   handling（`references/phases/create-spec-phase.md`）に従う）。一致したら
+   `references/artifact-digest.md` の `Layer 5 recording` に従って、
    `written_artifacts` の各 path の digest を `phase-state/design.yaml`
    （`phase: design`。スキーマは `references/phase-state.md`）の
    `artifacts` に記録する。`tokens.yaml` と `tokens.html` は、
-   両方とも書かれたら両方を記録する。そのうえで成果物（DESIGN.md /
+   両方とも書かれたら両方を記録する。`artifacts` の記録と、スクリプトが返した
+   `self_write_set` の記録は、同一の phase-state 書き込みで行う
+   （`written_artifacts` が空の run では、返却された status を記録する書き込みで
+   行う）。そのうえで成果物（DESIGN.md /
    更新された `design-system/` 配下 / mockup）を検証し、design step の
    `status` と `completed_at_commit`（規則 R2）を設定して commit-docs.sh で
    コミットする

@@ -132,6 +132,19 @@ phase-state's `last_input_digest`, the artifact bodies against their
 recorded digests, and whether the proposed patch is already applied — in
 that order, never from memory.
 
+**Resume after the planner's self-writes.** The orchestrator compares the
+recomputed `input_digest` with `last_input_digest` through the
+`substitute_only` operation of `scripts/self-write-digest.py`, given the
+persisted `dispatch_digest_inputs` and `self_write_set` of the `worker_runs`
+entry that `references/phase-state.md` selects (that document states the
+selection, and the case where nothing is substituted). The same operation,
+`substitute_only`, with the same persisted fields, serves the rule 1 check of
+a pending patch on resume (`references/workflow-patch.md`, application
+rule 1). The rule is the one in `references/contracts/worker-envelope.md`,
+Rule R1, "Recomputation and comparison timing"; it is cited here, not
+restated. The comparison of the artifact bodies with their recorded digests
+still runs as the Resume decision table orders it.
+
 **Interrupted `in_progress` on entry.** Since Step B's create-plan
 exemption (`skills/develop/SKILL.md`), develop no longer writes
 `in_progress` to the `create-plan` step; finding it `in_progress` on entry
@@ -202,6 +215,11 @@ Before the `Task` dispatch, the orchestrator verifies the planner's
 `write_policy.targets` per `references/artifact-digest.md`
 (`Pre-dispatch verification`).
 
+The planner run's `worker_runs` entry in `phase-state/create-plan.yaml`
+carries `dispatch_digest_inputs`, the per-path `digest_inputs` map of the
+dispatch's digest_source, written with the entry when it is created
+(`references/phase-state.md` defines the field and when it is written).
+
 ## 5. Question loop
 
 Blocking questions raised by the planner fall into these categories: TBD
@@ -240,6 +258,19 @@ implements does not happen at all.
 Once layer 4 has passed, the orchestrator's layer 5 records the digests of
 the written artifacts per `references/artifact-digest.md`
 (`Layer 5 recording`), into `phase-state/create-plan.yaml`.
+
+The return-time order on the planner's result is this one. The orchestrator
+completes the scope verification (layer 4), recomputes the current
+digest_source from current state exactly as at dispatch, and runs
+`scripts/self-write-digest.py` (operation `identify_and_substitute`), as
+`references/contracts/worker-envelope.md`, Rule R1, "Recomputation and
+comparison timing" states. Then the orchestrator runs
+`scripts/validate-worker-output.py` with the substituted digest_source the
+script returned as `--digest-source`, so that application rule 1 compares the
+substituted digest_source with the dispatch-time `input_digest`. A mismatch,
+or a script exit other than `0`, makes the result stale. When the result is
+not stale, the orchestrator records layer 5 (`Layer 5 recording`) together
+with `self_write_set`, in the same phase-state write.
 
 ## 9. Planning invariants — the validator-implemented subset, and human review for the rest
 
@@ -293,6 +324,10 @@ python3 scripts/validate-worker-output.py \
     --digest-source {digest-source.json} \
     --dry-run-apply
 ```
+
+The `--digest-source` file holds the substituted digest_source that
+`scripts/self-write-digest.py` returned (section 8), never the unsubstituted
+digest_source recomputed from current state.
 
 `--input-envelope` is mandatory for `--kind worker-result` — the script
 exits 2 without it. `--workflow`, `--registries`, `--feature-dir` and
