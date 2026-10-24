@@ -101,7 +101,8 @@ workflow:
   base_commit: 3b8e141af64cbac99dba101590c9882b4ef12527
   completed_at_commit: 89adea7554a51de4c09e961ed28e75c2fddb2230
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 03a13d1c1537f482c262cae577ebdcf9ee73a920
 - id: verify
   status: pending
 - id: retrospect
@@ -132,9 +133,9 @@ tasks:
     branch: em-workflow/rework-recheck-before-patch-write/task0001
     notes: null
 review:
-  status: pending
-  rounds_completed: 0
-  perspectives: []
+  status: completed
+  rounds_completed: 1
+  perspectives: [comprehensive, security, performance, architecture, spec]
   plan:
     floor: [comprehensive, security, performance, architecture, spec]
     discretionary: []
