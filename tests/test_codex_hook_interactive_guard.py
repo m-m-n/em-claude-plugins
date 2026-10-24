@@ -102,6 +102,49 @@ def quoted_launch_in_a_later_case(body):
     )
 
 
+# codex-guard-funcname-anon-always: the words that follow the second name of a
+# `function` head, and the three forms of a zsh anonymous function (the head
+# and the opening `{` of its body). The `()` form carries a blank after `$(`,
+# since `$((` opens an arithmetic expansion.
+FURTHER_NAME_WORDS = (
+    "case", "if", "then", "do", "while", "!", "for", "select", "coproc", "repeat",
+    "function", "[[", "esac", "always",
+)
+ANONYMOUS_OPENS = ("function {", "function () {", " () {")
+ANONYMOUS_HEADS = tuple(opening + " :; }" for opening in ANONYMOUS_OPENS)
+ANONYMOUS_REPRODUCTION_STEPS = (
+    ("3", 'echo "$(%s always case x)"; python3 -i'),
+    ("4", 'echo "$(%s always case x in x)"; python3 -i; ";; esac)"'),
+    ("5", 'echo "$(%s always { case y in y) echo \'"; python3 -i; "\';; esac; })"'),
+)
+# What can stand among the arguments of an anonymous function without ending
+# the arguments: (label, text).
+ANONYMOUS_ARGUMENT_SHAPES = (
+    ("語", "a"),
+    ("リダイレクト", "> f"),
+    ("ヒアドキュメントの演算子", "<<E"),
+    ("here-string", "<<< x"),
+    ("語の括弧", "a(b)"),
+    ("プロセス置換 >( )", ">(cat)"),
+    ("プロセス置換 <( )", "<(cat)"),
+    ("置換を含む語", "$(echo)"),
+    ("単引用符で囲んだ語", "'a b'"),
+    ("二重引用符で囲んだ語", '"a"'),
+    ("${ } を含む語", "${x}"),
+    ("エスケープした空白", "\\ "),
+    ("語の中の行継続の対", "a\\\nb"),
+)
+
+
+def case_then_quoted_launch(prefix):
+    """A `$( )` that holds `prefix` and then a case statement whose item holds
+    the launch inside single quotes. Silent means the `case` was read at a
+    command position, so the statement closed at its `esac`; deny means it
+    was read as an argument, so the `)` of its pattern closed the substitution
+    and the quoted launch was read as code."""
+    return 'echo "$(' + prefix + ' case y in y) echo \'"; python3 -i; "\';; esac)"'
+
+
 # codex-guard-delim-brace-quote-per-shell (SPEC.md Test Scenarios TS1 to TS32):
 # the `${ ... }` ranges of a heredoc delimiter in a nested `-c` string are read
 # by the shell that directly holds the string. Each entry is (id, expected,
@@ -1203,6 +1246,131 @@ CASES = [
     ("deny", "群の深さ 群を閉じた } の後の算術コマンドの後の always は予約語にならない", quoted_launch_in_a_later_item("{ : } ((1+1)) always { :; }")),
     ("deny", "群の深さ 群を閉じた } の後のサブシェルの後の always は予約語にならない", quoted_launch_in_a_later_item("{ : } (echo a) always { :; }")),
     ("silent", "群の深さ 複数名の function の後の算術コマンドを読み直しても、その後の { はコマンド位置", quoted_launch_in_a_later_item("function a b ((echo a) ) { :; }")),
+    # codex-guard-funcname-anon-always (SPEC.md Test Scenarios TS1 to TS12): in
+    # a command list of a substitution, every word after the second name of a
+    # `function` head is one more name except a standalone `{` or `}`, an empty
+    # `()` and a separator (FR1); the words after the `}` that closes the body
+    # of a zsh anonymous function are its arguments up to the next separator or
+    # the close of the list, and only a standalone `}` among them acts, closing
+    # the innermost open `{` group of its list (FR3, FR4). The rows built by
+    # `quoted_launch_in_a_later_item`, `quoted_launch_in_a_later_case` and
+    # `case_then_quoted_launch` keep a launch in quoted text: silent means the
+    # close or the `case` was read where zsh reads it, deny means the reader
+    # took an argument for a command or the reverse. The other rows keep the
+    # launch after the substitution, so deny means the close was found. TS3 is
+    # pinned by the rows below and by the existing `function a b { ... }`,
+    # `function a b () { ... }` and `function a b ((echo a) ) { ... }` rows of
+    # codex-guard-brace-case-group-depth above
+    ("deny", "追加の名前 TS1 2 つ目の名前の後の case は名前で、後ろの起動を拒否する (再現手順 2)", "zsh -c " + shlex.quote('echo "$(function f g case { :; })"; python3 -i')),
+    ("deny", "追加の名前 TS1 3 つ目の名前の後の case も名前", 'echo "$(function f g h case { :; })"; python3 -i'),
+    *[
+        ("deny", f"追加の名前 TS2 2 つ目の名前の後の {word} は名前", 'echo "$(function f g ' + word + ' { :; })"; python3 -i')
+        for word in FURTHER_NAME_WORDS
+    ],
+    *[
+        ("silent", f"追加の名前 TS2 2 つ目の名前の後の {word} の後の波括弧はコマンド位置で、深さを上げる", quoted_launch_in_a_later_item(f"function f g {word} {{ :; }}"))
+        for word in FURTHER_NAME_WORDS
+    ],
+    ("silent", "追加の名前 TS2 3 つ目の名前の後の [[ も名前で、後の波括弧はコマンド位置", quoted_launch_in_a_later_case("function f g h [[")),
+    ("silent", "追加の名前 引用符で囲んだ 2 つ目の名前の後の case も名前", quoted_launch_in_a_later_case('function f "g" case')),
+    ("silent", "追加の名前 置換を含む 2 つ目の名前の後の case も名前", quoted_launch_in_a_later_case("function f $(:) case")),
+    ("silent", "追加の名前 区切りは名前の状態を終え、その後の case は case 文を開く", case_then_quoted_launch("function a b;")),
+    ("silent", "追加の名前 空の () は頭部を終え、その後の case は case 文を開く", case_then_quoted_launch("function a b ()")),
+    ("deny", "追加の名前 サブシェルの中でも 2 つ目の名前の後の case は名前", 'echo "$( ( function f g case { :; } ) )"; python3 -i'),
+    ("deny", "追加の名前 in 形式の項目の本体でも 2 つ目の名前の後の case は名前", 'echo "$(case x in x) function f g case { :; };; esac)"; python3 -i'),
+    ("deny", "追加の名前 波括弧形式の項目の本体でも 2 つ目の名前の後の case は名前", 'echo "$(case x { x) function f g case { :; };; })"; python3 -i'),
+    ("silent", "追加の名前 TS3 最初の名前の直後の case は今までどおり case 文を開く", case_then_quoted_launch("function a")),
+    ("deny", "追加の名前 TS3 最初の名前の直後の case 文を閉じた後の起動を拒否する", 'echo "$(function a case x in x) :;; esac)"; python3 -i'),
+    # FR3 (TS4, TS5, TS6, TS10): the words after an anonymous body are arguments
+    *[
+        ("deny", f"匿名関数の引数 {'TS4' if head == ANONYMOUS_HEADS[0] else 'TS5'} 再現手順 {step} の {head.strip()}", "zsh -c " + shlex.quote(template % head))
+        for head in ANONYMOUS_HEADS
+        for step, template in ANONYMOUS_REPRODUCTION_STEPS
+    ],
+    *[
+        ("deny", f"匿名関数の引数 TS6 波括弧形式の項目の本体で、{head.strip()} の本体を閉じた }} の後の always は予約語にならず、深さを上げない", quoted_launch_in_a_later_item(head.strip() + " always { :; }"))
+        for head in ANONYMOUS_HEADS
+    ],
+    ("deny", "匿名関数の引数 波括弧形式の項目の本体の引数の位置の } が閉じるのも匿名関数の本体で、後の always は予約語にならない", quoted_launch_in_a_later_item("function { echo a } always { :; }")),
+    ("deny", "匿名関数の引数 外側が匿名関数なら、内側の普通の群を閉じた } の後の外側の本体を閉じた } も群を閉じた状態を立てない", quoted_launch_in_a_later_item("function { { :; } } always { :; }")),
+    ("deny", "匿名関数の引数 普通の群を閉じた } の後の匿名関数の本体を閉じた } の後の always は予約語にならない", quoted_launch_in_a_later_item("{ :; } function { :; } always { :; }")),
+    ("deny", "匿名関数の引数 コマンド位置の } が閉じるのも匿名関数の本体で、後の case は引数 (サブシェル)", 'echo "$( ( function { :; } always case x ) )"; python3 -i'),
+    ("deny", "匿名関数の引数 in 形式の項目の本体でも本体を閉じた } の後の case は引数", 'echo "$(case x in x) function { :; } always case y;; esac)"; python3 -i'),
+    ("deny", "匿名関数の引数 in 形式の項目の本体で開いたままの群の記録は項目の終端で捨てる", 'echo "$(case x in x) { :;; y) function { :; } always case z;; esac)"; python3 -i'),
+    *[
+        ("deny", f"匿名関数の引数 TS10 引数の後の区切りの後の always は予約語にならない ({head.strip()})", quoted_launch_in_a_later_item(head.strip() + " x; always { :; }"))
+        for head in ANONYMOUS_HEADS
+    ],
+    ("deny", "匿名関数の引数 TS10 引数の後の区切りの後の always は予約語にならない (置換の中)", quoted_launch_in_a_later_case("function { :; } x; always")),
+    ("deny", "匿名関数の引数 区切りが無ければ後の case は引数で、パターンの ) が置換を閉じる", case_then_quoted_launch("function { :; } x")),
+    *[
+        ("silent", f"匿名関数の引数 区切り {label} で引数は終わり、後の case はコマンド位置で case 文を開く", case_then_quoted_launch("function { :; } x" + separator))
+        for label, separator in (
+            ("セミコロン", ";"), ("&", "&"), ("|", "|"), ("改行", "\n"), ("&&", "&&"), ("||", "||"),
+        )
+    ],
+    # FR4 (TS7, TS8, TS9, A2): a standalone `}` among the arguments closes the
+    # innermost open `{` group of its list
+    ("silent", "匿名関数の引数 TS7 引数の位置の } は外側の普通の群を閉じ、直後の always は予約語で、後の波括弧はコマンド位置", quoted_launch_in_a_later_case("{ function { :; } } always")),
+    ("silent", "匿名関数の引数 TS7 function () の本体の後でも同じ", quoted_launch_in_a_later_case("{ function () { :; } } always")),
+    ("silent", "匿名関数の引数 TS7 () の本体の後でも同じ", quoted_launch_in_a_later_case("{ () { :; } } always")),
+    ("silent", "匿名関数の引数 TS7 入れ子の普通の群は 1 つずつ閉じ、最後の群を閉じた } の直後の always は予約語", quoted_launch_in_a_later_case("{ { function { :; } } } always")),
+    ("silent", "匿名関数の引数 TS7 波括弧形式の項目の本体でも引数の位置の } は外側の普通の群を閉じる", quoted_launch_in_a_later_item("{ function { :; } } always { :; }")),
+    *[
+        ("deny", f"匿名関数の引数 TS8 引数の位置の }} は外側の匿名関数の本体を閉じ、always 以降も外側の引数 ({opening.strip()})", 'echo "$(' + opening + " " + opening.strip() + ' :; } } always { case y in y) echo \'"; python3 -i; "\';; esac; })"')
+        for opening in ANONYMOUS_OPENS
+    ],
+    ("deny", "匿名関数の引数 TS8 波括弧形式の項目の本体でも外側の匿名関数の本体を閉じる", quoted_launch_in_a_later_item("function { function { :; } } always { :; }")),
+    *[
+        ("deny", f"匿名関数の引数 TS9 {label} は引数のままで、外側の群を閉じない", quoted_launch_in_a_later_case("{ function { :; } " + word + " always"))
+        for label, word in (
+            ('引用符で囲んだ "}"', '"}"'), ("単引用符で囲んだ '}'", "'}'"), ("エスケープした \\}", "\\}"),
+            ("語の一部の a}", "a}"), ("語の一部の }a", "}a"),
+        )
+    ],
+    ("deny", "匿名関数の引数 A2 開いた群が無い一覧の単独の } は普通の語で、後ろの always と case は引数のまま", 'echo "$(function { :; } } always case x)"; python3 -i'),
+    ("deny", "匿名関数の引数 A2 開いた群が無い一覧の単独の } は群を閉じず、後の always は予約語にならない", quoted_launch_in_a_later_case("function { :; } } always")),
+    ("deny", "匿名関数の引数 A2 サブシェルの開いた群が無い一覧の単独の } も普通の語", 'echo "$( ( function { :; } } always case x ) )"; python3 -i'),
+    ("deny", "匿名関数の引数 A2 外側の一覧の群はサブシェルの } で閉じない", 'echo "$( { ( function { :; } } always case x ) )"; python3 -i'),
+    ("deny", "匿名関数の引数 A2 波括弧形式の項目の本体の深さ 0 の単独の } は今どおり文を閉じる", 'echo "$(case x { x) function { :; } } )"; python3 -i'),
+    ("deny", "匿名関数の引数 A2 波括弧形式の項目の本体の深さ 0 の引数の後の } も今どおり文を閉じる", quoted_launch_in_a_later_item("function { :; } x } always { :; }")),
+    *[
+        ("silent", f"匿名関数の引数 {label} を挟んでも引数の状態は続き、次の単独の }} が外側の普通の群を閉じる", quoted_launch_in_a_later_case("{ function { :; } " + text + " } always"))
+        for label, text in ANONYMOUS_ARGUMENT_SHAPES
+    ],
+    # M2: the empty `()` of an anonymous function keeps its state over blanks,
+    # continuation pairs and newlines; a comment, a word and a separator end it.
+    # A named function definition is no anonymous function (A5)
+    ("deny", "匿名関数の頭部 空の () の直後の { は本体で、その } の後は引数", quoted_launch_in_a_later_case(" () { :; } always")),
+    ("deny", "匿名関数の頭部 改行を挟んでも { は本体", quoted_launch_in_a_later_case(" ()\n{ :; } always")),
+    ("deny", "匿名関数の頭部 改行と空白の連続を挟んでも { は本体", quoted_launch_in_a_later_case(" ()\n\n  \n{ :; } always")),
+    ("deny", "匿名関数の頭部 行継続の対を挟んでも { は本体", quoted_launch_in_a_later_case(" () \\\n{ :; } always")),
+    ("deny", "匿名関数の頭部 () の括弧の間の行継続の対があっても空の ()", quoted_launch_in_a_later_case(" (\\\n) { :; } always")),
+    ("deny", "匿名関数の頭部 function () の後の改行を挟んでも { は本体", quoted_launch_in_a_later_case("function ()\n{ :; } always")),
+    ("deny", "匿名関数の頭部 区切りの後のコマンド位置の () も匿名関数の頭部", quoted_launch_in_a_later_case(":; () { :; } always")),
+    ("silent", "匿名関数の頭部 コメントで状態は終わり、次の行の { は普通の群", quoted_launch_in_a_later_case(" () # c\n{ :; } always")),
+    ("silent", "匿名関数の頭部 function () の後のコメントで状態は終わる", quoted_launch_in_a_later_case("function () # c\n{ :; } always")),
+    ("silent", "匿名関数の頭部 セミコロンで状態は終わる", quoted_launch_in_a_later_case(" () ; { :; } always")),
+    ("silent", "匿名関数の頭部 & で状態は終わる", quoted_launch_in_a_later_case(" () & { :; } always")),
+    ("silent", "匿名関数の頭部 語で状態は終わる", quoted_launch_in_a_later_case(" () x { :; } always")),
+    ("silent", "匿名関数の頭部 名前付きの関数 name() の本体を閉じた } の後は今どおり always が予約語 (A5)", quoted_launch_in_a_later_case("f () { :; } always")),
+    ("silent", "匿名関数の頭部 名前付きの関数 name() の後の改行を挟んだ本体も今どおり (A5)", quoted_launch_in_a_later_case("f ()\n{ :; } always")),
+    ("silent", "匿名関数の頭部 function name () の本体も今どおり (A5)", quoted_launch_in_a_later_case("function f () { :; } always")),
+    ("silent", "匿名関数の頭部 function name の本体も今どおり (A5)", quoted_launch_in_a_later_case("function f { :; } always")),
+    # Rule 9: the arithmetic re-read after a second name and after an anonymous
+    # function gives the verdict it gave before this feature (TS12). The `(`
+    # after an anonymous body is a word parenthesis (A4), so no re-read happens
+    ("deny", "再読 TS12 2 つ目の名前の後の算術コマンドを読み直しても、後の case はコマンド位置", 'echo "$(function a b ((echo a) ) case x in x) :;; esac)"; python3 -i'),
+    ("silent", "再読 TS12 2 つ目の名前の後の算術コマンドを読み直した後の case は case 文を開く", case_then_quoted_launch("function a b ((echo a) )")),
+    ("silent", "再読 TS12 2 つ目の名前の後の算術コマンドを読み直しても、後の case と波括弧の位置は変わらない", quoted_launch_in_a_later_item("function a b ((echo a) ) case x in x) :;; esac")),
+    ("deny", "再読 TS12 3 つ目の名前の後の算術コマンドを読み直しても同じ", 'echo "$(function a b c ((echo a) ) case x in x) :;; esac)"; python3 -i'),
+    *[
+        ("deny", f"再読 TS12 匿名関数 {head.strip()} の後の算術コマンドの括弧は語の括弧で、後の always は引数", 'echo "$(' + head + ' ((echo a) ) always case x)"; python3 -i')
+        for head in ANONYMOUS_HEADS
+    ],
+    ("deny", "再読 TS12 匿名関数の後の算術コマンドの括弧は語の括弧で、後の always 以降も引数", 'echo "$(function { :; } ((echo a) ) always { case y in y) echo \'"; python3 -i; "\';; esac; })"'),
+    ("deny", "再読 TS12 波括弧形式の項目の本体で匿名関数の後の算術コマンドの括弧は語の括弧", quoted_launch_in_a_later_item("function { :; } ((echo a) ) always { :; }")),
+    ("deny", "再読 TS12 置換の中で匿名関数の後の算術コマンドの括弧は語の括弧", quoted_launch_in_a_later_case("function { :; } ((echo a) ) always")),
     # Forms whose close is not certain: a heredoc in a brace-form statement
     # (TS-19, rule 8), no close (TS-20), an `esac` at a command position of the
     # item body (TS-21), an item terminator while a `{ }` group is open (TS-22,
@@ -2289,6 +2457,35 @@ class TestCaseStatementsInASubstitution(HookCopiesMixin, unittest.TestCase):
         command = 'echo "$(case x { x) ' + '{ :; } always ' * self.DEPTH + '{ :; };; })"; python3 -i'
         self.assert_every_copy_denies(command)
 
+    # codex-guard-funcname-anon-always (SPEC.md TS11, NFR1, TM-4): DEPTH
+    # anonymous functions in a row, DEPTH anonymous functions nested in each
+    # other (each body closed at a command position, and each outer body closed
+    # by a `}` among the arguments), and a `function` head with DEPTH names
+    # followed by `case` are read in time, in the three forms of an anonymous
+    # function. The text after the last body stays in the arguments, so the
+    # reading that reaches the close of the substitution denies the launch
+    # after it; a reading that took `always` for a reserved word would stop.
+    def test_ts11_depth_anonymous_functions_in_a_row_are_read_in_time(self):
+        for opening in ANONYMOUS_OPENS:
+            with self.subTest(head=opening.strip()):
+                row = (opening + " :; } x;") * (self.DEPTH - 1) + opening + " :; }"
+                self.assert_every_copy_denies('echo "$(' + row + ' always case x)"; python3 -i')
+
+    def test_ts11_depth_anonymous_functions_nested_are_read_in_time(self):
+        depth = self.DEPTH
+        for opening in ANONYMOUS_OPENS:
+            shapes = {
+                "closed at a command position": (opening + " ") * depth + ":" + "; }" * depth,
+                "closed among the arguments": (opening + " ") * depth + ":; }" + " }" * (depth - 1),
+            }
+            for shape, nest in shapes.items():
+                with self.subTest(head=opening.strip(), shape=shape):
+                    self.assert_every_copy_denies('echo "$(' + nest + ' always case x)"; python3 -i')
+
+    def test_ts11_a_function_head_with_depth_names_followed_by_case_is_read_in_time(self):
+        command = 'echo "$(function' + " a" * self.DEPTH + ' case { :; })"; python3 -i'
+        self.assert_every_copy_denies(command)
+
     # codex-guard-case-reading-fixes (SPEC.md TS20 to TS22, NFR1): long runs of
     # continuation pairs and long runs of words whose keyword match fails are
     # read in time too. A continuation pair is a backslash directly followed
@@ -2452,6 +2649,44 @@ class TestAnonymousFunctionHeadInASubstitution(HookCopiesMixin, unittest.TestCas
             'echo "$(function () { case x in x) echo "; python3 -i;";; esac; })"',
             "silent",
         )
+
+
+class TestHeadStateComment(unittest.TestCase):
+    """The module comment in front of the head-state constants names the head
+    states of the substitution reading, the further-name, anonymous-head and
+    anonymous-arguments states of codex-guard-funcname-anon-always (FR7, TS16)
+    with their lifetimes."""
+
+    CONSTANTS = ("HEAD_FURTHER_NAME", "HEAD_ANON", "HEAD_ANON_ARGS")
+    NAMES = ("further-name state", "anonymous-head state", "anonymous-arguments state")
+    LIFETIMES = (
+        "Blanks, continuation pairs and newlines keep it",
+        "a comment, a separator other than a newline or a redirection ends it",
+        "up to the next separator or the close of the list",
+    )
+
+    @staticmethod
+    def comment_before_head_constants(path):
+        lines = path.read_text(encoding="utf-8").splitlines()
+        end = lines.index("HEAD_NONE = 0")
+        start = end
+        while start > 0 and lines[start - 1].startswith("#"):
+            start -= 1
+        return " ".join(" ".join(line.lstrip("#").split()) for line in lines[start:end])
+
+    def test_the_comment_names_the_three_new_states_and_their_lifetimes(self):
+        for plugin, path in HOOK_PATHS.items():
+            comment = self.comment_before_head_constants(path)
+            for text in self.NAMES + self.LIFETIMES:
+                with self.subTest(copy=plugin, text=text):
+                    self.assertIn(text, " ".join(comment.split()))
+
+    def test_each_new_state_has_a_constant_after_the_comment(self):
+        for plugin, path in HOOK_PATHS.items():
+            source = path.read_text(encoding="utf-8")
+            for constant in self.CONSTANTS:
+                with self.subTest(copy=plugin, constant=constant):
+                    self.assertRegex(source, r"(?m)^" + constant + r" = \d+$")
 
 
 class TestBraceCloseEqualsSemicolonBeforeIt(HookCopiesMixin, unittest.TestCase):
