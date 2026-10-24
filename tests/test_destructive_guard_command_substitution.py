@@ -820,7 +820,7 @@ class TestUnflaggedTargetReasonTextUnchanged(unittest.TestCase):
         byte-identical guarantee this test's name refers to is now against
         THIS task's wording, not the pre-task0001 one, since FR4 deliberately
         changes this exact string (it used to embed the raw target)."""
-        _, reason = decision("rm -rf /home/user/valuable")
+        _, reason = decision("rm -rf %s" % (Path.home() / "valuable"))
         self.assertEqual(
             reason,
             "[destructive-guard/rm-recursive] `rm -r` の対象（1番目のrmの1番目の対象）"
