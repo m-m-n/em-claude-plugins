@@ -1,0 +1,21 @@
+schema_version: 1
+feature: worker-self-write-digest
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 7048eb2937536d8e675bf1f27a41d58e42e967d9
+last_input_digest: sha256:ff7143e45051b2f1c99bf70393d4aedc4eb00aee7b20de9131af070cd12cdb28
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:ff7143e45051b2f1c99bf70393d4aedc4eb00aee7b20de9131af070cd12cdb28
+  output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
