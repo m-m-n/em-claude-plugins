@@ -68,15 +68,18 @@ findings:
   category: comprehensive
   file: em-workflow/references/rework-task-synthesis.md
   line: 245
-  title: rework の再確認が step 3 のパッチ適用（workflow.yaml の書き込みとコミット）の後に置かれており、stale になっても適用済みの変更が残る
-  description: §10 の追加文は『Step 3 validates and applies the patch ...』の後に『The orchestrator
+  title: >-
+    rework の再確認が step 3 のパッチ適用（workflow.yaml の書き込みとコミット）の後に置かれており、stale になっても適用済みの変更が残る
+  description: >-
+    §10 の追加文は『Step 3 validates and applies the patch ...』の後に『The orchestrator
     then runs the return-time recheck before the recording phase-state write』と置いている。workflow-patch.md
     の適用規則 15 は workflow.yaml への 1 回の Write、規則 16 は R2 のコミット列なので、再確認が走る時点では新しい rework
     タスクと implement: pending がもう integration ブランチにコミットされている。stale のときは create-spec-phase.md
     の Stale handling に従うが、これは出力を捨てて `reset --hard em-workflow/{feature}/integration`
     を行うだけで、ブランチの先端は適用済みのコミットを含んだままになる。そのため、stale として捨てたはずの結果がワークフローに残る。worker-envelope.md
     R1 の再確認が守るのは記録の phase-state 書き込みだけで、rework の場合はそれより前に、結果に効く書き込みが起きている。
-  suggestion: §10 で、再確認を step 3 の検証（適用規則 1〜14）の後、規則 15 の workflow.yaml 書き込みより前に置く。または、step
+  suggestion: >-
+    §10 で、再確認を step 3 の検証（適用規則 1〜14）の後、規則 15 の workflow.yaml 書き込みより前に置く。または、step
     3 の書き込みとコミットは再確認が通った後にだけ行うと明記する。test_recheck_dispatch_sites_docs.py の順序の probe
     もそれに合わせる。create-plan-phase.md §8 にも同じ構造（パッチを適用してから再確認する）がないか確かめる。
   reproduction: null
@@ -88,7 +91,8 @@ findings:
   resolution: unresolved
   resolution_reason: 'medium: not an auto-fix candidate (severity gate); follow-up task filed: <notion-url>'
 evaluation:
-  round_summary: 5 観点すべての出力を確認した。critical/high は architecture#0 の 1 件だけだった。worker-envelope.md
+  round_summary: >-
+    5 観点すべての出力を確認した。critical/high は architecture#0 の 1 件だけだった。worker-envelope.md
     の『Recomputation and comparison timing』節の冒頭は、返却時に input_digest を再計算して dispatch 時の値と比べることを、そのまま述べている。そのため『return-time
     comparison』は SSOT の語彙に沿った表現で、直後の文の `return-time recheck` とも区別されている。artifact-digest.md
     の順序（比較 → Calculation → 再確認 → 書き込み）は SPEC FR6 と Data Flow に一致しているので、この指摘は false
@@ -102,7 +106,8 @@ evaluation:
     は false positive として dismiss） / spec: corroborated（残り 2 本のテストは読み取り上限に入らず、forged-text
     の対照は個別には追っていない）
   recommended_action: auto_fix
-  action_rationale: carry した指摘のうち、一番重いのは rework §10 の medium 1 件で、修正は文書 1 か所の順序の書き直しと、対応する
+  action_rationale: >-
+    carry した指摘のうち、一番重いのは rework §10 の medium 1 件で、修正は文書 1 か所の順序の書き直しと、対応する
     probe の調整で済む。SPEC への違反や critical/high の指摘はないので、rework は要らない。low の 2 件は修正しなくても完了を妨げない。
 dismissed_sites:
 - file: em-workflow/references/artifact-digest.md
