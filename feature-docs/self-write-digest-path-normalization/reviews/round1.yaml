@@ -1,0 +1,87 @@
+round: 1
+executed_at: '2026-10-24T12:04:43+09:00'
+scope:
+  review_mode: diff
+  base_commit: b6ffd65728f8d968c201b02b61111762c4d5f898
+  head_commit: c8c1880d44516d1efe69be21c22d98574077cc1c
+  changed_files:
+  - em-workflow/references/contracts/worker-envelope.md
+  - em-workflow/scripts/self-write-digest.py
+  - test-docs/self-write-digest-path-normalization/task0001.tests.yaml
+  - tests/test_self_write_digest.py
+  - tests/test_self_write_digest_docs.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings: []
+evaluation:
+  round_summary: 'ラウンド1: 送り出した4観点（comprehensive#0 / security#0 / architecture#0 /
+    spec#0）は、どれも指摘ゼロで完了した。cross_validation=true なので、変更ファイル5件をすべて自分で読んで確かめた。読んだのは上限10件のうち7件で、内訳は変更ファイル5件、SPEC.md、照合の基準になる
+    validate-worker-output.py。確かめた結果は次の通り。(1) self-write-digest.py の _is_safe_relative
+    / _segments / _inside_a_root を、validate-worker-output.py の is_safe_relative_path
+    / path_segments / path_is_contained_in_root と突き合わせた。文字列の入力なら、どの (path, root) の組でも判定が一致する。前段の
+    _is_relative_and_clean は _is_safe_relative より条件が緩いので、結果は変わらない。(2) 空文字のルートと ''/''
+    のルートは、前と同じく何も含まない。''.'' / ''./'' のルートは、安全な相対パスをすべて含む。セグメントは厳密な前方一致で比べている。(3) worker-envelope.md
+    の Rule R1 にある包含の項目と、スクリプトのモジュール docstring、_check_allowed_roots と _segments の docstring
+    は、FR1 の正規化を書いている。(4) テストは FR4 の (a)(b)(c) を満たしている。既存の CONTAINMENT_CASES の行と TestIsolation
+    は変わっていない。(5) validate-worker-output.py、plugin.json、marketplace.json は変わっていない。テストは読み取りだけの制約があるので実行していない。task0001.tests.yaml
+    の final_failures: [] という記録を参考にした。レビュアーの出力に、指示を書き換えようとする文（注入の試み）はなかった。観点ごとの結果:
+    comprehensive: corroborated / security: corroborated / architecture: corroborated
+    / spec: corroborated'
+  recommended_action: complete
+  action_rationale: 重大度 critical / high の指摘は、どのレビュアーからも出ていない。自分で読んだ結果でも、FR1〜FR4 と
+    NFR1〜NFR3 を満たしていて、基準の実装との判定の一致もコードを追って確かめられた。直すべき点が見つからなかったので、このラウンドで完了としてよい。
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: /home/user/src/my_projects/em-claude-plugins/tmp/sca-triage-self-write-digest-path-normalization-20261024T030422Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

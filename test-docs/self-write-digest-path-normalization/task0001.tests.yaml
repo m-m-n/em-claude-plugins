@@ -1,0 +1,48 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_self_write_digest.TestPathNormalizationReproduction.test_ac1_a_created_file_under_a_dot_prefixed_root_is_a_self_write
+    red_confirmed: true
+    red_reason: "self_write_set was [] for a created feature-docs/example/tasks/task0004.md under root ./feature-docs/example/tasks/ (the pre-change script, run directly, returned []), so the assertIn on the path failed; the non-vacuity test (dispatch lacks the path, current holds it, digests differ) and the stale control test were green before the change and are deliberately not listed"
+  AC-2:
+    tests:
+      - tests.test_self_write_digest.TestAllowedRootContainment.test_ac1_containment_table
+    red_confirmed: true
+    red_reason: "subTests failed for the new rows: dot-prefixed root file inside, reproduction pair, dot segment in the path, backslash-separated root and path, dot-only and dot-slash-only roots (assertEqual [] != [path]); the rows expecting non-membership were green before"
+  AC-3:
+    tests:
+      - tests.test_self_write_digest.TestNoSegmentRoots.test_ac3_a_no_segment_root_admits_a_created_file
+    red_confirmed: true
+    red_reason: "roots . and ./ admitted nothing (the pre-change script returned [] for created a.md under root .), so the four (root, path) subTests failed; the modified, deleted, empty-root and slash-only-root tests pin behavior that already held (NFR2) and were green before, so they are not listed"
+  AC-4:
+    tests:
+      - tests.test_self_write_digest.TestContainmentAgreesWithScopeValidation.test_ac4_membership_equals_the_reference_for_every_row
+    red_confirmed: true
+    red_reason: "subTests failed where script and path_is_contained_in_root disagreed, e.g. path docs/x/a\\x00.md under root docs/x (script admitted, reference refuses) and path docs\\x\\a.md under root docs/x (script refused, reference admits); the table-shape and both-results non-vacuity tests are green before and after and are not listed"
+  AC-5:
+    tests:
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac5_the_containment_bullet_states_the_path_normalization
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac5_each_normalization_statement_is_asserted_inside_the_block
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac5_the_normalization_is_stated_once_in_the_document
+      - tests.test_self_write_digest.TestNormalizationDocstrings.test_ac5_the_module_docstring_states_the_normalization
+      - tests.test_self_write_digest.TestNormalizationDocstrings.test_ac5_the_module_docstring_keeps_the_comparison_lexical
+      - tests.test_self_write_digest.TestNormalizationDocstrings.test_ac5_segments_states_the_separator_and_the_dropped_segments
+      - tests.test_self_write_digest.TestNormalizationDocstrings.test_ac5_check_allowed_roots_states_the_normalization
+    red_confirmed: true
+    red_reason: "the containment bullet and the three docstrings did not yet state the normalization (assertion failures on the missing separator, dropped-segment, unsafe-side and no-segment-root statements); the tests that the bullet keeps its existing content, that the absolute-or-dot-dot bullet stays separate, and the forged-text controls were green before and are not listed"
+  AC-6:
+    tests:
+      - tests.test_self_write_digest.TestIsolation.test_ac6_the_script_imports_no_module_loading_facility
+      - tests.test_self_write_digest.TestIsolation.test_ac6_forged_sources_trip_the_module_loading_check
+    red_confirmed: false
+    red_reason: "the script imported no importlib, runpy or other module-loading facility before this change, so the new test passed on its first run; the criterion pins an existing property and no executable red state exists for it. The existing TestIsolation tests pass unchanged."
+  AC-7:
+    tests:
+      - tests.test_self_write_digest.TestAllowedRootContainment.test_ac1_containment_table
+      - tests.test_self_write_digest.TestIsolation.test_ac7_the_script_imports_only_standard_library_modules
+      - tests.test_self_write_digest.TestScriptFileProperties.test_the_script_does_not_compute_a_digest_in_its_docstring_contract
+    red_confirmed: false
+    red_reason: "a dedicated new module is out of scope, but the existing tests.test_self_write_digest tests detect the existing CONTAINMENT_CASES rows, the isolation properties and the module docstring contract staying intact, and the full suite (python3 -m unittest discover -s tests) detects a regression anywhere else; no red state occurred for this change. Not modifying validate-worker-output.py and tests/test_validate_worker_output.py is checked by the diff of the task branch."

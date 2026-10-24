@@ -223,9 +223,15 @@ as a self-write:
 - A path listed in `targets` is judged by its target even when it also
   lies under an allowed write root.
 - Containment in an allowed write root compares path segments, never
-  string prefixes (`feature-docs/x2/a.md` is not inside `feature-docs/x`);
-  a root written with or without a trailing slash names the same
-  directory; a path equal to the root itself is not inside it.
+  string prefixes (`feature-docs/x2/a.md` is not inside `feature-docs/x`).
+  `\` is equivalent to `/` as a separator, and empty and `.` segments are
+  dropped; a root written with or without a trailing slash names the same
+  directory. A root or a path that is empty, starts with `/`, contains NUL
+  or has a `..` segment (with `\` as a separator) never contains and is
+  never contained. A root with no segments left after that normalization
+  (`.`, `./`) contains every relative path that is otherwise safe; for a
+  root that keeps at least one segment, a path equal to the root itself is
+  not inside it.
 - An absolute path, or a path with a `..` segment, is never a member.
 - A `regenerate` target is decided after every other path; one whose
   `source` is itself a `regenerate` target is not a member.
