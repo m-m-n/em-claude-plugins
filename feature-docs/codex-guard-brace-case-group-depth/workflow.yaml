@@ -116,7 +116,12 @@ workflow:
   status: completed
   completed_at_commit: 588d34c1c43437af6446ffe4b43764f38b2dc893
 - id: verify
-  status: in_progress
+  status: completed
+  completed_at_commit: de48101f97186efcb3286824bd579181061a36d1
+  result: pass
+  failed_items: []
+  excluded: []
+  summary: 'test command passed (11243 tests, OK, skipped=1); TS-1..TS-18 rows present; copies byte-identical; no version files touched; NFR4 no new imports; NFR5 all guard hunks in the substitution reader, its helper docstring and the head-state constants'
 - id: retrospect
   status: pending
 tasks:
