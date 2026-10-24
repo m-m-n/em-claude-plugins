@@ -1,18 +1,18 @@
 schema_version: 1
 feature: self-write-digest-path-normalization
 phase: create-plan
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: 9c5e1376fe5ccf973178f46d0fde98efc2942d37
 last_input_digest: sha256:341d198e0901ef418e560d25a5abb066a42d20f0db1efad7e98a15174162a94b
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:341d198e0901ef418e560d25a5abb066a42d20f0db1efad7e98a15174162a94b
-  output_digest: null
+  output_digest: sha256:9bcba217b6f757d0f2c44a7dda37e7e6bc16118c177db5e1eec85bf79f2c9c25
   dispatch_digest_inputs:
     em-workflow/references/contracts/planner-contract.md: sha256:6476cc99ea8a1d2d4f376d1702bd636b1ab9898655397ec80ab1d6fb47cbe9e8
     em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
@@ -24,8 +24,25 @@ worker_runs:
     em-workflow/skills/plan-writing/SKILL.md: sha256:880bd01ad6c60af5695495e0a6784de7fe98e1ea9463dc6703164f8ffffdbccb
     feature-docs/self-write-digest-path-normalization/SPEC.md: sha256:9464a5b01e8de46c41a490d8d7b67894db05ddad922492d99a3ddd6231f3fec0
     feature-docs/self-write-digest-path-normalization/workflow.yaml: sha256:25a61c08708737b20a27aa4704125fb64391c7399efea910ee1208090aef1708
-artifacts: []
-patches: []
+  self_write_set:
+  - feature-docs/self-write-digest-path-normalization/THREAT-MODEL.md
+  - feature-docs/self-write-digest-path-normalization/VERIFICATION.md
+  - feature-docs/self-write-digest-path-normalization/tasks/task0001.md
+artifacts:
+- path: feature-docs/self-write-digest-path-normalization/THREAT-MODEL.md
+  sha256: sha256:d315341ebfcde21415fcfb4d92343f8b534a435393a931246217275282d2b481
+  produced_by: create-plan-run-0001
+- path: feature-docs/self-write-digest-path-normalization/VERIFICATION.md
+  sha256: sha256:aa552e8e98e83de47944548398287396eea3d6cb1b7dd005fb815ca0feb8a52f
+  produced_by: create-plan-run-0001
+- path: feature-docs/self-write-digest-path-normalization/tasks/task0001.md
+  sha256: sha256:35718822a123ebc99ee721897d58fa5f3b7d7c6685a516386e84ddd3259f9fc3
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: create-plan-p0001
+  status: pending
+  base_input_digest: sha256:341d198e0901ef418e560d25a5abb066a42d20f0db1efad7e98a15174162a94b
+  base_workflow_blob: 3ed2688ee293aeb516de722f44c186c937baf8bb
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
