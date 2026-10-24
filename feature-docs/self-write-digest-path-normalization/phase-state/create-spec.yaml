@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 68f508cfb3709252a00566d1def34f1143dd1dcb
 last_input_digest: sha256:425e1dd1cefb7d1c6a247f70757aab73d89a905aad94b20989912c121f5698a3
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets: {}
 answers:
   create-spec.feature-identity:
@@ -24,10 +24,13 @@ worker_runs:
   input_digest: sha256:83033e24f03fdedbf7c9032bab821abc1c189eb4c470e4b8424db63cb12e4ec0
   output_digest: sha256:2dfb3c8f2f27ffd4b5d61ee3625030ae00d3f5295fe91c8cc4df78271add1ba7
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:425e1dd1cefb7d1c6a247f70757aab73d89a905aad94b20989912c121f5698a3
-  output_digest: null
-artifacts: []
+  output_digest: sha256:9464a5b01e8de46c41a490d8d7b67894db05ddad922492d99a3ddd6231f3fec0
+artifacts:
+- path: feature-docs/self-write-digest-path-normalization/SPEC.md
+  sha256: sha256:9464a5b01e8de46c41a490d8d7b67894db05ddad922492d99a3ddd6231f3fec0
+  produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
