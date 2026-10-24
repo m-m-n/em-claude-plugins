@@ -30,10 +30,11 @@ orchestrator (skills/develop/SKILL.md, Step 0) at workflow start.
    `git -C {project_root} rev-parse --git-path hooks`; relative output is
    relative to `{project_root}`, NOT to the git dir — from the main worktree
    it returns `.git/hooks`, so the hooks dir is `{project_root}/.git/hooks`).
-4. Map the procedure outcome to a status: hook already contains `gitleaks` →
-   `already_configured`; hook file newly created → `created`; snippet
-   appended to an existing hook → `appended`; anything went wrong
-   (permission error etc.) → `failed` with the reason.
+4. Map the procedure outcome to a status: hook left unchanged as already
+   configured → `already_configured`; hook file newly created → `created`;
+   snippet appended to an existing hook → `appended`; an old-version script
+   or snippet replaced → `updated`; anything went wrong (permission error
+   etc.) → `failed` with the reason.
 
 ## Hard constraints
 
@@ -44,7 +45,8 @@ orchestrator (skills/develop/SKILL.md, Step 0) at workflow start.
   resolved wrong → report `failed` ("hooks dir not found") without creating
   anything.
 - Never weaken or remove existing hook content — additions only, per the
-  reference procedure.
+  reference procedure, except replacing an old-version script or snippet
+  the procedure names.
 - No `git add`, no `git commit`, no `git status` — git is only used for the
   read-only `rev-parse` probes above.
 
@@ -52,7 +54,7 @@ orchestrator (skills/develop/SKILL.md, Step 0) at workflow start.
 
 ```json
 {
-  "status": "gitleaks_missing" | "not_a_git_repo" | "already_configured" | "created" | "appended" | "failed",
+  "status": "gitleaks_missing" | "not_a_git_repo" | "already_configured" | "created" | "appended" | "updated" | "failed",
   "reason": "<short explanation; required on failed>"
 }
 ```
