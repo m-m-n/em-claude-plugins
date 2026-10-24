@@ -1,0 +1,257 @@
+schema_version: 1
+feature: worker-self-write-digest
+created: '2026-10-24'
+base_branch: main
+goal: |
+  # worker が読み書き両方する target（tokens.yaml、planner の既存成果物）で、R1 の返却後 input_digest 再計算が worker 自身の正当な更新を stale と誤判定しうる
+
+  Notion: <notion-url>
+
+  ## 現象 (必須)
+
+  `em-workflow/references/contracts/worker-envelope.md` の Rule R1 は、worker が戻った後に同じ入力から `input_digest` を計算し直し、dispatch 時の値と食い違えば stale として扱う。
+
+  designer の `design-system/tokens.yaml`（`extend_only`）や、implementation-planner / rework-planner が更新する既存成果物（IMPLEMENTATION.md、VERIFICATION.md、TASK.md 等）は、`digest_inputs` と `write_policy.targets` の両方に入る。このため worker 自身が許された範囲で書いただけで `input_digest` が変わり、外部の変更と区別できない。
+
+  ## 再現手順 (必須)
+
+  1. 既存の `design-system/tokens.yaml` がある feature で、designer を `extend_only` 付きで dispatch する
+  2. designer が tokens.yaml にキーを追加して戻る
+  3. オーケストレーターが R1 に従って `input_digest` を計算し直すと、dispatch 時の値と食い違う
+
+  ## 期待する挙動 (必須)
+
+  worker 自身が `write_policy` の範囲で書いた target を、戻った後の stale 判定から区別できるようにする。
+
+  ## 完了の定義 (必須)
+
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある
+
+  ## 該当箇所 (任意)
+
+  - `em-workflow/references/contracts/worker-envelope.md`（Rule R1 の Recomputation and comparison timing）
+  - `em-workflow/references/contracts/designer-contract.md`
+  - `em-workflow/references/contracts/planner-contract.md`
+  - `em-workflow/references/contracts/rework-planner-contract.md`
+
+  ## 実害・発生条件 (任意)
+
+  feature worker-digest-ownership の create-spec で Codex に相談した中で見つかった。その feature ではスコープ外とした。読み込み対象と書き込み対象を兼ねる成果物を持つ dispatch でだけ起きる。
+parent_branch: em-workflow/worker-self-write-digest/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.44
+      '2': 0.55
+      '3': 0.01
+    description_plus_code:
+      '0': 0.0
+      '1': 0.1
+      '2': 0.9
+      '3': 0.0
+  at: '2026-10-24T08:46:30+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: ad48379d810c09743f3df1c0edde5cb7cbbf3eea
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: No UI. The changes are limited to protocol Markdown, Python scripts and tests.
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: b7cdbfac5dcc9418a5f8159cde371ed3626922ff
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: Substitute dispatch-time digests for self-writes
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-7
+  FR2:
+    title: Self-write set identification
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-5
+  FR3:
+    title: Per-action permission
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-6
+    - TS-7
+  FR4:
+    title: Non-self-write changes stay stale
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-4
+  FR5:
+    title: Patch application rule 1
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-2
+    - TS-3
+  FR6:
+    title: Resume comparison
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-8
+  FR7:
+    title: Persistence
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-8
+  FR8:
+    title: Ordering
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR9:
+    title: Envelope-generic rule
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-9
+  FR10:
+    title: Script function
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR11:
+    title: Regression tests
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-10
+  NFR1:
+    title: Digest structure unchanged
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: worker_digest_stance invariant
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-10
+  NFR3:
+    title: dispatch_digest_wiring invariant
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-10
+  NFR4:
+    title: Full test suite
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-10
+  NFR5:
+    title: Plugin version
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR6:
+    title: Single statement of each rule
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
