@@ -4,8 +4,8 @@ phase: create-spec
 status: in_progress
 generation: 1
 base_revision: 2f7aa8e92fc51b6ecb0a09c9782fe31de3c58845
-last_input_digest: sha256:9b322aaf804047479d1ea4f420d4aa65e37721565439849aca25f2775516228d
-active_request_id: create-spec-run-0001
+last_input_digest: sha256:7d1bc5da970d8b6adbfcf513b0668873b84789531d5002718ed2e56d6a643bf5
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     path: null
@@ -49,13 +49,17 @@ worker_runs:
 - request_id: create-spec-run-0001
   status: completed
   input_digest: sha256:9b322aaf804047479d1ea4f420d4aa65e37721565439849aca25f2775516228d
-  dispatch_digest_inputs:
+  dispatch_digest_inputs: &id001
     CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
     em-review/scripts/codex-hook-interactive-guard.py: sha256:75936d424179629931f720b8e8c74ba749e00d5b621d866670e0545e42c67a46
     em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
     em-workflow/scripts/codex-hook-interactive-guard.py: sha256:75936d424179629931f720b8e8c74ba749e00d5b621d866670e0545e42c67a46
     test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
     tests/test_codex_hook_interactive_guard.py: sha256:fc80e17cd9502b9df3221756bc3b07bdb5caf74de0302fc83f22b020c010253e
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:7d1bc5da970d8b6adbfcf513b0668873b84789531d5002718ed2e56d6a643bf5
+  dispatch_digest_inputs: *id001
 artifacts: []
 patches: []
 progress_fingerprint: null
