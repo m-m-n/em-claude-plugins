@@ -146,9 +146,9 @@ tasks:
     - NFR1
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/worker-self-write-digest/task0001
   task0002:
     title: R1 self-write rule, contract citations, patch rule 1, phase-state fields
     plan: tasks/task0002.md
@@ -181,9 +181,9 @@ tasks:
     - NFR4
     - NFR5
     - NFR6
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/worker-self-write-digest/task0002
   task0003:
     title: dispatch-site procedures run the self-write script
     plan: tasks/task0003.md
@@ -208,9 +208,9 @@ tasks:
     - NFR4
     - NFR5
     - NFR6
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/worker-self-write-digest/task0003
 review:
   status: pending
   rounds_completed: 0
