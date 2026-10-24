@@ -158,6 +158,13 @@ cross-product this exception is drawn from is owned by
 `references/contracts/designer-contract.md`; this contract only states the
 consequence for the planner's own `digest_inputs`.
 
+The orchestrator applies the self-write rule of
+`references/contracts/worker-envelope.md`, Rule R1, "Recomputation and
+comparison timing", when it recomputes `input_digest` on this worker's
+return. The overlap between this worker's `digest_inputs` and the paths its
+`write_policy` lets it write is `IMPLEMENTATION.md`, `VERIFICATION.md`,
+`THREAT-MODEL.md` and `tasks/`.
+
 ## `completed` payload
 
 ```yaml

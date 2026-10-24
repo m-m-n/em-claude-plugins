@@ -176,6 +176,14 @@ project has its own design system, even if leftover files exist). Under
 only through `resolved_input_paths.project_design_system` — the designer
 never discovers them itself (see "Additional input" above).
 
+The orchestrator applies the self-write rule of
+`references/contracts/worker-envelope.md`, Rule R1, "Recomputation and
+comparison timing", when it recomputes `input_digest` on this worker's
+return. The overlap between this worker's `digest_inputs` and the paths its
+`write_policy` lets it write is `design-system/tokens.yaml` and
+`design-system/tokens.html` (except under the `project_native` exclusion
+above).
+
 ## `completed` payload
 
 ```yaml
