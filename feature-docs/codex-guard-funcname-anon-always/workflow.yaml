@@ -122,8 +122,8 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/codex-guard-funcname-anon-always/task0001
   task0002:
     title: State the further-name and anonymous-argument reading in the substitution-skip
       docstring
@@ -140,8 +140,8 @@ tasks:
     - FR7
     - NFR3
     - NFR4
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/codex-guard-funcname-anon-always/task0002
 review:
   status: pending
 requirements:
