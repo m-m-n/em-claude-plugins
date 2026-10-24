@@ -40,7 +40,7 @@ artifacts:
   produced_by: create-plan-run-0001
 patches:
 - patch_id: rework-recheck-before-patch-write-plan-p0001
-  status: applying
+  status: applied
   base_input_digest: sha256:70944310b8db7d2f6718339deabdda324d2562b53cc103755f15c9bf2fab9459
   base_workflow_blob: d6d985eb26aebfa7c20d5d4cc14324f148f4c4ba
 progress_fingerprint: null
