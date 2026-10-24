@@ -148,9 +148,9 @@ tasks:
     - NFR5
     - NFR6
     - NFR7
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/self-write-exclusivity-window/task0001
   task0002:
     title: Exclusivity interval through the recording write
     plan: tasks/task0002.md
@@ -171,9 +171,9 @@ tasks:
     - NFR3
     - NFR5
     - NFR7
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/self-write-exclusivity-window/task0002
   task0003:
     title: artifact-digest.md Layer 5 recording When
     plan: tasks/task0003.md
@@ -191,9 +191,9 @@ tasks:
     - NFR2
     - NFR3
     - NFR7
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/self-write-exclusivity-window/task0003
   task0004:
     title: Three dispatch sites reference the return-time recheck
     plan: tasks/task0004.md
@@ -214,9 +214,9 @@ tasks:
     - NFR2
     - NFR3
     - NFR7
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/self-write-exclusivity-window/task0004
 review:
   status: pending
   rounds_completed: 0
