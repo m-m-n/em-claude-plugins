@@ -1,11 +1,11 @@
 schema_version: 1
 feature: codex-guard-brace-case-group-depth
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 797b1277897be0fe74c4ae5160d33c538b7f1419
 last_input_digest: sha256:7a89b92effcbcf4c654472c679cfb9ebb9c2bd999544ba3e200d5f012a1499c1
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets: {}
 answers:
   create-spec.feature-identity:
