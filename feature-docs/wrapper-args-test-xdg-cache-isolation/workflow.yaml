@@ -2,64 +2,39 @@ schema_version: 1
 feature: wrapper-args-test-xdg-cache-isolation
 created: '2026-10-26'
 base_branch: main
-goal: '# tests/test_codex_hook_wrapper_args.py の --litellm 経路の試験が XDG_CACHE_HOME を外さず、実キャッシュに
-  em-workflow ディレクトリを残す
-
+goal: |
+  # tests/test_codex_hook_wrapper_args.py の --litellm 経路の試験が XDG_CACHE_HOME を外さず、実キャッシュに em-workflow ディレクトリを残す
 
   種別: バグ
 
-
   ## 現象 (必須)
 
-
-  `tests/test_codex_hook_wrapper_args.py` の `_run_wrapper_pid()` は、環境変数から `CODEX_HOME`
-  と `CODEX_OTLP_ENDPOINT` だけを外し、`XDG_CACHE_HOME` を外さない。`run_codex_exec.sh` の `--litellm`
-  経路は起動用 Codex home の親を `XDG_CACHE_HOME`（絶対パスのとき）配下の `em-workflow` に作るため、試験を走らせる環境で
-  `XDG_CACHE_HOME` が絶対パスだと、`--litellm` を使う各試験が利用者の実キャッシュに `em-workflow` ディレクトリを作って残す。その場所に書けない環境では、試験が環境に左右されて失敗する。
-
+  `tests/test_codex_hook_wrapper_args.py` の `_run_wrapper_pid()` は、環境変数から `CODEX_HOME` と `CODEX_OTLP_ENDPOINT` だけを外し、`XDG_CACHE_HOME` を外さない。`run_codex_exec.sh` の `--litellm` 経路は起動用 Codex home の親を `XDG_CACHE_HOME`（絶対パスのとき）配下の `em-workflow` に作るため、試験を走らせる環境で `XDG_CACHE_HOME` が絶対パスだと、`--litellm` を使う各試験が利用者の実キャッシュに `em-workflow` ディレクトリを作って残す。その場所に書けない環境では、試験が環境に左右されて失敗する。
 
   ## 再現手順 (必須)
 
-
   1. `XDG_CACHE_HOME` を絶対パスのディレクトリに設定する
-
   2. `python3 -m unittest tests.test_codex_hook_wrapper_args` を実行する
-
   3. `$XDG_CACHE_HOME/em-workflow` が作られて残っていることを確かめる
-
 
   ## 期待する挙動 (必須)
 
-
   試験は隔離された HOME の中だけに書き、利用者の実キャッシュに何も残さない。
-
 
   ## 完了の定義 (必須)
 
-
   - [ ] 再現手順で現象が起きない
-
   - [ ] 再発を検出するテストがある
-
 
   ## 該当箇所 (任意)
 
-
   - `tests/test_codex_hook_wrapper_args.py:217-222`（`_run_wrapper_pid()` の env 組み立て）
-
   - `em-workflow/scripts/run_codex_exec.sh:332-342`（`--litellm` の起動 home の親ディレクトリ）
-
-  - 対応案: `env.pop("XDG_CACHE_HOME", None)` を加え、作業ディレクトリの外に `em-workflow` ディレクトリが作られないことを確かめる。`tests/test_codex_litellm_launch_home_location.py`
-  は既に `XDG_CACHE_HOME` を外している
-
+  - 対応案: `env.pop("XDG_CACHE_HOME", None)` を加え、作業ディレクトリの外に `em-workflow` ディレクトリが作られないことを確かめる。`tests/test_codex_litellm_launch_home_location.py` は既に `XDG_CACHE_HOME` を外している
 
   ## 実害・発生条件 (任意)
 
-
-  `XDG_CACHE_HOME` を絶対パスで設定している環境で試験を走らせたときだけ起きる。codex-stop-hook-tty-reaper の review
-  round 2 で、評価者の独自点検により low として見つかった。
-
-  '
+  `XDG_CACHE_HOME` を絶対パスで設定している環境で試験を走らせたときだけ起きる。codex-stop-hook-tty-reaper の review round 2 で、評価者の独自点検により low として見つかった。
 parent_branch: em-workflow/wrapper-args-test-xdg-cache-isolation/integration
 tier: reduced
 tier_decision:
