@@ -102,7 +102,50 @@ workflow:
   status: pending
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Bind merge-task.sh to the named task's own worktree and branch
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/merge-task.sh
+    - tests/test_merge_task_journal.py
+    - tests/test_merge_unverified_exit_doc_contract.py
+    skills:
+    - infra-impl
+    domains:
+    - input-handling
+    - api-contract
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - FR8
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: pending
+    notes: null
+  task0002:
+    title: Cite merge-task.sh's already-contained case by name in implement-phase.md
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/references/implement-phase.md
+    - tests/test_merge_unverified_exit_doc_contract.py
+    skills: []
+    domains: []
+    complexity: low
+    requirements:
+    - FR7
+    - NFR3
+    - NFR4
+    status: pending
+    notes: null
 review:
   status: pending
 requirements:
@@ -111,17 +154,21 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS1
     - TS2
     - TS3
+    - TS9
+    - TS10
   FR2:
     title: 親ブランチはフィーチャーの統合ブランチでなければならない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS6
   FR3:
@@ -129,7 +176,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS4
     - TS5
@@ -138,34 +186,42 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS1
     - TS2
     - TS3
     - TS4
     - TS5
+    - TS8
   FR5:
     title: レイアウトの中の正しい実行は今の挙動を保つ
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS6
+    - TS10
   FR6:
     title: merge-task.sh 自身のコメントを更新する
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS11
   FR7:
     title: 既に含まれる場合を行番号でなく名前で引用する
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
     tests:
     - TS7
   FR8:
@@ -173,7 +229,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS3
   NFR1:
@@ -181,29 +238,45 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS4
+    - TS9
   NFR2:
     title: 終了コードの意味を保つ
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS1
+    - TS2
+    - TS3
+    - TS4
+    - TS5
+    - TS6
   NFR3:
     title: 標準ライブラリと使い捨てのリポジトリだけを使う
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS13
   NFR4:
     title: version を変えない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS14
 batch:
   review_rework_count: 0
   verify_rework:
