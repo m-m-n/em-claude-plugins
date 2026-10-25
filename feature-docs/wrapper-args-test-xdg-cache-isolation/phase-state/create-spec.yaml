@@ -64,13 +64,18 @@ worker_runs:
     tests/test_codex_litellm_launch_home_location.py: sha256:5725b61cdb6b292962fd47d85b307006a1f0a5cbfef91a902dc8c44acec3fecd
   self_write_set: []
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:449beead48bfa52c723b2d0b713573df51a3d2a270d4a1124471ed33d74900f9
-  output_digest: null
+  output_digest: sha256:2eb3255357db7c8486bd8a21e56b0a5d0f9ba3281b73a41faec04f266478dfe7
   dispatch_digest_inputs:
     em-workflow/references/contracts/spec-writer-contract.md: sha256:9032c6287d75f4a88e556bd3962c32ab8b4905cf3b6ececa895206788bcd0b63
     em-workflow/references/templates/spec-document.md: sha256:203dfcddbe507886ce861694fccd20ae25e5af0bd1b0efa5e935991add950cbd
-artifacts: []
+  self_write_set:
+  - feature-docs/wrapper-args-test-xdg-cache-isolation/SPEC.md
+artifacts:
+- path: feature-docs/wrapper-args-test-xdg-cache-isolation/SPEC.md
+  sha256: sha256:ad1e191569592238ae0a946f7d4b70d75916071ca0046b0a8bcee2319c081332
+  produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: sha256:ad37577e6c94dc584f3aa0566b7d1a3e2bb393f381d1e533b83fdf08f8a9eb7e
 stale_redispatch_count: 0
