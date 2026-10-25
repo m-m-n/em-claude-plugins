@@ -1,0 +1,73 @@
+feature: merge-task-worktree-binding
+collected_at: '2026-10-25T20:38:18+09:00'
+session_ids:
+- 01a172d9-7476-72ce-a6eb-299eb671cccd
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: description_plus_code の最終読みはバケット 1 と 2 がほぼ拮抗（0.52 / 0.48）し、評価器の閾値表により full を採用した
+    bases:
+    - basis: description_only
+      score:
+        type: score
+        score: 1.02
+        confidence: 0.98
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.98
+          '2': 0.02
+          '3': 0.0
+      observed_at: '2026-10-25T19:22:52+09:00'
+    - basis: description_plus_code
+      score:
+        type: score
+        score: 1.48
+        confidence: 0.52
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.52
+          '2': 0.48
+          '3': 0.0
+      observed_at: '2026-10-25T19:25:28+09:00'
+    pre_survey_estimate:
+      files_expected:
+      - em-workflow/scripts/merge-task.sh
+      - tests/test_merge_task_journal.py
+      - tests/test_merge_unverified_exit_doc_contract.py
+      changed_lines_approx: 60
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: true
+      spillover_modules:
+      - em-workflow/agents/implementer.md
+      - em-workflow/skills/worktree-task-workflow/SKILL.md
+      - em-workflow/references/implement-phase.md
+      work_still_required: true
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 1
+      body_change_kind: new_logic
+      change_containment: multiple_modules
+      caller_and_dependency_count: 5
+      changes_external_contract: true
+      changes_behavior: true
+      evidence: レイアウト外をexit 2で拒否する案の概算。行数・追加件数は未確定で、新規関数数は本体のみを数えた。em-workflow/scripts/merge-task.sh:87-101はレイアウト内だけ本人確認し、:114で現在のHEADを取得、:125・:133・:148でマージに使用する。:44-53はレイアウト外でjournal追記を省略する。既存のdie（:28）とtests/test_merge_task_journal.py:85-122の補助処理を利用できる。同テスト:263-274はレイアウト外でexit 0を期待し、:349-380はレイアウト内の不一致を検査するが、メイン作業ツリーからの拒否テストはない。tests/test_merge_unverified_exit_doc_contract.py:926-948はスクリプトのハッシュと行番号を固定している。呼出・依存数5はこの2テストと、em-workflow/agents/implementer.md:231-250、em-workflow/skills/worktree-task-workflow/SKILL.md:42-60、em-workflow/references/implement-phase.md:415-416を数えた。後者:879にも固定行番号がある。ファイル変更・テスト実行はしていない。
+follow_up_drafts: []
+lessons_candidates:
+- 'review の medium 指摘（382656461464cbe1: ブランチ束縛の確認時点と HEAD 読み出し時点のずれ）が unresolved のまま残り、triage_filing の filed も空だった。medium 以下の残件を起票する経路が無い'

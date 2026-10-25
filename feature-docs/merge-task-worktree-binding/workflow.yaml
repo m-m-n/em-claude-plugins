@@ -109,7 +109,8 @@ workflow:
   failed_items: []
   summary: 'python3 -m unittest discover -s tests: 11570 tests OK (skipped=1); TS1-TS14 pass; M1 confirmed by reading merge-task.sh header, identity-binding and journal-append comments; build/format commands empty'
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: 4a6ffab92f56d6ade7d4e9cb8576b437fa1f4d9d
 tasks:
   task0001:
     title: Bind merge-task.sh to the named task's own worktree and branch
