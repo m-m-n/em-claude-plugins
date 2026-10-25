@@ -1,0 +1,30 @@
+schema_version: 1
+feature: wrapper-args-test-xdg-cache-isolation
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: b4815531165387e93387d68b29b98b8c800ac7c5
+last_input_digest: sha256:72838797fdf5acd354c4bcfbdb3aea5d58ef4d70e031a6cc8721634c3f1ba9d6
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:72838797fdf5acd354c4bcfbdb3aea5d58ef4d70e031a6cc8721634c3f1ba9d6
+  output_digest: null
+  dispatch_digest_inputs:
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    em-review/scripts/run_codex_exec.sh: sha256:a638cbe671d8f85bf01c7859db1de86ed76afb088b278360d111e7c62a68c366
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
+    em-workflow/references/templates/design-tokens.yaml: sha256:ee02e7a3fb8574f782b42324ffe63b0c3f58d4247102d0d0b8482899993730ba
+    em-workflow/scripts/run_codex_exec.sh: sha256:54bd1de072d5e821e9d2b181e1b2e17e3fa81eaca5e18d9f331963eca05910f9
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+    tests/test_codex_hook_wrapper_args.py: sha256:c08e54d47a020c60b59b7c41f390da5e605e3162a38e63540e4e85aafa3e8d48
+    tests/test_codex_litellm_launch_home_location.py: sha256:5725b61cdb6b292962fd47d85b307006a1f0a5cbfef91a902dc8c44acec3fecd
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
