@@ -1,7 +1,7 @@
 schema_version: 1
 feature: merge-task-worktree-binding
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: 2752b652532e94800303f6593dc3b84c027860b0
 last_input_digest: sha256:1471e659193d82b32f54464f55ad698dbd9bb1ae9ad70517580578b2f78ba9e2

@@ -1,0 +1,214 @@
+schema_version: 1
+feature: merge-task-worktree-binding
+created: '2026-10-25'
+base_branch: main
+goal: |
+  # merge-task.sh を task worktree 外で実行すると、カレントの HEAD を integration ブランチへマージしてしまう
+
+  種別: バグ
+
+  ## 現象
+
+  `merge-task.sh` を task worktree の外（メイン作業ツリー）で実行すると、カレントの `HEAD` を feature の integration ブランチへマージする。task ブランチはマージされず、`merged` の journal イベントも出ない。
+
+  feature `codex-guard-funcname-anon-always` の implement で実際に起きた。implementer が別の Bash 呼び出しで `cd` した後、cwd がメイン作業ツリーに戻った状態で `merge-task.sh em-workflow/codex-guard-funcname-anon-always/integration task0001` を実行した。
+
+  - メイン作業ツリーの `HEAD`（main, `cac662fb`）が `merge: task0001`（`cc2f0fa6`）として integration ブランチへマージされた
+  - task0001 のコミット `ace81a71` はマージされなかった
+  - journal に `merged` が書かれず、failure net が `failed` を記録した（batch の自動 retry で回復した）
+
+  ## 再現手順
+
+  1. em-workflow の feature で integration ブランチと task worktree を用意する
+  2. メイン作業ツリー（クリーンな状態）で `merge-task.sh em-workflow/{feature}/integration task0001` を実行する
+  3. integration ブランチにメイン作業ツリーの `HEAD` がマージされ、exit 0 で終わる
+
+  ## 期待する挙動
+
+  task ID を受け取ったとき、カレントが `em-workflow/{feature}/{task}` の worktree でなければ拒否する（exit 2）。または、マージ対象をカレントの `HEAD` ではなく task ブランチ名から解決する。
+
+  ## 完了の定義
+
+  - 再現手順で現象が起きない
+  - 再発を検出するテストがある
+
+  ## 該当箇所
+
+  - `em-workflow/scripts/merge-task.sh` の Identity binding。em-workflow のレイアウト外では binding を適用せず、そのままカレントの `HEAD` をマージする
+
+  ## 実害・発生条件
+
+  implementer の Bash の cwd がメイン作業ツリーに戻ったまま `merge-task.sh` を呼んだときだけ。integration ブランチに無関係な履歴が入る。base_branch の履歴であれば PR の差分には出ないが、それ以外のブランチを指していた場合は別の変更が混入する。
+
+  ## 追加指示（起動時）
+
+  - 実装完了後、integration ブランチを remote に push し、base_branch へ gh pr create で PR を作成する。integration ブランチはローカル・リモートとも残す（base_branch へ自動マージしない）
+  - 不明点は Codex に相談し、比較的良いと判断された選択肢を採用する
+  - その議論内容を Notion に記録する
+parent_branch: em-workflow/merge-task-worktree-binding/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.98
+      '2': 0.02
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.52
+      '2': 0.48
+      '3': 0.0
+  at: '2026-10-25T19:25:40+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: Bash / Python / Markdown
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: f76e75fbba3b800d6b87b16354d7670c3ef61964
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'shell-script guard fix with no UI, zero design-system candidates (create-spec.design-step: decide_autonomously -> skipped)'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+requirements:
+  FR1:
+    title: タスクのワークツリーのレイアウトの外からの実行を拒否する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS2
+    - TS3
+  FR2:
+    title: 親ブランチはフィーチャーの統合ブランチでなければならない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS6
+  FR3:
+    title: チェックアウトされたブランチはタスクブランチでなければならない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS4
+    - TS5
+  FR4:
+    title: 拒否はロック・マージ・ref の更新より前に行う
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS2
+    - TS3
+    - TS4
+    - TS5
+  FR5:
+    title: レイアウトの中の正しい実行は今の挙動を保つ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS6
+  FR6:
+    title: merge-task.sh 自身のコメントを更新する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: 既に含まれる場合を行番号でなく名前で引用する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS7
+  FR8:
+    title: AC-5 のマージだけのテストを拒否のテストにする
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS3
+  NFR1:
+    title: 失敗側に倒す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 終了コードの意味を保つ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: 標準ライブラリと使い捨てのリポジトリだけを使う
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: version を変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
