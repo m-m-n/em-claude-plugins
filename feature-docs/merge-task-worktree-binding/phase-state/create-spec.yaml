@@ -5,7 +5,7 @@ status: in_progress
 generation: 1
 base_revision: 2752b652532e94800303f6593dc3b84c027860b0
 last_input_digest: sha256:1471e659193d82b32f54464f55ad698dbd9bb1ae9ad70517580578b2f78ba9e2
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     path: null
@@ -116,13 +116,23 @@ worker_runs:
     tests/test_merge_task_journal.py: sha256:12f1bd9cebc8c664617f8e1f78a3872f61d32eb285799f9ab3f4b404db97b10f
     tests/test_merge_unverified_exit_doc_contract.py: sha256:285e7e8be262c97072427847bc6a85d292772fccce59e81c5335a47e9af39979
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:1471e659193d82b32f54464f55ad698dbd9bb1ae9ad70517580578b2f78ba9e2
   dispatch_digest_inputs:
     em-workflow/references/contracts/spec-writer-contract.md: sha256:9032c6287d75f4a88e556bd3962c32ab8b4905cf3b6ececa895206788bcd0b63
     em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
     em-workflow/references/templates/spec-document.md: sha256:203dfcddbe507886ce861694fccd20ae25e5af0bd1b0efa5e935991add950cbd
-artifacts: []
+  output_digest: sha256:ccb68c598ead993f6ac94e3cfc38ba867367bd39fb0ed1e77c8466a7508dd668
+  self_write_set:
+  - feature-docs/merge-task-worktree-binding/REQUIREMENTS.md
+  - feature-docs/merge-task-worktree-binding/SPEC.md
+artifacts:
+- path: feature-docs/merge-task-worktree-binding/REQUIREMENTS.md
+  sha256: sha256:ff71a585b145cef005918f2d8a253ce8add1aa6793b7751a0320cd7da08cda07
+  produced_by: create-spec-run-0003
+- path: feature-docs/merge-task-worktree-binding/SPEC.md
+  sha256: sha256:ccb68c598ead993f6ac94e3cfc38ba867367bd39fb0ed1e77c8466a7508dd668
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
