@@ -1,0 +1,64 @@
+schema_version: 1
+feature: merge-task-worktree-binding
+phase: create-spec
+status: in_progress
+generation: 1
+base_revision: 2752b652532e94800303f6593dc3b84c027860b0
+last_input_digest: sha256:bcb82c3e8398ace74adaefde67ade3172b38387280a61e4fb8b9085adf7c180b
+active_request_id: create-spec-run-0001
+packets: {}
+answers:
+  create-spec.feature-identity:
+    packet_id: null
+    answered_at: '2026-10-25T19:22:00+09:00'
+    source: batch-policy
+    answer_mode: select
+    selected_option_ids:
+    - derive_from_task_description
+    freeform: null
+    normalized_answer: feature name merge-task-worktree-binding derived from the task
+      title
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:bcb82c3e8398ace74adaefde67ade3172b38387280a61e4fb8b9085adf7c180b
+  dispatch_digest_inputs:
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    em-workflow/README.md: sha256:369437c34ef84e712c86adc6497562bced67854f7694778c597676713f13b994
+    em-workflow/agents/implementer.md: sha256:c4e410c7fe33834769d5ddde305e90504367b95b42b1d1bd09e8c5cc443e0083
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
+    em-workflow/references/implement-phase.md: sha256:56ef029c699952bdcb0265012b313bdb89de93e759c49cd9babe4c475e7b5485
+    em-workflow/references/phase-state.md: sha256:3a6736bb8da4b29104ab1ef5d558ae0abca042813435e1189bbb0ab380f0ea32
+    em-workflow/references/phases/create-spec-phase.md: sha256:b227853eac40c98086a0de6d9f09b5b56386a98b44bbc746f9a4732785b15af4
+    em-workflow/references/review-phase.md: sha256:310a61d8927edf4deedbd859738c7e460ca44b3b937425df25e796c346060618
+    em-workflow/references/workflow-schema.md: sha256:272810b8e6b75a03a856a2c539985a326440db6ebad80c423d559ca742552f3f
+    em-workflow/scripts/commit-docs.sh: sha256:ef6a1ce0a7bcb4b40504b5630065a9e0aecae13013b5dd513c13addebef00d46
+    em-workflow/scripts/merge-task.sh: sha256:f8af1da2e7712a656fe70020fa9c71e53275342d46d96abd2b20b432c10eb84f
+    em-workflow/skills/develop/SKILL.md: sha256:3ad5a832b19ea3e64bbae71d17802ddec407deb9145fee6c3e361f7753ddf6e4
+    em-workflow/skills/worktree-task-workflow/SKILL.md: sha256:ae619838527657f2ec9ae0589308a5860b3c63c78886a8d6cc9cc2f66b710aa1
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+    tests/test_merge_task_journal.py: sha256:12f1bd9cebc8c664617f8e1f78a3872f61d32eb285799f9ab3f4b404db97b10f
+    tests/test_merge_unverified_exit_doc_contract.py: sha256:285e7e8be262c97072427847bc6a85d292772fccce59e81c5335a47e9af39979
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache:
+  reference_scan_targets:
+  - em-workflow/scripts/merge-task.sh
+  - em-workflow/scripts/commit-docs.sh
+  - em-workflow/agents/implementer.md
+  - em-workflow/skills/worktree-task-workflow/SKILL.md
+  - em-workflow/skills/develop/SKILL.md
+  - em-workflow/references/implement-phase.md
+  - em-workflow/references/review-phase.md
+  - em-workflow/references/workflow-schema.md
+  - em-workflow/references/phase-state.md
+  - em-workflow/references/phases/create-spec-phase.md
+  - em-workflow/README.md
+  - tests/test_merge_task_journal.py
+  - tests/test_merge_unverified_exit_doc_contract.py
+  e2e: []
+  design_system_candidates: []
+  package_files: []
+last_error: null
