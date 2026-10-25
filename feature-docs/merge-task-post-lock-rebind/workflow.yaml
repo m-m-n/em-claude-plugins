@@ -2,43 +2,73 @@ schema_version: 1
 feature: merge-task-post-lock-rebind
 created: '2026-10-25'
 base_branch: main
-goal: |
-  # merge-task.sh がロック待機中のブランチ切り替えで、確認済みでないブランチを統合し得る
+goal: '# merge-task.sh がロック待機中のブランチ切り替えで、確認済みでないブランチを統合し得る
+
 
   種別: バグ
 
-  ## 現象
-  `em-workflow/scripts/merge-task.sh` は、タスクブランチへの束縛（HEAD の symbolic-ref が `refs/heads/em-workflow/{feature}/{taskNNNN}` であることの確認）を flock の前に一度だけ行う。統合するコミットはロック取得後に `git rev-parse --verify HEAD` で読む。
 
-  ロック待ちの間に同じタスクのワークツリーで別ブランチへ切り替わると、そのブランチの先端が `merge: {TASK_ID}` として統合ブランチに入り、exit 0 と元の TASK_ID の `merged` イベントが記録される。
+  ## 現象
+
+  `em-workflow/scripts/merge-task.sh` は、タスクブランチへの束縛（HEAD の symbolic-ref が `refs/heads/em-workflow/{feature}/{taskNNNN}`
+  であることの確認）を flock の前に一度だけ行う。統合するコミットはロック取得後に `git rev-parse --verify HEAD` で読む。
+
+
+  ロック待ちの間に同じタスクのワークツリーで別ブランチへ切り替わると、そのブランチの先端が `merge: {TASK_ID}` として統合ブランチに入り、exit
+  0 と元の TASK_ID の `merged` イベントが記録される。
+
 
   feature `merge-task-worktree-binding` のレビュー round1 で medium として検出した（stable_id `382656461464cbe1`）。
 
+
   ## 再現手順
+
   1. 共有の `em-workflow-merge.lock` を別プロセスで保持する
+
   2. 正しい task0001 のワークツリーから `merge-task.sh` を起動する（ロック待ちになる）
+
   3. 待機中に同じワークツリーで、別コミットを持つブランチへ切り替える
+
   4. ロックを解放すると、別ブランチの内容が task0001 として統合される
 
+
   ## 期待する挙動
+
   ロック取得後に統合するコミットが、確認済みのタスクブランチの先端と一致する。一致しない場合は exit 2 で拒否する。
 
+
   修正案:
+
   - ロック前の拒否はそのまま残す
+
   - クリティカルセクションの中で HEAD_SHA を確認済みのタスクブランチ ref から取る
+
   - flock の後に symbolic-ref をもう一度確かめ、一致しなければ exit 2
-  - `tests/test_merge_unverified_exit_doc_contract.py` の `EXPECTED_MERGE_TASK_SH_SHA256` も同じ変更で更新する
+
+  - `tests/test_merge_unverified_exit_doc_contract.py` の `EXPECTED_MERGE_TASK_SH_SHA256`
+  も同じ変更で更新する
+
 
   ## 完了の定義
+
   - [ ] 再現手順で現象が起きない
+
   - [ ] 再発を検出するテストがある
 
+
   ## 該当箇所
+
   - `em-workflow/scripts/merge-task.sh:118`（ロック前の束縛確認）
+
   - `em-workflow/scripts/merge-task.sh:134`（ロック後の HEAD 読み取り）
 
+
   ## 実害・発生条件
-  同じタスクのワークツリーで、implementer 以外のプロセスがロック待ちの間にブランチを切り替えたときだけ。implementer は前景で merge-task.sh の終了を待つので、起こりにくい。
+
+  同じタスクのワークツリーで、implementer 以外のプロセスがロック待ちの間にブランチを切り替えたときだけ。implementer は前景で merge-task.sh
+  の終了を待つので、起こりにくい。
+
+  '
 parent_branch: em-workflow/merge-task-post-lock-rebind/integration
 tier: reduced
 tier_decision:
@@ -82,7 +112,8 @@ workflow:
   - DESIGN.md
   - design/
   status: skipped
-  skipped_reason: tier reduced subtracts the design step; also no UI (shell script and test change)
+  skipped_reason: tier reduced subtracts the design step; also no UI (shell script
+    and test change)
 - id: create-plan
   artifacts:
   - IMPLEMENTATION.md
@@ -97,7 +128,35 @@ workflow:
   status: pending
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Post-lock identity re-check and merge source from the verified task ref
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/merge-task.sh
+    - tests/test_merge_task_journal.py
+    - tests/test_merge_unverified_exit_doc_contract.py
+    skills:
+    - infra-impl
+    domains:
+    - concurrency
+    - input-handling
+    - config-infra
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: pending
+    notes: null
 review:
   status: pending
   rounds_completed: 0
@@ -109,78 +168,111 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-3
+    - TS-8
   FR2:
     title: Post-lock symbolic-ref re-check
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-5
   FR3:
     title: Re-check order
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-2
   FR4:
     title: Merge source read from the confirmed task ref
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-3
+    - TS-6
+    - TS-7
+    - TS-9
   FR5:
     title: Comment updates
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-4
+    - TS-9
   FR6:
     title: Content pin follows the script
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-4
   FR7:
     title: Regression test for a post-lock branch switch
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
   NFR1:
     title: Fail closed
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-5
+    - TS-6
   NFR2:
     title: Interface unchanged
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-3
+    - TS-9
   NFR3:
     title: Deterministic, bounded test
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-8
+    - TS-10
   NFR4:
     title: No version change
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-11
 batch:
   review_rework_count: 0
   verify_rework:
