@@ -10,9 +10,9 @@
 
 ## Test Verification
 - Command: `python3 -m unittest discover -s tests` (from the repository root)
-- Focused run: `python3 -m unittest tests.test_codex_hook_tty_reaper tests.test_codex_hook_wrapper_args`
-- Expected: exit code 0. On the Linux verification host, no test in these two
-  modules is skipped.
+- Focused run: `python3 -m unittest tests.test_codex_hook_tty_reaper tests.test_codex_hook_wrapper_args tests.test_codex_litellm_launch_home_location`
+- Expected: exit code 0. On the Linux verification host, no test in these
+  three modules is skipped.
 - Coverage target: not measured, because the standard-library-only test
   setup has no coverage tool. Completeness is tracked through the mapping
   from Acceptance Criteria to tests.
@@ -20,7 +20,8 @@
 ### Test Scenarios from SPEC.md
 
 SPEC.md's MV-1 to MV-4 appear below as TS-9 to TS-12. TS-13 to TS-17 are
-added for FR7, NFR4 / NFR5, NFR6 and the THREAT-MODEL.md mitigations.
+added for FR7, NFR4 / NFR5, NFR6 and the THREAT-MODEL.md mitigations. TS-18
+is added by the verify rework of TS-11 (task0003).
 
 | ID | Scenario | Expected Result | Test Type |
 |----|----------|-----------------|-----------|
@@ -41,6 +42,7 @@ added for FR7, NFR4 / NFR5, NFR6 and the THREAT-MODEL.md mitigations.
 | TS-15 | (NFR6, TM-1, TM-2, TM-4) (a) A stdin JSON object whose fields name other PIDs or paths. (b) Anchor argument missing, more than one, not ASCII digits only, equal to 1, or not a proper ancestor of the hook. (c) A process-name field with spaces and parentheses that imitate the following fields | (a) The targets are the same as with `{}`. (b) Nothing is signalled. (c) Parent and start time are read correctly: an outsider with a forged name is not targeted, and a descendant with a forged name is | Unit (real processes + in-process) |
 | TS-16 | (FR4, NFR1, TM-3) The start time of a target changes between enumeration and SIGTERM, and also between SIGTERM and SIGKILL (in-process) | That target receives no further signal | Unit (in-process) |
 | TS-17 | (FR2, TM-6) Copies of each plugin's `scripts/` under a path with a space and a single quote, plus the existing hostile directory names for the em-workflow default path and em-review | The `hooks.Stop=` value parses as TOML, and the command passes exactly the copied hook path and the wrapper's PID to `python3` | Unit (subprocess) |
+| TS-18 | (FR8, NFR3) Stub codex. em-workflow `--litellm`, readonly and readwrite, with `XDG_CACHE_HOME` absolute, unset or relative, and `TMPDIR` set to a separate directory. Also: `HOME` empty with no `XDG_CACHE_HOME`, and the default route | On `--litellm`, the launch home the stub sees is directly under the cache base's `em-workflow` directory, not under `TMPDIR` and not under the user's Codex home, owner-only, with the same files as before; it is gone after exit, also when codex exits non-zero. With no cache base, one diagnostic and a non-zero exit without launching codex. The default route sets no `CODEX_HOME` and creates nothing under the cache base | Unit (subprocess) |
 
 ## Code Quality Verification
 - Format: not configured (`format_command` is empty).
@@ -53,7 +55,7 @@ added for FR7, NFR4 / NFR5, NFR6 and the THREAT-MODEL.md mitigations.
 | ID | Criterion | How to Verify |
 |----|-----------|---------------|
 | SC-1 | All functional requirements are implemented and tested | Functional Requirements Coverage below; the full test run passes |
-| SC-2 | All test scenarios pass | TS-1 to TS-8 and TS-13 to TS-17 pass in the test run; TS-9 to TS-12 are performed |
+| SC-2 | All test scenarios pass | TS-1 to TS-8 and TS-13 to TS-18 pass in the test run; TS-9 to TS-12 are performed |
 | SC-3 | AC-1 to AC-6 are satisfied | AC-1: TS-1. AC-2: TS-3, TS-4. AC-3: TS-9. AC-4: TS-10. AC-5: TS-11. AC-6: TS-12 |
 | SC-4 | MV-1 to MV-4 are performed and recorded | The results of TS-9 to TS-12 are recorded |
 | SC-5 | Code review is completed | Review phase result |
@@ -68,10 +70,10 @@ added for FR7, NFR4 / NFR5, NFR6 and the THREAT-MODEL.md mitigations.
 | FR5 | task0001 | TS-7 |
 | FR6 | task0002 | TS-1 |
 | FR7 | task0001 | TS-12, TS-13 |
-| FR8 | (verify phase; no implement task) | TS-9, TS-10, TS-11, TS-12 |
+| FR8 | task0003 (the `--litellm` launch home that TS-11 needs); otherwise the verify phase | TS-9, TS-10, TS-11, TS-12, TS-18 |
 | NFR1 | task0001 | TS-6, TS-15, TS-16 |
 | NFR2 | task0001 | TS-5 |
-| NFR3 | task0002 | TS-1 |
+| NFR3 | task0002, task0003 | TS-1, TS-18 |
 | NFR4 | task0001, task0002 | TS-14 |
 | NFR5 | task0001 | TS-8, TS-14 |
 | NFR6 | task0001, task0002 | TS-15 |
@@ -128,7 +130,7 @@ Items:
 ## Verification Summary
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
-| Test scenarios | 17 | 13 (TS-1 to TS-8, TS-13 to TS-17) | 0 | 4 (TS-9 to TS-12) |
+| Test scenarios | 18 | 14 (TS-1 to TS-8, TS-13 to TS-18) | 0 | 4 (TS-9 to TS-12) |
 | Success criteria | 5 | 2 (SC-1, SC-2) | 0 | 3 (SC-3, SC-4, SC-5) |
 | Requirements coverage | 14 | 13 | 0 | 1 (FR8) |
 | Performance / security items | 7 | 7 (NFR2, TM-1 to TM-6) | 0 | 0 |
