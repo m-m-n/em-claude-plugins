@@ -5,6 +5,8 @@ repositories built in a temporary directory, per test/README.md. Covers
 AC-1..AC-7 of feature-docs/implement-phase-queue/tasks/task0001.md.
 """
 
+import contextlib
+import fcntl
 import json
 import os
 import re
@@ -19,6 +21,12 @@ MERGE_SCRIPT = REPO_ROOT / "em-workflow" / "scripts" / "merge-task.sh"
 
 FEATURE = "feat"
 PARENT_BRANCH = f"em-workflow/{FEATURE}/integration"
+
+# Upper bound (seconds) a rejected run may take while the test itself holds
+# the shared merge lock: a rejection happens before the lock is taken, so it
+# must finish far inside this bound; a run still blocked at the bound fails
+# the test.
+LOCKED_RUN_BOUND_SECONDS = 5
 
 # RFC 3339 with an explicit offset (or "Z"); we assert the *format*, not an
 # exact value, per the task plan's test notes.
@@ -140,6 +148,60 @@ class TestMergeTaskJournal(unittest.TestCase):
     def _assert_rfc3339_with_offset(self, value):
         self.assertRegex(value, RFC3339_OFFSET_RE)
 
+    # -- helpers for the identity-binding rejection tests ----------------
+
+    def _parent_sha(self):
+        return self._git(self.main_repo, "rev-parse", PARENT_BRANCH).stdout.strip()
+
+    def _assert_rejected_without_side_effects(self, result, task_id, parent_before):
+        """The run ended with exit 2 and an ERROR line, left the integration
+        ref alone, created no "merge: <task_id>" commit on it, and wrote no
+        journal.jsonl anywhere under the test's temporary directory."""
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertIn("ERROR", result.stderr)
+        self.assertEqual(self._parent_sha(), parent_before)
+        subjects = self._git(
+            self.main_repo, "log", "--format=%s", f"refs/heads/{PARENT_BRANCH}"
+        ).stdout.splitlines()
+        self.assertNotIn(f"merge: {task_id}", subjects)
+        self.assertEqual(list(self.tmp_path.rglob("journal.jsonl")), [])
+
+    @contextlib.contextmanager
+    def _hold_merge_lock(self):
+        """Hold the shared merge lock (the file merge-task.sh and
+        commit-docs.sh both lock, in the git common directory) from the test
+        process itself, releasing it on exit."""
+        common_dir = Path(
+            self._git(self.main_repo, "rev-parse", "--git-common-dir").stdout.strip()
+        )
+        if not common_dir.is_absolute():
+            common_dir = self.main_repo / common_dir
+        fd = os.open(str(common_dir / "em-workflow-merge.lock"), os.O_WRONLY | os.O_CREAT, 0o644)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX)
+            yield
+        finally:
+            os.close(fd)  # closing the descriptor releases the lock
+
+    def _run_merge_while_lock_held(self, worktree, task_id):
+        """Run merge-task.sh with a bounded wait; a run still blocked at the
+        bound fails the test (subprocess.run ends the child on its own
+        timeout; nothing is killed from outside)."""
+        try:
+            return subprocess.run(
+                [str(MERGE_SCRIPT), PARENT_BRANCH, task_id],
+                cwd=str(worktree),
+                env=self.git_env,
+                capture_output=True,
+                text=True,
+                timeout=LOCKED_RUN_BOUND_SECONDS,
+            )
+        except subprocess.TimeoutExpired:
+            self.fail(
+                f"merge-task.sh still blocked after {LOCKED_RUN_BOUND_SECONDS}s "
+                "while the merge lock was held (the rejection must come before the lock)"
+            )
+
     # -- AC-1 ----------------------------------------------------------
 
     def test_fast_forward_merge_appends_one_well_formed_merged_line(self):
@@ -258,20 +320,20 @@ class TestMergeTaskJournal(unittest.TestCase):
         self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
         self.assertEqual(self._read_journal_lines(feature), [])
 
-    # -- AC-5 ----------------------------------------------------------
+    # -- AC-5 (converted by merge-task-worktree-binding task0001) -------
+    # Formerly a merge-only success test outside the em-workflow layout;
+    # outside the layout the identity binding now rejects the run.
 
-    def test_no_journal_home_merge_succeeds_without_append_or_error(self):
-        # references AC-5
+    def test_out_of_layout_task_worktree_is_rejected_without_merge_or_journal(self):
+        # references AC-1 (c) / TS3 of merge-task-worktree-binding task0001
         task_id = "task0006"
         wt = self._add_task_worktree("unused-feature", task_id, valid_layout=False)
         self._commit_file(wt, "feature.txt", "hello\n", "task0006: add feature file")
+        parent_before = self._parent_sha()
 
         result = self._run_merge(wt, task_id)
 
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertNotIn("WARNING", result.stderr)
-        found = list(self.tmp_path.rglob("journal.jsonl"))
-        self.assertEqual(found, [])
+        self._assert_rejected_without_side_effects(result, task_id, parent_before)
 
     # -- AC-6 ----------------------------------------------------------
 
@@ -378,6 +440,147 @@ class TestMergeTaskJournal(unittest.TestCase):
         self.assertEqual(self._read_journal_lines(feature), [])
         other_after = self._git(self.main_repo, "rev-parse", other_parent).stdout.strip()
         self.assertEqual(other_before, other_after)  # no ref update happened
+
+    # -- merge-task-worktree-binding task0001: identity binding ----------
+    # merge-task.sh merges only when run inside the named task's own
+    # worktree of the em-workflow layout with that task's branch checked
+    # out; every other placement ends with exit 2 before the merge lock.
+
+    def test_main_working_tree_run_is_rejected_without_merge(self):
+        # references AC-1 (a) / TS1
+        task_id = "task0001"
+        # The fixture keeps the main working tree on the integration branch,
+        # which would then be contained in itself; move it to a branch that
+        # carries a commit the integration branch lacks.
+        self._git(self.main_repo, "checkout", "-q", "-b", "main-work")
+        self._commit_file(
+            self.main_repo, "main-only.txt", "main\n", "main work: commit integration lacks"
+        )
+        parent_before = self._parent_sha()
+
+        result = self._run_merge(self.main_repo, task_id)
+
+        self._assert_rejected_without_side_effects(result, task_id, parent_before)
+
+    def test_integration_worktree_run_is_rejected_even_when_parent_contains_head(self):
+        # references AC-1 (b) / TS2
+        task_id = "task0001"
+        # A branch is checked out in one worktree only: free the integration
+        # branch from the main working tree first.
+        self._git(self.main_repo, "checkout", "-q", "main")
+        integration_wt = (
+            self.main_repo / ".claude" / "worktrees" / "em-workflow" / FEATURE / "integration"
+        )
+        self._git(self.main_repo, "worktree", "add", str(integration_wt), PARENT_BRANCH)
+        parent_before = self._parent_sha()
+
+        result = self._run_merge(integration_wt, task_id)
+
+        self._assert_rejected_without_side_effects(result, task_id, parent_before)
+
+    def test_detached_head_in_layout_is_rejected(self):
+        # references AC-2 / TS4
+        task_id = "task0001"
+        wt = self._add_task_worktree(FEATURE, task_id)
+        self._commit_file(wt, "feature.txt", "hello\n", "task0001: add feature file")
+        self._git(wt, "checkout", "-q", "--detach")
+        parent_before = self._parent_sha()
+
+        result = self._run_merge(wt, task_id)
+
+        self._assert_rejected_without_side_effects(result, task_id, parent_before)
+        self.assertIn(f"refs/heads/em-workflow/{FEATURE}/{task_id}", result.stderr)
+
+    def test_other_branch_checked_out_in_layout_is_rejected(self):
+        # references AC-2 / TS5
+        task_id = "task0001"
+        wt = self._add_task_worktree(FEATURE, task_id)
+        self._commit_file(wt, "feature.txt", "hello\n", "task0001: add feature file")
+        self._git(wt, "checkout", "-q", "-b", "some-other-branch")
+        parent_before = self._parent_sha()
+
+        result = self._run_merge(wt, task_id)
+
+        self._assert_rejected_without_side_effects(result, task_id, parent_before)
+        self.assertIn(f"refs/heads/em-workflow/{FEATURE}/{task_id}", result.stderr)
+        self.assertIn("refs/heads/some-other-branch", result.stderr)
+
+    # -- ordering (FR4): the rejection precedes the merge lock and the
+    # clean-tree precondition ---------------------------------------------
+
+    def test_main_working_tree_run_is_rejected_while_merge_lock_is_held(self):
+        # references AC-3 / TS8
+        task_id = "task0001"
+        self._git(self.main_repo, "checkout", "-q", "-b", "main-work")
+        self._commit_file(
+            self.main_repo, "main-only.txt", "main\n", "main work: commit integration lacks"
+        )
+        parent_before = self._parent_sha()
+
+        with self._hold_merge_lock():
+            result = self._run_merge_while_lock_held(self.main_repo, task_id)
+
+        self._assert_rejected_without_side_effects(result, task_id, parent_before)
+
+    def test_detached_head_in_layout_is_rejected_while_merge_lock_is_held(self):
+        # references AC-3 / TS8
+        task_id = "task0001"
+        wt = self._add_task_worktree(FEATURE, task_id)
+        self._commit_file(wt, "feature.txt", "hello\n", "task0001: add feature file")
+        self._git(wt, "checkout", "-q", "--detach")
+        parent_before = self._parent_sha()
+
+        with self._hold_merge_lock():
+            result = self._run_merge_while_lock_held(wt, task_id)
+
+        self._assert_rejected_without_side_effects(result, task_id, parent_before)
+
+    def test_detached_head_with_untracked_file_reports_identity_rejection(self):
+        # references AC-3 / TS8
+        task_id = "task0001"
+        wt = self._add_task_worktree(FEATURE, task_id)
+        self._commit_file(wt, "feature.txt", "hello\n", "task0001: add feature file")
+        self._git(wt, "checkout", "-q", "--detach")
+        (wt / "untracked.txt").write_text("not committed\n")
+        parent_before = self._parent_sha()
+
+        result = self._run_merge(wt, task_id)
+
+        self._assert_rejected_without_side_effects(result, task_id, parent_before)
+        self.assertIn(f"refs/heads/em-workflow/{FEATURE}/{task_id}", result.stderr)
+        self.assertNotIn("uncommitted", result.stderr)
+
+    # -- fail-closed (NFR1) and subdirectory (SPEC.md A4) ----------------
+
+    def test_unresolvable_top_level_run_is_rejected(self):
+        # references AC-4 / TS9: inside the git directory there is no work
+        # tree, so the top-level cannot be resolved (git versions differ in
+        # whether that is an error or an empty result; only the outcome is
+        # asserted).
+        task_id = "task0001"
+        parent_before = self._parent_sha()
+
+        result = self._run_merge(self.main_repo / ".git", task_id)
+
+        self._assert_rejected_without_side_effects(result, task_id, parent_before)
+
+    def test_run_from_committed_subdirectory_of_own_worktree_merges(self):
+        # references AC-4 / TS10: the binding resolves the worktree's
+        # top-level, not the working directory.
+        task_id = "task0001"
+        wt = self._add_task_worktree(FEATURE, task_id)
+        (wt / "subdir").mkdir()
+        self._commit_file(wt, "subdir/nested.txt", "nested\n", "task0001: add nested file")
+
+        result = self._run_merge(wt / "subdir", task_id)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        merged = [
+            json.loads(line)
+            for line in self._read_journal_lines(FEATURE)
+            if json.loads(line)["event"] == "merged" and json.loads(line)["task"] == task_id
+        ]
+        self.assertEqual(len(merged), 1)
 
 
 if __name__ == "__main__":

@@ -917,35 +917,100 @@ class TestNoSC6CodeLeaksFromThisTasksEditedRegions(unittest.TestCase):
                 self.assertNotIn(code, self.readme)
 
 
-# Hashes computed from the un-modified files at this task's own base commit
-# (eabf7278) -- a byte-identity regression guard, cheaper than a git
-# subprocess call, proving this task never touched either file (NFR7).
+# Hash computed from the un-modified launch guard at routeback-deferred-
+# findings task0004's own base commit (eabf7278) -- a byte-identity
+# regression guard, cheaper than a git subprocess call (NFR7).
 EXPECTED_LAUNCH_GUARD_SHA256 = (
     "fb0b4d1a9b2729aee510ab7f7d643a72381df7604ac6bcb4cee2488d7dcf9521"
 )
+# Content pin of the current `em-workflow/scripts/merge-task.sh`. Any commit
+# that changes the script also sets this value to the new content's sha256
+# in the same commit (merge-task-worktree-binding task0001 set it after
+# adding the identity binding).
 EXPECTED_MERGE_TASK_SH_SHA256 = (
-    "f8af1da2e7712a656fe70020fa9c71e53275342d46d96abd2b20b432c10eb84f"
+    "fa6dd02e556724c0731900145ee2358bbb2e38bf7a0d0418734339de69b0b05e"
 )
 
 
 class TestNeverModifiedFilesAreByteIdentical(unittest.TestCase):
-    """AC-7 (NFR7): `em-workflow/hooks/queue_launch_guard.py` and
-    `em-workflow/scripts/merge-task.sh` are untouched by this task."""
+    """`em-workflow/hooks/queue_launch_guard.py` is untouched since
+    routeback-deferred-findings task0004's base commit; the content pin of
+    `em-workflow/scripts/merge-task.sh` matches its current bytes, and the
+    script still names its already-contained case (merge-task-worktree-
+    binding task0001, FR7)."""
 
     def test_launch_guard_untouched(self):
         actual = hashlib.sha256(LAUNCH_GUARD_PATH.read_bytes()).hexdigest()
         self.assertEqual(actual, EXPECTED_LAUNCH_GUARD_SHA256)
 
     def test_merge_task_sh_untouched(self):
+        # The content pin: the test id predates the pin following the
+        # script; it asserts the sha256 of the current merge-task.sh.
         actual = hashlib.sha256(MERGE_TASK_SH_PATH.read_bytes()).hexdigest()
         self.assertEqual(actual, EXPECTED_MERGE_TASK_SH_SHA256)
 
-    def test_merge_task_sh_lines_116_118_still_the_cited_case(self):
-        # R2 cites these line numbers directly; guard against silent drift.
+    def test_merge_task_sh_names_the_already_contained_case_once_with_its_check_next(
+        self,
+    ):
+        # R2 cites the case by name ("Parent already contains us"), not by
+        # line number: exactly one line carries the name, and the line right
+        # after it is the ancestor check that decides the case.
         lines = MERGE_TASK_SH_PATH.read_text(encoding="utf-8").splitlines()
-        cited = "\n".join(lines[115:118])
-        self.assertIn("Parent already contains us", cited)
-        self.assertIn("merge-base --is-ancestor", cited)
+        named = [
+            index
+            for index, line in enumerate(lines)
+            if "Parent already contains us" in line
+        ]
+        self.assertEqual(len(named), 1)
+        self.assertIn("merge-base --is-ancestor", lines[named[0] + 1])
+
+
+# Verbatim excerpt of merge-task.sh's journal-append comment and its
+# identity-binding comment as they read before merge-task-worktree-binding
+# task0001 (commit d5b829b3a). Each phrase matcher below is shown to find
+# its phrase here, so its absence from the live script is not vacuous.
+PRE_CHANGE_MERGE_TASK_SH_COMMENT_SAMPLE = (
+    "# CURRENT worktree's own top level, matching the\n"
+    "# `.../em-workflow/{feature}/{taskNNNN}` layout. Any mismatch (wrong shape,\n"
+    "# outside that layout, e.g. manual invocation or tests exercising only merge\n"
+    "# behavior) skips the append silently \u2014 merging must not depend on it.\n"
+    "# merged task as failed. Outside the layout (manual invocation, merge-only\n"
+    "# tests) no binding applies.\n"
+)
+
+OUT_OF_LAYOUT_PERMISSION_PHRASES = (
+    "manual invocation",
+    "merge-only",
+    "exercising only merge",
+)
+
+
+def _phrase_search_text(text):
+    """The text lowercased, with each line's leading `#` removed and
+    whitespace runs collapsed, so a phrase wrapped over two comment lines
+    is still found."""
+    stripped = "\n".join(re.sub(r"^\s*#\s?", "", line) for line in text.splitlines())
+    return _normalize_ws(stripped).lower()
+
+
+class TestMergeTaskShCommentsDoNotPermitOutOfLayoutMerge(unittest.TestCase):
+    """FR6: no comment of merge-task.sh names a manual invocation,
+    merge-only tests or tests exercising only merge as a reason the script
+    runs or skips a step outside the task's own worktree layout."""
+
+    def test_permission_phrases_absent_from_merge_task_sh(self):
+        live = _phrase_search_text(MERGE_TASK_SH_PATH.read_text(encoding="utf-8"))
+        for phrase in OUT_OF_LAYOUT_PERMISSION_PHRASES:
+            with self.subTest(phrase=phrase):
+                self.assertFalse(
+                    phrase in live, f"{phrase!r} still found in merge-task.sh"
+                )
+
+    def test_each_matcher_finds_its_phrase_in_the_pre_change_excerpt(self):
+        sample = _phrase_search_text(PRE_CHANGE_MERGE_TASK_SH_COMMENT_SAMPLE)
+        for phrase in OUT_OF_LAYOUT_PERMISSION_PHRASES:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, sample)
 
 
 class TestModuleImportsStdlibOnly(unittest.TestCase):
