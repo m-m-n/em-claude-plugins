@@ -12,7 +12,11 @@
 # feature's integration branch as <parent-branch>. Every other invocation —
 # the main working tree, the feature's integration worktree, any path outside
 # the layout, a detached HEAD, another branch — ends with exit 2 before the
-# merge lock is taken and before any ref is updated.
+# merge lock is taken and before any ref is updated. One identity re-check runs
+# again right after the lock is acquired (HEAD's symbolic ref must still be the
+# task branch); a run that waited for the lock while the worktree moved off the
+# task branch ends there with exit 2, still before any ref is updated. The
+# commit that gets merged is read from the verified task ref, not from HEAD.
 #
 # Usage:
 #   ${CLAUDE_PLUGIN_ROOT}/scripts/merge-task.sh <parent-branch> <task-id>
@@ -22,12 +26,20 @@
 #   1 = merge conflict (conflicted files listed on stderr; the implementer
 #       must incorporate the parent, re-implement conflicted files, and retry)
 #   2 = other error (a run outside the task's own worktree layout or without
-#       the task branch checked out, a task-id or parent-branch mismatch,
+#       the task branch checked out, a task-id or parent-branch mismatch, a
+#       switch away from the task branch while waiting for the merge lock,
 #       uncommitted changes, unknown branch, git failure, ...)
 #
 # Concurrency: the whole check→merge sequence runs under an exclusive flock
 # on a lock file in the shared .git directory. Concurrent callers simply
 # queue; each sees the parent ref as updated by the previous merger.
+# The wait for that lock is a window in which the task's worktree can change
+# underneath the run (a branch switch, a detached HEAD, a new commit on the
+# task branch). The identity check done before the wait cannot see such a
+# change, so the symbolic-ref re-check right after the lock closes the window
+# for a different or detached HEAD, and the merge source is read from the
+# verified task ref instead of HEAD, so a commit made on the task branch during
+# the wait is merged and a commit of any other branch is never merged.
 #
 # Requires git >= 2.40 (git merge-tree --write-tree --name-only) and the
 # util-linux `flock` command (absent on stock macOS — install it, e.g.
@@ -99,6 +111,11 @@ git rev-parse --is-inside-work-tree >/dev/null 2>&1 \
 # that every exit-0 merge also gets its `merged` journal event — a merge that
 # succeeded but skipped the append would make the failure net record a merged
 # task as failed.
+# The binding has two parts. The pre-lock part above (layout, TASK_ID, parent
+# branch, HEAD's symbolic ref) runs before the lock. The post-lock part, right
+# after the lock is acquired, reads HEAD's symbolic ref again and compares it
+# with the same expected task ref; the layout, TASK_ID and parent-branch checks
+# are not repeated, they cannot change while the run waits.
 IB_WT_TOP=$(git rev-parse --show-toplevel 2>/dev/null) || IB_WT_TOP=""
 [ -n "$IB_WT_TOP" ] \
   || die "cannot resolve this worktree's top-level directory — run merge-task.sh from the task's own worktree"
@@ -125,13 +142,27 @@ COMMON_DIR=$(git rev-parse --git-common-dir) || die "cannot resolve git common d
 exec 9>"$COMMON_DIR/em-workflow-merge.lock" || die "cannot open lock file"
 flock 9 || die "cannot acquire merge lock"
 
+# --- Post-lock identity re-check (fail-closed, BEFORE the clean-tree check and
+# any merge-tree/commit-tree/update-ref/journal append) ---
+# The worktree may have moved off the task branch while this run waited for the
+# lock. Read HEAD's symbolic ref again with the same quiet query as the pre-lock
+# binding and compare it with the ref verified there.
+PL_HEAD_REF=$(git symbolic-ref --quiet HEAD 2>/dev/null) || PL_HEAD_REF=""
+[ "$PL_HEAD_REF" = "$IB_EXPECTED_REF" ] \
+  || die "HEAD moved off the task branch while waiting for the merge lock: expected $IB_EXPECTED_REF, found ${PL_HEAD_REF:-a detached or unresolvable HEAD}"
+
 # --- Preconditions (inside the critical section) ---
 [ -z "$(git status --porcelain)" ] \
   || die "uncommitted or untracked changes in worktree — commit everything before merging"
 
 PARENT=$(git rev-parse --verify --quiet "refs/heads/$PARENT_BRANCH") \
   || die "parent branch not found: $PARENT_BRANCH"
-HEAD_SHA=$(git rev-parse --verify HEAD) || die "cannot resolve HEAD"
+# Merge source: the tip of the verified task ref, not HEAD. HEAD is only what
+# the worktree has checked out at this instant; the ref is what the identity
+# binding verified. One value feeds the already-contained, fast-forward and
+# merge-commit paths below.
+HEAD_SHA=$(git rev-parse --verify --quiet "$IB_EXPECTED_REF^{commit}") \
+  || die "cannot resolve the task branch $IB_EXPECTED_REF to a commit"
 
 # Parent already contains us → nothing to do (retry after someone merged us).
 if git merge-base --is-ancestor "$HEAD_SHA" "$PARENT"; then

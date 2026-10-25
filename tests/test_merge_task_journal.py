@@ -13,6 +13,7 @@ import re
 import subprocess
 import tempfile
 import threading
+import time
 import unittest
 from pathlib import Path
 
@@ -28,11 +29,43 @@ PARENT_BRANCH = f"em-workflow/{FEATURE}/integration"
 # the test.
 LOCKED_RUN_BOUND_SECONDS = 5
 
+# Post-lock tests: merge-task.sh is started while the test holds the merge
+# lock and is mutated underneath while it waits. The test synchronizes on the
+# waiting `flock` child appearing in the process table (no fixed sleep); the
+# deadline covers the script's pre-lock git calls plus process start-up.
+FLOCK_CHILD_APPEARANCE_BOUND_SECONDS = 10
+FLOCK_CHILD_POLL_INTERVAL_SECONDS = 0.02
+# Upper bound (seconds) for the run to finish once the lock is released.
+POST_LOCK_RUN_BOUND_SECONDS = 30
+# Upper bound (seconds) for reaping the test's own child on a failure path.
+CHILD_REAP_BOUND_SECONDS = 10
+
 # RFC 3339 with an explicit offset (or "Z"); we assert the *format*, not an
 # exact value, per the task plan's test notes.
 RFC3339_OFFSET_RE = re.compile(
     r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$"
 )
+
+
+def _has_flock_child(parent_pid):
+    """True when the process table holds a process whose parent is
+    `parent_pid` and whose command name is `flock` (Linux /proc)."""
+    for name in os.listdir("/proc"):
+        if not name.isdigit():
+            continue
+        try:
+            with open(f"/proc/{name}/stat", "rb") as stat_file:
+                stat = stat_file.read()
+        except OSError:
+            continue  # the process ended between listing and reading
+        # "<pid> (<comm>) <state> <ppid> ...": comm may itself hold spaces or
+        # parentheses, so split around the last closing parenthesis.
+        comm_end = stat.rfind(b")")
+        comm = stat[stat.find(b"(") + 1 : comm_end].decode("utf-8", "replace")
+        ppid = int(stat[comm_end + 2 :].split()[1])
+        if ppid == parent_pid and comm == "flock":
+            return True
+    return False
 
 
 class TestMergeTaskJournal(unittest.TestCase):
@@ -201,6 +234,90 @@ class TestMergeTaskJournal(unittest.TestCase):
                 f"merge-task.sh still blocked after {LOCKED_RUN_BOUND_SECONDS}s "
                 "while the merge lock was held (the rejection must come before the lock)"
             )
+
+    # -- harness for the post-lock tests -----------------------------------
+
+    def _wait_for_flock_child(self, child):
+        """Block until `child` (the launched merge-task.sh) is waiting on the
+        merge lock, i.e. a `flock` process whose parent is `child` exists. A
+        child that ends first, or no `flock` child by the deadline, fails the
+        test."""
+        deadline = time.monotonic() + FLOCK_CHILD_APPEARANCE_BOUND_SECONDS
+        while not _has_flock_child(child.pid):
+            if child.poll() is not None:
+                stdout, stderr = child.communicate()
+                self.fail(
+                    f"merge-task.sh ended with exit {child.returncode} before it "
+                    f"waited on the merge lock\n{stdout}{stderr}"
+                )
+            if time.monotonic() >= deadline:
+                self.fail(
+                    f"no flock child of merge-task.sh appeared within "
+                    f"{FLOCK_CHILD_APPEARANCE_BOUND_SECONDS}s"
+                )
+            time.sleep(FLOCK_CHILD_POLL_INTERVAL_SECONDS)
+
+    def _reap_own_child(self, child):
+        """End and reap the test's own launched child, through its handle
+        only, when it is still running. The waiting `flock` grandchild is not
+        signalled: the lock is already released, so it finishes by itself."""
+        if child.poll() is None:
+            child.terminate()
+            try:
+                child.wait(timeout=CHILD_REAP_BOUND_SECONDS)
+            except subprocess.TimeoutExpired:
+                child.kill()
+                child.wait(timeout=CHILD_REAP_BOUND_SECONDS)
+        for pipe in (child.stdout, child.stderr):
+            if pipe is not None:
+                pipe.close()
+
+    def _run_merge_with_mutation_during_lock_wait(self, worktree, task_id, mutate):
+        """Start merge-task.sh in `worktree` while the test holds the merge
+        lock, wait until the script is blocked on that lock, call `mutate()`
+        (the caller's change to the worktree), release the lock and return
+        the finished run as a CompletedProcess. Every exit path releases the
+        lock first, then ends and reaps the launched child if it still runs."""
+        child = None
+        try:
+            with self._hold_merge_lock():
+                child = subprocess.Popen(
+                    [str(MERGE_SCRIPT), PARENT_BRANCH, task_id],
+                    cwd=str(worktree),
+                    env=self.git_env,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                )
+                self._wait_for_flock_child(child)
+                mutate()
+            try:
+                stdout, stderr = child.communicate(timeout=POST_LOCK_RUN_BOUND_SECONDS)
+            except subprocess.TimeoutExpired:
+                self.fail(
+                    f"merge-task.sh still running {POST_LOCK_RUN_BOUND_SECONDS}s "
+                    "after the merge lock was released"
+                )
+            return subprocess.CompletedProcess(
+                child.args, child.returncode, stdout, stderr
+            )
+        finally:
+            if child is not None:
+                self._reap_own_child(child)
+
+    def _assert_identity_error_names(self, result, *refs):
+        """One ERROR line on stderr carries every ref in `refs`."""
+        error_lines = [
+            line for line in result.stderr.splitlines() if line.startswith("ERROR")
+        ]
+        self.assertTrue(
+            any(all(ref in line for ref in refs) for line in error_lines),
+            f"no ERROR line names {refs}: {result.stderr!r}",
+        )
+
+    def _assert_no_dirty_worktree_wording(self, result):
+        for wording in ("uncommitted", "untracked", "commit everything"):
+            self.assertNotIn(wording, result.stderr)
 
     # -- AC-1 ----------------------------------------------------------
 
@@ -575,6 +692,136 @@ class TestMergeTaskJournal(unittest.TestCase):
         result = self._run_merge(wt / "subdir", task_id)
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        merged = [
+            json.loads(line)
+            for line in self._read_journal_lines(FEATURE)
+            if json.loads(line)["event"] == "merged" and json.loads(line)["task"] == task_id
+        ]
+        self.assertEqual(len(merged), 1)
+
+    # -- merge-task-post-lock-rebind task0001: identity re-check after the
+    # merge lock. The test holds the lock, merge-task.sh waits on it, the
+    # worktree is changed during the wait, then the lock is released.
+
+    def _task_worktree_with_commit_to_merge(self, task_id):
+        wt = self._add_task_worktree(FEATURE, task_id)
+        self._commit_file(wt, "feature.txt", "hello\n", f"{task_id}: add feature file")
+        return wt
+
+    def test_branch_switch_during_lock_wait_is_rejected_without_side_effects(self):
+        # references AC-1 / TS-1
+        task_id = "task0001"
+        wt = self._task_worktree_with_commit_to_merge(task_id)
+        parent_before = self._parent_sha()
+
+        result = self._run_merge_with_mutation_during_lock_wait(
+            wt,
+            task_id,
+            lambda: self._git(wt, "checkout", "-q", "-b", "switched-during-wait"),
+        )
+
+        self._assert_rejected_without_side_effects(result, task_id, parent_before)
+        self._assert_identity_error_names(
+            result,
+            f"refs/heads/em-workflow/{FEATURE}/{task_id}",
+            "refs/heads/switched-during-wait",
+        )
+
+    def test_branch_switch_with_untracked_file_during_lock_wait_reports_identity_rejection(
+        self,
+    ):
+        # references AC-2 / TS-2
+        task_id = "task0001"
+        wt = self._task_worktree_with_commit_to_merge(task_id)
+        parent_before = self._parent_sha()
+
+        def switch_and_dirty():
+            self._git(wt, "checkout", "-q", "-b", "switched-during-wait")
+            (wt / "untracked.txt").write_text("not committed\n")
+
+        result = self._run_merge_with_mutation_during_lock_wait(
+            wt, task_id, switch_and_dirty
+        )
+
+        self._assert_rejected_without_side_effects(result, task_id, parent_before)
+        self._assert_identity_error_names(
+            result,
+            f"refs/heads/em-workflow/{FEATURE}/{task_id}",
+            "refs/heads/switched-during-wait",
+        )
+        self._assert_no_dirty_worktree_wording(result)
+
+    def test_detached_head_during_lock_wait_is_rejected_without_side_effects(self):
+        # references AC-3 / TS-5
+        task_id = "task0001"
+        wt = self._task_worktree_with_commit_to_merge(task_id)
+        parent_before = self._parent_sha()
+
+        result = self._run_merge_with_mutation_during_lock_wait(
+            wt, task_id, lambda: self._git(wt, "checkout", "-q", "--detach")
+        )
+
+        self._assert_rejected_without_side_effects(result, task_id, parent_before)
+        self._assert_identity_error_names(
+            result, f"refs/heads/em-workflow/{FEATURE}/{task_id}", "detached"
+        )
+
+    def test_task_ref_deleted_during_lock_wait_is_rejected_without_side_effects(self):
+        # references AC-4 / TS-6 (the run may already stop at the
+        # clean-tree check: only exit 2, an ERROR line and no side effects
+        # are required)
+        task_id = "task0001"
+        wt = self._task_worktree_with_commit_to_merge(task_id)
+        parent_before = self._parent_sha()
+
+        result = self._run_merge_with_mutation_during_lock_wait(
+            wt,
+            task_id,
+            lambda: self._git(
+                wt, "update-ref", "-d", f"refs/heads/em-workflow/{FEATURE}/{task_id}"
+            ),
+        )
+
+        self._assert_rejected_without_side_effects(result, task_id, parent_before)
+
+    def test_task_ref_deleted_in_a_clean_worktree_is_rejected_at_the_merge_source(self):
+        # references AC-4 / TS-6: with the tracked files removed as well, the
+        # worktree is clean on the unborn branch, so only the merge-source
+        # resolution from the verified task ref can reject the run.
+        task_id = "task0001"
+        wt = self._task_worktree_with_commit_to_merge(task_id)
+        parent_before = self._parent_sha()
+
+        def delete_ref_and_empty_worktree():
+            self._git(wt, "update-ref", "-d", f"refs/heads/em-workflow/{FEATURE}/{task_id}")
+            self._git(wt, "rm", "-r", "-q", "-f", ".")
+
+        result = self._run_merge_with_mutation_during_lock_wait(
+            wt, task_id, delete_ref_and_empty_worktree
+        )
+
+        self._assert_rejected_without_side_effects(result, task_id, parent_before)
+        self._assert_identity_error_names(
+            result, f"refs/heads/em-workflow/{FEATURE}/{task_id}"
+        )
+        self._assert_no_dirty_worktree_wording(result)
+
+    def test_new_commit_on_task_branch_during_lock_wait_is_merged(self):
+        # references AC-4 / TS-7
+        task_id = "task0001"
+        wt = self._task_worktree_with_commit_to_merge(task_id)
+
+        def commit_late():
+            self._commit_file(wt, "late.txt", "late\n", f"{task_id}: late commit")
+
+        result = self._run_merge_with_mutation_during_lock_wait(wt, task_id, commit_late)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        late_sha = self._git(wt, "rev-parse", "HEAD").stdout.strip()
+        contained = self._git(
+            self.main_repo, "merge-base", "--is-ancestor", late_sha, PARENT_BRANCH, check=False
+        )
+        self.assertEqual(contained.returncode, 0, "the late commit is not in the integration branch")
         merged = [
             json.loads(line)
             for line in self._read_journal_lines(FEATURE)
