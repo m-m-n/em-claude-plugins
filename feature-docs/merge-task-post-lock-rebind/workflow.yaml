@@ -104,7 +104,8 @@ workflow:
   excluded: []
   completed_at_commit: 8a328be9c8ab3de249d8b1157c6d45a344ceb604
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: b132cc51ae7e538ec20e411c765c58f0b50a3d53
 tasks:
   task0001:
     title: Post-lock identity re-check and merge source from the verified task ref
