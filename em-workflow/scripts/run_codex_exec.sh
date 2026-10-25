@@ -282,6 +282,16 @@ HOOK_FLAG=(
 # trust entry of the user's real Codex home reaches the launch, and the real
 # home is never written. Credentials stay in the environment (LITELLM_API_KEY)
 # and are never copied.
+#
+# The launch home is a new directory directly under the em-workflow directory
+# of the user's cache directory (XDG_CACHE_HOME when it is an absolute path,
+# otherwise $HOME/.cache), accessible to its owner only; the wrapper creates
+# the em-workflow directory when it is missing. It is not placed in the
+# temporary directory: Codex refuses to create its helper binaries (the
+# codex-linux-sandbox launcher among them) under the temporary directory, so a
+# Codex home there leaves the sandbox unable to run any command. When neither
+# cache base can be determined (HOME unset or empty, and no absolute
+# XDG_CACHE_HOME) the wrapper stops with one stderr line before launching codex.
 
 # Prints, NUL-terminated, directory $1 (made absolute) and every directory
 # above it, once each, under the spellings Codex may key a project by: as
@@ -320,7 +330,16 @@ trap 'rm -f "$OUTFILE" "$ERRFILE"; if [[ -n "$LAUNCH_HOME" ]]; then rm -rf -- "$
 
 if [[ "$LITELLM_ROUTE" -eq 1 ]]; then
   USER_CODEX_HOME="${CODEX_HOME:-${HOME:-}/.codex}"
-  LAUNCH_HOME="$(mktemp -d "${TMPDIR:-/tmp}/codex-launch-home.XXXXXX")"
+  if [[ "${XDG_CACHE_HOME:-}" == /* ]]; then
+    LAUNCH_HOME_PARENT="${XDG_CACHE_HOME}/em-workflow"
+  elif [[ -n "${HOME:-}" ]]; then
+    LAUNCH_HOME_PARENT="${HOME}/.cache/em-workflow"
+  else
+    echo "ERROR: no cache directory for the --litellm launch home: set HOME, or XDG_CACHE_HOME to an absolute path" >&2
+    exit 1
+  fi
+  mkdir -p -- "$LAUNCH_HOME_PARENT"
+  LAUNCH_HOME="$(mktemp -d "${LAUNCH_HOME_PARENT}/codex-launch-home.XXXXXX")"
   if [[ -f "${USER_CODEX_HOME}/litellm.config.toml" ]]; then
     cp -- "${USER_CODEX_HOME}/litellm.config.toml" "${LAUNCH_HOME}/litellm.config.toml"
   fi
