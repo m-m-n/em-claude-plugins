@@ -1,7 +1,7 @@
 schema_version: 1
 feature: codex-stop-hook-tty-reaper
 phase: create-spec
-status: applying_patch
+status: completed
 generation: 1
 base_revision: f24d26d724a084286c66a61fa01b11e584d4d445
 last_input_digest: sha256:937458a548a62a87297c5275b3e0353034015f59ee97e24eaff96e3ae6c877ec

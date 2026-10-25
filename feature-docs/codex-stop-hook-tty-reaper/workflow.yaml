@@ -1,0 +1,217 @@
+schema_version: 1
+feature: codex-stop-hook-tty-reaper
+created: '2026-10-25'
+base_branch: main
+goal: |
+  # run_codex_exec.sh で起動する Codex に、端末の入力待ちで残った対話起動のプロセスを止める Stop フックを登録する
+
+  ## やりたいこと (必須)
+
+  `run_codex_exec.sh` で起動する Codex に Stop フックを登録し、ターンの終わりに、端末の入力待ちのまま残っている対話起動のプロセスを止める。
+
+  ## 背景・なぜ (必須)
+
+  - Codex が `exec_command` を `tty:true` で実行し、`python3 -i` などの対話起動が残ると、Codex の終了後に孤児化して CPU を空回りし続ける（検証で CPU 65% を確認）。
+  - `codex-hook-interactive-guard.py`（PreToolUse）はコマンド文字列の静的解析で防いでいるが、レビューのたびに解析の穴が見つかり、タスクが増え続けて収束しない。解析の修正タスク 8 件は破棄した。
+  - `PreToolUse` の `tool_input` には `command` しか渡らず、`tty` の指定は見えない。実行前に端末ありの実行だけを止める手段は無い。
+  - `run_codex_exec.sh` の呼び出し元はすべて `readonly`（Codex のレビュアーと質問解決での相談）。
+
+  ### 検証結果（Codex 0.164.0、read-only サンドボックス）
+
+  - `Stop` の時点で、残った対話起動のプロセスは Codex の子孫として見え、標準入力は `/dev/pts/*` だった。
+  - `python3 -i` 自身の `PostToolUse` は発火しない（コマンドが終わらないため）。
+  - 検証用の Stop フックで止められた。
+    - `python3 -i`: 止められた
+    - `bash -i`: SIGTERM では止まらず、SIGKILL で止まった
+    - `node` の REPL: `Stop` の時点で既に終了しており、対象にならなかった
+  - `tty:true` を指定しない実行では、`bash -i` も `node -i` も入力の終わりを受け取ってすぐ終了した。
+  - 過去の read-only の `codex exec` のコマンド 41,542 件のうち、`tty:true` は 71 件。
+  - 検証で使った判定: Codex の子孫のうち子を持たない末端のプロセスで、標準入力が `/dev/pts/*` のものに SIGTERM を送り、0.5 秒後も生きていれば SIGKILL を送る。
+
+  ## 受け入れ条件 / 完了の定義 (必須)
+
+  - [ ] `run_codex_exec.sh`（em-workflow / em-review）が Stop フックを登録する
+  - [ ] Stop フックが、Codex の子孫で標準入力が端末のまま残っているプロセスを止める
+  - [ ] `python3 -i` と `bash -i` を `tty:true` で残した Codex の実行で、終了後にそのプロセスが残らない
+  - [ ] 読み取り専用のコマンドだけを実行した Codex の実行で、フックが何も止めない
+  - [ ] `readwrite` と `--litellm` 経由の起動でも、同じ判定で対象が見つかることを確かめる
+  - [ ] 意図して残したバックグラウンドのプロセスを巻き込むかどうかを確かめ、結果を記録する
+
+  ## スコープ外 (任意)
+
+  - `codex-hook-interactive-guard.py` のコマンド解析の修正
+
+  ## 制約・前提 (任意)
+
+  - フックは `run_codex_exec.sh` の起動時の引数（`-c hooks.Stop=...`）で登録する。
+parent_branch: em-workflow/codex-stop-hook-tty-reaper/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.01
+      '1': 0.5
+      '2': 0.38
+      '3': 0.11
+    description_plus_code:
+      '0': 0.0
+      '1': 0.15
+      '2': 0.82
+      '3': 0.03
+  at: '2026-10-25T22:53:02+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 183dbbb071733d5cc1556b6851aa3bc5e151ee23
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: No UI. The change is a shell wrapper argument and a process-control hook script.
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: 5526a6b99b99496dc5163746f24277394e3547a1
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: Stop フックの登録
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: フックスクリプトの配置
+    status: assumed
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: 停止対象の判定
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: 停止の手順
+    status: assumed
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: Codex の停止を妨げない
+    status: assumed
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: 既存の PreToolUse フックの維持
+    status: assumed
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: バックグラウンドのプロセスの扱い
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: 実機での確認と記録
+    status: assumed
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: シグナルの到達範囲
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 所要時間の上限
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: ラッパーの既存契約の維持
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: テストの依存と隔離
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: 実行環境
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR6:
+    title: 信頼しない入力への耐性
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
