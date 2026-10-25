@@ -1,0 +1,37 @@
+schema_version: 1
+feature: merge-task-post-lock-rebind
+phase: create-spec
+status: in_progress
+generation: 1
+base_revision: be2a4ba793a1e269b13f813b6d36243087835a5c
+last_input_digest: null
+active_request_id: null
+packets: {}
+answers:
+  create-spec.feature-identity:
+    packet_id: null
+    answered_at: '2026-10-25T22:01:39+09:00'
+    source: batch-policy
+    answer_mode: select
+    selected_option_ids:
+    - derive_from_task_description
+    freeform: null
+    normalized_answer: feature name merge-task-post-lock-rebind derived from the task title
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache:
+  reference_scan_targets:
+  - em-workflow/scripts/merge-task.sh
+  - em-workflow/agents/implementer.md
+  - em-workflow/skills/worktree-task-workflow/SKILL.md
+  - em-workflow/references/implement-phase.md
+  - em-workflow/README.md
+  - tests/test_merge_task_journal.py
+  - tests/test_merge_unverified_exit_doc_contract.py
+  e2e: []
+  design_system_candidates: []
+  package_files: []
+last_error: null
