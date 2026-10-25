@@ -1,7 +1,7 @@
 schema_version: 1
 feature: merge-task-post-lock-rebind
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 7fa4dc10db0d6dd75b6b765d830c777e0ca202ce
 last_input_digest: sha256:204c9ed20c290760505b70305b5919c8a352d2a6930542ec3a4404bc3e841b1c
