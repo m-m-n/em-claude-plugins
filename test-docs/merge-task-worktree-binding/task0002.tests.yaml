@@ -1,0 +1,24 @@
+task_id: task0002
+baseline_failures: []          # full suite before any edit: 11553 tests, OK (skipped=1); see the report notes for where it ran
+final_failures: []             # full suite re-executed in the task worktree after the implementation and this record: OK
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_merge_unverified_exit_doc_contract.TestAncestorCheckBulletStatesTheNewExit.test_all_new_phrases_present
+      - tests.test_merge_unverified_exit_doc_contract.TestAncestorCheckBulletStatesTheNewExit.test_new_phrase_absent_from_pre_change_sample
+      - tests.test_merge_unverified_exit_doc_contract.TestAncestorCheckBulletStatesTheNewExit.test_forged_sanity_each_phrase_detected_if_removed
+    red_confirmed: true
+    red_reason: "With the phrase constant updated and implement-phase.md untouched, test_all_new_phrases_present failed: AssertionError, the phrase ending with (its \"Parent already contains us\" case) was not found in the normalized I.2.b section, which still read \"case, lines 116-118)\"."
+  AC-2:
+    tests:
+      - tests.test_merge_unverified_exit_doc_contract.TestAncestorCheckBulletStatesTheNewExit.test_merge_task_case_cited_by_name_without_line_numbers
+      - tests.test_merge_unverified_exit_doc_contract.TestAncestorCheckBulletStatesTheNewExit.test_line_number_matcher_flags_presence_in_pre_change_sample
+      - tests.test_merge_unverified_exit_doc_contract.TestAncestorCheckBulletStatesTheNewExit.test_pre_change_sample_retains_anchor
+    red_confirmed: true
+    red_reason: "Before the doc edit, test_merge_task_case_cited_by_name_without_line_numbers failed: AssertionError, 'lines 116-118' was found in the normalized I.2.b section. The matcher test and the retained-anchor test passed before and after, as intended: they prove the matcher finds the clause in the verbatim pre-change excerpt and that the absence check is not vacuous."
+  AC-3:
+    tests:
+      - tests.test_merge_unverified_exit_doc_contract
+      - tests.test_merge_unverified_exit_doc_contract.TestModuleImportsStdlibOnly.test_module_uses_only_standard_library_imports
+    red_confirmed: true
+    red_reason: "Running tests.test_merge_unverified_exit_doc_contract before the doc edit reported FAILED (failures=2) of 64 tests, the two failures named under AC-1 and AC-2. The stdlib-only import test was already green and stays green; the full-suite run (python3 -m unittest discover -s tests) is the other half of this criterion."

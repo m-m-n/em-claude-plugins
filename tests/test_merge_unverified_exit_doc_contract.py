@@ -186,7 +186,7 @@ R2_RETRY_PATH_PHRASE = (
 )
 R2_MERGE_TASK_RECORDS_AGAIN_PHRASE = (
     '`merge-task.sh` records `merged` again (its "Parent already contains '
-    'us" case, lines 116-118)'
+    'us" case)'
 )
 
 R2_NEW_PHRASES = (
@@ -199,6 +199,26 @@ R2_NEW_PHRASES = (
     R2_HELPER_FAILURE_GOVERNS_PHRASE,
     R2_RETRY_PATH_PHRASE,
     R2_MERGE_TASK_RECORDS_AGAIN_PHRASE,
+)
+
+# merge-task-worktree-binding task0002 (FR7): the already-contained case of
+# `merge-task.sh` is cited by its case name only. The line-number clause is
+# an absence assertion, paired with a verbatim excerpt of the sentence as it
+# read before this change so the matcher is shown to find the clause.
+R2_LINE_NUMBER_CLAUSE = "lines 116-118"
+
+# Verbatim excerpt of I.2.b step 1's ancestor-check bullet before this
+# change (the sentence in which `merge-task.sh` records `merged` again).
+PRE_CHANGE_R2_LINE_NUMBER_SAMPLE = (
+    "already contains the task branch, `merge-task.sh` records `merged`\n"
+    "     again (its \"Parent already contains us\" case, lines 116-118), so a\n"
+    "     later reconcile verifies the merge."
+)
+
+# Present, unchanged, in both the pre-change excerpt above and the live
+# bullet -- guards the absence assertion against passing vacuously.
+R2_LINE_NUMBER_RETAINED_ANCHOR = (
+    "`merge-task.sh` records `merged` again (its \"Parent already contains us\" case"
 )
 
 
@@ -241,6 +261,23 @@ class TestAncestorCheckBulletStatesTheNewExit(unittest.TestCase):
             "or abort)",
             self.i2b,
         )
+
+    def test_merge_task_case_cited_by_name_without_line_numbers(self):
+        # merge-task-worktree-binding task0002 AC-2 (FR7).
+        self.assertNotIn(R2_LINE_NUMBER_CLAUSE, self.i2b)
+
+    def test_line_number_matcher_flags_presence_in_pre_change_sample(self):
+        sample = _normalize_ws(PRE_CHANGE_R2_LINE_NUMBER_SAMPLE)
+        self.assertIn(R2_LINE_NUMBER_CLAUSE, sample)
+
+    def test_new_phrase_absent_from_pre_change_sample(self):
+        sample = _normalize_ws(PRE_CHANGE_R2_LINE_NUMBER_SAMPLE)
+        self.assertNotIn(R2_MERGE_TASK_RECORDS_AGAIN_PHRASE, sample)
+
+    def test_pre_change_sample_retains_anchor(self):
+        sample = _normalize_ws(PRE_CHANGE_R2_LINE_NUMBER_SAMPLE)
+        self.assertIn(R2_LINE_NUMBER_RETAINED_ANCHOR, sample)
+        self.assertIn(R2_LINE_NUMBER_RETAINED_ANCHOR, self.i2b)
 
 
 # ===========================================================================

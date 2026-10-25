@@ -876,7 +876,7 @@ Triggered whenever a launched implementer's `Task()` call returns.
      way, retry follows the existing I.2.c drain and the I.2.a resume
      guard, on the task's kept worktree; when the integration branch
      already contains the task branch, `merge-task.sh` records `merged`
-     again (its "Parent already contains us" case, lines 116-118), so a
+     again (its "Parent already contains us" case), so a
      later reconcile verifies the merge. I.2.c narrows this case further
      only in the helper-failure case just above, because there the
      task's raw journal last event is still `merged` even though the
