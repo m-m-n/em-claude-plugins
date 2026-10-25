@@ -963,9 +963,10 @@ EXPECTED_LAUNCH_GUARD_SHA256 = (
 # Content pin of the current `em-workflow/scripts/merge-task.sh`. Any commit
 # that changes the script also sets this value to the new content's sha256
 # in the same commit (merge-task-worktree-binding task0001 set it after
-# adding the identity binding).
+# adding the identity binding; merge-task-post-lock-rebind task0001 set it
+# after adding the post-lock identity re-check).
 EXPECTED_MERGE_TASK_SH_SHA256 = (
-    "fa6dd02e556724c0731900145ee2358bbb2e38bf7a0d0418734339de69b0b05e"
+    "50fc5a354803ac5a7c63d42b903aca47d9571ef90007379c9267f1540a0951fd"
 )
 
 
