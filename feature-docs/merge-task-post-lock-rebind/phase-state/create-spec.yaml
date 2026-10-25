@@ -4,7 +4,7 @@ phase: create-spec
 status: dispatching
 generation: 1
 base_revision: 7fa4dc10db0d6dd75b6b765d830c777e0ca202ce
-last_input_digest: sha256:0ce40837e33ecae0cf71f907e0ae7a3cde2bfeeeefd0eedf4e3d8c0a4dfdd7bf
+last_input_digest: sha256:204c9ed20c290760505b70305b5919c8a352d2a6930542ec3a4404bc3e841b1c
 active_request_id: null
 packets: {}
 answers:
@@ -94,7 +94,19 @@ worker_runs:
     test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
     tests/test_merge_task_journal.py: sha256:bd82e1e143bf6f5864191d937c0210fab44067077e1c6a59314b90961c21f52d
     tests/test_merge_unverified_exit_doc_contract.py: sha256:ad594acc04f32b47cc6fbee42d4e0732ea22392bdee01bc817ca7d35de781e09
-artifacts: []
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:204c9ed20c290760505b70305b5919c8a352d2a6930542ec3a4404bc3e841b1c
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/spec-writer-contract.md: sha256:9032c6287d75f4a88e556bd3962c32ab8b4905cf3b6ececa895206788bcd0b63
+    em-workflow/references/templates/spec-document.md: sha256:203dfcddbe507886ce861694fccd20ae25e5af0bd1b0efa5e935991add950cbd
+  output_digest: sha256:670fbe58ba07ad2207fb4f8f5b31a9c39d3a9b2148dab054e0363a167509dbed
+  self_write_set:
+  - feature-docs/merge-task-post-lock-rebind/SPEC.md
+artifacts:
+- path: feature-docs/merge-task-post-lock-rebind/SPEC.md
+  sha256: sha256:670fbe58ba07ad2207fb4f8f5b31a9c39d3a9b2148dab054e0363a167509dbed
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
