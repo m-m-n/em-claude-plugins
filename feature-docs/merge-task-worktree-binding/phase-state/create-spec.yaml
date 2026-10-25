@@ -4,8 +4,8 @@ phase: create-spec
 status: in_progress
 generation: 1
 base_revision: 2752b652532e94800303f6593dc3b84c027860b0
-last_input_digest: sha256:780bb2feadca5423d86329b761db857fe8fcfd1ea9b0786469f6f98c2a62651e
-active_request_id: create-spec-run-0002
+last_input_digest: sha256:1471e659193d82b32f54464f55ad698dbd9bb1ae9ad70517580578b2f78ba9e2
+active_request_id: create-spec-run-0003
 packets:
   create-spec-q0001:
     path: null
@@ -65,6 +65,15 @@ answers:
       existing retry/re-append behavior test. Codex preferred this over the worker
       recommendation (update_pins) because line numbers shift with every inserted
       check; recorded as assumption.
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-25T19:41:00+09:00'
+    source: batch-decision-table
+    answer_mode: select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 'design step skipped per analyst recommendation: no UI change'
 worker_runs:
 - request_id: create-spec-run-0001
   status: completed
@@ -87,7 +96,7 @@ worker_runs:
     tests/test_merge_task_journal.py: sha256:12f1bd9cebc8c664617f8e1f78a3872f61d32eb285799f9ab3f4b404db97b10f
     tests/test_merge_unverified_exit_doc_contract.py: sha256:285e7e8be262c97072427847bc6a85d292772fccce59e81c5335a47e9af39979
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:780bb2feadca5423d86329b761db857fe8fcfd1ea9b0786469f6f98c2a62651e
   dispatch_digest_inputs:
     CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
@@ -106,6 +115,13 @@ worker_runs:
     test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
     tests/test_merge_task_journal.py: sha256:12f1bd9cebc8c664617f8e1f78a3872f61d32eb285799f9ab3f4b404db97b10f
     tests/test_merge_unverified_exit_doc_contract.py: sha256:285e7e8be262c97072427847bc6a85d292772fccce59e81c5335a47e9af39979
+- request_id: create-spec-run-0003
+  status: dispatched
+  input_digest: sha256:1471e659193d82b32f54464f55ad698dbd9bb1ae9ad70517580578b2f78ba9e2
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/spec-writer-contract.md: sha256:9032c6287d75f4a88e556bd3962c32ab8b4905cf3b6ececa895206788bcd0b63
+    em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
+    em-workflow/references/templates/spec-document.md: sha256:203dfcddbe507886ce861694fccd20ae25e5af0bd1b0efa5e935991add950cbd
 artifacts: []
 patches: []
 progress_fingerprint: null
@@ -128,8 +144,4 @@ resolved_input_cache:
   e2e: []
   design_system_candidates: []
   package_files: []
-last_error:
-  request_id: create-spec-run-0001
-  kind: validation
-  message: 'question_packet: questions[3].gate_id ''create-spec.design-step'' requires
-    option_id ''decide_autonomously'' to be offered among options'
+last_error: null
