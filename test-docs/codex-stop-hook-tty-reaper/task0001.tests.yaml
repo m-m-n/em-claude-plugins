@@ -1,0 +1,89 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests, run before any edit: 11570 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation: 11637 tests OK, skipped=1 (the same skip as the baseline); 11570 inherited + 67 new (66 in tests.test_codex_hook_tty_reaper, 1 record-check subtest for this record)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_tty_reaper.TestCopies.test_ac1_both_copies_exist
+      - tests.test_codex_hook_tty_reaper.TestCopies.test_ac1_the_two_copies_are_byte_identical
+      - tests.test_codex_hook_tty_reaper.TestCopies.test_ac1_each_copy_imports_only_standard_library_modules
+      - tests.test_codex_hook_tty_reaper.TestCopies.test_ac1_importing_a_copy_performs_no_action
+      - tests.test_codex_hook_tty_reaper.TestCopies.test_ac1_loading_a_copy_leaves_no_bytecode_cache_in_a_plugin_directory
+      - tests.test_codex_hook_tty_reaper.TestThisModule.test_ts14_module_imports_are_all_stdlib
+    red_confirmed: true
+    red_reason: "FileNotFoundError / missing file: test_ac1_both_copies_exist failed with 'False is not true : .../em-workflow/scripts/codex-hook-tty-reaper.py is missing' (and the em-review path), and byte-identity, stdlib-import and no-action tests raised FileNotFoundError reading the absent copies (observed before the hook existed); test_ts14_module_imports_are_all_stdlib passed from the start because it inspects the test module itself"
+  AC-2:
+    tests:
+      - tests.test_codex_hook_tty_reaper.TestRealTargets.test_ac2_terminal_descendants_are_stopped_and_pipe_descendants_remain
+      - tests.test_codex_hook_tty_reaper.TestRealTargets.test_ts13_a_detached_background_process_with_a_terminal_is_stopped_like_any_other
+      - tests.test_codex_hook_tty_reaper.TestTargetSelection.test_ac2_only_descendants_with_a_pts_standard_input_are_signalled
+      - tests.test_codex_hook_tty_reaper.TestTargetSelection.test_ac2_a_descendant_below_a_non_target_is_still_a_target
+      - tests.test_codex_hook_tty_reaper.TestTargetSelection.test_ac2_session_and_process_group_play_no_part
+      - tests.test_codex_hook_tty_reaper.TestTargetSelection.test_ac2_a_descendant_with_children_is_a_target
+      - tests.test_codex_hook_tty_reaper.TestTargetSelection.test_ac2_a_terminal_whose_master_is_gone_still_counts
+      - tests.test_codex_hook_tty_reaper.TestTargetSelection.test_tm4_names_with_spaces_and_parentheses_keep_the_real_parent
+      - tests.test_codex_hook_tty_reaper.TestTargetSelection.test_tm4_a_name_imitating_the_anchor_as_parent_does_not_pull_an_outsider_in
+      - tests.test_codex_hook_tty_reaper.TestTargetSelection.test_tm4_a_name_imitating_an_outside_parent_does_not_hide_a_descendant
+    red_confirmed: true
+    red_reason: "AssertionError: 2 != 0 : {'code': 2, 'stderr': can't open file '.../em-workflow/scripts/codex-hook-tty-reaper.py': No such file or directory} for the real-process tests, and FileNotFoundError while loading the hook for the in-process tests (observed before the hook existed)"
+  AC-3:
+    tests:
+      - tests.test_codex_hook_tty_reaper.TestOrder.test_ac3_children_are_signalled_before_their_parents_in_both_phases
+      - tests.test_codex_hook_tty_reaper.TestOrder.test_ac3_every_sigterm_precedes_every_sigkill
+      - tests.test_codex_hook_tty_reaper.TestOrder.test_ac3_a_parent_and_child_with_a_pts_standard_input_are_both_stopped
+      - tests.test_codex_hook_tty_reaper.TestRealTargets.test_ac3_a_pty_chain_of_three_generations_is_stopped
+      - tests.test_codex_hook_tty_reaper.TestRealTargets.test_ac3_a_terminal_process_below_a_pipe_process_is_stopped
+    red_confirmed: true
+    red_reason: "FileNotFoundError while loading the hook in-process (ordering tests) and 'AssertionError: 2 != 0' with the interpreter's cannot-open-file stderr in the real-process tests (observed before the hook existed)"
+  AC-4:
+    tests:
+      - tests.test_codex_hook_tty_reaper.TestTiming.test_ac4_sigkill_comes_no_earlier_than_half_a_second_after_the_last_sigterm
+      - tests.test_codex_hook_tty_reaper.TestTiming.test_ac4_no_sigkill_when_every_target_is_gone_after_sigterm
+      - tests.test_codex_hook_tty_reaper.TestTiming.test_ac4_a_zombie_after_sigterm_counts_as_gone
+      - tests.test_codex_hook_tty_reaper.TestTiming.test_ac4_only_the_survivors_of_sigterm_receive_sigkill
+      - tests.test_codex_hook_tty_reaper.TestTiming.test_ac4_the_wait_ends_as_soon_as_the_last_target_is_gone
+      - tests.test_codex_hook_tty_reaper.TestTiming.test_tm3_a_target_whose_start_time_changed_before_sigterm_gets_no_signal
+      - tests.test_codex_hook_tty_reaper.TestTiming.test_tm3_a_target_whose_start_time_changed_after_sigterm_gets_no_sigkill
+      - tests.test_codex_hook_tty_reaper.TestTiming.test_tm3_a_target_that_vanishes_before_sigterm_gets_no_signal
+      - tests.test_codex_hook_tty_reaper.TestRealTargets.test_ac4_a_process_that_ignores_sigterm_is_gone_when_the_hook_exits
+      - tests.test_codex_hook_tty_reaper.TestRealTargets.test_ac4_with_no_stubborn_target_the_hook_does_not_wait_the_half_second
+    red_confirmed: true
+    red_reason: "FileNotFoundError while loading the hook in-process (fake-clock and start-time tests) and 'AssertionError: 2 != 0' with the interpreter's cannot-open-file stderr in the real-process tests (observed before the hook existed)"
+  AC-5:
+    tests:
+      - tests.test_codex_hook_tty_reaper.TestTargetSelection.test_nfr1_outsiders_and_hook_ancestors_with_a_pts_standard_input_are_not_signalled
+      - tests.test_codex_hook_tty_reaper.TestTargetSelection.test_nfr1_a_sibling_of_the_hook_below_the_anchor_is_a_target
+      - tests.test_codex_hook_tty_reaper.TestTargetSelection.test_nfr6_the_hook_never_signals_itself
+      - tests.test_codex_hook_tty_reaper.TestAnchorArgument
+      - tests.test_codex_hook_tty_reaper.TestRealBoundaries.test_ac5_outsiders_and_the_hooks_ancestors_with_a_terminal_are_not_signalled
+      - tests.test_codex_hook_tty_reaper.TestRealBoundaries.test_ac5_a_parallel_pseudo_codex_named_as_the_anchor_stops_nothing
+      - tests.test_codex_hook_tty_reaper.TestRealBoundaries.test_ac5_an_argument_that_is_not_exactly_one_ascii_decimal_anchor_stops_nothing
+      - tests.test_codex_hook_tty_reaper.TestCopies.test_nfr6_the_hook_reads_no_environment_variable
+      - tests.test_codex_hook_tty_reaper.TestCopies.test_nfr6_the_defaults_of_main_are_the_real_collaborators
+    red_confirmed: true
+    red_reason: "FileNotFoundError while loading the hook in-process (anchor-argument grid, outsider and ancestor tests) and 'AssertionError: 2 != 0' with the interpreter's cannot-open-file stderr in the real-process tests (observed before the hook existed)"
+  AC-6:
+    tests:
+      - tests.test_codex_hook_tty_reaper.TestStandardInput
+      - tests.test_codex_hook_tty_reaper.TestFailures.test_ac6_a_target_that_ended_after_enumeration_is_not_an_error
+      - tests.test_codex_hook_tty_reaper.TestFailures.test_ac6_no_such_process_while_sending_sigkill_is_not_an_error
+      - tests.test_codex_hook_tty_reaper.TestFailures.test_ac6_a_signal_error_other_than_no_such_process_stops_further_signals
+      - tests.test_codex_hook_tty_reaper.TestFailures.test_ac6_a_signal_error_during_the_sigkill_phase_stops_further_signals
+      - tests.test_codex_hook_tty_reaper.TestFailures.test_ac6_an_unexpected_error_from_the_clock_stops_further_signals
+      - tests.test_codex_hook_tty_reaper.TestFailures.test_ac6_a_garbled_or_missing_entry_on_the_ancestor_chain_stops_nothing
+      - tests.test_codex_hook_tty_reaper.TestTargetSelection.test_ac6_an_unreadable_or_garbled_unrelated_entry_is_left_out
+      - tests.test_codex_hook_tty_reaper.TestRealBoundaries.test_ac6_standard_input_that_is_not_one_json_object_stops_nothing
+      - tests.test_codex_hook_tty_reaper.TestRealBoundaries.test_ac6_standard_input_kept_open_stops_nothing_and_the_hook_exits_in_time
+      - tests.test_codex_hook_tty_reaper.TestRealBoundaries.test_tm1_a_json_object_naming_other_processes_changes_no_target
+      - tests.test_codex_hook_tty_reaper.TestCommandLineEntry.test_ac6_without_an_anchor_the_hook_exits_zero_and_writes_nothing
+      - tests.test_codex_hook_tty_reaper.TestCommandLineEntry.test_ac6_a_run_leaves_no_bytecode_cache_in_a_plugin_directory
+    red_confirmed: true
+    red_reason: "FileNotFoundError while loading the hook in-process, 'AssertionError: 2 != 0' with the interpreter's cannot-open-file stderr in the real-process and command-line tests (observed before the hook existed); test_ac6_a_run_leaves_no_bytecode_cache_in_a_plugin_directory passed from the start because an absent script leaves no cache; test_tm5_a_complete_object_on_standard_input_that_is_not_closed_stops_nothing was added after the first red run and was observed failing against a mutant hook that proceeds on a timed-out read"
+  AC-7:
+    tests:
+      - tests.test_codex_hook_tty_reaper.TestFailures.test_ac7_a_missing_process_table_stops_nothing
+      - tests.test_codex_hook_tty_reaper.TestFailures.test_ac7_a_process_table_without_the_hooks_own_entry_stops_nothing
+      - tests.test_codex_hook_tty_reaper.TestFailures.test_ac7_an_empty_process_table_stops_nothing
+      - tests.test_codex_hook_tty_reaper.TestFailures.test_ac7_a_process_table_that_is_a_file_stops_nothing
+    red_confirmed: true
+    red_reason: "FileNotFoundError while loading the hook in-process (observed before the hook existed)"
