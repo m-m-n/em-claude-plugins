@@ -178,7 +178,7 @@ tasks:
     requirements:
     - FR8
     - NFR3
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/codex-stop-hook-tty-reaper/task0003
     provenance:
