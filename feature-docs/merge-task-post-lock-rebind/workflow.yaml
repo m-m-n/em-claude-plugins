@@ -126,7 +126,7 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/merge-task-post-lock-rebind/task0001
 review:
