@@ -153,6 +153,14 @@ tasks:
     notes: null
 review:
   status: pending
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
 requirements:
   FR1:
     title: タスクのワークツリーのレイアウトの外からの実行を拒否する
