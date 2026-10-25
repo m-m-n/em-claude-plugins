@@ -100,7 +100,8 @@ workflow:
   base_commit: 9f9e6bc7c003376cc679e63887d13e2b227eb9d3
   completed_at_commit: ad77f3fccc4e489c1e6baf3082f36df2439412f6
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 99276ab920f74ae17158b32e46ab2b95df8a05b5
 - id: verify
   status: pending
 - id: retrospect
@@ -152,7 +153,15 @@ tasks:
     branch: em-workflow/merge-task-worktree-binding/task0002
     notes: null
 review:
-  status: pending
+  status: completed
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  residual_critical_high: 0
+  needs_rework: false
   plan:
     floor:
     - comprehensive

@@ -1,0 +1,64 @@
+round: 1
+executed_at: "2026-10-25T20:28:19+09:00"
+scope:
+  review_mode: diff
+  base_commit: 9f9e6bc7c003376cc679e63887d13e2b227eb9d3
+  head_commit: 99276ab920f74ae17158b32e46ab2b95df8a05b5
+  changed_files:
+  - em-workflow/references/implement-phase.md
+  - em-workflow/scripts/merge-task.sh
+  - test-docs/merge-task-worktree-binding/task0001.tests.yaml
+  - test-docs/merge-task-worktree-binding/task0002.tests.yaml
+  - tests/test_merge_task_journal.py
+  - tests/test_merge_unverified_exit_doc_contract.py
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+- {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+- {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+- stable_id: 382656461464cbe1
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/merge-task.sh
+  line: 118
+  title: "ブランチの束縛はロック取得前に一度だけ確認され、統合するコミットはロック取得後に HEAD から読まれる（確認時点と使用時点のずれ）"
+  description: "118〜121行目では、HEAD の symbolic-ref が refs/heads/em-workflow/{feature}/{taskNNNN} であることを flock（126行目）より前に一度だけ確かめる。統合するコミットは、ロックを取った後の134行目 `HEAD_SHA=$(git rev-parse --verify HEAD)` で読む。ロック待ちの間に同じタスクのワークツリーで別のブランチへ切り替わると、そのブランチの先端が `merge: {TASK_ID}` として統合ブランチに入り、終了コード 0 と元の TASK_ID の `merged` イベントが記録される。実際に起きるには同じワークツリーで別プロセスが並行して動く必要があり、起こりにくい"
+  suggestion: "ロック前の拒否はそのまま残し、クリティカルセクションの中で HEAD_SHA を確認済みのタスクブランチの ref から取る。flock の後に symbolic-ref をもう一度確かめ、一致しなければ終了コード 2 にする。同じ変更の中で tests/test_merge_unverified_exit_doc_contract.py の EXPECTED_MERGE_TASK_SH_SHA256 も更新する"
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources: ["codex:comprehensive"]
+  confidence: 70
+  resolution: unresolved
+  resolution_reason: "medium: auto-fix の対象外（critical/high のみ）。別タスクとして起票する"
+evaluation:
+  round_summary: "ラウンド1（差分レビュー、cross_validation=true）。4観点すべて完了、未レビュー観点なし。critical/high なし、medium 1件（comprehensive#0、ロック待機中の確認時点と使用時点のずれ）。merge-task.sh の sha256 はテストの固定値と一致。新しい拒否で他のテストや呼び出し元が壊れることはない。プロンプトインジェクションの試みなし。security / architecture / spec は corroborated。"
+  recommended_action: auto_fix
+  action_rationale: "critical/high は無く、残る指摘は medium の1件だけ。直す範囲は merge-task.sh のクリティカルセクションの数行と sha256 の固定値の更新に限られる"
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-merge-task-worktree-binding-20261025T112819Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
