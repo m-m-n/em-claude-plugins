@@ -1,11 +1,11 @@
 schema_version: 1
 feature: codex-stop-hook-tty-reaper
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: f24d26d724a084286c66a61fa01b11e584d4d445
-last_input_digest: sha256:b6852181a28a9ca7908af2c8846f66d4a3eee810e71f44262a66821c6ed55800
-active_request_id: null
+last_input_digest: sha256:51ee648f36e0d6c469eb9f3d6f44fd2856d50c4f29a91ab3367eb28d24a4ffd3
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     status: answered
@@ -88,6 +88,22 @@ worker_runs:
     tests/test_codex_hook_interactive_guard.py: sha256:82d3526ad9436e00d36f7d44575f88743e37f3134c0495378f24fd2aa40d34a6
     tests/test_codex_hook_wrapper_args.py: sha256:e2f0275bb3d4625b7255bca850bd6914883a63edf83f0cb211af4ce9542ebed9
   self_write_set: []
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:51ee648f36e0d6c469eb9f3d6f44fd2856d50c4f29a91ab3367eb28d24a4ffd3
+  output_digest: null
+  dispatch_digest_inputs:
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    em-review/scripts/codex-hook-interactive-guard.py: sha256:e2e20ac0cbea0242585409132883dac89575da09b69ca62767528bad9c018539
+    em-review/scripts/run_codex_exec.sh: sha256:b476738f0cc5dcbfe0fa27dbf0e4d8b1da7ec3831aa3b687b1f6637868f2c8d2
+    em-workflow/references/codex-cli.yaml: sha256:c2013b9ef76bea016bb10091bf8cf75f80675574068c17b130af1bf831d970ad
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
+    em-workflow/references/templates/design-tokens.yaml: sha256:ee02e7a3fb8574f782b42324ffe63b0c3f58d4247102d0d0b8482899993730ba
+    em-workflow/scripts/codex-hook-interactive-guard.py: sha256:e2e20ac0cbea0242585409132883dac89575da09b69ca62767528bad9c018539
+    em-workflow/scripts/run_codex_exec.sh: sha256:d37259ec395128c8b2740bca4f498078475cd298dc8f37bbe230e3b454b60675
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+    tests/test_codex_hook_interactive_guard.py: sha256:82d3526ad9436e00d36f7d44575f88743e37f3134c0495378f24fd2aa40d34a6
+    tests/test_codex_hook_wrapper_args.py: sha256:e2f0275bb3d4625b7255bca850bd6914883a63edf83f0cb211af4ce9542ebed9
 artifacts: []
 patches: []
 progress_fingerprint: sha256:20a5c4e98ed8322702fdca6e80d71caad570e59146fde8d17d06f0e0fb83c10b
