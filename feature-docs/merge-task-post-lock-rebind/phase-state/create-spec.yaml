@@ -4,7 +4,7 @@ phase: create-spec
 status: dispatching
 generation: 1
 base_revision: 7fa4dc10db0d6dd75b6b765d830c777e0ca202ce
-last_input_digest: sha256:4081aac31f70716863abce5fe1cff225ceee3a67b5f8bb5eb8a84a750d538f88
+last_input_digest: sha256:0ce40837e33ecae0cf71f907e0ae7a3cde2bfeeeefd0eedf4e3d8c0a4dfdd7bf
 active_request_id: null
 packets: {}
 answers:
@@ -69,6 +69,20 @@ worker_runs:
 - request_id: create-spec-run-0001
   status: completed
   input_digest: sha256:4081aac31f70716863abce5fe1cff225ceee3a67b5f8bb5eb8a84a750d538f88
+  dispatch_digest_inputs:
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    em-workflow/README.md: sha256:369437c34ef84e712c86adc6497562bced67854f7694778c597676713f13b994
+    em-workflow/agents/implementer.md: sha256:c4e410c7fe33834769d5ddde305e90504367b95b42b1d1bd09e8c5cc443e0083
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
+    em-workflow/references/implement-phase.md: sha256:3cc151b20a6c5ceff0c1e3c4e245ed41c1a2c91091010ea3d5d7a8d1547759c6
+    em-workflow/scripts/merge-task.sh: sha256:fa6dd02e556724c0731900145ee2358bbb2e38bf7a0d0418734339de69b0b05e
+    em-workflow/skills/worktree-task-workflow/SKILL.md: sha256:ae619838527657f2ec9ae0589308a5860b3c63c78886a8d6cc9cc2f66b710aa1
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+    tests/test_merge_task_journal.py: sha256:bd82e1e143bf6f5864191d937c0210fab44067077e1c6a59314b90961c21f52d
+    tests/test_merge_unverified_exit_doc_contract.py: sha256:ad594acc04f32b47cc6fbee42d4e0732ea22392bdee01bc817ca7d35de781e09
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:0ce40837e33ecae0cf71f907e0ae7a3cde2bfeeeefd0eedf4e3d8c0a4dfdd7bf
   dispatch_digest_inputs:
     CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
     em-workflow/README.md: sha256:369437c34ef84e712c86adc6497562bced67854f7694778c597676713f13b994
