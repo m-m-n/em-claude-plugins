@@ -131,7 +131,8 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
+    branch: em-workflow/merge-task-worktree-binding/task0001
     notes: null
   task0002:
     title: Cite merge-task.sh's already-contained case by name in implement-phase.md
@@ -146,7 +147,8 @@ tasks:
     - FR7
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
+    branch: em-workflow/merge-task-worktree-binding/task0002
     notes: null
 review:
   status: pending
