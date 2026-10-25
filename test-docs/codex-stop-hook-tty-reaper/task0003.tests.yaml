@@ -1,0 +1,51 @@
+task_id: task0003
+baseline_failures: []          # python3 -m unittest discover -s tests, run before any edit: 11678 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation: python3 -m unittest discover -s tests, re-executed after implementation and with this record in place: 11696 tests OK, skipped=1 (the same skip as the baseline); 11678 inherited + 17 new in tests.test_codex_litellm_launch_home_location + 1 record-check subtest for this record
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_litellm_launch_home_location.TestLaunchHomeLocation.test_absolute_xdg_cache_home_holds_the_launch_home_under_em_workflow
+      - tests.test_codex_litellm_launch_home_location.TestLaunchHomeLocation.test_unset_xdg_cache_home_holds_the_launch_home_under_home_cache_em_workflow
+      - tests.test_codex_litellm_launch_home_location.TestLaunchHomeLocation.test_relative_xdg_cache_home_is_ignored_in_favour_of_home_cache
+      - tests.test_codex_litellm_launch_home_location.TestLaunchHomeLocation.test_location_checker_flags_forged_records
+    red_confirmed: true
+    red_reason: "AssertionError: ['CODEX_HOME is not directly under <work>/xdg/nested/cache/em-workflow', 'CODEX_HOME is under TMPDIR'] != [] (CODEX_HOME=<work>/tmp/codex-launch-home.XXXXXX), observed for the three wrapper-driven tests before run_codex_exec.sh was changed, in every mode / pre-existing-parent subtest; test_location_checker_flags_forged_records passed from the start because it checks the module's own checker against forged records (the non-vacuity proof)"
+  AC-2:
+    tests:
+      - tests.test_codex_litellm_launch_home_location.TestLaunchHomeContent.test_launch_home_is_owner_only_and_holds_exactly_the_wrapper_files
+      - tests.test_codex_litellm_launch_home_location.TestLaunchHomeContent.test_launch_home_without_a_user_profile_holds_only_config_toml
+      - tests.test_codex_litellm_launch_home_location.TestLaunchHomeContent.test_config_toml_marks_every_project_untrusted_including_the_working_directory
+    red_confirmed: true
+    red_reason: "The three tests failed before the change at their location precondition (assert_launched_under_parent): 'CODEX_HOME is not directly under <work>/xdg/nested/cache/em-workflow' and 'CODEX_HOME is under TMPDIR'. The content, mode and trust checks themselves describe behaviour that pre-existed in the temporary directory and are asserted only to show that the relocation kept them"
+  AC-3:
+    tests:
+      - tests.test_codex_litellm_launch_home_location.TestLaunchHomeRemoval.test_launch_home_is_removed_when_codex_exits_zero_and_non_zero
+      - tests.test_codex_litellm_launch_home_location.TestLaunchHomeRemoval.test_launch_home_is_removed_under_the_home_cache_fallback
+    red_confirmed: true
+    red_reason: "Failed before the change at the location precondition (assert_launched_under_parent): 'CODEX_HOME is not directly under <work>/xdg/nested/cache/em-workflow' and 'CODEX_HOME is under TMPDIR', in every stub-exit (0 and 3) and pre-existing-parent subtest. Removal of a launch home in the temporary directory pre-existed; the test pins that the relocated home is the one removed"
+  AC-4:
+    tests:
+      - tests.test_codex_litellm_launch_home_location.TestCacheBaseCannotBeDetermined.test_empty_home_and_unset_xdg_cache_home_is_refused
+      - tests.test_codex_litellm_launch_home_location.TestCacheBaseCannotBeDetermined.test_unset_home_and_unset_xdg_cache_home_is_refused
+      - tests.test_codex_litellm_launch_home_location.TestCacheBaseCannotBeDetermined.test_empty_home_and_relative_xdg_cache_home_is_refused
+      - tests.test_codex_litellm_launch_home_location.TestCacheBaseCannotBeDetermined.test_empty_home_with_an_absolute_xdg_cache_home_still_launches
+    red_confirmed: true
+    red_reason: "AssertionError: 0 == 0 : the wrapper exited 0 (the three refusal tests, both modes: the unchanged wrapper launched the stub from the temporary directory with an empty or unset HOME); test_empty_home_with_an_absolute_xdg_cache_home_still_launches failed with PosixPath('<work>/tmp') != PosixPath('<work>/xdg/nested/cache/em-workflow')"
+  AC-5:
+    tests:
+      - tests.test_codex_litellm_launch_home_location.TestDefaultRouteUnchanged.test_default_route_sets_no_codex_home_and_creates_nothing_under_the_cache_base
+    red_confirmed: false
+    red_reason: "The default route already set no CODEX_HOME and created nothing under the cache base before the change; the test passed from the start, no red state occurred for this change. It guards that the relocation stays confined to the --litellm route"
+  AC-6:
+    tests:
+      - tests.test_codex_hook_wrapper_args
+      - tests.test_codex_litellm_launch_home_location.TestLaunchHomeLocation
+    red_confirmed: false
+    red_reason: "NFR3 is a no-change criterion: tests.test_codex_hook_wrapper_args is not edited and passed both before and after the change, so no red state occurred. The exactly-one-stub-invocation check of the new module is the harness assertion in Run.launch(), used by every --litellm run that is expected to launch; it never failed on its own because every run launched the stub exactly once before and after the change"
+  AC-7:
+    tests:
+      - tests.test_codex_litellm_launch_home_location.TestHarnessIsolation.test_module_imports_only_standard_library_modules
+      - tests.test_codex_litellm_launch_home_location.TestHarnessIsolation.test_import_checker_flags_a_third_party_import
+      - tests.test_codex_litellm_launch_home_location.TestHarnessIsolation.test_every_run_uses_a_stub_codex_and_directories_the_test_owns
+    red_confirmed: false
+    red_reason: "These tests inspect the new test module and its harness themselves, so they have no state in which the implementation is absent: they passed on their first run. The import checker's own negative proof is test_import_checker_flags_a_third_party_import; the harness asserts that the stub codex is first on PATH for every run"
