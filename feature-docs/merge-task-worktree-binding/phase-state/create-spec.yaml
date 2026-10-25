@@ -6,7 +6,15 @@ generation: 1
 base_revision: 2752b652532e94800303f6593dc3b84c027860b0
 last_input_digest: sha256:bcb82c3e8398ace74adaefde67ade3172b38387280a61e4fb8b9085adf7c180b
 active_request_id: create-spec-run-0001
-packets: {}
+packets:
+  create-spec-q0001:
+    path: null
+    status: answered
+    question_ids:
+    - requirement.merge-source-binding
+    - requirement.in-layout-branch-check
+    - requirement.pinned-merge-task-references
+    - design-step.decision
 answers:
   create-spec.feature-identity:
     packet_id: null
@@ -18,9 +26,48 @@ answers:
     freeform: null
     normalized_answer: feature name merge-task-worktree-binding derived from the task
       title
+  requirement.merge-source-binding:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-25T19:36:00+09:00'
+    source: codex-consultation
+    answer_mode: select
+    selected_option_ids:
+    - reject_outside_task_worktree
+    freeform: null
+    normalized_answer: Reject (exit 2, before the merge lock and any ref update) unless
+      the cwd top level is .../em-workflow/{feature}/{TASK_ID} and the parent branch
+      is em-workflow/{feature}/integration. Main worktree and integration worktree
+      invocations are rejected; the merge-only invocation outside the layout is retired
+      and the AC-5 test becomes a rejection test. Codex agreed with the worker recommendation;
+      recorded as assumption.
+  requirement.in-layout-branch-check:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-25T19:36:00+09:00'
+    source: codex-consultation
+    answer_mode: select
+    selected_option_ids:
+    - require_branch_match
+    freeform: null
+    normalized_answer: Inside the layout, also require the checked-out branch (git
+      symbolic-ref) to be refs/heads/em-workflow/{feature}/{TASK_ID}; detached HEAD
+      or another branch exits 2 before the lock. Codex agreed; recorded as assumption.
+  requirement.pinned-merge-task-references:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-25T19:36:00+09:00'
+    source: codex-consultation
+    answer_mode: select
+    selected_option_ids:
+    - cite_by_case_name
+    freeform: null
+    normalized_answer: Update the sha256 pin of merge-task.sh; replace the line-number
+      citation (implement-phase.md "lines 116-118", the test phrase and the lines[115:118]
+      slice) with a citation by case name ("Parent already contains us"); keep the
+      existing retry/re-append behavior test. Codex preferred this over the worker
+      recommendation (update_pins) because line numbers shift with every inserted
+      check; recorded as assumption.
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:bcb82c3e8398ace74adaefde67ade3172b38387280a61e4fb8b9085adf7c180b
   dispatch_digest_inputs:
     CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
@@ -61,4 +108,8 @@ resolved_input_cache:
   e2e: []
   design_system_candidates: []
   package_files: []
-last_error: null
+last_error:
+  request_id: create-spec-run-0001
+  kind: validation
+  message: 'question_packet: questions[3].gate_id ''create-spec.design-step'' requires
+    option_id ''decide_autonomously'' to be offered among options'
