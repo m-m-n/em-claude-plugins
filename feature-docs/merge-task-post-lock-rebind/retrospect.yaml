@@ -1,0 +1,51 @@
+feature: merge-task-post-lock-rebind
+collected_at: "2026-10-25T23:06:58+09:00"
+session_ids: [01a17361-a62c-775f-889c-34b248d38ce3]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: "最終読み（description_plus_code）はバケット 1 が 0.89 で、閾値表により reduced に決まった"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.04, confidence: 0.96, probabilities: {"0": 0.0, "1": 0.96, "2": 0.04, "3": 0.0}}
+        observed_at: "2026-10-25T22:00:39+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.11, confidence: 0.89, probabilities: {"0": 0.0, "1": 0.89, "2": 0.11, "3": 0.0}}
+        observed_at: "2026-10-25T22:00:39+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/scripts/merge-task.sh
+        - tests/test_merge_task_journal.py
+        - tests/test_merge_unverified_exit_doc_contract.py
+      changed_lines_approx: 60
+      new_functions_needed: 0
+      new_files_needed: []
+      new_dependencies_needed: []
+      covering_tests_exist: false
+      spillover_modules: []
+      work_still_required: true
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 1
+      body_change_kind: new_logic
+      change_containment: single_module
+      caller_and_dependency_count: 5
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - >-
+    review round 1 の medium 1 件（stable_id b39406f870838215、merge-task.sh の
+    マージ元解決が `git rev-parse --verify` の参照名補完に頼り、タスクブランチ
+    消失時に同名タグ等を拾える）は resolution: unresolved のまま review が
+    completed になった。resolution_reason は「別タスクとして起票する」だが、
+    triage_filing は branch: report で filed: [] だったため、起票はされていない。
+  - >-
+    単一タスク・単一ファイル群の変更で、reduced tier の判定（バケット 1）と
+    事前調査の files_expected 3 件が実際の変更ファイルと一致した
+    （test-docs の記録ファイルを除く）。
