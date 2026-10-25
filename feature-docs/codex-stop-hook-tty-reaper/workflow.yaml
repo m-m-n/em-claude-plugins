@@ -107,7 +107,8 @@ workflow:
   failed_items: []
   completed_at_commit: 2dd074f1cab9d7b4a43b3e6a1955beef1cae472e
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: 17ba0cdc02a10367d858ecf4c84331f199d0582e
 tasks:
   task0001:
     title: Stop hook that stops terminal-bound Codex descendants (two byte-identical copies) and its unit tests
