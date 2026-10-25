@@ -99,8 +99,8 @@ workflow:
   completed_at_commit: 4b2adfb93beae6cb942e1809e725bb67150589a2
   base_commit: 5526a6b99b99496dc5163746f24277394e3547a1
 - id: review
-  status: in_progress
-  completed_at_commit: f7b2464a76827762ec734a6902a1626a741bb925
+  status: completed
+  completed_at_commit: b38434dae5599a7ed998443f37a765628eb349ca
 - id: verify
   status: pending
   result: fail
@@ -188,7 +188,7 @@ tasks:
       review_round: null
 review:
   status: completed
-  rounds_completed: 1
+  rounds_completed: 2
   perspectives:
   - comprehensive
   - security
