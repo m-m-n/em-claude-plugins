@@ -1,0 +1,67 @@
+round: 1
+executed_at: "2026-10-25T22:56:14+09:00"
+scope:
+  review_mode: diff
+  base_commit: e1994c9dfb271d26296da57382382b6ebdf41c7f
+  head_commit: db0033fb155cb6df99c8a2b3981955ab42bdc5a6
+  changed_files:
+  - em-workflow/scripts/merge-task.sh
+  - test-docs/merge-task-post-lock-rebind/task0001.tests.yaml
+  - tests/test_merge_task_journal.py
+  - tests/test_merge_unverified_exit_doc_contract.py
+plan:
+  floor: [comprehensive, security, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+- {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+- {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+- stable_id: b39406f870838215
+  severity: medium
+  category: security
+  file: em-workflow/scripts/merge-task.sh
+  line: 164
+  title: "マージ元の解決が参照名の補完に頼るため、タスクブランチ消失時に同名の別参照（タグ等）をマージできる"
+  description: "164行目の git rev-parse --verify --quiet \"$IB_EXPECTED_REF^{commit}\" は、完全な参照名 refs/heads/em-workflow/<feature>/<task> を渡していても、gitrevisions の曖昧解決規則（$GIT_DIR/<refname> → refs/<refname> → refs/tags/<refname> → ...）に従う。タスクブランチが消えていると refs/refs/heads/... や refs/tags/refs/heads/... に解決が進み、別のコミットを返す。(1) ブランチを update-ref -d で消しても HEAD は存在しないブランチを指すシンボリック参照のまま残るので、150〜152行目の確かめ直しは通る。(2) git rm -r -f . の後は git status --porcelain が空になる。(3) 同名のタグがあると164行目がそのコミットAを返す。Aが統合ブランチの子なら fast-forward で統合ブランチがAに進み、task0001 の merged イベントが追記され、終了0になる。THREAT-MODEL.md の TM-2 の緩和策と SPEC の NFR1・FR4（タスクの ref を解決できなければ終了2）が、この経路では保証されない。同じリポジトリに書き込める主体はタスクブランチ自体を動かすこともでき（A1 で受け入れ済み）、増える能力は削除時に失敗側へ倒す動作の迂回に限られるので medium。"
+  suggestion: "マージ元は完全に一致する参照だけから読む。例: TASK_TIP=$(git show-ref --verify --hash \"$IB_EXPECTED_REF\") || die ...; HEAD_SHA=$(git rev-parse --verify --quiet \"$TASK_TIP^{commit}\") || die ...。3経路はこの1つの値を使い続ける。回帰テスト: 参照を削除して作業ツリーも空にする既存手順に加えて、統合ブランチの子コミットを指す refs/tags/refs/heads/em-workflow/feat/<task> を作っておき、終了2で副作用が無いことを確かめる。同じコミットで EXPECTED_MERGE_TASK_SH_SHA256 を更新する。"
+  reproduction: "使い捨てリポジトリで、有効なfeat/task0001作業ツリーと、統合ブランチの子である攻撃用コミットAを別ブランチに用意する。git tag refs/heads/em-workflow/feat/task0001 <AのID> でタグを作る。共有マージロックを保持してmerge-task.sh em-workflow/feat/integration task0001を起動し、flock待機を確認する。同じタスク作業ツリーでgit update-ref -d refs/heads/em-workflow/feat/task0001とgit rm -r -q -f .を実行し、ロックを解放する。164行目がタグからAを取得するため、期待する終了2ではなく終了0となり、統合ブランチがAへ進み、task0001のmergedイベントが記録される。この再現手順自体は実行していない（Codex 側の read-only 実行で確認された推定経路）。"
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources: ["codex:security"]
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: "medium: auto-fix の対象外（critical/high のみ）。別タスクとして起票する"
+evaluation:
+  round_summary: "ラウンド1（diff、cross_validation=true）。5観点すべて completed。critical/high の指摘は無し。security#0 の medium 1件（merge-task.sh:164、参照名の曖昧解決）は、コードの読み取りと gitrevisions の解決規則で reproduced と判定し、そのまま採った。comprehensive#0 の medium 1件（macOS で /proc が無くテストが落ちる）は、SPEC の A4 が「/proc のある Linux で走らせ、/proc の無いホスト向けの skip は足さない」と明示しているので false positive として dismissed_sites に記録した。独自点検のため、変更4ファイル、SPEC.md、THREAT-MODEL.md、tasks/task0001.md を読んだ（読み取り予算10ファイル中8ファイル）。security / comprehensive / performance / architecture / spec はいずれも corroborated。sha256 の固定値が現行スクリプトと一致することを確認した。reviewer 出力に指示の注入は見つからなかった。"
+  recommended_action: auto_fix
+  action_rationale: "残る指摘は medium の1件だけで、修正範囲は merge-task.sh の164〜165行目に限られる。厳密な参照解決への置き換え、回帰テスト1件、sha256 の固定値の更新で閉じられ、仕様や構造の見直しは要らない。"
+dismissed_sites:
+- file: tests/test_merge_task_journal.py
+  line: 53
+  run_id: "comprehensive#0"
+  reason: "false positive"
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-merge-task-post-lock-rebind-20261025T135614Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
