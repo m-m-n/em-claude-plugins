@@ -1,0 +1,54 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests before any edit: 11553 tests, OK (skipped=1)
+final_failures: []             # python3 -m unittest discover -s tests re-run after the implementation and this record
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_main_working_tree_run_is_rejected_without_merge
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_integration_worktree_run_is_rejected_even_when_parent_contains_head
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_out_of_layout_task_worktree_is_rejected_without_merge_or_journal
+    red_confirmed: true
+    red_reason: "all three failed against the unchanged script: AssertionError: 0 != 2 : MERGED: task0001 -> em-workflow/feat/integration (fast-forward to <sha>) for the main working tree; 0 != 2 : MERGED: task0001 already contained in em-workflow/feat/integration for the integration worktree; 0 != 2 : MERGED: task0006 -> em-workflow/feat/integration (fast-forward to <sha>) for the out-of-layout task worktree (the former AC-5 test, converted)"
+  AC-2:
+    tests:
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_detached_head_in_layout_is_rejected
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_other_branch_checked_out_in_layout_is_rejected
+    red_confirmed: true
+    red_reason: "both failed against the unchanged script, which checks no branch: AssertionError: 0 != 2 : MERGED: task0001 -> em-workflow/feat/integration (fast-forward to <sha>)"
+  AC-3:
+    tests:
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_main_working_tree_run_is_rejected_while_merge_lock_is_held
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_detached_head_in_layout_is_rejected_while_merge_lock_is_held
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_detached_head_with_untracked_file_reports_identity_rejection
+    red_confirmed: true
+    red_reason: "against the unchanged script the two lock-held runs blocked on the held lock until the test's bounded wait ended them (AssertionError: merge-task.sh still blocked after 5s while the merge lock was held), and the untracked-file run reported the precondition instead of the identity rejection (AssertionError: 'refs/heads/em-workflow/feat/task0001' not found in 'ERROR: uncommitted or untracked changes in worktree ...')"
+  AC-4:
+    tests:
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_unresolvable_top_level_run_is_rejected
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_run_from_committed_subdirectory_of_own_worktree_merges
+    red_confirmed: true
+    red_reason: "test_unresolvable_top_level_run_is_rejected failed against the unchanged script: AssertionError: 0 != 2 : MERGED: task0001 already contained in em-workflow/feat/integration (exit 0 through the already-contained path from the git directory). test_run_from_committed_subdirectory_of_own_worktree_merges (TS10) was green before and after the change by design: it guards against a binding based on the working directory instead of the top-level, so no red state occurred for it"
+  AC-5:
+    tests:
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_fast_forward_merge_appends_one_well_formed_merged_line
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_merge_commit_merge_appends_one_well_formed_merged_line
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_idempotent_already_merged_path_appends_merged_line_and_tolerates_duplicates
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_conflicting_merge_appends_nothing
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_precondition_error_appends_nothing
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_journal_write_failure_does_not_change_exit_code
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_concurrent_merges_produce_no_torn_or_interleaved_journal_lines
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_mismatched_task_id_aborts_before_merge
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_mismatched_parent_branch_feature_aborts_before_merge
+    red_confirmed: false
+    red_reason: "a dedicated new module is out of scope, but these existing in-layout tests detect any regression of the unchanged merge paths, the task-id mismatch and the parent-branch mismatch (bodies unchanged); no red state occurred for this criterion because the behavior pre-existed and must stay as it was"
+  AC-6:
+    tests:
+      - tests.test_merge_unverified_exit_doc_contract.TestMergeTaskShCommentsDoNotPermitOutOfLayoutMerge.test_permission_phrases_absent_from_merge_task_sh
+    red_confirmed: true
+    red_reason: "failed against the unchanged script for each of the three phrases: AssertionError: 'manual invocation' still found in merge-task.sh (likewise 'merge-only' and 'exercising only merge'). The companion test TestMergeTaskShCommentsDoNotPermitOutOfLayoutMerge.test_each_matcher_finds_its_phrase_in_the_pre_change_excerpt proves the matchers non-vacuous and was green from the start by design, so it is not listed. The wording of the header and identity-binding comments (second half of the criterion) has no executable check and is manual item M1 of VERIFICATION.md"
+  AC-7:
+    tests:
+      - tests.test_merge_unverified_exit_doc_contract.TestNeverModifiedFilesAreByteIdentical.test_merge_task_sh_untouched
+      - tests.test_merge_unverified_exit_doc_contract.TestNeverModifiedFilesAreByteIdentical.test_merge_task_sh_names_the_already_contained_case_once_with_its_check_next
+    red_confirmed: false
+    red_reason: "the case-name test replaces the line-slice test and was green before the change because the single 'Parent already contains us' line with the ancestor check on the next line pre-existed (checked non-vacuous afterwards by running it against modified copies of the script: the phrase twice, the check line removed); the content pin can only be written from the final bytes of merge-task.sh, so no failing run against an absent implementation exists for it. No red state occurred for this criterion"
