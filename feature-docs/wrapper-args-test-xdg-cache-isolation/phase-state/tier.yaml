@@ -1,0 +1,65 @@
+schema_version: 2
+feature: wrapper-args-test-xdg-cache-isolation
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.0
+    confidence: 0.99
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.99
+      '2': 0.01
+      '3': 0.0
+  observed_at: '2026-10-26T08:15:06+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.07
+    confidence: 0.93
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.93
+      '2': 0.07
+      '3': 0.0
+  observed_at: '2026-10-26T08:16:47+09:00'
+pre_survey_estimate:
+  files_expected:
+  - tests/test_codex_hook_wrapper_args.py
+  changed_lines_approx: 25
+  new_functions_needed: 1
+  new_files_needed: []
+  new_dependencies_needed: []
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  work_still_required_evidence: 静的確認で不具合が残っている。tests/test_codex_hook_wrapper_args.py:217-224
+    は親環境を複製し、HOMEを置き換えるが、XDG_CACHE_HOMEを除外しない。em-workflow/scripts/run_codex_exec.sh:333-342
+    は絶対パスのXDG_CACHE_HOME配下にem-workflowを作り、同ファイル:329 の終了処理は起動用ディレクトリだけを削除するため、親のem-workflowが残る。既存の隔離試験は
+    tests/test_codex_hook_wrapper_args.py:926-934 でHOMEだけを検査する。tests/test_codex_litellm_launch_home_location.py:195-197
+    は別の実行補助関数でXDG_CACHE_HOMEを除外しており、今回の補助関数を検査しない。見積もりはenv.pop("XDG_CACHE_HOME", None)の追加と、親環境に一時領域の絶対パスを設定し、readonly/readwriteで外部キャッシュにem-workflowが作られないことを検査する試験1関数・2ケースを追加する場合。呼出元・依存数は、直接呼出元5個（同試験ファイル:255,265,781,811,830）とリポジトリ内補助関数への直接依存2個（:210,249）の計7個。変わる挙動は試験実行時の書込先で、公開仕様の変更は不要。ファイル変更・試験実行は行っていない
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 2
+  body_change_kind: new_logic
+  change_containment: single_module
+  caller_and_dependency_count: 7
+  changes_external_contract: false
+  changes_behavior: true
+decided_at: '2026-10-26T08:16:52+09:00'
