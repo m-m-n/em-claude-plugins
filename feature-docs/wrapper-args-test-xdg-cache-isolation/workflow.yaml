@@ -122,6 +122,14 @@ tasks:
     branch: em-workflow/wrapper-args-test-xdg-cache-isolation/task0001
 review:
   status: pending
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - performance
+    - spec
+    discretionary: []
+    cross_validation: false
   rounds_completed: 0
   residual_critical_high: 0
   needs_rework: false
