@@ -99,7 +99,7 @@ workflow:
   completed_at_commit: a829b4744d14ed81e6d771a8a5e749b9c5d8883a
   base_commit: 5526a6b99b99496dc5163746f24277394e3547a1
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -160,8 +160,17 @@ tasks:
     notes: null
     branch: em-workflow/codex-stop-hook-tty-reaper/task0002
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - performance
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
 requirements:
   FR1:
     title: Stop フックの登録
