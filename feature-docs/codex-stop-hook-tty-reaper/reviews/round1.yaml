@@ -1,0 +1,86 @@
+round: 1
+executed_at: "2026-10-26T00:30:03+09:00"
+scope:
+  review_mode: diff
+  base_commit: 5526a6b99b99496dc5163746f24277394e3547a1
+  head_commit: f7b2464a76827762ec734a6902a1626a741bb925
+  changed_files:
+  - em-review/scripts/codex-hook-tty-reaper.py
+  - em-review/scripts/run_codex_exec.sh
+  - em-workflow/scripts/codex-hook-tty-reaper.py
+  - em-workflow/scripts/run_codex_exec.sh
+  - test-docs/codex-stop-hook-tty-reaper/task0001.tests.yaml
+  - test-docs/codex-stop-hook-tty-reaper/task0002.tests.yaml
+  - tests/test_codex_hook_tty_reaper.py
+  - tests/test_codex_hook_wrapper_args.py
+plan:
+  floor: [comprehensive, security, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+  - stable_id: 5582689c13871652
+    severity: medium
+    category: comprehensive
+    file: em-workflow/scripts/codex-hook-tty-reaper.py
+    line: 171
+    title: "走査中の親 PID 再利用で外部プロセスが子孫と判定され信号を受ける"
+    description: "_snapshot() は /proc を PID 昇順に 1 件ずつ読み、_depths_below() は ppid の数値だけで親子を結ぶ。外部プロセス P の子 C を読んだ後に P が終了し、同じ PID が ANCHOR 配下の新しいプロセス P' に再割り当てされ、そのあとで P の位置を読むと、C が P' の子として ANCHOR の子孫に入る。昇順に走査するので、PID の折り返しで C < P になっている場合に限られる。C の stdin が /dev/pts/* なら標的になり、_same_process() は C 自身の開始時刻しか見ないので確認を通る。NFR1 に反する経路で、THREAT-MODEL.md の TM-3 にも書かれていない。発生確率は極めて低い。em-review のコピーも同じ。"
+    suggestion: "_depths_below() で、親の開始時刻が子の開始時刻より後になる親子リンクは採用しない（等しい場合は許す）。走査中に親 PID が再利用される状況を FakeTable で再現する試験を追加する。2 つのコピーは同じ変更で直し、バイト単位で同一に保つ。"
+    reproduction: null
+    reproduction_alternates: []
+    reproduction_overflow: false
+    sources: [codex:comprehensive]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "medium severity: outside the auto-fix candidate gate; filed as a follow-up task"
+  - stable_id: 4d46391b03cbd7bd
+    severity: medium
+    category: comprehensive
+    file: em-workflow/scripts/codex-hook-tty-reaper.py
+    line: 239
+    title: "同一性の確認から信号送信までの間に起きる PID 再利用が塞がれていない"
+    description: "_stop() は _same_process() で開始時刻を確かめたあと、別の操作として os.kill(pid, sig) を呼ぶ（SIGTERM 225-226 行、SIGKILL 239-240 行）。確認の直後に対象が終了・回収され PID が再割り当てされると、信号は新しいプロセスに届く。test_tm3_* が扱うのは確認より前の入れ替わりだけ。窓はマイクロ秒単位で実害の確率は極めて低いが、NFR1 の保証に穴が残る。em-review のコピーも同じ。"
+    suggestion: "os.pidfd_open(pid) で pidfd を取ってから開始時刻を照合し、一致したときだけ signal.pidfd_send_signal(pidfd, sig) で送る。ProcessLookupError は終了済みとして扱い、それ以外の失敗や pidfd が使えない環境では何も止めない側に倒す。SIGTERM と SIGKILL の両段階で確認後の入れ替わりを扱う試験を追加する。2 つのコピーは同時に直す。"
+    reproduction: null
+    reproduction_alternates: []
+    reproduction_overflow: false
+    sources: [codex:comprehensive]
+    confidence: 80
+    resolution: unresolved
+    resolution_reason: "medium severity: outside the auto-fix candidate gate; filed as a follow-up task"
+evaluation:
+  round_summary: "第 1 ラウンド (diff, cross_validation=true)。プロンプトインジェクションの試みは見つからなかった。採用した指摘は comprehensive#0 の medium 2 件（いずれも PID 再利用の競合で、コードを読んで経路の成立を確認）。architecture#0 の high 1 件（2 つのコピーの重複）は false positive として退けた: SPEC FR2 が 2 つのコピーを明示しており、プラグインごとに <plugin>/ 配下だけが配布されるため共有の置き場所やプラグインをまたぐ symlink は使えない。codex-hook-interactive-guard.py にも同じ二重配置とバイト同一性の試験という前例がある。cmp で 2 つのコピーの同一性を確認した。security#0 / performance#0 / architecture#0 / spec#0 は corroborated。FR1（readonly / readwrite / --litellm の全経路で HOOK_FLAG を使う）、FR2-FR5、NFR1-NFR6 を確認した。ただし NFR1 には上記 2 件の穴が残る。"
+  recommended_action: "auto_fix"
+  action_rationale: "残る指摘は medium 2 件で codex-hook-tty-reaper.py の中で直せる。critical / high は残っていない。"
+dismissed_sites:
+  - file: em-workflow/scripts/codex-hook-tty-reaper.py
+    line: 1
+    run_id: "architecture#0"
+    reason: "false positive"
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: "tmp/sca-triage-codex-stop-hook-tty-reaper-20261025T152952Z.md"
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

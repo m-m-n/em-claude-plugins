@@ -1,0 +1,52 @@
+task_id: task0002
+baseline_failures: []          # python3 -m unittest discover -s tests: 11570 tests OK (1 skipped, none failing) before any edit
+final_failures: []             # re-executed after implementation and after writing this record: all tests OK, none failing
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_wrapper_args.TestStopHookRegistrationOnEveryLaunch.test_stop_ac1_workflow_default_path_readonly
+      - tests.test_codex_hook_wrapper_args.TestStopHookRegistrationOnEveryLaunch.test_stop_ac1_workflow_default_path_readwrite
+      - tests.test_codex_hook_wrapper_args.TestStopHookRegistrationOnEveryLaunch.test_stop_ac1_workflow_litellm_path_readonly
+      - tests.test_codex_hook_wrapper_args.TestStopHookRegistrationOnEveryLaunch.test_stop_ac1_workflow_litellm_path_readwrite
+      - tests.test_codex_hook_wrapper_args.TestStopHookRegistrationOnEveryLaunch.test_stop_ac1_review_readonly
+      - tests.test_codex_hook_wrapper_args.TestStopHookRegistrationOnEveryLaunch.test_stop_ac1_review_readwrite
+      - tests.test_codex_hook_wrapper_args.TestStopHookRegistrationOnEveryLaunch.test_stop_ac1_anchor_stays_an_ancestor_of_the_launch
+      - tests.test_codex_hook_wrapper_args.TestStopHookRegistrationOnEveryLaunch.test_stop_ac1_each_run_carries_its_own_anchor
+      - tests.test_codex_hook_wrapper_args.TestStopCheckerDetectsRegressions
+    red_confirmed: true
+    red_reason: "AssertionError: expected exactly one `-c hooks.Stop=...` pair, found 0 in ['exec', '--color', 'never', '--skip-git-repo-check', '--ignore-rules', '--ignore-user-config', '-s', 'read-only', '-c', 'model_reasoning_effort=\"xhigh\"', '-c', 'hooks.PreToolUse=[...]', '--dangerously-bypass-hook-trust', ...] (observed on all six launch paths before the wrappers were edited). TestStopCheckerDetectsRegressions is the non-vacuity proof of the checker against forged argv (missing value, two values, matcher, two groups, two hooks, non-command type, another plugin's path, unquoted path, missing / extra / non-decimal anchor); it exercises the test module's own checker and passed from its first run."
+  AC-2:
+    tests:
+      - tests.test_codex_hook_wrapper_args.TestStopHookPathFollowsTheWrapper.test_stop_ac2_path_does_not_depend_on_the_callers_working_directory
+      - tests.test_codex_hook_wrapper_args.TestStopHookPathFollowsTheWrapper.test_stop_ac2_each_plugin_names_only_its_own_directory
+      - tests.test_codex_hook_wrapper_args.TestStopHookPathFollowsTheWrapper.test_stop_ac2_a_scripts_copy_without_the_hook_file_still_launches_once
+    red_confirmed: true
+    red_reason: "AssertionError: expected exactly one `-c hooks.Stop=...` pair, found 0 in [argv of the wrapper started from the other plugin's scripts/ directory] (observed on the three launch paths before the wrappers were edited); the per-plugin test failed with `0 != 1` on the count of Stop values."
+  AC-3:
+    tests:
+      - tests.test_codex_hook_wrapper_args.TestStopHookPathSurvivesHostilePlugins.test_stop_ac3_space_and_single_quote_in_path_for_every_launch_path
+      - tests.test_codex_hook_wrapper_args.TestStopHookPathSurvivesHostilePlugins.test_stop_ac3_every_shell_and_toml_metacharacter_in_path
+    red_confirmed: true
+    red_reason: "AssertionError: expected exactly one `-c hooks.Stop=...` pair, found 0 in the argv recorded from the wrapper copy under the path with a space and a single quote, and under each hostile directory name (observed before the wrappers were edited)."
+  AC-4:
+    tests:
+      - tests.test_codex_hook_wrapper_args.TestStopRegistrationLeavesTheLaunchContractAlone.test_stop_ac4_both_registrations_and_one_bypass_flag_on_every_launch
+      - tests.test_codex_hook_wrapper_args.TestHookRegistrationOnEveryLaunch
+      - tests.test_codex_hook_wrapper_args.TestHookPathSurvivesHostilePlugins
+    red_confirmed: false
+    red_reason: "The PreToolUse registration pre-exists and was not changed; a dedicated new module is out of scope, but the existing tests.test_codex_hook_wrapper_args.TestHookRegistrationOnEveryLaunch (and the hostile-path class beside it) detects the PreToolUse registration on every launch path; no red state occurred for this change. The added combined test failed before the wrappers were edited, but only on its Stop half (`found 0` Stop values), so it does not show a red for the PreToolUse claim of this criterion."
+  AC-5:
+    tests:
+      - tests.test_codex_hook_wrapper_args.TestStopRegistrationLeavesTheLaunchContractAlone.test_stop_ac5_stop_value_stays_out_of_the_profile_words_and_before_the_prompt
+      - tests.test_codex_hook_wrapper_args.TestStopRegistrationLeavesTheLaunchContractAlone.test_stop_ac5_isolation_flags_and_overrides_survive_next_to_the_stop_value
+      - tests.test_codex_hook_wrapper_args.TestWrapperContractIsUnchanged
+      - tests.test_codex_hook_wrapper_args.TestConfigIsolationIsPreserved
+      - tests.test_codex_wrapper_single_invocation
+      - tests.test_codex_wrapper_timeout_alignment.TestEmReviewWrapperUntouched
+    red_confirmed: false
+    red_reason: "The wrapper contract properties (one bypass flag, usage text, error messages, single launch, 2>&1 handling, prompt last, -p litellm -m MODEL adjacency, isolation flags, overrides) pre-exist and are unchanged; a dedicated new module is out of scope, but the existing tests.test_codex_hook_wrapper_args.TestWrapperContractIsUnchanged, TestConfigIsolationIsPreserved, tests.test_codex_wrapper_single_invocation and tests.test_codex_wrapper_timeout_alignment.TestEmReviewWrapperUntouched detect them; no red state occurred for this change. The two added tests failed before the wrappers were edited, but only on the Stop-value assertion (`found 0` Stop values), not on a contract property."
+  AC-6:
+    tests:
+      - tests.test_codex_hook_wrapper_args.TestHarnessNeverReachesRealCodex
+    red_confirmed: false
+    red_reason: "The harness properties (stub codex first on PATH, isolated HOME, standard-library-only imports, the Stop hook never executed and its file never required because python3 is replaced by a recorder) are properties of the module's own harness and held from its first run, so no executable red exists for them; the existing tests.test_codex_hook_wrapper_args.TestHarnessNeverReachesRealCodex detects the stub, the isolated HOME and the stdlib-only imports; no red state occurred for this change."

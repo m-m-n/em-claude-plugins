@@ -1,0 +1,89 @@
+round: 2
+executed_at: "2026-10-26T02:07:16+09:00"
+scope:
+  review_mode: diff
+  base_commit: 5526a6b99b99496dc5163746f24277394e3547a1
+  head_commit: b38434dae5599a7ed998443f37a765628eb349ca
+  changed_files:
+    - em-review/scripts/codex-hook-tty-reaper.py
+    - em-review/scripts/run_codex_exec.sh
+    - em-workflow/scripts/codex-hook-tty-reaper.py
+    - em-workflow/scripts/run_codex_exec.sh
+    - test-docs/codex-stop-hook-tty-reaper/task0001.tests.yaml
+    - test-docs/codex-stop-hook-tty-reaper/task0002.tests.yaml
+    - test-docs/codex-stop-hook-tty-reaper/task0003.tests.yaml
+    - tests/test_codex_hook_tty_reaper.py
+    - tests/test_codex_hook_wrapper_args.py
+    - tests/test_codex_litellm_launch_home_location.py
+plan:
+  floor:
+    - comprehensive
+    - security
+    - performance
+    - architecture
+    - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+  - stable_id: 97ed063cadd4f280
+    severity: medium
+    category: comprehensive
+    file: em-workflow/scripts/codex-hook-tty-reaper.py
+    line: 171
+    title: "走査中の親 PID 再利用で外部プロセスが ANCHOR の子孫と判定され信号を受ける"
+    description: "_snapshot() は /proc の各エントリを 1 件ずつ順に読み、_depths_below() は ppid の数値だけで親子を結ぶ（171-172 行）。外部プロセス P の子 C（PID の折り返しで C < P）を先に読み、その後 P が終了して同じ PID が ANCHOR 配下の新しいプロセスに再割り当てされてから P の位置を読むと、C が ANCHOR の子孫に入る。C の stdin が /dev/pts/* なら標的になる。_same_process() は C 自身の開始時刻しか見ないので確認を通り、NFR1 に反して外部プロセス（利用者の対話シェルなど）に SIGTERM / SIGKILL が届く。第 1 ラウンドの head（f7b2464a）以降、フック本体に差分は無い。発生確率は極めて低い。em-review のコピーもバイト同一なので同じ問題がある（cmp で確認）。"
+    suggestion: "_depths_below() で、親の開始時刻が子の開始時刻より後になる親子リンクは採用しない（等しい場合は許す）。走査中に親 PID が再利用される状況を FakeTable で再現する試験を追加する。2 つのコピーは同じ変更で直し、バイト単位で同一に保つ。"
+    reproduction: null
+    reproduction_alternates: []
+    reproduction_overflow: false
+    sources: [codex:comprehensive]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "medium severity: outside the auto-fix candidate gate; carried over unchanged from round 1 (stable_id 5582689c13871652, title wording differs)"
+  - stable_id: 4d46391b03cbd7bd
+    severity: medium
+    category: comprehensive
+    file: em-workflow/scripts/codex-hook-tty-reaper.py
+    line: 239
+    title: "同一性の確認から信号送信までの間の PID 再利用が塞がれていない"
+    description: "_stop() は _same_process() で開始時刻を確かめたあと、別の操作として send_signal(pid, sig)（既定値は os.kill）を呼ぶ（SIGTERM は 225-226 行、SIGKILL は 239-240 行）。確認の直後に対象が終了して回収され、PID が再割り当てされると、信号は新しいプロセスに届く。test_tm3_* が扱うのは確認より前の入れ替わりだけ。窓はマイクロ秒単位で実害の確率は極めて低いが、NFR1 の保証に穴が残る。第 1 ラウンドから変わっていない。em-review のコピーも同じ。"
+    suggestion: "os.pidfd_open(pid) で pidfd を取ってから開始時刻を照合し、一致したときだけ signal.pidfd_send_signal(pidfd, sig) で送る。ProcessLookupError は終了済みとして扱う。それ以外の失敗や pidfd が使えない環境では、何も止めない側に倒す。SIGTERM と SIGKILL の両段階で、確認後の入れ替わりを扱う試験を追加する。2 つのコピーは同時に直す。"
+    reproduction: null
+    reproduction_alternates: []
+    reproduction_overflow: false
+    sources: [codex:comprehensive]
+    confidence: 80
+    resolution: unresolved
+    resolution_reason: "medium severity: outside the auto-fix candidate gate; carried over unchanged from round 1"
+evaluation:
+  round_summary: "第 2 ラウンド（diff、cross_validation=true）。レビュー結果の中にプロンプトインジェクションの試みは無かった。critical / high を報告した実行は無いので、dismissed_sites は空にした。comprehensive#0 の medium 2 件（171 行と 239 行の PID 再利用の競合）は、round_context で unresolved になっている第 1 ラウンドの指摘と同じ箇所。フック本体は第 1 ラウンドの head（f7b2464a）以降変わっておらず、コードを読んで経路がまだ成り立つことを確認したので、そのまま持ち越した。2 つのコピーがバイト同一であることは cmp で確かめた。第 1 ラウンド以降の差分は task0003（--litellm の起動 home をキャッシュ配下へ移す変更）だけ。その変更を独自に点検し、low 1 件を新たに起票した（wrapper-args 試験が XDG_CACHE_HOME を外していない件。claude:evaluator 起点。severity ゲートにより round record からは除外）。観点ごとの確認結果: security = corroborated。comprehensive = findings（medium 2 件を裏付け、low 1 件を追加）。performance = corroborated。architecture = corroborated。spec = corroborated（NFR1 の穴は comprehensive の 2 件として持ち越し済み）。読み取りの予算 10 ファイルは使い切った。task0001 と task0002 の tests.yaml は読んでいない。"
+  recommended_action: "complete"
+  action_rationale: "critical / high は残っていない。medium 2 件は第 1 ラウンドから変わっていない持ち越し。新しく見つかったのは試験の分離の low 1 件だけで、次のラウンドで新しい指摘が出る見込みは低い。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: "tmp/sca-triage-codex-stop-hook-tty-reaper-20261025T170709Z.md"
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

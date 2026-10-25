@@ -1,0 +1,68 @@
+schema_version: 2
+feature: codex-stop-hook-tty-reaper
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.59
+    confidence: 0.39
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.01
+      '1': 0.5
+      '2': 0.38
+      '3': 0.11
+  observed_at: '2026-10-25T22:48:36+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.88
+    confidence: 0.82
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.15
+      '2': 0.82
+      '3': 0.03
+  observed_at: '2026-10-25T22:52:59+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/scripts/run_codex_exec.sh
+  - em-review/scripts/run_codex_exec.sh
+  - tests/test_codex_hook_wrapper_args.py
+  changed_lines_approx: 0
+  new_functions_needed: 0
+  new_files_needed: []
+  new_dependencies_needed: []
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  work_still_required_evidence: 両ラッパーのフック登録は PreToolUse のみで、hooks.Stop は存在しない（em-workflow/scripts/run_codex_exec.sh:241、em-review/scripts/run_codex_exec.sh:195）。既存ガードの2コピーはバイト単位で同一で、tool_input.command
+    を静的解析し、プロセスを停止する処理はない。tests/test_codex_hook_wrapper_args.py:291 は両モードと workflow
+    の --litellm 経路で PreToolUse の登録を確認しているが、Stop の登録や端末入力待ちのプロセス停止は検証していない。tests/test_codex_repo_hook_trust.py:652
+    に子孫列挙と強制終了の補助処理があるが、テストの時間制限超過時に使われ、端末の判定は行わない。python3 -i・bash -i の終了時停止、通常コマンドでの停止対象なし、readwrite・--litellm
+    での対象検出、意図したバックグラウンドプロセスへの影響を確認する実装・テスト・結果記録は見つからない。--litellm は em-workflow のみ対応している。既存ガードは
+    python3 -i と bash -i を拒否するため、停止検証では対象が実際に起動したことの確認も必要になる。ファイルは変更しておらず、テストも実行していない。数量欄の0と新規ファイル欄の空配列は今回の実変更を示し、将来必要な変更行数・関数数・新規ファイル数の見積もりではない。それらは実装未確定のため算定していない。
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 0
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  caller_and_dependency_count: 0
+  changes_external_contract: true
+  changes_behavior: true
+decided_at: '2026-10-25T22:53:02+09:00'

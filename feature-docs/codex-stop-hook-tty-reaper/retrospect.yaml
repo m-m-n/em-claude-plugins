@@ -1,0 +1,32 @@
+feature: codex-stop-hook-tty-reaper
+collected_at: "2026-10-26T02:25:35+09:00"
+session_ids: [01a17417-6ca4-71af-aea9-fd068f17ef01]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の最終読みが bucket 2（新しいロジック・外部契約の変更）に 0.82 の確信度を置いた"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.59, confidence: 0.39}
+        observed_at: "2026-10-25T22:48:36+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.88, confidence: 0.82}
+        observed_at: "2026-10-25T22:52:59+09:00"
+    pre_survey_estimate:
+      work_still_required: true
+      test_change_kind: new_behavior_tests
+      body_change_kind: new_logic
+      change_containment: multiple_modules
+      changes_external_contract: true
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "verify 1 回目で TS-11（--litellm 経路の実機確認）が失敗し、rework 1 ラウンド（task0003: --litellm の起動 home を一時ディレクトリの外へ移す）で解消した。--litellm readwrite 経路は一時ディレクトリ配下の home だと codex-linux-sandbox を起動できなかった"
+  - "review の medium 2 件（PID 再利用の競合: 5582689c13871652 / 97ed063cadd4f280、4d46391b03cbd7bd）は auto-fix の対象外のまま 2 ラウンド持ち越した"
+  - "architecture 観点の high 1 件（2 つのコピーの重複）は SPEC FR2 の明示により false positive として退けた"
