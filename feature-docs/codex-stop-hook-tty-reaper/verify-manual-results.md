@@ -68,3 +68,43 @@ their exec_command returned, before the Stop hook ran. The hook therefore
 caught neither of them; Codex itself ended them.
 
 - Result: recorded (FR7 records the outcome only).
+
+# Verify round 2
+
+Codex version: codex-cli 0.164.0. Same procedure as round 1: a copy of
+em-workflow's `scripts/` with `references/codex-cli.yaml` and a stub
+`codex-hook-interactive-guard.py`; the wrapper and `codex-hook-tty-reaper.py`
+in the copy are byte-identical to the integration branch. Process listings
+with `ps -eo pid,ppid,stat,tty,args` before and after each run. The verifier
+sent no signal.
+
+## Scope of round 2
+
+Since round 1, the only code change is task0003: the `--litellm` branch of
+em-workflow's `run_codex_exec.sh` creates the launch home under the cache
+directory instead of the temporary directory. The default route, em-review's
+wrapper, the Stop hook and the PreToolUse registration are unchanged. Round 2
+therefore re-runs only the `--litellm` part of TS-11, and carries over the
+round 1 results of TS-9, TS-10, the readwrite routes of TS-11 and TS-12.
+Codex was consulted on carrying over versus re-running all manual items and
+chose carrying over, given the unchanged code paths and the passing tests.
+
+## Automated tests
+
+- `python3 -m unittest discover -s tests`: 11696 tests, OK (1 skipped,
+  outside the three focused modules).
+- `python3 -m unittest tests.test_codex_hook_tty_reaper tests.test_codex_hook_wrapper_args tests.test_codex_litellm_launch_home_location`:
+  161 tests, OK, none skipped.
+
+## TS-11 (SPEC MV-3): `--litellm`
+
+| Route | Outcome |
+|---|---|
+| `--litellm muse-spark`, readwrite | `python3 -i` and `bash -i` both started with tty (the `>>>` and bash prompts appeared). `hook: Stop` ran; both sessions `exited 1`. Wrapper exit status 0. Before and after: no matching process. Pass |
+| `--litellm muse-spark`, readonly | Two exec_command calls failed argument parsing (a float `1000.0` where an integer was expected) before the model retried with defaults; then both processes started with tty. `hook: Stop` ran; both sessions `exited 1`. Wrapper exit status 0. Before and after: no matching process. Pass |
+
+- The cache directory's `em-workflow` directory did not exist before the
+  runs, was created by the first run, and was empty after both runs: the
+  launch home was created there and removed on exit. No sandbox spawn error
+  appeared.
+- Result: pass. Together with round 1's readwrite routes, AC-5 is confirmed.
