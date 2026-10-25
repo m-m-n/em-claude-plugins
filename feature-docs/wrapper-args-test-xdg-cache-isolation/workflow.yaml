@@ -116,9 +116,9 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/wrapper-args-test-xdg-cache-isolation/task0001
 review:
   status: pending
   rounds_completed: 0
