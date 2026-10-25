@@ -2,73 +2,43 @@ schema_version: 1
 feature: merge-task-post-lock-rebind
 created: '2026-10-25'
 base_branch: main
-goal: '# merge-task.sh がロック待機中のブランチ切り替えで、確認済みでないブランチを統合し得る
-
+goal: |
+  # merge-task.sh がロック待機中のブランチ切り替えで、確認済みでないブランチを統合し得る
 
   種別: バグ
 
-
   ## 現象
+  `em-workflow/scripts/merge-task.sh` は、タスクブランチへの束縛（HEAD の symbolic-ref が `refs/heads/em-workflow/{feature}/{taskNNNN}` であることの確認）を flock の前に一度だけ行う。統合するコミットはロック取得後に `git rev-parse --verify HEAD` で読む。
 
-  `em-workflow/scripts/merge-task.sh` は、タスクブランチへの束縛（HEAD の symbolic-ref が `refs/heads/em-workflow/{feature}/{taskNNNN}`
-  であることの確認）を flock の前に一度だけ行う。統合するコミットはロック取得後に `git rev-parse --verify HEAD` で読む。
-
-
-  ロック待ちの間に同じタスクのワークツリーで別ブランチへ切り替わると、そのブランチの先端が `merge: {TASK_ID}` として統合ブランチに入り、exit
-  0 と元の TASK_ID の `merged` イベントが記録される。
-
+  ロック待ちの間に同じタスクのワークツリーで別ブランチへ切り替わると、そのブランチの先端が `merge: {TASK_ID}` として統合ブランチに入り、exit 0 と元の TASK_ID の `merged` イベントが記録される。
 
   feature `merge-task-worktree-binding` のレビュー round1 で medium として検出した（stable_id `382656461464cbe1`）。
 
-
   ## 再現手順
-
   1. 共有の `em-workflow-merge.lock` を別プロセスで保持する
-
   2. 正しい task0001 のワークツリーから `merge-task.sh` を起動する（ロック待ちになる）
-
   3. 待機中に同じワークツリーで、別コミットを持つブランチへ切り替える
-
   4. ロックを解放すると、別ブランチの内容が task0001 として統合される
 
-
   ## 期待する挙動
-
   ロック取得後に統合するコミットが、確認済みのタスクブランチの先端と一致する。一致しない場合は exit 2 で拒否する。
 
-
   修正案:
-
   - ロック前の拒否はそのまま残す
-
   - クリティカルセクションの中で HEAD_SHA を確認済みのタスクブランチ ref から取る
-
   - flock の後に symbolic-ref をもう一度確かめ、一致しなければ exit 2
-
-  - `tests/test_merge_unverified_exit_doc_contract.py` の `EXPECTED_MERGE_TASK_SH_SHA256`
-  も同じ変更で更新する
-
+  - `tests/test_merge_unverified_exit_doc_contract.py` の `EXPECTED_MERGE_TASK_SH_SHA256` も同じ変更で更新する
 
   ## 完了の定義
-
   - [ ] 再現手順で現象が起きない
-
   - [ ] 再発を検出するテストがある
 
-
   ## 該当箇所
-
   - `em-workflow/scripts/merge-task.sh:118`（ロック前の束縛確認）
-
   - `em-workflow/scripts/merge-task.sh:134`（ロック後の HEAD 読み取り）
 
-
   ## 実害・発生条件
-
-  同じタスクのワークツリーで、implementer 以外のプロセスがロック待ちの間にブランチを切り替えたときだけ。implementer は前景で merge-task.sh
-  の終了を待つので、起こりにくい。
-
-  '
+  同じタスクのワークツリーで、implementer 以外のプロセスがロック待ちの間にブランチを切り替えたときだけ。implementer は前景で merge-task.sh の終了を待つので、起こりにくい。
 parent_branch: em-workflow/merge-task-post-lock-rebind/integration
 tier: reduced
 tier_decision:
@@ -112,14 +82,14 @@ workflow:
   - DESIGN.md
   - design/
   status: skipped
-  skipped_reason: tier reduced subtracts the design step; also no UI (shell script
-    and test change)
+  skipped_reason: tier reduced subtracts the design step; also no UI (shell script and test change)
 - id: create-plan
   artifacts:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: 0d47c879e0399f7a50c593d12cc237cad7c3500a
 - id: implement
   status: pending
 - id: review

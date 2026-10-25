@@ -1,11 +1,11 @@
 schema_version: 1
 feature: merge-task-post-lock-rebind
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 7c4bf204b511a209b901ad1b6fc72c5d88e38bfa
 last_input_digest: sha256:5b1bb7a704835042932b28eb3ac0f5b75ba2af6d32e865435a9fed9a097a3876
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
