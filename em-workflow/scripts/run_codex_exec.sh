@@ -240,8 +240,30 @@ toml_basic_string() {
 
 HOOK_SCRIPT="${SCRIPT_DIR}/codex-hook-interactive-guard.py"
 HOOK_COMMAND="python3 $(shell_single_quote "$HOOK_SCRIPT")"
+
+# --- Stop hook ---
+# Every launch also registers scripts/codex-hook-tty-reaper.py (the copy next
+# to this wrapper) as a Stop hook. When a Codex turn ends, the hook stops the
+# processes of this launch whose standard input is a terminal (/dev/pts/*), so
+# a command that Codex left running on a terminal does not outlive the turn.
+# The hook's one argument is this wrapper's own process ID, the anchor it uses
+# to tell which processes belong to this launch. It is $$, the main shell,
+# which waits on the launch and so stays an ancestor of the hook for the whole
+# launch -- never $BASHPID, which names whichever subshell evaluates it. For
+# the same reason this wrapper starts no other process that lives at the same
+# time as the `codex exec` launch below.
+# The path and the encoding are those of the interactive-guard registration
+# above (derived from this script's own location, single-quoted for the shell,
+# then written as a TOML basic string); the anchor is plain decimal digits. The
+# group has no matcher, and the single --dangerously-bypass-hook-trust below
+# covers this hook as well. The wrapper does not check that the file exists:
+# when it is missing, nothing is reaped and the launch is otherwise unchanged.
+STOP_HOOK_SCRIPT="${SCRIPT_DIR}/codex-hook-tty-reaper.py"
+STOP_HOOK_COMMAND="python3 $(shell_single_quote "$STOP_HOOK_SCRIPT") $$"
+
 HOOK_FLAG=(
   -c "hooks.PreToolUse=[{matcher=\"Bash\", hooks=[{type=\"command\", command=$(toml_basic_string "$HOOK_COMMAND")}]}]"
+  -c "hooks.Stop=[{hooks=[{type=\"command\", command=$(toml_basic_string "$STOP_HOOK_COMMAND")}]}]"
   --dangerously-bypass-hook-trust
 )
 
