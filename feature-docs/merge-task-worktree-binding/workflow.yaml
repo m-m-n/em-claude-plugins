@@ -131,7 +131,7 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: in_progress
+    status: merged
     branch: em-workflow/merge-task-worktree-binding/task0001
     notes: null
   task0002:
