@@ -1,18 +1,80 @@
 schema_version: 1
 feature: codex-stop-hook-tty-reaper
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: f24d26d724a084286c66a61fa01b11e584d4d445
 last_input_digest: sha256:b6852181a28a9ca7908af2c8846f66d4a3eee810e71f44262a66821c6ed55800
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-25T23:08:00+09:00'
+    questions:
+    - question_id: requirement.reap-target-scope
+      status: answered
+    - question_id: requirement.background-process-policy
+      status: answered
+    - question_id: requirement.version-bump
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+answers:
+  requirement.reap-target-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-25T23:08:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - all_tty_descendants
+    freeform: null
+    normalized_answer: 端末を持つ子孫すべて
+    resolution_note: 'gate: create-spec.requirement-clarification; Codex consulted
+      (harness: codex, 1 turn); orchestrator mapped the suggestion onto option all_tty_descendants;
+      Opus escalation not run; Codex rationale: 受け入れ条件は、末端に限定せず、Codex の子孫で標準入力が端末のまま残るプロセスを対象としている。末端だけでは、子を持つ対話シェルが残り、残存防止を満たせない場合がある。フック自身とその祖先を除外し、標準入力が
+      /dev/pts/* の子孫を子から順に止める案を推奨する。'
+  requirement.background-process-policy:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-25T23:08:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - record_only
+    freeform: null
+    normalized_answer: 記録だけする
+    resolution_note: 'gate: create-spec.requirement-clarification; Codex consulted
+      (harness: codex, 1 turn); orchestrator mapped the suggestion onto option record_only;
+      Opus escalation not run; Codex rationale: 受け入れ条件が求めているのは、巻き込みの確認と結果の記録であり、バックグラウンドプロセスの除外は要求していない。したがって、子孫関係と標準入力による判定を維持するのが依頼の範囲に沿っている。両ラッパーと
+      tests/test_codex_hook_wrapper_args.py は readwrite も扱うため、readonly の利用実態だけを根拠に影響がないとせず、その経路での結果も記録する。'
+  requirement.version-bump:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-25T23:08:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - patch_by_actions
+    freeform: null
+    normalized_answer: Actions に任せる
+    resolution_note: 'gate: create-spec.requirement-clarification; Codex consulted
+      (harness: codex, 1 turn); orchestrator mapped the suggestion onto option patch_by_actions;
+      Opus escalation not run; Codex rationale: 今回の変更は、終了後に対話プロセスが残って CPU を消費する不具合の修正として扱うのが妥当と判断する。.claude/rules/core-plugin-version-bump.md
+      は通常の変更では版番号を手動変更せず、main への push 後に Actions が patch を上げると定めている。.github/workflows/plugin-version-bump.yml
+      にもその処理があるため、両プラグインの版番号は変更しない。'
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-25T23:08:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 推奨に従う（design step は skip）
+    resolution_note: batch-policies.yaml create-spec.design-step -> decide_autonomously
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:b6852181a28a9ca7908af2c8846f66d4a3eee810e71f44262a66821c6ed55800
-  output_digest: null
+  output_digest: sha256:1b552b260695c0919e305aaf3828c11d372e7f55b9eb5b7e9be2b067f19b4750
   dispatch_digest_inputs:
     CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
     em-review/scripts/codex-hook-interactive-guard.py: sha256:e2e20ac0cbea0242585409132883dac89575da09b69ca62767528bad9c018539
@@ -25,9 +87,10 @@ worker_runs:
     test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
     tests/test_codex_hook_interactive_guard.py: sha256:82d3526ad9436e00d36f7d44575f88743e37f3134c0495378f24fd2aa40d34a6
     tests/test_codex_hook_wrapper_args.py: sha256:e2f0275bb3d4625b7255bca850bd6914883a63edf83f0cb211af4ce9542ebed9
+  self_write_set: []
 artifacts: []
 patches: []
-progress_fingerprint: null
+progress_fingerprint: sha256:20a5c4e98ed8322702fdca6e80d71caad570e59146fde8d17d06f0e0fb83c10b
 stale_redispatch_count: 0
 resolved_input_cache: {}
 last_error: null
