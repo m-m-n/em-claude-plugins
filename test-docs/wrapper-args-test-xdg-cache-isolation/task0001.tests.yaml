@@ -1,0 +1,46 @@
+task_id: task0001
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 11703 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 11713 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_wrapper_args.TestHarnessKeepsOutOfTheCallersCache.test_fr2_litellm_launch_leaves_the_callers_cache_directory_untouched
+      - tests.test_codex_hook_wrapper_args.TestCacheLeakIsDetectedWhenTheHarnessHandsTheCacheOver.test_fr3_a_cache_directory_given_through_extra_env_is_written_and_detected
+    red_confirmed: true
+    red_reason: "The removal is observed through its effect. Against the unchanged harness, the FR2 test failed in both modes with AssertionError: '<test-owned dir>' changed during the launch; entries that appeared: ['em-workflow']; an `em-workflow` entry is present. The override order is pinned by the FR3 test, which passed against the unchanged harness; it was observed to fail (AssertionError: False is not true at the em-workflow directory check, both modes) when the removal was temporarily placed after extra_env was applied, and the harness was restored afterwards."
+  AC-2:
+    tests:
+      - tests.test_codex_hook_wrapper_args.TestHarnessKeepsOutOfTheCallersCache.test_fr2_litellm_launch_leaves_the_callers_cache_directory_untouched
+    red_confirmed: true
+    red_reason: "Failed in readonly and readwrite against the unchanged harness: exit status 0 and one stub invocation passed, then the checker raised AssertionError: entries that appeared: ['em-workflow']; an `em-workflow` entry is present."
+  AC-3:
+    tests:
+      - tests.test_codex_hook_wrapper_args.TestCacheLeakCheckerDetectsRegressions.test_passes_silently_on_an_empty_directory_that_stays_empty
+      - tests.test_codex_hook_wrapper_args.TestCacheLeakCheckerDetectsRegressions.test_passes_silently_when_the_contents_match
+      - tests.test_codex_hook_wrapper_args.TestCacheLeakCheckerDetectsRegressions.test_raises_naming_the_em_workflow_entry
+      - tests.test_codex_hook_wrapper_args.TestCacheLeakCheckerDetectsRegressions.test_names_the_em_workflow_entry_when_it_holds_a_nested_entry
+      - tests.test_codex_hook_wrapper_args.TestCacheLeakCheckerDetectsRegressions.test_raises_naming_an_unrelated_new_entry
+      - tests.test_codex_hook_wrapper_args.TestCacheLeakCheckerDetectsRegressions.test_raises_naming_an_entry_that_disappeared
+      - tests.test_codex_hook_wrapper_args.TestCacheLeakCheckerDetectsRegressions.test_snapshot_lists_every_entry_beneath_the_directory
+    red_confirmed: true
+    red_reason: "All seven errored before the helpers existed: NameError: name '_cache_snapshot' is not defined. The FR2 and FR3 tests call the same _cache_snapshot and _assert_cache_unchanged helpers."
+  AC-4:
+    tests:
+      - tests.test_codex_hook_wrapper_args.TestCacheLeakIsDetectedWhenTheHarnessHandsTheCacheOver.test_fr3_a_cache_directory_given_through_extra_env_is_written_and_detected
+    red_confirmed: false
+    red_reason: "The test passed against the unchanged harness, because it names XDG_CACHE_HOME through extra_env and that handover already reached the wrapper before FR1; no red state occurred for this change. It is a non-vacuity proof: it was observed to fail (AssertionError: False is not true at the em-workflow directory check, both modes) with the removal temporarily placed after extra_env, and the harness was restored afterwards."
+  AC-5:
+    tests:
+      - tests.test_codex_hook_wrapper_args.TestHarnessKeepsOutOfTheCallersCache.test_fr2_litellm_launch_leaves_the_callers_cache_directory_untouched
+    red_confirmed: true
+    red_reason: "Run against the unchanged harness, the test failed on the em-workflow entry (AssertionError: entries that appeared: ['em-workflow']), not on a launch error: exit status 0 and exactly one stub invocation held before the checker raised. It passes after the change."
+  AC-6:
+    tests:
+      - tests.test_codex_hook_wrapper_args.TestHarnessNeverReachesRealCodex.test_module_imports_are_all_stdlib
+      - tests.test_codex_hook_wrapper_args.TestHarnessKeepsOutOfTheCallersCache.test_fr2_litellm_launch_leaves_the_callers_cache_directory_untouched
+    red_confirmed: true
+    red_reason: "The two-module run with XDG_CACHE_HOME set to a fresh empty absolute directory, repeated with only the new removal line deleted from the harness, failed in the FR2 test (readonly and readwrite) and left an em-workflow entry in that directory; the line was restored afterwards. test_module_imports_are_all_stdlib is a guard that passed before and after."
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: "A change-set check against the implement base commit (git diff --name-only shows tests/test_codex_hook_wrapper_args.py and this record only). No existing test checks the change set: the search of tests/ by path and by basename test_codex_hook_wrapper_args found only a docstring mention in tests/test_codex_litellm_launch_home_location.py, which does not exercise the change set, so no executable check can be made to fail."

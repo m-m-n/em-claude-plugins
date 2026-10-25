@@ -76,6 +76,22 @@ and map to that task's Acceptance Criteria:
   HOME), standard-library imports only. The Stop hook is never executed and
   its file is never required (IMPLEMENTATION.md D3): `python3` is replaced by
   a recorder when a recorded command is run.
+
+The module also covers the cache isolation of the harness of
+feature-docs/wrapper-args-test-xdg-cache-isolation/tasks/task0001.md. The
+harness removes the caller's `XDG_CACHE_HOME` before it starts the wrapper, so
+a `--litellm` launch never creates `em-workflow` in the caller's cache
+directory:
+
+- FR1: `_run_wrapper_pid` drops `XDG_CACHE_HOME` next to `CODEX_HOME` and
+  `CODEX_OTLP_ENDPOINT`, before `extra_env` is applied.
+- FR2: `TestHarnessKeepsOutOfTheCallersCache` points the test process's
+  `XDG_CACHE_HOME` at a test-owned empty directory and checks, per mode, that
+  the directory is unchanged after a `--litellm` launch.
+- FR3: `TestCacheLeakIsDetectedWhenTheHarnessHandsTheCacheOver` hands such a
+  directory to the wrapper through `extra_env` and checks that the same
+  checker catches the `em-workflow` entry the launch writes there;
+  `TestCacheLeakCheckerDetectsRegressions` pins the checker's own behavior.
 """
 
 import ast
@@ -91,6 +107,7 @@ import tempfile
 import tomllib
 import unittest
 from pathlib import Path
+from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 WORKFLOW_SCRIPTS_DIR = REPO_ROOT / "em-workflow" / "scripts"
@@ -196,7 +213,12 @@ def _read_log(log_path):
 
 def _run_wrapper_pid(wrapper_path, wrapper_args, extra_env=None, cwd=None, timeout=30):
     """Runs a wrapper as a subprocess with a stub `codex` first on PATH and
-    an isolated HOME (AC-7). Returns (CompletedProcess, list of recorded
+    an isolated HOME (AC-7). The caller's `XDG_CACHE_HOME` is removed along
+    with `CODEX_HOME` and `CODEX_OTLP_ENDPOINT`, so the wrapper's `--litellm`
+    launch home is placed under the isolated HOME, inside this run's own
+    temporary directory, and never in the caller's cache directory; an
+    `XDG_CACHE_HOME` named in `extra_env` is applied after the removals and
+    still reaches the wrapper. Returns (CompletedProcess, list of recorded
     launches, process ID of the wrapper). The wrapper is started directly
     as `bash <script>`, so the process ID the harness reads is that of the
     shell process that runs the wrapper script and later waits on the launch.
@@ -220,6 +242,7 @@ def _run_wrapper_pid(wrapper_path, wrapper_args, extra_env=None, cwd=None, timeo
         env["CODEX_STUB_LOG"] = str(log_path)
         env.pop("CODEX_OTLP_ENDPOINT", None)
         env.pop("CODEX_HOME", None)
+        env.pop("XDG_CACHE_HOME", None)
         if extra_env:
             env.update(extra_env)
 
@@ -281,6 +304,39 @@ def _launch_argv(wrapper_path, mode, path_args, extra_env=None, prompt="do the t
         wrapper_path, mode, path_args, extra_env=extra_env, prompt=prompt
     )
     return record["argv"]
+
+
+def _cache_snapshot(directory):
+    """The set of relative paths of every entry beneath `directory`,
+    recursively. The directories this module inspects start empty and the
+    wrapper only creates directories there, so names are enough."""
+    root = str(directory)
+    entries = set()
+    for current, dirnames, filenames in os.walk(root):
+        for name in (*dirnames, *filenames):
+            entries.add(os.path.relpath(os.path.join(current, name), root))
+    return entries
+
+
+def _assert_cache_unchanged(directory, before):
+    """The cache-leak checker (FR2 / FR3). `before` is the `_cache_snapshot`
+    taken before a launch. Returns without effect when `directory` still holds
+    exactly those entries; otherwise raises with a message that names the
+    entries that appeared or disappeared, and says so explicitly when an
+    `em-workflow` entry is present."""
+    after = _cache_snapshot(directory)
+    if after == before:
+        return
+    appeared = sorted(after - before)
+    disappeared = sorted(before - after)
+    message = f"{str(directory)!r} changed during the launch"
+    if appeared:
+        message += f"; entries that appeared: {appeared!r}"
+    if disappeared:
+        message += f"; entries that disappeared: {disappeared!r}"
+    if any(Path(entry).parts[0] == "em-workflow" for entry in after):
+        message += "; an `em-workflow` entry is present"
+    raise AssertionError(message)
 
 
 def _find_adjacent(argv, expected):
@@ -944,6 +1000,67 @@ class TestHarnessNeverReachesRealCodex(unittest.TestCase):
         self.assertTrue(imported <= set(sys.stdlib_module_names), imported)
 
 
+class TestHarnessKeepsOutOfTheCallersCache(unittest.TestCase):
+    """FR2: a `--litellm` launch through the harness creates nothing in the
+    cache directory the test process names with `XDG_CACHE_HOME`. The
+    directory is test-owned and absolute, so a leak lands there and never in
+    the real cache."""
+
+    def _new_cache_dir(self):
+        # A fresh, empty directory per launch: the wrapper leaves its
+        # `em-workflow` directory behind, so a reused directory would hide a
+        # leak from the next snapshot.
+        cache_dir = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        self.assertTrue(cache_dir.is_absolute(), cache_dir)
+        self.assertEqual(_cache_snapshot(cache_dir), set())
+        return cache_dir
+
+    def test_fr2_litellm_launch_leaves_the_callers_cache_directory_untouched(self):
+        wrapper = LITELLM_PATH[1] / WRAPPER_NAME
+        for mode in MODES:
+            with self.subTest(mode=mode):
+                cache_dir = self._new_cache_dir()
+                with mock.patch.dict(os.environ, {"XDG_CACHE_HOME": str(cache_dir)}):
+                    before = _cache_snapshot(cache_dir)
+                    proc, launches, _ = _run_wrapper_pid(
+                        wrapper, [mode, *LITELLM_PATH[2], "do the thing"]
+                    )
+                self.assertEqual(proc.returncode, 0, proc.stderr)
+                self.assertEqual(len(launches), 1, launches)
+                _assert_cache_unchanged(cache_dir, before)
+
+
+class TestCacheLeakIsDetectedWhenTheHarnessHandsTheCacheOver(unittest.TestCase):
+    """FR3, non-vacuity of the test above: handing the same kind of directory
+    to the wrapper as `XDG_CACHE_HOME` through `extra_env` (what the harness
+    passed on its own before FR1) makes the launch write `em-workflow` there,
+    and the checker catches it against the pre-launch snapshot. The override
+    also shows that `extra_env` is applied after the harness's own removal of
+    `XDG_CACHE_HOME`."""
+
+    def test_fr3_a_cache_directory_given_through_extra_env_is_written_and_detected(self):
+        wrapper = LITELLM_PATH[1] / WRAPPER_NAME
+        for mode in MODES:
+            with self.subTest(mode=mode):
+                cache_dir = Path(self.enterContext(tempfile.TemporaryDirectory()))
+                self.assertTrue(cache_dir.is_absolute(), cache_dir)
+                before = _cache_snapshot(cache_dir)
+                self.assertEqual(before, set())
+                proc, launches, _ = _run_wrapper_pid(
+                    wrapper,
+                    [mode, *LITELLM_PATH[2], "do the thing"],
+                    extra_env={"XDG_CACHE_HOME": str(cache_dir)},
+                )
+                # The launch itself succeeded, so the failure below can only
+                # come from the cache write.
+                self.assertEqual(proc.returncode, 0, proc.stderr)
+                self.assertEqual(len(launches), 1, launches)
+                self.assertTrue((cache_dir / "em-workflow").is_dir())
+                with self.assertRaises(AssertionError) as caught:
+                    _assert_cache_unchanged(cache_dir, before)
+                self.assertIn("em-workflow", str(caught.exception))
+
+
 class TestCheckerDetectsRegressions(unittest.TestCase):
     """Non-vacuity: the registration checker and the adjacency matcher fail
     against forged input, so a green run above means something."""
@@ -1147,6 +1264,66 @@ class TestStopCheckerDetectsRegressions(unittest.TestCase):
             with self.subTest(anchor=bad):
                 with self.assertRaises(AssertionError):
                     _assert_stop_registered(self._good_argv(), self.HOOK_PATH, bad)
+
+
+class TestCacheLeakCheckerDetectsRegressions(unittest.TestCase):
+    """Non-vacuity (AC-3): the cache-leak checker passes silently when a
+    directory is unchanged and raises, naming the entries, when it is not."""
+
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
+
+    def test_passes_silently_on_an_empty_directory_that_stays_empty(self):
+        before = _cache_snapshot(self.root)
+        self.assertIsNone(_assert_cache_unchanged(self.root, before))
+
+    def test_passes_silently_when_the_contents_match(self):
+        (self.root / "kept" / "nested").mkdir(parents=True)
+        (self.root / "kept" / "file.txt").write_text("x", encoding="utf-8")
+        before = _cache_snapshot(self.root)
+        self.assertIsNone(_assert_cache_unchanged(self.root, before))
+
+    def test_raises_naming_the_em_workflow_entry(self):
+        before = _cache_snapshot(self.root)
+        (self.root / "em-workflow").mkdir()
+        with self.assertRaises(AssertionError) as caught:
+            _assert_cache_unchanged(self.root, before)
+        self.assertIn("em-workflow", str(caught.exception))
+
+    def test_names_the_em_workflow_entry_when_it_holds_a_nested_entry(self):
+        before = _cache_snapshot(self.root)
+        (self.root / "em-workflow" / "codex-launch-home.AbC123").mkdir(parents=True)
+        with self.assertRaises(AssertionError) as caught:
+            _assert_cache_unchanged(self.root, before)
+        message = str(caught.exception)
+        self.assertIn("em-workflow", message)
+        self.assertIn("codex-launch-home.AbC123", message)
+
+    def test_raises_naming_an_unrelated_new_entry(self):
+        before = _cache_snapshot(self.root)
+        (self.root / "something-else").mkdir()
+        with self.assertRaises(AssertionError) as caught:
+            _assert_cache_unchanged(self.root, before)
+        message = str(caught.exception)
+        self.assertIn("something-else", message)
+        self.assertNotIn("em-workflow", message)
+
+    def test_raises_naming_an_entry_that_disappeared(self):
+        (self.root / "was-here").mkdir()
+        before = _cache_snapshot(self.root)
+        (self.root / "was-here").rmdir()
+        with self.assertRaises(AssertionError) as caught:
+            _assert_cache_unchanged(self.root, before)
+        self.assertIn("was-here", str(caught.exception))
+
+    def test_snapshot_lists_every_entry_beneath_the_directory(self):
+        (self.root / "a" / "b").mkdir(parents=True)
+        (self.root / "a" / "b" / "c.txt").write_text("x", encoding="utf-8")
+        (self.root / "d.txt").write_text("x", encoding="utf-8")
+        self.assertEqual(
+            _cache_snapshot(self.root),
+            {"a", os.path.join("a", "b"), os.path.join("a", "b", "c.txt"), "d.txt"},
+        )
 
 
 if __name__ == "__main__":
