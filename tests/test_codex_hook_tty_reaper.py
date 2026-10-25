@@ -1,0 +1,1476 @@
+"""Unit tests for `scripts/codex-hook-tty-reaper.py`, the Codex Stop hook that
+ships as two byte-identical copies: one in `em-workflow/` and one in
+`em-review/` (feature-docs/codex-stop-hook-tty-reaper/tasks/task0001.md).
+
+Acceptance Criteria covered:
+
+- AC-1 (FR2, NFR5): both copies exist, are byte-identical and import only the
+  standard library; importing a copy performs no action.
+- AC-2 (FR3, FR7, TM-4): descendants with a `/dev/pts/*` standard input are
+  stopped, whether they have a child or run in their own session; a pipe
+  standard input is left alone; a process-name field that imitates the
+  following fields cannot shift the parent or the start time.
+- AC-3 (FR3, FR4): a parent and its child are both stopped, the child first
+  in both the SIGTERM and the SIGKILL phase.
+- AC-4 (FR4, NFR2, TM-3): SIGTERM first, SIGKILL no earlier than 0.5 s after
+  the last SIGTERM, a SIGTERM-ignoring process is gone within the time bound,
+  and a target whose start time changed gets no further signal.
+- AC-5 (NFR1, NFR6, TM-2): outsiders and the hook's ancestors are never
+  signalled; an anchor argument that is not exactly one ASCII-decimal value
+  greater than 1 naming a proper ancestor of the hook stops nothing.
+- AC-6 (FR4, FR5, NFR6, TM-1, TM-5): nothing on stdout or stderr and exit 0 on
+  every path; invalid or open standard input stops nothing; its fields choose
+  no target; failures stop further signals.
+- AC-7 (NFR5): a missing process table stops nothing.
+
+Two kinds of test:
+
+- Real-process tests start a pseudo-Codex tree of their own: a Python process
+  that forks descendants, gives the chosen ones a pseudo-terminal as standard
+  input and the others a pipe, and runs the hook as a separate process that
+  descends from it. Every anchor passed to the hook in these tests is a
+  process the test started (NFR4); the test sends no signal itself. Every
+  process the tests start ends by itself within `LIFETIME` seconds, and
+  normally at once, when the test closes the control pipe.
+- In-process tests drive `main()` over a fabricated process table in a
+  temporary directory, a recording signal sender and a fake clock. No real
+  signal is sent. The hook is loaded from its file path with bytecode writing
+  disabled, so no `__pycache__` lands in a distributed plugin directory.
+
+Standard library only, per test/README.md.
+"""
+
+import ast
+import contextlib
+import importlib.util
+import inspect
+import io
+import json
+import os
+import pty
+import select
+import shutil
+import signal
+import subprocess
+import sys
+import tempfile
+import threading
+import time
+import unittest
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+HOOK_NAME = "codex-hook-tty-reaper.py"
+HOOK_PATHS = {
+    "em-workflow": REPO_ROOT / "em-workflow" / "scripts" / HOOK_NAME,
+    "em-review": REPO_ROOT / "em-review" / "scripts" / HOOK_NAME,
+}
+HOOK = HOOK_PATHS["em-workflow"]
+
+# A process every real-process test starts ends by itself after this many
+# seconds, so a failed test leaves nothing running.
+LIFETIME = 20.0
+# How long a test waits for a signalled process to disappear, and how long it
+# lets a wrongly sent signal land before it calls a process "untouched".
+GONE_TIMEOUT = 3.0
+SETTLE_SECONDS = 0.2
+EVENT_TIMEOUT = 20.0
+
+# Fabricated PIDs start above any PID the kernel hands out (pid_max is at most
+# 4194304), so they never collide with the test process or a real process.
+FAKE_PID_BASE = 10_000_000
+
+
+def fake_pid(n):
+    return FAKE_PID_BASE + n
+
+
+def _real_process_skip_reason():
+    if not os.path.isdir("/proc") or not os.path.isdir("/proc/self"):
+        return "the platform has no /proc"
+    try:
+        master, slave = pty.openpty()
+    except OSError as exc:
+        return f"cannot allocate a pseudo-terminal: {exc}"
+    os.close(master)
+    os.close(slave)
+    return None
+
+
+REAL_PROCESS_SKIP = _real_process_skip_reason()
+
+
+def load_hook(path=HOOK):
+    """The hook as a module of its own, loaded without writing bytecode."""
+    spec = importlib.util.spec_from_file_location("codex_hook_tty_reaper_under_test", path)
+    module = importlib.util.module_from_spec(spec)
+    previous = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = previous
+    return module
+
+
+def imported_top_level_names(source):
+    tree = ast.parse(source)
+    names = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            names.update(alias.name.split(".")[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom):
+            names.add("." * node.level + (node.module or "").split(".")[0])
+    return names
+
+
+# --------------------------------------------------------------------------
+# Copies (AC-1, TS-2, TS-14)
+# --------------------------------------------------------------------------
+
+
+class TestCopies(unittest.TestCase):
+    def test_ac1_both_copies_exist(self):
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                self.assertTrue(path.is_file(), f"{path} is missing")
+
+    def test_ac1_the_two_copies_are_byte_identical(self):
+        self.assertEqual(
+            HOOK_PATHS["em-workflow"].read_bytes(),
+            HOOK_PATHS["em-review"].read_bytes(),
+        )
+
+    def test_ac1_each_copy_imports_only_standard_library_modules(self):
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                imported = imported_top_level_names(path.read_text(encoding="utf-8"))
+                self.assertTrue(imported, "the hook imports nothing at all")
+                self.assertTrue(imported <= set(sys.stdlib_module_names), imported)
+
+    def test_ac1_importing_a_copy_performs_no_action(self):
+        # Only definitions at the top level, plus the command-line guard.
+        allowed = (
+            ast.Import, ast.ImportFrom, ast.FunctionDef, ast.ClassDef,
+            ast.Assign, ast.AnnAssign,
+        )
+        for plugin, path in HOOK_PATHS.items():
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            guards = 0
+            for index, node in enumerate(tree.body):
+                with self.subTest(copy=plugin, statement=index):
+                    if (
+                        index == 0
+                        and isinstance(node, ast.Expr)
+                        and isinstance(node.value, ast.Constant)
+                        and isinstance(node.value.value, str)
+                    ):
+                        continue
+                    if isinstance(node, ast.If):
+                        guards += 1
+                        test = ast.unparse(node.test)
+                        self.assertIn(test, ('__name__ == "__main__"', "__name__ == '__main__'"))
+                        continue
+                    self.assertIsInstance(node, allowed, ast.dump(node)[:80])
+            with self.subTest(copy=plugin, statement="guard"):
+                self.assertEqual(guards, 1)
+
+    def test_ac1_loading_a_copy_leaves_no_bytecode_cache_in_a_plugin_directory(self):
+        for plugin, path in HOOK_PATHS.items():
+            load_hook(path)
+            with self.subTest(copy=plugin):
+                self.assertEqual(
+                    list(path.parent.glob("__pycache__/codex-hook-tty-reaper*")), []
+                )
+
+    def test_nfr6_the_hook_reads_no_environment_variable(self):
+        source = HOOK.read_text(encoding="utf-8") if HOOK.is_file() else ""
+        self.assertTrue(source, "the hook is missing")
+        tree = ast.parse(source)
+        attributes = {n.attr for n in ast.walk(tree) if isinstance(n, ast.Attribute)}
+        names = {n.id for n in ast.walk(tree) if isinstance(n, ast.Name)}
+        for forbidden in ("environ", "environb", "getenv", "getenvb", "putenv"):
+            self.assertNotIn(forbidden, attributes | names)
+
+    def test_nfr6_the_defaults_of_main_are_the_real_collaborators(self):
+        main = load_hook().main
+        parameters = inspect.signature(main).parameters
+        self.assertEqual(parameters["proc_dir"].default, "/proc")
+        self.assertIs(parameters["send_signal"].default, os.kill)
+        self.assertIs(parameters["clock"].default, time.monotonic)
+        self.assertIs(parameters["sleep"].default, time.sleep)
+
+
+class TestThisModule(unittest.TestCase):
+    def test_ts14_module_imports_are_all_stdlib(self):
+        imported = imported_top_level_names(Path(__file__).read_text(encoding="utf-8"))
+        self.assertTrue(imported <= set(sys.stdlib_module_names), imported)
+
+
+# --------------------------------------------------------------------------
+# In-process fixtures: a fabricated process table, a fake clock, a recording
+# signal sender.
+# --------------------------------------------------------------------------
+
+
+class FakeClock:
+    def __init__(self):
+        self.now = 1000.0
+
+    def clock(self):
+        return self.now
+
+    def sleep(self, seconds):
+        self.now += seconds
+
+
+class FakeTable:
+    """A directory shaped like /proc: `<pid>/stat` and `<pid>/fd/0`."""
+
+    def __init__(self, root):
+        self.root = Path(root)
+        self.entries = {}
+
+    @staticmethod
+    def stat_line(pid, ppid, state, start, comm, pgrp, session):
+        # 52 fields, as the kernel writes them. `comm` goes in verbatim.
+        return (
+            f"{pid} ({comm}) {state} {ppid} {pgrp} {session} 0 -1 4194560 "
+            + "0 " * 8
+            + "20 0 1 0 "
+            + f"{start} "
+            + " ".join(["0"] * 30)
+            + "\n"
+        ).encode()
+
+    def add(self, pid, ppid, *, state="S", start=None, stdin=None, comm="proc",
+            pgrp=None, session=None):
+        self.entries[pid] = {
+            "ppid": ppid,
+            "state": state,
+            "start": 1000 + pid % 100000 if start is None else start,
+            "comm": comm,
+            "pgrp": pid if pgrp is None else pgrp,
+            "session": pid if session is None else session,
+        }
+        self._write(pid)
+        if stdin is not None:
+            link_dir = self.root / str(pid) / "fd"
+            link_dir.mkdir(parents=True, exist_ok=True)
+            if os.path.lexists(link_dir / "0"):
+                os.unlink(link_dir / "0")
+            os.symlink(stdin, link_dir / "0")
+
+    def _write(self, pid):
+        entry = self.entries[pid]
+        directory = self.root / str(pid)
+        directory.mkdir(parents=True, exist_ok=True)
+        (directory / "stat").write_bytes(
+            self.stat_line(
+                pid, entry["ppid"], entry["state"], entry["start"],
+                entry["comm"], entry["pgrp"], entry["session"],
+            )
+        )
+
+    def change(self, pid, **fields):
+        self.entries[pid].update(fields)
+        self._write(pid)
+
+    def remove(self, pid):
+        shutil.rmtree(self.root / str(pid), ignore_errors=True)
+
+    def garble(self, pid, data=b"this is not a stat record\n"):
+        (self.root / str(pid) / "stat").write_bytes(data)
+
+
+class World:
+    """A fabricated machine: init, an anchor, a middle process and the hook
+    (the test process itself, whose real PID the hook reads)."""
+
+    def __init__(self, case):
+        self.case = case
+        self.dir = Path(case.enterContext(tempfile.TemporaryDirectory()))
+        self.table = FakeTable(self.dir)
+        self.hook = load_hook()
+        self.fake_clock = FakeClock()
+        self.sent = []
+        self.on_send = None
+        self.on_sleep = None
+        self.me = os.getpid()
+        self.anchor = fake_pid(1)
+        self.mid = fake_pid(2)
+        self.table.add(1, 0, comm="init")
+        self.table.add(self.anchor, 1, stdin="/dev/pts/1", comm="anchor")
+        self.table.add(self.mid, self.anchor, stdin="/dev/pts/2", comm="mid")
+        self.table.add(self.me, self.mid, stdin="pipe:[1]", comm="hook")
+        self.out = ""
+        self.err = ""
+
+    def _send(self, pid, signum):
+        self.sent.append((pid, signum, self.fake_clock.now))
+        if self.on_send is not None:
+            self.on_send(pid, signum)
+
+    def _sleep(self, seconds):
+        self.fake_clock.sleep(seconds)
+        if self.on_sleep is not None:
+            self.on_sleep()
+
+    def run(self, argv=None, stdin=b"{}", proc_dir=None, keep_stdin_open=False):
+        argv = [str(self.anchor)] if argv is None else argv
+        read_end, write_end = os.pipe()
+
+        def feed():
+            # A thread: a payload larger than the pipe buffer must not block
+            # the test before the hook starts reading.
+            try:
+                view = memoryview(stdin)
+                while view:
+                    view = view[os.write(write_end, view):]
+            except OSError:
+                pass
+            finally:
+                if not keep_stdin_open:
+                    os.close(write_end)
+
+        feeder = threading.Thread(target=feed)
+        feeder.start()
+        out, err = io.StringIO(), io.StringIO()
+        try:
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                code = self.hook.main(
+                    argv,
+                    stdin_fd=read_end,
+                    proc_dir=str(self.dir if proc_dir is None else proc_dir),
+                    send_signal=self._send,
+                    clock=self.fake_clock.clock,
+                    sleep=self._sleep,
+                )
+        finally:
+            os.close(read_end)
+            feeder.join()
+            if keep_stdin_open:
+                os.close(write_end)
+        self.out, self.err = out.getvalue(), err.getvalue()
+        self.case.assertEqual(code, 0)
+        self.case.assertEqual(self.out, "")
+        self.case.assertEqual(self.err, "")
+        return code
+
+    def terms(self):
+        return [pid for pid, signum, _ in self.sent if signum == signal.SIGTERM]
+
+    def kills(self):
+        return [pid for pid, signum, _ in self.sent if signum == signal.SIGKILL]
+
+    def signalled(self):
+        return {pid for pid, _, _ in self.sent}
+
+    def sequence(self):
+        return [(pid, signum) for pid, signum, _ in self.sent]
+
+
+class InProcessCase(unittest.TestCase):
+    def world(self, target=True):
+        world = World(self)
+        self.target = fake_pid(10)
+        if target:
+            world.table.add(self.target, world.anchor, stdin="/dev/pts/10", comm="target")
+        return world
+
+
+# --------------------------------------------------------------------------
+# AC-2, AC-3: which processes are targets, and in what order (in-process)
+# --------------------------------------------------------------------------
+
+
+class TestTargetSelection(InProcessCase):
+    def test_ac2_only_descendants_with_a_pts_standard_input_are_signalled(self):
+        world = self.world()
+        t = self.target
+        world.table.add(fake_pid(11), world.anchor, stdin="pipe:[2]")
+        world.table.add(fake_pid(12), world.anchor, stdin="/dev/null")
+        world.table.add(fake_pid(13), world.anchor)  # standard input unreadable
+        world.table.add(fake_pid(14), world.anchor, stdin="/dev/tty")
+        world.table.add(fake_pid(15), world.anchor, stdin="/dev/ptsx")
+        world.table.add(fake_pid(16), world.anchor, stdin="/tmp/pts/1")
+        world.run()
+        self.assertEqual(world.terms(), [t])
+        self.assertEqual(world.kills(), [t])
+        self.assertEqual(world.signalled(), {t})
+
+    def test_ac2_a_descendant_below_a_non_target_is_still_a_target(self):
+        world = self.world(target=False)
+        world.table.add(fake_pid(20), world.anchor, stdin="pipe:[3]")
+        world.table.add(fake_pid(21), fake_pid(20), stdin="/dev/pts/7")
+        world.run()
+        self.assertEqual(world.terms(), [fake_pid(21)])
+
+    def test_ac2_session_and_process_group_play_no_part(self):
+        world = self.world(target=False)
+        world.table.add(fake_pid(20), world.anchor, stdin="/dev/pts/7", pgrp=fake_pid(20), session=fake_pid(20))
+        world.table.add(fake_pid(21), world.anchor, stdin="/dev/pts/7", pgrp=fake_pid(99), session=fake_pid(98))
+        world.run()
+        self.assertEqual(sorted(world.terms()), [fake_pid(20), fake_pid(21)])
+
+    def test_ac2_a_descendant_with_children_is_a_target(self):
+        world = self.world(target=False)
+        world.table.add(fake_pid(20), world.anchor, stdin="/dev/pts/7")
+        world.table.add(fake_pid(21), fake_pid(20), stdin="pipe:[4]")
+        world.run()
+        self.assertEqual(world.terms(), [fake_pid(20)])
+
+    def test_ac2_a_terminal_whose_master_is_gone_still_counts(self):
+        world = self.world(target=False)
+        world.table.add(fake_pid(20), world.anchor, stdin="/dev/pts/7 (deleted)")
+        world.run()
+        self.assertEqual(world.terms(), [fake_pid(20)])
+
+    def test_nfr1_a_sibling_of_the_hook_below_the_anchor_is_a_target(self):
+        world = self.world(target=False)
+        world.table.add(fake_pid(20), world.mid, stdin="/dev/pts/7")
+        world.run()
+        self.assertEqual(world.terms(), [fake_pid(20)])
+
+    def test_nfr1_outsiders_and_hook_ancestors_with_a_pts_standard_input_are_not_signalled(self):
+        world = self.world()
+        # A second pseudo-Codex next to the anchor, with descendants.
+        parallel = fake_pid(60)
+        world.table.add(parallel, 1, stdin="/dev/pts/60")
+        world.table.add(fake_pid(61), parallel, stdin="/dev/pts/61")
+        world.table.add(fake_pid(62), fake_pid(61), stdin="/dev/pts/62")
+        # Further outsiders: a child of init, and one that lost its parent.
+        world.table.add(fake_pid(63), 1, stdin="/dev/pts/63")
+        world.table.add(fake_pid(64), fake_pid(999), stdin="/dev/pts/64")
+        world.run()
+        self.assertEqual(world.signalled(), {self.target})
+        for pid in (world.anchor, world.mid, world.me, 1, parallel):
+            self.assertNotIn(pid, world.signalled())
+
+    def test_ac2_a_zombie_target_receives_no_signal(self):
+        world = self.world(target=False)
+        world.table.add(fake_pid(20), world.anchor, stdin="/dev/pts/7", state="Z")
+        world.table.add(fake_pid(21), world.anchor, stdin="/dev/pts/8")
+        world.run()
+        self.assertEqual(world.signalled(), {fake_pid(21)})
+
+    def test_nfr6_the_hook_never_signals_itself(self):
+        world = self.world()
+        world.table.add(world.me, world.mid, stdin="/dev/pts/3")
+        world.run()
+        self.assertNotIn(world.me, world.signalled())
+
+    def test_ac6_an_unreadable_or_garbled_unrelated_entry_is_left_out(self):
+        world = self.world()
+        garbled = fake_pid(30)
+        world.table.add(garbled, world.anchor, stdin="/dev/pts/30")
+        world.table.garble(garbled)
+        child_of_garbled = fake_pid(31)
+        world.table.add(child_of_garbled, garbled, stdin="/dev/pts/31")
+        (world.dir / "self").mkdir()
+        (world.dir / "sys").write_text("not a process\n")
+        world.run()
+        self.assertEqual(world.terms(), [self.target])
+
+    def test_tm4_names_with_spaces_and_parentheses_keep_the_real_parent(self):
+        names = ["a b c", "(x)", ") (", "))))", "((", "a\nb", "x) S 1 1 1", ""]
+        for name in names:
+            with self.subTest(name=name):
+                world = self.world(target=False)
+                world.table.add(fake_pid(20), world.anchor, stdin="/dev/pts/7", comm=name)
+                world.run()
+                self.assertEqual(world.terms(), [fake_pid(20)])
+
+    def test_tm4_a_name_imitating_the_anchor_as_parent_does_not_pull_an_outsider_in(self):
+        world = self.world()
+        forged = f"x) R {world.anchor} 1 1 0 -1 0 0 0 0 0 0 0 0 0 20 0 1 0 5 (y"
+        outsider = fake_pid(50)
+        world.table.add(outsider, 1, stdin="/dev/pts/9", comm=forged, start=777)
+        world.run()
+        self.assertNotIn(outsider, world.signalled())
+        self.assertEqual(world.terms(), [self.target])
+
+    def test_tm4_a_name_imitating_an_outside_parent_does_not_hide_a_descendant(self):
+        world = self.world(target=False)
+        forged = "x) S 1 1 1 0 -1 0 0 0 0 0 0 0 0 0 20 0 1 0 424242 (y"
+        descendant = fake_pid(51)
+        world.table.add(descendant, world.anchor, stdin="/dev/pts/9", comm=forged, start=777)
+        world.run()
+        self.assertEqual(world.terms(), [descendant])
+        self.assertEqual(world.kills(), [descendant])
+
+    def test_tm4_a_name_imitating_a_zombie_does_not_hide_a_live_target(self):
+        world = self.world(target=False)
+        forged = "x) Z 1 1 1 0 -1 0 0 0 0 0 0 0 0 0 20 0 1 0 5 (y"
+        descendant = fake_pid(52)
+        world.table.add(descendant, world.anchor, stdin="/dev/pts/9", comm=forged, start=777)
+        world.run()
+        self.assertEqual(world.terms(), [descendant])
+
+
+class TestOrder(InProcessCase):
+    def build_tree(self, world):
+        # depth 1: 30 (target), 40 (target), 41 (not a target)
+        # depth 2: 29 (target, child of 30), 31 (not a target, child of 30)
+        # depth 3: 28 (target, child of 29), 50 (target, child of 31)
+        t = world.table
+        t.add(fake_pid(30), world.anchor, stdin="/dev/pts/1")
+        t.add(fake_pid(40), world.anchor, stdin="/dev/pts/1")
+        t.add(fake_pid(41), world.anchor, stdin="pipe:[5]")
+        t.add(fake_pid(29), fake_pid(30), stdin="/dev/pts/1")
+        t.add(fake_pid(31), fake_pid(30), stdin="pipe:[6]")
+        t.add(fake_pid(28), fake_pid(29), stdin="/dev/pts/1")
+        t.add(fake_pid(50), fake_pid(31), stdin="/dev/pts/1")
+
+    def test_ac3_children_are_signalled_before_their_parents_in_both_phases(self):
+        world = self.world(target=False)
+        self.build_tree(world)
+        world.run()
+        expected = [fake_pid(n) for n in (28, 50, 29, 30, 40)]
+        self.assertEqual(world.terms(), expected)
+        self.assertEqual(world.kills(), expected)
+
+    def test_ac3_every_sigterm_precedes_every_sigkill(self):
+        world = self.world(target=False)
+        self.build_tree(world)
+        world.run()
+        numbers = [signum for _, signum, _ in world.sent]
+        self.assertEqual(numbers, [signal.SIGTERM] * 5 + [signal.SIGKILL] * 5)
+
+    def test_ac3_a_parent_and_child_with_a_pts_standard_input_are_both_stopped(self):
+        world = self.world(target=False)
+        parent, child = fake_pid(80), fake_pid(70)  # the child has the lower PID
+        world.table.add(parent, world.anchor, stdin="/dev/pts/4")
+        world.table.add(child, parent, stdin="/dev/pts/4")
+        world.run()
+        self.assertEqual(world.sequence(), [
+            (child, signal.SIGTERM), (parent, signal.SIGTERM),
+            (child, signal.SIGKILL), (parent, signal.SIGKILL),
+        ])
+
+
+# --------------------------------------------------------------------------
+# AC-4: timing and identity (in-process, fake clock)
+# --------------------------------------------------------------------------
+
+
+class TestTiming(InProcessCase):
+    def test_ac4_sigkill_comes_no_earlier_than_half_a_second_after_the_last_sigterm(self):
+        world = self.world()
+        world.table.add(fake_pid(11), world.anchor, stdin="/dev/pts/1")
+        started = world.fake_clock.now
+        world.run()
+        term_times = [t for _, signum, t in world.sent if signum == signal.SIGTERM]
+        kill_times = [t for _, signum, t in world.sent if signum == signal.SIGKILL]
+        self.assertEqual(len(term_times), 2)
+        self.assertEqual(len(kill_times), 2)
+        last_term = max(term_times)
+        for kill_time in kill_times:
+            self.assertGreaterEqual(kill_time - last_term, 0.5)
+        # NFR2: a single bounded wait, not an open-ended one.
+        self.assertLess(world.fake_clock.now - started, 0.6)
+
+    def test_ac4_no_sigkill_when_every_target_is_gone_after_sigterm(self):
+        world = self.world()
+        world.table.add(fake_pid(11), world.anchor, stdin="/dev/pts/1")
+        world.on_send = lambda pid, signum: world.table.remove(pid)
+        started = world.fake_clock.now
+        world.run()
+        self.assertEqual(world.kills(), [])
+        self.assertLess(world.fake_clock.now - started, 0.5)
+
+    def test_ac4_a_zombie_after_sigterm_counts_as_gone(self):
+        world = self.world()
+        world.on_send = lambda pid, signum: world.table.change(pid, state="Z")
+        world.run()
+        self.assertEqual(world.terms(), [self.target])
+        self.assertEqual(world.kills(), [])
+
+    def test_ac4_only_the_survivors_of_sigterm_receive_sigkill(self):
+        world = self.world()
+        stubborn = fake_pid(11)
+        world.table.add(stubborn, world.anchor, stdin="/dev/pts/1")
+        world.on_send = lambda pid, signum: (
+            world.table.remove(pid) if pid == self.target else None
+        )
+        world.run()
+        self.assertEqual(sorted(world.terms()), [self.target, stubborn])
+        self.assertEqual(world.kills(), [stubborn])
+
+    def test_ac4_the_wait_ends_as_soon_as_the_last_target_is_gone(self):
+        world = self.world()
+        started = world.fake_clock.now
+
+        def vanish_after_a_fifth_of_a_second():
+            if world.fake_clock.now - started >= 0.2 and self.target in world.table.entries:
+                world.table.remove(self.target)
+                world.table.entries.pop(self.target)
+
+        world.on_sleep = vanish_after_a_fifth_of_a_second
+        world.run()
+        self.assertEqual(world.kills(), [])
+        self.assertLess(world.fake_clock.now - started, 0.4)
+
+    def test_tm3_a_target_whose_start_time_changed_before_sigterm_gets_no_signal(self):
+        world = self.world(target=False)
+        first, second = fake_pid(10), fake_pid(11)
+        world.table.add(first, world.anchor, stdin="/dev/pts/1")
+        world.table.add(second, world.anchor, stdin="/dev/pts/1")
+        original = world.table.entries[second]["start"]
+        world.on_send = lambda pid, signum: (
+            world.table.change(second, start=original + 1)
+            if pid == first and signum == signal.SIGTERM else None
+        )
+        world.run()
+        self.assertEqual(world.terms(), [first])
+        self.assertEqual(world.kills(), [first])
+        self.assertNotIn(second, world.signalled())
+
+    def test_tm3_a_target_whose_start_time_changed_after_sigterm_gets_no_sigkill(self):
+        world = self.world(target=False)
+        reused, stubborn = fake_pid(10), fake_pid(11)
+        world.table.add(reused, world.anchor, stdin="/dev/pts/1")
+        world.table.add(stubborn, world.anchor, stdin="/dev/pts/1")
+        original = world.table.entries[reused]["start"]
+        changed = []
+
+        def reuse_the_pid():
+            if not changed:
+                world.table.change(reused, start=original + 1)
+                changed.append(True)
+
+        world.on_sleep = reuse_the_pid
+        world.run()
+        self.assertEqual(world.terms(), [reused, stubborn])
+        self.assertEqual(world.kills(), [stubborn])
+
+    def test_tm3_a_target_that_vanishes_before_sigterm_gets_no_signal(self):
+        world = self.world(target=False)
+        first, second = fake_pid(10), fake_pid(11)
+        world.table.add(first, world.anchor, stdin="/dev/pts/1")
+        world.table.add(second, world.anchor, stdin="/dev/pts/1")
+        world.on_send = lambda pid, signum: (
+            world.table.remove(second) if pid == first and signum == signal.SIGTERM else None
+        )
+        world.run()
+        self.assertNotIn(second, world.signalled())
+
+
+# --------------------------------------------------------------------------
+# AC-5: the anchor argument (in-process)
+# --------------------------------------------------------------------------
+
+
+class TestAnchorArgument(InProcessCase):
+    def arabic_indic(self, number):
+        return "".join(chr(0x0660 + int(d)) for d in str(number))
+
+    def fullwidth(self, number):
+        return "".join(chr(0xFF10 + int(d)) for d in str(number))
+
+    def test_tm2_the_valid_anchor_stops_the_target(self):
+        world = self.world()
+        world.run()
+        self.assertEqual(world.terms(), [self.target])
+
+    def test_tm2_an_argument_list_or_value_that_is_not_one_valid_anchor_stops_nothing(self):
+        world = self.world()
+        anchor = str(world.anchor)
+        cases = {
+            "missing": [],
+            "two arguments": [anchor, anchor],
+            "two arguments, second empty": [anchor, ""],
+            "empty": [""],
+            "plus sign": ["+" + anchor],
+            "minus sign": ["-" + anchor],
+            "leading space": [" " + anchor],
+            "trailing space": [anchor + " "],
+            "trailing newline": [anchor + "\n"],
+            "inner space": [anchor[:3] + " " + anchor[3:]],
+            "underscore": [anchor[:3] + "_" + anchor[3:]],
+            "hex prefix": [hex(world.anchor)],
+            "hex digits": [format(world.anchor, "x")],
+            "octal prefix": [oct(world.anchor)],
+            "decimal point": [anchor + ".0"],
+            "exponent": [anchor + "e0"],
+            "arabic-indic digits": [self.arabic_indic(world.anchor)],
+            "fullwidth digits": [self.fullwidth(world.anchor)],
+            "superscript digits": ["²³"],
+            "trailing text": [anchor + "x"],
+            "zero": ["0"],
+            "one": ["1"],
+            "one, padded": ["0001"],
+            "one, fullwidth": [self.fullwidth(1)],
+            "negative one": ["-1"],
+            "the hook itself": [str(world.me)],
+            "a process that does not exist": [str(fake_pid(99))],
+            "a digit string past the int conversion limit": ["9" * 5000],
+        }
+        for label, argv in cases.items():
+            with self.subTest(case=label):
+                fresh = self.world()
+                # Something with a terminal below the hook, so that taking the
+                # hook itself for the anchor would have a target to stop.
+                fresh.table.add(fake_pid(95), fresh.me, stdin="/dev/pts/95")
+                fresh.run(argv=argv)
+                self.assertEqual(fresh.sent, [])
+
+    def test_tm2_a_process_that_is_not_an_ancestor_of_the_hook_stops_nothing(self):
+        world = self.world()
+        parallel = fake_pid(60)
+        world.table.add(parallel, 1, stdin="/dev/pts/60")
+        world.table.add(fake_pid(61), parallel, stdin="/dev/pts/61")
+        child_of_hook = fake_pid(62)
+        world.table.add(child_of_hook, world.me, stdin="/dev/pts/62")
+        for label, anchor in (
+            ("a parallel pseudo-Codex", parallel),
+            ("a child of the hook", child_of_hook),
+            ("a descendant of the anchor off the hook's chain", self.target),
+        ):
+            with self.subTest(anchor=label):
+                world.sent.clear()
+                world.run(argv=[str(anchor)])
+                self.assertEqual(world.sent, [])
+
+    def test_tm2_the_anchor_itself_and_the_processes_between_it_and_the_hook_are_excluded(self):
+        world = self.world()
+        world.run()
+        for pid in (world.anchor, world.mid, world.me):
+            self.assertNotIn(pid, world.signalled())
+
+    def test_tm2_an_anchor_higher_up_the_chain_reaches_the_processes_below_it(self):
+        world = self.world(target=False)
+        grandparent = fake_pid(3)
+        # Re-root the fabricated chain: grandparent -> anchor -> mid -> hook.
+        world.table.add(grandparent, 1, stdin="/dev/pts/3")
+        world.table.change(world.anchor, ppid=grandparent)
+        world.table.add(fake_pid(90), grandparent, stdin="/dev/pts/9")
+        world.table.add(fake_pid(91), world.anchor, stdin="/dev/pts/9")
+        world.run(argv=[str(grandparent)])
+        self.assertEqual(world.signalled(), {fake_pid(90), fake_pid(91)})
+        world.sent.clear()
+        world.run(argv=[str(world.anchor)])
+        self.assertEqual(world.signalled(), {fake_pid(91)})
+
+
+# --------------------------------------------------------------------------
+# AC-6, AC-7: failures, standard input and the process table (in-process)
+# --------------------------------------------------------------------------
+
+
+class TestStandardInput(InProcessCase):
+    def test_ac6_standard_input_that_is_not_one_json_object_stops_nothing(self):
+        cases = {
+            "empty": b"",
+            "blank": b"  \n",
+            "unterminated object": b"{",
+            "not json": b"not json",
+            "array": b"[]",
+            "array holding an object": b"[{}]",
+            "null": b"null",
+            "string": b'"{}"',
+            "number": b"1",
+            "two objects": b"{}{}",
+            "trailing garbage": b"{} garbage",
+            "not utf-8": b"\xff\xfe{}",
+            "not utf-8 inside a value": b'{"a": "\xff"}',
+            "nested too deep": b"[" * 100000 + b"]" * 100000,
+        }
+        for label, payload in cases.items():
+            with self.subTest(case=label):
+                world = self.world()
+                world.run(stdin=payload)
+                self.assertEqual(world.sent, [])
+
+    def test_tm5_a_complete_object_on_standard_input_that_is_not_closed_stops_nothing(self):
+        world = self.world()
+        world.run(stdin=b"{}", keep_stdin_open=True)
+        self.assertEqual(world.sent, [])
+
+    def test_ac6_a_json_object_is_enough(self):
+        for payload in (b"{}", b'  {"a": 1}\n', b'{"hook_event_name": "Stop"}'):
+            with self.subTest(payload=payload):
+                world = self.world()
+                world.run(stdin=payload)
+                self.assertEqual(world.terms(), [self.target])
+
+    def test_tm1_fields_naming_other_processes_or_paths_choose_no_target(self):
+        baseline = self.world()
+        baseline.run(stdin=b"{}")
+        self.assertTrue(baseline.sent)
+        outsider = fake_pid(55)
+        payloads = [
+            {
+                "session_id": "s1",
+                "transcript_path": "/dev/pts/9",
+                "cwd": "/",
+                "hook_event_name": "Stop",
+                "stop_hook_active": False,
+                "last_assistant_message": f"kill {outsider} {fake_pid(1)}",
+                "pid": outsider,
+                "pids": [outsider, 1, self.target + 1],
+                "targets": [outsider],
+                "anchor": str(outsider),
+                "ppid": outsider,
+                "stdin": "/dev/pts/9",
+                "proc_dir": "/tmp",
+                "signal": 9,
+            },
+            {"anchor": [str(outsider)], "argv": [str(outsider)], "env": {"PROC": "/tmp"}},
+        ]
+        for payload in payloads:
+            with self.subTest(payload=sorted(payload)):
+                world = self.world()
+                world.table.add(outsider, 1, stdin="/dev/pts/9")
+                world.run(stdin=json.dumps(payload).encode())
+                self.assertEqual(world.sequence(), baseline.sequence())
+
+
+class TestFailures(InProcessCase):
+    def test_ac6_a_target_that_ended_after_enumeration_is_not_an_error(self):
+        world = self.world(target=False)
+        deepest, middle, top = fake_pid(12), fake_pid(11), fake_pid(10)
+        world.table.add(top, world.anchor, stdin="/dev/pts/1")
+        world.table.add(middle, top, stdin="/dev/pts/1")
+        world.table.add(deepest, middle, stdin="/dev/pts/1")
+
+        def first_call_finds_no_process(pid, signum):
+            if pid == deepest and signum == signal.SIGTERM:
+                raise ProcessLookupError(3, "No such process")
+
+        world.on_send = first_call_finds_no_process
+        world.run()
+        self.assertEqual(world.terms(), [deepest, middle, top])
+        self.assertEqual(world.kills(), [deepest, middle, top])
+
+    def test_ac6_no_such_process_while_sending_sigkill_is_not_an_error(self):
+        world = self.world(target=False)
+        first, second = fake_pid(10), fake_pid(11)
+        world.table.add(first, world.anchor, stdin="/dev/pts/1")
+        world.table.add(second, world.anchor, stdin="/dev/pts/1")
+
+        def sigkill_finds_no_process(pid, signum):
+            if pid == first and signum == signal.SIGKILL:
+                raise ProcessLookupError(3, "No such process")
+
+        world.on_send = sigkill_finds_no_process
+        world.run()
+        self.assertEqual(world.kills(), [first, second])
+
+    def test_ac6_a_signal_error_other_than_no_such_process_stops_further_signals(self):
+        for errno_value, exception in ((1, PermissionError), (22, OSError)):
+            with self.subTest(exception=exception.__name__):
+                world = self.world(target=False)
+                for n in (10, 11, 12):
+                    world.table.add(fake_pid(n), world.anchor, stdin="/dev/pts/1")
+
+                def fail_on_the_second_call(pid, signum, world=world, e=errno_value, x=exception):
+                    if len(world.sent) == 2:
+                        raise x(e, "boom")
+
+                world.on_send = fail_on_the_second_call
+                world.run()
+                self.assertEqual(len(world.sent), 2)
+
+    def test_ac6_a_signal_error_during_the_sigkill_phase_stops_further_signals(self):
+        world = self.world(target=False)
+        for n in (10, 11, 12):
+            world.table.add(fake_pid(n), world.anchor, stdin="/dev/pts/1")
+
+        def fail_on_the_first_sigkill(pid, signum):
+            if signum == signal.SIGKILL:
+                raise PermissionError(1, "Operation not permitted")
+
+        world.on_send = fail_on_the_first_sigkill
+        world.run()
+        self.assertEqual(world.terms(), [fake_pid(n) for n in (10, 11, 12)])
+        self.assertEqual(len(world.kills()), 1)
+
+    def test_ac6_an_unexpected_error_from_the_clock_stops_further_signals(self):
+        world = self.world()
+        calls = []
+
+        def broken_sleep(seconds):
+            calls.append(seconds)
+            raise RuntimeError("boom")
+
+        world._sleep = broken_sleep
+        world.run()
+        self.assertEqual(world.terms(), [self.target])
+        self.assertEqual(world.kills(), [])
+        self.assertEqual(len(calls), 1)
+
+    def test_ac6_a_garbled_or_missing_entry_on_the_ancestor_chain_stops_nothing(self):
+        def garble_the_middle(world):
+            world.table.garble(world.mid)
+
+        def drop_the_middle(world):
+            world.table.remove(world.mid)
+
+        def garble_the_hook(world):
+            world.table.garble(world.me)
+
+        def garble_init(world):
+            world.table.garble(1)
+
+        def drop_init(world):
+            world.table.remove(1)
+
+        def garble_the_anchor(world):
+            world.table.garble(world.anchor)
+
+        def cut_the_name_field(world):
+            world.table.garble(world.mid, f"{world.mid} (mid S {world.anchor}\n".encode())
+
+        def too_few_fields(world):
+            world.table.garble(world.mid, f"{world.mid} (mid) S {world.anchor} 1 1\n".encode())
+
+        def non_numeric_parent(world):
+            world.table.garble(world.mid, FakeTable.stat_line(
+                world.mid, "x", "S", 5, "mid", 1, 1))
+
+        def wrong_pid_in_the_record(world):
+            world.table.garble(world.mid, FakeTable.stat_line(
+                fake_pid(777), world.anchor, "S", 5, "mid", 1, 1))
+
+        def parent_loop(world):
+            world.table.change(world.mid, ppid=world.me)
+
+        cases = {
+            "garbled middle": garble_the_middle,
+            "missing middle": drop_the_middle,
+            "garbled hook entry": garble_the_hook,
+            "garbled init": garble_init,
+            "missing init": drop_init,
+            "garbled anchor": garble_the_anchor,
+            "name field not closed": cut_the_name_field,
+            "too few fields": too_few_fields,
+            "non-numeric parent": non_numeric_parent,
+            "record names another PID": wrong_pid_in_the_record,
+            "parent loop": parent_loop,
+        }
+        for label, damage in cases.items():
+            with self.subTest(case=label):
+                world = self.world()
+                damage(world)
+                world.run()
+                self.assertEqual(world.sent, [])
+
+    def test_ac7_a_missing_process_table_stops_nothing(self):
+        world = self.world()
+        world.run(proc_dir=world.dir / "no-such-directory")
+        self.assertEqual(world.sent, [])
+
+    def test_ac7_a_process_table_without_the_hooks_own_entry_stops_nothing(self):
+        world = self.world()
+        world.table.remove(world.me)
+        world.run()
+        self.assertEqual(world.sent, [])
+
+    def test_ac7_an_empty_process_table_stops_nothing(self):
+        world = self.world()
+        empty = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        world.run(proc_dir=empty)
+        self.assertEqual(world.sent, [])
+
+    def test_ac7_a_process_table_that_is_a_file_stops_nothing(self):
+        world = self.world()
+        not_a_directory = world.dir / "plain-file"
+        not_a_directory.write_text("x")
+        world.run(proc_dir=not_a_directory)
+        self.assertEqual(world.sent, [])
+
+
+# --------------------------------------------------------------------------
+# Real processes (TS-3 to TS-8, TS-13, TS-15)
+# --------------------------------------------------------------------------
+
+# The pseudo-Codex: runs as `python -c`. Its standard input is a
+# pseudo-terminal. It forks the descendants the spec names, waits until each
+# is set up (so the hook never sees a half-built process), then runs the hook
+# as a descendant of the process the spec names, and reports on stdout. Every
+# process it starts ends when the control pipe closes or after LIFETIME.
+PSEUDO_CODEX_SOURCE = r'''
+import json
+import os
+import select
+import signal
+import subprocess
+import sys
+import time
+
+SPEC = json.loads(sys.argv[1])
+HOOK = sys.argv[2]
+CONTROL = int(sys.argv[3])
+LIFETIME = float(sys.argv[4])
+START = time.monotonic()
+ROOT = os.getpid()
+PTY = os.dup(0)
+READY_R, READY_W = os.pipe()
+GO_R, GO_W = os.pipe()
+
+
+def emit(event):
+    os.write(1, (json.dumps(event) + "\n").encode())
+
+
+def count(node):
+    return 1 + sum(count(child) for child in node.get("children", []))
+
+
+def find_holder(node):
+    if node.get("hook") is not None:
+        return node
+    for child in node.get("children", []):
+        found = find_holder(child)
+        if found is not None:
+            return found
+    return None
+
+
+def lingering():
+    while time.monotonic() - START < LIFETIME:
+        readable, _, _ = select.select([CONTROL], [], [], 0.2)
+        if readable and not os.read(CONTROL, 1):
+            break
+    os._exit(0)
+
+
+def expand(argument):
+    arabic = "".join(chr(0x0660 + int(d)) for d in str(ROOT))
+    return (
+        argument.replace("$ROOT_ARABIC", arabic)
+        .replace("$ROOT_HEX", "0x%x" % ROOT)
+        .replace("$ROOT", str(ROOT))
+    )
+
+
+def run_hooks(runs):
+    results = []
+    for run in runs:
+        began = time.monotonic()
+        proc = subprocess.Popen(
+            [sys.executable, HOOK] + [expand(a) for a in run["args"]],
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        )
+        try:
+            proc.stdin.write(bytes.fromhex(run["stdin_hex"]))
+            proc.stdin.flush()
+            if not run.get("stdin_open"):
+                proc.stdin.close()
+        except OSError:
+            pass
+        try:
+            code = proc.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait()
+            code = None
+        elapsed = time.monotonic() - began
+        out = proc.stdout.read()
+        err = proc.stderr.read()
+        try:
+            proc.stdin.close()
+        except OSError:
+            pass
+        results.append({
+            "code": code,
+            "stdout": out.decode("latin-1"),
+            "stderr": err.decode("latin-1"),
+            "elapsed": elapsed,
+        })
+    emit({"event": "hook", "runs": results})
+
+
+def run_node(node):
+    if node["stdin"] == "pty":
+        os.dup2(PTY, 0)
+    else:
+        read_end, _write_end = os.pipe()  # the write end stays open: no EOF
+        os.dup2(read_end, 0)
+    if node.get("session"):
+        os.setsid()
+    if node.get("ignore_term"):
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+    os.write(READY_W, (json.dumps({"name": node["name"], "pid": os.getpid()}) + "\n").encode())
+    for child in node.get("children", []):
+        spawn(child)
+    if node.get("hook") is not None:
+        os.read(GO_R, 1)
+        run_hooks(node["hook"])
+    lingering()
+
+
+def spawn(node):
+    pid = os.fork()
+    if pid == 0:
+        try:
+            run_node(node)
+        finally:
+            os._exit(0)
+    return pid
+
+
+pids = {"root": ROOT}
+for child in SPEC.get("children", []):
+    spawn(child)
+total = count(SPEC)
+buffer = b""
+deadline = time.monotonic() + 15
+while len(pids) < total:
+    readable, _, _ = select.select([READY_R], [], [], max(0.0, deadline - time.monotonic()))
+    if not readable:
+        emit({"event": "error", "message": "tree not ready", "pids": pids})
+        os._exit(1)
+    buffer += os.read(READY_R, 65536)
+    while b"\n" in buffer:
+        line, buffer = buffer.split(b"\n", 1)
+        entry = json.loads(line)
+        pids[entry["name"]] = entry["pid"]
+emit({"event": "tree", "pids": pids})
+holder = find_holder(SPEC)
+if holder is SPEC:
+    run_hooks(SPEC["hook"])
+elif holder is not None:
+    os.write(GO_W, b"g")
+lingering()
+'''
+
+
+def process_state(pid):
+    try:
+        with open(f"/proc/{pid}/stat", "rb") as fh:
+            data = fh.read()
+    except OSError:
+        return None
+    return data[data.rindex(b")") + 2:data.rindex(b")") + 3].decode()
+
+
+def is_alive(pid):
+    state = process_state(pid)
+    return state is not None and state not in ("Z", "X", "x")
+
+
+def wait_until_gone(pid, timeout=GONE_TIMEOUT):
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if not is_alive(pid):
+            return True
+        time.sleep(0.02)
+    return not is_alive(pid)
+
+
+def node(name, stdin="pty", children=(), hook=None, **flags):
+    spec = {"name": name, "stdin": stdin, "children": list(children)}
+    spec.update(flags)
+    if hook is not None:
+        spec["hook"] = hook
+    return spec
+
+
+def hook_run(args=("$ROOT",), stdin=b"{}", stdin_open=False):
+    return {"args": list(args), "stdin_hex": stdin.hex(), "stdin_open": stdin_open}
+
+
+def root(children=(), hook=None):
+    return node("root", "pty", children, hook=hook)
+
+
+class PseudoCodex:
+    """One pseudo-Codex process the test started, with its descendants."""
+
+    def __init__(self, spec, hook_path=HOOK):
+        self.spec = spec
+        self.hook_path = hook_path
+        self.events = {}
+        self.buffer = b""
+        self.closed = False
+        self.master, slave = pty.openpty()
+        control_read, self.control_write = os.pipe()
+        self.stderr = tempfile.TemporaryFile()
+        try:
+            self.proc = subprocess.Popen(
+                [sys.executable, "-c", PSEUDO_CODEX_SOURCE, json.dumps(spec),
+                 str(hook_path), str(control_read), str(LIFETIME)],
+                stdin=slave, stdout=subprocess.PIPE, stderr=self.stderr,
+                pass_fds=(control_read,),
+            )
+        finally:
+            os.close(slave)
+            os.close(control_read)
+        self.pid = self.proc.pid
+
+    def wait_for(self, kind, timeout=EVENT_TIMEOUT):
+        deadline = time.monotonic() + timeout
+        descriptor = self.proc.stdout.fileno()
+        while kind not in self.events:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise AssertionError(f"no {kind!r} event from the pseudo-Codex: {self.diagnostics()}")
+            readable, _, _ = select.select([descriptor], [], [], remaining)
+            if not readable:
+                continue
+            chunk = os.read(descriptor, 65536)
+            if not chunk:
+                raise AssertionError(f"the pseudo-Codex ended early: {self.diagnostics()}")
+            self.buffer += chunk
+            while b"\n" in self.buffer:
+                line, self.buffer = self.buffer.split(b"\n", 1)
+                event = json.loads(line)
+                self.events[event["event"]] = event
+                if event["event"] == "error":
+                    raise AssertionError(f"pseudo-Codex error: {event}")
+        return self.events[kind]
+
+    def pids(self):
+        return self.wait_for("tree")["pids"]
+
+    def runs(self):
+        return self.wait_for("hook")["runs"]
+
+    def diagnostics(self):
+        self.stderr.seek(0)
+        return self.stderr.read().decode("utf-8", "replace")
+
+    def close(self):
+        if self.closed:
+            return
+        self.closed = True
+        os.close(self.control_write)
+        try:
+            self.proc.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            self.proc.kill()
+            self.proc.wait()
+        self.proc.stdout.close()
+        os.close(self.master)
+        self.stderr.close()
+
+
+@unittest.skipIf(REAL_PROCESS_SKIP is not None, REAL_PROCESS_SKIP or "")
+class RealProcessCase(unittest.TestCase):
+    def start(self, spec, hook_path=HOOK):
+        codex = PseudoCodex(spec, hook_path)
+        self.addCleanup(codex.close)
+        return codex
+
+    def settle(self):
+        time.sleep(SETTLE_SECONDS)
+
+    def assert_gone(self, pids, *names):
+        for name in names:
+            self.assertTrue(
+                wait_until_gone(pids[name]),
+                f"{name} (pid {pids[name]}) is still alive",
+            )
+
+    def assert_alive(self, pids, *names):
+        for name in names:
+            self.assertTrue(
+                is_alive(pids[name]),
+                f"{name} (pid {pids[name]}) was stopped, state {process_state(pids[name])}",
+            )
+
+    def assert_quiet(self, run, time_bound=3.0):
+        self.assertEqual(run["code"], 0, run)
+        self.assertEqual(run["stdout"], "", run)
+        self.assertEqual(run["stderr"], "", run)
+        self.assertLess(run["elapsed"], time_bound, run)
+
+
+class TestRealTargets(RealProcessCase):
+    def test_ac2_terminal_descendants_are_stopped_and_pipe_descendants_remain(self):
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                codex = self.start(root([
+                    node("parent", "pty", [node("child", "pty"), node("pipe_child", "pipe")]),
+                    node("detached", "pty", session=True),
+                    node("pipe_background", "pipe", session=True),
+                    node("pipe_plain", "pipe"),
+                ], hook=[hook_run()]), hook_path=path)
+                pids = codex.pids()
+                self.assert_quiet(codex.runs()[0])
+                self.assert_gone(pids, "parent", "child", "detached")
+                self.settle()
+                self.assert_alive(pids, "pipe_child", "pipe_background", "pipe_plain", "root")
+
+    def test_ac3_a_pty_chain_of_three_generations_is_stopped(self):
+        codex = self.start(root([
+            node("parent", "pty", [node("child", "pty", [node("grandchild", "pty")])]),
+        ], hook=[hook_run()]))
+        pids = codex.pids()
+        self.assert_quiet(codex.runs()[0])
+        self.assert_gone(pids, "parent", "child", "grandchild")
+        self.assert_alive(pids, "root")
+
+    def test_ac3_a_terminal_process_below_a_pipe_process_is_stopped(self):
+        codex = self.start(root([
+            node("pipe_parent", "pipe", [node("pty_child", "pty")]),
+        ], hook=[hook_run()]))
+        pids = codex.pids()
+        self.assert_quiet(codex.runs()[0])
+        self.assert_gone(pids, "pty_child")
+        self.settle()
+        self.assert_alive(pids, "pipe_parent")
+
+    def test_ts13_a_detached_background_process_with_a_terminal_is_stopped_like_any_other(self):
+        codex = self.start(root([
+            node("detached_pty", "pty", session=True),
+            node("detached_pipe", "pipe", session=True),
+        ], hook=[hook_run()]))
+        pids = codex.pids()
+        self.assert_quiet(codex.runs()[0])
+        self.assert_gone(pids, "detached_pty")
+        self.settle()
+        self.assert_alive(pids, "detached_pipe")
+
+    def test_ac4_a_process_that_ignores_sigterm_is_gone_when_the_hook_exits(self):
+        codex = self.start(root([
+            node("stubborn", "pty", ignore_term=True),
+            node("polite", "pty"),
+        ], hook=[hook_run()]))
+        pids = codex.pids()
+        run = codex.runs()[0]
+        self.assert_quiet(run, time_bound=3.0)
+        # The stubborn process survived SIGTERM, so the hook waited the full
+        # half second before SIGKILL: it was not sent earlier.
+        self.assertGreaterEqual(run["elapsed"], 0.45)
+        self.assert_gone(pids, "stubborn", "polite")
+        self.assert_alive(pids, "root")
+
+    def test_ac4_with_no_stubborn_target_the_hook_does_not_wait_the_half_second(self):
+        codex = self.start(root([node("polite", "pty")], hook=[hook_run()]))
+        pids = codex.pids()
+        run = codex.runs()[0]
+        self.assert_quiet(run)
+        self.assert_gone(pids, "polite")
+
+
+class TestRealBoundaries(RealProcessCase):
+    def test_ac5_outsiders_and_the_hooks_ancestors_with_a_terminal_are_not_signalled(self):
+        parallel = self.start(root([
+            node("p_child", "pty", [node("p_grandchild", "pty")]),
+            node("p_detached", "pty", session=True),
+            node("p_pipe", "pipe"),
+        ]))
+        parallel_pids = parallel.pids()
+        main = self.start(root([
+            node("mid", "pty", [node("mid_child", "pty")], hook=[hook_run()]),
+            node("target", "pty"),
+        ]))
+        pids = main.pids()
+        self.assert_quiet(main.runs()[0])
+        # The hook was effective: the targets below the anchor are gone.
+        self.assert_gone(pids, "target", "mid_child")
+        self.settle()
+        # The anchor and the process between the anchor and the hook, both
+        # with a pseudo-terminal as standard input, were left alone.
+        self.assert_alive(pids, "root", "mid")
+        self.assert_alive(parallel_pids, "root", "p_child", "p_grandchild", "p_detached", "p_pipe")
+
+    def test_ac5_a_parallel_pseudo_codex_named_as_the_anchor_stops_nothing(self):
+        parallel = self.start(root([node("p_child", "pty")]))
+        parallel_pids = parallel.pids()
+        main = self.start(root(
+            [node("target", "pty"), node("pipe_child", "pipe")],
+            hook=[hook_run(args=[str(parallel.pid)])],
+        ))
+        pids = main.pids()
+        self.assert_quiet(main.runs()[0])
+        self.settle()
+        self.assert_alive(pids, "root", "target", "pipe_child")
+        self.assert_alive(parallel_pids, "root", "p_child")
+
+    def test_ac5_an_argument_that_is_not_exactly_one_ascii_decimal_anchor_stops_nothing(self):
+        runs = [
+            hook_run(args=[]),
+            hook_run(args=["$ROOT", "$ROOT"]),
+            hook_run(args=["+$ROOT"]),
+            hook_run(args=[" $ROOT"]),
+            hook_run(args=["$ROOT "]),
+            hook_run(args=["$ROOT_HEX"]),
+            hook_run(args=["$ROOT_ARABIC"]),
+            hook_run(args=[""]),
+        ]
+        codex = self.start(root([node("target", "pty"), node("deep", "pty", [node("deeper", "pty")])],
+                                hook=runs))
+        pids = codex.pids()
+        results = codex.runs()
+        self.assertEqual(len(results), len(runs))
+        for index, result in enumerate(results):
+            with self.subTest(run=index, args=runs[index]["args"]):
+                self.assert_quiet(result)
+        self.settle()
+        self.assert_alive(pids, "root", "target", "deep", "deeper")
+
+    def test_ac6_standard_input_that_is_not_one_json_object_stops_nothing(self):
+        runs = [
+            hook_run(stdin=b""),
+            hook_run(stdin=b"not json"),
+            hook_run(stdin=b"[]"),
+            hook_run(stdin=b"\xff\xfe{}"),
+            hook_run(stdin=b'{"a": '),
+        ]
+        codex = self.start(root([node("target", "pty")], hook=runs))
+        pids = codex.pids()
+        results = codex.runs()
+        self.assertEqual(len(results), len(runs))
+        for index, result in enumerate(results):
+            with self.subTest(run=index):
+                self.assert_quiet(result)
+        self.settle()
+        self.assert_alive(pids, "root", "target")
+
+    def test_ac6_standard_input_kept_open_stops_nothing_and_the_hook_exits_in_time(self):
+        codex = self.start(root([node("target", "pty")], hook=[hook_run(stdin_open=True)]))
+        pids = codex.pids()
+        run = codex.runs()[0]
+        self.assert_quiet(run, time_bound=3.0)
+        self.settle()
+        self.assert_alive(pids, "root", "target")
+
+    def test_tm1_a_json_object_naming_other_processes_changes_no_target(self):
+        codex_outsider = self.start(root([node("p_child", "pty")]))
+        outsider_pids = codex_outsider.pids()
+        naming = json.dumps({
+            "pid": outsider_pids["p_child"],
+            "pids": [codex_outsider.pid, outsider_pids["p_child"]],
+            "anchor": str(codex_outsider.pid),
+            "cwd": "/dev/pts",
+        }).encode()
+        codex = self.start(root([node("target", "pty"), node("pipe_child", "pipe")],
+                                hook=[hook_run(stdin=naming)]))
+        pids = codex.pids()
+        self.assert_quiet(codex.runs()[0])
+        self.assert_gone(pids, "target")
+        self.settle()
+        self.assert_alive(pids, "root", "pipe_child")
+        self.assert_alive(outsider_pids, "root", "p_child")
+
+
+class TestCommandLineEntry(unittest.TestCase):
+    def run_hook(self, args, stdin):
+        return subprocess.run(
+            [sys.executable, str(HOOK), *args],
+            input=stdin, capture_output=True, timeout=30,
+        )
+
+    def test_ac6_without_an_anchor_the_hook_exits_zero_and_writes_nothing(self):
+        for stdin in (b"{}", b"", b"\xff", b"[]"):
+            with self.subTest(stdin=stdin):
+                proc = self.run_hook([], stdin)
+                self.assertEqual(proc.returncode, 0)
+                self.assertEqual(proc.stdout, b"")
+                self.assertEqual(proc.stderr, b"")
+
+    def test_ac6_a_run_leaves_no_bytecode_cache_in_a_plugin_directory(self):
+        for plugin, path in HOOK_PATHS.items():
+            self.run_hook([], b"{}")
+            with self.subTest(copy=plugin):
+                self.assertEqual(
+                    list(path.parent.glob("__pycache__/codex-hook-tty-reaper*")), []
+                )
+
+
+if __name__ == "__main__":
+    unittest.main()
