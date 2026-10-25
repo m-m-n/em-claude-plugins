@@ -4,8 +4,8 @@ phase: create-spec
 status: dispatching
 generation: 1
 base_revision: f24d26d724a084286c66a61fa01b11e584d4d445
-last_input_digest: sha256:51ee648f36e0d6c469eb9f3d6f44fd2856d50c4f29a91ab3367eb28d24a4ffd3
-active_request_id: create-spec-run-0002
+last_input_digest: sha256:937458a548a62a87297c5275b3e0353034015f59ee97e24eaff96e3ae6c877ec
+active_request_id: create-spec-run-0003
 packets:
   create-spec-q0001:
     status: answered
@@ -89,9 +89,9 @@ worker_runs:
     tests/test_codex_hook_wrapper_args.py: sha256:e2f0275bb3d4625b7255bca850bd6914883a63edf83f0cb211af4ce9542ebed9
   self_write_set: []
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:51ee648f36e0d6c469eb9f3d6f44fd2856d50c4f29a91ab3367eb28d24a4ffd3
-  output_digest: null
+  output_digest: sha256:b29c8937e10378c83b7e1a779b707a40a7a4fe5a94ddde584894a6ea147cd119
   dispatch_digest_inputs:
     CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
     em-review/scripts/codex-hook-interactive-guard.py: sha256:e2e20ac0cbea0242585409132883dac89575da09b69ca62767528bad9c018539
@@ -104,6 +104,15 @@ worker_runs:
     test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
     tests/test_codex_hook_interactive_guard.py: sha256:82d3526ad9436e00d36f7d44575f88743e37f3134c0495378f24fd2aa40d34a6
     tests/test_codex_hook_wrapper_args.py: sha256:e2f0275bb3d4625b7255bca850bd6914883a63edf83f0cb211af4ce9542ebed9
+  self_write_set: []
+- request_id: create-spec-run-0003
+  status: dispatched
+  input_digest: sha256:937458a548a62a87297c5275b3e0353034015f59ee97e24eaff96e3ae6c877ec
+  output_digest: null
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/spec-writer-contract.md: sha256:9032c6287d75f4a88e556bd3962c32ab8b4905cf3b6ececa895206788bcd0b63
+    em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
+    em-workflow/references/templates/spec-document.md: sha256:203dfcddbe507886ce861694fccd20ae25e5af0bd1b0efa5e935991add950cbd
 artifacts: []
 patches: []
 progress_fingerprint: sha256:20a5c4e98ed8322702fdca6e80d71caad570e59146fde8d17d06f0e0fb83c10b
