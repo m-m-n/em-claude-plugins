@@ -1,11 +1,11 @@
 schema_version: 1
 feature: codex-stop-hook-tty-reaper
 phase: create-spec
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: f24d26d724a084286c66a61fa01b11e584d4d445
 last_input_digest: sha256:937458a548a62a87297c5275b3e0353034015f59ee97e24eaff96e3ae6c877ec
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -106,14 +106,23 @@ worker_runs:
     tests/test_codex_hook_wrapper_args.py: sha256:e2f0275bb3d4625b7255bca850bd6914883a63edf83f0cb211af4ce9542ebed9
   self_write_set: []
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:937458a548a62a87297c5275b3e0353034015f59ee97e24eaff96e3ae6c877ec
-  output_digest: null
+  output_digest: sha256:8911edceb2b1a95c5ac1b8c3f8ec3f967490e7565b0f01f6680a0c292cd86c40
   dispatch_digest_inputs:
     em-workflow/references/contracts/spec-writer-contract.md: sha256:9032c6287d75f4a88e556bd3962c32ab8b4905cf3b6ececa895206788bcd0b63
     em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
     em-workflow/references/templates/spec-document.md: sha256:203dfcddbe507886ce861694fccd20ae25e5af0bd1b0efa5e935991add950cbd
-artifacts: []
+  self_write_set:
+  - feature-docs/codex-stop-hook-tty-reaper/REQUIREMENTS.md
+  - feature-docs/codex-stop-hook-tty-reaper/SPEC.md
+artifacts:
+- path: feature-docs/codex-stop-hook-tty-reaper/REQUIREMENTS.md
+  sha256: sha256:b27953ddcfc93987b83a491cb15b4252341847749957c09629478512b2a3ab2c
+  produced_by: create-spec-run-0003
+- path: feature-docs/codex-stop-hook-tty-reaper/SPEC.md
+  sha256: sha256:d90d3e3edd330b8679f7583d592475962f403fc82e52814986f9a67a130dac23
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: sha256:20a5c4e98ed8322702fdca6e80d71caad570e59146fde8d17d06f0e0fb83c10b
 stale_redispatch_count: 0
