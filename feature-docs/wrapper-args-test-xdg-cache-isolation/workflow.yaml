@@ -91,7 +91,7 @@ workflow:
   base_commit: 494af41c900e14d488cf42349dcdc7045106105b
   completed_at_commit: bfd3392f6af023c9ca7c2e32b66fedde1ad9211e
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
