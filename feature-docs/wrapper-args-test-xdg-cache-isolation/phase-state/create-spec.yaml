@@ -3,16 +3,56 @@ feature: wrapper-args-test-xdg-cache-isolation
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: b4815531165387e93387d68b29b98b8c800ac7c5
-last_input_digest: sha256:72838797fdf5acd354c4bcfbdb3aea5d58ef4d70e031a6cc8721634c3f1ba9d6
-active_request_id: create-spec-run-0001
+base_revision: f6b42da76226ad091a97e157040e622dba74b57d
+last_input_digest: sha256:449beead48bfa52c723b2d0b713573df51a3d2a270d4a1124471ed33d74900f9
+active_request_id: create-spec-run-0002
 packets: {}
-answers: {}
+answers:
+  design-step.decision:
+    packet_id: null
+    answered_at: '2026-10-26T08:27:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 推奨に従う（design step は skip）
+    resolution_note: batch-policies.yaml create-spec.design-step -> decide_autonomously
+  create-spec.design-system:
+    packet_id: null
+    answered_at: '2026-10-26T08:27:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - top_candidate_or_none
+    freeform: null
+    normalized_answer: project_native（em-workflow/references/templates/design-tokens.yaml）
+    resolution_note: 'batch-policies.yaml create-spec.design-system -> top_candidate_or_none;
+      candidate present -> project_native. Codex consulted (harness: codex, 1 turn)
+      on whether to treat the template as no candidate (none); Codex chose literal
+      policy application because create-spec-phase.md 11a requires the determination
+      even when design is skipped and no rule excludes templates; option not chosen:
+      none; Opus escalation not run'
+  create-spec.requirement-id-format:
+    packet_id: null
+    answered_at: '2026-10-26T08:27:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - rename_one_to_one
+    freeform: null
+    normalized_answer: FR-1..FR-3 / NFR-1..NFR-4 を FR1..FR3 / NFR1..NFR4 に一対一で改名して
+      SPEC.md に書く
+    resolution_note: 'orchestrator-raised; analyst IDs did not match spec-writer post-condition
+      ^(FR|NFR)[1-9][0-9]*$; Codex consulted (harness: codex, 1 turn): spec-writer
+      agent defines hyphen-less numbering, so one-to-one renaming keeps content and
+      needs no analyst re-dispatch; option not chosen: re-dispatch analyst; Opus escalation
+      not run'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:72838797fdf5acd354c4bcfbdb3aea5d58ef4d70e031a6cc8721634c3f1ba9d6
-  output_digest: null
+  output_digest: sha256:2d57fe821d4e18809293bf1533a764b34379c7aa60f4ccf664d69fb5084230e6
   dispatch_digest_inputs:
     CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
     em-review/scripts/run_codex_exec.sh: sha256:a638cbe671d8f85bf01c7859db1de86ed76afb088b278360d111e7c62a68c366
@@ -22,9 +62,17 @@ worker_runs:
     test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
     tests/test_codex_hook_wrapper_args.py: sha256:c08e54d47a020c60b59b7c41f390da5e605e3162a38e63540e4e85aafa3e8d48
     tests/test_codex_litellm_launch_home_location.py: sha256:5725b61cdb6b292962fd47d85b307006a1f0a5cbfef91a902dc8c44acec3fecd
+  self_write_set: []
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:449beead48bfa52c723b2d0b713573df51a3d2a270d4a1124471ed33d74900f9
+  output_digest: null
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/spec-writer-contract.md: sha256:9032c6287d75f4a88e556bd3962c32ab8b4905cf3b6ececa895206788bcd0b63
+    em-workflow/references/templates/spec-document.md: sha256:203dfcddbe507886ce861694fccd20ae25e5af0bd1b0efa5e935991add950cbd
 artifacts: []
 patches: []
-progress_fingerprint: null
+progress_fingerprint: sha256:ad37577e6c94dc584f3aa0566b7d1a3e2bb393f381d1e533b83fdf08f8a9eb7e
 stale_redispatch_count: 0
 resolved_input_cache: {}
 last_error: null
