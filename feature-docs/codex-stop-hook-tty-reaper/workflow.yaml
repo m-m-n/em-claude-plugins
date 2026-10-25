@@ -155,7 +155,7 @@ tasks:
     - NFR3
     - NFR4
     - NFR6
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/codex-stop-hook-tty-reaper/task0002
 review:
