@@ -91,7 +91,8 @@ workflow:
   base_commit: 494af41c900e14d488cf42349dcdc7045106105b
   completed_at_commit: bfd3392f6af023c9ca7c2e32b66fedde1ad9211e
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 5e4490526f16bbf22143f0ca40fb8150a5a66c98
 - id: verify
   status: pending
   result: null
@@ -121,7 +122,7 @@ tasks:
     notes: null
     branch: em-workflow/wrapper-args-test-xdg-cache-isolation/task0001
 review:
-  status: pending
+  status: completed
   plan:
     floor:
     - comprehensive
@@ -130,7 +131,12 @@ review:
     - spec
     discretionary: []
     cross_validation: false
-  rounds_completed: 0
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - performance
+  - spec
   residual_critical_high: 0
   needs_rework: false
 requirements:

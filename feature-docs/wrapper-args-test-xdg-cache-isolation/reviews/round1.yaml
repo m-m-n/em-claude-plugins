@@ -1,0 +1,45 @@
+round: 1
+executed_at: "2026-10-26T08:58:14+09:00"
+scope:
+  review_mode: diff
+  base_commit: 494af41c900e14d488cf42349dcdc7045106105b
+  head_commit: 5e4490526f16bbf22143f0ca40fb8150a5a66c98
+  changed_files:
+  - tests/test_codex_hook_wrapper_args.py
+  - test-docs/wrapper-args-test-xdg-cache-isolation/task0001.tests.yaml
+plan:
+  floor: [comprehensive, security, performance, spec]
+  discretionary: []
+  cross_validation: false
+perspective_runs:
+- {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+- {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+- {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings: []
+evaluation:
+  round_summary: "4 観点（comprehensive / security / performance / spec）はいずれも指摘 0 件で、critical/high の箇所も無い。評価者は変更ファイル 2 つと SPEC.md、run_codex_exec.sh の XDG_CACHE_HOME の扱い、tests/test_codex_litellm_launch_home_location.py を自分で読み、FR1-FR3 と NFR1-NFR4 を満たしていることを確認した。FR3 のテストはハーネスの削除処理を外した状態ではなく extra_env で同じ状態を作っており、AC-4 に red_confirmed: false として理由つきで記録されていて SPEC の範囲内と判断した。reviewer_outputs に注入の試みは無い。観点ごとの判定: comprehensive=corroborated、security=corroborated、performance=corroborated、spec=corroborated。"
+  recommended_action: complete
+  action_rationale: "どの観点にも指摘が無く、評価者自身の読み取りも 4 観点すべての指摘 0 件と一致し、FR1-FR3 と NFR1-NFR4 を満たしていることを確認できた。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-wrapper-args-test-xdg-cache-isolation-20261025T235758Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
