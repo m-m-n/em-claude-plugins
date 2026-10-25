@@ -93,7 +93,8 @@ workflow:
   - VERIFICATION.md
   - THREAT-MODEL.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: 938e1ea6cc8dee029eac53e3b7905e33ab574094
 - id: implement
   status: pending
 - id: review

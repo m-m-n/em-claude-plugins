@@ -1,11 +1,11 @@
 schema_version: 1
 feature: merge-task-worktree-binding
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 3dedba4ec4bd5c4046e949e01d815e4227511260
 last_input_digest: sha256:d37f00a61d5abc270f4e5f8dbe01369c3eb0634d0177fc843544337ded38a5ca
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
