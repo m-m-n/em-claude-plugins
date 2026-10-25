@@ -132,9 +132,9 @@ tasks:
     - NFR4
     - NFR5
     - NFR6
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/codex-stop-hook-tty-reaper/task0001
   task0002:
     title: Register the Stop hook on every run_codex_exec.sh launch path (em-workflow / em-review) and extend the wrapper argument test
     plan: tasks/task0002.md
@@ -155,9 +155,9 @@ tasks:
     - NFR3
     - NFR4
     - NFR6
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/codex-stop-hook-tty-reaper/task0002
 review:
   status: pending
   rounds_completed: 0
