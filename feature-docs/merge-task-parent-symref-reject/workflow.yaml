@@ -87,7 +87,8 @@ workflow:
   base_commit: d39296aa283f340b58ceb8d41b26d1bf0fffbf7f
   completed_at_commit: 2ffb7e0ff463a94962e94305110cd0f8d64fc675
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: c033d4a423bf220d68980ab30ad0b44f9499fb4a
 - id: verify
   status: pending
   result: null
@@ -125,8 +126,14 @@ tasks:
     branch: em-workflow/merge-task-parent-symref-reject/task0001
     notes: null
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
   plan:
     floor:
     - comprehensive
