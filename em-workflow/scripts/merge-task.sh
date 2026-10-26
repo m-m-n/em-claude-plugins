@@ -20,7 +20,13 @@
 # the parent value from the exact integration ref refs/heads/<parent-branch>:
 # both are resolved by exact ref-name match (no ambiguous-name lookup), and a
 # ref that is absent, or whose object is not a commit, ends the run with exit 2
-# before any ref is updated.
+# before any ref is updated. The integration ref must also be a direct ref:
+# once the lock is held, a symbolic ref at refs/heads/<parent-branch> (a
+# dangling one included), or an answer to that question that cannot be
+# determined, ends the run with exit 2 after the lock and before any ref
+# update. Both update-ref calls on the integration ref use the no-deref
+# option, so a symbolic ref placed there after that check is never followed
+# to its referent.
 #
 # Usage:
 #   ${CLAUDE_PLUGIN_ROOT}/scripts/merge-task.sh <parent-branch> <task-id>
@@ -32,7 +38,8 @@
 #   2 = other error (a run outside the task's own worktree layout or without
 #       the task branch checked out, a task-id or parent-branch mismatch, a
 #       switch away from the task branch while waiting for the merge lock,
-#       uncommitted changes, unknown branch, git failure, ...)
+#       an integration ref that is a symbolic ref, uncommitted changes,
+#       unknown branch, git failure, ...)
 #
 # Concurrency: the whole check→merge sequence runs under an exclusive flock
 # on a lock file in the shared .git directory. Concurrent callers simply
@@ -173,10 +180,28 @@ PL_HEAD_REF=$(git symbolic-ref --quiet HEAD 2>/dev/null) || PL_HEAD_REF=""
 # here exits 2 before any update-ref, merge-tree, commit-tree or journal
 # append. One merge-source value feeds the already-contained, fast-forward and
 # merge-commit paths below; nothing reads the task ref or HEAD again.
+# The integration ref must not be a symbolic ref: a lookup of it would resolve
+# through the symbolic ref to its referent, and an update of it would move
+# that other branch. Immediately before the parent value is read, with the
+# lock held, `git symbolic-ref --quiet` is asked about the exact ref and the
+# decision is made on its exit status alone: 0 (a symbolic ref, dangling
+# included) ends the run with exit 2; 1 (a direct ref, or no such ref, which
+# the lookup below rejects on its own) lets the run continue; any other status
+# also ends the run with exit 2, because the answer could not be determined.
+# Both update-ref calls below pass the no-deref option, so a symbolic ref
+# placed at the integration ref after this check is never followed to its
+# referent; the old-value comparison against PARENT stays as it was.
 HEAD_SHA=$(git show-ref --verify --hash -- "$IB_EXPECTED_REF" 2>/dev/null) \
   || die "cannot resolve the task ref $IB_EXPECTED_REF by its exact name"
 [ "$(git cat-file -t "$HEAD_SHA" 2>/dev/null)" = "commit" ] \
   || die "the task ref $IB_EXPECTED_REF does not name a commit"
+PARENT_SYMREF_TARGET=$(git symbolic-ref --quiet "refs/heads/$PARENT_BRANCH" 2>/dev/null)
+PARENT_SYMREF_STATUS=$?
+case "$PARENT_SYMREF_STATUS" in
+  0) die "the integration ref refs/heads/$PARENT_BRANCH is a symbolic ref (pointing at ${PARENT_SYMREF_TARGET:-an unreadable target}) — merge-task.sh merges only into a direct ref of the integration branch" ;;
+  1) ;;
+  *) die "cannot determine whether the integration ref refs/heads/$PARENT_BRANCH is a symbolic ref (git symbolic-ref exited $PARENT_SYMREF_STATUS)" ;;
+esac
 PARENT=$(git show-ref --verify --hash -- "refs/heads/$PARENT_BRANCH" 2>/dev/null) \
   || die "parent branch not found: $PARENT_BRANCH"
 [ "$(git cat-file -t "$PARENT" 2>/dev/null)" = "commit" ] \
@@ -191,7 +216,7 @@ fi
 
 # Fast-forward case: parent is our ancestor → advance the ref, no merge commit.
 if git merge-base --is-ancestor "$PARENT" "$HEAD_SHA"; then
-  git update-ref "refs/heads/$PARENT_BRANCH" "$HEAD_SHA" "$PARENT" \
+  git update-ref --no-deref "refs/heads/$PARENT_BRANCH" "$HEAD_SHA" "$PARENT" \
     || die "update-ref failed (fast-forward)"
   append_merged_event "$HEAD_SHA"
   echo "MERGED: $TASK_ID -> $PARENT_BRANCH (fast-forward to $HEAD_SHA)"
@@ -219,7 +244,7 @@ COMMIT=$(git commit-tree "$TREE" -p "$PARENT" -p "$HEAD_SHA" \
 
 # Compare-and-swap against the PARENT value read inside this critical
 # section — defense in depth on top of the flock.
-git update-ref "refs/heads/$PARENT_BRANCH" "$COMMIT" "$PARENT" \
+git update-ref --no-deref "refs/heads/$PARENT_BRANCH" "$COMMIT" "$PARENT" \
   || die "update-ref failed (parent moved unexpectedly)"
 
 append_merged_event "$COMMIT"

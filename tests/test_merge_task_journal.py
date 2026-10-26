@@ -10,6 +10,8 @@ import fcntl
 import json
 import os
 import re
+import shlex
+import shutil
 import subprocess
 import tempfile
 import threading
@@ -153,11 +155,11 @@ class TestMergeTaskJournal(unittest.TestCase):
         self._git(worktree, "add", filename)
         self._git(worktree, "commit", "-q", "-m", message)
 
-    def _run_merge(self, worktree, task_id, parent_branch=PARENT_BRANCH):
+    def _run_merge(self, worktree, task_id, parent_branch=PARENT_BRANCH, env=None):
         return subprocess.run(
             [str(MERGE_SCRIPT), parent_branch, task_id],
             cwd=str(worktree),
-            env=self.git_env,
+            env=self.git_env if env is None else env,
             capture_output=True,
             text=True,
         )
@@ -336,6 +338,140 @@ class TestMergeTaskJournal(unittest.TestCase):
         self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
         self.assertIn("ERROR", result.stderr)
         self.assertEqual(list(self.tmp_path.rglob("journal.jsonl")), [])
+
+    # -- helpers for the integration-ref symbolic-ref tests ----------------
+    # (merge-task-parent-symref-reject task0001). The helpers that resolve the
+    # integration branch by name (_parent_sha, _assert_rejected_without_side_
+    # effects) follow a symbolic ref, so the symref cases judge ref values
+    # through exact lookups (_exact_ref_value) of the referent and the task
+    # ref, and the symbolic ref itself through _parent_symbolic_target.
+
+    def _point_parent_ref_at(self, target):
+        """Make refs/heads/<integration branch> a symbolic ref targeting the
+        full ref name `target` (the referent need not exist)."""
+        self._git(
+            self.main_repo, "symbolic-ref", f"refs/heads/{PARENT_BRANCH}", target
+        )
+
+    def _parent_symbolic_target(self):
+        """The ref name refs/heads/<integration branch> points at, or None
+        when that ref is not a symbolic ref."""
+        result = self._git(
+            self.main_repo,
+            "symbolic-ref",
+            "--quiet",
+            f"refs/heads/{PARENT_BRANCH}",
+            check=False,
+        )
+        return result.stdout.strip() if result.returncode == 0 else None
+
+    def _assert_symref_case_rejected(self, result, names_symbolic_ref=False):
+        """Exit 2; exactly one ERROR line, and it names PARENT_BRANCH (and, when
+        requested, says "symbolic ref"); no dirty-worktree wording; no
+        journal.jsonl anywhere under the test's temporary directory."""
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        error_lines = [
+            line for line in result.stderr.splitlines() if line.startswith("ERROR")
+        ]
+        self.assertEqual(len(error_lines), 1, result.stderr)
+        self.assertIn(PARENT_BRANCH, error_lines[0])
+        if names_symbolic_ref:
+            self.assertIn("symbolic ref", error_lines[0])
+        self._assert_no_dirty_worktree_wording(result)
+        self.assertEqual(list(self.tmp_path.rglob("journal.jsonl")), [])
+
+    def _create_branch_diverged_from_task(self, branch):
+        """A branch with one commit (on a file the task commit does not touch)
+        on top of the integration tip, built in a side worktree so the main
+        working tree's checkout is untouched. Returns its full ref name."""
+        side_worktree = self.tmp_path / "side-worktree"
+        self._git(
+            self.main_repo,
+            "worktree",
+            "add",
+            "-q",
+            "-b",
+            branch,
+            str(side_worktree),
+            PARENT_BRANCH,
+        )
+        self._commit_file(
+            side_worktree, "side.txt", "side change\n", "side: diverging commit"
+        )
+        return f"refs/heads/{branch}"
+
+    def _build_git_shim(self, mode):
+        """Write an executable `git` into a fresh directory under the test's
+        temporary directory and return (env, record_dir): `env` is the git
+        environment with that directory first on PATH, `record_dir` holds one
+        file per interception. Every invocation goes to the real git
+        (absolute path resolved here, before the shim exists) with its
+        arguments, working directory, output and exit status, except:
+
+        - "repoint": the first invocation whose subcommand is update-ref and
+          whose arguments include refs/heads/<integration branch> first makes
+          that ref a symbolic ref targeting refs/heads/main through the real
+          git and records the interception, then hands the original
+          invocation to the real git.
+        - "status": every invocation whose subcommand is symbolic-ref and
+          whose arguments include refs/heads/<integration branch> records the
+          interception and exits 128 without calling git.
+
+        The returned env is meant for the merge-task.sh subprocess only; the
+        test's own git calls use self.git_env."""
+        self.assertIn(mode, ("repoint", "status"))
+        real_git = shutil.which("git")
+        self.assertIsNotNone(real_git, "git not found on PATH")
+        shim_dir = Path(tempfile.mkdtemp(dir=self.tmp_path, prefix="git-shim-"))
+        record_dir = Path(tempfile.mkdtemp(dir=self.tmp_path, prefix="git-shim-records-"))
+        parent_ref = f"refs/heads/{PARENT_BRANCH}"
+        record = (
+            'n=1; while [ -e "$RECORD_DIR/interception-$n" ]; do n=$((n+1)); done; '
+            ': > "$RECORD_DIR/interception-$n"'
+        )
+        if mode == "repoint":
+            body = (
+                'if [ "$1" = update-ref ]; then\n'
+                '  for arg in "$@"; do\n'
+                '    if [ "$arg" = "$PARENT_REF" ]; then\n'
+                '      if [ ! -e "$RECORD_DIR/interception-1" ]; then\n'
+                '        "$REAL_GIT" symbolic-ref "$PARENT_REF" refs/heads/main \\\n'
+                '          || { echo "git shim: re-point failed" >&2; exit 99; }\n'
+                f"        {record}\n"
+                "      fi\n"
+                "      break\n"
+                "    fi\n"
+                "  done\n"
+                "fi\n"
+            )
+        else:
+            body = (
+                'if [ "$1" = symbolic-ref ]; then\n'
+                '  for arg in "$@"; do\n'
+                '    if [ "$arg" = "$PARENT_REF" ]; then\n'
+                f"      {record}\n"
+                "      exit 128\n"
+                "    fi\n"
+                "  done\n"
+                "fi\n"
+            )
+        script = (
+            "#!/bin/sh\n"
+            f"REAL_GIT={shlex.quote(real_git)}\n"
+            f"PARENT_REF={shlex.quote(parent_ref)}\n"
+            f"RECORD_DIR={shlex.quote(str(record_dir))}\n"
+            + body
+            + 'exec "$REAL_GIT" "$@"\n'
+        )
+        shim_path = shim_dir / "git"
+        shim_path.write_text(script)
+        os.chmod(shim_path, 0o755)
+        env = dict(self.git_env)
+        env["PATH"] = f"{shim_dir}{os.pathsep}{self.git_env['PATH']}"
+        return env, record_dir
+
+    def _count_interceptions(self, record_dir):
+        return len(list(Path(record_dir).iterdir()))
 
     # -- AC-1 ----------------------------------------------------------
 
@@ -946,6 +1082,198 @@ class TestMergeTaskJournal(unittest.TestCase):
             if json.loads(line)["event"] == "merged" and json.loads(line)["task"] == task_id
         ]
         self.assertEqual(len(merged), 1)
+
+    # -- merge-task-parent-symref-reject task0001: the integration ref must be
+    # a direct ref. Under the merge lock, a symbolic ref at
+    # refs/heads/<integration branch> (dangling included), or an
+    # undeterminable answer, ends the run with exit 2 before any ref update;
+    # both update-ref calls on the integration ref use the no-deref option.
+
+    def test_parent_ref_repointed_to_task_ref_during_lock_wait_is_rejected(self):
+        # references AC-1 (a) / TS-1: the unmodified script resolves the
+        # parent through the symbolic ref to the task tip, takes the
+        # already-contained path and appends a `merged` event.
+        task_id = "task0001"
+        wt = self._task_worktree_with_commit_to_merge(task_id)
+        task_ref = f"refs/heads/em-workflow/{FEATURE}/{task_id}"
+        task_tip = self._exact_ref_value(task_ref)
+        self.assertIsNotNone(task_tip)
+
+        result = self._run_merge_with_mutation_during_lock_wait(
+            wt, task_id, lambda: self._point_parent_ref_at(task_ref)
+        )
+
+        self._assert_symref_case_rejected(result, names_symbolic_ref=True)
+        self.assertEqual(self._exact_ref_value(task_ref), task_tip)
+        self.assertEqual(self._parent_symbolic_target(), task_ref)
+
+    def test_parent_ref_repointed_to_main_at_fast_forward_position_during_lock_wait_is_rejected(
+        self,
+    ):
+        # references AC-1 (b) / TS-2: main is the initial commit, an ancestor
+        # of the task tip, so the unmodified script would fast-forward main.
+        task_id = "task0001"
+        wt = self._task_worktree_with_commit_to_merge(task_id)
+        task_ref = f"refs/heads/em-workflow/{FEATURE}/{task_id}"
+        main_ref = "refs/heads/main"
+        task_tip = self._exact_ref_value(task_ref)
+        main_before = self._exact_ref_value(main_ref)
+        self.assertIsNotNone(main_before)
+        self.assertEqual(
+            self._git(
+                self.main_repo, "merge-base", "--is-ancestor", main_before, task_tip,
+                check=False,
+            ).returncode,
+            0,
+            "fixture: main must sit at a fast-forward position",
+        )
+
+        result = self._run_merge_with_mutation_during_lock_wait(
+            wt, task_id, lambda: self._point_parent_ref_at(main_ref)
+        )
+
+        self._assert_symref_case_rejected(result, names_symbolic_ref=True)
+        self.assertEqual(self._exact_ref_value(main_ref), main_before)
+        self.assertEqual(self._exact_ref_value(task_ref), task_tip)
+        self.assertEqual(self._parent_symbolic_target(), main_ref)
+
+    def test_parent_ref_repointed_to_diverged_branch_during_lock_wait_is_rejected(self):
+        # references AC-1 (c) / TS-3: the side branch and the task tip are
+        # unrelated by ancestry and touch different files, so the unmodified
+        # script would create a merge commit on the side branch.
+        task_id = "task0001"
+        wt = self._task_worktree_with_commit_to_merge(task_id)
+        task_ref = f"refs/heads/em-workflow/{FEATURE}/{task_id}"
+        task_tip = self._exact_ref_value(task_ref)
+        side_ref = self._create_branch_diverged_from_task("diverged-side")
+        side_before = self._exact_ref_value(side_ref)
+        self.assertIsNotNone(side_before)
+
+        result = self._run_merge_with_mutation_during_lock_wait(
+            wt, task_id, lambda: self._point_parent_ref_at(side_ref)
+        )
+
+        self._assert_symref_case_rejected(result, names_symbolic_ref=True)
+        self.assertEqual(self._exact_ref_value(side_ref), side_before)
+        self.assertEqual(self._exact_ref_value(task_ref), task_tip)
+        subjects = self._git(
+            self.main_repo, "log", "--format=%s", side_ref
+        ).stdout.splitlines()
+        self.assertNotIn(f"merge: {task_id}", subjects)
+        self.assertEqual(self._parent_symbolic_target(), side_ref)
+
+    def test_parent_ref_already_a_symbolic_ref_to_main_is_rejected(self):
+        # references AC-2 (a) / TS-4: no lock wait; the symbolic ref exists
+        # before the run.
+        task_id = "task0001"
+        wt = self._task_worktree_with_commit_to_merge(task_id)
+        main_ref = "refs/heads/main"
+        main_before = self._exact_ref_value(main_ref)
+        self._point_parent_ref_at(main_ref)
+
+        result = self._run_merge(wt, task_id)
+
+        self._assert_symref_case_rejected(result, names_symbolic_ref=True)
+        self.assertEqual(self._exact_ref_value(main_ref), main_before)
+        self.assertEqual(self._parent_symbolic_target(), main_ref)
+
+    def test_parent_ref_a_dangling_symbolic_ref_is_rejected_as_a_symbolic_ref(self):
+        # references AC-2 (b) / TS-5: the unmodified script already ends with
+        # exit 2 here (the parent lookup fails) but with a different message.
+        task_id = "task0001"
+        wt = self._task_worktree_with_commit_to_merge(task_id)
+        absent_ref = "refs/heads/no-such-target"
+        self.assertIsNone(self._exact_ref_value(absent_ref))
+        self._point_parent_ref_at(absent_ref)
+
+        result = self._run_merge(wt, task_id)
+
+        self._assert_symref_case_rejected(result, names_symbolic_ref=True)
+        self.assertIsNone(self._exact_ref_value(absent_ref))
+        self.assertEqual(self._parent_symbolic_target(), absent_ref)
+
+    def test_undeterminable_symbolic_ref_status_of_parent_ref_is_rejected(self):
+        # references AC-3 / TS-9: the git shim makes the symbolic-ref query on
+        # the integration ref exit 128 (neither 0 nor 1). The unmodified
+        # script never asks, so the shim sees no interception and the merge
+        # succeeds.
+        task_id = "task0001"
+        wt = self._task_worktree_with_commit_to_merge(task_id)
+        parent_before = self._parent_sha()
+        env, records = self._build_git_shim("status")
+
+        result = self._run_merge(wt, task_id, env=env)
+
+        self._assert_symref_case_rejected(result)
+        self.assertIn("128", result.stderr)
+        self._assert_rejected_without_side_effects(result, task_id, parent_before)
+        self.assertGreaterEqual(self._count_interceptions(records), 1)
+
+    def test_update_ref_does_not_follow_symbolic_ref_planted_before_fast_forward(self):
+        # references AC-4 / TS-8 (fast-forward path): main's tip equals the
+        # integration tip (true in the base fixture), and the shim re-points
+        # the integration ref to main right before the update-ref. Only main's
+        # value and the interception count are asserted: with the no-deref
+        # option git may reject the update or replace the symbolic ref by a
+        # direct ref.
+        task_id = "task0001"
+        wt = self._task_worktree_with_commit_to_merge(task_id)
+        main_ref = "refs/heads/main"
+        main_before = self._exact_ref_value(main_ref)
+        self.assertEqual(main_before, self._parent_sha())
+        env, records = self._build_git_shim("repoint")
+
+        self._run_merge(wt, task_id, env=env)
+
+        self.assertEqual(self._exact_ref_value(main_ref), main_before)
+        self.assertEqual(self._count_interceptions(records), 1)
+
+    def test_update_ref_does_not_follow_symbolic_ref_planted_before_merge_commit(self):
+        # references AC-4 / TS-8 (merge-commit path): the integration branch is
+        # advanced with an unrelated commit first, then main is moved to the
+        # integration tip so the old values are equal.
+        task_id = "task0001"
+        wt = self._task_worktree_with_commit_to_merge(task_id)
+        self._commit_file(
+            self.main_repo,
+            "parent-file.txt",
+            "parent change\n",
+            "integration: unrelated advance",
+        )
+        main_ref = "refs/heads/main"
+        self._git(self.main_repo, "branch", "-f", "main", PARENT_BRANCH)
+        main_before = self._exact_ref_value(main_ref)
+        self.assertEqual(main_before, self._parent_sha())
+        env, records = self._build_git_shim("repoint")
+
+        self._run_merge(wt, task_id, env=env)
+
+        self.assertEqual(self._exact_ref_value(main_ref), main_before)
+        self.assertEqual(self._count_interceptions(records), 1)
+
+    def test_task_ref_repointed_to_symbolic_ref_of_another_branch_during_lock_wait_is_rejected(
+        self,
+    ):
+        # references AC-5 / TS-7 (existing behaviour pinned): the post-lock HEAD
+        # re-check resolves the task ref recursively and rejects the run.
+        task_id = "task0001"
+        wt = self._task_worktree_with_commit_to_merge(task_id)
+        self._git(self.main_repo, "branch", "other-branch", "main")
+        task_ref = f"refs/heads/em-workflow/{FEATURE}/{task_id}"
+        other_ref = "refs/heads/other-branch"
+        parent_ref = f"refs/heads/{PARENT_BRANCH}"
+        other_before = self._exact_ref_value(other_ref)
+        parent_before = self._exact_ref_value(parent_ref)
+        self.assertIsNotNone(other_before)
+
+        result = self._run_merge_with_mutation_during_lock_wait(
+            wt, task_id, lambda: self._git(wt, "symbolic-ref", task_ref, other_ref)
+        )
+
+        self._assert_failed_without_ref_or_journal_side_effects(result)
+        self._assert_identity_error_names(result, task_ref)
+        self.assertEqual(self._exact_ref_value(other_ref), other_before)
+        self.assertEqual(self._exact_ref_value(parent_ref), parent_before)
 
 
 if __name__ == "__main__":

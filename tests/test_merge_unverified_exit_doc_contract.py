@@ -966,9 +966,11 @@ EXPECTED_LAUNCH_GUARD_SHA256 = (
 # adding the identity binding; merge-task-post-lock-rebind task0001 set it
 # after adding the post-lock identity re-check; merge-task-exact-ref-resolve
 # task0001 set it after switching the merge source and the parent to exact
-# ref-name lookups).
+# ref-name lookups; merge-task-parent-symref-reject task0001 set it after
+# rejecting a symbolic-ref integration ref and adding the no-deref option to
+# both update-ref calls).
 EXPECTED_MERGE_TASK_SH_SHA256 = (
-    "19691d1bb6c803f81ae1b35a5b084935bbef1979506b7070e0c512e42871ccb0"
+    "aee6805efeb2fec1d947605712d6031323dec330bd78f7da8114e8bc47d679f5"
 )
 
 
