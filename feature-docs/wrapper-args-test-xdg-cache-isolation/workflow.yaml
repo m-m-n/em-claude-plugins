@@ -99,7 +99,8 @@ workflow:
   failed_items: []
   completed_at_commit: 6c8863253c97bb4211ca7014ce72eb50f4d9d1b7
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: f22c428d3a7e7fc4c66099b95e6bb2e68dfbc002
 tasks:
   task0001:
     title: Keep the wrapper-args harness out of the caller's cache
