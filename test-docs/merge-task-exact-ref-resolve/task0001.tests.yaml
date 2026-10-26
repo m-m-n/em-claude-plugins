@@ -1,0 +1,46 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests, run inside the task worktree before any edit: 11713 tests, OK (skipped=1)
+final_failures: []             # python3 -m unittest discover -s tests, re-run inside the task worktree after the implementation and this record: 11717 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_task_ref_deleted_in_a_clean_worktree_is_rejected_at_the_merge_source
+    red_confirmed: true
+    red_reason: "the extended test failed against the unchanged script: AssertionError: 0 != 2 : MERGED: task0001 -> em-workflow/feat/integration (fast-forward to <sha>); the name lookup of the deleted task ref resolved to the tag refs/tags/refs/heads/em-workflow/feat/task0001 and the integration branch was fast-forwarded to the tagged commit"
+  AC-2:
+    tests:
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_parent_ref_deleted_with_a_same_named_tag_is_rejected_without_side_effects
+    red_confirmed: true
+    red_reason: "failed against the unchanged script: AssertionError: 0 != 2 : MERGED: task0001 already contained in em-workflow/feat/integration; the name lookup of the deleted integration ref resolved to the tag refs/tags/refs/heads/em-workflow/feat/integration at the task tip"
+  AC-3:
+    tests:
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_task_ref_pointing_at_a_non_commit_during_lock_wait_is_rejected_without_side_effects
+    red_confirmed: false
+    red_reason: "passed against the unchanged script, as the task plan allows: the old rev-parse '^{commit}' peel already rejected a tree with exit 2 (cannot resolve the task branch to a commit). The test guards the new commit-type check (cat-file -t) of the exact-ref lookup; no red state occurred for this change"
+  AC-4:
+    tests:
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_parent_ref_pointing_at_a_non_commit_is_rejected_without_side_effects
+    red_confirmed: true
+    red_reason: "failed against the unchanged script: AssertionError: 1 != 2 with 'error: object <tree sha> is a tree, not a commit' and 'CONFLICT: merging task0001 into em-workflow/feat/integration conflicts in: merge-tree: <tree sha> - not something we can merge'; the old parent lookup accepted a tree and the run ended through the conflict path with exit 1"
+  AC-5:
+    tests:
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_new_commit_on_task_branch_during_lock_wait_is_merged
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_fast_forward_merge_appends_one_well_formed_merged_line
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_merge_commit_merge_appends_one_well_formed_merged_line
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_idempotent_already_merged_path_appends_merged_line_and_tolerates_duplicates
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_run_from_committed_subdirectory_of_own_worktree_merges
+    red_confirmed: false
+    red_reason: "a dedicated new module is out of scope, but the existing tests of tests/test_merge_task_journal.py (bodies unchanged) detect any regression of the late-commit-during-wait, fast-forward, merge-commit, already-contained and subdirectory behavior of the single merge-source value; no red state occurred for this change because the behavior pre-existed and must stay as it was. That each of the merge source and the parent is obtained once through the exact ref verification lookup, and that no revision-parsing lookup of either remains, is checked on the diff only"
+  AC-6:
+    tests:
+      - tests.test_merge_unverified_exit_doc_contract.TestNeverModifiedFilesAreByteIdentical.test_merge_task_sh_untouched
+      - tests.test_merge_unverified_exit_doc_contract.TestNeverModifiedFilesAreByteIdentical.test_merge_task_sh_names_the_already_contained_case_once_with_its_check_next
+      - tests.test_merge_unverified_exit_doc_contract.TestMergeTaskShCommentsDoNotPermitOutOfLayoutMerge.test_permission_phrases_absent_from_merge_task_sh
+    red_confirmed: true
+    red_reason: "test_merge_task_sh_untouched failed once merge-task.sh was edited and the old pin was still in place: AssertionError: '19691d1b...ccb0' != '50fc5a35...951fd' (actual sha256 of the script versus the old pin). The other two tests pin properties that pre-existed (single 'Parent already contains us' line with the ancestor check next, absence of the permission phrases), were green throughout and guard against regressions; no red state occurred for them. The wording of the header paragraph, the Concurrency paragraph and the comment block above the resolution has no executable check and is reviewed on the diff"
+  AC-7:
+    tests:
+      - tests.test_merge_task_journal
+      - tests.test_merge_unverified_exit_doc_contract
+    red_confirmed: true
+    red_reason: "the two modules were observed failing before the implementation: three of the new or extended tests in tests.test_merge_task_journal failed against the unchanged script (AC-1, AC-2, AC-4 above), and the pin test of tests.test_merge_unverified_exit_doc_contract failed once the script changed with the old pin. That the only test changes are the FR6 extension, the added tests and helpers, and the pin value with its history comment is checked on the diff only"

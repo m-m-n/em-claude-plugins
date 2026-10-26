@@ -319,6 +319,24 @@ class TestMergeTaskJournal(unittest.TestCase):
         for wording in ("uncommitted", "untracked", "commit everything"):
             self.assertNotIn(wording, result.stderr)
 
+    def _exact_ref_value(self, ref):
+        """The object ID stored under the exact full ref name `ref` (git's
+        exact verification lookup, no ambiguous-name resolution), or None when
+        that exact ref is absent."""
+        result = self._git(
+            self.main_repo, "show-ref", "--verify", "--hash", "--", ref, check=False
+        )
+        return result.stdout.strip() if result.returncode == 0 else None
+
+    def _assert_failed_without_ref_or_journal_side_effects(self, result):
+        """Exit 2 with an ERROR line and no journal.jsonl anywhere under the
+        test's temporary directory. The ref checks stay with the caller: these
+        tests plant refs the integration-branch helper above would resolve by
+        name."""
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertIn("ERROR", result.stderr)
+        self.assertEqual(list(self.tmp_path.rglob("journal.jsonl")), [])
+
     # -- AC-1 ----------------------------------------------------------
 
     def test_fast_forward_merge_appends_one_well_formed_merged_line(self):
@@ -788,9 +806,28 @@ class TestMergeTaskJournal(unittest.TestCase):
         # references AC-4 / TS-6: with the tracked files removed as well, the
         # worktree is clean on the unborn branch, so only the merge-source
         # resolution from the verified task ref can reject the run.
+        # references FR6 / TS-1 of merge-task-exact-ref-resolve: the tag
+        # refs/tags/<task ref> sits at a commit that is a child of the
+        # integration tip and is on no branch. A name lookup of the deleted
+        # task ref would resolve to that tag and fast-forward the integration
+        # branch to it; the exact-ref lookup must not.
         task_id = "task0001"
         wt = self._task_worktree_with_commit_to_merge(task_id)
         parent_before = self._parent_sha()
+        parent_tree = self._git(
+            self.main_repo, "rev-parse", f"{parent_before}^{{tree}}"
+        ).stdout.strip()
+        tagged_commit = self._git(
+            self.main_repo,
+            "commit-tree",
+            parent_tree,
+            "-p",
+            parent_before,
+            "-m",
+            "off-branch commit under a same-named tag",
+        ).stdout.strip()
+        tag_ref = f"refs/tags/refs/heads/em-workflow/{FEATURE}/{task_id}"
+        self._git(self.main_repo, "update-ref", tag_ref, tagged_commit)
 
         def delete_ref_and_empty_worktree():
             self._git(wt, "update-ref", "-d", f"refs/heads/em-workflow/{FEATURE}/{task_id}")
@@ -805,6 +842,87 @@ class TestMergeTaskJournal(unittest.TestCase):
             result, f"refs/heads/em-workflow/{FEATURE}/{task_id}"
         )
         self._assert_no_dirty_worktree_wording(result)
+        self.assertEqual(self._exact_ref_value(tag_ref), tagged_commit)
+
+    def test_parent_ref_deleted_with_a_same_named_tag_is_rejected_without_side_effects(
+        self,
+    ):
+        # references FR7 / FR8 / TS-3 of merge-task-exact-ref-resolve: with the
+        # exact integration ref gone and the tag refs/tags/<integration ref>
+        # at the task tip, a name lookup of the parent would resolve to that
+        # tag and report the task as already contained (exit 0, a `merged`
+        # event); the exact-ref lookup must reject the run instead. The
+        # integration branch is absent, so the side effects are checked on the
+        # exact refs and the journal rather than on the integration history.
+        task_id = "task0001"
+        wt = self._task_worktree_with_commit_to_merge(task_id)
+        parent_ref = f"refs/heads/{PARENT_BRANCH}"
+        tag_ref = f"refs/tags/{parent_ref}"
+        task_ref = f"refs/heads/em-workflow/{FEATURE}/{task_id}"
+        task_tip = self._exact_ref_value(task_ref)
+        self.assertIsNotNone(task_tip)
+
+        def delete_parent_and_plant_tag():
+            self._git(self.main_repo, "update-ref", "-d", parent_ref)
+            self._git(self.main_repo, "update-ref", tag_ref, task_tip)
+
+        result = self._run_merge_with_mutation_during_lock_wait(
+            wt, task_id, delete_parent_and_plant_tag
+        )
+
+        self._assert_failed_without_ref_or_journal_side_effects(result)
+        self._assert_identity_error_names(result, PARENT_BRANCH)
+        self.assertIsNone(self._exact_ref_value(parent_ref))
+        self.assertEqual(self._exact_ref_value(tag_ref), task_tip)
+        self.assertEqual(self._exact_ref_value(task_ref), task_tip)
+
+    def test_task_ref_pointing_at_a_non_commit_during_lock_wait_is_rejected_without_side_effects(
+        self,
+    ):
+        # references FR3 / TS-4 of merge-task-exact-ref-resolve: git refuses
+        # to update a branch ref to a non-commit object, so the loose ref file
+        # is written directly. The run may stop at the clean-tree check or at
+        # the commit-type check: only exit 2, an ERROR line and no side
+        # effects are required.
+        task_id = "task0001"
+        wt = self._task_worktree_with_commit_to_merge(task_id)
+        parent_before = self._parent_sha()
+        tree_oid = self._git(wt, "rev-parse", "HEAD^{tree}").stdout.strip()
+        task_ref_file = (
+            self.main_repo / ".git" / "refs" / "heads" / "em-workflow" / FEATURE / task_id
+        )
+        self.assertTrue(task_ref_file.is_file())
+
+        result = self._run_merge_with_mutation_during_lock_wait(
+            wt, task_id, lambda: task_ref_file.write_text(tree_oid + "\n")
+        )
+
+        self._assert_rejected_without_side_effects(result, task_id, parent_before)
+
+    def test_parent_ref_pointing_at_a_non_commit_is_rejected_without_side_effects(self):
+        # references SPEC.md A3 of merge-task-exact-ref-resolve: the pre-lock
+        # binding compares only the parent branch's name, so the integration
+        # ref can point at a non-commit object before the run. The
+        # integration-branch history cannot be read here, so the side effects
+        # are checked on the exact refs and the journal.
+        task_id = "task0001"
+        wt = self._task_worktree_with_commit_to_merge(task_id)
+        parent_ref = f"refs/heads/{PARENT_BRANCH}"
+        task_ref = f"refs/heads/em-workflow/{FEATURE}/{task_id}"
+        task_tip = self._exact_ref_value(task_ref)
+        tree_oid = self._git(wt, "rev-parse", "HEAD^{tree}").stdout.strip()
+        parent_ref_file = (
+            self.main_repo / ".git" / "refs" / "heads" / "em-workflow" / FEATURE / "integration"
+        )
+        self.assertTrue(parent_ref_file.is_file())
+        parent_ref_file.write_text(tree_oid + "\n")
+        self.assertEqual(self._exact_ref_value(parent_ref), tree_oid)
+
+        result = self._run_merge(wt, task_id)
+
+        self._assert_failed_without_ref_or_journal_side_effects(result)
+        self.assertEqual(self._exact_ref_value(parent_ref), tree_oid)
+        self.assertEqual(self._exact_ref_value(task_ref), task_tip)
 
     def test_new_commit_on_task_branch_during_lock_wait_is_merged(self):
         # references AC-4 / TS-7
