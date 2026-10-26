@@ -1,0 +1,29 @@
+schema_version: 1
+feature: merge-task-already-contained-symref-recheck
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: 0ea2e45dd3f0248436b788e5bca1603acd3b7018
+last_input_digest: sha256:8029f1cc75c65ae2ea1f54cdc03f85fe22b7d8c0415c77d6291fb29c184a8b01
+active_request_id: create-spec-run-0001
+packets: {}
+answers:
+  create-spec.feature-identity:
+    packet_id: null
+    answered_at: "2026-10-27T00:24:38+09:00"
+    source: batch_policy
+    answer_mode: select
+    selected_option_ids: [derive_from_task_description]
+    freeform: null
+    normalized_answer: "feature name derived from the task description: merge-task-already-contained-symref-recheck"
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: dispatched
+    input_digest: sha256:8029f1cc75c65ae2ea1f54cdc03f85fe22b7d8c0415c77d6291fb29c184a8b01
+    output_digest: null
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
