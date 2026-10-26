@@ -2,36 +2,53 @@ schema_version: 1
 feature: merge-task-parent-symref-reject
 created: '2026-10-26'
 base_branch: main
-goal: |
-  # merge-task.sh の統合ブランチの値の解決が、refs/heads/<parent-branch> に置かれたシンボリック参照を辿り、参照先のブランチを統合ブランチとして扱い得る
+goal: '# merge-task.sh の統合ブランチの値の解決が、refs/heads/<parent-branch> に置かれたシンボリック参照を辿り、参照先のブランチを統合ブランチとして扱い得る
+
 
   種別: セキュリティ (severity: low)
 
+
   ## 脆弱性の概要
+
 
   `em-workflow/scripts/merge-task.sh` は統合ブランチの値を `git show-ref --verify --hash -- "refs/heads/$PARENT_BRANCH"` で読む。完全一致の参照名で引くが、その名前がシンボリック参照だと参照先の値を返す。続く `update-ref "refs/heads/$PARENT_BRANCH"` も既定でシンボリック参照を辿るため、統合ブランチ以外の参照先ブランチを動かし得る。
 
+
   ## 攻撃シナリオ
+
 
   同じリポジトリに書き込める別プロセスが、merge-task.sh のロック待機中に `git symbolic-ref refs/heads/em-workflow/{feature}/integration refs/heads/em-workflow/{feature}/{taskNNNN}`（または `refs/heads/main`）を実行する。ロック解放後、統合ブランチの値は参照先のコミットになり、コミット型の確認も通る。
 
+
   - タスク参照を指させた場合: already-contained の経路に入り、exit 0 と `merged` イベントが記録される
+
   - 別ブランチを指させた場合: fast-forward / merge-commit の `update-ref` がそのブランチを動かす
+
 
   ## 影響範囲
 
+
   統合ブランチ以外のブランチ（main を含む）が更新される、またはマージしていないタスクがマージ済みとして記録される。ただし主体は参照を直接動かせる書き込み権限を既に持つため、増えるのは迂回経路に限られる。変更前の rev-parse による解決でも同じ挙動だった（既存の挙動）。
+
 
   ## 完了の定義
 
+
   - 攻撃シナリオが成立しない
+
   - 修正版に追随している（修正版が無い場合は暫定緩和策の欄に対応を記載）
+
 
   ## 該当箇所
 
+
   - `em-workflow/scripts/merge-task.sh:180`（統合ブランチの値の解決）
+
   - 修正案: 値を使う前に `git symbolic-ref --quiet "refs/heads/$PARENT_BRANCH"` が成功したら exit 2 にする。タスク参照側はロック後の `git symbolic-ref --quiet HEAD` が再帰的に辿るため、別ブランチへの付け替えは既に再確認で弾かれる
+
   - 由来: feature `merge-task-exact-ref-resolve` のレビュー round1 で評価者が low として報告した
+
+  '
 parent_branch: em-workflow/merge-task-parent-symref-reject/integration
 tier: full
 tier_decision:
@@ -91,7 +108,35 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Reject a symbolic-ref integration ref in merge-task.sh and stop update-ref from following one
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/merge-task.sh
+    - tests/test_merge_task_journal.py
+    - tests/test_merge_unverified_exit_doc_contract.py
+    skills:
+    - infra-impl
+    domains:
+    - concurrency
+    - external-io
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: pending
+    notes: null
 review:
   status: pending
   rounds_completed: 0
@@ -103,7 +148,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-2
@@ -115,33 +161,45 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-9
   FR3:
     title: 拒否時のエラー出力
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-5
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-9
   FR4:
     title: 参照先を変えない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-2
     - TS-3
+    - TS-4
+    - TS-5
+    - TS-9
   FR5:
     title: スクリプト内コメントの更新
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-6
   FR6:
@@ -149,7 +207,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-6
   FR7:
@@ -157,7 +216,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-8
   NFR1:
@@ -165,30 +225,38 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-6
+    - TS-7
   NFR2:
     title: テストの実行形態
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-10
   NFR3:
     title: version を変更しない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-11
   NFR4:
     title: kill / pkill を使わない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-12
 batch:
   review_rework_count: 0
   verify_rework:
