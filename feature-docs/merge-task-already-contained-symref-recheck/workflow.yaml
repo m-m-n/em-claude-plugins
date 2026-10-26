@@ -83,7 +83,7 @@ workflow:
   completed_at_commit: e304dc707ba507bae55df29c593648157f07b13e
   base_commit: 144f8f4b9b20a597aeca52a7695150ca570e6591
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -122,8 +122,17 @@ tasks:
     status: merged
     branch: em-workflow/merge-task-already-contained-symref-recheck/task0001
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - performance
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
 requirements:
   FR1:
     title: already-contained 経路での統合ブランチ参照の再確認
