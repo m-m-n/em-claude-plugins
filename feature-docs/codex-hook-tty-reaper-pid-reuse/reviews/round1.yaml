@@ -1,0 +1,58 @@
+round: 1
+executed_at: "2026-10-27T01:40:35+09:00"
+scope:
+  review_mode: diff
+  base_commit: 144f8f4b9b20a597aeca52a7695150ca570e6591
+  head_commit: de475f2cef2e5c185798f92574a332b40d1483e9
+  changed_files:
+  - em-review/scripts/codex-hook-tty-reaper.py
+  - em-workflow/scripts/codex-hook-tty-reaper.py
+  - test-docs/codex-hook-tty-reaper-pid-reuse/task0001.tests.yaml
+  - tests/test_codex_hook_tty_reaper.py
+plan:
+  floor: [comprehensive, security, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings: []
+evaluation:
+  round_summary: >-
+    ラウンド 1（diff、cross_validation=true）。5 観点すべて完了。2 つのコピーのバイト同一性を確認。
+    FR1〜FR9 をコード読解で確認し SPEC どおり。critical/high なし、dismissed_sites は空、注入の試みなし。
+    評価者は low を 2 件返したが、R3b step 2（severity は critical/high/medium のみ）で落とした:
+    (1) tests/test_codex_hook_tty_reaper.py:153 の without_attribute() が、属性がもともと無い環境で
+    AttributeError になる（comprehensive#0 が medium で報告、評価者が low に下げた）。
+    (2) em-workflow/scripts/codex-hook-tty-reaper.py:310 付近（em-review 側も同じ）で、祖先チェーン確認から
+    スナップショットまでの間に起点 PID が再利用されると起点の子孫でないプロセスが対象になりうる
+    （評価者自身の指摘。SPEC FR1 を超える追加の堅牢化）。
+  recommended_action: auto_fix
+  action_rationale: >-
+    medium 以上の問題はない。残りは low が 2 件で、いずれも R3b の severity ゲートで除外されるため
+    自動修正の対象外。
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-codex-hook-tty-reaper-pid-reuse-20261026T164016Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
