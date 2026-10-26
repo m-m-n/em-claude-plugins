@@ -4,8 +4,8 @@ phase: create-spec
 status: in_progress
 generation: 1
 base_revision: 65799f34edfd2fa97e477b0c1d11a9b26248352d
-last_input_digest: sha256:7103441d0ed05d2561cba79f8b031b110bd07d16da88cd6b6b8d7732029668e8
-active_request_id: create-spec-run-0001
+last_input_digest: sha256:17ed4e0a471eb6a15c038da4f07378a1e96d33a5d3d94d402fe690535fb5308a
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     path: null
@@ -61,6 +61,17 @@ worker_runs:
     tests/test_merge_task_journal.py: sha256:ecb63ce5c7482e1bf0bad17f222be967779db0b5d2f291586663874117967b65
     tests/test_merge_unverified_exit_doc_contract.py: sha256:a39d942a5a433d045f40ced0f124c0daefc669622180418b5f60c1566c72a5ea
   self_write_set: []
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:17ed4e0a471eb6a15c038da4f07378a1e96d33a5d3d94d402fe690535fb5308a
+  dispatch_digest_inputs:
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
+    em-workflow/references/templates/design-tokens.yaml: sha256:ee02e7a3fb8574f782b42324ffe63b0c3f58d4247102d0d0b8482899993730ba
+    em-workflow/scripts/merge-task.sh: sha256:50fc5a354803ac5a7c63d42b903aca47d9571ef90007379c9267f1540a0951fd
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+    tests/test_merge_task_journal.py: sha256:ecb63ce5c7482e1bf0bad17f222be967779db0b5d2f291586663874117967b65
+    tests/test_merge_unverified_exit_doc_contract.py: sha256:a39d942a5a433d045f40ced0f124c0daefc669622180418b5f60c1566c72a5ea
 artifacts: []
 patches: []
 progress_fingerprint: null
