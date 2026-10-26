@@ -1,0 +1,38 @@
+schema_version: 1
+feature: merge-task-parent-symref-reject
+phase: create-spec
+status: in_progress
+generation: 1
+base_revision: fcee2b0708c2508350c5dd11ba20e630374c04d1
+last_input_digest: sha256:455650a2e8b34f038ed850ef98dfa9f7ae52462d16463a33a26ec8d3b24d7917
+active_request_id: create-spec-run-0001
+packets: {}
+answers:
+  create-spec.feature-identity:
+    packet_id: null
+    answered_at: '2026-10-26T23:05:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - derive_from_task_description
+    freeform: null
+    normalized_answer: merge-task-parent-symref-reject
+    resolution_note: batch-policies.yaml create-spec.feature-identity -> derive_from_task_description
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:455650a2e8b34f038ed850ef98dfa9f7ae52462d16463a33a26ec8d3b24d7917
+  dispatch_digest_inputs:
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
+    em-workflow/references/templates/design-tokens.yaml: sha256:ee02e7a3fb8574f782b42324ffe63b0c3f58d4247102d0d0b8482899993730ba
+    em-workflow/scripts/merge-task.sh: sha256:19691d1bb6c803f81ae1b35a5b084935bbef1979506b7070e0c512e42871ccb0
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+    tests/test_merge_task_journal.py: sha256:76fc935e20f4b102de0eafeea4402dc144ea086083c1c5cd1271dae378d5d8c9
+    tests/test_merge_unverified_exit_doc_contract.py: sha256:b260bdfb5a74c78f5490b554874120bcfd05e4c63ace2c19ce39cdfcb8e50ac4
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
