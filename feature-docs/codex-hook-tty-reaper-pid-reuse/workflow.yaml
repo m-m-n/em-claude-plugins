@@ -106,7 +106,7 @@ workflow:
   completed_at_commit: bf0f480e74a816e4b7f8a2f32e9ac6258fd90d2f
   base_commit: 144f8f4b9b20a597aeca52a7695150ca570e6591
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -146,8 +146,17 @@ tasks:
     notes: null
     branch: em-workflow/codex-hook-tty-reaper-pid-reuse/task0001
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - performance
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
   residual_critical_high: 0
   needs_rework: false
 requirements:
