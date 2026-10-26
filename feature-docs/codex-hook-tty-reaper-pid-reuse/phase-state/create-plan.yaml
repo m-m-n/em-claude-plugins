@@ -4,14 +4,14 @@ phase: create-plan
 status: in_progress
 generation: 1
 base_revision: 83ffa90312e047f38530d1720e7b3fffeb6d118a
-last_input_digest: sha256:038fff6137f41fed79d58ba3d66658ffe4b580d211b4db3d9ecfe1f19dcc9edf
+last_input_digest: sha256:b203b917c2b75ecb0c10e65161535ea8c493af947df2a31b0c14258d37d9bb14
 active_request_id: create-plan-run-0001
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
   status: dispatched
-  input_digest: sha256:038fff6137f41fed79d58ba3d66658ffe4b580d211b4db3d9ecfe1f19dcc9edf
+  input_digest: sha256:b203b917c2b75ecb0c10e65161535ea8c493af947df2a31b0c14258d37d9bb14
   dispatch_digest_inputs:
     em-workflow/references/contracts/planner-contract.md: sha256:6476cc99ea8a1d2d4f376d1702bd636b1ab9898655397ec80ab1d6fb47cbe9e8
     em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
