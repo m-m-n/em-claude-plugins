@@ -1,18 +1,92 @@
 schema_version: 1
 feature: codex-hook-tty-reaper-pid-reuse
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: 56c846754b2cff9550ab21eec0c210d951b676f3
 last_input_digest: sha256:03d0203e0d20309710d250a12bac978191dc1052881cb05bd84ee0c7f32cbee6
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-27T00:34:00+09:00'
+    questions:
+    - question_id: requirement.pidfd-unavailable
+      status: answered
+    - question_id: requirement.start-time-equal
+      status: answered
+    - question_id: requirement.pidfd-lifetime
+      status: answered
+    - question_id: requirement.ancestor-chain-scope
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+answers:
+  requirement.pidfd-unavailable:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-27T00:34:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - stop_nothing
+    freeform: null
+    normalized_answer: 何も止めない
+    resolution_note: 'gate: create-spec.requirement-clarification; Codex consulted (harness: codex, 1
+      turn); orchestrator mapped the suggestion onto option stop_nothing; Opus escalation not run; Codex
+      rationale: _stop() は確認と信号送信を別々に行うため、os.kill に戻すと報告された競合が残る。使えなければ何も送らずに終える方が、「疑わしければ何も止めない」方針と、送信エラー後に追加送信しない既存テストに沿う。'
+  requirement.start-time-equal:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-27T00:34:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - allow_equal
+    freeform: null
+    normalized_answer: 等しければ採用
+    resolution_note: 'gate: create-spec.requirement-clarification; Codex consulted (harness: codex, 2
+      turns); orchestrator mapped the suggestion onto option allow_equal; Opus escalation not run; Codex
+      rationale: turn 1 は reject_equal を推したが、orchestrator が「開始時刻は 10 ms 刻みで、正しい親子が同値になることは多く、拒否すると止めるべき子孫が漏れて元の不具合が戻る」と反論し、turn
+      2 で allow_equal に収束した。親が子より後に開始したリンクだけを除外し、同値は許容するのが妥当。Codex が turn 2 で添えた追加の確認（親子双方の pidfd を取った後の再確認）はタスクの範囲を超えるため採用しない。'
+  requirement.pidfd-lifetime:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-27T00:34:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - hold_across_phases
+    freeform: null
+    normalized_answer: SIGKILL まで保持
+    resolution_note: 'gate: create-spec.requirement-clarification; Codex consulted (harness: codex, 1
+      turn); orchestrator mapped the suggestion onto option hold_across_phases; Opus escalation not run;
+      Codex rationale: _stop() は SIGTERM 後も (pid, start) だけを保持し、SIGKILL 前に開始時刻で再判定している。pidfd を保持すれば両段階で同じプロセスを参照でき、開き直しの経路を避けられる。記述子は対象数分必要だが、EMFILE
+      では追加送信を止めれば既存のエラー処理方針に沿う。'
+  requirement.ancestor-chain-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-27T00:34:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - apply_to_chain_too
+    freeform: null
+    normalized_answer: 祖先チェーンにも適用
+    resolution_note: 'gate: create-spec.requirement-clarification; Codex consulted (harness: codex, 1
+      turn); orchestrator mapped the suggestion onto option apply_to_chain_too; Opus escalation not run;
+      Codex rationale: _ancestor_chain() も開始時刻を使わず PPID だけをたどり、その結果で起点の妥当性と除外対象を決めている。ここを放置すると誤った起点を採用する経路が残るため、不整合が見つかったら送信前に終える。'
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-27T00:34:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 推奨に従う（design step は skip）
+    resolution_note: batch-policies.yaml create-spec.design-step -> decide_autonomously
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:03d0203e0d20309710d250a12bac978191dc1052881cb05bd84ee0c7f32cbee6
-  output_digest: null
+  output_digest: sha256:3fb4fd7fd5be080d730ea27b4a2d89cb41aab0f73616f5e3867ce6ba564b847e
   dispatch_digest_inputs:
     .claude/rules/core-plugin-version-bump.md: sha256:2d4c25eb5b7e70a44df068780fce08b4736cd52ff14e13b60ac711beb3b96745
     .claude/rules/hook-tests.md: sha256:69fcdbd53cfc7f685bbe9050757167a9ac9f0b4a38dac7d8c7533d65945fea38
@@ -24,6 +98,7 @@ worker_runs:
     em-workflow/scripts/run_codex_exec.sh: sha256:54bd1de072d5e821e9d2b181e1b2e17e3fa81eaca5e18d9f331963eca05910f9
     test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
     tests/test_codex_hook_tty_reaper.py: sha256:05f19a28315650d77385734c2b687ccdd33341576b7d9203a1d24c5a80c9b680
+  self_write_set: []
 artifacts: []
 patches: []
 progress_fingerprint: null
