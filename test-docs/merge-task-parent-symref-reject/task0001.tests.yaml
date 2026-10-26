@@ -1,0 +1,44 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests, run inside the task worktree before any edit: 11717 tests, OK (skipped=1)
+final_failures: []             # python3 -m unittest discover -s tests, re-run inside the task worktree after the implementation and this record: 11727 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_parent_ref_repointed_to_task_ref_during_lock_wait_is_rejected
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_parent_ref_repointed_to_main_at_fast_forward_position_during_lock_wait_is_rejected
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_parent_ref_repointed_to_diverged_branch_during_lock_wait_is_rejected
+    red_confirmed: true
+    red_reason: "all three failed against the unchanged script with AssertionError: 0 != 2; the symbolic integration ref was followed: 'MERGED: task0001 already contained in em-workflow/feat/integration' for the task-ref target, 'MERGED: task0001 -> em-workflow/feat/integration (fast-forward to <sha>)' for the main target (the referent was fast-forwarded), and 'MERGED: task0001 -> em-workflow/feat/integration (<sha>)' for the diverged-branch target (a merge commit was created on the referent)"
+  AC-2:
+    tests:
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_parent_ref_already_a_symbolic_ref_to_main_is_rejected
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_parent_ref_a_dangling_symbolic_ref_is_rejected_as_a_symbolic_ref
+    red_confirmed: true
+    red_reason: "the main-target test failed against the unchanged script with AssertionError: 0 != 2 : MERGED: task0001 -> em-workflow/feat/integration (fast-forward to <sha>); the dangling-target test failed only on the wording, as the task plan predicts: AssertionError: 'symbolic ref' not found in 'ERROR: parent branch not found: em-workflow/feat/integration' (the unchanged script already ends with exit 2 at the parent lookup)"
+  AC-3:
+    tests:
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_undeterminable_symbolic_ref_status_of_parent_ref_is_rejected
+    red_confirmed: true
+    red_reason: "failed against the unchanged script with AssertionError: 0 != 2 : MERGED: task0001 -> em-workflow/feat/integration (fast-forward to <sha>); the unchanged script never asks the symbolic-ref question, so the git shim in status mode was never reached and the merge succeeded"
+  AC-4:
+    tests:
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_update_ref_does_not_follow_symbolic_ref_planted_before_fast_forward
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_update_ref_does_not_follow_symbolic_ref_planted_before_merge_commit
+    red_confirmed: true
+    red_reason: "both failed against the unchanged script with AssertionError: main's value after the run differed from its value before (the shim re-pointed the integration ref to main right before update-ref and the dereferencing update-ref moved main). They were observed failing a second time with the symbolic-ref rejection in place and the no-deref option still absent, and passed only once both update-ref calls carried the no-deref option"
+  AC-5:
+    tests:
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_task_ref_repointed_to_symbolic_ref_of_another_branch_during_lock_wait_is_rejected
+    red_confirmed: false
+    red_reason: "pins existing behaviour as the task plan states: it passed against the unchanged script because the post-lock HEAD re-check already resolves the re-pointed task ref recursively and ends the run with exit 2 naming the task ref; no red state occurred for this change"
+  AC-6:
+    tests:
+      - tests.test_merge_unverified_exit_doc_contract.TestNeverModifiedFilesAreByteIdentical.test_merge_task_sh_untouched
+      - tests.test_merge_unverified_exit_doc_contract.TestNeverModifiedFilesAreByteIdentical.test_merge_task_sh_names_the_already_contained_case_once_with_its_check_next
+      - tests.test_merge_unverified_exit_doc_contract.TestMergeTaskShCommentsDoNotPermitOutOfLayoutMerge.test_permission_phrases_absent_from_merge_task_sh
+    red_confirmed: true
+    red_reason: "test_merge_task_sh_untouched was observed failing for the edited script against the old pin value (applied in-process to the module constant): AssertionError: 'aee6805e...79f5' != '19691d1b...ccb0' (actual script sha256 versus the old pin). The other two tests pin properties that pre-existed (a single 'Parent already contains us' line followed by the ancestor check; absence of the permission phrases), stayed green throughout and guard against regressions; no red state occurred for them. The existing tests of tests.test_merge_task_journal (bodies unchanged) detect any change of behaviour for a direct integration ref and stayed green. The wording of the header paragraph, the exit 2 examples and the Merge source and parent comment has no executable check and is reviewed on the diff"
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: "no executable check can be made to fail: a search of tests/ by repository-relative path and by basename (test_merge_task_journal) found no test that reads tests/test_merge_task_journal.py, only the ID lists of other features' test records. That the added tests import only the standard library (shlex and shutil are the only new imports), build repositories only under the test's temporary directory, run merge-task.sh as a subprocess, add no process-control calls, route every lock-wait mutation through _run_merge_with_mutation_during_lock_wait, and that the diff touches neither em-workflow/.claude-plugin/plugin.json nor .claude-plugin/marketplace.json, is checked on the diff only"
