@@ -1,0 +1,109 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests, run before any edit: 11727 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after writing this record: python3 -m unittest discover -s tests ran 11782 tests, OK (skipped=1, the same skip as the baseline); 11727 inherited + 55 new (tests.test_codex_hook_tty_reaper went from 65 to 120 tests)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_tty_reaper.TestLinkRule.test_ac1_ts1_an_unrelated_process_whose_recorded_parent_was_recreated_later_gets_no_signal
+      - tests.test_codex_hook_tty_reaper.TestLinkRule.test_ac1_ts1_the_same_layout_with_the_child_started_after_its_parent_is_stopped
+      - tests.test_codex_hook_tty_reaper.TestLinkRule.test_ac1_the_boundary_is_one_tick
+      - tests.test_codex_hook_tty_reaper.TestLinkRule.test_ac1_ts3_a_parent_and_child_with_equal_start_times_under_the_anchor_are_both_stopped
+      - tests.test_codex_hook_tty_reaper.TestLinkRule.test_ac1_ts3_a_child_of_the_anchor_that_started_at_the_same_time_is_stopped
+      - tests.test_codex_hook_tty_reaper.TestLinkRule.test_ac1_a_rejected_link_deep_in_the_tree_cuts_only_what_is_below_it
+      - tests.test_codex_hook_tty_reaper.TestLinkRule.test_ac1_a_process_with_a_rejected_link_is_not_a_target_even_when_it_looks_like_one
+      - tests.test_codex_hook_tty_reaper.TestLinkRule.test_ac1_an_anchor_missing_from_the_snapshot_stops_nothing
+      - tests.test_codex_hook_tty_reaper.TestLinkRule.test_ac1_depths_below_adopts_only_valid_links
+      - tests.test_codex_hook_tty_reaper.TestLinkRule.test_ac1_depths_below_with_the_anchor_absent_is_empty
+    red_confirmed: true
+    red_reason: "Observed against the previous hook (the committed copy, run from a scratch directory with a test-side adapter that delivers a PID-addressed signal to whichever instance holds the PID, because the previous main() has no pidfd seams). The TS-1 reproduction failed with 'AssertionError: Items in the first set but not the second' (the unrelated process C, recorded parent recreated later, was signalled); the anchor-missing test failed with 'Lists differ: [(10000010, SIGTERM, ...), (10000010, SIGKILL, ...)] != []'; the rejected-link, one-tick (parent one tick later) and _depths_below tests failed on their set/dict equality. The control layout and the equal-start-time tests (TS-3) were already green against the previous hook; they pin that the new rule keeps ordered and equal links."
+  AC-2:
+    tests:
+      - tests.test_codex_hook_tty_reaper.TestAncestorChainRule.test_ac2_ts4_the_control_chain_with_ordered_start_times_stops_the_target
+      - tests.test_codex_hook_tty_reaper.TestAncestorChainRule.test_ac2_ts4_a_chain_with_equal_start_times_stops_the_target
+      - tests.test_codex_hook_tty_reaper.TestAncestorChainRule.test_ac2_ts4_one_link_whose_parent_started_later_stops_nothing
+      - tests.test_codex_hook_tty_reaper.TestAncestorChainRule.test_ac2_ts4_an_invalid_link_above_the_anchor_stops_nothing
+      - tests.test_codex_hook_tty_reaper.TestAncestorChainRule.test_ac2_ts4_a_valid_link_above_the_anchor_does_not_stop_the_target
+    red_confirmed: true
+    red_reason: "Observed against the previous hook with the same adapter: test_ac2_ts4_one_link_whose_parent_started_later_stops_nothing failed in all five subtests with 'Lists differ: [(10000010, SIGTERM, 1000.0), ...] != []' (the target was stopped although one chain link had a parent that started later), and test_ac2_ts4_an_invalid_link_above_the_anchor_stops_nothing failed the same way. The control chain and the equal-start-time chain were already green against the previous hook; they pin that ordered and equal chains still stop the target."
+  AC-3:
+    tests:
+      - tests.test_codex_hook_tty_reaper.TestPidfdSignalling.test_ac3_ts2_a_pid_that_changes_hands_right_after_the_check_is_never_signalled
+      - tests.test_codex_hook_tty_reaper.TestPidfdSignalling.test_ac3_the_pidfd_is_opened_just_before_the_check_and_the_signal_follows_the_check
+      - tests.test_codex_hook_tty_reaper.TestPidfdSignalling.test_ac3_signals_go_only_through_the_pidfd_of_the_target
+      - tests.test_codex_hook_tty_reaper.TestPidfdSignalling.test_ac3_a_pid_that_changes_hands_between_the_sigkill_check_and_the_sigkill_is_not_reached
+      - tests.test_codex_hook_tty_reaper.TestPidfdSignalling.test_ac3_a_pid_that_changes_hands_between_the_snapshot_and_the_open_gets_no_signal
+      - tests.test_codex_hook_tty_reaper.TestPidfdSignalling.test_ac3_a_target_that_fails_the_check_gets_no_signal_then_or_later_and_its_pidfd_is_closed
+      - tests.test_codex_hook_tty_reaper.TestPidfdSignalling.test_ac3_a_target_that_vanishes_between_the_snapshot_and_the_open_is_skipped
+    red_confirmed: true
+    red_reason: "Observed against the previous hook with the same adapter (PID-addressed delivery goes to the instance that holds the PID at call time): the TS-2 reproduction failed with 'AssertionError: Lists differ: [(<Signals.SIGTERM: 15>, None)] != []' (the start-200 instance received SIGTERM after the stat read returned start 100); the SIGKILL-phase variant and the snapshot-to-open variant also failed; the open-before-check ordering test errored because the previous hook never opens a pidfd (no ('open', pid) event); the pidfd-only delivery test failed because no pidfd was opened. The vanish-between-snapshot-and-open test was already green against the previous hook (its stat check also skipped a vanished target); it pins that the pidfd path keeps that behaviour."
+  AC-4:
+    tests:
+      - tests.test_codex_hook_tty_reaper.TestPidfdSignalling.test_ac4_ts7_sigkill_goes_through_the_pidfd_that_carried_the_sigterm
+      - tests.test_codex_hook_tty_reaper.TestPidfdSignalling.test_ac4_the_sigkill_follows_a_check_made_while_the_pidfd_is_held
+      - tests.test_codex_hook_tty_reaper.TestPidfdSignalling.test_ac4_a_target_that_is_a_zombie_at_the_sigkill_check_gets_no_sigkill
+      - tests.test_codex_hook_tty_reaper.TestPidfdSignalling.test_ac4_all_pidfds_are_closed_when_main_returns_on_the_success_path
+      - tests.test_codex_hook_tty_reaper.TestPidfdSignalling.test_ac4_all_pidfds_are_closed_when_every_target_is_gone_after_the_sigterm
+      - tests.test_codex_hook_tty_reaper.TestPidfdSignalling.test_ac4_all_pidfds_are_closed_when_the_clock_fails_between_the_phases
+      - tests.test_codex_hook_tty_reaper.TestPidfdErrors.test_ac6_every_error_path_closes_every_pidfd_it_opened
+    red_confirmed: true
+    red_reason: "Observed against the previous hook with the same adapter: test_ac4_ts7 failed in all three subtests with 'AssertionError: 0 != 1' (no pidfd was opened for the target), the three all-pidfds-closed tests failed on the pidfd count (nothing was ever opened), and the SIGKILL-check ordering test errored for the missing ('open', pid) event. The zombie-at-SIGKILL-check test was already green against the previous hook (the old check also skipped a zombie); it pins that the pidfd path keeps the check."
+  AC-5:
+    tests:
+      - tests.test_codex_hook_tty_reaper.TestPidfdUnavailable.test_ac5_ts5_a_pidfd_open_seam_set_to_none_stops_nothing
+      - tests.test_codex_hook_tty_reaper.TestPidfdUnavailable.test_ac5_ts5_a_pidfd_send_seam_set_to_none_stops_nothing
+      - tests.test_codex_hook_tty_reaper.TestPidfdUnavailable.test_ac5_a_pidfd_close_seam_set_to_none_stops_nothing
+      - tests.test_codex_hook_tty_reaper.TestPidfdUnavailable.test_ac5_ts5_a_pidfd_open_that_raises_enosys_stops_nothing
+      - tests.test_codex_hook_tty_reaper.TestPidfdUnavailable.test_ac5_ts5_a_missing_pidfd_open_function_leaves_a_default_that_stops_nothing
+      - tests.test_codex_hook_tty_reaper.TestPidfdUnavailable.test_ac5_ts5_a_missing_pidfd_send_signal_function_leaves_a_default_that_stops_nothing
+      - tests.test_codex_hook_tty_reaper.TestPidfdUnavailable.test_ac5_the_pid_addressed_signal_function_is_never_a_fallback
+      - tests.test_codex_hook_tty_reaper.TestNoPidAddressedSignalling.test_ac5_the_hook_names_no_pid_addressed_signal_function
+    red_confirmed: true
+    red_reason: "Observed against the previous hook with the same adapter: with pidfd_open or pidfd_send_signal set to None the previous hook still delivered signals ('Lists differ: [(10000010, SIGTERM, 1000.0), (10000010, SIGKILL, 1000.5)] != []'); the missing-function tests errored with KeyError: 'pidfd_open' (the previous main() has no such parameter); the static test failed with 'Items in the first set but not the second' because the previous hook names os.kill."
+  AC-6:
+    tests:
+      - tests.test_codex_hook_tty_reaper.TestPidfdErrors.test_ac6_ts6_no_such_process_at_open_skips_that_target_only
+      - tests.test_codex_hook_tty_reaper.TestPidfdErrors.test_ac6_ts6_no_such_process_at_the_sigterm_send_skips_that_target_only
+      - tests.test_codex_hook_tty_reaper.TestPidfdErrors.test_ac6_ts6_no_such_process_at_the_sigkill_send_skips_that_target_only
+      - tests.test_codex_hook_tty_reaper.TestPidfdErrors.test_ac6_ts6_no_such_process_for_every_target_is_not_an_error
+      - tests.test_codex_hook_tty_reaper.TestPidfdErrors.test_ac6_ts6_emfile_at_open_ends_all_signalling_the_sigkill_phase_included
+      - tests.test_codex_hook_tty_reaper.TestPidfdErrors.test_ac6_emfile_at_the_first_open_sends_nothing
+      - tests.test_codex_hook_tty_reaper.TestPidfdErrors.test_ac6_enosys_at_a_later_open_ends_all_signalling
+      - tests.test_codex_hook_tty_reaper.TestPidfdErrors.test_ac6_ts6_permission_error_at_the_sigterm_send_ends_all_signalling
+      - tests.test_codex_hook_tty_reaper.TestPidfdErrors.test_ac6_ts6_permission_error_at_the_sigkill_send_ends_all_signalling
+      - tests.test_codex_hook_tty_reaper.TestPidfdErrors.test_ac6_other_errors_at_open_or_send_end_all_signalling
+      - tests.test_codex_hook_tty_reaper.TestFailures.test_ac6_a_target_that_ended_after_enumeration_is_not_an_error
+      - tests.test_codex_hook_tty_reaper.TestFailures.test_ac6_no_such_process_while_sending_sigkill_is_not_an_error
+      - tests.test_codex_hook_tty_reaper.TestFailures.test_ac6_a_signal_error_other_than_no_such_process_stops_further_signals
+      - tests.test_codex_hook_tty_reaper.TestFailures.test_ac6_a_signal_error_during_the_sigkill_phase_stops_further_signals
+      - tests.test_codex_hook_tty_reaper.TestFailures.test_ac6_an_unexpected_error_from_the_clock_stops_further_signals
+    red_confirmed: true
+    red_reason: "Observed against the previous hook with the same adapter: the error-injection tests failed because the previous hook ignored the pidfd error injections and kept signalling ('Lists differ: [(10000010, SIGTERM), (10000011, SIGTERM), ...] != [(10000010, SIGTERM)]' for EMFILE at the second open; the no-such-process-at-open case delivered SIGTERM to the target that should have been skipped); the SIGKILL-phase no-such-process case failed on the kills list. The migrated TestFailures tests keep their previous assertions, except test_ac6_a_target_that_ended_after_enumeration_is_not_an_error, whose SIGKILL expectation changed to [middle, top] because a target whose send found no process now gets no further signal (FR5)."
+  AC-7:
+    tests:
+      - tests.test_codex_hook_tty_reaper.TestCopies.test_nfr6_the_defaults_of_main_are_the_real_collaborators
+      - tests.test_codex_hook_tty_reaper.TestPidfdSignalling.test_ac4_the_fake_pidfd_binds_to_the_instance_holding_the_pid_at_open_time
+      - tests.test_codex_hook_tty_reaper.TestCopies.test_ac1_the_two_copies_are_byte_identical
+      - tests.test_codex_hook_tty_reaper.TestCopies.test_ac1_importing_a_copy_performs_no_action
+      - tests.test_codex_hook_tty_reaper.TestCopies.test_ac1_loading_a_copy_leaves_no_bytecode_cache_in_a_plugin_directory
+      - tests.test_codex_hook_tty_reaper.TestCopies.test_nfr6_the_hook_reads_no_environment_variable
+      - tests.test_codex_hook_tty_reaper.TestTargetSelection
+      - tests.test_codex_hook_tty_reaper.TestOrder
+      - tests.test_codex_hook_tty_reaper.TestTiming
+      - tests.test_codex_hook_tty_reaper.TestAnchorArgument
+      - tests.test_codex_hook_tty_reaper.TestStandardInput
+      - tests.test_codex_hook_tty_reaper.TestRealTargets
+      - tests.test_codex_hook_tty_reaper.TestRealBoundaries
+      - tests.test_codex_hook_tty_reaper.TestCommandLineEntry
+    red_confirmed: true
+    red_reason: "Observed against the previous hook: the defaults test, rewritten to pin os.pidfd_open, signal.pidfd_send_signal and os.close as the defaults of main(), failed with KeyError: 'pidfd_open' (the previous main() has no such parameter and its send_signal default was os.kill). The remaining tests are pre-existing selection, order, timing, silent-operation, import, byte-identity and real-process tests; they were green before the change and stay green (the fake pidfd self-test passes from the start because the fake lives in the test module); their fixtures were adjusted only so that default start times obey the new link rule (a child starts after its parent)."
+  AC-8:
+    tests:
+      - tests.test_codex_hook_tty_reaper.TestModuleDocstring.test_ac8_the_flow_has_ten_steps_and_a_closing_errors_paragraph
+      - tests.test_codex_hook_tty_reaper.TestModuleDocstring.test_ac8_step_4_states_the_start_time_rule_for_the_ancestor_chain
+      - tests.test_codex_hook_tty_reaper.TestModuleDocstring.test_ac8_step_6_states_the_start_time_rule_for_descendants
+      - tests.test_codex_hook_tty_reaper.TestModuleDocstring.test_ac8_step_8_states_pidfd_opened_before_the_check_and_kept
+      - tests.test_codex_hook_tty_reaper.TestModuleDocstring.test_ac8_step_10_states_sigkill_through_the_same_pidfd
+      - tests.test_codex_hook_tty_reaper.TestModuleDocstring.test_ac8_the_errors_paragraph_states_the_pidfd_unavailable_behaviour
+      - tests.test_codex_hook_tty_reaper.TestCopies.test_ac1_each_copy_imports_only_standard_library_modules
+    red_confirmed: true
+    red_reason: "Observed against the previous hook: the docstring contract tests failed with \"AssertionError: 'start-time' not found in \\\"walk the hook's own ancestor chain to pid 1. ...\\\"\" (step 4), the same for step 6, \"'pidfd' not found in 'sigterm each target, in that order. ...'\" (step 8), \"'same pidfd' not found in 'sigkill, in the same order ...'\" (step 10) and \"'never sent by pid' not found in 'a no-such-process result while signalling ...'\" (errors paragraph). The ten-step structure test and the standard-library import test were already green and stay green."
