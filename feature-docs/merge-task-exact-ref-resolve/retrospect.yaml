@@ -1,0 +1,82 @@
+feature: merge-task-exact-ref-resolve
+collected_at: '2026-10-26T20:21:11+09:00'
+session_ids:
+- 01a177f0-7427-7280-b851-8f0bc3c156ee
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: description_plus_code の最終読みがバケット 1 に 0.94 の確率を置き、reduced を採用した
+    bases:
+    - basis: description_only
+      score:
+        type: score
+        score: 1.05
+        confidence: 0.95
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread
+            across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to
+            an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+            or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.95
+          '2': 0.05
+          '3': 0.0
+      observed_at: '2026-10-26T19:15:59+09:00'
+    - basis: description_plus_code
+      score:
+        type: score
+        score: 1.06
+        confidence: 0.94
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread
+            across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to
+            an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+            or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.94
+          '2': 0.06
+          '3': 0.0
+      observed_at: '2026-10-26T19:17:43+09:00'
+    pre_survey_estimate:
+      files_expected:
+      - em-workflow/scripts/merge-task.sh
+      - tests/test_merge_task_journal.py
+      - tests/test_merge_unverified_exit_doc_contract.py
+      changed_lines_approx: 15
+      new_functions_needed: 0
+      new_files_needed: []
+      new_dependencies_needed: []
+      covering_tests_exist: true
+      spillover_modules:
+      - tests/test_merge_unverified_exit_doc_contract.py
+      work_still_required: true
+      work_still_required_evidence: em-workflow/scripts/merge-task.sh:164 は現在も rev-parse
+        --verify --quiet "$IB_EXPECTED_REF^{commit}" を使用しており、完全一致で参照を取得していない。取得値 HEAD_SHA
+        は同ファイル:168、:175、:184、:199 の各経路で既に共用されている。tests/test_merge_task_journal.py:787
+        に参照削除と作業ツリーの空化を行う既存テストがあるが、同名タグは作成していない。同ファイル:189 の共通確認処理は終了コード2、統合ブランチ不変、マージコミットとjournalの不在を確認する。この既存ケースへの同名タグ追加と、完全一致取得・コミット型確認が必要になる。tests/test_merge_unverified_exit_doc_contract.py:963
+        はスクリプト変更と同じコミットで固定ハッシュを更新する規約を記載し、:984 が照合する。呼び出し元と依存の件数は、em-workflow/agents/implementer.md:16
+        の実装担当と、em-workflow/scripts/merge-task.sh:44 のGit・flockを数えて3とした。終了コード2は同ファイル:28
+        で既に定義されている。変更行数は既存テスト1件の拡張とハッシュ更新を含む概算で、ファイル変更・テスト実行は行っていない
+      test_change_kind: extend_existing_one_to_one
+      added_test_cases_approx: 1
+      body_change_kind: new_logic
+      change_containment: single_module
+      caller_and_dependency_count: 3
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates: []
