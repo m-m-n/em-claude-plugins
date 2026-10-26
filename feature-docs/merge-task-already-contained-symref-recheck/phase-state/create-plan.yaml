@@ -45,7 +45,7 @@ artifacts:
   produced_by: create-plan-run-0001
 patches:
 - patch_id: merge-task-already-contained-symref-recheck-p0001
-  status: validated
+  status: applied
   base_input_digest: sha256:77c4c6234d515e2de9f4152b27c08ecb651c570628cb7d51ccce9db0212072bb
   base_workflow_blob: 90d84abecf9d033aa42b5c7b744668fb5d5a86ff
 progress_fingerprint: null
