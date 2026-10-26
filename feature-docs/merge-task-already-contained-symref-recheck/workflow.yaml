@@ -1,0 +1,193 @@
+schema_version: 1
+feature: merge-task-already-contained-symref-recheck
+created: '2026-10-27'
+base_branch: main
+goal: |
+  # merge-task.sh の already-contained 経路で、シンボリック参照の検査後に統合ブランチ参照を差し替えると、統合せずに merged が記録される
+
+  種別: セキュリティ (severity: low)
+
+  ## 脆弱性の概要
+  `em-workflow/scripts/merge-task.sh` の already-contained 経路は update-ref を通らない。ロック取得後のシンボリック参照の検査（`git symbolic-ref --quiet "refs/heads/$PARENT_BRANCH"`）と、統合ブランチの値の取得（`git show-ref --verify --hash`）が別々の操作なので、その間に統合ブランチ参照をシンボリック参照へ差し替えられると、統合せずに `merged` が記録され exit 0 になる。
+
+  ## 攻撃シナリオ
+  同じリポジトリの参照を書き換えられる別プロセスが、merge-task.sh のシンボリック参照の検査（exit 1 で通過）の直後、統合ブランチの値の取得より前に `git symbolic-ref refs/heads/em-workflow/{feature}/integration refs/heads/em-workflow/{feature}/{taskNNNN}` を実行する。`show-ref --verify` は参照先をたどってタスクの先端を返すため、PARENT が HEAD_SHA と一致し、`merge-base --is-ancestor` が成功して already-contained 経路に入る。統合ブランチ参照はシンボリック参照のまま、journal に `merged` が追記され exit 0 になる。
+
+  ## 影響範囲
+  マージしていないタスクがマージ済みとして記録され、統合ブランチ参照がシンボリック参照のまま残る。主体は参照を直接書き換えられる権限を既に持つため、増えるのは迂回経路に限られる。悪用にはロック内の 2 つの git 呼び出しの間という短い隙間への割り込みが要る。
+
+  ## 完了の定義
+  - 攻撃シナリオが成立しない
+  - 修正版に追随している（修正版が無い場合は暫定緩和策の欄に対応を記載）
+
+  ## 該当箇所
+  - `em-workflow/scripts/merge-task.sh:198`（シンボリック参照の検査）〜 `em-workflow/scripts/merge-task.sh:205`（統合ブランチの値の取得）、already-contained 経路の `merged` 記録
+  - 修正案: シンボリック参照の判定と値の取得を 1 回の読み取りで行う、または `merged` を記録する直前に統合ブランチ参照が直接参照のままであることを再確認する。その隙間を突くテストを追加する
+  - 由来: feature `merge-task-parent-symref-reject` のレビュー round1 で security 観点が medium として報告し、評価者が再現を確認したうえで low に下げた。同 feature の SPEC の Assumptions と THREAT-MODEL の Accepted residuals で範囲外として受容済み
+
+  ## 追加指示
+  - 実装完了後、integration ブランチを remote に push し、base_branch に対して gh pr create で PR を作る。integration ブランチはローカル・remote の両方に残す（base_branch への自動マージはしない）
+  - 不明点は Codex に相談し、比較的良いと判断した案を採用する
+  - その議論内容を Notion に記録する
+parent_branch: em-workflow/merge-task-already-contained-symref-recheck/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.97
+      '2': 0.03
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.83
+      '2': 0.17
+      '3': 0.0
+  at: '2026-10-27T00:23:08+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 9126fb196b2a94d3d55bc5af9b375197dc43dd05
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI を持たない変更（シェルスクリプトとテストのみ）
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: 144f8f4b9b20a597aeca52a7695150ca570e6591
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: already-contained 経路での統合ブランチ参照の再確認
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+  FR2:
+    title: 再確認で拒否したときの副作用なし
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+  FR3:
+    title: 拒否時のエラー出力
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+  FR4:
+    title: スクリプト内コメントの更新
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-4
+  FR5:
+    title: 内容ピンの更新
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-4
+  FR6:
+    title: 隙間を突くテストの追加
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+  NFR1:
+    title: 既存挙動の維持
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-4
+  NFR2:
+    title: テストの実行形態
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: version を変更しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: kill / pkill を使わない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: 依存を増やさない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

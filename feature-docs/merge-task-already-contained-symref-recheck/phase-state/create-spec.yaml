@@ -1,7 +1,7 @@
 schema_version: 1
 feature: merge-task-already-contained-symref-recheck
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 0ea2e45dd3f0248436b788e5bca1603acd3b7018
 last_input_digest: sha256:8029f1cc75c65ae2ea1f54cdc03f85fe22b7d8c0415c77d6291fb29c184a8b01
