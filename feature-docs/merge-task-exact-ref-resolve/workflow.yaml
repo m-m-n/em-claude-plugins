@@ -140,6 +140,15 @@ tasks:
     branch: em-workflow/merge-task-exact-ref-resolve/task0001
 review:
   status: pending
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - performance
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
   rounds_completed: 0
   residual_critical_high: 0
   needs_rework: false
