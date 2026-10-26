@@ -1,7 +1,7 @@
 schema_version: 1
 feature: merge-task-parent-symref-reject
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: fcee2b0708c2508350c5dd11ba20e630374c04d1
 last_input_digest: sha256:6cd4fadace6eae35629a7a1c716db908feba0082b0bc92e1b6b36343c865050d

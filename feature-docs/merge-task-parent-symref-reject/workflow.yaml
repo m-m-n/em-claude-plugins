@@ -1,0 +1,199 @@
+schema_version: 1
+feature: merge-task-parent-symref-reject
+created: '2026-10-26'
+base_branch: main
+goal: |
+  # merge-task.sh の統合ブランチの値の解決が、refs/heads/<parent-branch> に置かれたシンボリック参照を辿り、参照先のブランチを統合ブランチとして扱い得る
+
+  種別: セキュリティ (severity: low)
+
+  ## 脆弱性の概要
+
+  `em-workflow/scripts/merge-task.sh` は統合ブランチの値を `git show-ref --verify --hash -- "refs/heads/$PARENT_BRANCH"` で読む。完全一致の参照名で引くが、その名前がシンボリック参照だと参照先の値を返す。続く `update-ref "refs/heads/$PARENT_BRANCH"` も既定でシンボリック参照を辿るため、統合ブランチ以外の参照先ブランチを動かし得る。
+
+  ## 攻撃シナリオ
+
+  同じリポジトリに書き込める別プロセスが、merge-task.sh のロック待機中に `git symbolic-ref refs/heads/em-workflow/{feature}/integration refs/heads/em-workflow/{feature}/{taskNNNN}`（または `refs/heads/main`）を実行する。ロック解放後、統合ブランチの値は参照先のコミットになり、コミット型の確認も通る。
+
+  - タスク参照を指させた場合: already-contained の経路に入り、exit 0 と `merged` イベントが記録される
+  - 別ブランチを指させた場合: fast-forward / merge-commit の `update-ref` がそのブランチを動かす
+
+  ## 影響範囲
+
+  統合ブランチ以外のブランチ（main を含む）が更新される、またはマージしていないタスクがマージ済みとして記録される。ただし主体は参照を直接動かせる書き込み権限を既に持つため、増えるのは迂回経路に限られる。変更前の rev-parse による解決でも同じ挙動だった（既存の挙動）。
+
+  ## 完了の定義
+
+  - 攻撃シナリオが成立しない
+  - 修正版に追随している（修正版が無い場合は暫定緩和策の欄に対応を記載）
+
+  ## 該当箇所
+
+  - `em-workflow/scripts/merge-task.sh:180`（統合ブランチの値の解決）
+  - 修正案: 値を使う前に `git symbolic-ref --quiet "refs/heads/$PARENT_BRANCH"` が成功したら exit 2 にする。タスク参照側はロック後の `git symbolic-ref --quiet HEAD` が再帰的に辿るため、別ブランチへの付け替えは既に再確認で弾かれる
+  - 由来: feature `merge-task-exact-ref-resolve` のレビュー round1 で評価者が low として報告した
+parent_branch: em-workflow/merge-task-parent-symref-reject/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.02
+      '1': 0.78
+      '2': 0.2
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.83
+      '2': 0.17
+      '3': 0.0
+  at: '2026-10-26T23:03:10+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: project_native
+    paths:
+    - em-workflow/references/templates/design-tokens.yaml
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: fbfd9097e332531ae5a33cfe5474f998444bbf66
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: シェルスクリプトとテストだけの変更で、画面・視覚的な成果物が無い
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: 統合ブランチのシンボリック参照を拒否する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
+  FR2:
+    title: 判定できない場合は拒否する（fail-closed）
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: 拒否時のエラー出力
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-5
+  FR4:
+    title: 参照先を変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+  FR5:
+    title: スクリプト内コメントの更新
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-6
+  FR6:
+    title: 内容ピンの更新
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-6
+  FR7:
+    title: update-ref はシンボリック参照を辿らない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-8
+  NFR1:
+    title: 既存挙動の維持
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-6
+  NFR2:
+    title: テストの実行形態
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: version を変更しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: kill / pkill を使わない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
