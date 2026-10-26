@@ -1,11 +1,11 @@
 schema_version: 1
 feature: merge-task-already-contained-symref-recheck
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 598b0fccfba1f69b11469252f4626ed82f69c557
 last_input_digest: sha256:77c4c6234d515e2de9f4152b27c08ecb651c570628cb7d51ccce9db0212072bb
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
