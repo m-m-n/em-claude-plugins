@@ -134,7 +134,7 @@ tasks:
     - FR8
     - NFR1
     - NFR2
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/merge-task-exact-ref-resolve/task0001
 review:
