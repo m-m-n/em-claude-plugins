@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 56c846754b2cff9550ab21eec0c210d951b676f3
 last_input_digest: sha256:4c751ec21ceb9615c1c0d6bab0f8eaee154d79160d762385e3c430865b809c5d
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -116,14 +116,23 @@ worker_runs:
     tests/test_codex_hook_tty_reaper.py: sha256:05f19a28315650d77385734c2b687ccdd33341576b7d9203a1d24c5a80c9b680
   self_write_set: []
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:4c751ec21ceb9615c1c0d6bab0f8eaee154d79160d762385e3c430865b809c5d
-  output_digest: null
+  output_digest: sha256:8d1fafa36b3f5f3cc0252e2c63a94401a3fffecdcffd9479b0ae2210199707bf
   dispatch_digest_inputs:
     em-workflow/references/contracts/spec-writer-contract.md: sha256:9032c6287d75f4a88e556bd3962c32ab8b4905cf3b6ececa895206788bcd0b63
     em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
     em-workflow/references/templates/spec-document.md: sha256:203dfcddbe507886ce861694fccd20ae25e5af0bd1b0efa5e935991add950cbd
-artifacts: []
+  self_write_set:
+  - feature-docs/codex-hook-tty-reaper-pid-reuse/REQUIREMENTS.md
+  - feature-docs/codex-hook-tty-reaper-pid-reuse/SPEC.md
+artifacts:
+- path: feature-docs/codex-hook-tty-reaper-pid-reuse/REQUIREMENTS.md
+  sha256: sha256:5e0159bf2512023ed2ab2108baae119e28a30dc1b84148ca188cde426d9c11a2
+  produced_by: create-spec-run-0003
+- path: feature-docs/codex-hook-tty-reaper-pid-reuse/SPEC.md
+  sha256: sha256:16caab07b2aa3f63cfeaa0cadcde7bae51292b08dd8ce15ef70b17e589889d8c
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
