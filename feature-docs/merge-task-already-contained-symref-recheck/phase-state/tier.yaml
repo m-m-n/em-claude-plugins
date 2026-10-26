@@ -1,0 +1,81 @@
+schema_version: 2
+feature: merge-task-already-contained-symref-recheck
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.03
+    confidence: 0.97
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.97
+      '2': 0.03
+      '3': 0.0
+  observed_at: '2026-10-27T00:23:08+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.18
+    confidence: 0.83
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.83
+      '2': 0.17
+      '3': 0.0
+  observed_at: '2026-10-27T00:23:08+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/scripts/merge-task.sh
+  - tests/test_merge_task_journal.py
+  - tests/test_merge_unverified_exit_doc_contract.py
+  changed_lines_approx: 70
+  new_functions_needed: 0
+  new_files_needed: []
+  new_dependencies_needed: []
+  covering_tests_exist: true
+  spillover_modules:
+  - tests/test_merge_unverified_exit_doc_contract.py
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 1
+  body_change_kind: new_logic
+  change_containment: single_module
+  caller_and_dependency_count: 3
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: '競合はコード上残っている。em-workflow/scripts/merge-task.sh:198 の symbolic-ref 検査と同ファイル:205
+    の親参照取得は別操作で、同ファイル:211 の包含判定が成功すると、参照の再確認も update-ref もなく同ファイル:212 で merged を追記し、同ファイル:214
+    で exit 0 になる。--no-deref がある更新処理は同ファイル:219 と同ファイル:247 に限られる。feature-docs/merge-task-parent-symref-reject/SPEC.md:205
+    と feature-docs/merge-task-parent-symref-reject/THREAT-MODEL.md:29 も、この競合を未対処の残存事項として記載している。
+
+    既存テストは tests/test_merge_task_journal.py:478、同ファイル:500、同ファイル:535 で通常の各成功経路を、同ファイル:1092
+    でロック待機中の付け替えを検査する。既存の Git 仲介処理は同ファイル:411 の update-ref 直前の付け替えと同ファイル:416 の検査エラーを扱うが、今回の検査後から親参照取得までの付け替えは扱っていない。test/README.md:23
+    はテストの配置先を tests/ と定めており、em-workflow/scripts/tests は存在しない。
+
+    推奨案は already-contained 経路の記録前に直接参照であることを再確認し、判定不能時も拒否する処理と、今回の隙間で付け替える回帰テスト1件を追加すること。既存の
+    die とテスト補助処理を利用する案について変更約70行と見積もった。新関数数は実装側のみを数え、テストメソッドは追加ケース数に含めた。これらの数値は実測差分ではない。
+
+    tests/test_merge_unverified_exit_doc_contract.py:963 はスクリプト変更と同時のハッシュ更新を要求し、同ファイル:988
+    が検証するため、このテストファイルも変更対象になる。現在のハッシュ値との一致は読み取りのみで確認した。
+
+    呼出元・依存数は em-workflow/agents/implementer.md:231 の呼出元1種類と、em-workflow/references/implement-phase.md:145
+    の Git・flock の2依存を数えた。引数と終了コードの意味は em-workflow/scripts/merge-task.sh:31 と同ファイル:34
+    の既存契約を利用できる。ファイル変更、再現実行、テスト実行、外部サービスへの書き込みは行っていない'
+decided_at: '2026-10-27T00:23:08+09:00'
