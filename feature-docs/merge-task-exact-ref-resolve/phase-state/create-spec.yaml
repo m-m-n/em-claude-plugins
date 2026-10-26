@@ -6,7 +6,13 @@ generation: 1
 base_revision: 65799f34edfd2fa97e477b0c1d11a9b26248352d
 last_input_digest: sha256:7103441d0ed05d2561cba79f8b031b110bd07d16da88cd6b6b8d7732029668e8
 active_request_id: create-spec-run-0001
-packets: {}
+packets:
+  create-spec-q0001:
+    path: null
+    status: answered
+    question_ids:
+    - requirement.parent-ref-exact-resolution
+    - design-step.decision
 answers:
   create-spec.feature-identity:
     packet_id: null
@@ -18,9 +24,33 @@ answers:
     freeform: null
     normalized_answer: merge-task-exact-ref-resolve
     resolution_note: batch-policies.yaml create-spec.feature-identity -> derive_from_task_description
+  requirement.parent-ref-exact-resolution:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-26T19:31:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - include_parent_ref
+    freeform: null
+    normalized_answer: 親（統合）ブランチの解決（merge-task.sh:158）も完全一致に切り替え、無ければ exit 2・副作用なしで拒否し、回帰テストを足す
+    resolution_note: 'batch-policies.yaml create-spec.requirement-clarification ->
+      codex_consultation (record_as_assumption). Codex consulted (harness: codex,
+      1 turn): 親側も同じ曖昧解決を使い、親参照削除時にタスク先端を指す同名タグがあると already-contained 経路で merged を追記して
+      exit 0 になり得る（merge-task.sh:158,168）。更新前の比較（:176,:204）はこの経路を守れない。局所的な修正で既存の待機中変更ヘルパー（tests/test_merge_task_journal.py:275）で回帰テストを追加できる。option
+      not chosen: task_ref_only（親不在での誤った成功記録が残る）; Opus escalation not run'
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-26T19:31:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 推奨に従う（design step は skip）
+    resolution_note: batch-policies.yaml create-spec.design-step -> decide_autonomously
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:7103441d0ed05d2561cba79f8b031b110bd07d16da88cd6b6b8d7732029668e8
   dispatch_digest_inputs:
     CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
@@ -30,6 +60,7 @@ worker_runs:
     test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
     tests/test_merge_task_journal.py: sha256:ecb63ce5c7482e1bf0bad17f222be967779db0b5d2f291586663874117967b65
     tests/test_merge_unverified_exit_doc_contract.py: sha256:a39d942a5a433d045f40ced0f124c0daefc669622180418b5f60c1566c72a5ea
+  self_write_set: []
 artifacts: []
 patches: []
 progress_fingerprint: null
