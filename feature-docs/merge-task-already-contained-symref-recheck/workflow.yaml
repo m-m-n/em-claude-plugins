@@ -83,7 +83,8 @@ workflow:
   completed_at_commit: e304dc707ba507bae55df29c593648157f07b13e
   base_commit: 144f8f4b9b20a597aeca52a7695150ca570e6591
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 84a09605b584e3460cdb6d381a1913f973f72193
 - id: verify
   status: pending
   result: null
@@ -122,8 +123,11 @@ tasks:
     status: merged
     branch: em-workflow/merge-task-already-contained-symref-recheck/task0001
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
+  perspectives: [comprehensive, security, performance, architecture, spec]
+  residual_critical_high: 0
+  needs_rework: false
   plan:
     floor:
     - comprehensive
