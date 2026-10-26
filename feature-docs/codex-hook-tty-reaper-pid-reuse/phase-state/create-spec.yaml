@@ -1,7 +1,7 @@
 schema_version: 1
 feature: codex-hook-tty-reaper-pid-reuse
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 56c846754b2cff9550ab21eec0c210d951b676f3
 last_input_digest: sha256:4c751ec21ceb9615c1c0d6bab0f8eaee154d79160d762385e3c430865b809c5d
