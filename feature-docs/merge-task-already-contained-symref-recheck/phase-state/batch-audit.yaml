@@ -1,0 +1,20 @@
+schema_version: 1
+feature: merge-task-already-contained-symref-recheck
+records:
+- question_id: create-spec.requirement-clarification.fix-approach
+  packet_id: null
+  answered_at: '2026-10-27T00:36:49+09:00'
+  source: batch-codex-consultation
+  answer_mode: select_or_freeform
+  selected_option_ids:
+  - D
+  freeform: symbolic-ref --quiet recheck (exit 2 unless 1) then update-ref --no-deref
+    ref PARENT PARENT (exit 2 on failure) before recording merged
+  normalized_answer: adopt option D
+  resolution_note: 'gate: create-spec.requirement-clarification (orchestrator-raised:
+    fix approach); options: A recheck value+symref / B single for-each-ref read /
+    C same-value CAS / D symref recheck then same-value CAS; codex_consulted: true
+    (2 turns, harness codex); turn1 -> C (A leaves value/type race, B single call
+    is not an atomic verify); turn2 -> D (fail-closed exit 2 on symref before CAS;
+    same-value update-ref writes no ref/reflog on files backend but takes the lock);
+    chosen: D; not chosen: A, B, C; opus_escalation: not run'
