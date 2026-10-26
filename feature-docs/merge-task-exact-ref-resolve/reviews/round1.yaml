@@ -1,0 +1,66 @@
+round: 1
+executed_at: "2026-10-26T20:09:38+09:00"
+scope:
+  review_mode: diff
+  base_commit: deafe1c3c073c25c48b661099710c9fc4cd64bd3
+  head_commit: 7904efd7d42b192a0e55c1d74ba577110f07f51a
+  changed_files:
+    - em-workflow/scripts/merge-task.sh
+    - test-docs/merge-task-exact-ref-resolve/task0001.tests.yaml
+    - tests/test_merge_task_journal.py
+    - tests/test_merge_unverified_exit_doc_contract.py
+plan:
+  floor: [comprehensive, security, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "vulnerability#tool", perspective: vulnerability, role: tool, source: tool, status: skipped, skip_reason: "not_selected: diff touches no dependency manifest or lockfile"}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings: []
+# The evaluator reported one low-severity security note (parent ref at
+# refs/heads/<parent-branch> may be a symbolic ref; pre-existing behavior,
+# merge-task.sh:180). It is below the persisted severity floor (R3b step 2)
+# and was dropped from findings; it is carried as an out-of-scope follow-up.
+evaluation:
+  round_summary: >-
+    Round 1 (diff mode, cross_validation=true). All five dispatched runs
+    completed with empty findings. No run reported a critical or high site,
+    so dismissed_sites is empty. Independent inspection confirmed the exact
+    show-ref --verify --hash lookups and cat-file -t commit checks precede
+    any update-ref, merge-tree, commit-tree or journal append (FR1-FR3, FR7),
+    one HEAD_SHA feeds all three paths (FR4), the sha256 pin matches (FR5),
+    NFR2 text constraints hold, and the new tests match TS-1, TS-3, TS-4.
+    One low note only: a pre-existing symbolic-ref case at the exact parent
+    name. Coverage: security - one low evaluator-originated note;
+    performance, architecture, spec, comprehensive - corroborated.
+  recommended_action: complete
+  action_rationale: >-
+    Nothing at critical, high or medium. The one low note predates this
+    change, follows the lookup the SPEC prescribes, and only matters for a
+    party that already has repository write access.
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-merge-task-exact-ref-resolve-20261026T110932Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

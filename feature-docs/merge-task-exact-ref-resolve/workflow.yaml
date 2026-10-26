@@ -101,7 +101,8 @@ workflow:
   base_commit: deafe1c3c073c25c48b661099710c9fc4cd64bd3
   completed_at_commit: 63f076b581fa1f48ea825a5d857d398d9ae16fb2
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 7904efd7d42b192a0e55c1d74ba577110f07f51a
 - id: verify
   status: pending
   result: null
@@ -139,7 +140,7 @@ tasks:
     notes: null
     branch: em-workflow/merge-task-exact-ref-resolve/task0001
 review:
-  status: pending
+  status: completed
   plan:
     floor:
     - comprehensive
@@ -149,7 +150,13 @@ review:
     - spec
     discretionary: []
     cross_validation: true
-  rounds_completed: 0
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
   residual_critical_high: 0
   needs_rework: false
 requirements:
