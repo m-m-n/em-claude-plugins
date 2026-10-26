@@ -968,9 +968,11 @@ EXPECTED_LAUNCH_GUARD_SHA256 = (
 # task0001 set it after switching the merge source and the parent to exact
 # ref-name lookups; merge-task-parent-symref-reject task0001 set it after
 # rejecting a symbolic-ref integration ref and adding the no-deref option to
-# both update-ref calls).
+# both update-ref calls; merge-task-already-contained-symref-recheck task0001
+# set it after adding the symbolic-ref re-check and the same-value
+# compare-and-swap on the already-contained path).
 EXPECTED_MERGE_TASK_SH_SHA256 = (
-    "aee6805efeb2fec1d947605712d6031323dec330bd78f7da8114e8bc47d679f5"
+    "277239fed7353be3c5c1e1b755788b8acb31dbfe43142e4e115bcf71fd97e754"
 )
 
 

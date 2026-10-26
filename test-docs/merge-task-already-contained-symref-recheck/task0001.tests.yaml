@@ -1,0 +1,43 @@
+task_id: task0001
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests (run against the worktree's tests directory) -> Ran 11727 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record was written: python3 -m unittest discover -s tests -> OK (skipped=1); see the report for the test count
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_already_contained_path_rejects_parent_ref_swapped_to_symbolic_ref_before_parent_read
+    red_confirmed: true
+    red_reason: "Run against the unchanged merge-task.sh with the new swap shim mode, the test failed on the exit status: AssertionError: 0 != 2 : MERGED: task0001 already contained in em-workflow/feat/integration. The swap acted (the run took the already-contained path through the symbolic ref instead of fast-forwarding) and the unchanged script recorded the merge. It passes after the change."
+  AC-2:
+    tests:
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_already_contained_path_rejects_parent_ref_swapped_and_restored_before_recheck_cas
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_already_contained_rerun_rejects_parent_ref_deleted_before_recheck_cas
+    red_confirmed: true
+    red_reason: "Both failed against the unchanged merge-task.sh with AssertionError: 0 != 2 : MERGED: task0001 already contained in em-workflow/feat/integration. The unchanged script makes no second symbolic-ref call on the integration ref, so the restore (a) and the delete (b) never happen and the run records the merge; the swap-then-restore test also reached exit 0 because its first swap acted. Both pass after the change, with the shim acting twice (a) and once (b)."
+  AC-3:
+    tests:
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_already_contained_rerun_rejects_undeterminable_second_symbolic_ref_status
+    red_confirmed: true
+    red_reason: "Failed against the unchanged merge-task.sh with AssertionError: 0 != 2 : MERGED: task0001 already contained in em-workflow/feat/integration. The unchanged script makes no second symbolic-ref call on the integration ref, so the shim never acts and the re-run appends a second merged line. It passes after the change, with the shim acting once."
+  AC-4:
+    tests:
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_already_contained_rerun_on_direct_ref_keeps_exit_zero_and_ref_value
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_idempotent_already_merged_path_appends_merged_line_and_tolerates_duplicates
+      - tests.test_merge_task_journal.TestMergeTaskJournal.test_undeterminable_symbolic_ref_status_of_parent_ref_is_rejected
+    red_confirmed: false
+    red_reason: "The behaviour is kept, not added: the re-run on an untouched direct integration ref already exited 0 with the already-contained message before the change, so the new test passed against the unchanged script and no red state occurred. The two existing tests are run unmodified and pass."
+  AC-5:
+    tests:
+      - tests.test_merge_unverified_exit_doc_contract.TestNeverModifiedFilesAreByteIdentical.test_merge_task_sh_names_the_already_contained_case_once_with_its_check_next
+      - tests.test_merge_unverified_exit_doc_contract.TestMergeTaskShCommentsDoNotPermitOutOfLayoutMerge.test_permission_phrases_absent_from_merge_task_sh
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing tests detect the structural parts (the case name on exactly one line with the merge-base --is-ancestor line right after it; the three forbidden phrases absent); no red state occurred for this change. That the four comment locations state the re-check and that every count of no-deref update-ref calls is accurate has no executable check; it is verified by reading the diff."
+  AC-6:
+    tests:
+      - tests.test_merge_unverified_exit_doc_contract.TestNeverModifiedFilesAreByteIdentical.test_merge_task_sh_untouched
+    red_confirmed: true
+    red_reason: "With the changed merge-task.sh and the pin left at its previous value (the pre-change copy of the doc-contract module run against the changed script), the test failed: AssertionError: '277239fe...' != 'aee6805e...'. After the pin and its provenance comment were updated in the same commit as the script, it passes."
+  AC-7:
+    tests:
+      - tests.test_merge_unverified_exit_doc_contract.TestModuleImportsStdlibOnly.test_module_uses_only_standard_library_imports
+    red_confirmed: false
+    red_reason: "The diff-shape constraints (fast-forward path, merge-commit path and the code of the post-lock symbolic-ref check untouched; no plugin.json or marketplace.json change; no process-termination command added; the Requires comment unchanged) have no executable check and are verified by reading the diff against the implement base commit. The existing test only pins the standard-library-only imports of the doc-contract module; no red state occurred for this change."
