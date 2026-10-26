@@ -2,55 +2,89 @@ schema_version: 1
 feature: codex-hook-tty-reaper-pid-reuse
 created: '2026-10-27'
 base_branch: main
-goal: |
-  # codex-hook-tty-reaper.py の PID 再利用の競合で、起動元の Codex の子孫ではないプロセスに信号が届き得る
+goal: '# codex-hook-tty-reaper.py の PID 再利用の競合で、起動元の Codex の子孫ではないプロセスに信号が届き得る
+
 
   種別: バグ
 
+
   ## 現象
 
-  `codex-hook-tty-reaper.py`（Codex の Stop フック）に、PID の再利用による競合が 2 つ残っている。どちらも、起動元の Codex と関係のないプロセスに SIGTERM / SIGKILL が届く経路になる。
 
-  1. 走査中の親 PID の再利用: `_snapshot()` は `/proc` を PID 昇順に 1 件ずつ読み、`_depths_below()` は ppid の数値だけで親子を結ぶ。外部プロセス P の子 C を読んだ後に P が終了し、同じ PID が起動元配下の新しいプロセスに再割り当てされると、C が起動元の子孫と判定される。`_same_process()` は C 自身の開始時刻しか見ないので確認を通る。
-  2. 同一性の確認から信号送信までの窓: `_stop()` は `_same_process()` で開始時刻を確かめたあと、別の操作として `os.kill(pid, sig)` を呼ぶ。確認の直後に対象が終了して PID が再割り当てされると、信号は新しいプロセスに届く。
+  `codex-hook-tty-reaper.py`（Codex の Stop フック）に、PID の再利用による競合が 2 つ残っている。どちらも、起動元の Codex と関係のないプロセスに SIGTERM
+  / SIGKILL が届く経路になる。
+
+
+  1. 走査中の親 PID の再利用: `_snapshot()` は `/proc` を PID 昇順に 1 件ずつ読み、`_depths_below()` は ppid の数値だけで親子を結ぶ。外部プロセス
+  P の子 C を読んだ後に P が終了し、同じ PID が起動元配下の新しいプロセスに再割り当てされると、C が起動元の子孫と判定される。`_same_process()` は C 自身の開始時刻しか見ないので確認を通る。
+
+  2. 同一性の確認から信号送信までの窓: `_stop()` は `_same_process()` で開始時刻を確かめたあと、別の操作として `os.kill(pid, sig)` を呼ぶ。確認の直後に対象が終了して
+  PID が再割り当てされると、信号は新しいプロセスに届く。
+
 
   em-workflow / em-review の 2 つのコピーはバイト単位で同一なので、両方に同じ問題がある。
 
+
   ## 再現手順
 
+
   1. テストの FakeTable で、C の古い PPID と、再利用された P の新しい PPID を同じスナップショットに取り込ませる。C が停止対象になり、SIGTERM の送信が記録される。
+
   2. テストで、stat 読み取りが開始時刻 100 を返した直後に PID の実体を開始時刻 200 へ入れ替える。新しい実体への SIGTERM と SIGKILL の送信が記録される。
+
 
   ## 期待する挙動
 
+
   起動元の Codex の子孫ではないプロセスには、どの段階でも信号を送らない。
+
 
   ## 完了の定義
 
+
   - [ ] 再現手順で現象が起きない
+
   - [ ] 再発を検出するテストがある
+
   - [ ] 2 つのコピー（em-workflow / em-review）を同じ変更で直し、バイト単位で同一に保つ
+
 
   ## 該当箇所
 
+
   - `em-workflow/scripts/codex-hook-tty-reaper.py:171`（`_depths_below()` の親子リンク）
+
   - `em-workflow/scripts/codex-hook-tty-reaper.py:225`、`:239`（`_stop()` の `os.kill`）
+
   - `em-review/scripts/codex-hook-tty-reaper.py` の同じ箇所
+
 
   修正案（レビューでの提案）:
 
+
   - 親の開始時刻が子の開始時刻より後になる親子リンクを採用しない（等しい場合は許す）
+
   - `os.pidfd_open(pid)` で pidfd を取ってから開始時刻を照合し、`signal.pidfd_send_signal` で送る。pidfd が使えない環境では何も止めない側に倒す
+
 
   ## 実害・発生条件
 
-  成立には PID 空間の折り返しと走査中の再割り当て、またはマイクロ秒単位の窓での再割り当てが要るため、発生確率は極めて低い。em-workflow の feature `codex-stop-hook-tty-reaper` のレビュー（round 1、comprehensive 観点、medium 2 件）で見つかった。この feature のブランチがマージされた後に着手する。
+
+  成立には PID 空間の折り返しと走査中の再割り当て、またはマイクロ秒単位の窓での再割り当てが要るため、発生確率は極めて低い。em-workflow の feature `codex-stop-hook-tty-reaper`
+  のレビュー（round 1、comprehensive 観点、medium 2 件）で見つかった。この feature のブランチがマージされた後に着手する。
+
 
   ## 追加の指示（起動者から）
 
-  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作る。integration ブランチはローカル・リモートとも残す（base_branch に自動マージしない）。
+
+  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作る。integration ブランチはローカル・リモートとも残す（base_branch
+  に自動マージしない）。
+
   - 不明点は Codex に相談し、相対的に良いと判断した選択肢を採用する。
+
   - その相談内容を Notion（タスクページへのコメント）に記録する。
+
+  '
 parent_branch: em-workflow/codex-hook-tty-reaper-pid-reuse/integration
 tier: full
 tier_decision:
@@ -92,7 +126,8 @@ workflow:
   - DESIGN.md
   - design/
   status: skipped
-  skipped_reason: No UI. Internal bug fix to a process-signalling script. Batch policy create-spec.design-step -> decide_autonomously.
+  skipped_reason: No UI. Internal bug fix to a process-signalling script. Batch policy create-spec.design-step
+    -> decide_autonomously.
 - id: create-plan
   artifacts:
   - IMPLEMENTATION.md
@@ -111,7 +146,37 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Start-time link rule and pidfd signalling in codex-hook-tty-reaper.py
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/codex-hook-tty-reaper.py
+    - em-review/scripts/codex-hook-tty-reaper.py
+    - tests/test_codex_hook_tty_reaper.py
+    skills:
+    - backend-impl
+    domains:
+    - concurrency
+    - external-io
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - FR8
+    - FR9
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: pending
+    notes: null
 review:
   status: pending
   rounds_completed: 0
@@ -123,7 +188,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-3
@@ -132,7 +198,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-2
   FR3:
@@ -140,7 +207,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-7
   FR4:
@@ -148,7 +216,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-5
   FR5:
@@ -156,7 +225,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-6
   FR6:
@@ -164,7 +234,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-4
   FR7:
@@ -172,7 +243,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-8
   FR8:
@@ -180,7 +252,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-2
@@ -194,36 +267,46 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-9
   NFR1:
     title: Standard library only
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-10
   NFR2:
     title: Exit 0, silent, no env, no import side effects, no __pycache__
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-11
   NFR3:
     title: Existing behaviour (selection, order, timing) unchanged
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-12
   NFR4:
     title: No plugin version change
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-13
 batch:
   review_rework_count: 0
   verify_rework:
