@@ -23,7 +23,10 @@ Flow:
   3. Read the process table (`/proc`). If it is missing or the hook's own
      entry cannot be read -> stop nothing.
   4. Walk the hook's own ancestor chain to PID 1. If a link cannot be read,
-     or ANCHOR is not a proper ancestor on the chain -> stop nothing.
+     or ANCHOR is not a proper ancestor on the chain -> stop nothing. Every
+     link must obey the start-time rule: the parent's start time is not later
+     than its child's (equal is fine). One link that breaks it -> stop
+     nothing.
   5. Take one snapshot of the process table. Parent, state and start time are
      read from after the last closing parenthesis of the process-name field,
      so a name that holds spaces or parentheses cannot shift them. An entry
@@ -32,20 +35,32 @@ Flow:
      path under `/dev/pts/` (a terminal whose master is gone reads as
      `/dev/pts/N (deleted)` and counts), minus the hook and every process on
      its ancestor chain. Session, process group and having children play no
-     part.
+     part. The descendants are found from the snapshot through links that
+     obey the same start-time rule, using the start times the snapshot
+     recorded: a process whose parent started later than it did is not a
+     descendant, and neither is anything reachable only through it. ANCHOR
+     itself must be in the snapshot, or there are no targets.
   7. Order: deepest first, ties by ascending PID, so every target comes after
      all of its target descendants.
-  8. SIGTERM each target, in that order. Right before each signal the target
-     must still be the same process: entry present, same start time as
-     recorded, not a zombie. A target that fails the check gets no signal now
-     or later.
+  8. SIGTERM each target, in that order. For each, a pidfd is opened for its
+     PID first. While the pidfd is held, the target must still be the same
+     process: entry present, same start time as recorded, not a zombie. Only
+     then SIGTERM is sent, through that pidfd, and the pidfd is kept. A target
+     that fails the check gets no signal now or later and its pidfd is
+     closed.
   9. Wait until every signalled target is gone or 0.5 seconds have passed
      since the last SIGTERM.
- 10. SIGKILL, in the same order and under the same check, each target that is
-     still there.
+ 10. SIGKILL, in the same order, each target that is still there: the same
+     check, then SIGKILL through the same pidfd that carried its SIGTERM. A
+     target never gets a second pidfd. Every pidfd the hook opened is closed
+     before it exits, on every path.
 
-A no-such-process result while signalling is not an error. Any other error
-ends the run: no further signal is sent.
+A no-such-process result from opening a pidfd or from sending through it is
+not an error: that target gets no further signal and the others go on. Any
+other error ends the run: no further signal is sent (the SIGKILL phase
+included) and the open pidfds are closed. Signals are never sent by PID. When
+`os.pidfd_open` or `signal.pidfd_send_signal` does not exist, or the kernel
+has no pidfd (ENOSYS), nothing is stopped.
 """
 
 import json
@@ -68,6 +83,10 @@ DEAD_STATES = frozenset("ZXx")
 STAT_PPID_INDEX = 1
 STAT_START_INDEX = 19
 STAT_MIN_FIELDS = 20
+# The real pidfd functions. A missing one is None, which `_stop` reads as
+# "pidfd unavailable": the hook stops nothing and never signals by PID.
+PIDFD_OPEN = getattr(os, "pidfd_open", None)
+PIDFD_SEND_SIGNAL = getattr(signal, "pidfd_send_signal", None)
 
 
 def _stdin_is_one_json_object(fd, clock):
@@ -133,12 +152,13 @@ def _read_stat(proc_dir, pid):
 
 
 def _ancestor_chain(proc_dir, pid):
-    """[PID, parent, ..., top] up to PID 1, or None when a link is unreadable
-    or the chain loops."""
+    """[PID, parent, ..., top] up to PID 1, or None when a link is unreadable,
+    the chain loops, or a link breaks the start-time rule (a parent that
+    started later than its child)."""
     chain = [pid]
     seen = {pid}
+    record = _read_stat(proc_dir, pid)
     while True:
-        record = _read_stat(proc_dir, chain[-1])
         if record is None:
             return None
         ppid = record[1]
@@ -146,8 +166,12 @@ def _ancestor_chain(proc_dir, pid):
             return chain
         if ppid in seen:
             return None
+        parent = _read_stat(proc_dir, ppid)
+        if parent is None or parent[2] > record[2]:
+            return None
         seen.add(ppid)
         chain.append(ppid)
+        record = parent
 
 
 def _snapshot(proc_dir):
@@ -166,7 +190,14 @@ def _snapshot(proc_dir):
 
 
 def _depths_below(table, anchor):
-    """{pid: depth below ANCHOR} for every descendant of ANCHOR."""
+    """{pid: depth below ANCHOR} for every descendant of ANCHOR.
+
+    A link from a process to its recorded parent is adopted only when the
+    parent's recorded start time is not later than the process's own. A
+    process whose link is rejected, and everything reachable only through it,
+    is not a descendant. ANCHOR must be in TABLE; otherwise nothing is."""
+    if anchor not in table:
+        return {}
     children = {}
     for pid, (_state, ppid, _start) in table.items():
         children.setdefault(ppid, []).append(pid)
@@ -178,11 +209,13 @@ def _depths_below(table, anchor):
         depth += 1
         following = []
         for parent in frontier:
+            parent_start = table[parent][2]
             for child in children.get(parent, ()):
-                if child not in seen:
-                    seen.add(child)
-                    depths[child] = depth
-                    following.append(child)
+                if child in seen or table[child][2] < parent_start:
+                    continue
+                seen.add(child)
+                depths[child] = depth
+                following.append(child)
         frontier = following
     return depths
 
@@ -212,35 +245,59 @@ def _same_process(proc_dir, pid, start):
     return record is not None and record[2] == start and record[0] not in DEAD_STATES
 
 
-def _signal(send_signal, pid, signum):
+def _release(held, pidfd, pidfd_close):
+    """Close PIDFD now; it leaves HELD first, so it is never closed twice."""
+    held.remove(pidfd)
+    pidfd_close(pidfd)
+
+
+def _stop(proc_dir, targets, pidfd_open, pidfd_send_signal, pidfd_close, clock, sleep):
+    if not (callable(pidfd_open) and callable(pidfd_send_signal) and callable(pidfd_close)):
+        return
+    held = []  # every pidfd opened and not yet closed
     try:
-        send_signal(pid, signum)
-    except ProcessLookupError:
-        pass
+        signalled = []
+        for pid, start in targets:
+            try:
+                pidfd = pidfd_open(pid)
+            except ProcessLookupError:
+                continue
+            held.append(pidfd)
+            if not _same_process(proc_dir, pid, start):
+                _release(held, pidfd, pidfd_close)
+                continue
+            try:
+                pidfd_send_signal(pidfd, signal.SIGTERM)
+            except ProcessLookupError:
+                _release(held, pidfd, pidfd_close)
+                continue
+            signalled.append((pid, start, pidfd))
+        if not signalled:
+            return
+        deadline = clock() + GRACE_SECONDS
+        while any(_same_process(proc_dir, pid, start) for pid, start, _pidfd in signalled):
+            remaining = deadline - clock()
+            if remaining <= 0:
+                break
+            sleep(min(POLL_SECONDS, remaining))
+        else:
+            return
+        for pid, start, pidfd in signalled:
+            if _same_process(proc_dir, pid, start):
+                try:
+                    pidfd_send_signal(pidfd, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+    finally:
+        while held:
+            try:
+                pidfd_close(held.pop())
+            except Exception:
+                pass
 
 
-def _stop(proc_dir, targets, send_signal, clock, sleep):
-    signalled = []
-    for pid, start in targets:
-        if _same_process(proc_dir, pid, start):
-            _signal(send_signal, pid, signal.SIGTERM)
-            signalled.append((pid, start))
-    if not signalled:
-        return
-    deadline = clock() + GRACE_SECONDS
-    while any(_same_process(proc_dir, pid, start) for pid, start in signalled):
-        remaining = deadline - clock()
-        if remaining <= 0:
-            break
-        sleep(min(POLL_SECONDS, remaining))
-    else:
-        return
-    for pid, start in signalled:
-        if _same_process(proc_dir, pid, start):
-            _signal(send_signal, pid, signal.SIGKILL)
-
-
-def _reap(argv, stdin_fd, proc_dir, send_signal, clock, sleep):
+def _reap(argv, stdin_fd, proc_dir, pidfd_open, pidfd_send_signal, pidfd_close,
+          clock, sleep):
     if not _stdin_is_one_json_object(stdin_fd, clock):
         return
     anchor = _parse_anchor(argv)
@@ -252,17 +309,20 @@ def _reap(argv, stdin_fd, proc_dir, send_signal, clock, sleep):
         return
     table = _snapshot(proc_dir)
     targets = _targets(proc_dir, table, anchor, set(chain))
-    _stop(proc_dir, targets, send_signal, clock, sleep)
+    _stop(proc_dir, targets, pidfd_open, pidfd_send_signal, pidfd_close, clock, sleep)
 
 
-def main(argv, stdin_fd=0, proc_dir=PROC_DIR, send_signal=os.kill,
+def main(argv, stdin_fd=0, proc_dir=PROC_DIR, pidfd_open=PIDFD_OPEN,
+         pidfd_send_signal=PIDFD_SEND_SIGNAL, pidfd_close=os.close,
          clock=time.monotonic, sleep=time.sleep):
     """Run the hook once. Always returns 0; never writes to stdout/stderr.
 
     The collaborators are the seams of the unit tests. The command-line entry
-    below always uses the real ones."""
+    below always uses the real ones. A pidfd function that is None means
+    "unavailable": nothing is stopped."""
     try:
-        _reap(argv, stdin_fd, proc_dir, send_signal, clock, sleep)
+        _reap(argv, stdin_fd, proc_dir, pidfd_open, pidfd_send_signal, pidfd_close,
+              clock, sleep)
     except Exception:
         pass
     return 0
