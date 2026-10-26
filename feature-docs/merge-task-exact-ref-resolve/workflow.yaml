@@ -2,49 +2,83 @@ schema_version: 1
 feature: merge-task-exact-ref-resolve
 created: '2026-10-26'
 base_branch: main
-goal: |
-  # merge-task.sh のマージ元解決が参照名の曖昧解決に頼り、タスクブランチ消失時に同名タグ等をマージし得る
+goal: '# merge-task.sh のマージ元解決が参照名の曖昧解決に頼り、タスクブランチ消失時に同名タグ等をマージし得る
+
 
   種別: バグ
 
+
   ## 現象
 
-  `em-workflow/scripts/merge-task.sh` はロック取得後、マージ元のコミットを `git rev-parse --verify --quiet "$IB_EXPECTED_REF^{commit}"` で読む。`rev-parse` は gitrevisions の曖昧解決規則に従うため、タスクブランチ `refs/heads/em-workflow/{feature}/{taskNNNN}` が消えていると、`refs/tags/refs/heads/em-workflow/{feature}/{taskNNNN}` のような同名の別参照に解決が進み、そのコミットを返す。
 
-  ロック待機中にタスクブランチが削除され作業ツリーが空にされると、ロック後の symbolic-ref の再確認（HEAD は存在しないブランチを指したまま残る）と clean-tree の確認を通過し、別参照のコミットが `merge: {TASK_ID}` として統合ブランチに入り、exit 0 と `merged` イベントが記録される。
+  `em-workflow/scripts/merge-task.sh` はロック取得後、マージ元のコミットを `git rev-parse --verify --quiet
+  "$IB_EXPECTED_REF^{commit}"` で読む。`rev-parse` は gitrevisions の曖昧解決規則に従うため、タスクブランチ
+  `refs/heads/em-workflow/{feature}/{taskNNNN}` が消えていると、`refs/tags/refs/heads/em-workflow/{feature}/{taskNNNN}`
+  のような同名の別参照に解決が進み、そのコミットを返す。
+
+
+  ロック待機中にタスクブランチが削除され作業ツリーが空にされると、ロック後の symbolic-ref の再確認（HEAD は存在しないブランチを指したまま残る）と
+  clean-tree の確認を通過し、別参照のコミットが `merge: {TASK_ID}` として統合ブランチに入り、exit 0 と `merged` イベントが記録される。
+
 
   feature `merge-task-post-lock-rebind` のレビュー round1 で medium として検出した（stable_id `b39406f870838215`）。
 
+
   ## 再現手順
 
+
   1. 使い捨てリポジトリで、有効な task0001 のワークツリーと、統合ブランチの子である別コミット A を用意する
+
   2. `git tag refs/heads/em-workflow/feat/task0001 <A>` で同名タグを作る
-  3. 共有の `em-workflow-merge.lock` を別プロセスで保持し、task0001 のワークツリーから `merge-task.sh em-workflow/feat/integration task0001` を起動する（ロック待ちになる）
-  4. 待機中に同じワークツリーで `git update-ref -d refs/heads/em-workflow/feat/task0001` と `git rm -r -q -f .` を実行する
+
+  3. 共有の `em-workflow-merge.lock` を別プロセスで保持し、task0001 のワークツリーから `merge-task.sh em-workflow/feat/integration
+  task0001` を起動する（ロック待ちになる）
+
+  4. 待機中に同じワークツリーで `git update-ref -d refs/heads/em-workflow/feat/task0001` と `git
+  rm -r -q -f .` を実行する
+
   5. ロックを解放すると、exit 2 ではなく exit 0 になり、統合ブランチが A に進む
+
 
   ## 期待する挙動
 
+
   タスクの ref が完全一致で解決できなければ exit 2 で拒否し、統合ブランチ・journal に副作用を残さない。
+
 
   修正案:
 
-  - `git show-ref --verify --hash "$IB_EXPECTED_REF"` で完全一致の参照からコミット ID を取り、失敗時は exit 2 にする
-  - 取得した ID をコミット型で確認し、already-contained / fast-forward / merge-commit の 3 経路でその 1 つの値を使う
-  - 同じコミットで `tests/test_merge_unverified_exit_doc_contract.py` の `EXPECTED_MERGE_TASK_SH_SHA256` を更新する
+
+  - `git show-ref --verify --hash "$IB_EXPECTED_REF"` で完全一致の参照からコミット ID を取り、失敗時は exit
+  2 にする
+
+  - 取得した ID をコミット型で確認し、already-contained / fast-forward / merge-commit の 3 経路でその 1
+  つの値を使う
+
+  - 同じコミットで `tests/test_merge_unverified_exit_doc_contract.py` の `EXPECTED_MERGE_TASK_SH_SHA256`
+  を更新する
+
 
   ## 完了の定義
 
+
   - [ ] 再現手順で現象が起きない
+
   - [ ] 再発を検出するテストがある（既存の「参照を削除して作業ツリーも空にする」テストに、統合ブランチの子コミットを指す同名タグを加えて exit 2・副作用なしを確認する）
+
 
   ## 該当箇所
 
+
   - `em-workflow/scripts/merge-task.sh:164`（ロック後のマージ元の解決）
+
 
   ## 実害・発生条件
 
+
   同じリポジトリに書き込める別プロセスが、ロック待機中にタスクブランチを削除し、同名の別参照を用意したときだけ。その主体はタスクブランチ自体を動かすこともできるため、増えるのは「削除時に失敗側へ倒す動作」の迂回に限られる。
+
+  '
 parent_branch: em-workflow/merge-task-exact-ref-resolve/integration
 tier: reduced
 tier_decision:
@@ -94,7 +128,8 @@ workflow:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: 67a3aa229949226e9246469cc6abaa83ce31ed58
 - id: implement
   status: pending
 - id: review
@@ -105,7 +140,36 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Exact-ref resolution of the merge source and the parent in merge-task.sh
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/merge-task.sh
+    - tests/test_merge_task_journal.py
+    - tests/test_merge_unverified_exit_doc_contract.py
+    skills:
+    - infra-impl
+    domains:
+    - concurrency
+    - input-handling
+    - external-io
+    - config-infra
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - FR8
+    - NFR1
+    - NFR2
+    status: pending
+    notes: null
+    branch: null
 review:
   status: pending
   rounds_completed: 0
@@ -117,7 +181,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
   FR2:
@@ -125,7 +190,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-2
@@ -134,7 +200,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-4
   FR4:
@@ -142,7 +209,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-5
   FR5:
@@ -150,7 +218,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-6
   FR6:
@@ -158,7 +227,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
   FR7:
@@ -166,7 +236,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-3
   FR8:
@@ -174,7 +245,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-3
   NFR1:
@@ -182,7 +254,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-5
   NFR2:
@@ -190,7 +263,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-6
 batch:
