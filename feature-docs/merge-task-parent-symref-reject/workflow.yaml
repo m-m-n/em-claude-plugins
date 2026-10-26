@@ -95,7 +95,7 @@ workflow:
   failed_items: []
   completed_at_commit: 5d00b423e4f85137a77524e99689b0d07cc9e3c5
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: Reject a symbolic-ref integration ref in merge-task.sh and stop update-ref from following one
