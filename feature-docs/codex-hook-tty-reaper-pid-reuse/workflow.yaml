@@ -141,8 +141,9 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
     notes: null
+    branch: em-workflow/codex-hook-tty-reaper-pid-reuse/task0001
 review:
   status: pending
   rounds_completed: 0
