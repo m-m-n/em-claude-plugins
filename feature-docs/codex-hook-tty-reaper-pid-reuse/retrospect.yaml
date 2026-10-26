@@ -1,0 +1,79 @@
+feature: codex-hook-tty-reaper-pid-reuse
+collected_at: '2026-10-27T01:59:09+09:00'
+session_ids:
+- 01a17925-bbfc-73bf-ad42-5801793a07f8
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: description_plus_code の最終読みでバケット 2 が 0.62 となり、評価器が full を返した
+    bases:
+    - basis: description_only
+      score:
+        type: score
+        score: 1.28
+        confidence: 0.72
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread
+            across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to
+            an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+            or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.72
+          '2': 0.28
+          '3': 0.0
+      observed_at: '2026-10-27T00:23:18+09:00'
+    - basis: description_plus_code
+      score:
+        type: score
+        score: 1.64
+        confidence: 0.62
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread
+            across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to
+            an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+            or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.37
+          '2': 0.62
+          '3': 0.01
+      observed_at: '2026-10-27T00:23:18+09:00'
+    pre_survey_estimate:
+      files_expected:
+      - em-workflow/scripts/codex-hook-tty-reaper.py
+      - em-review/scripts/codex-hook-tty-reaper.py
+      - tests/test_codex_hook_tty_reaper.py
+      changed_lines_approx: 0
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: []
+      covering_tests_exist: false
+      spillover_modules: []
+      work_still_required: true
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 0
+      body_change_kind: new_logic
+      change_containment: multiple_modules
+      caller_and_dependency_count: 0
+      changes_external_contract: false
+      changes_behavior: true
+      evidence: 両競合は残っている。em-workflow/scripts/codex-hook-tty-reaper.py:171 は開始時刻を比較せず
+        PPID だけで親子を結ぶ。同ファイル:225 と :239 は同一性の確認後に別操作で信号を送り、:258 の既定送信先は os.kill。メモリ上の模擬実行で、外部プロセスの誤選択と、確認直後の
+        PID 再利用による SIGTERM／SIGKILL の送信を両コピーで記録した。em-review/scripts/codex-hook-tty-reaper.py
+        は cmp でバイト単位の一致を確認した。tests/test_codex_hook_tty_reaper.py:614 と :629 は確認前の開始時刻変更を扱うが、今回の競合を検出するテストはない。なお、走査は
+        PID 昇順ではなく os.listdir の返却順で行う（em-workflow/scripts/codex-hook-tty-reaper.py:156）。ファイルは変更していない
+follow_up_drafts: []
+lessons_candidates: []
