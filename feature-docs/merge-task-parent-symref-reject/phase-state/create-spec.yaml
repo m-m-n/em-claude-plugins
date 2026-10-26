@@ -4,8 +4,8 @@ phase: create-spec
 status: in_progress
 generation: 1
 base_revision: fcee2b0708c2508350c5dd11ba20e630374c04d1
-last_input_digest: sha256:455650a2e8b34f038ed850ef98dfa9f7ae52462d16463a33a26ec8d3b24d7917
-active_request_id: create-spec-run-0001
+last_input_digest: sha256:6cd4fadace6eae35629a7a1c716db908feba0082b0bc92e1b6b36343c865050d
+active_request_id: create-spec-run-0002
 packets: {}
 answers:
   create-spec.feature-identity:
@@ -18,9 +18,33 @@ answers:
     freeform: null
     normalized_answer: merge-task-parent-symref-reject
     resolution_note: batch-policies.yaml create-spec.feature-identity -> derive_from_task_description
+  requirement.update-ref-no-deref:
+    packet_id: null
+    answered_at: '2026-10-26T23:14:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - reject_plus_no_deref
+    freeform: null
+    normalized_answer: シンボリック参照の拒否に加えて、fast-forward / merge-commit の 2 つの update-ref
+      に --no-deref を付ける（requirements-analyst の仮定「--no-deref は追加しない」を置き換える）
+    resolution_note: 'orchestrator が analyst の仮定を未確定点として扱い Codex に相談（harness: codex,
+      1 turn）。Codex: 確認後に付け替えられても別ブランチを動かさない。旧値比較だけでは付け替え先が同じコミットを指すと防げない。通常の参照では挙動不変。残るリスク:
+      旧値一致ならシンボリック参照自体が直接参照に置き換わる / already-contained 経路の確認後付け替えは防げない。option not chosen:
+      reject_only; Opus escalation not run'
+  design-step.decision:
+    packet_id: null
+    answered_at: '2026-10-26T23:14:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 推奨に従う（design step は skip）
+    resolution_note: batch-policies.yaml create-spec.design-step -> decide_autonomously
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:455650a2e8b34f038ed850ef98dfa9f7ae52462d16463a33a26ec8d3b24d7917
   dispatch_digest_inputs:
     CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
@@ -30,6 +54,14 @@ worker_runs:
     test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
     tests/test_merge_task_journal.py: sha256:76fc935e20f4b102de0eafeea4402dc144ea086083c1c5cd1271dae378d5d8c9
     tests/test_merge_unverified_exit_doc_contract.py: sha256:b260bdfb5a74c78f5490b554874120bcfd05e4c63ace2c19ce39cdfcb8e50ac4
+  self_write_set: []
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:6cd4fadace6eae35629a7a1c716db908feba0082b0bc92e1b6b36343c865050d
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/spec-writer-contract.md: sha256:9032c6287d75f4a88e556bd3962c32ab8b4905cf3b6ececa895206788bcd0b63
+    em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
+    em-workflow/references/templates/spec-document.md: sha256:203dfcddbe507886ce861694fccd20ae25e5af0bd1b0efa5e935991add950cbd
 artifacts: []
 patches: []
 progress_fingerprint: null
