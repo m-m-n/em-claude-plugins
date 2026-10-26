@@ -964,9 +964,11 @@ EXPECTED_LAUNCH_GUARD_SHA256 = (
 # that changes the script also sets this value to the new content's sha256
 # in the same commit (merge-task-worktree-binding task0001 set it after
 # adding the identity binding; merge-task-post-lock-rebind task0001 set it
-# after adding the post-lock identity re-check).
+# after adding the post-lock identity re-check; merge-task-exact-ref-resolve
+# task0001 set it after switching the merge source and the parent to exact
+# ref-name lookups).
 EXPECTED_MERGE_TASK_SH_SHA256 = (
-    "50fc5a354803ac5a7c63d42b903aca47d9571ef90007379c9267f1540a0951fd"
+    "19691d1bb6c803f81ae1b35a5b084935bbef1979506b7070e0c512e42871ccb0"
 )
 
 

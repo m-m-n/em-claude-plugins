@@ -16,7 +16,11 @@
 # again right after the lock is acquired (HEAD's symbolic ref must still be the
 # task branch); a run that waited for the lock while the worktree moved off the
 # task branch ends there with exit 2, still before any ref is updated. The
-# commit that gets merged is read from the verified task ref, not from HEAD.
+# commit that gets merged is read from the exact task ref, not from HEAD, and
+# the parent value from the exact integration ref refs/heads/<parent-branch>:
+# both are resolved by exact ref-name match (no ambiguous-name lookup), and a
+# ref that is absent, or whose object is not a commit, ends the run with exit 2
+# before any ref is updated.
 #
 # Usage:
 #   ${CLAUDE_PLUGIN_ROOT}/scripts/merge-task.sh <parent-branch> <task-id>
@@ -38,8 +42,10 @@
 # task branch). The identity check done before the wait cannot see such a
 # change, so the symbolic-ref re-check right after the lock closes the window
 # for a different or detached HEAD, and the merge source is read from the
-# verified task ref instead of HEAD, so a commit made on the task branch during
-# the wait is merged and a commit of any other branch is never merged.
+# exact task ref instead of HEAD, so a commit made on the task branch during
+# the wait is merged and a commit of any other branch is never merged. The task
+# ref and the parent ref are looked up by exact ref-name match, so a tag or any
+# other ref that merely resolves under the same name is never taken for either.
 #
 # Requires git >= 2.40 (git merge-tree --write-tree --name-only) and the
 # util-linux `flock` command (absent on stock macOS — install it, e.g.
@@ -155,14 +161,26 @@ PL_HEAD_REF=$(git symbolic-ref --quiet HEAD 2>/dev/null) || PL_HEAD_REF=""
 [ -z "$(git status --porcelain)" ] \
   || die "uncommitted or untracked changes in worktree — commit everything before merging"
 
-PARENT=$(git rev-parse --verify --quiet "refs/heads/$PARENT_BRANCH") \
+# --- Merge source and parent: exact ref-name match, commit objects only ---
+# Merge source: the tip of the exact task ref, not HEAD. HEAD is only what the
+# worktree has checked out at this instant; the ref is what the identity
+# binding verified. The parent value comes from the exact integration ref the
+# same way. `git show-ref --verify` looks a full ref name up as that exact name
+# only: unlike a revision lookup (rev-parse) it does not also try the name
+# under refs/, refs/tags/, refs/heads/ and refs/remotes/, so a tag or a branch
+# that happens to resolve under the same name is never taken for either ref.
+# Both objects must be commits (cat-file -t, no tag peeling). Every rejection
+# here exits 2 before any update-ref, merge-tree, commit-tree or journal
+# append. One merge-source value feeds the already-contained, fast-forward and
+# merge-commit paths below; nothing reads the task ref or HEAD again.
+HEAD_SHA=$(git show-ref --verify --hash -- "$IB_EXPECTED_REF" 2>/dev/null) \
+  || die "cannot resolve the task ref $IB_EXPECTED_REF by its exact name"
+[ "$(git cat-file -t "$HEAD_SHA" 2>/dev/null)" = "commit" ] \
+  || die "the task ref $IB_EXPECTED_REF does not name a commit"
+PARENT=$(git show-ref --verify --hash -- "refs/heads/$PARENT_BRANCH" 2>/dev/null) \
   || die "parent branch not found: $PARENT_BRANCH"
-# Merge source: the tip of the verified task ref, not HEAD. HEAD is only what
-# the worktree has checked out at this instant; the ref is what the identity
-# binding verified. One value feeds the already-contained, fast-forward and
-# merge-commit paths below.
-HEAD_SHA=$(git rev-parse --verify --quiet "$IB_EXPECTED_REF^{commit}") \
-  || die "cannot resolve the task branch $IB_EXPECTED_REF to a commit"
+[ "$(git cat-file -t "$PARENT" 2>/dev/null)" = "commit" ] \
+  || die "parent branch $PARENT_BRANCH does not name a commit"
 
 # Parent already contains us → nothing to do (retry after someone merged us).
 if git merge-base --is-ancestor "$HEAD_SHA" "$PARENT"; then
