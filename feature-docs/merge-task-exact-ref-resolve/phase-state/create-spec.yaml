@@ -1,7 +1,7 @@
 schema_version: 1
 feature: merge-task-exact-ref-resolve
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: 65799f34edfd2fa97e477b0c1d11a9b26248352d
 last_input_digest: sha256:17ed4e0a471eb6a15c038da4f07378a1e96d33a5d3d94d402fe690535fb5308a
@@ -48,6 +48,17 @@ answers:
     freeform: null
     normalized_answer: 推奨に従う（design step は skip）
     resolution_note: batch-policies.yaml create-spec.design-step -> decide_autonomously
+  create-spec.design-system:
+    packet_id: null
+    answered_at: '2026-10-26T19:40:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - top_candidate_or_none
+    freeform: null
+    normalized_answer: project_native（em-workflow/references/templates/design-tokens.yaml）
+    resolution_note: batch-policies.yaml create-spec.design-system -> top_candidate_or_none;
+      candidate present -> project_native
 worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
