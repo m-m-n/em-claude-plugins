@@ -400,7 +400,7 @@ class TestMergeTaskJournal(unittest.TestCase):
         )
         return f"refs/heads/{branch}"
 
-    def _build_git_shim(self, mode):
+    def _build_git_shim(self, mode, task_ref=None, parent_original=None):
         """Write an executable `git` into a fresh directory under the test's
         temporary directory and return (env, record_dir): `env` is the git
         environment with that directory first on PATH, `record_dir` holds one
@@ -416,20 +416,120 @@ class TestMergeTaskJournal(unittest.TestCase):
         - "status": every invocation whose subcommand is symbolic-ref and
           whose arguments include refs/heads/<integration branch> records the
           interception and exits 128 without calling git.
+        - "swap": the first invocation whose subcommand is show-ref and whose
+          arguments include refs/heads/<integration branch> first makes that
+          ref a symbolic ref targeting `task_ref` through the real git and
+          records the interception, then hands the original invocation to the
+          real git. Later show-ref invocations pass through.
+        - "swap_restore": "swap" as above, and in addition the second
+          invocation whose subcommand is symbolic-ref and whose arguments
+          include refs/heads/<integration branch> first sets that ref back to
+          `parent_original` as a direct ref (a no-deref update through the
+          real git) and records the interception, then hands the original
+          invocation to the real git.
+        - "delete_before_recheck": the second invocation whose subcommand is
+          symbolic-ref and whose arguments include refs/heads/<integration
+          branch> first deletes that ref through the real git and records the
+          interception, then hands the original invocation to the real git.
+        - "second_status": the first invocation whose subcommand is
+          symbolic-ref and whose arguments include refs/heads/<integration
+          branch> goes to the real git; the second records the interception
+          and exits 128 without calling git.
+
+        "swap" and "swap_restore" need `task_ref` (a full ref name);
+        "swap_restore" also needs `parent_original` (the integration ref's
+        object ID before the run). The invocation counts ("first", "second")
+        are kept per shim instance, in a state directory of their own, and
+        the shim's own calls to the real git are not counted.
 
         The returned env is meant for the merge-task.sh subprocess only; the
         test's own git calls use self.git_env."""
-        self.assertIn(mode, ("repoint", "status"))
+        self.assertIn(
+            mode,
+            (
+                "repoint",
+                "status",
+                "swap",
+                "swap_restore",
+                "delete_before_recheck",
+                "second_status",
+            ),
+        )
+        if mode in ("swap", "swap_restore"):
+            self.assertIsNotNone(task_ref, f"mode {mode} needs task_ref")
+        if mode == "swap_restore":
+            self.assertIsNotNone(parent_original, f"mode {mode} needs parent_original")
         real_git = shutil.which("git")
         self.assertIsNotNone(real_git, "git not found on PATH")
         shim_dir = Path(tempfile.mkdtemp(dir=self.tmp_path, prefix="git-shim-"))
         record_dir = Path(tempfile.mkdtemp(dir=self.tmp_path, prefix="git-shim-records-"))
+        state_dir = Path(tempfile.mkdtemp(dir=self.tmp_path, prefix="git-shim-state-"))
         parent_ref = f"refs/heads/{PARENT_BRANCH}"
         record = (
             'n=1; while [ -e "$RECORD_DIR/interception-$n" ]; do n=$((n+1)); done; '
             ': > "$RECORD_DIR/interception-$n"'
         )
-        if mode == "repoint":
+        # Shell helpers shared by the modes that count invocations: `bump
+        # <name>` raises the per-instance counter <name> and leaves the new
+        # value in $COUNT; `names_parent_ref "$@"` is true when an argument is
+        # exactly the integration ref.
+        counting_helpers = (
+            'names_parent_ref() { for a in "$@"; do '
+            '[ "$a" = "$PARENT_REF" ] && return 0; done; return 1; }\n'
+            'bump() { COUNT=0; '
+            '[ -e "$STATE_DIR/$1" ] && COUNT=$(cat "$STATE_DIR/$1"); '
+            'COUNT=$((COUNT+1)); echo "$COUNT" > "$STATE_DIR/$1"; }\n'
+            f"record_interception() {{ {record}; }}\n"
+        )
+        swap_step = (
+            'if [ "$1" = show-ref ] && names_parent_ref "$@"; then\n'
+            "  bump show-ref\n"
+            '  if [ "$COUNT" = 1 ]; then\n'
+            '    "$REAL_GIT" symbolic-ref "$PARENT_REF" "$TASK_REF" \\\n'
+            '      || { echo "git shim: swap failed" >&2; exit 99; }\n'
+            "    record_interception\n"
+            "  fi\n"
+            "fi\n"
+        )
+        if mode == "swap":
+            body = counting_helpers + swap_step
+        elif mode == "swap_restore":
+            body = (
+                counting_helpers
+                + swap_step
+                + 'if [ "$1" = symbolic-ref ] && names_parent_ref "$@"; then\n'
+                "  bump symbolic-ref\n"
+                '  if [ "$COUNT" = 2 ]; then\n'
+                '    "$REAL_GIT" update-ref --no-deref "$PARENT_REF" "$PARENT_ORIGINAL" \\\n'
+                '      || { echo "git shim: restore failed" >&2; exit 99; }\n'
+                "    record_interception\n"
+                "  fi\n"
+                "fi\n"
+            )
+        elif mode == "delete_before_recheck":
+            body = (
+                counting_helpers
+                + 'if [ "$1" = symbolic-ref ] && names_parent_ref "$@"; then\n'
+                "  bump symbolic-ref\n"
+                '  if [ "$COUNT" = 2 ]; then\n'
+                '    "$REAL_GIT" update-ref -d "$PARENT_REF" \\\n'
+                '      || { echo "git shim: delete failed" >&2; exit 99; }\n'
+                "    record_interception\n"
+                "  fi\n"
+                "fi\n"
+            )
+        elif mode == "second_status":
+            body = (
+                counting_helpers
+                + 'if [ "$1" = symbolic-ref ] && names_parent_ref "$@"; then\n'
+                "  bump symbolic-ref\n"
+                '  if [ "$COUNT" = 2 ]; then\n'
+                "    record_interception\n"
+                "    exit 128\n"
+                "  fi\n"
+                "fi\n"
+            )
+        elif mode == "repoint":
             body = (
                 'if [ "$1" = update-ref ]; then\n'
                 '  for arg in "$@"; do\n'
@@ -460,6 +560,9 @@ class TestMergeTaskJournal(unittest.TestCase):
             f"REAL_GIT={shlex.quote(real_git)}\n"
             f"PARENT_REF={shlex.quote(parent_ref)}\n"
             f"RECORD_DIR={shlex.quote(str(record_dir))}\n"
+            f"STATE_DIR={shlex.quote(str(state_dir))}\n"
+            f"TASK_REF={shlex.quote(task_ref or '')}\n"
+            f"PARENT_ORIGINAL={shlex.quote(parent_original or '')}\n"
             + body
             + 'exec "$REAL_GIT" "$@"\n'
         )
@@ -1274,6 +1377,162 @@ class TestMergeTaskJournal(unittest.TestCase):
         self._assert_identity_error_names(result, task_ref)
         self.assertEqual(self._exact_ref_value(other_ref), other_before)
         self.assertEqual(self._exact_ref_value(parent_ref), parent_before)
+
+    # -- merge-task-already-contained-symref-recheck task0001: on the
+    # already-contained path the integration ref is checked again right before
+    # `merged` is recorded (still a direct ref, then a same-value
+    # compare-and-swap against the parent value read under the lock). Every
+    # race below is injected synchronously by the git shim, inside the
+    # script's own git invocation: no lock wait, no sleep.
+
+    def _assert_recheck_rejection(self, result, *fragments):
+        """Exit 2; stderr holds exactly one line and it is an ERROR line that
+        names PARENT_BRANCH and every fragment (no git diagnostic of its own
+        next to it); no dirty-worktree wording; no `MERGED:` line on stdout.
+        The journal and ref checks stay with the caller."""
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        stderr_lines = [line for line in result.stderr.splitlines() if line.strip()]
+        self.assertEqual(len(stderr_lines), 1, result.stderr)
+        error_lines = [line for line in stderr_lines if line.startswith("ERROR")]
+        self.assertEqual(len(error_lines), 1, result.stderr)
+        self.assertIn(PARENT_BRANCH, error_lines[0])
+        for fragment in fragments:
+            self.assertIn(fragment, error_lines[0])
+        self._assert_no_dirty_worktree_wording(result)
+        self.assertNotIn("MERGED:", result.stdout)
+
+    def test_already_contained_path_rejects_parent_ref_swapped_to_symbolic_ref_before_parent_read(
+        self,
+    ):
+        # references AC-1 / TS-1: the shim turns the integration ref into a
+        # symbolic ref to the task ref right before the parent value is read,
+        # i.e. after the post-lock symbolic-ref check said "direct ref". The
+        # parent value then resolves to the task tip, so the run takes the
+        # already-contained path; the unmodified script records `merged` and
+        # exits 0 there.
+        task_id = "task0001"
+        wt = self._task_worktree_with_commit_to_merge(task_id)
+        task_ref = f"refs/heads/em-workflow/{FEATURE}/{task_id}"
+        task_tip = self._exact_ref_value(task_ref)
+        self.assertIsNotNone(task_tip)
+        env, records = self._build_git_shim("swap", task_ref=task_ref)
+
+        result = self._run_merge(wt, task_id, env=env)
+
+        self._assert_recheck_rejection(result, "symbolic ref")
+        self.assertEqual(list(self.tmp_path.rglob("journal.jsonl")), [])
+        self.assertEqual(self._exact_ref_value(task_ref), task_tip)
+        self.assertEqual(self._parent_symbolic_target(), task_ref)
+        self.assertEqual(self._count_interceptions(records), 1)
+
+    def test_already_contained_path_rejects_parent_ref_swapped_and_restored_before_recheck_cas(
+        self,
+    ):
+        # references AC-2 (a) / TS-2: the shim swaps the integration ref to a
+        # symbolic ref as above, then puts the original value back as a direct
+        # ref right before the second symbolic-ref query. The query now sees a
+        # direct ref, so only the same-value compare-and-swap against the
+        # parent value read under the lock (the task tip) can notice that the
+        # ref no longer holds it. The unmodified script never asks a second
+        # time, so the restore never happens and it exits 0.
+        task_id = "task0001"
+        wt = self._task_worktree_with_commit_to_merge(task_id)
+        task_ref = f"refs/heads/em-workflow/{FEATURE}/{task_id}"
+        parent_ref = f"refs/heads/{PARENT_BRANCH}"
+        task_tip = self._exact_ref_value(task_ref)
+        parent_original = self._exact_ref_value(parent_ref)
+        self.assertIsNotNone(task_tip)
+        self.assertIsNotNone(parent_original)
+        self.assertNotEqual(task_tip, parent_original)
+        env, records = self._build_git_shim(
+            "swap_restore", task_ref=task_ref, parent_original=parent_original
+        )
+
+        result = self._run_merge(wt, task_id, env=env)
+
+        self._assert_recheck_rejection(result, "update-ref")
+        self.assertEqual(list(self.tmp_path.rglob("journal.jsonl")), [])
+        self.assertIsNone(self._parent_symbolic_target())
+        self.assertEqual(self._exact_ref_value(parent_ref), parent_original)
+        self.assertEqual(self._exact_ref_value(task_ref), task_tip)
+        self.assertEqual(self._count_interceptions(records), 2)
+
+    def test_already_contained_rerun_rejects_parent_ref_deleted_before_recheck_cas(self):
+        # references AC-2 (b) / TS-5: the task is merged normally, then re-run
+        # with a shim that deletes the integration ref right before the second
+        # symbolic-ref query. The query answers "not a symbolic ref" (status
+        # 1) for an absent ref, so only the compare-and-swap can notice. The
+        # unmodified script never asks a second time, so the delete never
+        # happens and the re-run appends a second `merged` line.
+        task_id = "task0001"
+        wt = self._task_worktree_with_commit_to_merge(task_id)
+        task_ref = f"refs/heads/em-workflow/{FEATURE}/{task_id}"
+        parent_ref = f"refs/heads/{PARENT_BRANCH}"
+        first = self._run_merge(wt, task_id)
+        self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
+        self.assertEqual(len(self._read_journal_lines(FEATURE)), 1)
+        task_tip = self._exact_ref_value(task_ref)
+        env, records = self._build_git_shim("delete_before_recheck")
+
+        result = self._run_merge(wt, task_id, env=env)
+
+        self._assert_recheck_rejection(result, "update-ref")
+        self.assertEqual(len(self._read_journal_lines(FEATURE)), 1)
+        self.assertIsNone(self._exact_ref_value(parent_ref))
+        self.assertEqual(self._exact_ref_value(task_ref), task_tip)
+        self.assertEqual(self._count_interceptions(records), 1)
+
+    def test_already_contained_rerun_rejects_undeterminable_second_symbolic_ref_status(self):
+        # references AC-3 / TS-3: the task is merged normally, then re-run with
+        # a shim whose second symbolic-ref query on the integration ref exits
+        # 128 (neither 0 nor 1). The unmodified script never asks a second
+        # time, so the shim never acts and the re-run appends a second
+        # `merged` line.
+        task_id = "task0001"
+        wt = self._task_worktree_with_commit_to_merge(task_id)
+        parent_ref = f"refs/heads/{PARENT_BRANCH}"
+        first = self._run_merge(wt, task_id)
+        self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
+        self.assertEqual(len(self._read_journal_lines(FEATURE)), 1)
+        parent_before = self._exact_ref_value(parent_ref)
+        env, records = self._build_git_shim("second_status")
+
+        result = self._run_merge(wt, task_id, env=env)
+
+        self._assert_recheck_rejection(result, "128")
+        self.assertEqual(len(self._read_journal_lines(FEATURE)), 1)
+        self.assertEqual(self._exact_ref_value(parent_ref), parent_before)
+        self.assertIsNone(self._parent_symbolic_target())
+        self.assertEqual(self._count_interceptions(records), 1)
+
+    def test_already_contained_rerun_on_direct_ref_keeps_exit_zero_and_ref_value(self):
+        # references AC-4 / TS-4 (behaviour kept): with the integration ref a
+        # direct ref that nobody touches, the re-check passes. The re-run
+        # exits 0, reports the already-contained case, appends exactly one
+        # more `merged` line, and leaves the integration ref's value and kind
+        # as they were. The behaviour pre-dates the re-check, so this test is
+        # green before the change as well.
+        task_id = "task0001"
+        wt = self._task_worktree_with_commit_to_merge(task_id)
+        parent_ref = f"refs/heads/{PARENT_BRANCH}"
+        first = self._run_merge(wt, task_id)
+        self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
+        lines_before = self._read_journal_lines(FEATURE)
+        self.assertEqual(len(lines_before), 1)
+        parent_before = self._exact_ref_value(parent_ref)
+        self.assertIsNotNone(parent_before)
+
+        result = self._run_merge(wt, task_id)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("already contained in", result.stdout)
+        lines_after = self._read_journal_lines(FEATURE)
+        self.assertEqual(len(lines_after), len(lines_before) + 1)
+        self.assertEqual(lines_after[: len(lines_before)], lines_before)
+        self.assertEqual(json.loads(lines_after[-1])["event"], "merged")
+        self.assertEqual(json.loads(lines_after[-1])["commit"], parent_before)
+        self.assertEqual(self._exact_ref_value(parent_ref), parent_before)
+        self.assertIsNone(self._parent_symbolic_target())
 
 
 if __name__ == "__main__":
