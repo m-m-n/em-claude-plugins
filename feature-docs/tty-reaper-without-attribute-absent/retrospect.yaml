@@ -1,0 +1,24 @@
+feature: tty-reaper-without-attribute-absent
+collected_at: "2026-10-27T20:29:20+09:00"
+session_ids: [01a17d19-67d0-708f-a2c1-f47f275bfd71]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: "テストの補助関数 1 つの修正で、変更は単一モジュールに収まり外部契約も変えないため、最終読みはバケット 1 が 0.92 だった"
+    bases:
+      - basis: description_only
+        score: {"score": 1.01, "confidence": 0.97, "probabilities": {"0": 0.01, "1": 0.97, "2": 0.02, "3": 0.0}}
+        observed_at: "2026-10-27T19:31:00+09:00"
+      - basis: description_plus_code
+        score: {"score": 1.06, "confidence": 0.92, "probabilities": {"0": 0.01, "1": 0.92, "2": 0.07, "3": 0.0}}
+        observed_at: "2026-10-27T19:35:30+09:00"
+    pre_survey_estimate: {"files_expected": ["tests/test_codex_hook_tty_reaper.py"], "changed_lines_approx": 20, "new_functions_needed": 0, "new_files_needed": 0, "new_dependencies_needed": 0, "covering_tests_exist": true, "spillover_modules": [], "work_still_required": true, "test_change_kind": "extend_existing_one_to_one", "added_test_cases_approx": 2, "body_change_kind": "new_logic", "change_containment": "single_module", "caller_and_dependency_count": 2, "changes_external_contract": false, "changes_behavior": true}
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 の評価者メモ: tests/test_codex_hook_tty_reaper.py の PID_ADDRESSED_SIGNALS 定義行に意図しない空白だけの変更が入った（task0001.md の Out of Scope に反する整形）。書式のみで severity の報告対象外"

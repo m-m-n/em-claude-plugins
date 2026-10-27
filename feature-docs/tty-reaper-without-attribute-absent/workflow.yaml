@@ -117,7 +117,7 @@ workflow:
   failed_items: []
   completed_at_commit: 0966265e2eda9052680b8d31bef1fedbfbf430f1
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: without_attribute tolerates an attribute absent from the start
