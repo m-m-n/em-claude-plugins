@@ -1,7 +1,7 @@
 schema_version: 1
 feature: tty-reaper-without-attribute-absent
 phase: create-plan
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: 4ff86a9c0da93f79c6b57e2b0c1ba75dec950d65
 last_input_digest: sha256:b33347ce1a70cfe78b4f4971c117c9479903f41485ecb2beff53ea12d1b3f364
@@ -10,7 +10,7 @@ packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:b33347ce1a70cfe78b4f4971c117c9479903f41485ecb2beff53ea12d1b3f364
   dispatch_digest_inputs:
     em-workflow/references/contracts/planner-contract.md: sha256:6476cc99ea8a1d2d4f376d1702bd636b1ab9898655397ec80ab1d6fb47cbe9e8
@@ -23,8 +23,25 @@ worker_runs:
     em-workflow/skills/plan-writing/SKILL.md: sha256:880bd01ad6c60af5695495e0a6784de7fe98e1ea9463dc6703164f8ffffdbccb
     feature-docs/tty-reaper-without-attribute-absent/SPEC.md: sha256:df9d0177c56b5e87d8a3690c976ba48689b1db75cf5237193132ec94ae51b9c9
     feature-docs/tty-reaper-without-attribute-absent/workflow.yaml: sha256:91f1b50fa09ffc9d153b8856b3a8d62535f316cde58ed8841250afa90f11479a
-artifacts: []
-patches: []
+  self_write_set:
+  - feature-docs/tty-reaper-without-attribute-absent/THREAT-MODEL.md
+  - feature-docs/tty-reaper-without-attribute-absent/VERIFICATION.md
+  - feature-docs/tty-reaper-without-attribute-absent/tasks/task0001.md
+artifacts:
+- path: feature-docs/tty-reaper-without-attribute-absent/THREAT-MODEL.md
+  sha256: sha256:33c2c3f6a6cae584824330c2f413deadae6f8521784aa4430525386d2859b471
+  produced_by: create-plan-run-0001
+- path: feature-docs/tty-reaper-without-attribute-absent/VERIFICATION.md
+  sha256: sha256:9e2d00e7abcacb1d893a70908f32e58fcbefb27d80db90b076c87605e6a4a957
+  produced_by: create-plan-run-0001
+- path: feature-docs/tty-reaper-without-attribute-absent/tasks/task0001.md
+  sha256: sha256:64aab76c4a1b794118ec4b1dca12c700420f97e84f73374713323d6675a3726a
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: create-plan-p0001
+  status: applied
+  base_input_digest: sha256:b33347ce1a70cfe78b4f4971c117c9479903f41485ecb2beff53ea12d1b3f364
+  base_workflow_blob: 36f943aa222c2740c7ba7f169ab8d4a7b2b8e9cc
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
