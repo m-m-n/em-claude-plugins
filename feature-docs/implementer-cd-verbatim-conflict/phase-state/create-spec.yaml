@@ -3,17 +3,17 @@ feature: implementer-cd-verbatim-conflict
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: f5b7a7bb0580d06a07f10d31246318913a021770
+base_revision: 0672a3e0661b259b9419aac6f232045b4a70b382
 last_input_digest: sha256:36a19e144618959745840dd4c93619398b5c4857674cb142dacd0501770f3919
-active_request_id: create-spec-run-0001
+active_request_id: create-spec-run-0002
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: failed
   input_digest: sha256:36a19e144618959745840dd4c93619398b5c4857674cb142dacd0501770f3919
-  output_digest: null
-  dispatch_digest_inputs:
+  output_digest: sha256:bf5f995b223a439eba794948b188e7d14c31873853f9967a0e525615c4cb032e
+  dispatch_digest_inputs: &id001
     CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
     em-workflow/README.md: sha256:369437c34ef84e712c86adc6497562bced67854f7694778c597676713f13b994
     em-workflow/agents/implementer.md: sha256:c4e410c7fe33834769d5ddde305e90504367b95b42b1d1bd09e8c5cc443e0083
@@ -33,6 +33,11 @@ worker_runs:
     tests/test_hooks_registration.py: sha256:57081b42d003d8508c7c232855dccdd875dcd929926b14f662028ef218a24a82
     tests/test_merge_unverified_exit_doc_contract.py: sha256:5fc37ff0d9de2b906f46fe9680a503258e817ebb543a97264cd879afbe2f98a3
     tests/test_worktree_skill_instruction_source.py: sha256:f7f78f54b06d681e16d3645431f69c378ef76b5de40a354cb8388f5647c360f2
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:36a19e144618959745840dd4c93619398b5c4857674cb142dacd0501770f3919
+  output_digest: null
+  dispatch_digest_inputs: *id001
 artifacts: []
 patches: []
 progress_fingerprint: null
@@ -44,4 +49,5 @@ resolved_input_cache:
     paths: []
     digests: {}
     truncated: false
-last_error: null
+last_error: 'create-spec-run-0001: validate-worker-output gate_id error: questions[5]
+  create-spec.design-step did not offer option_id decide_autonomously'
