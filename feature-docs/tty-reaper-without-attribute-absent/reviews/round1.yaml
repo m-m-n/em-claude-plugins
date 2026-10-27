@@ -1,0 +1,44 @@
+round: 1
+executed_at: "2026-10-27T20:20:06+09:00"
+scope:
+  review_mode: diff
+  base_commit: 1a59900ea5c53f2e52a4f563d5d14f71aede49a8
+  head_commit: df8882e8b44e8f35f8711f84b794178edfaab80a
+  changed_files:
+  - test-docs/tty-reaper-without-attribute-absent/task0001.tests.yaml
+  - tests/test_codex_hook_tty_reaper.py
+plan:
+  floor: [comprehensive, security, spec]
+  discretionary: []
+  cross_validation: false
+perspective_runs:
+- {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+- {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+- {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings: []
+evaluation:
+  round_summary: "ラウンド1（diff モード、cross_validation なし）。security#0・comprehensive#0・spec#0 の3つの実行はどれも指摘0件だった。重大度 critical/high の指摘も、検証すべき reproduction も無かった。reviewer の出力にインジェクションは見当たらなかった。観点ごとの確認結果: security — corroborated（変更はテストだけ。本物の os/signal モジュールを書き換える入れ子テストは addCleanup で元の状態に戻している）。comprehensive — corroborated（without_attribute はセンチネル付きの getattr で属性の有無を判定し、属性があったときだけ delattr/setattr する。属性がある場合の対照テストで記録が意味のある検査になっている。既存の呼び出し2か所は変わっていない）。spec — corroborated（FR1〜FR5 と NFR1〜NFR3 を満たし、AC-1〜AC-7 に対応するテストがある。変更範囲は宣言された集合に収まる）。報告の基準に届かないメモ: tests/test_codex_hook_tty_reaper.py の420行目に意図しない空白だけの変更がある（PID_ADDRESSED_SIGNALS = { が PID_ADDRESSED_SIGNALS ={ になった）。動作には影響しないが task0001.md の Out of Scope（helper と新しいテスト以外の整形はしない）に引っかかる。書式の問題で Severity の報告対象外のため findings には入れていない。"
+  recommended_action: complete
+  action_rationale: "3観点とも指摘0件で、評価者が自分で読んだ結果もそれぞれと一致した（corroborated）。修正はセンチネル方式という仕様どおりの形で、属性あり・なし・例外・入れ子・シグネチャのテストがそろっている。medium 以上で直すべき点は無い。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-tty-reaper-without-attribute-absent-20261027T111948Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
