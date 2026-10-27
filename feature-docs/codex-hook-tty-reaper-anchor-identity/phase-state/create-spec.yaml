@@ -1,0 +1,92 @@
+schema_version: 1
+feature: codex-hook-tty-reaper-anchor-identity
+phase: create-spec
+status: completed
+generation: 1
+base_revision: 0d37682a2877e96ad66a7510a401cd02bcbb627c
+last_input_digest: sha256:65d1ba43bbc10f81dac02957753ae4b2e1c99f026820197928c1e4247802d620
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-27T19:47:00+09:00'
+    questions:
+    - question_id: requirement.anchor-identity.approach
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+answers:
+  requirement.anchor-identity.approach:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-27T19:52:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - anchor_start_time
+    freeform: null
+    normalized_answer: 起点の開始時刻を照合
+    resolution_note: 'gate: create-spec.requirement-clarification; Codex consulted (harness: codex, 1
+      turn); orchestrator mapped the suggestion onto option anchor_start_time; Opus escalation not run;
+      Codex rationale: _reap は祖先確認と _snapshot を別々に行い起点の PID しか引き継がないため、祖先走査で読んだ開始時刻との照合が直接の修正になる。_same_process
+      と同じ同定方法で既存の慎重な方針に沿う。中間の Codex が終了してフックの親が変わっても、同一起点の子孫を処理する現行挙動を保てる。到達確認は中間プロセスの終了による停止取りやめまで導入するため採らない。'
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-27T19:52:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 推奨に従う（design step は skip）
+    resolution_note: batch-policies.yaml create-spec.design-step -> decide_autonomously
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:b3e5f0636ef720889612c4c6a49cd8513883fcfa46bd2a2cc20e5dc22e4305c2
+  dispatch_digest_inputs:
+    .claude/rules/core-plugin-version-bump.md: sha256:2d4c25eb5b7e70a44df068780fce08b4736cd52ff14e13b60ac711beb3b96745
+    .claude/rules/hook-tests.md: sha256:69fcdbd53cfc7f685bbe9050757167a9ac9f0b4a38dac7d8c7533d65945fea38
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    em-review/scripts/codex-hook-tty-reaper.py: sha256:94584f0c0e8b8da2fd5bc1bc5702bcd8c28d27773616606445cfb12d58df98a5
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
+    em-workflow/scripts/codex-hook-tty-reaper.py: sha256:94584f0c0e8b8da2fd5bc1bc5702bcd8c28d27773616606445cfb12d58df98a5
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+    tests/test_codex_hook_tty_reaper.py: sha256:23bb6de0723025c3703021adda755c73e3c78b16969eb6140c72116575475c68
+  self_write_set: []
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:effde03d6ac63f3302c2d01ed84e8c94e2242d406d81fc53ad8ca15a05fb0dd8
+  dispatch_digest_inputs:
+    .claude/rules/core-plugin-version-bump.md: sha256:2d4c25eb5b7e70a44df068780fce08b4736cd52ff14e13b60ac711beb3b96745
+    .claude/rules/hook-tests.md: sha256:69fcdbd53cfc7f685bbe9050757167a9ac9f0b4a38dac7d8c7533d65945fea38
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    em-review/scripts/codex-hook-tty-reaper.py: sha256:94584f0c0e8b8da2fd5bc1bc5702bcd8c28d27773616606445cfb12d58df98a5
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
+    em-workflow/scripts/codex-hook-tty-reaper.py: sha256:94584f0c0e8b8da2fd5bc1bc5702bcd8c28d27773616606445cfb12d58df98a5
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+    tests/test_codex_hook_tty_reaper.py: sha256:23bb6de0723025c3703021adda755c73e3c78b16969eb6140c72116575475c68
+  output_digest: sha256:c8b20afa6b0ddaf04d303160c588d0dbd1371b020fb1c8f0222429af6357d0e1
+  self_write_set: []
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:65d1ba43bbc10f81dac02957753ae4b2e1c99f026820197928c1e4247802d620
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/spec-writer-contract.md: sha256:9032c6287d75f4a88e556bd3962c32ab8b4905cf3b6ececa895206788bcd0b63
+    em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
+    em-workflow/references/templates/spec-document.md: sha256:203dfcddbe507886ce861694fccd20ae25e5af0bd1b0efa5e935991add950cbd
+  output_digest: sha256:b517b61b0739c976237519147a2e01ae03739641575d6cc94763a27061e3b426
+  self_write_set:
+  - feature-docs/codex-hook-tty-reaper-anchor-identity/REQUIREMENTS.md
+  - feature-docs/codex-hook-tty-reaper-anchor-identity/SPEC.md
+artifacts:
+- path: feature-docs/codex-hook-tty-reaper-anchor-identity/REQUIREMENTS.md
+  sha256: sha256:da3ab14c0af9230472c9d1a56f206435f5720f6cad28f5bcb7d305db4ea385e2
+  produced_by: create-spec-run-0003
+- path: feature-docs/codex-hook-tty-reaper-anchor-identity/SPEC.md
+  sha256: sha256:b517b61b0739c976237519147a2e01ae03739641575d6cc94763a27061e3b426
+  produced_by: create-spec-run-0003
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

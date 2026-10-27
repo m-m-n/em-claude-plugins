@@ -1,0 +1,46 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests, run in the task worktree after the new tests were written and before any script edit: Ran 11795 tests, FAILED (failures=5, skipped=1); the 5 failures are exactly the new tests this task added (TestAnchorIdentity.test_ac1_a_process_that_took_over_the_anchor_pid_stops_nothing, both subtests of TestAnchorIdentity.test_ac2_a_start_time_that_differs_by_one_tick_stops_nothing, both copy subtests of TestModuleDocstring.test_anchor_identity_the_flow_states_the_anchor_start_time_check); no test that existed before this task failed, so nothing was inherited red
+final_failures: []             # re-executed after the implementation and after writing this record: python3 -m unittest discover -s tests, Ran 11796 tests, OK (skipped=1, the same skip as before); 11788 inherited + 7 new tests + 1 record-check test for this record file
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_tty_reaper.TestAnchorIdentity.test_ac1_a_process_that_took_over_the_anchor_pid_stops_nothing
+      - tests.test_codex_hook_tty_reaper.TestAnchorIdentity.test_ac1_the_same_layout_without_the_takeover_stops_the_descendant
+    red_confirmed: true
+    red_reason: "Observed against the unmodified script (tests written first, script untouched): test_ac1_a_process_that_took_over_the_anchor_pid_stops_nothing failed with AssertionError: Lists differ: [(10000040, SIGTERM, 1000.0), (10000040, SIGKILL, 1000.5)] != [] (the descendant of the process that took over the anchor PID was signalled). The control test (same layout, anchor start time left unchanged, descendant stopped) was already green before the fix; it pins that the descendant is a real target, so the red test is not vacuous."
+  AC-2:
+    tests:
+      - tests.test_codex_hook_tty_reaper.TestAnchorIdentity.test_ac2_a_start_time_that_differs_by_one_tick_stops_nothing
+    red_confirmed: true
+    red_reason: "Observed against the unmodified script: both subtests (anchor start time one tick later, one tick earlier) failed with AssertionError: Lists differ: [(10000040, SIGTERM, 1000.0), (10000040, SIGKILL, 1000.5)] != [] (a signal was recorded)."
+  AC-3:
+    tests:
+      - tests.test_codex_hook_tty_reaper.TestAnchorIdentity.test_ac3_an_anchor_absent_from_the_snapshot_stops_nothing
+      - tests.test_codex_hook_tty_reaper.TestLinkRule.test_ac1_an_anchor_missing_from_the_snapshot_stops_nothing
+    red_confirmed: false
+    red_reason: "The unmodified script already stops nothing when the snapshot has no entry for the anchor PID (the descendant search returns no depths for an absent anchor), so no red state occurred for the absent-anchor part: the existing TestLinkRule test detects it, and the new test passed before the fix as well while adding explicit exit code 0 and empty stdout / stderr assertions on that path. The same quiet-exit assertions on the mismatch path live in the AC-1 and AC-2 tests, where the no-signal assertion failed first before the fix, so no separate failing observation of the quiet-exit part exists."
+  AC-4:
+    tests:
+      - tests.test_codex_hook_tty_reaper.TestAnchorIdentity.test_ac4_an_anchor_whose_only_change_is_its_parent_is_still_the_anchor
+    red_confirmed: false
+    red_reason: "Guard against a check that is too strict. The unmodified script has no anchor check, so the descendant is stopped before the fix and the test passed before any implementation existed; no red state is possible for this criterion. Checked separately against a scratch copy of the fixed script whose check also compares the anchor parent: this test failed there (not part of the shipped change)."
+  AC-5:
+    tests:
+      - tests.test_codex_hook_tty_reaper.TestAnchorIdentity.test_ac5_a_process_between_the_anchor_and_the_hook_that_exited_does_not_matter
+    red_confirmed: false
+    red_reason: "Guard against a check that is too strict. The unmodified script has no anchor check, so the descendant is stopped before the fix and the test passed before any implementation existed; no red state is possible for this criterion. Checked separately against a scratch copy of the fixed script whose check requires every chain process to be in the snapshot: this test failed there (not part of the shipped change)."
+  AC-6:
+    tests:
+      - tests.test_codex_hook_tty_reaper.TestModuleDocstring.test_anchor_identity_the_flow_states_the_anchor_start_time_check
+      - tests.test_codex_hook_tty_reaper.TestModuleDocstring.test_ac8_the_flow_has_ten_steps_and_a_closing_errors_paragraph
+      - tests.test_codex_hook_tty_reaper.TestModuleDocstring.test_ac8_step_4_states_the_start_time_rule_for_the_ancestor_chain
+      - tests.test_codex_hook_tty_reaper.TestModuleDocstring.test_ac8_step_6_states_the_start_time_rule_for_descendants
+      - tests.test_codex_hook_tty_reaper.TestCopies.test_ac1_the_two_copies_are_byte_identical
+    red_confirmed: true
+    red_reason: "Observed against the unmodified script: test_anchor_identity_the_flow_states_the_anchor_start_time_check failed for both copies with AssertionError: 'anchor' not found in 'take one snapshot of the process table. ...' (step 5 did not describe the anchor identity check). The other four tests already exist and passed before the change; they pin the ten steps, the step 4 and step 6 wording and the byte identity of the copies, and still pass after it."
+  AC-7:
+    tests:
+      - tests.test_codex_hook_tty_reaper.TestNoPidAddressedSignalling.test_ac5_the_hook_names_no_pid_addressed_signal_function
+      - tests.test_codex_hook_tty_reaper.TestCopies.test_ac1_each_copy_imports_only_standard_library_modules
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing TestNoPidAddressedSignalling test detects a PID-addressed signal function named in either copy and the existing TestCopies import test detects a non-standard-library import; no red state occurred for this change. That no existing test case is changed is read from the diff (the test file diff adds 137 lines and removes none; the script diffs add no import and no signal function), and the two suite runs are python3 -m unittest tests.test_codex_hook_tty_reaper and python3 -m unittest discover -s tests."
