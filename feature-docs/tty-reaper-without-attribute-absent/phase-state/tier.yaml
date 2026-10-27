@@ -1,0 +1,12 @@
+schema_version: 2
+feature: tty-reaper-without-attribute-absent
+tier: reduced
+bases:
+  - basis: description_only
+    score: {"score": 1.01, "confidence": 0.97, "probabilities": {"0": 0.01, "1": 0.97, "2": 0.02, "3": 0.0}}
+    observed_at: "2026-10-27T19:31:00+09:00"
+  - basis: description_plus_code
+    score: {"score": 1.06, "confidence": 0.92, "probabilities": {"0": 0.01, "1": 0.92, "2": 0.07, "3": 0.0}}
+    observed_at: "2026-10-27T19:35:30+09:00"
+pre_survey_estimate: {"files_expected": ["tests/test_codex_hook_tty_reaper.py"], "changed_lines_approx": 20, "new_functions_needed": 0, "new_files_needed": 0, "new_dependencies_needed": 0, "covering_tests_exist": true, "spillover_modules": [], "work_still_required": true, "test_change_kind": "extend_existing_one_to_one", "added_test_cases_approx": 2, "body_change_kind": "new_logic", "change_containment": "single_module", "caller_and_dependency_count": 2, "changes_external_contract": false, "changes_behavior": true}
+decided_at: "2026-10-27T19:36:00+09:00"
