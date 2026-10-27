@@ -1,11 +1,11 @@
 schema_version: 1
 feature: codex-hook-tty-reaper-anchor-identity
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: 0d37682a2877e96ad66a7510a401cd02bcbb627c
-last_input_digest: sha256:b3e5f0636ef720889612c4c6a49cd8513883fcfa46bd2a2cc20e5dc22e4305c2
-active_request_id: null
+last_input_digest: sha256:effde03d6ac63f3302c2d01ed84e8c94e2242d406d81fc53ad8ca15a05fb0dd8
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     status: answered
@@ -43,6 +43,18 @@ worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
   input_digest: sha256:b3e5f0636ef720889612c4c6a49cd8513883fcfa46bd2a2cc20e5dc22e4305c2
+  dispatch_digest_inputs:
+    .claude/rules/core-plugin-version-bump.md: sha256:2d4c25eb5b7e70a44df068780fce08b4736cd52ff14e13b60ac711beb3b96745
+    .claude/rules/hook-tests.md: sha256:69fcdbd53cfc7f685bbe9050757167a9ac9f0b4a38dac7d8c7533d65945fea38
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    em-review/scripts/codex-hook-tty-reaper.py: sha256:94584f0c0e8b8da2fd5bc1bc5702bcd8c28d27773616606445cfb12d58df98a5
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
+    em-workflow/scripts/codex-hook-tty-reaper.py: sha256:94584f0c0e8b8da2fd5bc1bc5702bcd8c28d27773616606445cfb12d58df98a5
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+    tests/test_codex_hook_tty_reaper.py: sha256:23bb6de0723025c3703021adda755c73e3c78b16969eb6140c72116575475c68
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:effde03d6ac63f3302c2d01ed84e8c94e2242d406d81fc53ad8ca15a05fb0dd8
   dispatch_digest_inputs:
     .claude/rules/core-plugin-version-bump.md: sha256:2d4c25eb5b7e70a44df068780fce08b4736cd52ff14e13b60ac711beb3b96745
     .claude/rules/hook-tests.md: sha256:69fcdbd53cfc7f685bbe9050757167a9ac9f0b4a38dac7d8c7533d65945fea38
