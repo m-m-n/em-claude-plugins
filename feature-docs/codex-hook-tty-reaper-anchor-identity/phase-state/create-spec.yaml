@@ -1,7 +1,7 @@
 schema_version: 1
 feature: codex-hook-tty-reaper-anchor-identity
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 0d37682a2877e96ad66a7510a401cd02bcbb627c
 last_input_digest: sha256:65d1ba43bbc10f81dac02957753ae4b2e1c99f026820197928c1e4247802d620

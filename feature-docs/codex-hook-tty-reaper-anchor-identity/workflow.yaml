@@ -1,0 +1,171 @@
+schema_version: 1
+feature: codex-hook-tty-reaper-anchor-identity
+created: '2026-10-27'
+base_branch: main
+goal: |
+  # codex-hook-tty-reaper.py の祖先チェーン確認からスナップショットまでの間に起点の PID が再利用されると、起点の子孫でないプロセスに信号が届き得る
+
+  種別: バグ
+
+  ## 現象
+  `codex-hook-tty-reaper.py`（Codex の Stop フック）の `_reap` は、まず `_ancestor_chain` で起点（ANCHOR）がフックの祖先であることを確かめ、その後、別の時点で `_snapshot` を取る。`_depths_below` は起点の開始時刻をスナップショットから読むが、祖先チェーンを読んだ時点の起点の開始時刻とスナップショット上の起点の開始時刻は照合していない。
+
+  この間に起点が終了して回収され、その PID を無関係なプロセス X が受け取ると、X より後に始まった X の子孫のうち標準入力が `/dev/pts/*` のものが停止対象になる。それらは本当に X の子孫なので、親子リンクの開始時刻規則も pidfd による同一性確認も通ってしまう。
+
+  em-workflow / em-review の 2 つのコピーはバイト単位で同一なので、両方に同じ問題がある。
+
+  ## 再現手順
+  1. テストで、`_ancestor_chain` が返す起点の開始時刻と、続く `_snapshot` 上の同じ PID の開始時刻が異なる状態（起点の PID が別プロセスに再割り当てされた状態）を作る。
+  2. 再割り当て先のプロセスの子孫に、標準入力が `/dev/pts/*` のプロセスを置く。
+  3. そのプロセスへの SIGTERM の送信が記録される。
+
+  ## 期待する挙動
+  祖先チェーン確認時の起点と、スナップショット上の起点が同一プロセスであると確認できない場合は、何も止めない。
+
+  ## 完了の定義
+  - 再現手順で現象が起きない
+  - 再発を検出するテストがある
+  - 2 つのコピー（em-workflow / em-review）を同じ変更で直し、バイト単位で同一に保つ
+
+  ## 該当箇所
+  - `em-workflow/scripts/codex-hook-tty-reaper.py:307`（`_ancestor_chain` の呼び出し）、`:310`（`_snapshot` の呼び出し）
+  - `em-review/scripts/codex-hook-tty-reaper.py` の同じ箇所
+
+  修正案（レビューでの提案）:
+  - `_ancestor_chain` が起点の開始時刻も返すようにし、スナップショット上の起点の開始時刻と一致しなければ何も止めない
+  - または、スナップショット上でフック自身（`os.getpid()`）が同じリンク規則で起点の子孫として到達できることを確かめ、できなければ何も止めない
+
+  ## 実害・発生条件
+  成立には、起点がフックの実行中に終了し、さらに PID が一巡して再割り当てされる必要があるため、発生確率は極めて低い。em-workflow の feature `codex-hook-tty-reaper-pid-reuse` のレビュー（round 1、評価者自身の指摘、severity low）で見つかった。low のためレビューの severity ゲートで対象外になり、その feature では直していない。
+
+  ## 追加の指示（起動者から）
+
+  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作る。integration ブランチはローカル・リモートとも残す（base_branch に自動マージしない）。
+  - 不明点は Codex に相談し、相対的に良いと判断した選択肢を採用する。
+  - その相談内容を Notion（タスクページへのコメント）に記録する。
+parent_branch: em-workflow/codex-hook-tty-reaper-anchor-identity/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.95
+      '2': 0.05
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.79
+      '2': 0.21
+      '3': 0.0
+  at: '2026-10-27T19:36:52+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: c9b7852f7686de1c7589829923aa1620163083f9
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: No UI. Internal bug fix to a process-signalling script. Batch policy create-spec.design-step -> decide_autonomously.
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: 起点の同一性の照合
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: 2 つのコピーの同一性
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: docstring の更新
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: 回帰テスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 標準ライブラリのみ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 出力と終了コード
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: 既存挙動の維持
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: PID 指定の信号を使わない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
