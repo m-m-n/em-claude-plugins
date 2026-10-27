@@ -1,0 +1,50 @@
+feature: codex-hook-tty-reaper-anchor-identity
+collected_at: "2026-10-27T20:37:30+09:00"
+session_ids: [01a17d25-d0a2-7749-88af-53538c47ff4f.jsonl]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の最終読みで score 1.21（confidence 0.79）となり、閾値表により full を採用した"
+    bases:
+      - basis: description_only
+        score:
+          type: score
+          score: 1.05
+          confidence: 0.95
+          probabilities: {"0": 0.0, "1": 0.95, "2": 0.05, "3": 0.0}
+        observed_at: "2026-10-27T19:30:40+09:00"
+      - basis: description_plus_code
+        score:
+          type: score
+          score: 1.21
+          confidence: 0.79
+          probabilities: {"0": 0.0, "1": 0.79, "2": 0.21, "3": 0.0}
+        observed_at: "2026-10-27T19:36:40+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/scripts/codex-hook-tty-reaper.py
+        - em-review/scripts/codex-hook-tty-reaper.py
+        - tests/test_codex_hook_tty_reaper.py
+      changed_lines_approx: 40
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: true
+      spillover_modules: []
+      work_still_required: true
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 1
+      body_change_kind: new_logic
+      change_containment: multiple_modules
+      caller_and_dependency_count: 9
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 の評価者が補足として、スナップショットは /proc を 1 回走査して作るため、起点エントリを読んでから走査が終わるまでの間に PID が 2 回再利用されると別プロセスの子が子孫として数えられる経路が残ると記録した。変更前からある性質で、この feature の SPEC の範囲外"

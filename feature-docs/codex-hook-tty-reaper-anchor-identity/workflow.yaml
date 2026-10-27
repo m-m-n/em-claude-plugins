@@ -106,7 +106,8 @@ workflow:
   failed_items: []
   completed_at_commit: 423baba21f3594636077a5b5059a356a1d4d353c
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: e82a0017d126ad75abc4f4ebcf7869249a46389e
 tasks:
   task0001:
     title: Anchor start-time identity check in the TTY reaper
