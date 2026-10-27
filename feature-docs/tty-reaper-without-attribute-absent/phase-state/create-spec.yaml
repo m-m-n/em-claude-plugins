@@ -1,11 +1,11 @@
 schema_version: 1
 feature: tty-reaper-without-attribute-absent
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: eef9c9f3a2d940bb05d266054f76ee8a02211dfb
 last_input_digest: sha256:b41252f8289a66d1568a5590d05d23dcb48b57f2200a950378df2ff8e1da016a
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:

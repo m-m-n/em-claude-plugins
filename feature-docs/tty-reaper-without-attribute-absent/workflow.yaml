@@ -1,0 +1,181 @@
+schema_version: 1
+feature: tty-reaper-without-attribute-absent
+created: '2026-10-27'
+base_branch: main
+goal: '# tests/test_codex_hook_tty_reaper.py の without_attribute() が、pidfd 関数がもともと無い Python で AttributeError になり、関数欠落の試験が動かない
+
+
+  種別: バグ
+
+
+  ## 現象
+
+  tests/test_codex_hook_tty_reaper.py のテスト補助関数 without_attribute() は、既定値なしで getattr(module, name) を呼ぶ。そのため os.pidfd_open または signal.pidfd_send_signal がもともと無い Python では、関数が無い場合を検証するテスト（test_ac5_ts5_a_missing_pidfd_open_function_leaves_a_default_that_stops_nothing と test_ac5_ts5_a_missing_pidfd_send_signal_function_leaves_a_default_that_stops_nothing）が準備の段階で AttributeError になる。フック本体は getattr(..., None) で関数が無い場合を扱っている。
+
+
+  ## 再現手順
+
+  1. os.pidfd_open を削除した状態で `with without_attribute(os, "pidfd_open"):` を実行する。
+
+  2. AttributeError が出る。signal.pidfd_send_signal でも同じ。
+
+
+  ## 期待する挙動
+
+  属性がもともと無い環境でも、without_attribute() はエラーにならず、ブロックの中で属性が無い状態を作る。
+
+
+  ## 完了の定義
+
+  - 再現手順で現象が起きない
+
+  - 再発を検出するテストがある
+
+
+  ## 該当箇所
+
+  - tests/test_codex_hook_tty_reaper.py:153（without_attribute()）
+
+
+  修正案（レビューでの提案）: sentinel を使って saved = getattr(module, name, sentinel) とし、属性があったときだけ削除・復元する。
+
+
+  ## 実害・発生条件
+
+  影響はテストだけ。関数が無いのは Linux 以外のビルドに限られ、リポジトリが使う Linux の Python には両方の関数がある。em-workflow の feature codex-hook-tty-reaper-pid-reuse のレビュー（round 1、comprehensive 観点）で見つかった。low のためこの feature では直していない。
+
+
+  ## 追加指示（起動者より）
+
+  - 実装完了後、integration ブランチを remote に push し、base_branch への PR を gh pr create で作成する。integration ブランチはローカル・リモートともに残す（base_branch へ自動マージしない）
+
+  - 不明点は Codex に相談し、比較的良いと判断した選択肢を採用する
+
+  - その議論の内容を Notion に記録する
+
+  '
+parent_branch: em-workflow/tty-reaper-without-attribute-absent/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.01
+      '1': 0.97
+      '2': 0.02
+      '3': 0.0
+    description_plus_code:
+      '0': 0.01
+      '1': 0.92
+      '2': 0.07
+      '3': 0.0
+  at: '2026-10-27T19:36:00+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    repo-tests:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: f371028cbf32cfe091350e5ba3ff0624bf47fb7f
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: テストコードだけの変更で、画面がない
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+requirements:
+  FR1:
+    title: 属性がもともと無いときにエラーにしない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: 属性がもともと無いときは何も削除・復元しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: 属性があるときの挙動を保つ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: 既存の呼び出し側を変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: 再発を検出するテスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: テストコードは標準ライブラリだけを使う
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 変更は tests/test_codex_hook_tty_reaper.py に限る
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: 既存のテストはすべて通り続ける
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
