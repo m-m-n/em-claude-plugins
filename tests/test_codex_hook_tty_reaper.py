@@ -50,6 +50,19 @@ task0001.md), pinned by the classes `TestLinkRule`, `TestAncestorChainRule`,
 - AC-8 (FR9, NFR1): the module docstring states the link rule, the pidfd
   signalling and the pidfd-unavailable behaviour; standard library only.
 
+Anchor identity (feature-docs/codex-hook-tty-reaper-anchor-identity/tasks/
+task0001.md), pinned by the class `TestAnchorIdentity` and the docstring test
+`test_anchor_identity_the_flow_states_the_anchor_start_time_check`:
+
+- AC-1, AC-2 (FR1, FR4, TM-1): when the snapshot holds the anchor PID with a
+  start time that differs from the one the ancestor-chain read saw, by any
+  amount (one tick included), nothing is signalled and no pidfd is opened.
+- AC-3 (FR1, NFR2): an anchor PID absent from the snapshot stops nothing; the
+  mismatch path ends with exit 0 and no output.
+- AC-4, AC-5 (FR1, NFR3): a changed parent of the anchor, or an exited process
+  between the anchor and the hook, does not prevent stopping.
+- AC-6 (FR2, FR3): the Flow describes the check in step 5.
+
 Two kinds of test:
 
 - Real-process tests start a pseudo-Codex tree of their own: a Python process
@@ -342,6 +355,17 @@ class TestModuleDocstring(unittest.TestCase):
                 steps, _ = docstring_parts(path)
                 self.check(
                     steps[10], "sigkill", "same pidfd", "second pidfd", "closed",
+                )
+
+    def test_anchor_identity_the_flow_states_the_anchor_start_time_check(self):
+        # The check runs once the snapshot exists, so step 5 describes it; the
+        # Flow keeps its ten steps (test_ac8_the_flow_has_ten_steps_...).
+        for plugin, path in HOOK_PATHS.items():
+            with self.subTest(copy=plugin):
+                steps, _ = docstring_parts(path)
+                self.check(
+                    steps[5], "anchor", "start time", "step 4", "equals", "exactly",
+                    "one tick", "stop nothing",
                 )
 
     def test_ac8_the_errors_paragraph_states_the_pidfd_unavailable_behaviour(self):
@@ -1471,6 +1495,119 @@ class TestAncestorChainRule(InProcessCase):
         world.table.change(world.anchor, ppid=grandparent)
         world.run()
         self.assertEqual(world.terms(), [fake_pid(10)])
+
+
+# --------------------------------------------------------------------------
+# Anchor identity: the anchor of the ancestor-chain read is the anchor of the
+# snapshot (feature-docs/codex-hook-tty-reaper-anchor-identity/tasks/
+# task0001.md, AC-1 to AC-5)
+# --------------------------------------------------------------------------
+
+
+class TestAnchorIdentity(InProcessCase):
+    """The reaper stops anything only when the snapshot holds the anchor PID
+    with exactly the start time the ancestor-chain read saw.
+
+    Each test changes the fabricated table after the ancestor-chain read and
+    before the snapshot, by wrapping the hook's `_snapshot`: the chain read
+    still sees the original anchor."""
+
+    def run_changing_before_the_snapshot(self, world, change):
+        """Run the hook; CHANGE runs once, right before the snapshot is taken."""
+        calls = []
+        real_snapshot = world.hook._snapshot
+
+        def snapshot_after_the_change(proc_dir):
+            calls.append(proc_dir)
+            change()
+            return real_snapshot(proc_dir)
+
+        world.hook._snapshot = snapshot_after_the_change
+        code = world.run()
+        self.assertEqual(len(calls), 1, "the snapshot was not taken exactly once")
+        return code
+
+    def assert_quiet_exit(self, world, code):
+        self.assertEqual(code, 0)
+        self.assertEqual(world.out, "")
+        self.assertEqual(world.err, "")
+
+    def assert_nothing_stopped(self, world):
+        self.assertEqual(world.sent, [])
+        self.assertEqual(world.open_calls, [])
+
+    def anchor_taken_over(self, world, offset):
+        """A callback: the anchor PID is held by a process X that started
+        OFFSET ticks after the anchor, and X has a descendant on a terminal
+        that started after X. Returns (callback, descendant)."""
+        descendant = fake_pid(40)
+        x_start = start_of(world, world.anchor) + offset
+
+        def change():
+            world.table.change(world.anchor, start=x_start)
+            world.table.add(descendant, world.anchor, stdin="/dev/pts/40", start=x_start + 1)
+
+        return change, descendant
+
+    def test_ac1_a_process_that_took_over_the_anchor_pid_stops_nothing(self):
+        world = self.world(target=False)
+        change, _descendant = self.anchor_taken_over(world, offset=500)
+        code = self.run_changing_before_the_snapshot(world, change)
+        self.assert_nothing_stopped(world)
+        # AC-3: the mismatch path ends quietly with exit code 0.
+        self.assert_quiet_exit(world, code)
+
+    def test_ac1_the_same_layout_without_the_takeover_stops_the_descendant(self):
+        # The control: the descendant is a real target; only the anchor's
+        # start time in the snapshot differs from the test above.
+        world = self.world(target=False)
+        change, descendant = self.anchor_taken_over(world, offset=0)
+        self.run_changing_before_the_snapshot(world, change)
+        self.assertEqual(world.terms(), [descendant])
+        self.assertEqual(world.kills(), [descendant])
+
+    def test_ac2_a_start_time_that_differs_by_one_tick_stops_nothing(self):
+        for label, offset in (("one tick later", 1), ("one tick earlier", -1)):
+            with self.subTest(case=label):
+                world = self.world(target=False)
+                change, _descendant = self.anchor_taken_over(world, offset=offset)
+                code = self.run_changing_before_the_snapshot(world, change)
+                self.assert_nothing_stopped(world)
+                self.assert_quiet_exit(world, code)
+
+    def test_ac3_an_anchor_absent_from_the_snapshot_stops_nothing(self):
+        world = self.world()
+        descendant = fake_pid(40)
+
+        def change():
+            world.table.remove(world.anchor)
+            world.table.add(descendant, world.anchor, stdin="/dev/pts/40", start=9000)
+
+        code = self.run_changing_before_the_snapshot(world, change)
+        self.assert_nothing_stopped(world)
+        self.assert_quiet_exit(world, code)
+
+    def test_ac4_an_anchor_whose_only_change_is_its_parent_is_still_the_anchor(self):
+        world = self.world()
+        subreaper = fake_pid(3)
+
+        def change():
+            world.table.add(subreaper, 1, stdin="pipe:[3]")
+            world.table.change(world.anchor, ppid=subreaper)
+
+        self.run_changing_before_the_snapshot(world, change)
+        self.assertEqual(world.terms(), [self.target])
+        self.assertEqual(world.kills(), [self.target])
+
+    def test_ac5_a_process_between_the_anchor_and_the_hook_that_exited_does_not_matter(self):
+        world = self.world()
+
+        def change():
+            world.table.remove(world.mid)
+
+        self.run_changing_before_the_snapshot(world, change)
+        self.assertEqual(world.terms(), [self.target])
+        self.assertEqual(world.kills(), [self.target])
 
 
 # --------------------------------------------------------------------------

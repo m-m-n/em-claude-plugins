@@ -30,7 +30,12 @@ Flow:
   5. Take one snapshot of the process table. Parent, state and start time are
      read from after the last closing parenthesis of the process-name field,
      so a name that holds spaces or parentheses cannot shift them. An entry
-     that vanishes or cannot be read is left out.
+     that vanishes or cannot be read is left out. Then ANCHOR must still be
+     the process step 4 saw: the snapshot must hold an entry for its PID
+     whose start time equals, exactly, the start time of ANCHOR read in the
+     step 4 walk. A start time that differs by any amount (one tick
+     included), or no entry for the PID -> stop nothing. The parent is not
+     compared.
   6. Targets: descendants of ANCHOR whose standard-input link (fd 0) names a
      path under `/dev/pts/` (a terminal whose master is gone reads as
      `/dev/pts/N (deleted)` and counts), minus the hook and every process on
@@ -151,16 +156,21 @@ def _read_stat(proc_dir, pid):
     return state.decode("ascii"), int(ppid), int(start)
 
 
-def _ancestor_chain(proc_dir, pid):
+def _ancestor_chain(proc_dir, pid, starts=None):
     """[PID, parent, ..., top] up to PID 1, or None when a link is unreadable,
     the chain loops, or a link breaks the start-time rule (a parent that
-    started later than its child)."""
+    started later than its child).
+
+    When STARTS is a dict, it receives {pid: start time} for every link of the
+    chain, taken from the same reads that built the chain."""
     chain = [pid]
     seen = {pid}
     record = _read_stat(proc_dir, pid)
     while True:
         if record is None:
             return None
+        if starts is not None:
+            starts[chain[-1]] = record[2]
         ppid = record[1]
         if chain[-1] == 1 or ppid == 0:
             return chain
@@ -187,6 +197,14 @@ def _snapshot(proc_dir):
         if record is not None:
             table[pid] = record
     return table
+
+
+def _anchor_is_unchanged(table, anchor, start):
+    """True when TABLE holds ANCHOR with exactly START as its start time.
+
+    Identity is the PID plus the start time; the parent plays no part."""
+    entry = table.get(anchor)
+    return entry is not None and entry[2] == start
 
 
 def _depths_below(table, anchor):
@@ -304,10 +322,13 @@ def _reap(argv, stdin_fd, proc_dir, pidfd_open, pidfd_send_signal, pidfd_close,
     if anchor is None:
         return
     own = os.getpid()
-    chain = _ancestor_chain(proc_dir, own)
+    starts = {}
+    chain = _ancestor_chain(proc_dir, own, starts)
     if chain is None or anchor not in chain[1:]:
         return
     table = _snapshot(proc_dir)
+    if not _anchor_is_unchanged(table, anchor, starts[anchor]):
+        return
     targets = _targets(proc_dir, table, anchor, set(chain))
     _stop(proc_dir, targets, pidfd_open, pidfd_send_signal, pidfd_close, clock, sleep)
 
