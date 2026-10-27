@@ -1,0 +1,45 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests, run inside the task worktree before any edit: 11788 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after writing this record: python3 -m unittest discover -s tests, run inside the task worktree; 11799 tests, OK (skipped=1, the same skip as the baseline); 11788 inherited + 11 new (10 in tests.test_codex_hook_tty_reaper, which went from 120 to 130 tests, and 1 record check for this file)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_hook_tty_reaper.TestWithoutAttribute.test_an_absent_attribute_raises_nothing_and_stays_absent_inside_and_after
+    red_confirmed: true
+    red_reason: "Observed against the unfixed helper: the test errored at block entry with \"AttributeError: module 'stand_in' has no attribute 'feature'\"."
+  AC-2:
+    tests:
+      - tests.test_codex_hook_tty_reaper.TestWithoutAttribute.test_an_absent_attribute_is_neither_deleted_nor_assigned
+      - tests.test_codex_hook_tty_reaper.TestWithoutAttribute.test_a_present_attribute_is_recorded_as_one_deletion_then_one_assignment
+    red_confirmed: true
+    red_reason: "Observed against the unfixed helper: test_an_absent_attribute_is_neither_deleted_nor_assigned errored at block entry with \"AttributeError: module 'recording_stand_in' has no attribute 'feature'\". test_a_present_attribute_is_recorded_as_one_deletion_then_one_assignment was already green against the unfixed helper; it pins that the recording stand-in does see a deletion and an assignment when the attribute is present, so the zero-event assertion is not vacuous."
+  AC-3:
+    tests:
+      - tests.test_codex_hook_tty_reaper.TestWithoutAttribute.test_an_exception_over_an_absent_attribute_propagates_and_it_stays_absent
+    red_confirmed: true
+    red_reason: "Observed against the unfixed helper: the test errored at block entry with \"AttributeError: module 'stand_in' has no attribute 'feature'\" instead of reaching the raised exception."
+  AC-4:
+    tests:
+      - tests.test_codex_hook_tty_reaper.TestWithoutAttribute.test_a_present_attribute_is_absent_inside_and_the_identical_object_is_back_after
+      - tests.test_codex_hook_tty_reaper.TestWithoutAttribute.test_a_present_attribute_is_restored_and_the_exception_propagates_when_the_block_raises
+      - tests.test_codex_hook_tty_reaper.TestWithoutAttribute.test_a_present_none_is_an_attribute_that_is_removed_and_put_back
+    red_confirmed: false
+    red_reason: "The behaviour for a present attribute pre-existed in the helper (remove on entry, restore on every exit path); these tests passed against the unfixed helper, so no red state occurred for this criterion. They pin that the fix keeps it, including the identity of the restored object, the propagation of the same exception object and a present value of None."
+  AC-5:
+    tests:
+      - tests.test_codex_hook_tty_reaper.TestWithoutAttribute.test_nested_use_on_os_pidfd_open_restores_the_state_recorded_before_the_outer_block
+      - tests.test_codex_hook_tty_reaper.TestWithoutAttribute.test_nested_use_on_signal_pidfd_send_signal_restores_the_state_recorded_before_the_outer_block
+    red_confirmed: true
+    red_reason: "Observed against the unfixed helper: the inner use errored at entry with \"AttributeError: module 'os' has no attribute 'pidfd_open'\" and \"AttributeError: module 'signal' has no attribute 'pidfd_send_signal'\" respectively; the test cleanup restored both modules."
+  AC-6:
+    tests:
+      - tests.test_codex_hook_tty_reaper.TestWithoutAttribute.test_the_helper_keeps_its_name_and_its_two_parameters
+      - tests.test_codex_hook_tty_reaper.TestPidfdUnavailable.test_ac5_ts5_a_missing_pidfd_open_function_leaves_a_default_that_stops_nothing
+      - tests.test_codex_hook_tty_reaper.TestPidfdUnavailable.test_ac5_ts5_a_missing_pidfd_send_signal_function_leaves_a_default_that_stops_nothing
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing two missing-function tests detect that the helper still removes and restores the attribute for their unmodified calls, and the new signature test detects the helper name and its two parameters (module, name); all three passed against the unfixed helper and the fixed one, so no red state occurred for this change."
+  AC-7:
+    tests:
+      - tests.test_codex_hook_tty_reaper.TestThisModule.test_ts14_module_imports_are_all_stdlib
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing TestThisModule.test_ts14_module_imports_are_all_stdlib detects any non-standard-library import in the test module (the new tests add only the standard-library module types); no red state occurred for this change. That the two unittest commands pass and that no file other than the listed test module changed are verified by the full-suite run and by git diff, not by a test that can be made to fail first."
