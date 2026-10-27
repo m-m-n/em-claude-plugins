@@ -1,16 +1,16 @@
 schema_version: 1
 feature: codex-hook-tty-reaper-anchor-identity
 phase: create-plan
-status: dispatched
+status: completed
 generation: 1
 base_revision: f91fbe35bf154cc72fc2b5e5c36d086d244e8b34
 last_input_digest: sha256:a7c14d1c6a50b81d67e97d6df971e84855b9714ad29584f928d667142786620b
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:a7c14d1c6a50b81d67e97d6df971e84855b9714ad29584f928d667142786620b
   dispatch_digest_inputs:
     em-workflow/references/contracts/planner-contract.md: sha256:6476cc99ea8a1d2d4f376d1702bd636b1ab9898655397ec80ab1d6fb47cbe9e8
@@ -24,9 +24,29 @@ worker_runs:
     feature-docs/codex-hook-tty-reaper-anchor-identity/REQUIREMENTS.md: sha256:da3ab14c0af9230472c9d1a56f206435f5720f6cad28f5bcb7d305db4ea385e2
     feature-docs/codex-hook-tty-reaper-anchor-identity/SPEC.md: sha256:b517b61b0739c976237519147a2e01ae03739641575d6cc94763a27061e3b426
     feature-docs/codex-hook-tty-reaper-anchor-identity/workflow.yaml: sha256:4ad91c9e7e9da1c784a73da8eea573a3b124fea5d3f3254c37040c006bb836d2
-  self_write_set: []
-artifacts: []
-patches: []
+  self_write_set:
+  - feature-docs/codex-hook-tty-reaper-anchor-identity/IMPLEMENTATION.md
+  - feature-docs/codex-hook-tty-reaper-anchor-identity/THREAT-MODEL.md
+  - feature-docs/codex-hook-tty-reaper-anchor-identity/VERIFICATION.md
+  - feature-docs/codex-hook-tty-reaper-anchor-identity/tasks/task0001.md
+artifacts:
+- path: feature-docs/codex-hook-tty-reaper-anchor-identity/IMPLEMENTATION.md
+  sha256: sha256:9dfacb520b38e94bf8347930a2cc64dc01be17efc6d9309cf0c29c6253ad9a4a
+  produced_by: create-plan-run-0001
+- path: feature-docs/codex-hook-tty-reaper-anchor-identity/THREAT-MODEL.md
+  sha256: sha256:bc4793143d12892793dc01e43b1b72338202791b23c87e4020525f3807962190
+  produced_by: create-plan-run-0001
+- path: feature-docs/codex-hook-tty-reaper-anchor-identity/VERIFICATION.md
+  sha256: sha256:e105772482f115022209805e9e10e9989c260fe9ed17422c82638405c3144f46
+  produced_by: create-plan-run-0001
+- path: feature-docs/codex-hook-tty-reaper-anchor-identity/tasks/task0001.md
+  sha256: sha256:e187374966da75e7742b36c4a30376beeff01ab7ac6b19d1c3318dcb4071ba38
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: create-plan-run-0001-p0001
+  status: applied
+  base_input_digest: sha256:a7c14d1c6a50b81d67e97d6df971e84855b9714ad29584f928d667142786620b
+  base_workflow_blob: 8d95fed4e4ef9f371c1957b828522b99eb0ff2ed
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
