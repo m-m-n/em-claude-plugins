@@ -1,11 +1,11 @@
 schema_version: 1
 feature: tty-reaper-without-attribute-absent
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 4ff86a9c0da93f79c6b57e2b0c1ba75dec950d65
 last_input_digest: sha256:b33347ce1a70cfe78b4f4971c117c9479903f41485ecb2beff53ea12d1b3f364
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
