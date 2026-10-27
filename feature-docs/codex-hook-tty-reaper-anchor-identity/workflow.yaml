@@ -98,7 +98,8 @@ workflow:
   base_commit: 76065ce596be85874df9ee21529954593c47e6e5
   completed_at_commit: 02658ce7d0d65576272217573aeb2013a35c729f
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: ea7f56eaf2db4700d950c35d094e1abc7d2cb9f1
 - id: verify
   status: pending
 - id: retrospect
@@ -129,8 +130,16 @@ tasks:
     branch: em-workflow/codex-hook-tty-reaper-anchor-identity/task0001
     notes: null
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  residual_critical_high: 0
+  needs_rework: false
   plan:
     floor:
     - comprehensive
