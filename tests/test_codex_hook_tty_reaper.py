@@ -50,6 +50,14 @@ task0001.md), pinned by the classes `TestLinkRule`, `TestAncestorChainRule`,
 - AC-8 (FR9, NFR1): the module docstring states the link rule, the pidfd
   signalling and the pidfd-unavailable behaviour; standard library only.
 
+The test helper `without_attribute`, pinned by the class `TestWithoutAttribute`
+(feature-docs/tty-reaper-without-attribute-absent/tasks/task0001.md): an
+attribute absent at entry is neither deleted nor assigned and stays absent,
+also when the block raises; an attribute present at entry is absent inside the
+block and the identical object is back after it, also when the block raises;
+nesting it on `os.pidfd_open` and `signal.pidfd_send_signal` restores the
+original state.
+
 Two kinds of test:
 
 - Real-process tests start a pseudo-Codex tree of their own: a Python process
@@ -91,6 +99,7 @@ import sys
 import tempfile
 import threading
 import time
+import types
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -149,15 +158,25 @@ def load_hook(path=HOOK):
     return module
 
 
+_NOT_PRESENT = object()
+
+
 @contextlib.contextmanager
 def without_attribute(module, name):
-    """MODULE.NAME does not exist inside the block (an interpreter without it)."""
-    saved = getattr(module, name)
-    delattr(module, name)
+    """MODULE.NAME does not exist inside the block (an interpreter without it).
+
+    An attribute present at entry is removed and the identical object is put
+    back on every exit path. An attribute already absent at entry is left
+    alone: nothing is deleted on entry and nothing is assigned on exit. An
+    exception raised inside the block propagates unchanged."""
+    saved = getattr(module, name, _NOT_PRESENT)
+    if saved is not _NOT_PRESENT:
+        delattr(module, name)
     try:
         yield
     finally:
-        setattr(module, name, saved)
+        if saved is not _NOT_PRESENT:
+            setattr(module, name, saved)
 
 
 def imported_top_level_names(source):
@@ -262,7 +281,143 @@ class TestThisModule(unittest.TestCase):
         self.assertTrue(imported <= set(sys.stdlib_module_names), imported)
 
 
-PID_ADDRESSED_SIGNALS = {"kill", "killpg", "pthread_kill", "raise_signal"}
+# --------------------------------------------------------------------------
+# The without_attribute() helper
+# (feature-docs/tty-reaper-without-attribute-absent/tasks/task0001.md)
+# --------------------------------------------------------------------------
+
+ABSENT = object()
+
+
+class BlockError(Exception):
+    """Raised inside a without_attribute() block; each test raises an instance."""
+
+
+class RecordingModule(types.ModuleType):
+    """A stand-in module that records every attribute deletion and assignment
+    as ("del" | "set", attribute name)."""
+
+    def __init__(self, name="recording_stand_in"):
+        object.__setattr__(self, "events", [])
+        super().__init__(name)
+
+    def __setattr__(self, name, value):
+        self.events.append(("set", name))
+        super().__setattr__(name, value)
+
+    def __delattr__(self, name):
+        self.events.append(("del", name))
+        super().__delattr__(name)
+
+
+class TestWithoutAttribute(unittest.TestCase):
+    NAME = "feature"
+
+    def restore_on_cleanup(self, module, name):
+        """Put MODULE.NAME back to its present state (object or absence) once the
+        test ends, so a failing helper cannot leave a real module altered."""
+        original = getattr(module, name, ABSENT)
+
+        def restore():
+            if original is ABSENT:
+                if hasattr(module, name):
+                    delattr(module, name)
+            else:
+                setattr(module, name, original)
+
+        self.addCleanup(restore)
+        return original
+
+    # An attribute absent at entry --------------------------------------
+
+    def test_an_absent_attribute_raises_nothing_and_stays_absent_inside_and_after(self):
+        stand_in = types.ModuleType("stand_in")
+        with without_attribute(stand_in, self.NAME):
+            self.assertFalse(hasattr(stand_in, self.NAME))
+        self.assertFalse(hasattr(stand_in, self.NAME))
+
+    def test_an_absent_attribute_is_neither_deleted_nor_assigned(self):
+        stand_in = RecordingModule()
+        with without_attribute(stand_in, self.NAME):
+            pass
+        self.assertEqual(stand_in.events, [])
+        self.assertFalse(hasattr(stand_in, self.NAME))
+
+    def test_an_exception_over_an_absent_attribute_propagates_and_it_stays_absent(self):
+        stand_in = types.ModuleType("stand_in")
+        raised = BlockError("raised inside the block")
+        with self.assertRaises(BlockError) as caught:
+            with without_attribute(stand_in, self.NAME):
+                raise raised
+        self.assertIs(caught.exception, raised)
+        self.assertFalse(hasattr(stand_in, self.NAME))
+
+    # An attribute present at entry -------------------------------------
+
+    def test_a_present_attribute_is_absent_inside_and_the_identical_object_is_back_after(self):
+        stand_in = types.ModuleType("stand_in")
+        original = object()
+        setattr(stand_in, self.NAME, original)
+        with without_attribute(stand_in, self.NAME):
+            self.assertFalse(hasattr(stand_in, self.NAME))
+        self.assertIs(getattr(stand_in, self.NAME), original)
+
+    def test_a_present_attribute_is_restored_and_the_exception_propagates_when_the_block_raises(self):
+        stand_in = types.ModuleType("stand_in")
+        original = object()
+        setattr(stand_in, self.NAME, original)
+        raised = BlockError("raised inside the block")
+        with self.assertRaises(BlockError) as caught:
+            with without_attribute(stand_in, self.NAME):
+                self.assertFalse(hasattr(stand_in, self.NAME))
+                raise raised
+        self.assertIs(caught.exception, raised)
+        self.assertIs(getattr(stand_in, self.NAME), original)
+
+    def test_a_present_none_is_an_attribute_that_is_removed_and_put_back(self):
+        stand_in = types.ModuleType("stand_in")
+        setattr(stand_in, self.NAME, None)
+        with without_attribute(stand_in, self.NAME):
+            self.assertFalse(hasattr(stand_in, self.NAME))
+        self.assertTrue(hasattr(stand_in, self.NAME))
+        self.assertIsNone(getattr(stand_in, self.NAME))
+
+    def test_a_present_attribute_is_recorded_as_one_deletion_then_one_assignment(self):
+        # The recorder above is what makes "no deletion, no assignment" for an
+        # absent attribute a real check: it does see both operations here.
+        stand_in = RecordingModule()
+        setattr(stand_in, self.NAME, object())
+        del stand_in.events[:]
+        with without_attribute(stand_in, self.NAME):
+            pass
+        self.assertEqual(stand_in.events, [("del", self.NAME), ("set", self.NAME)])
+
+    # Nested use on the real modules ------------------------------------
+
+    def assert_nested_use_restores(self, module, name):
+        original = self.restore_on_cleanup(module, name)
+        with without_attribute(module, name):
+            with without_attribute(module, name):
+                self.assertFalse(hasattr(module, name))
+            self.assertFalse(hasattr(module, name))
+        self.assertIs(getattr(module, name, ABSENT), original)
+
+    def test_nested_use_on_os_pidfd_open_restores_the_state_recorded_before_the_outer_block(self):
+        self.assert_nested_use_restores(os, "pidfd_open")
+
+    def test_nested_use_on_signal_pidfd_send_signal_restores_the_state_recorded_before_the_outer_block(self):
+        self.assert_nested_use_restores(signal, "pidfd_send_signal")
+
+    # The helper's shape ------------------------------------------------
+
+    def test_the_helper_keeps_its_name_and_its_two_parameters(self):
+        self.assertEqual(without_attribute.__name__, "without_attribute")
+        self.assertEqual(
+            list(inspect.signature(without_attribute).parameters), ["module", "name"]
+        )
+
+
+PID_ADDRESSED_SIGNALS ={"kill", "killpg", "pthread_kill", "raise_signal"}
 
 
 class TestNoPidAddressedSignalling(unittest.TestCase):
