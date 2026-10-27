@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 0d37682a2877e96ad66a7510a401cd02bcbb627c
 last_input_digest: sha256:65d1ba43bbc10f81dac02957753ae4b2e1c99f026820197928c1e4247802d620
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -68,13 +68,23 @@ worker_runs:
   output_digest: sha256:c8b20afa6b0ddaf04d303160c588d0dbd1371b020fb1c8f0222429af6357d0e1
   self_write_set: []
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:65d1ba43bbc10f81dac02957753ae4b2e1c99f026820197928c1e4247802d620
   dispatch_digest_inputs:
     em-workflow/references/contracts/spec-writer-contract.md: sha256:9032c6287d75f4a88e556bd3962c32ab8b4905cf3b6ececa895206788bcd0b63
     em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
     em-workflow/references/templates/spec-document.md: sha256:203dfcddbe507886ce861694fccd20ae25e5af0bd1b0efa5e935991add950cbd
-artifacts: []
+  output_digest: sha256:b517b61b0739c976237519147a2e01ae03739641575d6cc94763a27061e3b426
+  self_write_set:
+  - feature-docs/codex-hook-tty-reaper-anchor-identity/REQUIREMENTS.md
+  - feature-docs/codex-hook-tty-reaper-anchor-identity/SPEC.md
+artifacts:
+- path: feature-docs/codex-hook-tty-reaper-anchor-identity/REQUIREMENTS.md
+  sha256: sha256:da3ab14c0af9230472c9d1a56f206435f5720f6cad28f5bcb7d305db4ea385e2
+  produced_by: create-spec-run-0003
+- path: feature-docs/codex-hook-tty-reaper-anchor-identity/SPEC.md
+  sha256: sha256:b517b61b0739c976237519147a2e01ae03739641575d6cc94763a27061e3b426
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
