@@ -1,16 +1,47 @@
 schema_version: 1
 feature: codex-hook-tty-reaper-anchor-identity
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: 0d37682a2877e96ad66a7510a401cd02bcbb627c
 last_input_digest: sha256:b3e5f0636ef720889612c4c6a49cd8513883fcfa46bd2a2cc20e5dc22e4305c2
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-27T19:47:00+09:00'
+    questions:
+    - question_id: requirement.anchor-identity.approach
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+answers:
+  requirement.anchor-identity.approach:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-27T19:52:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - anchor_start_time
+    freeform: null
+    normalized_answer: 起点の開始時刻を照合
+    resolution_note: 'gate: create-spec.requirement-clarification; Codex consulted (harness: codex, 1
+      turn); orchestrator mapped the suggestion onto option anchor_start_time; Opus escalation not run;
+      Codex rationale: _reap は祖先確認と _snapshot を別々に行い起点の PID しか引き継がないため、祖先走査で読んだ開始時刻との照合が直接の修正になる。_same_process
+      と同じ同定方法で既存の慎重な方針に沿う。中間の Codex が終了してフックの親が変わっても、同一起点の子孫を処理する現行挙動を保てる。到達確認は中間プロセスの終了による停止取りやめまで導入するため採らない。'
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-27T19:52:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 推奨に従う（design step は skip）
+    resolution_note: batch-policies.yaml create-spec.design-step -> decide_autonomously
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:b3e5f0636ef720889612c4c6a49cd8513883fcfa46bd2a2cc20e5dc22e4305c2
   dispatch_digest_inputs:
     .claude/rules/core-plugin-version-bump.md: sha256:2d4c25eb5b7e70a44df068780fce08b4736cd52ff14e13b60ac711beb3b96745
