@@ -13,9 +13,14 @@ worker_runs:
   status: completed
   input_digest: sha256:7565c007c8fc78c7920b6c992a73cc5752847e72cb69abd88664bbf7d939b3ae
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:b41252f8289a66d1568a5590d05d23dcb48b57f2200a950378df2ff8e1da016a
-artifacts: []
+  self_write_set:
+  - feature-docs/tty-reaper-without-attribute-absent/SPEC.md
+artifacts:
+- path: feature-docs/tty-reaper-without-attribute-absent/SPEC.md
+  sha256: sha256:df9d0177c56b5e87d8a3690c976ba48689b1db75cf5237193132ec94ae51b9c9
+  produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
