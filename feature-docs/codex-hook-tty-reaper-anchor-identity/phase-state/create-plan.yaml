@@ -1,0 +1,33 @@
+schema_version: 1
+feature: codex-hook-tty-reaper-anchor-identity
+phase: create-plan
+status: dispatched
+generation: 1
+base_revision: f91fbe35bf154cc72fc2b5e5c36d086d244e8b34
+last_input_digest: sha256:a7c14d1c6a50b81d67e97d6df971e84855b9714ad29584f928d667142786620b
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:a7c14d1c6a50b81d67e97d6df971e84855b9714ad29584f928d667142786620b
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/planner-contract.md: sha256:6476cc99ea8a1d2d4f376d1702bd636b1ab9898655397ec80ab1d6fb47cbe9e8
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
+    em-workflow/references/workflow-schema.md: sha256:272810b8e6b75a03a856a2c539985a326440db6ebad80c423d559ca742552f3f
+    em-workflow/skills/plan-writing/SKILL.md: sha256:880bd01ad6c60af5695495e0a6784de7fe98e1ea9463dc6703164f8ffffdbccb
+    feature-docs/codex-hook-tty-reaper-anchor-identity/REQUIREMENTS.md: sha256:da3ab14c0af9230472c9d1a56f206435f5720f6cad28f5bcb7d305db4ea385e2
+    feature-docs/codex-hook-tty-reaper-anchor-identity/SPEC.md: sha256:b517b61b0739c976237519147a2e01ae03739641575d6cc94763a27061e3b426
+    feature-docs/codex-hook-tty-reaper-anchor-identity/workflow.yaml: sha256:4ad91c9e7e9da1c784a73da8eea573a3b124fea5d3f3254c37040c006bb836d2
+  self_write_set: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
