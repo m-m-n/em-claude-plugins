@@ -24,9 +24,14 @@
 # once the lock is held, a symbolic ref at refs/heads/<parent-branch> (a
 # dangling one included), or an answer to that question that cannot be
 # determined, ends the run with exit 2 after the lock and before any ref
-# update. Both update-ref calls on the integration ref use the no-deref
-# option, so a symbolic ref placed there after that check is never followed
-# to its referent.
+# update. All update-ref calls on the integration ref (the same-value check on
+# the already-contained path, the fast-forward and the merge commit) use the
+# no-deref option, so a symbolic ref placed there after that check is never
+# followed to its referent. On the already-contained path, right before
+# `merged` is recorded, the script confirms that the integration ref is still a
+# direct ref. It then confirms by a same-value compare-and-swap that the ref's
+# value is still the parent value read under the lock. If either check fails,
+# the run ends with exit 2.
 #
 # Usage:
 #   ${CLAUDE_PLUGIN_ROOT}/scripts/merge-task.sh <parent-branch> <task-id>
@@ -38,7 +43,9 @@
 #   2 = other error (a run outside the task's own worktree layout or without
 #       the task branch checked out, a task-id or parent-branch mismatch, a
 #       switch away from the task branch while waiting for the merge lock,
-#       an integration ref that is a symbolic ref, uncommitted changes,
+#       an integration ref that is a symbolic ref, an integration ref that is
+#       no longer a direct ref holding the parent value right before the
+#       already-contained path records `merged`, uncommitted changes,
 #       unknown branch, git failure, ...)
 #
 # Concurrency: the whole check→merge sequence runs under an exclusive flock
@@ -188,9 +195,14 @@ PL_HEAD_REF=$(git symbolic-ref --quiet HEAD 2>/dev/null) || PL_HEAD_REF=""
 # included) ends the run with exit 2; 1 (a direct ref, or no such ref, which
 # the lookup below rejects on its own) lets the run continue; any other status
 # also ends the run with exit 2, because the answer could not be determined.
-# Both update-ref calls below pass the no-deref option, so a symbolic ref
-# placed at the integration ref after this check is never followed to its
-# referent; the old-value comparison against PARENT stays as it was.
+# Every update-ref call on the integration ref below (the same-value check on
+# the already-contained path, the fast-forward and the merge commit) passes the
+# no-deref option, so a symbolic ref placed at the integration ref after this
+# check is never followed to its referent; the old-value comparison against
+# PARENT stays as it was. The already-contained path asks the same question
+# again right before `merged` is recorded, and then confirms by a same-value
+# compare-and-swap that the ref's value is still PARENT; if either check
+# fails, the run ends with exit 2.
 HEAD_SHA=$(git show-ref --verify --hash -- "$IB_EXPECTED_REF" 2>/dev/null) \
   || die "cannot resolve the task ref $IB_EXPECTED_REF by its exact name"
 [ "$(git cat-file -t "$HEAD_SHA" 2>/dev/null)" = "commit" ] \
@@ -209,6 +221,28 @@ PARENT=$(git show-ref --verify --hash -- "refs/heads/$PARENT_BRANCH" 2>/dev/null
 
 # Parent already contains us → nothing to do (retry after someone merged us).
 if git merge-base --is-ancestor "$HEAD_SHA" "$PARENT"; then
+  # Right before `merged` is recorded, confirm that the integration ref is
+  # still a direct ref. A symbolic ref can appear between the symbolic-ref
+  # check made before the parent value was read and that read; PARENT would
+  # then be the referent's value, and the ancestor check above would have
+  # judged another branch. The question and the decision on its exit status are
+  # those of the earlier check: 0 (a symbolic ref, dangling included) or any
+  # status other than 1 ends the run with exit 2. Then confirm by a same-value
+  # compare-and-swap, with PARENT as both the new and the expected old value,
+  # that the ref still holds PARENT; the no-deref option keeps a symbolic ref
+  # from being followed, and a failure ends the run with exit 2. The
+  # compare-and-swap is the last git call before the journal append. Neither
+  # call passes git's own diagnostics through to stderr, so the ERROR line of a
+  # rejection is the only line written.
+  RECHECK_SYMREF_TARGET=$(git symbolic-ref --quiet "refs/heads/$PARENT_BRANCH" 2>/dev/null)
+  RECHECK_SYMREF_STATUS=$?
+  case "$RECHECK_SYMREF_STATUS" in
+    0) die "the integration ref refs/heads/$PARENT_BRANCH became a symbolic ref (pointing at ${RECHECK_SYMREF_TARGET:-an unreadable target}) before the merge was recorded — merge-task.sh records a merge only for a direct ref of the integration branch" ;;
+    1) ;;
+    *) die "cannot determine whether the integration ref refs/heads/$PARENT_BRANCH is still a direct ref (git symbolic-ref exited $RECHECK_SYMREF_STATUS)" ;;
+  esac
+  git update-ref --no-deref "refs/heads/$PARENT_BRANCH" "$PARENT" "$PARENT" 2>/dev/null \
+    || die "update-ref check failed: the integration ref refs/heads/$PARENT_BRANCH no longer holds $PARENT, the parent value read under the lock"
   append_merged_event "$PARENT"
   echo "MERGED: $TASK_ID already contained in $PARENT_BRANCH"
   exit 0

@@ -1,0 +1,54 @@
+schema_version: 1
+feature: merge-task-already-contained-symref-recheck
+phase: create-plan
+status: completed
+generation: 1
+base_revision: 598b0fccfba1f69b11469252f4626ed82f69c557
+last_input_digest: sha256:77c4c6234d515e2de9f4152b27c08ecb651c570628cb7d51ccce9db0212072bb
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: completed
+  input_digest: sha256:77c4c6234d515e2de9f4152b27c08ecb651c570628cb7d51ccce9db0212072bb
+  output_digest: sha256:0d166c2ba55d0993de07fd02ecaac2d66f4e609cc95ab3a4d67577b186fbedff
+  dispatch_digest_inputs:
+    ${CLAUDE_PLUGIN_ROOT}/references/contracts/planner-contract.md: sha256:6476cc99ea8a1d2d4f376d1702bd636b1ab9898655397ec80ab1d6fb47cbe9e8
+    ${CLAUDE_PLUGIN_ROOT}/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    ${CLAUDE_PLUGIN_ROOT}/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    ${CLAUDE_PLUGIN_ROOT}/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    ${CLAUDE_PLUGIN_ROOT}/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    ${CLAUDE_PLUGIN_ROOT}/references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
+    ${CLAUDE_PLUGIN_ROOT}/references/workflow-schema.md: sha256:272810b8e6b75a03a856a2c539985a326440db6ebad80c423d559ca742552f3f
+    ${CLAUDE_PLUGIN_ROOT}/skills/plan-writing/SKILL.md: sha256:880bd01ad6c60af5695495e0a6784de7fe98e1ea9463dc6703164f8ffffdbccb
+    feature-docs/merge-task-already-contained-symref-recheck/REQUIREMENTS.md: sha256:faea1bbddecc5068eb3d377d7883954a920f19bd90a137b8d24d5edce80c42db
+    feature-docs/merge-task-already-contained-symref-recheck/SPEC.md: sha256:078e2e7bb7d01d15df5a95c8f97c062af7734f281300ffece6598f09f60ff3d1
+    feature-docs/merge-task-already-contained-symref-recheck/workflow.yaml: sha256:a633d8cae237638b66ec7bab563eca29401e4f205609e5afd3440446fbb58e90
+  self_write_set:
+  - feature-docs/merge-task-already-contained-symref-recheck/IMPLEMENTATION.md
+  - feature-docs/merge-task-already-contained-symref-recheck/THREAT-MODEL.md
+  - feature-docs/merge-task-already-contained-symref-recheck/VERIFICATION.md
+  - feature-docs/merge-task-already-contained-symref-recheck/tasks/task0001.md
+artifacts:
+- path: feature-docs/merge-task-already-contained-symref-recheck/IMPLEMENTATION.md
+  sha256: sha256:c81bb05ec120e35c2f09d45437b5b5b8651207add0caab999f6b6a19c90b231e
+  produced_by: create-plan-run-0001
+- path: feature-docs/merge-task-already-contained-symref-recheck/VERIFICATION.md
+  sha256: sha256:bf3f3d162c99b5b54e2363c62c192f00f66ad1a44921d499db9e645f603e95ef
+  produced_by: create-plan-run-0001
+- path: feature-docs/merge-task-already-contained-symref-recheck/THREAT-MODEL.md
+  sha256: sha256:72459d932bad1b369b392038805e9d1700e2c4b7edf4dc0fe6a47e5d27065af7
+  produced_by: create-plan-run-0001
+- path: feature-docs/merge-task-already-contained-symref-recheck/tasks/task0001.md
+  sha256: sha256:059addd8cfb3749cb5b5e6cbcf64b4d03b0053bed9f62bd1b1b4975c95106bea
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: merge-task-already-contained-symref-recheck-p0001
+  status: applied
+  base_input_digest: sha256:77c4c6234d515e2de9f4152b27c08ecb651c570628cb7d51ccce9db0212072bb
+  base_workflow_blob: 90d84abecf9d033aa42b5c7b744668fb5d5a86ff
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

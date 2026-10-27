@@ -1,0 +1,61 @@
+schema_version: 1
+feature: merge-task-already-contained-symref-recheck
+phase: create-spec
+status: completed
+generation: 1
+base_revision: 0ea2e45dd3f0248436b788e5bca1603acd3b7018
+last_input_digest: sha256:8029f1cc75c65ae2ea1f54cdc03f85fe22b7d8c0415c77d6291fb29c184a8b01
+active_request_id: null
+packets: {}
+answers:
+  create-spec.feature-identity:
+    packet_id: null
+    answered_at: '2026-10-27T00:24:38+09:00'
+    source: batch_policy
+    answer_mode: select
+    selected_option_ids:
+    - derive_from_task_description
+    freeform: null
+    normalized_answer: 'feature name derived from the task description: merge-task-already-contained-symref-recheck'
+  create-spec.requirement-clarification.fix-approach:
+    packet_id: null
+    answered_at: '2026-10-27T00:36:49+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - D
+    freeform: symbolic-ref --quiet recheck (exit 2 unless 1) then update-ref --no-deref
+      ref PARENT PARENT (exit 2 on failure) before recording merged
+    normalized_answer: adopt option D
+    resolution_note: 'gate: create-spec.requirement-clarification (orchestrator-raised:
+      fix approach); options: A recheck value+symref / B single for-each-ref read
+      / C same-value CAS / D symref recheck then same-value CAS; codex_consulted:
+      true (2 turns, harness codex); turn1 -> C (A leaves value/type race, B single
+      call is not an atomic verify); turn2 -> D (fail-closed exit 2 on symref before
+      CAS; same-value update-ref writes no ref/reflog on files backend but takes the
+      lock); chosen: D; not chosen: A, B, C; opus_escalation: not run'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: completed
+  input_digest: sha256:8029f1cc75c65ae2ea1f54cdc03f85fe22b7d8c0415c77d6291fb29c184a8b01
+  output_digest: sha256:acf99bae82ab44253a2af7d5f2bb550f96d4dcd52f5309554e4399447c71529f
+  self_write_set: []
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:848ae7cd113230b7363a582300c48f7d1ee9a4d25be1edfe95ebe875f287f9d0
+  output_digest: null
+  self_write_set:
+  - feature-docs/merge-task-already-contained-symref-recheck/REQUIREMENTS.md
+  - feature-docs/merge-task-already-contained-symref-recheck/SPEC.md
+artifacts:
+- path: feature-docs/merge-task-already-contained-symref-recheck/REQUIREMENTS.md
+  sha256: sha256:faea1bbddecc5068eb3d377d7883954a920f19bd90a137b8d24d5edce80c42db
+  produced_by: create-spec-run-0002
+- path: feature-docs/merge-task-already-contained-symref-recheck/SPEC.md
+  sha256: sha256:078e2e7bb7d01d15df5a95c8f97c062af7734f281300ffece6598f09f60ff3d1
+  produced_by: create-spec-run-0002
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
