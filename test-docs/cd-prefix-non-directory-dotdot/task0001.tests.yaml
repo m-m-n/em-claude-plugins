@@ -1,0 +1,107 @@
+task_id: task0001
+baseline_failures: []          # before any edit: python3 -m unittest discover -s tests -> Ran 11920 tests, OK (skipped=1); no failing test
+final_failures: []             # re-executed after the implementation and after writing this record: python3 -m unittest discover -s tests -> OK (skipped=1, the same single skip as the baseline); no failing test
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestNonDirectoryBeforeDotDot.test_ac1_the_path_check_is_false_for_a_non_directory_before_dotdot
+      - tests.test_bash_guard_cd_prefix.TestNonDirectoryBeforeDotDot.test_ac1_proc_self_root_dotdot_in_front_changes_nothing
+      - tests.test_bash_guard_cd_prefix.TestNonDirectoryBeforeDotDot.test_ac1_the_path_check_is_still_true_for_existing_directory_forms
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged path check (new tests written first),
+      test_ac1_the_path_check_is_false_for_a_non_directory_before_dotdot and
+      test_ac1_proc_self_root_dotdot_in_front_changes_nothing failed in every
+      subtest (all four forms) with AssertionError: True is not False, because
+      the lenient realpath made the physical path look like an existing
+      directory. test_ac1_the_path_check_is_still_true_for_existing_directory_forms
+      passed before the change (it pins the unchanged True results), so it is
+      not what carries the red.
+  AC-2:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestAc3PathConditions.test_ac3_forms_breaking_a_path_condition_are_silent
+      - tests.test_bash_guard_cd_prefix.TestNonDirectoryBeforeDotDot.test_ac2_the_added_forms_are_silent_from_a_git_worktree
+      - tests.test_bash_guard_cd_prefix.TestNonDirectoryBeforeDotDot.test_ac2_the_required_forms_are_in_the_path_cases_as_silent
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged path check, the two new PATH_CASES forms (and
+      the two link variants) failed in the existing
+      test_ac3_forms_breaking_a_path_condition_are_silent from the main
+      worktree and in test_ac2_the_added_forms_are_silent_from_a_git_worktree
+      from the git worktree, with AssertionError: 'allow' != 'silent'.
+      test_ac2_the_required_forms_are_in_the_path_cases_as_silent only checks
+      that the table holds the two forms, so it passed before the change.
+  AC-3:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestNonDirectoryBeforeDotDot.test_ac3_proc_self_root_dotdot_in_front_of_the_added_forms_is_silent
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged path check, every subtest (cwd repo1 and
+      wtree, each of the four forms) failed with AssertionError: 'allow' !=
+      'silent'. The test is skipped, not failed, when /proc/self/root is not a
+      directory; it ran here.
+  AC-4:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestNonDirectoryBeforeDotDot.test_ac4_the_fixture_layout_matches_the_claimed_resolution
+      - tests.test_bash_guard_cd_prefix.TestNonDirectoryBeforeDotDot.test_ac4_the_decision_does_not_depend_on_strict_mode_realpath
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged path check,
+      test_ac4_the_decision_does_not_depend_on_strict_mode_realpath failed for
+      every form (with and without /proc/self/root/.. in front) with
+      AssertionError: True is not False. The fixture-layout guard
+      test_ac4_the_fixture_layout_matches_the_claimed_resolution passed before
+      the change by design: it states the fact that made the old check allow
+      the forms (the operating system cannot resolve the path as written, the
+      lenient realpath lands on a directory below the area), so it is not what
+      carries the red.
+  AC-5:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestAc1AllowedPrefixForm.test_ac1_allow_when_cwd_is_main_worktree
+      - tests.test_bash_guard_cd_prefix.TestAc1AllowedPrefixForm.test_ac1_allow_when_cwd_is_a_git_worktree
+      - tests.test_bash_guard_cd_prefix.TestAc2SyntaxConditions.test_ac2_forms_breaking_a_syntax_condition_are_silent
+      - tests.test_bash_guard_cd_prefix.TestAc4RefusalPatternStillDenies.test_ac4_refusal_pattern_in_the_remainder_denies
+      - tests.test_bash_guard_cd_prefix.TestPhysicalFallbackAllowed.test_ac1_proc_self_root_dotdot_before_an_absolute_worktree_path_is_allowed
+      - tests.test_bash_guard_cd_prefix.TestPhysicalFallbackAllowed.test_ac2_link_dotdot_name_forms_are_allowed_from_the_main_worktree
+      - tests.test_bash_guard_cd_prefix.TestPhysicalFallbackAllowed.test_ac2_link_dotdot_name_forms_are_allowed_from_a_git_worktree
+      - tests.test_bash_guard_cd_prefix.TestPhysicalFallbackNotAllowed.test_ac3_logical_destination_that_exists_outside_the_area_is_silent
+      - tests.test_bash_guard_cd_prefix.TestPhysicalFallbackNotAllowed.test_ac4_physical_path_that_is_not_below_the_area_is_silent
+      - tests.test_bash_guard_cd_prefix.TestPathConditionWording.test_ac7_the_hook_docstring_states_the_new_condition
+      - tests.test_bash_guard_cd_prefix.TestAc7StandardLibraryOnly.test_ac7_hook_imports_only_standard_library_modules
+      - tests.test_bash_guard_cd_prefix.TestAc7StandardLibraryOnly.test_ac7_hook_executable_text_has_no_status_substring
+    red_confirmed: false
+    red_reason: >-
+      This criterion pins behavior that must not change (no allowance widened,
+      no new deny, wording and standard-library tests intact). The existing
+      tests listed here passed before the implementation, so no red state
+      occurred. A dedicated new module is out of scope: the existing
+      tests/test_bash_guard_cd_prefix.py detects each of these behaviors, and
+      none of its existing cases was edited or removed. The whole suite
+      (python3 -m unittest discover -s tests) is the acceptance gate.
+  AC-6:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestNonDirectoryBeforeDotDot.test_ac6_the_path_check_starts_no_child_process
+      - tests.test_bash_guard_cd_prefix.TestAc1AllowedPrefixForm.test_ac1_no_child_process_uses_the_prefixed_path
+    red_confirmed: false
+    red_reason: >-
+      The path check started no child process before the change either (the
+      change only adds an os.stat call in the hook process), so both tests
+      passed before the implementation and no red state occurred. The new test
+      guards the added resolution step against a future switch to a child
+      process: it replaces the standard library's child-process entry points
+      with ones that raise and calls the path check for the added forms and for
+      the plain inside directory.
+  AC-7:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestNonDirectoryBeforeDotDot.test_ac7_a_resolution_error_in_the_as_written_step_makes_the_check_false
+      - tests.test_bash_guard_cd_prefix.TestNonDirectoryBeforeDotDot.test_ac7_the_as_written_step_alone_can_refuse_an_ordinary_directory
+      - tests.test_bash_guard_cd_prefix.TestNonDirectoryBeforeDotDot.test_ac7_a_nul_inserted_into_an_added_form_makes_the_check_false
+      - tests.test_bash_guard_cd_prefix.TestNulInPath.test_ac5_a_resolution_error_makes_the_path_check_false
+    red_confirmed: true
+    red_reason: >-
+      Run with no implementation present, the first two tests failed with
+      AttributeError: the module has no attribute resolves_to_directory (the
+      as-written resolution step they replace did not exist yet), which is the
+      observed red for the step. The NUL test and the existing
+      TestNulInPath test passed before the change: the NUL handling pre-existed
+      and is only pinned for the added forms here.

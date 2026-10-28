@@ -48,10 +48,27 @@ existing directory strictly below the area).
 - AC-7: the hook docstring and the protocol's Verbatim execution rule state
   the new path condition.
 
+Feature cd-prefix-non-directory-dotdot, task0001
+(feature-docs/cd-prefix-non-directory-dotdot/tasks/task0001.md): the physical
+path counts as an existing directory only when the operating system resolves
+the path exactly as written to a directory, so a regular file, a missing
+component, or a link to either, placed before a `..`, is never allowed.
+
+- AC-1: the path check is False for `<area>/afile/../task0001` and
+  `<area>/task0001/does-not-exist/..`, with or without `/proc/self/root/..`
+  in front, and still True for `<area>/task0001` and `<root>/hop/../sub`.
+- AC-2, AC-3: the same forms are silent through the hook.
+- AC-4: the fixture layout shows the forms were allowed before, and the
+  decision does not depend on strict-mode realpath.
+- AC-5: every existing case above is left as it was.
+- AC-6: the path check starts no child process.
+- AC-7: a resolution error or a NUL in an added form makes the check False.
+
 Standard library only.
 """
 
 import ast
+import contextlib
 import json
 import os
 import re
@@ -154,6 +171,11 @@ class Fixture:
         self.file = self.region / "afile"
         self.file.write_text("not a directory\n", encoding="utf-8")
         self.missing = self.region / "does-not-exist"
+        #   area/link-to-file -> area/afile; area/dangling -> area/gone (absent)
+        self.link_to_file = self.region / "link-to-file"
+        os.symlink(self.file, self.link_to_file)
+        self.dangling = self.region / "dangling"
+        os.symlink(self.region / "gone", self.dangling)
         self.sibling = self.repo / ".claude" / "worktrees" / "em-workflow-x" / "task0001"
         self.sibling.mkdir(parents=True)
 
@@ -267,6 +289,8 @@ class Fixture:
             "@HOPTASK@": str(self.hop_task),
             "@HOPSIB@": str(self.hop_sibling),
             "@HOPIN@": str(self.hop_in),
+            "@LINKFILE@": str(self.link_to_file),
+            "@DANGLING@": str(self.dangling),
         }
 
     def expand(self, template):
@@ -420,6 +444,22 @@ TM2_CASES = (
      'cd "@HOPTASK@/../afile" && ' + PLAIN_COMMAND),
 )
 
+# Feature cd-prefix-non-directory-dotdot AC-2: a regular file, a missing
+# component, or a link to either, followed by `..`. The logical path is the
+# existing <area>/task0001 (or its name collapsed), and the lenient realpath
+# lands below the area, but the operating system cannot resolve the path as
+# written, so the physical path is not an existing directory.
+NON_DIRECTORY_DOTDOT_CASES = (
+    (SILENT, "regular file followed by .., then an existing directory",
+     'cd "@FILE@/../task0001" && ' + PLAIN_COMMAND),
+    (SILENT, "missing component followed by ..",
+     'cd "@IN@/does-not-exist/.." && ' + PLAIN_COMMAND),
+    (SILENT, "link to a regular file followed by .., then an existing directory",
+     'cd "@LINKFILE@/../task0001" && ' + PLAIN_COMMAND),
+    (SILENT, "link to a missing target followed by .., then an existing directory",
+     'cd "@DANGLING@/../task0001" && ' + PLAIN_COMMAND),
+)
+
 PATH_CASES = (
     (SILENT, "existing directory outside the area", 'cd "@OUT@" && ' + PLAIN_COMMAND),
     (SILENT, "area of another repository", 'cd "@OTHER@" && ' + PLAIN_COMMAND),
@@ -430,7 +470,7 @@ PATH_CASES = (
     (SILENT, "path that does not exist", 'cd "@MISSING@" && ' + PLAIN_COMMAND),
     (SILENT, "path that is a file", 'cd "@FILE@" && ' + PLAIN_COMMAND),
     (SILENT, "root directory", 'cd "/" && ' + PLAIN_COMMAND),
-) + TM1_CASES + TM2_CASES
+) + TM1_CASES + TM2_CASES + NON_DIRECTORY_DOTDOT_CASES
 
 # AC-2: the logical path is absent or a file, the physical path is an existing
 # directory strictly below the area.
@@ -766,6 +806,166 @@ class TestNulInPath(CdPrefixCase):
                     self.assertEqual(proc.stderr, "")
                     decision, _ = decide(proc)
                     self.assertNotEqual(decision, ALLOW)
+
+
+# Feature cd-prefix-non-directory-dotdot: the forms whose `..` follows a
+# component that is not a directory. The first two are the forms the criteria
+# name; the last two are the link variants.
+REQUIRED_NON_DIRECTORY_FORMS = (
+    ("regular file then ..", "@FILE@/../task0001"),
+    ("missing component then ..", "@IN@/does-not-exist/.."),
+)
+NON_DIRECTORY_FORMS = REQUIRED_NON_DIRECTORY_FORMS + (
+    ("link to a regular file then ..", "@LINKFILE@/../task0001"),
+    ("link to a missing target then ..", "@DANGLING@/../task0001"),
+)
+
+
+class TestNonDirectoryBeforeDotDot(CdPrefixCase):
+    """cd-prefix-non-directory-dotdot AC-1 .. AC-4, AC-6, AC-7: the physical
+    path is an existing directory only when the operating system resolves the
+    path exactly as written to a directory."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.guard = _load_guard_module()
+        cls.area = str(FIX.region)
+
+    # -- AC-1 -------------------------------------------------------------
+
+    def test_ac1_the_path_check_is_false_for_a_non_directory_before_dotdot(self):
+        for label, template in NON_DIRECTORY_FORMS:
+            with self.subTest(label=label):
+                self.assertIs(self.guard.is_below(FIX.expand(template), self.area), False)
+
+    def test_ac1_the_path_check_is_still_true_for_existing_directory_forms(self):
+        for label, path in (
+            ("existing directory below the area", str(FIX.inside)),
+            ("link, .., then a name under the target's parent", FIX.expand("@HOP@/../sub")),
+        ):
+            with self.subTest(label=label):
+                self.assertIs(self.guard.is_below(path, self.area), True)
+
+    @unittest.skipUnless(os.path.isdir(PROC_ROOT), "/proc/self/root is not a directory")
+    def test_ac1_proc_self_root_dotdot_in_front_changes_nothing(self):
+        for label, template in NON_DIRECTORY_FORMS:
+            with self.subTest(label=label):
+                path = PROC_ROOT + "/.." + FIX.expand(template)
+                self.assertIs(self.guard.is_below(path, self.area), False)
+        path = PROC_ROOT + "/.." + str(FIX.inside)
+        self.assertIs(self.guard.is_below(path, self.area), True)
+
+    # -- AC-2, AC-3 -------------------------------------------------------
+
+    def test_ac2_the_required_forms_are_in_the_path_cases_as_silent(self):
+        cases = {template: expected for expected, _label, template in PATH_CASES}
+        for _label, form in REQUIRED_NON_DIRECTORY_FORMS:
+            with self.subTest(form=form):
+                template = 'cd "' + form + '" && ' + PLAIN_COMMAND
+                self.assertEqual(cases.get(template), SILENT)
+
+    def test_ac2_the_added_forms_are_silent_from_a_git_worktree(self):
+        self.check_cases(NON_DIRECTORY_DOTDOT_CASES, FIX.worktree)
+
+    @unittest.skipUnless(os.path.isdir(PROC_ROOT), "/proc/self/root is not a directory")
+    def test_ac3_proc_self_root_dotdot_in_front_of_the_added_forms_is_silent(self):
+        for cwd in (FIX.repo, FIX.worktree):
+            for label, template in NON_DIRECTORY_FORMS:
+                with self.subTest(cwd=cwd.name, label=label):
+                    command = (
+                        'cd "' + PROC_ROOT + "/.." + FIX.expand(template) + '" && ' + PLAIN_COMMAND
+                    )
+                    decision, _ = decide(FIX.run_hook(command, cwd))
+                    self.assertEqual(decision, SILENT)
+
+    # -- AC-4 -------------------------------------------------------------
+
+    def written_forms(self):
+        forms = [(label, FIX.expand(template)) for label, template in NON_DIRECTORY_FORMS]
+        if os.path.isdir(PROC_ROOT):
+            forms += [
+                ("proc root, " + label, PROC_ROOT + "/.." + written)
+                for label, written in list(forms)
+            ]
+        return forms
+
+    def test_ac4_the_fixture_layout_matches_the_claimed_resolution(self):
+        # Guards the fixture: the operating system cannot resolve each form as
+        # written, while the lenient realpath lands on an existing directory
+        # strictly below the area. Together: the form was allowed before.
+        for label, written in self.written_forms():
+            with self.subTest(label=label):
+                with self.assertRaises((NotADirectoryError, FileNotFoundError)):
+                    os.stat(written)
+                self.assertFalse(os.path.isdir(written))
+                lenient = os.path.realpath(written, strict=False)
+                self.assertTrue(os.path.isdir(lenient))
+                self.assertTrue(self.guard.strictly_below(lenient, self.area))
+
+    def test_ac4_the_decision_does_not_depend_on_strict_mode_realpath(self):
+        real_realpath = os.path.realpath
+
+        def always_lenient(path, **_ignored_strict_request):
+            return real_realpath(path)
+
+        with mock.patch.object(os.path, "realpath", new=always_lenient):
+            for label, written in self.written_forms():
+                with self.subTest(label=label):
+                    self.assertIs(self.guard.is_below(written, self.area), False)
+            self.assertIs(self.guard.is_below(str(FIX.inside), self.area), True)
+
+    # -- AC-6 -------------------------------------------------------------
+
+    def test_ac6_the_path_check_starts_no_child_process(self):
+        entry_points = (
+            (subprocess, ("Popen", "run", "call", "check_call", "check_output",
+                          "getoutput", "getstatusoutput")),
+            (os, ("system", "popen", "fork", "forkpty", "posix_spawn", "posix_spawnp",
+                  "execv", "execve", "execvp", "execvpe",
+                  "spawnv", "spawnve", "spawnvp", "spawnvpe")),
+        )
+        paths = [written for _label, written in self.written_forms()]
+        paths.append(str(FIX.inside))
+        with contextlib.ExitStack() as stack:
+            for owner, names in entry_points:
+                for name in names:
+                    if hasattr(owner, name):
+                        stack.enter_context(
+                            mock.patch.object(
+                                owner,
+                                name,
+                                side_effect=AssertionError(
+                                    f"{owner.__name__}.{name} called by the path check"
+                                ),
+                            )
+                        )
+            for path in paths:
+                self.guard.is_below(path, self.area)
+
+    # -- AC-7 -------------------------------------------------------------
+
+    def test_ac7_a_resolution_error_in_the_as_written_step_makes_the_check_false(self):
+        paths = [str(FIX.inside)] + [FIX.expand(t) for _label, t in NON_DIRECTORY_FORMS]
+        for error in (OSError("simulated"), ValueError("simulated")):
+            for path in paths:
+                with self.subTest(error=type(error).__name__, path=path):
+                    with mock.patch.object(
+                        self.guard, "resolves_to_directory", side_effect=error
+                    ):
+                        self.assertIs(self.guard.is_below(path, self.area), False)
+
+    def test_ac7_the_as_written_step_alone_can_refuse_an_ordinary_directory(self):
+        with mock.patch.object(self.guard, "resolves_to_directory", return_value=False):
+            self.assertIs(self.guard.is_below(str(FIX.inside), self.area), False)
+
+    def test_ac7_a_nul_inserted_into_an_added_form_makes_the_check_false(self):
+        for label, path in (
+            ("nul after the file", str(FIX.file) + "\x00/../task0001"),
+            ("nul after the missing component", str(FIX.inside) + "/does-not-exist\x00/.."),
+            ("nul at the end of the file form", str(FIX.file) + "/../task0001\x00"),
+        ):
+            with self.subTest(label=label):
+                self.assertIs(self.guard.is_below(path, self.area), False)
 
 
 def _verbatim_execution_rule(text):

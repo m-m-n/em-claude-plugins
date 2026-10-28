@@ -59,6 +59,7 @@ Override the store path with $EM_WORKFLOW_APPROVALS (tests only).
 import json
 import os
 import re
+import stat
 import subprocess
 import sys
 from datetime import datetime
@@ -234,6 +235,15 @@ def strictly_below(path, area):
     )
 
 
+def resolves_to_directory(path):
+    """True when the operating system resolves path exactly as written to a
+    directory. The kernel applies each `..` to the directory already reached,
+    so a regular file, a missing component, or a link to either, placed before
+    a `..`, makes the resolution fail. Raises OSError or ValueError when path
+    cannot be resolved (the caller treats that as not a directory)."""
+    return stat.S_ISDIR(os.stat(path).st_mode)
+
+
 def is_below(path, area):
     """True when path reaches an existing directory strictly below area the
     way Bash's cd does. path is only resolved, never handed to a child process.
@@ -241,7 +251,10 @@ def is_below(path, area):
     Bash first moves to the logical path (each `..` collapsed against the
     component written before it, then links resolved). When that move fails
     it falls back to the physical path (links resolved component by component,
-    each `..` applying to the directory already resolved). So:
+    each `..` applying to the directory already resolved). The physical path
+    is an existing directory only when the operating system itself resolves
+    path as written to a directory; the lenient realpath is used for the
+    location compared against area, never to decide that. So:
       - logical path is an existing directory: both paths must be existing
         directories strictly below area;
       - otherwise: the physical path alone must be an existing directory
@@ -251,13 +264,14 @@ def is_below(path, area):
     try:
         physical = os.path.realpath(path)
         logical = os.path.realpath(os.path.normpath(path))
+        physical_is_directory = os.path.isdir(physical) and resolves_to_directory(path)
         if os.path.isdir(logical):
             return (
-                os.path.isdir(physical)
+                physical_is_directory
                 and strictly_below(logical, area)
                 and strictly_below(physical, area)
             )
-        return os.path.isdir(physical) and strictly_below(physical, area)
+        return physical_is_directory and strictly_below(physical, area)
     except (OSError, ValueError):
         return False
 
