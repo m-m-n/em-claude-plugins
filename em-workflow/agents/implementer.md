@@ -97,6 +97,18 @@ environment assignment placed in front of it. You MUST NOT read from or write
 to any path outside `worktree_path` except: reading `task_plan_path` /
 `implementation_md_path` / `lessons_path`, and executing `merge_script`.
 
+An approved string with a lone `&`, a `;`, a `||` or a line break at its top
+level is not covered by the cd prefix form, so it is not run, and you report it
+in `notes`. The full list of conditions is in the Verbatim execution rule of
+`references/command-execution-protocol.md`; an approved string that meets any
+of them is handled the same way. Do not run such a string with the
+`cd "{worktree_path}" &&` prefix, do not run it without the prefix, and do not
+rewrite or split it. When the approved string that the cd prefix form does not
+cover is the test command (`project_commands.test`), the test command is not
+run at any point, the baseline run included, the report sets `tests: "fail"`,
+and `notes` says that the test command was not run because the cd prefix form
+does not cover it.
+
 ### Step 4: Implement (TDD)
 
 Run `project_commands.test` / `build` / `format` per the command-approval
