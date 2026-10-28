@@ -1,0 +1,49 @@
+feature: cd-prefix-non-directory-dotdot
+collected_at: "2026-10-29T02:12:43+09:00"
+session_ids: [01a1837e-7f85-761c-a664-5b44ec7a5a32]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: "最終読み（description_plus_code）でバケット 1 が 0.93 となり、単一関数の変更として reduced を採用した"
+    bases:
+      - basis: description_only
+        score:
+          probabilities: {'0': 0.0, '1': 0.98, '2': 0.02, '3': 0.0}
+          score: 1.02
+          confidence: 0.98
+        observed_at: "2026-10-29T00:59:51+09:00"
+      - basis: description_plus_code
+        score:
+          probabilities: {'0': 0.0, '1': 0.93, '2': 0.07, '3': 0.0}
+          score: 1.07
+          confidence: 0.93
+        observed_at: "2026-10-29T01:02:11+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/hooks/bash_guard.py
+        - tests/test_bash_guard_cd_prefix.py
+      changed_lines_approx: 10
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: true
+      spillover_modules: []
+      work_still_required: true
+      test_change_kind: extend_existing_one_to_one
+      added_test_cases_approx: 4
+      body_change_kind: new_logic
+      change_containment: single_function
+      caller_and_dependency_count: 5
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "事前調査の概算は 10 行だったが、実際の差分は bash_guard.py 20 行・テスト 202 行の追加で、テスト側が大きく上回った"
+  - "task0001 の files に em-workflow/references/command-execution-protocol.md を予測したが、変更されなかった（既に既存ディレクトリを条件とする記述だったため）"
+  - "review round 1 は 4 観点すべて指摘なし"

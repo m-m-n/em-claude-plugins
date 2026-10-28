@@ -109,7 +109,8 @@ workflow:
   summary: 'python3 -m unittest discover -s tests: 11933 tests OK (skipped=1); python3 -m unittest tests.test_bash_guard_cd_prefix: 55 tests OK; TS-1..TS-6 pass; no excluded requirements'
   completed_at_commit: 0517ffb2c882d57afa189fd71a5175634474f4e5
 - id: retrospect
-  status: pending
+  status: completed
+  completed_at_commit: 5a5c00e7596a3599bdc8dee7ccae98497c695b27
 tasks:
   task0001:
     title: 'cd prefix: refuse `..` after a non-directory on the physical side'
