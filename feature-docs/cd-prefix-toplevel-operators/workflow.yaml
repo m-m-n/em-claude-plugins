@@ -1,0 +1,274 @@
+schema_version: 1
+feature: cd-prefix-toplevel-operators
+created: '2026-10-28'
+base_branch: main
+goal: '# bash_guard.py の cd 前置形の許可で、承認文字列のトップレベルに & / ; / || があると後続が元の cwd で動く
+
+
+  種別: バグ
+
+
+  ## 現象
+
+  bash_guard.py の cd 前置形の許可（`cd "<worktree>" && <承認済みコマンド>`）で、承認文字列のトップレベルに `&` / `;` / `||` があると、後続のコマンドが cd 先ではなく元の cwd（通常はメイン作業ツリー）で動く。
+
+  - `&&` は `&` / `;` より強く結びつくため、`cd "P" && A & B` では B が元の cwd で動く
+
+  - `;` や `||` を含む承認文字列では、cd が失敗したときに後続が元の cwd で動く
+
+  実装は SPEC の FR1 のとおりで、SPEC の設計の漏れから来ている。
+
+
+  ## 再現手順
+
+  1. トップレベルに `&` を含むコマンド `A & B` を承認済みにする
+
+  2. implementer が `cd "<worktree>" && A & B` を実行する
+
+  3. bash_guard.py は allow するが、B は元の cwd で動く
+
+
+  ## 期待する挙動
+
+  次のどちらかにする。フック・文書・試験を同じ変更で合わせる。
+
+  - 承認文字列全体が cd 先で動く実行形にする
+
+  - トップレベルに `&` / `;` / `||` を含む承認文字列は cd 前置形の対象外とし、そう手順書に書く
+
+
+  ## 完了の定義
+
+  - 再現手順で現象が起きない
+
+  - 再発を検出するテストがある
+
+
+  ## 該当箇所
+
+  - em-workflow/hooks/bash_guard.py（is_cd_prefixed_approved 付近）
+
+  - em-workflow/references/command-execution-protocol.md の cd 前置形の例外
+
+
+  ## 実害・発生条件
+
+  - feature implementer-cd-verbatim-conflict の review round 1 で未解決になった medium（stable_id b3582a48847b9e2f、comprehensive、confidence 80）
+
+  '
+parent_branch: em-workflow/cd-prefix-toplevel-operators/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.88
+      '2': 0.12
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.39
+      '2': 0.6
+      '3': 0.01
+  at: '2026-10-28T23:11:44+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: e4e52a58e49990dc84315ca87aeae8bf69285aed
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'UI が無い。変更は hook（Python）・Markdown 文書・unittest に限られる（design-step.decision: decide_autonomously、source: batch-decision-table）。'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: 3fb5138c39d789ee335559978658717a79dc16c5
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: トップレベル演算子を含む承認文字列を cd 前置形の対象外にする
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS2
+    - TS6
+  FR2:
+    title: 演算子の検出規則（引用と転送を区別する）
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS2
+    - TS6
+  FR3:
+    title: 安全側の追加除外条件
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS3
+  FR4:
+    title: 対象外にした形は今の判定表で判定する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS3
+    - TS4
+  FR5:
+    title: 禁止パターンの判定を先に当てる順序を保つ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS5
+  FR6:
+    title: command-execution-protocol.md に対象外の条件を書く
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS7
+  FR7:
+    title: implementer の手順書に、該当する承認文字列の扱いを書く
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS7
+  FR8:
+    title: README.md と workflow-schema.md の説明に対象外の条件を書き足す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS7
+  FR9:
+    title: bash_guard.py の docstring を合わせる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS7
+  FR10:
+    title: 再発を検出する試験
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS7
+  NFR1:
+    title: 決定的な判定
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS6
+  NFR2:
+    title: hook 分類試験の前提を守る
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS6
+  NFR3:
+    title: hash 固定ファイルと hook 登録を変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS6
+  NFR4:
+    title: version を変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: SKILL の gate 節の文言の制約
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS6
+  NFR6:
+    title: 既存の文書試験の固定を保つ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS6
+  NFR7:
+    title: 試験の実行方法
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS6
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

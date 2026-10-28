@@ -1,7 +1,7 @@
 schema_version: 1
 feature: cd-prefix-toplevel-operators
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 4cc7bfeb884976452039171758505a01b4cf391f
 last_input_digest: sha256:2a9ac3f7eda3e1eb020d5a2a31df67fef9639a9467eb07d5e709211946bfedb6
