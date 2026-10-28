@@ -1,0 +1,47 @@
+feature: is-below-physical-fallback
+collected_at: "2026-10-29T00:19:10+09:00"
+session_ids: [01a18317-39a1-70c4-862e-88fd38df2334]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: "最終読み（description_plus_code）でバケット 1 が 0.95 となり、単一関数の変更として reduced を採用した"
+    bases:
+      - basis: description_only
+        score:
+          probabilities: {'0': 0.0, '1': 0.92, '2': 0.08, '3': 0.0}
+          expectation_clear: 0.59
+          confidence: 0.92
+        observed_at: "2026-10-28T23:09:00+09:00"
+      - basis: description_plus_code
+        score:
+          probabilities: {'0': 0.0, '1': 0.95, '2': 0.05, '3': 0.0}
+          expectation_clear: 0.66
+          confidence: 0.95
+        observed_at: "2026-10-28T23:14:00+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/hooks/bash_guard.py
+        - tests/test_bash_guard_cd_prefix.py
+      changed_lines_approx: 40
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: []
+      covering_tests_exist: true
+      spillover_modules: []
+      work_still_required: true
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 2
+      body_change_kind: new_logic
+      change_containment: single_function
+      caller_and_dependency_count: 4
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 で medium 2 件（/proc/self/cwd のようにプロセスごとに解決先が変わるパス、通常ファイルの後ろに .. が続くパス）が evaluator により low に下げられ、severity ゲートで findings から外れた"

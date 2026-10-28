@@ -115,7 +115,8 @@ workflow:
   failed_items: []
   completed_at_commit: 9d1b03665f6f06b5a1c4a3b32f5140f83c00188f
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: 988f99da04ba72a51f25c1bb2243853e2931b038
 tasks:
   task0001:
     title: Physical-path fallback in the cd-prefix path check
