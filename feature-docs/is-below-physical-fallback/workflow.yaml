@@ -1,0 +1,208 @@
+schema_version: 1
+feature: is-below-physical-fallback
+created: '2026-10-28'
+base_branch: main
+goal: |
+  # bash_guard.py の is_below() が論理パスの不存在だけで有効な cd 前置形を allow から外す
+
+  種別: 改善
+
+  ## 現象
+  bash_guard.py の is_below() は、論理パス（realpath(normpath(path))）が存在しないだけで False を返す。Bash の cd は論理パスへの移動に失敗すると物理パスで再試行するため、論理パスが存在しなくても領域内へ正常に移動できる場合がある。そうした有効な cd 前置コマンドが allow から外れ、通常の権限確認に回る。
+  review round 1 の loop 1 の修正（シンボリックリンクの後ろの .. で領域外へ出られる問題の修正）で入った副作用で、安全側に倒れている。
+
+  ## 再現手順
+  1. P = /proc/self/root/.. + 現在の worktree パスとする
+  2. realpath(P) は worktree になり、bash の cd "P" も成功する
+  3. realpath(normpath(P)) は存在しないため、修正後の is_below() は False を返す
+
+  ## 期待する挙動
+  領域外の論理移動先は引き続き除外しつつ、論理パスが使えず物理パスへフォールバックする場合も考慮して判定する。
+
+  ## 完了の定義
+  - 再現手順で現象が起きない
+  - 再発を検出するテストがある
+  - シンボリックリンクの後ろの .. で領域外へ出る形は引き続き allow しない
+
+  ## 該当箇所
+  em-workflow/hooks/bash_guard.py:224（is_below）
+
+  ## 実害・発生条件
+  - feature implementer-cd-verbatim-conflict の review round 1 で未解決になった medium（stable_id 1ff4933d3c9b729c、comprehensive、confidence 60）
+  - 通常の権限確認に戻るだけで、無人実行では deny になる。普通の worktree パスでは起きない
+  - 変更は PR https://github.com/m-m-n/em-claude-plugins/pull/19 で入る（マージ済み）
+parent_branch: em-workflow/is-below-physical-fallback/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.92
+      '2': 0.08
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.95
+      '2': 0.05
+      '3': 0.0
+  at: '2026-10-28T23:14:30+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: 84e1eac508ac0ac886856d7d9d087832d5426216
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'UI のない Python のフック変更（判定ロジック 1 関数と文書・テスト）で、画面設計の対象がない（design-step
+    推奨: skipped。tier reduced でも design は削減対象）'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: 論理パスが使えないときの物理パス判定
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+  FR2:
+    title: 論理パスが使えるときの判定は現状維持
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-3
+  FR3:
+    title: 再現手順の形を allow する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+  FR4:
+    title: シンボリックリンクの後ろの .. で領域外へ出る形は引き続き allow しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-3
+  FR5:
+    title: フォールバック時も領域外・領域そのものは allow しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-4
+  FR6:
+    title: 他の判定は変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+  FR7:
+    title: 判定条件の記述を実装に合わせる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-6
+  FR8:
+    title: 再発検出テスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 標準ライブラリのみの import
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+  NFR2:
+    title: 実行テキストに status を含めない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+  NFR3:
+    title: path を子プロセスに使わない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+  NFR4:
+    title: 例外時は判定なし側に倒す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: テストの隔離
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
