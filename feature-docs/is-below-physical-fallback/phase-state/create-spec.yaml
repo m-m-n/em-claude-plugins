@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 3dd3f93422cae6cf67788cbc4a6f831b4d444577
 last_input_digest: sha256:01b419abf117c3c55e544cf9a7ff2ba02eed86b4dd68dcaf49a73d5792d3a5fd
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -23,13 +23,18 @@ worker_runs:
     tests/test_hook_classification_pin.py: sha256:1f38bf7b6848d3c7d824761ee550ef59cfe9b1dd0022f96b853fa1dbfe1433f1
   self_write_set: []
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:01b419abf117c3c55e544cf9a7ff2ba02eed86b4dd68dcaf49a73d5792d3a5fd
-  output_digest: null
+  output_digest: sha256:da2d1b1feb0d287b22ce11d332d18142b79d4fd90a100c37b432ade533175ffc
   dispatch_digest_inputs:
     em-workflow/references/contracts/spec-writer-contract.md: sha256:9032c6287d75f4a88e556bd3962c32ab8b4905cf3b6ececa895206788bcd0b63
     em-workflow/references/templates/spec-document.md: sha256:203dfcddbe507886ce861694fccd20ae25e5af0bd1b0efa5e935991add950cbd
-artifacts: []
+  self_write_set:
+  - feature-docs/is-below-physical-fallback/SPEC.md
+artifacts:
+- path: feature-docs/is-below-physical-fallback/SPEC.md
+  sha256: sha256:fef39b7e7636863b43c794e30272e6c853153f492ca05ceb6dd639fc51033b04
+  produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: sha256:018e235d0865691c752b88832c3a7461a09b14d433eac91ed0d87f93830903a9
 stale_redispatch_count: 0
