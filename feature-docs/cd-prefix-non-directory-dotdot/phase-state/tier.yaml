@@ -1,0 +1,64 @@
+schema_version: 2
+feature: cd-prefix-non-directory-dotdot
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.02
+    confidence: 0.98
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.98
+      '2': 0.02
+      '3': 0.0
+  observed_at: '2026-10-29T00:59:51+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.07
+    confidence: 0.93
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.93
+      '2': 0.07
+      '3': 0.0
+  observed_at: '2026-10-29T01:02:11+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/hooks/bash_guard.py
+  - tests/test_bash_guard_cd_prefix.py
+  changed_lines_approx: 10
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 4
+  body_change_kind: new_logic
+  change_containment: single_function
+  caller_and_dependency_count: 5
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: em-workflow/hooks/bash_guard.py:252–260 は解決後のパスを検査する。読み取り専用の直接確認では、通常ファイル・不存在要素の後ろに..を置いた論理パス存在形と物理フォールバック形の4例すべてでis_below=True、未正規化パスのisdir=False、Bashの終了コード=1だった。概算10行はis_below内のisdir確認2行と既存形式のテスト4例8行を基準とする。同ファイル:252–260の直接依存4個と:274の本体側呼び出し元1個を数えた。tests/test_bash_guard_cd_prefix.py:154–156,256–269
+    に再利用可能な準備処理と置換値があり、:423–433 のPATH_CASESには対象形がなく、:506–507 が同表を検証する。em-workflow/references/command-execution-protocol.md:125–135
+    は既にBashが到達できる既存ディレクトリを条件としている。既存テスト全体は未実行
+decided_at: '2026-10-29T01:02:40+09:00'
