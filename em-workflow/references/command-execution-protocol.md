@@ -122,8 +122,17 @@ depends on the role:
     - the command starts with `cd`, then one double-quoted absolute path,
       with no `cd` options;
     - only spaces or tabs sit between the closing quote and the first `&&`;
-    - the path's realpath is an existing directory deeper than
-      `.claude/worktrees/em-workflow/` under the main working tree;
+    - the path reaches an existing directory strictly below
+      `.claude/worktrees/em-workflow/` under the main working tree, judged on
+      two paths: the logical path (the realpath of the path with each `..`
+      first collapsed against the component written before it, as Bash's
+      default `cd` does) and the physical path (the realpath of the path
+      exactly as written, each `..` applying to the directory already
+      resolved). When the logical path is an existing directory, the logical
+      path and the physical path must both be existing directories strictly
+      below that directory. Otherwise the physical path alone must be an
+      existing directory strictly below it, which is where Bash lands through
+      its physical-path fallback;
     - everything after the first `&&` matches an approved string exactly
       (surrounding whitespace aside).
 - **Every role**: never prefix environment assignments. The

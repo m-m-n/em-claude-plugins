@@ -30,21 +30,43 @@ Covers task0001 Acceptance Criteria
 - AC-7: standard-library-only imports; no `status` substring in the
   executable text of the hook.
 
+Feature is-below-physical-fallback, task0001
+(feature-docs/is-below-physical-fallback/tasks/task0001.md): the path check
+also accepts a path that Bash reaches through its physical-path fallback
+(the logical path is not an existing directory, the physical path is an
+existing directory strictly below the area).
+
+- AC-1: `/proc/self/root/..` followed by an absolute worktree path is allowed
+  (skipped when `/proc/self/root` is not a directory).
+- AC-2: a link outside the area, `..`, then a name under the target's parent
+  is allowed (logical path absent, or an existing file).
+- AC-3 (TM-1): a logical destination that exists outside the area is never
+  allowed, whatever the physical path is.
+- AC-4 (TM-2): when the logical path is not a directory, a physical path that
+  is not an existing directory strictly below the area is not allowed.
+- AC-5 (TM-4): an embedded NUL makes the path check return False.
+- AC-7: the hook docstring and the protocol's Verbatim execution rule state
+  the new path condition.
+
 Standard library only.
 """
 
 import ast
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
 import tempfile
+import types
 import unittest
 from pathlib import Path
+from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 GUARD_PATH = REPO_ROOT / "em-workflow" / "hooks" / "bash_guard.py"
+PROTOCOL_PATH = REPO_ROOT / "em-workflow" / "references" / "command-execution-protocol.md"
 
 ALLOW = "allow"
 DENY = "deny"
@@ -135,6 +157,31 @@ class Fixture:
         self.sibling = self.repo / ".claude" / "worktrees" / "em-workflow-x" / "task0001"
         self.sibling.mkdir(parents=True)
 
+        # Layout for the physical-path fallback: forms whose logical path is
+        # not an existing directory while the physical path is. Everything
+        # lives under the temporary root.
+        self.elsewhere = self.repo / ".claude" / "worktrees" / "elsewhere"
+        self.elsewhere.mkdir()
+        #   root/hop -> area/task0001/sub          (link outside the area)
+        self.hop = root / "hop"
+        os.symlink(self.inside / "sub", self.hop)
+        #   root/hopdir/hop -> area/task0001/sub, root/hopdir/sub is a file
+        self.hopdir = root / "hopdir"
+        self.hopdir.mkdir()
+        os.symlink(self.inside / "sub", self.hopdir / "hop")
+        (self.hopdir / "sub").write_text("not a directory\n", encoding="utf-8")
+        #   root/hop-task -> area/task0001; root/hop-sibling -> worktrees/em-workflow-x
+        self.hop_task = root / "hop-task"
+        os.symlink(self.inside, self.hop_task)
+        self.hop_sibling = root / "hop-sibling"
+        os.symlink(self.sibling.parent, self.hop_sibling)
+        #   area/hop-in -> area/task0001/sub/deeper (link inside the area)
+        self.hop_in = self.region / "hop-in"
+        os.symlink(self.inside / "sub" / "deeper", self.hop_in)
+        #   a directory inside the area that mirrors the sibling's layout
+        self.twin = self.inside / "em-workflow-x" / "task0001"
+        self.twin.mkdir(parents=True)
+
         # A directory outside every worktree area, and a link to it placed
         # inside the area.
         self.outside = root / "outside"
@@ -215,6 +262,11 @@ class Fixture:
             "@AMP@": str(self.ampersand),
             "@SPACED@": str(self.spaced),
             "@WT@": str(self.worktree),
+            "@HOP@": str(self.hop),
+            "@HOPDIR@": str(self.hopdir),
+            "@HOPTASK@": str(self.hop_task),
+            "@HOPSIB@": str(self.hop_sibling),
+            "@HOPIN@": str(self.hop_in),
         }
 
     def expand(self, template):
@@ -340,6 +392,34 @@ SYNTAX_CASES = (
     (SILENT, "empty path", 'cd "" && ' + PLAIN_COMMAND),
 )
 
+# AC-3 (TM-1): the logical destination exists outside the area, or is the
+# area itself, or is below the area while the physical one is not.
+TM1_CASES = (
+    (SILENT, "link inside the area followed by .. : logical is the worktrees directory outside the area",
+     'cd "@HOPIN@/../.." && ' + PLAIN_COMMAND),
+    (SILENT, "link inside the area followed by .. : logical is under the prefix-sharing sibling",
+     'cd "@HOPIN@/../../em-workflow-x/task0001" && ' + PLAIN_COMMAND),
+    (SILENT, "link inside the area followed by .. : logical is the area itself",
+     'cd "@HOPIN@/.." && ' + PLAIN_COMMAND),
+    (SILENT, "logical path below the area, physical path absent",
+     'cd "@HOPIN@/../task0001" && ' + PLAIN_COMMAND),
+)
+
+# AC-4 (TM-2): the logical path is not an existing directory, and the physical
+# path is not an existing directory strictly below the area.
+TM2_CASES = (
+    (SILENT, "physical path is an existing directory outside the area",
+     'cd "@HOPSIB@/../elsewhere" && ' + PLAIN_COMMAND),
+    (SILENT, "physical path is the area itself",
+     'cd "@HOPSIB@/../em-workflow" && ' + PLAIN_COMMAND),
+    (SILENT, "physical path is below a sibling sharing the name prefix",
+     'cd "@HOPSIB@/../em-workflow-x/task0001" && ' + PLAIN_COMMAND),
+    (SILENT, "physical path does not exist",
+     'cd "@HOPTASK@/../does-not-exist" && ' + PLAIN_COMMAND),
+    (SILENT, "physical path is an existing file",
+     'cd "@HOPTASK@/../afile" && ' + PLAIN_COMMAND),
+)
+
 PATH_CASES = (
     (SILENT, "existing directory outside the area", 'cd "@OUT@" && ' + PLAIN_COMMAND),
     (SILENT, "area of another repository", 'cd "@OTHER@" && ' + PLAIN_COMMAND),
@@ -350,6 +430,19 @@ PATH_CASES = (
     (SILENT, "path that does not exist", 'cd "@MISSING@" && ' + PLAIN_COMMAND),
     (SILENT, "path that is a file", 'cd "@FILE@" && ' + PLAIN_COMMAND),
     (SILENT, "root directory", 'cd "/" && ' + PLAIN_COMMAND),
+) + TM1_CASES + TM2_CASES
+
+# AC-2: the logical path is absent or a file, the physical path is an existing
+# directory strictly below the area.
+FALLBACK_ALLOW_CASES = (
+    (ALLOW, "link outside the area, .., then a directory under the target's parent",
+     'cd "@HOP@/../sub" && ' + PLAIN_COMMAND),
+    (ALLOW, "same, a deeper directory under the target's parent",
+     'cd "@HOP@/../sub/deeper" && ' + PLAIN_COMMAND),
+    (ALLOW, "same, the target's parent itself is the destination",
+     'cd "@HOPTASK@/../task0001" && ' + PLAIN_COMMAND),
+    (ALLOW, "logical path is an existing file, physical path is a directory below the area",
+     'cd "@HOPDIR@/hop/../sub" && ' + PLAIN_COMMAND),
 )
 
 
@@ -535,6 +628,233 @@ class TestAc6DenyGuidance(CdPrefixCase):
         self.assertEqual(decision, DENY)
         self.assertIn("ユーザーに定義の修正を報告すること", output["additionalContext"])
         self.assertNotIn('cd "{worktree_path}"', output["additionalContext"])
+
+
+def _load_guard_module():
+    """The hook's functions, loaded without writing any bytecode file."""
+    module = types.ModuleType("bash_guard_under_test")
+    source = GUARD_PATH.read_text(encoding="utf-8")
+    exec(compile(source, str(GUARD_PATH), "exec"), module.__dict__)
+    return module
+
+
+PROC_ROOT = "/proc/self/root"
+
+
+class TestPhysicalFallbackAllowed(CdPrefixCase):
+    """AC-1, AC-2 (FR1, FR3, FR8): the logical path is not an existing
+    directory and the physical path is an existing directory strictly below
+    the area."""
+
+    @unittest.skipUnless(os.path.isdir(PROC_ROOT), "/proc/self/root is not a directory")
+    def test_ac1_proc_self_root_dotdot_before_an_absolute_worktree_path_is_allowed(self):
+        for cwd in (FIX.repo, FIX.worktree):
+            for target in (FIX.worktree, FIX.inside):
+                with self.subTest(cwd=cwd.name, target=target.name):
+                    command = 'cd "' + PROC_ROOT + "/.." + str(target) + '" && ' + PLAIN_COMMAND
+                    decision, _ = decide(FIX.run_hook(command, cwd))
+                    self.assertEqual(decision, ALLOW)
+
+    def test_ac2_link_dotdot_name_forms_are_allowed_from_the_main_worktree(self):
+        self.check_cases(FALLBACK_ALLOW_CASES, FIX.repo)
+
+    def test_ac2_link_dotdot_name_forms_are_allowed_from_a_git_worktree(self):
+        self.check_cases(FALLBACK_ALLOW_CASES, FIX.worktree)
+
+    def test_ac2_the_fixture_layout_matches_the_claimed_logical_paths(self):
+        # Guards the fixture: the logical path of each allowed form really is
+        # absent (or a file), and its physical path a directory below the area.
+        absent = os.path.normpath(str(FIX.hop) + "/../sub")
+        self.assertFalse(os.path.exists(absent))
+        self.assertTrue(os.path.isdir(os.path.realpath(str(FIX.hop) + "/../sub")))
+        as_file = os.path.normpath(str(FIX.hopdir) + "/hop/../sub")
+        self.assertTrue(os.path.isfile(as_file))
+        self.assertTrue(
+            os.path.isdir(os.path.realpath(str(FIX.hopdir) + "/hop/../sub"))
+        )
+
+    def test_ac2_the_allow_reason_is_the_cd_prefix_reason(self):
+        _, exact = decide(FIX.run_hook(PLAIN_COMMAND, FIX.repo))
+        decision, prefixed = decide(
+            FIX.run_hook(FIX.expand('cd "@HOP@/../sub" && ' + PLAIN_COMMAND), FIX.repo)
+        )
+        self.assertEqual(decision, ALLOW)
+        self.assertNotEqual(
+            prefixed["permissionDecisionReason"], exact["permissionDecisionReason"]
+        )
+
+
+class TestPhysicalFallbackNotAllowed(CdPrefixCase):
+    """AC-3, AC-4 (FR2, FR4, FR5, FR8, TM-1, TM-2): no output."""
+
+    def test_ac3_logical_destination_that_exists_outside_the_area_is_silent(self):
+        for cwd in (FIX.repo, FIX.worktree):
+            self.check_cases(TM1_CASES, cwd)
+
+    def test_ac3_the_fixture_layout_matches_the_claimed_destinations(self):
+        # Guards the fixture: the physical path is an existing directory
+        # inside the area, the logical one an existing directory outside it.
+        written = str(FIX.hop_in) + "/../.."
+        logical = os.path.realpath(os.path.normpath(written))
+        physical = os.path.realpath(written)
+        self.assertTrue(os.path.isdir(logical))
+        self.assertEqual(logical, str(FIX.region.parent))
+        self.assertTrue(os.path.isdir(physical))
+        self.assertEqual(physical, str(FIX.inside))
+
+    def test_ac4_physical_path_that_is_not_below_the_area_is_silent(self):
+        for cwd in (FIX.repo, FIX.worktree):
+            self.check_cases(TM2_CASES, cwd)
+
+    def test_ac4_the_fixture_layout_matches_the_claimed_destinations(self):
+        # Guards the fixture: every logical path is not a directory, and each
+        # physical path is what its label says.
+        expected = {
+            "@HOPSIB@/../elsewhere": FIX.elsewhere,
+            "@HOPSIB@/../em-workflow": FIX.region,
+            "@HOPSIB@/../em-workflow-x/task0001": FIX.sibling,
+            "@HOPTASK@/../afile": FIX.file,
+        }
+        for template, physical in expected.items():
+            with self.subTest(template=template):
+                written = FIX.expand(template)
+                self.assertFalse(os.path.isdir(os.path.normpath(written)))
+                self.assertEqual(os.path.realpath(written), str(physical))
+        for template in ("@HOPTASK@/../does-not-exist",):
+            written = FIX.expand(template)
+            self.assertFalse(os.path.isdir(os.path.normpath(written)))
+            self.assertFalse(os.path.exists(os.path.realpath(written)))
+
+
+class TestNulInPath(CdPrefixCase):
+    """AC-5 (NFR4, TM-4): an embedded NUL character never raises."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.guard = _load_guard_module()
+        cls.area = str(FIX.region)
+
+    def test_ac5_the_path_check_returns_false_for_a_path_with_a_nul(self):
+        for label, path in (
+            ("nul after an existing directory", str(FIX.inside) + "\x00"),
+            ("nul inside a component", str(FIX.inside) + "/su\x00b"),
+            ("nul after a fallback form", FIX.expand("@HOP@/../sub") + "\x00"),
+            ("nul before a dotdot", str(FIX.inside) + "\x00/.."),
+        ):
+            with self.subTest(label=label):
+                self.assertIs(self.guard.is_below(path, self.area), False)
+
+    def test_ac5_a_resolution_error_makes_the_path_check_false(self):
+        path = str(FIX.inside)
+        self.assertIs(self.guard.is_below(path, self.area), True)
+        for error in (OSError("simulated"), ValueError("simulated")):
+            with self.subTest(error=type(error).__name__):
+                with mock.patch.object(os.path, "realpath", side_effect=error):
+                    self.assertIs(self.guard.is_below(path, self.area), False)
+                with mock.patch.object(os.path, "isdir", side_effect=error):
+                    self.assertIs(self.guard.is_below(path, self.area), False)
+
+    def test_ac5_through_the_hook_a_nul_path_exits_zero_silently_without_allow(self):
+        for cwd in (FIX.repo, FIX.worktree):
+            for template in (
+                'cd "@IN@\x00" && ' + PLAIN_COMMAND,
+                'cd "@HOP@/../sub\x00" && ' + PLAIN_COMMAND,
+            ):
+                with self.subTest(cwd=cwd.name, template=template):
+                    proc = FIX.run_hook(FIX.expand(template), cwd)
+                    self.assertEqual(proc.returncode, 0)
+                    self.assertEqual(proc.stderr, "")
+                    decision, _ = decide(proc)
+                    self.assertNotEqual(decision, ALLOW)
+
+
+def _verbatim_execution_rule(text):
+    """Body of the protocol's "Verbatim execution rule" section."""
+    lines = text.splitlines()
+    start = next(
+        (i for i, line in enumerate(lines) if line.startswith("## Verbatim execution rule")),
+        None,
+    )
+    if start is None:
+        return None
+    end = next(
+        (i for i in range(start + 1, len(lines)) if lines[i].startswith("## ")),
+        len(lines),
+    )
+    return " ".join(" ".join(lines[start:end]).split())
+
+
+def _states_single_realpath_condition(text):
+    """True when the text states that the realpath alone must be an existing
+    directory below the area (the condition this change replaces)."""
+    flat = " ".join(text.split())
+    return bool(
+        re.search(r"realpath of <path> is an existing directory", flat)
+        or re.search(r"path's realpath is an existing directory", flat)
+    )
+
+
+def _states_new_path_condition(text):
+    """True when the text carries the two-sided rule: the logical path, the
+    physical path, both strictly below the area when the logical path is an
+    existing directory, otherwise the physical path alone."""
+    flat = " ".join(text.split()).lower()
+    return all(
+        needle in flat
+        for needle in (
+            "logical path",
+            "physical path",
+            "strictly below",
+            "existing directory",
+            "otherwise",
+            "both",
+        )
+    )
+
+
+class TestPathConditionWording(unittest.TestCase):
+    """AC-7 (FR7): the hook docstring and the protocol's Verbatim execution
+    rule state the same two-sided path condition."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.docstring = _load_guard_module().__doc__
+        cls.rule = _verbatim_execution_rule(PROTOCOL_PATH.read_text(encoding="utf-8"))
+
+    def test_ac7_matchers_fire_on_forged_text(self):
+        self.assertTrue(
+            _states_single_realpath_condition(
+                "the realpath of <path> is an existing directory strictly below X"
+            )
+        )
+        self.assertTrue(
+            _states_single_realpath_condition(
+                "the path's realpath is an existing directory deeper than X"
+            )
+        )
+        self.assertFalse(_states_new_path_condition("the realpath of <path> only"))
+
+    def test_ac7_the_hook_docstring_states_the_new_condition(self):
+        self.assertTrue(_states_new_path_condition(self.docstring))
+
+    def test_ac7_the_hook_docstring_no_longer_states_the_single_realpath_condition(self):
+        self.assertFalse(_states_single_realpath_condition(self.docstring))
+
+    def test_ac7_the_protocol_rule_states_the_new_condition(self):
+        self.assertIsNotNone(self.rule, "section 'Verbatim execution rule' not found")
+        self.assertTrue(_states_new_path_condition(self.rule))
+
+    def test_ac7_the_protocol_rule_no_longer_states_the_single_realpath_condition(self):
+        self.assertIsNotNone(self.rule, "section 'Verbatim execution rule' not found")
+        self.assertFalse(_states_single_realpath_condition(self.rule))
+
+    def test_ac7_both_places_define_the_two_terms(self):
+        self.assertIsNotNone(self.rule, "section 'Verbatim execution rule' not found")
+        for name, text in (("docstring", self.docstring), ("protocol", self.rule)):
+            flat = " ".join(text.split())
+            with self.subTest(place=name):
+                self.assertRegex(flat, r"logical path \([^)]*\.\.[^)]*\)")
+                self.assertRegex(flat, r"physical path \([^)]*as written[^)]*\)")
 
 
 def _imported_top_level_modules(source):
