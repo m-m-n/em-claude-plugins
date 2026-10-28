@@ -1,0 +1,33 @@
+schema_version: 1
+feature: cd-prefix-excluded-build-format-tests
+phase: create-spec
+status: in_progress
+generation: 1
+base_revision: cf6696ff332bed9b55b6b76ab47f7b5d48a67c48
+last_input_digest: sha256:eb6d678083d179643fa59089ced340880e35bd95e422909db37c4a531de20f15
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:eb6d678083d179643fa59089ced340880e35bd95e422909db37c4a531de20f15
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache:
+  reference_scan_targets:
+    resolved_at_generation: 1
+    paths:
+    - em-workflow/agents/implementer.md
+    - em-workflow/skills/worktree-task-workflow/SKILL.md
+    - em-workflow/references/command-execution-protocol.md
+    - em-workflow/references/implement-phase.md
+    - tests/test_implementer_cd_prefix_exclusion_docs.py
+    - tests/test_cd_prefix_operator_exclusion_docs.py
+    - tests/test_cd_prefix_exception_docs.py
+    - feature-docs/cd-prefix-toplevel-operators/SPEC.md
+    - feature-docs/cd-prefix-toplevel-operators/tasks/task0003.md
+    truncated: false
+last_error: null
