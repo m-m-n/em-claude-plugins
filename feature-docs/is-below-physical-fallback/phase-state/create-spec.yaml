@@ -1,7 +1,7 @@
 schema_version: 1
 feature: is-below-physical-fallback
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 3dd3f93422cae6cf67788cbc4a6f831b4d444577
 last_input_digest: sha256:01b419abf117c3c55e544cf9a7ff2ba02eed86b4dd68dcaf49a73d5792d3a5fd
