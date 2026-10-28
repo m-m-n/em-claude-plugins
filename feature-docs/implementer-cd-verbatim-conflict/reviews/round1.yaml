@@ -1,0 +1,159 @@
+round: 1
+executed_at: '2026-10-28T10:25:36+09:00'
+scope:
+  review_mode: diff
+  base_commit: 53f950623fc6bb0891f724771748775f4e3c0602
+  head_commit: 769b17609f71160ac5722ad6bad52a163c043f22
+  changed_files:
+  - em-workflow/README.md
+  - em-workflow/agents/implementer.md
+  - em-workflow/hooks/bash_guard.py
+  - em-workflow/references/command-execution-protocol.md
+  - em-workflow/references/workflow-schema.md
+  - em-workflow/skills/worktree-task-workflow/SKILL.md
+  - test-docs/implementer-cd-verbatim-conflict/task0001.tests.yaml
+  - test-docs/implementer-cd-verbatim-conflict/task0002.tests.yaml
+  - test-docs/implementer-cd-verbatim-conflict/task0003.tests.yaml
+  - tests/test_bash_guard_cd_prefix.py
+  - tests/test_cd_prefix_exception_docs.py
+  - tests/test_implementer_cd_chain_docs.py
+  - tests/test_worktree_skill_instruction_source.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - spec
+  - architecture
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+- run_id: comprehensive#loop1
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#loop1
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: spec#loop1
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: architecture#loop1
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+findings:
+- stable_id: 61f034be00484674
+  severity: high
+  category: security
+  file: em-workflow/hooks/bash_guard.py
+  line: 221
+  title: シンボリックリンクの後ろの .. で cd 先の領域制限を回避できる
+  description: is_below() は os.path.realpath() でリンクを解決してから .. を処理する（物理パス）が、シェルの既定の cd は .. を文字列上で処理してからリンクを解決する（論理パス）。P が <リンク>/.. を含むと、フックが検査する場所と実際の移動先がずれ、承認済みコマンドが領域外で確認なしに動く。SPEC の AC-5 と Edge Case に反する。
+  suggestion: P に .. の要素があれば cd 前置形として扱わない。または realpath(os.path.normpath(P)) も領域内にあることを求める。
+  reproduction: 承認集合を {"pwd -P"} とし、worktree 内を cwd として cd "/proc/self/cwd/.." && pwd -P を is_cd_prefixed_approved() に渡すと True。同じ入力を bash で実行すると移動先は領域外の /proc/<PID>。
+  reproduction_alternates:
+  - この integration 作業ツリーを cwd とし、`pwd -P` を承認済みとして `cd "/proc/self/cwd/.." && pwd -P` を検査する。allow が返る一方、同じ cwd から Bash で実行すると `/proc/<PID>` が出力される。
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  - codex:comprehensive
+  confidence: 100
+  resolution: fixed
+  resolution_reason: auto-applied loop 1
+- stable_id: b3582a48847b9e2f
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/bash_guard.py
+  line: 239
+  title: 承認文字列にトップレベルの & があると、後続の処理が cd 先ではなく元の cwd で動く
+  description: '&& は & / ; より強く結びつくため、cd "P" && A & B では B が元の cwd（通常はメイン作業ツリー）で動く。; や || を含む承認文字列でも cd 失敗時に後続が元の cwd で動く。実装は FR1 のとおりで、SPEC の設計の漏れから来ている。'
+  suggestion: 承認文字列全体が cd 先で動く実行形にするか、トップレベルに & / ; / || を含む承認文字列は cd 前置形の対象外だと手順書に書く。フック・文書・試験を同じ変更で合わせる。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 80
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix 対象外（critical/high のみ）。SPEC の FR1 の設計に関わるため後続の変更で扱う'
+- stable_id: 1ff4933d3c9b729c
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/bash_guard.py
+  line: 224
+  title: Bash が移動できるパスを論理パスの不存在だけで除外しない
+  description: Bash の cd は論理パスへの移動に失敗すると物理パスで再試行するため、論理パスが存在しなくても領域内へ正常に移動できる場合がある。loop 1 の修正後は、そうした有効なパスの cd 前置コマンドが allow から無判定（通常の権限確認）へ変わる。
+  suggestion: 領域外の論理移動先は引き続き除外しつつ、論理パスが使えず物理パスへフォールバックする場合も考慮して判定し、回帰テストを追加する。
+  reproduction: P = "/proc/self/root/.." + 現在の worktree パスとすると、realpath(P) は worktree で bash の cd も成功するが、realpath(normpath(P)) は存在しないため修正後の is_below() は False を返す。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix 対象外（critical/high のみ）。安全側（allow しない）に倒れる副作用で、通常の権限確認に戻るだけ'
+evaluation:
+  round_summary: 'ラウンド 1（cross_validation: true）。high 1 件（security、シンボリックリンクの後ろの .. で cd 先の領域制限を回避できる。security#0 と comprehensive#0 が同じ箇所を独立に指摘し、security#0 の reproduction はコードと bash の cd の仕様を読んで reproduced と判定）と medium 1 件（comprehensive、承認文字列にトップレベルの & があると後続が元の cwd で動く）を採用。comprehensive#0 の high の箇所は重複として dismissed_sites に記録。プロンプトインジェクションの試みは無し。観点ごと: comprehensive corroborated、security corroborated、spec findings（リンクの後ろの .. の件は security の採用分と同一箇所）、architecture corroborated。'
+  recommended_action: auto_fix
+  action_rationale: high の 1 件は bash_guard.py の is_below / is_cd_prefixed_approved に閉じており、範囲を限った自動修正に向く。medium の 1 件はフック・文書・試験の同時修正で済む。
+dismissed_sites:
+- file: em-workflow/hooks/bash_guard.py
+  line: 217
+  run_id: comprehensive#0
+  reason: duplicate of another finding
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 1
+  applied_total: 1
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
