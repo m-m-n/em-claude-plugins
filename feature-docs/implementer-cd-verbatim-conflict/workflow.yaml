@@ -173,8 +173,9 @@ tasks:
     - NFR5
     - NFR7
     - NFR8
-    status: pending
+    status: in_progress
     notes: null
+    branch: em-workflow/implementer-cd-verbatim-conflict/task0001
   task0002:
     title: implementer.md と worktree-task-workflow/SKILL.md を連結形の指示に戻す
     plan: tasks/task0002.md
@@ -194,8 +195,9 @@ tasks:
     - NFR6
     - NFR7
     - NFR8
-    status: pending
+    status: in_progress
     notes: null
+    branch: em-workflow/implementer-cd-verbatim-conflict/task0002
   task0003:
     title: command-execution-protocol.md・README.md・workflow-schema.md に cd 前置の例外を書き足す
     plan: tasks/task0003.md
@@ -213,8 +215,9 @@ tasks:
     - FR8
     - NFR7
     - NFR8
-    status: pending
+    status: in_progress
     notes: null
+    branch: em-workflow/implementer-cd-verbatim-conflict/task0003
 review:
   status: pending
   rounds_completed: 0
