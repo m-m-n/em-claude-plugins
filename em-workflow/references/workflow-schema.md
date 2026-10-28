@@ -304,6 +304,12 @@ run only after user approval, which lives in
 clone — keyed by the repo's git common dir (shared across worktrees). The
 plugin's `PreToolUse` hook (`hooks/bash_guard.py`) enforces this on every
 Bash call: approved exact string → allow, declared-but-unapproved → deny.
+An implementer (a subagent, whose cwd does not persist between Bash calls)
+may instead run an approved string as
+`cd "{worktree_path}" && <approved string>` in a single Bash call; the hook
+allows that form when the path is deeper than `.claude/worktrees/em-workflow/`
+under the main working tree and everything after `&&` is an approved string
+exactly.
 Details: `references/command-execution-protocol.md`.
 
 Schema consequences:
