@@ -1,0 +1,131 @@
+task_id: task0002
+# Baseline run before any edit: python3 -m unittest discover -s tests,
+# 11901 tests, OK (skipped=1).
+baseline_failures: []
+# Re-executed after the documents, the new module and this record were in
+# place: python3 -m unittest discover -s tests, 11954 tests, OK (skipped=1).
+# The 52 tests of the new module and the record check of this record account
+# for the difference from the 11901-test baseline.
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_cd_prefix_operator_exclusion_docs.TestVerbatimSectionOperators.test_ac1_names_the_four_top_level_operators
+      - tests.test_cd_prefix_operator_exclusion_docs.TestVerbatimSectionOperators.test_ac1_names_the_six_recognized_tokens
+      - tests.test_cd_prefix_operator_exclusion_docs.TestVerbatimSectionOperators.test_ac1_states_that_the_ampersand_of_a_token_is_not_counted
+      - tests.test_cd_prefix_operator_exclusion_docs.TestVerbatimSectionOperators.test_ac1_states_the_longest_token_rule
+      - tests.test_cd_prefix_operator_exclusion_docs.TestVerbatimSectionOperators.test_ac1_states_that_a_plain_pipe_is_not_counted
+      - tests.test_cd_prefix_operator_exclusion_docs.TestVerbatimSectionOperators.test_ac1_states_the_unquoted_escape_rule
+      - tests.test_cd_prefix_operator_exclusion_docs.TestVerbatimSectionOperators.test_ac1_states_the_single_quote_escape_rule
+      - tests.test_cd_prefix_operator_exclusion_docs.TestVerbatimSectionOperators.test_ac1_states_the_double_quote_escape_rule
+      - tests.test_cd_prefix_operator_exclusion_docs.TestVerbatimSectionOperators.test_ac1_states_where_each_operator_counts
+      - tests.test_cd_prefix_operator_exclusion_docs.TestVerbatimSectionOperators.test_ac1_keeps_the_cd_prefix_form_and_its_existing_conditions
+    red_confirmed: true
+    red_reason: >-
+      Run on the unchanged protocol, the first nine tests failed with
+      "AssertionError: Regex didn't match" against the Verbatim execution
+      rule section (it named no top-level operator, recognized token or
+      escape rule). The tenth test pins the cd prefix form and its existing
+      conditions and passed before the change.
+  AC-2:
+    tests:
+      - tests.test_cd_prefix_operator_exclusion_docs.TestVerbatimSectionSafeSide.test_ac2_unclosed_quote_at_the_end_of_the_scan
+      - tests.test_cd_prefix_operator_exclusion_docs.TestVerbatimSectionSafeSide.test_ac2_trailing_backslash_at_the_end_of_the_scan
+      - tests.test_cd_prefix_operator_exclusion_docs.TestVerbatimSectionSafeSide.test_ac2_dollar_single_and_double_quote_anywhere
+      - tests.test_cd_prefix_operator_exclusion_docs.TestVerbatimSectionSafeSide.test_ac2_hash_anywhere_inside_quotes_included
+      - tests.test_cd_prefix_operator_exclusion_docs.TestVerbatimSectionSafeSide.test_ac2_parentheses_and_braces_when_unquoted_and_unescaped
+      - tests.test_cd_prefix_operator_exclusion_docs.TestVerbatimSectionSafeSide.test_ac2_command_and_parameter_substitution_and_backtick_anywhere
+      - tests.test_cd_prefix_operator_exclusion_docs.TestVerbatimSectionSafeSide.test_ac2_states_that_nesting_is_not_parsed
+      - tests.test_cd_prefix_operator_exclusion_docs.TestVerbatimSectionSafeSide.test_ac2_states_that_the_hook_does_not_parse_these_constructs
+    red_confirmed: true
+    red_reason: >-
+      Run on the unchanged protocol, all eight tests failed with
+      "AssertionError: Regex didn't match"; the section named none of the
+      safe-side constructs, their positions or the nesting statement.
+  AC-3:
+    tests:
+      - tests.test_cd_prefix_operator_exclusion_docs.TestVerbatimSectionImplementerHandling.test_ac3_implementer_does_not_run_an_excluded_approved_string
+      - tests.test_cd_prefix_operator_exclusion_docs.TestVerbatimSectionImplementerHandling.test_ac3_implementer_reports_it_in_notes
+      - tests.test_cd_prefix_operator_exclusion_docs.TestVerbatimSectionImplementerHandling.test_ac3_handling_sits_in_the_implementer_bullet
+    red_confirmed: true
+    red_reason: >-
+      Run on the unchanged protocol, the first two tests failed with
+      "AssertionError: Regex didn't match" and the third raised "ValueError:
+      substring not found" for the handling sentence; the section had no
+      statement of the implementer's handling of an excluded approved string.
+  AC-4:
+    tests:
+      - tests.test_cd_prefix_operator_exclusion_docs.TestReadmeExclusionSummary.test_ac4_names_the_operators_with_toplevel_and_exclusion
+      - tests.test_cd_prefix_operator_exclusion_docs.TestReadmeExclusionSummary.test_ac4_names_the_line_break
+      - tests.test_cd_prefix_operator_exclusion_docs.TestReadmeExclusionSummary.test_ac4_still_cites_the_protocol
+      - tests.test_cd_prefix_operator_exclusion_docs.TestReadmeExclusionSummary.test_ac4_stays_one_numbered_item_without_a_blank_line
+      - tests.test_cd_prefix_operator_exclusion_docs.TestReadmeExclusionSummary.test_ac4_keeps_the_existing_decisions
+      - tests.test_cd_prefix_operator_exclusion_docs.TestSchemaExclusionSummary.test_ac4_names_the_operators_with_top_level_and_not_covered
+      - tests.test_cd_prefix_operator_exclusion_docs.TestSchemaExclusionSummary.test_ac4_still_carries_the_details_line
+      - tests.test_cd_prefix_operator_exclusion_docs.TestSchemaExclusionSummary.test_ac4_adds_no_bullet_to_the_section_before_schema_consequences
+    red_confirmed: true
+    red_reason: >-
+      Run on the unchanged README and schema, the three tests that name the
+      operators with the top-level wording failed with "AssertionError: Regex
+      didn't match" (the README item had no トップレベル / 対象外 wording and
+      the schema section had no "top level ... not covered" sentence). The
+      other five tests pin text that held before the change (the protocol
+      citation, the single-line item, the existing decisions, the Details
+      line, no bullet in the section) and passed before it.
+  AC-5:
+    tests:
+      - tests.test_cd_prefix_operator_exclusion_docs.TestSummariesDoNotRestateSafeSideConstructs.test_ac5_no_dollar_single_quote
+      - tests.test_cd_prefix_operator_exclusion_docs.TestSummariesDoNotRestateSafeSideConstructs.test_ac5_dollar_single_quote_matcher_fires_on_forged_text
+      - tests.test_cd_prefix_operator_exclusion_docs.TestSummariesDoNotRestateSafeSideConstructs.test_ac5_no_dollar_double_quote
+      - tests.test_cd_prefix_operator_exclusion_docs.TestSummariesDoNotRestateSafeSideConstructs.test_ac5_dollar_double_quote_matcher_fires_on_forged_text
+      - tests.test_cd_prefix_operator_exclusion_docs.TestSummariesDoNotRestateSafeSideConstructs.test_ac5_no_dollar_brace
+      - tests.test_cd_prefix_operator_exclusion_docs.TestSummariesDoNotRestateSafeSideConstructs.test_ac5_dollar_brace_matcher_fires_on_forged_text
+      - tests.test_cd_prefix_operator_exclusion_docs.TestSummariesDoNotRestateSafeSideConstructs.test_ac5_no_dollar_paren
+      - tests.test_cd_prefix_operator_exclusion_docs.TestSummariesDoNotRestateSafeSideConstructs.test_ac5_dollar_paren_matcher_fires_on_forged_text
+      - tests.test_cd_prefix_operator_exclusion_docs.TestSummariesDoNotRestateSafeSideConstructs.test_ac5_no_hash_condition
+      - tests.test_cd_prefix_operator_exclusion_docs.TestSummariesDoNotRestateSafeSideConstructs.test_ac5_hash_condition_matcher_fires_on_forged_text
+      - tests.test_cd_prefix_operator_exclusion_docs.TestSummariesDoNotRestateSafeSideConstructs.test_ac5_no_unclosed_quote
+      - tests.test_cd_prefix_operator_exclusion_docs.TestSummariesDoNotRestateSafeSideConstructs.test_ac5_unclosed_quote_matcher_fires_on_forged_text
+      - tests.test_cd_prefix_operator_exclusion_docs.TestSummariesDoNotRestateSafeSideConstructs.test_ac5_no_trailing_backslash
+      - tests.test_cd_prefix_operator_exclusion_docs.TestSummariesDoNotRestateSafeSideConstructs.test_ac5_trailing_backslash_matcher_fires_on_forged_text
+      - tests.test_cd_prefix_operator_exclusion_docs.TestSummariesDoNotRestateSafeSideConstructs.test_ac5_matchers_leave_a_clean_summary_alone
+      - tests.test_cd_prefix_operator_exclusion_docs.TestSummariesDoNotRestateSafeSideConstructs.test_ac5_every_matcher_has_a_forged_case
+    red_confirmed: false
+    red_reason: >-
+      The criterion is an absence property: the README item and the schema
+      section never held the safe-side constructs, so each absence assertion
+      passed on the unchanged documents and no red state occurred. Every
+      absence assertion is paired with a forged-text test showing its
+      matcher flags the construct, and the edits made here add none of the
+      constructs, which these tests keep pinned.
+  AC-6:
+    tests:
+      - tests.test_cd_prefix_exception_docs
+      - tests.test_failed_items_category
+      - tests.test_failed_kind_schema
+      - tests.test_workflow_schema_journal_readers_doc_contract
+    red_confirmed: false
+    red_reason: >-
+      The criterion is that four existing modules pass unedited. A dedicated
+      new module is out of scope; the existing modules detect the pinned
+      sentences of the protocol, README and schema that this change had to
+      keep (test_cd_prefix_exception_docs) and the section boundaries and
+      bullet extraction of the schema (the other three); no red state
+      occurred for this change. They were run after the document edits and
+      passed, and none of them was edited.
+  AC-7:
+    tests:
+      - tests.test_cd_prefix_operator_exclusion_docs.TestLocatingText.test_section_of_a_renamed_heading_is_none_not_empty
+      - tests.test_cd_prefix_operator_exclusion_docs.TestLocatingText.test_section_skips_headings_inside_fenced_code
+      - tests.test_cd_prefix_operator_exclusion_docs.TestLocatingText.test_numbered_item_is_none_when_the_marker_is_absent
+      - tests.test_cd_prefix_operator_exclusion_docs.TestLocatingText.test_numbered_item_runs_to_the_next_item
+      - tests.test_cd_prefix_operator_exclusion_docs.TestLocatingText.test_normalize_collapses_line_wraps
+      - tests.test_cd_prefix_operator_exclusion_docs.TestStandardLibraryOnly.test_ac7_imports_are_standard_library
+    red_confirmed: false
+    red_reason: >-
+      The criterion states how the new module is built (heading and
+      numbered-item location, whitespace normalization, standard library
+      only) and that python3 -m unittest discover -s tests passes. The
+      module-shape checks passed as soon as the module existed and the
+      full-suite pass is a property of the finished change, so no executable
+      red state exists for this criterion.
