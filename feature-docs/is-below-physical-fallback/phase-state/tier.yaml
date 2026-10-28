@@ -1,0 +1,47 @@
+schema_version: 2
+feature: is-below-physical-fallback
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    probabilities:
+      '0': 0.0
+      '1': 0.92
+      '2': 0.08
+      '3': 0.0
+    expectation_clear: 0.59
+    confidence: 0.92
+  observed_at: '2026-10-28T23:09:00+09:00'
+- basis: description_plus_code
+  score:
+    probabilities:
+      '0': 0.0
+      '1': 0.95
+      '2': 0.05
+      '3': 0.0
+    expectation_clear: 0.66
+    confidence: 0.95
+  observed_at: '2026-10-28T23:14:00+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/hooks/bash_guard.py
+  - tests/test_bash_guard_cd_prefix.py
+  changed_lines_approx: 40
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: []
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 2
+  body_change_kind: new_logic
+  change_containment: single_function
+  caller_and_dependency_count: 4
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: em-workflow/hooks/bash_guard.py:225 は論理先がディレクトリでなければ False を返す。同:253 に直接呼出元1か所、同:223-225
+    に依存API3種（realpath、normpath、isdir）がある。tests/test_bash_guard_cd_prefix.py:285,343,368,413
+    に既存の許可・除外テストがあるが、再現経路とリンク直後の .. の組合せは含まれない。同:107 以降の準備処理がファイルを作るためテストは未実行。変更行数と追加ケース数は概算で、変更範囲・新規関数数は本体を対象とする。外部契約は
+    bash_guard.py:256 の出力形式を指す
+decided_at: '2026-10-28T23:14:30+09:00'
