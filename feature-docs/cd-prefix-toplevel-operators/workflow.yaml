@@ -143,7 +143,8 @@ tasks:
     - NFR3
     - NFR4
     - NFR7
-    status: pending
+    status: in_progress
+    branch: em-workflow/cd-prefix-toplevel-operators/task0001
     notes: null
   task0002:
     title: 'Protocol, README and workflow-schema: state the cd prefix exclusion'
@@ -165,7 +166,8 @@ tasks:
     - NFR4
     - NFR6
     - NFR7
-    status: pending
+    status: in_progress
+    branch: em-workflow/cd-prefix-toplevel-operators/task0002
     notes: null
   task0003:
     title: 'implementer.md and worktree-task-workflow SKILL.md: do not run excluded approved strings'
@@ -186,7 +188,8 @@ tasks:
     - NFR5
     - NFR6
     - NFR7
-    status: pending
+    status: in_progress
+    branch: em-workflow/cd-prefix-toplevel-operators/task0003
     notes: null
 review:
   status: pending
