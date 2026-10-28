@@ -173,7 +173,7 @@ tasks:
     - NFR5
     - NFR7
     - NFR8
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/implementer-cd-verbatim-conflict/task0001
   task0002:
