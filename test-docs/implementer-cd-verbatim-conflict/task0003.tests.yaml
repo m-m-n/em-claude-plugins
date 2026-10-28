@@ -1,0 +1,96 @@
+task_id: task0003
+baseline_failures: []
+# Re-executed after implementation: 11840 tests, OK (skipped=1); the 33 new
+# tests account for the difference from the 11807-test baseline.
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_cd_prefix_exception_docs.TestVerbatimSection.test_ac1_names_the_implementer_exception
+      - tests.test_cd_prefix_exception_docs.TestVerbatimSection.test_ac1_rules_are_split_by_role
+      - tests.test_cd_prefix_exception_docs.TestVerbatimSection.test_ac1_subagent_cwd_does_not_persist_between_bash_calls
+      - tests.test_cd_prefix_exception_docs.TestVerbatimSection.test_ac1_states_the_cd_prefix_form_in_one_bash_call
+      - tests.test_cd_prefix_exception_docs.TestVerbatimSection.test_ac1_part_after_the_ampersands_is_the_approved_string
+      - tests.test_cd_prefix_exception_docs.TestVerbatimSection.test_ac1_states_hook_conditions_quoted_absolute_path
+      - tests.test_cd_prefix_exception_docs.TestVerbatimSection.test_ac1_states_hook_conditions_realpath_under_worktrees_dir
+      - tests.test_cd_prefix_exception_docs.TestVerbatimSection.test_ac1_states_hook_conditions_rest_equals_approved_string
+    red_confirmed: true
+    red_reason: >-
+      Before the documents changed, all eight tests failed on assertions
+      against the Verbatim execution rule section (for example
+      "AssertionError: 'Implementer' not found in 'The hook compares exact
+      strings ...'" and "AssertionError: 'subagent' not found in ..."); the
+      section had no implementer exception.
+  AC-2:
+    tests:
+      - tests.test_cd_prefix_exception_docs.TestVerbatimSection.test_ac2_orchestrator_keeps_the_separate_cd_rule
+      - tests.test_cd_prefix_exception_docs.TestVerbatimSection.test_ac2_orchestrator_returns_to_project_root
+      - tests.test_cd_prefix_exception_docs.TestVerbatimSection.test_ac2_orchestrator_does_not_prefix_cd_and_ampersands
+      - tests.test_cd_prefix_exception_docs.TestVerbatimSection.test_ac2_environment_assignment_prefix_stays_forbidden
+      - tests.test_cd_prefix_exception_docs.TestVerbatimSection.test_ac2_split_join_quote_wrap_stays_forbidden
+      - tests.test_cd_prefix_exception_docs.TestVerbatimSection.test_ac2_mutated_string_no_longer_matches_its_approval
+      - tests.test_cd_prefix_exception_docs.TestVerbatimSection.test_section_does_not_claim_one_cd_in_the_whole_command
+      - tests.test_cd_prefix_exception_docs.TestVerbatimSection.test_one_cd_matcher_fires_on_forged_text
+    red_confirmed: false
+    red_reason: >-
+      Pin of rules that held before the change (the orchestrator's separate
+      cd and return to the project root, the environment-assignment ban, the
+      split/join/quote-wrap ban); all eight tests passed on the unchanged
+      document, so no red state occurred. The one-cd absence check is paired
+      with a forged-text case showing its matcher fires.
+  AC-3:
+    tests:
+      - tests.test_cd_prefix_exception_docs.TestRuntimeEnforcementSection.test_ac3_has_exactly_one_cd_prefix_row
+      - tests.test_cd_prefix_exception_docs.TestRuntimeEnforcementSection.test_ac3_cd_prefix_row_decides_allow
+      - tests.test_cd_prefix_exception_docs.TestRuntimeEnforcementSection.test_ac3_cd_prefix_row_sits_after_refusal_and_before_exact_match
+      - tests.test_cd_prefix_exception_docs.TestRuntimeEnforcementSection.test_ac3_refusal_row_covers_the_whole_command_including_cd_prefix
+      - tests.test_cd_prefix_exception_docs.TestRuntimeEnforcementSection.test_ac3_unmet_cd_prefix_form_is_judged_as_a_whole_string
+      - tests.test_cd_prefix_exception_docs.TestRuntimeEnforcementSection.test_ac3_refusal_row_still_denies_even_when_approved
+      - tests.test_cd_prefix_exception_docs.TestRuntimeEnforcementSection.test_ac3_deny_handling_keeps_its_two_bullets
+      - tests.test_cd_prefix_exception_docs.TestRuntimeEnforcementSection.test_ac3_row_order_matcher_fires_on_forged_table
+    red_confirmed: true
+    red_reason: >-
+      Before the change the first five tests failed (the decision table had
+      no cd prefix row: "0 != 1" on the row count, and the whole-command and
+      whole-string wording was absent). The last three pin behavior that held
+      before (the refusal row denying even if approved, the two deny-handling
+      bullets, the forged-table matcher) and passed on the unchanged
+      document.
+  AC-4:
+    tests:
+      - tests.test_cd_prefix_exception_docs.TestReadmeRuntimeEnforcement.test_ac4_states_the_implementer_cd_prefix_exception
+      - tests.test_cd_prefix_exception_docs.TestReadmeRuntimeEnforcement.test_ac4_defers_the_details_to_the_protocol
+      - tests.test_cd_prefix_exception_docs.TestReadmeRuntimeEnforcement.test_ac4_keeps_the_existing_decisions
+      - tests.test_cd_prefix_exception_docs.TestReadmeRuntimeEnforcement.test_ac4_does_not_claim_one_cd_in_the_whole_command
+    red_confirmed: true
+    red_reason: >-
+      Before the change test_ac4_states_the_implementer_cd_prefix_exception
+      and test_ac4_defers_the_details_to_the_protocol failed (the README item
+      had no cd prefix form and no protocol citation). The other two pin the
+      existing allow/deny wording and passed on the unchanged README.
+  AC-5:
+    tests:
+      - tests.test_cd_prefix_exception_docs.TestSchemaCommandApprovalStore.test_ac5_states_the_implementer_cd_prefix_exception
+      - tests.test_cd_prefix_exception_docs.TestSchemaCommandApprovalStore.test_ac5_keeps_the_existing_hook_description
+      - tests.test_cd_prefix_exception_docs.TestSchemaCommandApprovalStore.test_ac5_keeps_the_reference_to_the_protocol
+      - tests.test_cd_prefix_exception_docs.TestSchemaCommandApprovalStore.test_ac5_does_not_claim_one_cd_in_the_whole_command
+    red_confirmed: true
+    red_reason: >-
+      Before the change test_ac5_states_the_implementer_cd_prefix_exception
+      failed (the Command approval store section had no cd prefix form). The
+      other three pin the existing hook description and the protocol
+      reference and passed on the unchanged document.
+  AC-6:
+    tests:
+      - tests.test_cd_prefix_exception_docs.TestStandardLibraryOnly.test_ac6_imports_are_standard_library
+    red_confirmed: false
+    red_reason: >-
+      The criterion states that the new module imports only the standard
+      library and that python3 -m unittest discover -s tests passes,
+      tests/test_muse_consent_no_new_questions.py included. The import check
+      passed as soon as the module existed and the full-suite pass is a
+      property of the finished change, so no executable red state exists
+      for this criterion. The existing
+      tests.test_muse_consent_no_new_questions module already fixes the
+      AskUserQuestion count of command-execution-protocol.md (8) and stayed
+      green; no red state occurred for this change.

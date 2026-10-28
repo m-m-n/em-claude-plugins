@@ -105,14 +105,31 @@ in force.
 ## Verbatim execution rule
 
 The hook compares exact strings (after trimming). Agents MUST run approved
-commands **byte-for-byte as recorded**:
+commands **byte-for-byte as recorded**. How the working directory is set
+depends on the role:
 
-- Never prefix `cd {dir} && …` or environment assignments — change directory
-  with a separate `cd` call first (shell cwd persists between Bash calls).
-- The orchestrator returns to the project root with a separate `cd` call
-  after the command finishes. Do not move on to the next step or to another
-  worktree while the cwd is still inside a worktree.
-- Never split, join, quote-wrap, or "improve" the string.
+- **Orchestrator (main session)**: never prefix `cd {dir} && …` — change
+  directory with a separate `cd` call first (shell cwd persists between Bash
+  calls in the main session). The orchestrator returns to the project root
+  with a separate `cd` call after the command finishes. Do not move on to the
+  next step or to another worktree while the cwd is still inside a worktree.
+- **Implementer (exception)**: in a subagent the shell cwd does not persist
+  between Bash calls, so a separate `cd` call is lost before the command
+  runs. The implementer runs an approved string in a single Bash call as
+  `cd "{worktree_path}" && <approved string>`, and everything after `&&` is
+  the approved string, exactly as recorded. The hook allows this form when
+  all of the following hold:
+    - the command starts with `cd`, then one double-quoted absolute path,
+      with no `cd` options;
+    - only spaces or tabs sit between the closing quote and the first `&&`;
+    - the path's realpath is an existing directory deeper than
+      `.claude/worktrees/em-workflow/` under the main working tree;
+    - everything after the first `&&` matches an approved string exactly
+      (surrounding whitespace aside).
+- **Every role**: never prefix environment assignments. The
+  `cd "{worktree_path}" && ` prefix above is the only prefix allowed, and
+  only for the implementer. Never split, join, quote-wrap, or "improve" the
+  string.
 - A mutated string no longer matches its approval and falls through to the
   normal permission prompt (or is denied if it still matches a declared
   workflow.yaml string).
@@ -121,10 +138,14 @@ commands **byte-for-byte as recorded**:
 
 | Condition | Decision |
 |-----------|----------|
-| Command matches a refusal pattern (and is workflow-relevant) | `deny` — even if approved |
+| Command matches a refusal pattern (and is workflow-relevant); checked against the whole command, a `cd` prefix included | `deny` — even if approved |
+| Implementer `cd` prefix form, `cd "{worktree_path}" && <approved string>`, meeting the conditions above | `allow` (no permission prompt) |
 | Command exactly matches an approved string for this repo | `allow` (no permission prompt) |
 | Command is declared in a `feature-docs/*/workflow.yaml` but not approved | `deny` — run the approval gate, then retry |
 | Anything else | no decision — normal Claude Code permission flow |
+
+A `cd` prefix form that does not meet the conditions above is judged as a
+whole string by the remaining rows (usually no decision).
 
 On a `deny` for an unapproved command:
 

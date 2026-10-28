@@ -115,7 +115,7 @@ R2b はスキップ理由が retryable なときだけチェーンを進める�
 workflow.yaml の build / test / format / e2e コマンドはリポジトリ管理の自由記述シェルであり、悪意あるリポジトリでは RCE の入口になりうる。em-workflow は「LLM が提案し、hook が裁く」の分離で守る（詳細: `references/command-execution-protocol.md`）:
 
 1. **事前一括承認**: create-spec（または develop の Step A.5）が全コマンド文字列を出典フィールド・実体の説明つきで提示し、AskUserQuestion で一括承認。承認は `~/.claude/em-workflow/approvals.json`（リポジトリ外・ユーザー管理。git common dir をキーに同一リポジトリの全 worktree で共有）へ記録する
-2. **実行時強制**: プラグイン同梱の PreToolUse hook（`hooks/bash_guard.py`）が全 Bash コールを機械的に検査する — 承認済み文字列と完全一致 → allow、workflow.yaml 記載かつ未承認 → deny、禁止パターン（sudo / curl-pipe-shell / プロジェクト外 rm 等）→ 承認済みでも deny。hook は LLM ではなくコードなので、プロンプトインジェクションで判定を曲げられない
+2. **実行時強制**: プラグイン同梱の PreToolUse hook（`hooks/bash_guard.py`）が全 Bash コールを機械的に検査する — 承認済み文字列と完全一致 → allow（implementer は例外として、`cd "{worktree_path}" && <承認文字列>` を 1 回の Bash 呼び出しで実行できる。`&&` より後ろが承認済み文字列と完全一致し、cd 先が `.claude/worktrees/em-workflow/` より深い場所のときに allow。条件の詳細は `references/command-execution-protocol.md`）、workflow.yaml 記載かつ未承認 → deny、禁止パターン（sudo / curl-pipe-shell / プロジェクト外 rm 等）→ 承認済みでも deny（`cd` 前置形を含むコマンド全体に当てる）。hook は LLM ではなくコードなので、プロンプトインジェクションで判定を曲げられない
 3. workflow.yaml と無関係なコマンドには判定を出さない（Claude Code 標準の権限フローのまま）
 
 これにより develop 実行中の確認プロンプトは、開発するプロダクトに関する質問だけになる。
