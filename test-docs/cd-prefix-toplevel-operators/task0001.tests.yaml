@@ -1,0 +1,114 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests before any edit: 11901 tests, OK (1 skipped)
+final_failures: []             # full suite re-executed after the implementation and this record: OK
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_bash_guard_cd_prefix_operators.TestAc1TopLevelOperatorsAreExcluded.test_ac1_operator_strings_get_no_decision
+      - tests.test_bash_guard_cd_prefix_operators.TestAc1TopLevelOperatorsAreExcluded.test_ac1_line_break_strings_get_no_decision
+      - tests.test_bash_guard_cd_prefix_operators.TestAc1TopLevelOperatorsAreExcluded.test_ac1_fixture_holds_the_strings_verbatim
+    red_confirmed: true
+    red_reason: >-
+      Run against the unmodified hook, the operator-string test failed for
+      every case in both cwds (22 subtests) and the line-break test failed
+      for both line-break strings in both cwds (4 subtests), each with
+      "AssertionError: Tuples differ: ('allow', ...) != ('silent', None)"
+      (the cd prefix form was allowed). The fixture-guard test passed before
+      the change by design (the bare approved strings are allowed by exact
+      match).
+  AC-2:
+    tests:
+      - tests.test_bash_guard_cd_prefix_operators.TestAc2RecognizedFormsStillAllowed.test_ac2_recognized_tokens_and_quoted_characters_allow
+      - tests.test_bash_guard_cd_prefix_operators.TestAc2RecognizedFormsStillAllowed.test_ac2_surrounding_blanks_and_a_trailing_line_feed_allow
+      - tests.test_bash_guard_cd_prefix_operators.TestAc2RecognizedFormsStillAllowed.test_ac2_operators_in_the_path_are_not_scanned
+    red_confirmed: false
+    red_reason: >-
+      Pinning of behavior that already held before the change (the cd prefix
+      form of these approved strings was already allowed with the cd prefix
+      reason); the tests passed before any implementation. They do fail
+      against hook variants that count too much (checked with throwaway
+      mutations of the hook, restored afterwards: no token recognition,
+      quotes ignored, backslash escape ignored in the unquoted state, a
+      backslash treated as an escape inside single quotes). The existing
+      tests.test_bash_guard_cd_prefix.TestAc1AllowedPrefixForm also detects
+      the loss of the allow for the plain and the a && b approved strings;
+      no red state occurred for that existing test.
+  AC-3:
+    tests:
+      - tests.test_bash_guard_cd_prefix_operators.TestAc3SafeSideExclusions.test_ac3_each_safe_side_string_gets_no_decision
+      - tests.test_bash_guard_cd_prefix_operators.TestAc3SafeSideExclusions.test_ac3_fixture_holds_the_strings_verbatim
+    red_confirmed: true
+    red_reason: >-
+      Run against the unmodified hook, the no-decision test failed for all 21
+      safe-side strings in both cwds (42 subtests) with "AssertionError:
+      Tuples differ: ('allow', ...) != ('silent', None)". The fixture-guard
+      test passed before the change by design.
+  AC-4:
+    tests:
+      - tests.test_bash_guard_cd_prefix_operators.TestAc4DecisionTableUnchanged.test_ac4_bare_approved_string_with_an_operator_is_allowed_by_exact_match
+      - tests.test_bash_guard_cd_prefix_operators.TestAc4DecisionTableUnchanged.test_ac4_bare_declared_unapproved_string_is_denied
+      - tests.test_bash_guard_cd_prefix_operators.TestAc4DecisionTableUnchanged.test_ac4_excluded_form_whose_whole_string_is_declared_is_denied
+      - tests.test_bash_guard_cd_prefix_operators.TestAc4DecisionTableUnchanged.test_ac4_not_excluded_form_whose_whole_string_is_declared_keeps_the_allow
+      - tests.test_bash_guard_cd_prefix_operators.TestAc4DecisionTableUnchanged.test_ac4_excluded_form_whose_whole_string_is_approved_is_allowed
+      - tests.test_bash_guard_cd_prefix_operators.TestAc4DecisionTableUnchanged.test_ac4_excluded_form_neither_approved_nor_declared_gets_no_decision
+    red_confirmed: true
+    red_reason: >-
+      Run against the unmodified hook, the declared-and-excluded test failed
+      with "AssertionError: 'allow' != 'deny'" (the cd prefix form was
+      allowed instead of denied as unapproved) and the neither-approved-nor-
+      declared test failed with "AssertionError: 'allow' != 'silent'". The
+      bare-string tests, the whole-string-approved test and the
+      not-excluded-declared test passed before the change by design (they
+      pin the unchanged decision table); they fail against a hook whose
+      final branch still denies every non-approved candidate or whose
+      declared check is missing (checked with throwaway mutations, restored
+      afterwards).
+  AC-5:
+    tests:
+      - tests.test_bash_guard_cd_prefix_operators.TestAc5RefusalPatternsAreAppliedFirst.test_ac5_refusal_string_with_an_operator_is_denied_in_cd_form
+      - tests.test_bash_guard_cd_prefix_operators.TestAc5RefusalPatternsAreAppliedFirst.test_ac5_the_store_holds_the_refusal_strings_verbatim
+    red_confirmed: false
+    red_reason: >-
+      Pinning of behavior that already held before the change (the refusal
+      patterns were applied to the whole command before any allow); the
+      tests passed before any implementation. The criterion guards against
+      a new implementation that drops an excluded candidate from the
+      workflow-relevant set: the refusal test fails against that variant
+      (checked with a throwaway mutation of the hook that narrowed the
+      candidate by the exclusion, restored afterwards). The existing
+      tests.test_bash_guard_cd_prefix.TestAc4RefusalPatternStillDenies
+      detects the refusal deny without an operator; no red state occurred
+      for that existing test.
+  AC-6:
+    tests:
+      - tests.test_bash_guard_cd_prefix_operators.TestAc6DocstringStatesTheConditions.test_ac6_the_paragraph_is_found_and_covers_the_existing_conditions
+      - tests.test_bash_guard_cd_prefix_operators.TestAc6DocstringStatesTheConditions.test_ac6_the_paragraph_states_every_required_condition
+      - tests.test_bash_guard_cd_prefix_operators.TestAc6DocstringStatesTheConditions.test_ac6_the_paragraph_ends_before_the_approval_store_paragraph
+      - tests.test_bash_guard_cd_prefix_operators.TestAc6DocstringStatesTheConditions.test_ac6_the_matcher_fires_on_a_paragraph_missing_a_statement
+      - tests.test_bash_guard_cd_prefix_operators.TestAc6DocstringStatesTheConditions.test_ac6_the_matcher_fires_on_a_paragraph_missing_a_token
+      - tests.test_bash_guard_cd_prefix_operators.TestAc6DocstringStatesTheConditions.test_ac6_the_matcher_fires_when_the_paragraph_is_absent
+    red_confirmed: true
+    red_reason: >-
+      Run against the unmodified hook docstring, the every-required-condition
+      test failed with "AssertionError: Lists differ: ['four top-level
+      operators', ...] != []" (every operator, safe-side and refusal
+      statement missing, plus all six tokens), and the two forged-text
+      tests that need the statements to exist in the real paragraph failed
+      for the same reason. The other tests of the class passed before the
+      change by design (paragraph location, and the matcher run on forged
+      text).
+  AC-7:
+    tests:
+      - tests.test_bash_guard_cd_prefix_operators.TestAc7StandardLibraryOnly.test_ac7_this_test_module_imports_only_standard_library_modules
+      - tests.test_bash_guard_cd_prefix_operators.TestAc7StandardLibraryOnly.test_ac7_hook_imports_only_standard_library_modules
+      - tests.test_bash_guard_cd_prefix_operators.TestAc7StandardLibraryOnly.test_ac7_the_checker_fires_on_forged_third_party_imports
+      - tests.test_bash_guard_cd_prefix.TestAc7StandardLibraryOnly.test_ac7_hook_executable_text_has_no_status_substring
+      - tests.test_hook_classification_pin.TestHookClassificationPin.test_documented_classification_matches_observed_classification_for_every_row
+    red_confirmed: false
+    red_reason: >-
+      Regression guards that held before the change and still hold; no red
+      state occurred. The unchanged state of tests/test_bash_guard_cd_prefix.py,
+      em-workflow/hooks/queue_launch_guard.py, em-workflow/scripts/merge-task.sh
+      and em-workflow/hooks/hooks.json was checked with git diff against the
+      parent branch (no difference), and the whole suite is the final run
+      recorded in final_failures.

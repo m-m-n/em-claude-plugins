@@ -124,6 +124,18 @@ approval rule below exactly as stated there. Your obligations:
   prefix allowed is `cd "{worktree_path}" &&` in the same Bash call, because
   the cwd does not persist between Bash calls. Never prefix environment
   assignments. A mutated string no longer matches its approval.
+- An approved string with a lone `&`, a `;`, a `||` or a line break at its top
+  level is not covered by the cd prefix form, so it is not run, and you report
+  it in `notes`. The full list of conditions is in the Verbatim execution rule
+  of `references/command-execution-protocol.md`; an approved string that meets
+  any of them is handled the same way. Do not run such a string with the
+  `cd "{worktree_path}" &&` prefix, do not run it without the prefix, and do
+  not rewrite or split it.
+- When the approved string that the cd prefix form does not cover is the test
+  command (`project_commands.test`), the test command is not run at any point,
+  the baseline run included, the report sets `tests: "fail"`, and `notes` says
+  that the test command was not run because the cd prefix form does not cover
+  it.
 - If the hook denies a command: do NOT retry, rephrase, or restructure the
   command to evade the match. Run nothing, set `tests: "fail"`, and explain
   in `notes` (per-command AskUserQuestion is unavailable to you — the
