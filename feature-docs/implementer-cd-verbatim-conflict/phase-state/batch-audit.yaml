@@ -1,0 +1,17 @@
+schema_version: 1
+feature: implementer-cd-verbatim-conflict
+records:
+- question_id: requirement.nonconforming-cd-form
+  packet_id: create-spec-q0001
+  answered_at: '2026-10-28T09:00:39+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - keep_existing
+  freeform: null
+  normalized_answer: 許可しないだけ（今の判定のまま）
+  resolution_note: 'relaxed route (category: security); harness: codex (1 turn); opus_escalation:
+    not run; orchestrator mapped Codex suggestion to option keep_existing. Codex reason:
+    bash_guard.py:191–198 はコマンド全体が宣言集合にも承認集合にも一致しなければ判定せず、command-execution-protocol.md
+    の Verbatim execution rule も変形した文字列を通常の権限確認へ回すと明記している。今回の許可条件を満たさない場合は、この既存判定を維持するのが妥当だと判断する;
+    options not chosen: deny_when_relevant'
