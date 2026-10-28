@@ -1,0 +1,29 @@
+schema_version: 1
+feature: cd-prefix-non-directory-dotdot
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: 25ad6b3e65df2eea2dac9df769617fa6df346890
+last_input_digest: sha256:d07f73e021701cd181ed5d08235c4a4d34afe435589e23d9e95d173ccf10a6d3
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: dispatched
+    input_digest: sha256:d07f73e021701cd181ed5d08235c4a4d34afe435589e23d9e95d173ccf10a6d3
+artifacts: []
+patches: []
+stale_redispatch_count: 0
+resolved_input_cache:
+  design_system_candidates:
+    resolved_at_generation: 1
+    paths: []
+    truncated: false
+  reference_scan_targets:
+    resolved_at_generation: 1
+    paths:
+      - em-workflow/hooks/bash_guard.py
+      - tests/test_bash_guard_cd_prefix.py
+      - em-workflow/references/command-execution-protocol.md
+last_error: null
