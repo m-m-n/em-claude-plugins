@@ -1,7 +1,7 @@
 schema_version: 1
 feature: cd-prefix-non-directory-dotdot
 phase: create-plan
-status: in_progress
+status: completed
 generation: 1
 base_revision: 7479d9c7178422d1e17f4a48f837c883fad82985
 last_input_digest: sha256:9ee46a8b00ee0d1f8a90e2f1d6f4bab3d39769171405c46bf830269e74ecc031
@@ -40,7 +40,7 @@ artifacts:
   produced_by: create-plan-run-0001
 patches:
 - patch_id: cd-prefix-non-directory-dotdot-create-plan-p0001
-  status: pending
+  status: applied
   base_input_digest: sha256:9ee46a8b00ee0d1f8a90e2f1d6f4bab3d39769171405c46bf830269e74ecc031
   base_workflow_blob: 8de805d257ed0d81c97816b3796048be55304826
 progress_fingerprint: null

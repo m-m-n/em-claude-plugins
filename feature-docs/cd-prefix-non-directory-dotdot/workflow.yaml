@@ -88,7 +88,8 @@ workflow:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: 6b5a018ff4be9a4d0a05c73cf15dce7a66814022
 - id: implement
   status: pending
   base_commit: null
@@ -100,7 +101,33 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: 'cd prefix: refuse `..` after a non-directory on the physical side'
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/hooks/bash_guard.py
+    - tests/test_bash_guard_cd_prefix.py
+    - em-workflow/references/command-execution-protocol.md
+    skills:
+    - backend-impl
+    domains:
+    - auth
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: pending
+    notes: null
 review:
   status: pending
   rounds_completed: 0
@@ -113,7 +140,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-2
@@ -124,7 +152,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-2
@@ -133,7 +162,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-3
   FR4:
@@ -141,7 +171,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-2
@@ -151,7 +182,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-2
@@ -161,7 +193,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-3
   NFR1:
@@ -169,7 +202,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-4
   NFR2:
@@ -177,7 +211,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-6
   NFR3:
@@ -185,7 +220,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-6
   NFR4:
@@ -193,7 +229,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-6
 batch:
