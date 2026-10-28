@@ -42,7 +42,7 @@ docstring both state rule C1 below; nothing cites a summary as its source.
 | C1: cd prefix exclusion rule | Decides whether the remainder of a cd prefix form is excluded from the cd prefix allow | Pre: R is the remainder (everything after the first `&&` of the cd prefix form) with surrounding whitespace removed — the same string that is compared with the approval store. Post: "excluded" when any rule E1–E10 below fires, otherwise "not excluded". Pure: no file read, no child process, no LLM; the same R always gives the same answer | task0001 (implements, docstring), task0002 (states in full in the protocol; summarizes in README and schema), task0003 (summarizes) |
 | C2: hook decision order | Orders the hook's checks so that the exclusion only narrows the cd prefix allow | Pre: the whole command, already stripped. Post: the decision of steps 1–8 below; no command gets a deny that the hook before this change would not give it | task0001 (implements), task0002 (the protocol's decision table keeps its rows and order) |
 | C3: document anchors | Headings other tasks and existing tests locate text by | Post: none of these headings is renamed, removed or re-levelled: protocol "Verbatim execution rule" and "Runtime enforcement (hook decision table)"; workflow-schema "Command approval store (outside the repository)"; README numbered item containing 実行時強制; implementer.md "Step 3: Verify the worktree"; SKILL.md "Command execution gate (workflow.yaml strings)". No new heading is added inside these sections | task0002, task0003 |
-| C4: shared wording | Keeps the summaries consistent with the protocol | Post: every summary names the four top-level operators — `&`, `;`, `\|\|` and the line break — with the words "top level" (English) or トップレベル (Japanese), and cites `references/command-execution-protocol.md` for the full list. The implementer handling is stated in English as: the implementer does not run such an approved string, and reports it in `notes`. Summaries do not restate rules E5–E10 | task0002, task0003 |
+| C4: shared wording | Keeps the summaries consistent with the protocol | Post: every summary names the four top-level operators — `&`, `;`, `\|\|` and the line break — with the words "top level" (English) or トップレベル (Japanese), and cites `references/command-execution-protocol.md` for the full list. The implementer handling is stated in English as: the implementer does not run such an approved string, and reports it in `notes`. The two implementer instruction sources (implementer.md Step 3, SKILL.md Command execution gate) also state the report value when that string is the test command (`project_commands.test`): `tests: "fail"`, with `notes` saying the test command was not run because the cd prefix form does not cover it. Summaries do not restate rules E5–E10 | task0002, task0003 |
 
 ### C1 detail: scan model
 
@@ -169,7 +169,9 @@ task0002.
 
 ## Open Questions
 
-- [ ] SPEC FR7 says the implementer does not run an excluded approved string
-      and reports it in `notes`; it does not say which value the
-      implementer's `tests` field takes in that case. The plans state only
-      what FR7 states.
+- [x] The value of the implementer's `tests` field when the approved test
+      command is excluded from the cd prefix form: `"fail"`, with `notes`
+      stating that the test command was not run because the cd prefix form
+      does not cover it (answer to
+      `create-plan.fr7-excluded-test-command-tests-value`). Carried by C4 and
+      task0003.
