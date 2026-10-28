@@ -1,0 +1,607 @@
+"""Contract tests for the `cd "<P>" && <approved command>` allowance in
+`em-workflow/hooks/bash_guard.py` (feature implementer-cd-verbatim-conflict,
+task0001).
+
+Every case drives the hook as a subprocess with PreToolUse JSON on standard
+input and reads the decision from standard output, in the same shape as
+`tests/test_loop_command_guard.py`. The expected decision is one of three:
+
+- `allow`  -- a JSON `permissionDecision: allow` on standard output.
+- `deny`   -- a JSON `permissionDecision: deny` on standard output.
+- `silent` -- no output at all (no decision; the normal permission flow
+  applies).
+
+Isolation: the approval store is a temporary file selected through
+`EM_WORKFLOW_APPROVALS`, `CLAUDE_PROJECT_DIR` is removed from the hook's
+environment, and every repository is a temporary git repository. The real
+approval store and the real repository's workflow.yaml are never read.
+Paths used for comparison are realpaths, so a temporary directory reached
+through a symbolic link does not skew the cases.
+
+Covers task0001 Acceptance Criteria
+(feature-docs/implementer-cd-verbatim-conflict/tasks/task0001.md):
+
+- AC-1: allow for `cd "P" && X` (syntax and path conditions met, X approved).
+- AC-2: silent for every form that breaks a syntax condition.
+- AC-3: silent for every form that breaks a path condition.
+- AC-4: a refusal pattern in X still denies, with the refusal reason.
+- AC-5: commands without a `cd` prefix are judged as before; no new deny.
+- AC-6: the guidance of the unapproved deny names the three audiences.
+- AC-7: standard-library-only imports; no `status` substring in the
+  executable text of the hook.
+
+Standard library only.
+"""
+
+import ast
+import json
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+GUARD_PATH = REPO_ROOT / "em-workflow" / "hooks" / "bash_guard.py"
+
+ALLOW = "allow"
+DENY = "deny"
+SILENT = "silent"
+
+ENV_PREFIXED = (
+    "CARGO_TARGET_DIR=src-tauri/target cargo test "
+    "--manifest-path src-tauri/Cargo.toml --lib"
+)
+AMPERSAND_COMMAND = "a && b"
+PLAIN_COMMAND = "make test"
+SUDO_COMMAND = "sudo make test"
+DECLARED_COMMAND = "make lint"
+UNRELATED_COMMAND = "make build"
+
+APPROVED_COMMANDS = (PLAIN_COMMAND, ENV_PREFIXED, AMPERSAND_COMMAND)
+
+
+def _clean_env():
+    return {
+        key: value
+        for key, value in os.environ.items()
+        if key != "CLAUDE_PROJECT_DIR" and not key.startswith("GIT_")
+    }
+
+
+def _git(cwd, *args):
+    env = _clean_env()
+    env.update(
+        GIT_AUTHOR_NAME="test",
+        GIT_AUTHOR_EMAIL="test@example.com",
+        GIT_COMMITTER_NAME="test",
+        GIT_COMMITTER_EMAIL="test@example.com",
+        GIT_CONFIG_NOSYSTEM="1",
+        GIT_CONFIG_GLOBAL=os.devnull,
+    )
+    proc = subprocess.run(
+        ["git", "-c", "commit.gpgsign=false", "-C", str(cwd), *args],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(f"git {' '.join(args)} failed: {proc.stderr}")
+    return proc.stdout.strip()
+
+
+def _make_repo(path):
+    path.mkdir(parents=True)
+    _git(path, "init", "-q")
+    (path / "README").write_text("fixture\n", encoding="utf-8")
+    _git(path, "add", "README")
+    _git(path, "commit", "-q", "-m", "init")
+
+
+class Fixture:
+    """Temporary repositories, approval stores and a git call logger."""
+
+    def __init__(self):
+        self.root = Path(os.path.realpath(tempfile.mkdtemp(prefix="bash-guard-cd-")))
+        root = self.root
+
+        # Repository 1: the repository the hook runs in.
+        self.repo = root / "repo1"
+        _make_repo(self.repo)
+        self.region = self.repo / ".claude" / "worktrees" / "em-workflow"
+        self.inside = self.region / "task0001"
+        self.deep = self.inside / "sub" / "deeper"
+        self.deep.mkdir(parents=True)
+        for name in (
+            "dollar$dir",
+            "back`tick",
+            "back\\slash",
+            "new\nline",
+            "x && y",
+            "with space",
+        ):
+            (self.region / name).mkdir()
+        self.dollar = self.region / "dollar$dir"
+        self.backtick = self.region / "back`tick"
+        self.backslash = self.region / "back\\slash"
+        self.newline = self.region / "new\nline"
+        self.ampersand = self.region / "x && y"
+        self.spaced = self.region / "with space"
+        self.file = self.region / "afile"
+        self.file.write_text("not a directory\n", encoding="utf-8")
+        self.missing = self.region / "does-not-exist"
+        self.sibling = self.repo / ".claude" / "worktrees" / "em-workflow-x" / "task0001"
+        self.sibling.mkdir(parents=True)
+
+        # A directory outside every worktree area, and a link to it placed
+        # inside the area.
+        self.outside = root / "outside"
+        self.outside.mkdir()
+        self.link_out = self.region / "link-out"
+        os.symlink(self.outside, self.link_out)
+        self.dotdot = Path(
+            os.path.join(str(self.inside), *([".."] * 5), "outside")
+        )
+
+        # A real git worktree below the area, used as the hook's cwd.
+        self.worktree = self.region / "wtree"
+        _git(self.repo, "worktree", "add", "-q", str(self.worktree), "-b", "wtree")
+
+        # Repository 2: same layout, different repository.
+        self.repo2 = root / "repo2"
+        _make_repo(self.repo2)
+        self.other_inside = self.repo2 / ".claude" / "worktrees" / "em-workflow" / "task0001"
+        self.other_inside.mkdir(parents=True)
+
+        # A directory that is not a git repository.
+        self.nongit = root / "plain"
+        self.nongit.mkdir()
+
+        # A declared (workflow.yaml) but never approved command.
+        wf_dir = self.repo / "feature-docs" / "demo"
+        wf_dir.mkdir(parents=True)
+        (wf_dir / "workflow.yaml").write_text(
+            f"test_command: {DECLARED_COMMAND}\n", encoding="utf-8"
+        )
+
+        # git call logger: lets a test see which cwd / arguments git ran with.
+        self.git_log = root / "git-calls.log"
+        shim_dir = root / "shim"
+        shim_dir.mkdir()
+        real_git = shutil.which("git")
+        shim = shim_dir / "git"
+        shim.write_text(
+            "#!/bin/sh\n"
+            'printf \'%s\\t%s\\n\' "$PWD" "$*" >> "$GIT_SHIM_LOG"\n'
+            f'exec "{real_git}" "$@"\n',
+            encoding="utf-8",
+        )
+        shim.chmod(0o755)
+        self.shim_dir = shim_dir
+
+        # Approval stores.
+        self.store = root / "approvals-main.json"
+        self.store_sudo = root / "approvals-sudo.json"
+        self.store_nongit = root / "approvals-nongit.json"
+        self.record(self.store, self.repo, APPROVED_COMMANDS)
+        self.record(self.store_nongit, self.nongit, APPROVED_COMMANDS)
+        key = _git(self.repo, "rev-parse", "--path-format=absolute", "--git-common-dir")
+        # `--record` refuses refusal patterns, so this store is written directly.
+        self.store_sudo.write_text(
+            json.dumps(
+                {"version": 1, "projects": {key: {"approved_commands": [SUDO_COMMAND]}}}
+            ),
+            encoding="utf-8",
+        )
+
+    def tokens(self):
+        return {
+            "@IN@": str(self.inside),
+            "@DEEP@": str(self.deep),
+            "@REGION@": str(self.region),
+            "@SIBLING@": str(self.sibling),
+            "@OUT@": str(self.outside),
+            "@OTHER@": str(self.other_inside),
+            "@DOTDOT@": str(self.dotdot),
+            "@LINK@": str(self.link_out),
+            "@FILE@": str(self.file),
+            "@MISSING@": str(self.missing),
+            "@DOLLAR@": str(self.dollar),
+            "@BACKTICK@": str(self.backtick),
+            "@BACKSLASH@": str(self.backslash),
+            "@NEWLINE@": str(self.newline),
+            "@AMP@": str(self.ampersand),
+            "@SPACED@": str(self.spaced),
+            "@WT@": str(self.worktree),
+        }
+
+    def expand(self, template):
+        for token, value in self.tokens().items():
+            template = template.replace(token, value)
+        return template
+
+    def env(self, store, extra=None):
+        env = _clean_env()
+        env["EM_WORKFLOW_APPROVALS"] = str(store)
+        env["GIT_CEILING_DIRECTORIES"] = str(self.root)
+        if extra:
+            env.update(extra)
+        return env
+
+    def record(self, store, project_dir, commands):
+        proc = subprocess.run(
+            [sys.executable, str(GUARD_PATH), "--record", "--project-dir", str(project_dir)],
+            input="\n".join(commands) + "\n",
+            capture_output=True,
+            text=True,
+            env=self.env(store),
+        )
+        if proc.returncode != 0:
+            raise RuntimeError(f"--record failed: {proc.stderr}")
+
+    def run_hook(self, command, cwd, store=None, extra_env=None):
+        payload = {"tool_name": "Bash", "tool_input": {"command": command}, "cwd": str(cwd)}
+        proc = subprocess.run(
+            [sys.executable, str(GUARD_PATH)],
+            input=json.dumps(payload),
+            capture_output=True,
+            text=True,
+            env=self.env(store or self.store, extra_env),
+            cwd=str(cwd),
+        )
+        return proc
+
+    def cleanup(self):
+        shutil.rmtree(self.root, ignore_errors=True)
+
+
+FIX = None
+
+
+def setUpModule():
+    global FIX
+    FIX = Fixture()
+
+
+def tearDownModule():
+    FIX.cleanup()
+
+
+def decide(proc):
+    """Return (decision, hookSpecificOutput dict or None)."""
+    if proc.returncode != 0:
+        raise AssertionError(f"hook exited {proc.returncode}: {proc.stderr}")
+    if proc.stderr != "":
+        raise AssertionError(f"hook wrote to stderr: {proc.stderr}")
+    if proc.stdout == "":
+        return SILENT, None
+    output = json.loads(proc.stdout)["hookSpecificOutput"]
+    return output["permissionDecision"], output
+
+
+# (expected decision, label, command template)
+ALLOW_CASES = (
+    (ALLOW, "plain approved command", 'cd "@IN@" && ' + PLAIN_COMMAND),
+    (ALLOW, "approved command that starts with an env assignment", 'cd "@IN@" && ' + ENV_PREFIXED),
+    (ALLOW, "approved command that itself contains &&", 'cd "@IN@" && ' + AMPERSAND_COMMAND),
+    (ALLOW, "deeper directory below the area", 'cd "@DEEP@" && ' + PLAIN_COMMAND),
+    (ALLOW, "no space before &&", 'cd "@IN@"&& ' + PLAIN_COMMAND),
+    (ALLOW, "no space after &&", 'cd "@IN@" &&' + PLAIN_COMMAND),
+    (ALLOW, "tabs around the path and &&", 'cd\t"@IN@"\t&&\t' + PLAIN_COMMAND),
+    (ALLOW, "several spaces everywhere", 'cd   "@IN@"   &&   ' + PLAIN_COMMAND),
+    (ALLOW, "surrounding whitespace on the command", '  cd "@IN@" && ' + PLAIN_COMMAND + "  \n"),
+    (ALLOW, "path containing && is not used for splitting", 'cd "@AMP@" && ' + PLAIN_COMMAND),
+    (ALLOW, "path containing a space", 'cd "@SPACED@" && ' + PLAIN_COMMAND),
+    (ALLOW, "a git worktree below the area", 'cd "@WT@" && ' + PLAIN_COMMAND),
+)
+
+SYNTAX_CASES = (
+    (SILENT, "unquoted path", 'cd @IN@ && ' + PLAIN_COMMAND),
+    (SILENT, "single-quoted path", "cd '@IN@' && " + PLAIN_COMMAND),
+    (SILENT, "relative path, bare name", 'cd "task0001" && ' + PLAIN_COMMAND),
+    (SILENT, "relative path that resolves into the area from cwd",
+     'cd "./.claude/worktrees/em-workflow/task0001" && ' + PLAIN_COMMAND),
+    (SILENT, "path with a dollar sign (directory exists)", 'cd "@DOLLAR@" && ' + PLAIN_COMMAND),
+    (SILENT, "path with a variable reference", 'cd "@IN@/$HOME" && ' + PLAIN_COMMAND),
+    (SILENT, "path with a backtick (directory exists)", 'cd "@BACKTICK@" && ' + PLAIN_COMMAND),
+    (SILENT, "path with a command substitution", 'cd "@IN@/$(true)" && ' + PLAIN_COMMAND),
+    (SILENT, "path with a backslash (directory exists)", 'cd "@BACKSLASH@" && ' + PLAIN_COMMAND),
+    (SILENT, "path with a newline (directory exists)", 'cd "@NEWLINE@" && ' + PLAIN_COMMAND),
+    (SILENT, "cd with -P", 'cd -P "@IN@" && ' + PLAIN_COMMAND),
+    (SILENT, "cd with --", 'cd -- "@IN@" && ' + PLAIN_COMMAND),
+    (SILENT, "two path arguments", 'cd "@IN@" "@IN@" && ' + PLAIN_COMMAND),
+    (SILENT, "semicolon between the closing quote and &&",
+     'cd "@IN@" ; true && ' + PLAIN_COMMAND),
+    (SILENT, "pipe between the closing quote and &&",
+     'cd "@IN@" | true && ' + PLAIN_COMMAND),
+    (SILENT, "newline between the closing quote and &&",
+     'cd "@IN@"\n&& ' + PLAIN_COMMAND),
+    (SILENT, "second cd in the prefix, remainder not approved",
+     'cd "@IN@" && cd "@IN@" && ' + PLAIN_COMMAND),
+    (SILENT, "command added before the approved string",
+     'cd "@IN@" && echo x && ' + PLAIN_COMMAND),
+    (SILENT, "command added after with semicolon",
+     'cd "@IN@" && ' + PLAIN_COMMAND + " ; echo x"),
+    (SILENT, "command added after with &&",
+     'cd "@IN@" && ' + PLAIN_COMMAND + " && echo x"),
+    (SILENT, "command added after with a pipe",
+     'cd "@IN@" && ' + PLAIN_COMMAND + " | tee out"),
+    (SILENT, "remainder is a prefix of an approved string", 'cd "@IN@" && make'),
+    (SILENT, "remainder is only the first half of an approved && string", 'cd "@IN@" && a'),
+    (SILENT, "remainder is only the second half of an approved && string", 'cd "@IN@" && b'),
+    (SILENT, "empty remainder", 'cd "@IN@" &&'),
+    (SILENT, "blank remainder", 'cd "@IN@" &&    '),
+    (SILENT, "no && at all", 'cd "@IN@"'),
+    (SILENT, "no space between cd and the path", 'cd"@IN@" && ' + PLAIN_COMMAND),
+    (SILENT, "something in front of cd", 'echo x; cd "@IN@" && ' + PLAIN_COMMAND),
+    (SILENT, "pushd instead of cd", 'pushd "@IN@" && ' + PLAIN_COMMAND),
+    (SILENT, "empty path", 'cd "" && ' + PLAIN_COMMAND),
+)
+
+PATH_CASES = (
+    (SILENT, "existing directory outside the area", 'cd "@OUT@" && ' + PLAIN_COMMAND),
+    (SILENT, "area of another repository", 'cd "@OTHER@" && ' + PLAIN_COMMAND),
+    (SILENT, ".. that leaves the area", 'cd "@DOTDOT@" && ' + PLAIN_COMMAND),
+    (SILENT, "symbolic link inside the area pointing outside", 'cd "@LINK@" && ' + PLAIN_COMMAND),
+    (SILENT, "the area itself", 'cd "@REGION@" && ' + PLAIN_COMMAND),
+    (SILENT, "sibling directory sharing the name prefix", 'cd "@SIBLING@" && ' + PLAIN_COMMAND),
+    (SILENT, "path that does not exist", 'cd "@MISSING@" && ' + PLAIN_COMMAND),
+    (SILENT, "path that is a file", 'cd "@FILE@" && ' + PLAIN_COMMAND),
+    (SILENT, "root directory", 'cd "/" && ' + PLAIN_COMMAND),
+)
+
+
+class CdPrefixCase(unittest.TestCase):
+    def check_cases(self, cases, cwd, store=None):
+        for expected, label, template in cases:
+            with self.subTest(label=label, cwd=cwd.name):
+                proc = FIX.run_hook(FIX.expand(template), cwd, store)
+                decision, _output = decide(proc)
+                self.assertEqual(decision, expected)
+
+
+class TestAc1AllowedPrefixForm(CdPrefixCase):
+    """AC-1 (FR1, FR9)."""
+
+    def test_ac1_allow_when_cwd_is_main_worktree(self):
+        self.check_cases(ALLOW_CASES, FIX.repo)
+
+    def test_ac1_allow_when_cwd_is_a_git_worktree(self):
+        self.check_cases(ALLOW_CASES, FIX.worktree)
+
+    def test_ac1_allow_reason_differs_from_the_exact_match_reason(self):
+        _, exact = decide(FIX.run_hook(PLAIN_COMMAND, FIX.repo))
+        decision, prefixed = decide(
+            FIX.run_hook(FIX.expand('cd "@IN@" && ' + PLAIN_COMMAND), FIX.repo)
+        )
+        self.assertEqual(decision, ALLOW)
+        self.assertNotEqual(
+            prefixed["permissionDecisionReason"], exact["permissionDecisionReason"]
+        )
+
+    def test_ac1_no_child_process_uses_the_prefixed_path(self):
+        log = FIX.git_log
+        if log.exists():
+            log.unlink()
+        extra = {
+            "PATH": str(FIX.shim_dir) + os.pathsep + os.environ.get("PATH", ""),
+            "GIT_SHIM_LOG": str(log),
+        }
+        command = FIX.expand('cd "@IN@" && ' + PLAIN_COMMAND)
+        decision, _ = decide(FIX.run_hook(command, FIX.repo, extra_env=extra))
+        self.assertEqual(decision, ALLOW)
+        lines = log.read_text(encoding="utf-8").splitlines() if log.exists() else []
+        self.assertTrue(lines, "git was never run through the logger")
+        for line in lines:
+            self.assertNotIn(str(FIX.inside), line)
+
+
+class TestAc2SyntaxConditions(CdPrefixCase):
+    """AC-2 (FR1, FR3, FR9, TM-1): a form that breaks a syntax condition is
+    left to the pre-change judgement, which is no output."""
+
+    def test_ac2_forms_breaking_a_syntax_condition_are_silent(self):
+        self.check_cases(SYNTAX_CASES, FIX.repo)
+
+
+class TestAc3PathConditions(CdPrefixCase):
+    """AC-3 (FR1, FR3, FR9, TM-2): a form that breaks a path condition is
+    left to the pre-change judgement, which is no output."""
+
+    def test_ac3_forms_breaking_a_path_condition_are_silent(self):
+        self.check_cases(PATH_CASES, FIX.repo)
+
+    def test_ac3_cwd_outside_any_git_repository_is_silent(self):
+        # The remainder is approved for this cwd's project, so only the
+        # unobtainable git common dir can keep the answer silent.
+        command = FIX.expand('cd "@IN@" && ' + PLAIN_COMMAND)
+        decision, _ = decide(FIX.run_hook(command, FIX.nongit, FIX.store_nongit))
+        self.assertEqual(decision, SILENT)
+
+    def test_ac3_nongit_cwd_still_allows_the_exact_approved_string(self):
+        decision, _ = decide(FIX.run_hook(PLAIN_COMMAND, FIX.nongit, FIX.store_nongit))
+        self.assertEqual(decision, ALLOW)
+
+
+class TestAc4RefusalPatternStillDenies(CdPrefixCase):
+    """AC-4 (FR2, FR9, TM-3)."""
+
+    def test_ac4_refusal_pattern_in_the_remainder_denies(self):
+        for cwd in (FIX.repo, FIX.worktree):
+            with self.subTest(cwd=cwd.name):
+                command = FIX.expand('cd "@IN@" && ' + SUDO_COMMAND)
+                decision, output = decide(FIX.run_hook(command, cwd, FIX.store_sudo))
+                self.assertEqual(decision, DENY)
+                reason = output["permissionDecisionReason"]
+                self.assertIn("禁止パターン", reason)
+                self.assertIn("sudo", reason)
+
+    def test_ac4_the_store_holds_the_refused_string_verbatim(self):
+        # Guards the fixture: the exact string alone also denies, proving the
+        # store entry is what is being matched.
+        decision, output = decide(FIX.run_hook(SUDO_COMMAND, FIX.repo, FIX.store_sudo))
+        self.assertEqual(decision, DENY)
+        self.assertIn("禁止パターン", output["permissionDecisionReason"])
+
+
+class TestAc5CommandsWithoutPrefixUnchanged(CdPrefixCase):
+    """AC-5 (FR3, FR9, NFR2)."""
+
+    def test_ac5_approved_command_allows(self):
+        decision, output = decide(FIX.run_hook(PLAIN_COMMAND, FIX.repo))
+        self.assertEqual(decision, ALLOW)
+        self.assertIn("承認済み", output["permissionDecisionReason"])
+
+    def test_ac5_declared_unapproved_command_denies(self):
+        decision, output = decide(FIX.run_hook(DECLARED_COMMAND, FIX.repo))
+        self.assertEqual(decision, DENY)
+        self.assertIn("未承認", output["permissionDecisionReason"])
+
+    def test_ac5_neither_declared_nor_approved_is_silent(self):
+        decision, _ = decide(FIX.run_hook(UNRELATED_COMMAND, FIX.repo))
+        self.assertEqual(decision, SILENT)
+
+    def test_ac5_prefixed_declared_unapproved_command_is_silent(self):
+        for cwd in (FIX.repo, FIX.worktree):
+            with self.subTest(cwd=cwd.name):
+                command = FIX.expand('cd "@IN@" && ' + DECLARED_COMMAND)
+                decision, _ = decide(FIX.run_hook(command, cwd))
+                self.assertEqual(decision, SILENT)
+
+    def test_ac5_prefixed_unrelated_command_is_silent(self):
+        command = FIX.expand('cd "@IN@" && ' + UNRELATED_COMMAND)
+        decision, _ = decide(FIX.run_hook(command, FIX.repo))
+        self.assertEqual(decision, SILENT)
+
+    def test_ac5_non_bash_and_blank_input_stay_silent(self):
+        proc = subprocess.run(
+            [sys.executable, str(GUARD_PATH)],
+            input=json.dumps({"tool_name": "Read", "tool_input": {"command": PLAIN_COMMAND}}),
+            capture_output=True,
+            text=True,
+            env=FIX.env(FIX.store),
+        )
+        self.assertEqual((proc.returncode, proc.stdout), (0, ""))
+        decision, _ = decide(FIX.run_hook("   ", FIX.repo))
+        self.assertEqual(decision, SILENT)
+
+
+class TestAc6DenyGuidance(CdPrefixCase):
+    """AC-6 (FR7): the unapproved deny carries separate guidance for the
+    orchestrator, for the implementer and for a subagent that cannot ask."""
+
+    @classmethod
+    def setUpClass(cls):
+        decision, output = decide(FIX.run_hook(DECLARED_COMMAND, FIX.repo))
+        assert decision == DENY
+        cls.context = output["additionalContext"]
+        cls.sentences = [s for s in cls.context.split("。") if s.strip()]
+
+    def sentence_index(self, marker):
+        found = [i for i, s in enumerate(self.sentences) if marker in s]
+        self.assertTrue(found, f"{marker!r} not in additionalContext: {self.context!r}")
+        return found[0]
+
+    def test_ac6_orchestrator_guidance_names_a_standalone_cd(self):
+        index = self.sentence_index("単独の cd")
+        self.assertIn("オーケストレーター", self.sentences[index])
+
+    def test_ac6_implementer_guidance_names_the_chained_form(self):
+        index = self.sentence_index('cd "{worktree_path}" && ')
+        self.assertIn("implementer", self.sentences[index])
+        self.assertIn("1 回の Bash 呼び出し", self.sentences[index])
+
+    def test_ac6_subagent_guidance_says_do_not_retry_and_report_in_notes(self):
+        index = self.sentence_index("再試行")
+        sentence = self.sentences[index]
+        self.assertIn("AskUserQuestion", sentence)
+        self.assertIn("notes", sentence)
+
+    def test_ac6_the_three_guidance_items_are_separate_sentences(self):
+        indexes = {
+            self.sentence_index("単独の cd"),
+            self.sentence_index('cd "{worktree_path}" && '),
+            self.sentence_index("再試行"),
+        }
+        self.assertEqual(len(indexes), 3)
+
+    def test_ac6_transforming_the_approved_string_is_discouraged(self):
+        self.assertIn("環境変数", self.context)
+
+    def test_ac6_refusal_pattern_deny_guidance_is_unchanged(self):
+        decision, output = decide(FIX.run_hook(SUDO_COMMAND, FIX.repo, FIX.store_sudo))
+        self.assertEqual(decision, DENY)
+        self.assertIn("ユーザーに定義の修正を報告すること", output["additionalContext"])
+        self.assertNotIn('cd "{worktree_path}"', output["additionalContext"])
+
+
+def _imported_top_level_modules(source):
+    found = set()
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.Import):
+            found.update(alias.name.split(".")[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+            found.add(node.module.split(".")[0])
+    return found
+
+
+def _executable_text_fragments(source):
+    """Identifiers and string literals of the module, docstrings excluded."""
+    tree = ast.parse(source)
+    docstring_nodes = set()
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            body = node.body
+            if (
+                body
+                and isinstance(body[0], ast.Expr)
+                and isinstance(body[0].value, ast.Constant)
+                and isinstance(body[0].value.value, str)
+            ):
+                docstring_nodes.add(id(body[0].value))
+    fragments = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            if id(node) not in docstring_nodes:
+                fragments.append(node.value)
+        elif isinstance(node, ast.Name):
+            fragments.append(node.id)
+        elif isinstance(node, ast.Attribute):
+            fragments.append(node.attr)
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            fragments.append(node.name)
+        elif isinstance(node, ast.arg):
+            fragments.append(node.arg)
+        elif isinstance(node, ast.keyword) and node.arg:
+            fragments.append(node.arg)
+        elif isinstance(node, ast.alias):
+            fragments.append(node.name)
+    return fragments
+
+
+class TestAc7StandardLibraryOnly(unittest.TestCase):
+    """AC-7 (NFR1, NFR3, NFR8)."""
+
+    def test_ac7_hook_imports_only_standard_library_modules(self):
+        source = GUARD_PATH.read_text(encoding="utf-8")
+        imported = _imported_top_level_modules(source)
+        self.assertTrue(imported)
+        self.assertEqual(imported - set(sys.stdlib_module_names), set())
+
+    def test_ac7_this_test_module_imports_only_standard_library_modules(self):
+        source = Path(__file__).read_text(encoding="utf-8")
+        imported = _imported_top_level_modules(source)
+        self.assertEqual(imported - set(sys.stdlib_module_names), set())
+
+    def test_ac7_hook_executable_text_has_no_status_substring(self):
+        # tests/test_hook_classification_pin.py counts "status" next to
+        # "workflow.yaml" in executable text as a per-task status read.
+        source = GUARD_PATH.read_text(encoding="utf-8")
+        offenders = [f for f in _executable_text_fragments(source) if "status" in f]
+        self.assertEqual(offenders, [])
+
+
+if __name__ == "__main__":
+    unittest.main()

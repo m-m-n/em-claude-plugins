@@ -8,13 +8,32 @@ an LLM — a prompt-injected agent cannot talk it out of a decision.
 Hook mode (no arguments; stdin = PreToolUse JSON):
   - refusal pattern in the command        -> deny (even if approved)
   - exact match in the approval store     -> allow
+  - cd "<path>" && <approved command>     -> allow (see "cd prefix" below)
   - declared in workflow.yaml, unapproved -> deny (run the approval gate)
   - anything else                         -> no decision (exit 0, no output;
                                              normal permission flow applies)
 
 The hook only ever decides on commands that are workflow-relevant (declared
-in a feature-docs/*/workflow.yaml or present in the approval store). All
-other Bash commands pass through untouched.
+in a feature-docs/*/workflow.yaml or present in the approval store, or a cd
+prefix in front of an approved command). All other Bash commands pass through
+untouched.
+
+cd prefix: a subagent's working directory does not survive between Bash
+calls, so an implementer runs an approved command as one call of the form
+`cd "<path>" && <approved command>`. The hook allows that form only when all
+of these hold; a command that fails any of them is judged exactly as if it
+had no cd prefix (never a new deny):
+  - syntax: `cd`, blanks, one double-quoted absolute path (no `"`, `$`,
+    backtick, backslash or line break in it), blanks, then the first `&&`;
+    everything after that `&&` is the remainder
+  - path: the realpath of <path> is an existing directory strictly below
+    <main worktree>/.claude/worktrees/em-workflow (compared per path
+    component), where the main worktree is the parent of the git common dir
+    of the hook's cwd; <path> is only resolved, never used as the directory
+    or argument of a child process
+  - approval: the remainder, with surrounding blanks removed, equals one
+    approved string of the cwd's project
+The refusal patterns are applied to the whole command first.
 
 Approval store: ~/.claude/em-workflow/approvals.json — user-owned, outside
 any repository, so a cloned repo can never ship approvals. Projects are
@@ -83,9 +102,13 @@ def git_out(cwd, *args):
     return None
 
 
+def git_common_dir(directory):
+    return git_out(directory, "rev-parse", "--path-format=absolute", "--git-common-dir")
+
+
 def project_key(directory):
     """Stable per-repository key, shared by all worktrees."""
-    common_dir = git_out(directory, "rev-parse", "--path-format=absolute", "--git-common-dir")
+    common_dir = git_common_dir(directory)
     if common_dir:
         return common_dir
     return os.path.realpath(directory)
@@ -152,6 +175,74 @@ def approved_for(store, key):
     return {c.strip() for c in commands if isinstance(c, str) and c.strip()}
 
 
+# `cd`, blanks, one double-quoted absolute path, blanks, the first `&&`.
+# The path may not contain a quote, `$`, a backtick, a backslash or a line
+# break; the remainder is everything after the `&&`.
+CD_PREFIX_RE = re.compile(r'cd[ \t]+"(/[^"$`\\\r\n]*)"[ \t]*&&(.*)', re.DOTALL)
+
+WORKTREE_AREA_PARTS = (".claude", "worktrees", "em-workflow")
+
+# additionalContext of the unapproved deny: one sentence per audience.
+UNAPPROVED_GUIDANCE = (
+    "オーケストレーターへ: command-execution-protocol.md の承認ゲート"
+    "（AskUserQuestion で一括承認 → bash_guard.py --record で記録）を実行してから、"
+    "単独の cd で作業ディレクトリへ移動し、承認された文字列をそのまま実行して。"
+    'implementer へ: 承認された文字列は cd "{worktree_path}" && <承認文字列> の '
+    "1 回の Bash 呼び出しで実行して。"
+    "AskUserQuestion を持たないサブエージェントは、deny された後に再試行せず、"
+    "実行を諦めて notes で報告すること。"
+    "環境変数の前置などで承認文字列そのものを変形しないこと。"
+)
+
+
+def split_cd_prefix(command):
+    """(path, remainder) when the command has the cd prefix form, else None."""
+    match = CD_PREFIX_RE.fullmatch(command)
+    if not match:
+        return None
+    return match.group(1), match.group(2)
+
+
+def worktree_area(common_dir):
+    """Realpath of <main worktree>/.claude/worktrees/em-workflow, or None."""
+    if not common_dir:
+        return None
+    main_tree = os.path.dirname(os.path.normpath(common_dir))
+    try:
+        return os.path.realpath(os.path.join(main_tree, *WORKTREE_AREA_PARTS))
+    except (OSError, ValueError):
+        return None
+
+
+def is_below(path, area):
+    """True when the realpath of path is an existing directory strictly below
+    area. Compared per path component; path is only resolved."""
+    try:
+        resolved = os.path.realpath(path)
+        if not os.path.isdir(resolved):
+            return False
+    except (OSError, ValueError):
+        return False
+    resolved_parts = resolved.split(os.sep)
+    area_parts = area.split(os.sep)
+    return (
+        len(resolved_parts) > len(area_parts)
+        and resolved_parts[: len(area_parts)] == area_parts
+    )
+
+
+def is_cd_prefixed_approved(command, approved, common_dir):
+    """True for `cd "<path>" && <approved>` with <path> in the worktree area."""
+    parts = split_cd_prefix(command)
+    if parts is None:
+        return False
+    path, remainder = parts
+    if remainder.strip() not in approved:
+        return False
+    area = worktree_area(common_dir)
+    return area is not None and is_below(path, area)
+
+
 def emit(decision, reason, additional_context=None):
     output = {
         "hookSpecificOutput": {
@@ -193,8 +284,11 @@ def hook_main():
     if command not in declared and not os.path.isfile(store_path):
         return 0
 
-    approved = approved_for(load_store(store_path), project_key(cwd))
-    if command not in declared and command not in approved:
+    common_dir = git_common_dir(cwd)
+    key = common_dir or os.path.realpath(cwd)
+    approved = approved_for(load_store(store_path), key)
+    cd_prefixed = is_cd_prefixed_approved(command, approved, common_dir)
+    if command not in declared and command not in approved and not cd_prefixed:
         return 0  # not workflow-relevant: stay silent
 
     reason = refusal_reason(command)
@@ -207,15 +301,17 @@ def hook_main():
         )
     elif command in approved:
         emit("allow", "em-workflow guard: 承認済みコマンド（approvals.json に完全一致）")
+    elif cd_prefixed:
+        emit(
+            "allow",
+            "em-workflow guard: 承認済みコマンドの worktree への cd 前置形"
+            "（cd より後ろが approvals.json に完全一致）",
+        )
     else:
         emit(
             "deny",
             "em-workflow guard: workflow.yaml 由来のコマンドが未承認だよ。コマンド承認ゲートを実行してから再試行して",
-            "オーケストレーターへ: command-execution-protocol.md の承認ゲート"
-            "（AskUserQuestion で一括承認 → bash_guard.py --record で記録）を実行してから、"
-            "承認された文字列と一字一句同じコマンドを再実行して。cd や環境変数の前置で"
-            "コマンド文字列を変形しないこと（作業ディレクトリは事前に単独の cd で移動する）。"
-            "AskUserQuestion を持たないサブエージェントは、実行を諦めて notes で報告すること。",
+            UNAPPROVED_GUIDANCE,
         )
     return 0
 
