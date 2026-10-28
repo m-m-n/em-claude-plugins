@@ -1,11 +1,11 @@
 schema_version: 1
 feature: cd-prefix-toplevel-operators
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: 4cc7bfeb884976452039171758505a01b4cf391f
-last_input_digest: sha256:42f27e4f593271c63553b81a363205afd312850c139d14d7e990eac996d51479
-active_request_id: create-spec-run-0001
+last_input_digest: sha256:d56338e992a241bf8c6f3f4aca6cab310d21bdeca5dfa6e5b9e87f13e072e68f
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     status: answered
@@ -63,6 +63,9 @@ worker_runs:
   status: needs_user_input
   input_digest: sha256:42f27e4f593271c63553b81a363205afd312850c139d14d7e990eac996d51479
   output_digest: sha256:98c6954a27db21d406e1565dd8f76c93ee7231b7468fd0dabc60c22967b87ee8
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:d56338e992a241bf8c6f3f4aca6cab310d21bdeca5dfa6e5b9e87f13e072e68f
 artifacts: []
 patches: []
 progress_fingerprint: null
