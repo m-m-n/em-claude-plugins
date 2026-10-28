@@ -1,0 +1,12 @@
+schema_version: 1
+feature: cd-prefix-toplevel-operators
+records:
+- question_id: create-plan.fr7-excluded-test-command-tests-value
+  packet_id: null
+  answered_at: '2026-10-28T23:58:00+09:00'
+  source: codex
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: "Option B: when the approved test command is an excluded string (top-level &, ; or ||) and so the suite cannot be run in the cd-prefix form, the implementer does not run it, reports tests: \"fail\", and states in notes that the command was not run because it is excluded from the cd-prefix form (Step 4a requires running the baseline; an unrun suite cannot back tests: \"pass\")."
+  normalized_answer: "B: tests \"fail\" + notes stating the excluded command was not run"
+  resolution_note: "gate: create-plan open point left by implementation-planner run-0001 (SPEC FR7 does not fix the implementer report tests value when the approved test command is excluded from the cd-prefix form); options: A keep FR7 text only and file follow-up / B tests fail + notes / C standalone cd then run; chosen: B; not chosen: A, C; key points: Step 4a requires running the baseline so an unrun suite cannot back tests pass, the standalone-cd rule is for the parent session only and implementers use the Step 3 cd-prefix form, exclusion is not a deny so the existing deny-fail rule does not apply directly; codex_consulted: true; opus_escalation: false"
