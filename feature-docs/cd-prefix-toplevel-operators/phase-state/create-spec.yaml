@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 4cc7bfeb884976452039171758505a01b4cf391f
 last_input_digest: sha256:2a9ac3f7eda3e1eb020d5a2a31df67fef9639a9467eb07d5e709211946bfedb6
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -69,13 +69,23 @@ worker_runs:
   output_digest: sha256:503e0a3acba8b37c3d944d09d8f204d339dc733bebab031b16adc55fb5651db6
   self_write_set: []
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:2a9ac3f7eda3e1eb020d5a2a31df67fef9639a9467eb07d5e709211946bfedb6
   dispatch_digest_inputs:
     em-workflow/references/contracts/spec-writer-contract.md: sha256:9032c6287d75f4a88e556bd3962c32ab8b4905cf3b6ececa895206788bcd0b63
     em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
     em-workflow/references/templates/spec-document.md: sha256:203dfcddbe507886ce861694fccd20ae25e5af0bd1b0efa5e935991add950cbd
-artifacts: []
+  output_digest: sha256:41796e5791281de6d7870cc100f6bb4bd604af345728007780d7f81a37c4371e
+  self_write_set:
+  - feature-docs/cd-prefix-toplevel-operators/REQUIREMENTS.md
+  - feature-docs/cd-prefix-toplevel-operators/SPEC.md
+artifacts:
+- path: feature-docs/cd-prefix-toplevel-operators/REQUIREMENTS.md
+  sha256: sha256:034bd3ea4aee446dc52fa1c97a06bc0d1622b803786acaebbd80ef381e9454e5
+  produced_by: create-spec-run-0003
+- path: feature-docs/cd-prefix-toplevel-operators/SPEC.md
+  sha256: sha256:ebeaa106344d76446f491893b62ce7934f798c3cd6854a3a4a4b323923cdd8ba
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
