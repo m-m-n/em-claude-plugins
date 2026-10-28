@@ -218,10 +218,20 @@ def is_below(path, area):
     """True when the realpath of path is an existing directory strictly below
     area. Compared per path component; path is only resolved."""
     try:
+        # The shell resolves `..` lexically (logical path); realpath resolves
+        # links first (physical path). Require both to land below area.
         resolved = os.path.realpath(path)
-        if not os.path.isdir(resolved):
+        logical = os.path.realpath(os.path.normpath(path))
+        if not os.path.isdir(resolved) or not os.path.isdir(logical):
             return False
     except (OSError, ValueError):
+        return False
+    area_parts = area.split(os.sep)
+    logical_parts = logical.split(os.sep)
+    if not (
+        len(logical_parts) > len(area_parts)
+        and logical_parts[: len(area_parts)] == area_parts
+    ):
         return False
     resolved_parts = resolved.split(os.sep)
     area_parts = area.split(os.sep)
