@@ -166,7 +166,7 @@ tasks:
     - NFR4
     - NFR6
     - NFR7
-    status: in_progress
+    status: merged
     branch: em-workflow/cd-prefix-toplevel-operators/task0002
     notes: null
   task0003:
