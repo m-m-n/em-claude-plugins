@@ -1,11 +1,11 @@
 schema_version: 1
 feature: implementer-cd-verbatim-conflict
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 301788df5916b6a055ffd8c85c6a755095811ab9
 last_input_digest: sha256:bea4fa9669bec1b055658e158351f5fffce07bc3e0285d775f706b338d0ccacc
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -53,7 +53,7 @@ artifacts:
   produced_by: create-plan-run-0001
 patches:
 - patch_id: create-plan-p0001
-  status: validated
+  status: applied
   base_input_digest: sha256:bea4fa9669bec1b055658e158351f5fffce07bc3e0285d775f706b338d0ccacc
   base_workflow_blob: 4b69e3c71731091d0052606137a5c6aab3500fd3
 progress_fingerprint: null
