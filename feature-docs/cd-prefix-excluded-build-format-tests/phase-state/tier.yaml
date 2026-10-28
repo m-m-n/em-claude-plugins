@@ -1,0 +1,66 @@
+schema_version: 2
+feature: cd-prefix-excluded-build-format-tests
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 0.99
+    confidence: 0.99
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.01
+      '1': 0.99
+      '2': 0.0
+      '3': 0.0
+  observed_at: '2026-10-29T08:51:59+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.08
+    confidence: 0.92
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.92
+      '2': 0.08
+      '3': 0.0
+  observed_at: '2026-10-29T08:54:19+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/agents/implementer.md
+  - em-workflow/skills/worktree-task-workflow/SKILL.md
+  - tests/test_implementer_cd_prefix_exclusion_docs.py
+  changed_lines_approx: 45
+  new_functions_needed: false
+  new_files_needed: false
+  new_dependencies_needed: false
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 3
+  body_change_kind: wording_or_rule_addition
+  change_containment: multiple_modules
+  caller_and_dependency_count: 2
+  changes_external_contract: true
+  changes_behavior: true
+  evidence: em-workflow/agents/implementer.md:100、em-workflow/skills/worktree-task-workflow/SKILL.md:127
+    は対象外コマンドの実行禁止とnotesへの記録を定めるが、tests値の指定はtestコマンドに限る。implementer.md:283 の一般規則にもbuild/formatの場合の指定はない。feature-docs/cd-prefix-toplevel-operators/tasks/task0003.md:131
+    はその値を対象外と明記している。既存の文書試験はtests/test_implementer_cd_prefix_exclusion_docs.py:194、参照先の実行規則はem-workflow/references/command-execution-protocol.md:105、報告の受け取り元はem-workflow/references/implement-phase.md:894
+    にある
+decided_at: '2026-10-29T08:54:23+09:00'
