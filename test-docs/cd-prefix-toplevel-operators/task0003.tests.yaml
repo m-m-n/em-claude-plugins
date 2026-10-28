@@ -1,0 +1,68 @@
+task_id: task0003
+baseline_failures: []          # 4a, before any edit: python3 -m unittest discover -s tests -> Ran 11901 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 11939 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestAC1ImplementerStep3.test_ac1_one_sentence_names_the_operators_and_says_not_run_and_noted
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestAC1ImplementerStep3.test_ac1_cites_the_protocol_verbatim_execution_rule_for_the_conditions
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestMatchersAreNotVacuous.test_operator_matcher_accepts_the_intended_sentence
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestMatchersAreNotVacuous.test_operator_matcher_rejects_the_cd_prefix_ampersands_alone
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestMatchersAreNotVacuous.test_operator_matcher_rejects_a_sentence_missing_an_operator
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestMatchersAreNotVacuous.test_operator_matcher_rejects_a_sentence_without_the_notes_report
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestMatchersAreNotVacuous.test_citation_matcher_accepts_the_intended_sentence
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestMatchersAreNotVacuous.test_citation_matcher_rejects_a_bare_path_mention
+    red_confirmed: true
+    red_reason: "Run against the unchanged implementer.md, both TestAC1ImplementerStep3 tests failed with AssertionError: 0 != 1 (no Step 3 sentence names the four operators with 'top level', and none cites the Verbatim execution rule of the protocol)."
+  AC-2:
+    tests:
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestAC2SkillCommandExecutionGate.test_ac2_one_sentence_names_the_operators_and_says_not_run_and_noted
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestAC2SkillCommandExecutionGate.test_ac2_cites_the_protocol_verbatim_execution_rule_for_the_conditions
+    red_confirmed: true
+    red_reason: "Run against the unchanged SKILL.md, both TestAC2SkillCommandExecutionGate tests failed with AssertionError: 0 != 1. The gate section already held the protocol path inside a ${CLAUDE_PLUGIN_ROOT} citation, so the citation matcher requires the sentence to name the Verbatim execution rule and the conditions."
+  AC-3:
+    tests:
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestAC3HandlingInBothSections.test_ac3_handling_sentence_is_in_both_sections
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestMatchersAreNotVacuous.test_handling_matcher_accepts_the_intended_sentence
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestMatchersAreNotVacuous.test_handling_matcher_rejects_a_sentence_missing_split
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestMatchersAreNotVacuous.test_handling_matcher_rejects_a_sentence_missing_the_no_prefix_case
+    red_confirmed: true
+    red_reason: "Run against the unchanged documents, test_ac3_handling_sentence_is_in_both_sections failed for both subTests (implementer.md Step 3 and SKILL.md Command execution gate) with AssertionError: 0 != 1."
+  AC-4:
+    tests:
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestAC4TestCommandReportValue.test_ac4_one_sentence_ties_the_not_covered_string_to_the_test_command
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestAC4TestCommandReportValue.test_ac4_the_existing_gate_deny_sentence_alone_does_not_satisfy_it
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestAC4TestCommandReportValue.test_ac4_the_existing_deny_bullet_is_unchanged
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestMatchersAreNotVacuous.test_test_command_matcher_accepts_the_intended_sentence
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestMatchersAreNotVacuous.test_test_command_matcher_rejects_the_existing_deny_wording_alone
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestMatchersAreNotVacuous.test_test_command_matcher_rejects_a_sentence_without_the_cover_reason
+    red_confirmed: true
+    red_reason: "Run against the unchanged documents, test_ac4_one_sentence_ties_the_not_covered_string_to_the_test_command failed for both subTests with AssertionError: 0 != 1; the gate section's existing deny bullet was present and did not satisfy the matcher. The other tests of this entry are guards (the deny-only forged text is rejected, the deny bullet is unchanged) and passed before and after."
+  AC-5:
+    tests:
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestAC5NoSafeSideRestatement.test_ac5_neither_section_restates_the_safe_side_constructs
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestAC5NoSafeSideRestatement.test_ac5_sections_name_no_other_exclusion_construct_words
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestMatchersAreNotVacuous.test_safe_side_matcher_flags_each_construct
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestMatchersAreNotVacuous.test_safe_side_matcher_accepts_the_plugin_root_path_variable
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestMatchersAreNotVacuous.test_safe_side_matcher_still_flags_a_brace_next_to_the_plugin_root
+    red_confirmed: false
+    red_reason: "An absence criterion: the unchanged documents already held none of the safe-side constructs, so the section tests passed before any edit and no red state occurred for this change. Their non-vacuity is shown by the forged-text cases in the same module (test_safe_side_matcher_flags_each_construct flags $', $\", ${ and #; the ${CLAUDE_PLUGIN_ROOT} citation already in the gate section is accepted, and a different ${ is still flagged)."
+  AC-6:
+    tests:
+      - tests.test_implementer_cd_chain_docs
+      - tests.test_worktree_skill_instruction_source
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestAC6ExistingConstraintsStayIntact.test_no_sentence_asks_for_a_separate_cd_or_forbids_chaining_or_says_may_reset
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestAC6ExistingConstraintsStayIntact.test_gate_section_keeps_byte_for_byte_once_and_no_other_byte_wording
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestAC6ExistingConstraintsStayIntact.test_gate_section_adds_no_second_copy_of_the_pinned_sentences
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestAC6ExistingConstraintsStayIntact.test_step3_adds_no_second_copy_of_the_pinned_sentences
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestAC6ExistingConstraintsStayIntact.test_step3_keeps_the_read_and_write_boundary_sentence
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing tests.test_implementer_cd_chain_docs and tests.test_worktree_skill_instruction_source detect the sentence-count and wording constraints of Step 3 and the gate section; no red state occurred for this change, because they passed unedited before the edit and still pass after it. The TestAC6 tests of the new module re-check the same constraints against the added text and also passed before and after."
+  AC-7:
+    tests:
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestAC7Mechanics.test_this_module_imports_only_the_standard_library
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestSectionScoping.test_a_renamed_heading_fails_loudly_instead_of_passing_on_empty_text
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestSectionScoping.test_every_section_is_found_and_nonempty
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestSectionScoping.test_neighbouring_sections_are_not_swallowed
+    red_confirmed: false
+    red_reason: "These are properties of the new module (it locates text by heading, raises on a missing heading, imports the standard library only); they were written together with the module and passed on its first run, so no red state occurred for this criterion. The full-suite run (python3 -m unittest discover -s tests, OK) is the suite-level outcome."
