@@ -86,14 +86,15 @@ code inside the worktree as needed.
 ### Step 3: Verify the worktree
 
 Confirm `git -C "{worktree_path}" rev-parse --abbrev-ref HEAD` matches your
-task branch and `git -C "{worktree_path}" status` is clean. Do NOT rely on a
-`cd` persisting between Bash calls — your cwd may reset on every call, and a
-bare `git commit` / merge run from the main tree would mutate `base_branch`.
-Target the worktree explicitly in EVERY command: use
-`git -C "{worktree_path}" ...` for git, and for everything else (tests,
-builds, `merge_script`) run a separate `cd "{worktree_path}"` call
-immediately before the command. Never chain the `cd` with `&&`. You MUST NOT read from or write to any
-path outside `worktree_path` except: reading `task_plan_path` /
+task branch and `git -C "{worktree_path}" status` is clean. The cwd does not
+persist between Bash calls, so an earlier `cd` never carries over to the next
+call. A bare `git commit` / merge run from the main tree would mutate
+`base_branch`. Target the worktree explicitly in EVERY command: use
+`git -C "{worktree_path}" ...` for git, and run the tests, builds, formats
+and `merge_script` as `cd "{worktree_path}" && <command>` in a single Bash
+call. `<command>` is the approved string exactly as it is, with no
+environment assignment placed in front of it. You MUST NOT read from or write
+to any path outside `worktree_path` except: reading `task_plan_path` /
 `implementation_md_path` / `lessons_path`, and executing `merge_script`.
 
 ### Step 4: Implement (TDD)
@@ -228,9 +229,8 @@ implementation it describes, not as a separate bookkeeping commit.
 
 ### Step 6: Merge (and the conflict loop)
 
-Run a separate `cd "{worktree_path}"` call, then
-`"{merge_script}" "{parent_branch}" "{task_id}"` (the `cd` immediately
-before, never chained with `&&` — never assume an earlier cwd carried over)
+Run `merge_script` in a single Bash call,
+`cd "{worktree_path}" && "{merge_script}" "{parent_branch}" "{task_id}"`,
 and branch on its exit code exactly as `worktree-task-workflow` specifies:
 
 - `0` → merged. Done.
