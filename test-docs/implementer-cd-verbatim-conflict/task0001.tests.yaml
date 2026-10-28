@@ -1,0 +1,95 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests: 11807 tests, OK (1 skipped)
+final_failures: []             # re-executed after the implementation and this record: OK
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestAc1AllowedPrefixForm.test_ac1_allow_when_cwd_is_main_worktree
+      - tests.test_bash_guard_cd_prefix.TestAc1AllowedPrefixForm.test_ac1_allow_when_cwd_is_a_git_worktree
+      - tests.test_bash_guard_cd_prefix.TestAc1AllowedPrefixForm.test_ac1_allow_reason_differs_from_the_exact_match_reason
+      - tests.test_bash_guard_cd_prefix.TestAc1AllowedPrefixForm.test_ac1_no_child_process_uses_the_prefixed_path
+    red_confirmed: true
+    red_reason: >-
+      Run against the unmodified hook, every allow case failed with
+      "AssertionError: 'silent' != 'allow'" (plain, env-assignment-prefixed
+      and &&-containing approved strings, for both the main-worktree cwd and
+      a git-worktree cwd); the reason-differs and no-child-process tests
+      failed on the same missing allow.
+  AC-2:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestAc2SyntaxConditions.test_ac2_forms_breaking_a_syntax_condition_are_silent
+    red_confirmed: false
+    red_reason: >-
+      Pinning of behavior that already held before the change (no output
+      for these forms in the unmodified hook); the test passed before any
+      implementation. It does fail against hook variants that loosen a
+      syntax condition (checked with throwaway mutations of the hook: dollar
+      sign allowed, remainder matched by substring, splitting at the first
+      && of the whole string).
+  AC-3:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestAc3PathConditions.test_ac3_forms_breaking_a_path_condition_are_silent
+      - tests.test_bash_guard_cd_prefix.TestAc3PathConditions.test_ac3_cwd_outside_any_git_repository_is_silent
+      - tests.test_bash_guard_cd_prefix.TestAc3PathConditions.test_ac3_nongit_cwd_still_allows_the_exact_approved_string
+    red_confirmed: false
+    red_reason: >-
+      Pinning of behavior that already held before the change (no output
+      for these forms in the unmodified hook); the tests passed before any
+      implementation. They do fail against hook variants that loosen a path
+      condition (checked with throwaway mutations of the hook: string
+      prefix comparison, no realpath, the area itself accepted).
+  AC-4:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestAc4RefusalPatternStillDenies.test_ac4_refusal_pattern_in_the_remainder_denies
+      - tests.test_bash_guard_cd_prefix.TestAc4RefusalPatternStillDenies.test_ac4_the_store_holds_the_refused_string_verbatim
+    red_confirmed: true
+    red_reason: >-
+      Run against the unmodified hook, the remainder test failed with
+      "AssertionError: 'silent' != 'deny'" for both cwds (the cd-prefixed
+      sudo string produced no output). The fixture-guard test passed before
+      the change by design.
+  AC-5:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestAc5CommandsWithoutPrefixUnchanged.test_ac5_approved_command_allows
+      - tests.test_bash_guard_cd_prefix.TestAc5CommandsWithoutPrefixUnchanged.test_ac5_declared_unapproved_command_denies
+      - tests.test_bash_guard_cd_prefix.TestAc5CommandsWithoutPrefixUnchanged.test_ac5_neither_declared_nor_approved_is_silent
+      - tests.test_bash_guard_cd_prefix.TestAc5CommandsWithoutPrefixUnchanged.test_ac5_prefixed_declared_unapproved_command_is_silent
+      - tests.test_bash_guard_cd_prefix.TestAc5CommandsWithoutPrefixUnchanged.test_ac5_prefixed_unrelated_command_is_silent
+      - tests.test_bash_guard_cd_prefix.TestAc5CommandsWithoutPrefixUnchanged.test_ac5_non_bash_and_blank_input_stay_silent
+    red_confirmed: false
+    red_reason: >-
+      Pinning of behavior that already held before the change (judgement of
+      commands without a cd prefix, and no new deny for a prefixed
+      declared-but-unapproved string); the tests passed before any
+      implementation.
+  AC-6:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestAc6DenyGuidance.test_ac6_orchestrator_guidance_names_a_standalone_cd
+      - tests.test_bash_guard_cd_prefix.TestAc6DenyGuidance.test_ac6_implementer_guidance_names_the_chained_form
+      - tests.test_bash_guard_cd_prefix.TestAc6DenyGuidance.test_ac6_subagent_guidance_says_do_not_retry_and_report_in_notes
+      - tests.test_bash_guard_cd_prefix.TestAc6DenyGuidance.test_ac6_the_three_guidance_items_are_separate_sentences
+      - tests.test_bash_guard_cd_prefix.TestAc6DenyGuidance.test_ac6_transforming_the_approved_string_is_discouraged
+      - tests.test_bash_guard_cd_prefix.TestAc6DenyGuidance.test_ac6_refusal_pattern_deny_guidance_is_unchanged
+    red_confirmed: true
+    red_reason: >-
+      Run against the unmodified hook, the implementer test failed with
+      "'cd \"{worktree_path}\" && ' not in additionalContext", the subagent
+      test with "'再試行' not in additionalContext", the orchestrator test
+      with "'オーケストレーター' not found in" the sentence holding the
+      standalone-cd wording, and the separate-sentences test on the missing
+      markers. The environment-variable and refusal-guidance tests passed
+      before the change by design (they pin wording that must be kept).
+  AC-7:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestAc7StandardLibraryOnly.test_ac7_hook_imports_only_standard_library_modules
+      - tests.test_bash_guard_cd_prefix.TestAc7StandardLibraryOnly.test_ac7_this_test_module_imports_only_standard_library_modules
+      - tests.test_bash_guard_cd_prefix.TestAc7StandardLibraryOnly.test_ac7_hook_executable_text_has_no_status_substring
+      - tests.test_hook_classification_pin.TestObserveHookSource.test_bash_guard_reads_workflow_yaml_but_not_task_status
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope for the pin, but the existing
+      tests.test_hook_classification_pin.TestObserveHookSource.test_bash_guard_reads_workflow_yaml_but_not_task_status
+      detects a "status" substring in the executable text of bash_guard.py;
+      no red state occurred for this change. The new import and
+      executable-text checks also passed before any implementation (the
+      constraint held before the change and is kept).
