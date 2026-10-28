@@ -33,7 +33,21 @@ had no cd prefix (never a new deny):
     or argument of a child process
   - approval: the remainder, with surrounding blanks removed, equals one
     approved string of the cwd's project
-The refusal patterns are applied to the whole command first.
+  - operators: no lone `&`, `;`, `||` or line break at the top level of the
+    remainder (outside quotes and backslash escapes); a line break counts
+    inside quotes too. The recognized tokens (`&&`, `|&`, `>&`, `<&`, `&>`,
+    `&>>`) are not counted, and a `|` that starts none of them is a pipe and
+    is not counted. Nesting is never parsed
+  - safe side: the remainder has none of these: an unclosed quote; a trailing
+    backslash; `$'` or `$"` anywhere; `#` anywhere, inside quotes too; `(`,
+    `)`, `{` or `}` outside quotes and backslash escapes; `$(`, `${` or a
+    backtick anywhere, inside single quotes too
+The refusal patterns are applied to the whole command first; that check does
+not depend on the operator conditions above. A cd prefix form that meets the
+syntax, path and approval conditions but fails an operator or safe-side
+condition keeps its place among the workflow-relevant commands: it is judged
+by the same table as the bare command (exact approval allows, a whole-command
+declaration in workflow.yaml denies as unapproved, otherwise no decision).
 
 Approval store: ~/.claude/em-workflow/approvals.json — user-owned, outside
 any repository, so a cloned repo can never ship approvals. Projects are
@@ -242,7 +256,12 @@ def is_below(path, area):
 
 
 def is_cd_prefixed_approved(command, approved, common_dir):
-    """True for `cd "<path>" && <approved>` with <path> in the worktree area."""
+    """True for `cd "<path>" && <approved>` with <path> in the worktree area.
+
+    This is the cd prefix candidate: it decides whether the command is
+    workflow-relevant. Whether the cd prefix allow is given is decided by
+    cd_prefix_allowed.
+    """
     parts = split_cd_prefix(command)
     if parts is None:
         return False
@@ -251,6 +270,88 @@ def is_cd_prefixed_approved(command, approved, common_dir):
         return False
     area = worktree_area(common_dir)
     return area is not None and is_below(path, area)
+
+
+# Remainder text that excludes the cd prefix allow wherever it appears, inside
+# quotes included (rules E7, E8, E10).
+EXCLUDED_ANYWHERE = ("$'", '$"', "#", "$(", "${", "`")
+
+# Characters that exclude the cd prefix allow when unquoted and unescaped (E9).
+EXCLUDED_UNQUOTED = "(){}"
+
+# Tokens consumed as one unit in the unquoted state, longest match first. The
+# `&` inside them is not a lone `&`.
+UNCOUNTED_TOKENS = ("&>>", "&&", "&>", "|&", ">&", "<&")
+
+# Characters that a backslash escapes inside double quotes (Bash); any other
+# backslash there is an ordinary character.
+DOUBLE_QUOTE_ESCAPED = '$`"\\\n'
+
+
+def cd_remainder_excluded(remainder):
+    """True when the remainder of a cd prefix form is excluded from the cd
+    prefix allow (rules E1 to E10 of the cd-prefix-toplevel-operators plan).
+
+    One left-to-right pass with three quoting states (unquoted, single-quoted,
+    double-quoted). Pure: no file read, no child process. Nesting is never
+    parsed; one hit of any rule is enough. The remainder is trimmed first, so
+    the scanned string is the one compared with the approval store.
+    """
+    text = remainder.strip()
+    # E4: a line break anywhere. E7, E8, E10: position-independent text.
+    if "\n" in text or "\r" in text:
+        return True
+    if any(piece in text for piece in EXCLUDED_ANYWHERE):
+        return True
+
+    quote = ""  # "", "'" or '"'
+    index = 0
+    size = len(text)
+    while index < size:
+        char = text[index]
+        if quote == "'":
+            # Every character is ordinary, a backslash included.
+            if char == "'":
+                quote = ""
+            index += 1
+        elif quote == '"':
+            if char == "\\":
+                if index + 1 >= size:
+                    return True  # E6
+                escapes = text[index + 1] in DOUBLE_QUOTE_ESCAPED
+                index += 2 if escapes else 1
+            else:
+                if char == '"':
+                    quote = ""
+                index += 1
+        elif char == "\\":
+            if index + 1 >= size:
+                return True  # E6
+            index += 2  # an escaped character is never counted
+        elif char in "'\"":
+            quote = char
+            index += 1
+        elif char == ";" or char in EXCLUDED_UNQUOTED:
+            return True  # E2, E9
+        elif char in "&|<>":
+            token = next((t for t in UNCOUNTED_TOKENS if text.startswith(t, index)), None)
+            if token:
+                index += len(token)
+            elif char == "&" or text.startswith("||", index):
+                return True  # E1, E3
+            else:
+                index += 1  # a pipe or a redirection character
+        else:
+            index += 1
+    return quote != ""  # E5
+
+
+def cd_prefix_allowed(command, candidate):
+    """True when the cd prefix candidate also passes the exclusion rules."""
+    if not candidate:
+        return False
+    parts = split_cd_prefix(command)
+    return parts is not None and not cd_remainder_excluded(parts[1])
 
 
 def emit(decision, reason, additional_context=None):
@@ -297,8 +398,8 @@ def hook_main():
     common_dir = git_common_dir(cwd)
     key = common_dir or os.path.realpath(cwd)
     approved = approved_for(load_store(store_path), key)
-    cd_prefixed = is_cd_prefixed_approved(command, approved, common_dir)
-    if command not in declared and command not in approved and not cd_prefixed:
+    cd_candidate = is_cd_prefixed_approved(command, approved, common_dir)
+    if command not in declared and command not in approved and not cd_candidate:
         return 0  # not workflow-relevant: stay silent
 
     reason = refusal_reason(command)
@@ -311,18 +412,20 @@ def hook_main():
         )
     elif command in approved:
         emit("allow", "em-workflow guard: 承認済みコマンド（approvals.json に完全一致）")
-    elif cd_prefixed:
+    elif cd_prefix_allowed(command, cd_candidate):
         emit(
             "allow",
             "em-workflow guard: 承認済みコマンドの worktree への cd 前置形"
             "（cd より後ろが approvals.json に完全一致）",
         )
-    else:
+    elif command in declared:
         emit(
             "deny",
             "em-workflow guard: workflow.yaml 由来のコマンドが未承認だよ。コマンド承認ゲートを実行してから再試行して",
             UNAPPROVED_GUIDANCE,
         )
+    # Otherwise no decision: only an excluded cd prefix candidate that is
+    # neither approved nor declared as a whole reaches this point.
     return 0
 
 
