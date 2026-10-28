@@ -328,7 +328,7 @@ class TestAC3DecodedCommandUnderVerbatimRule(unittest.TestCase):
         section = _normalize_ws(gate_section())
         for expected in (
             "Run each `project_commands` string **verbatim** (byte-for-byte).",
-            "Never prefix `cd …` or environment assignments",
+            'The only prefix allowed is `cd "{worktree_path}" &&` in the same Bash call',
             "A mutated string no longer matches its approval.",
         ):
             with self.subTest(expected=expected):

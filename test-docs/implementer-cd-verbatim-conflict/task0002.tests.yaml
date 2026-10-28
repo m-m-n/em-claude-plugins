@@ -1,0 +1,53 @@
+task_id: task0002
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 11807 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 11841 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_implementer_cd_chain_docs.TestAC1ImplementerStep3.test_ac1_states_that_the_cwd_does_not_persist_between_bash_calls
+      - tests.test_implementer_cd_chain_docs.TestAC1ImplementerStep3.test_ac1_runs_tests_builds_formats_and_merge_script_as_one_chained_call
+      - tests.test_implementer_cd_chain_docs.TestAC1ImplementerStep3.test_ac1_command_string_gets_no_environment_assignment_in_front
+    red_confirmed: true
+    red_reason: "Against the unchanged implementer.md all three failed with AssertionError: 0 != 1 (no Step 3 sentence states that the cwd does not persist between Bash calls, none runs tests/builds/formats/merge_script as `cd \"{worktree_path}\" && <command>` in a single Bash call, none says `<command>` is the approved string with no environment assignment in front). The git -C, read/write boundary and main-tree sentences of the same class passed before the change because that wording pre-existed."
+  AC-2:
+    tests:
+      - tests.test_implementer_cd_chain_docs.TestAC2ImplementerStep6.test_ac2_shows_the_merge_script_call_as_one_bash_call
+      - tests.test_implementer_tests_yaml_record_contract.TestR5MandatoryRerunAfterParentSideAdoption.test_required_phrases_present
+    red_confirmed: true
+    red_reason: "The single-Bash-call test failed against the unchanged implementer.md with AssertionError: 0 != 1 (Step 6 told the implementer to run a separate cd call, so no sentence held the chained merge_script call). The existing test_implementer_tests_yaml_record_contract test pins the unchanged Step 6 conflict-loop sentences; it passed before and after, no red state occurred for it."
+  AC-3:
+    tests:
+      - tests.test_implementer_cd_chain_docs.TestAC3NoOldWording.test_ac3_no_separate_cd_call_sentence_remains
+      - tests.test_implementer_cd_chain_docs.TestAC3NoOldWording.test_ac3_no_ban_on_joining_cd_with_and_and_remains
+      - tests.test_implementer_cd_chain_docs.TestAC3NoOldWording.test_ac3_no_cwd_may_reset_sentence_remains
+      - tests.test_implementer_cd_chain_docs.TestAC3NoOldWording.test_ac3_separate_cd_check_flags_the_earlier_wording
+      - tests.test_implementer_cd_chain_docs.TestAC3NoOldWording.test_ac3_chain_prohibition_check_flags_the_earlier_wording
+      - tests.test_implementer_cd_chain_docs.TestAC3NoOldWording.test_ac3_cwd_may_reset_check_flags_the_earlier_wording
+      - tests.test_implementer_cd_chain_docs.TestAC3NoOldWording.test_ac3_checks_accept_the_new_wording
+    red_confirmed: true
+    red_reason: "The three no-remaining-sentence tests failed against the unchanged documents: each returned a non-empty list of hits (the Step 3, Step 6, contract and gate sentences with a separate cd call, a ban on chaining cd with &&, and \"may reset\" / \"may have reset\"). The four tests that run the checks on forged earlier wording and on the new wording pass from the start by construction; they pin the checks themselves."
+  AC-4:
+    tests:
+      - tests.test_implementer_cd_chain_docs.TestAC4SkillMergeContract.test_ac4_invocation_is_one_bash_call_that_starts_with_the_cd_prefix
+      - tests.test_implementer_cd_chain_docs.TestAC4SkillMergeContract.test_ac4_code_block_shows_the_chained_call
+      - tests.test_implementer_cd_chain_docs.TestAC4SkillMergeContract.test_ac4_states_that_the_cwd_does_not_persist_between_bash_calls
+    red_confirmed: true
+    red_reason: "All three failed against the unchanged SKILL.md: AssertionError: 0 != 1 for the invocation sentence and the cwd sentence, and AssertionError (chained call not in the fenced blocks) for the code block, which held only the merge_script call without the cd prefix."
+  AC-5:
+    tests:
+      - tests.test_implementer_cd_chain_docs.TestAC5SkillCommandExecutionGate.test_ac5_only_prefix_allowed_is_the_cd_prefix_in_the_same_bash_call
+      - tests.test_implementer_cd_chain_docs.TestAC5SkillCommandExecutionGate.test_ac5_states_that_the_cwd_does_not_persist_between_bash_calls
+      - tests.test_implementer_cd_chain_docs.TestAC5SkillCommandExecutionGate.test_ac5_earlier_never_prefix_cd_sentence_is_gone
+      - tests.test_implementer_cd_chain_docs.TestAC5SkillCommandExecutionGate.test_ac5_byte_for_byte_appears_exactly_once_and_no_other_byte_claim
+    red_confirmed: true
+    red_reason: "The first three failed against the unchanged gate section (AssertionError: 0 != 1 twice, and the earlier \"Never prefix `cd …`\" sentence was still present). The byte-for-byte test and the verbatim/mutation/environment-assignment/deny/Hard-refuse checks of the same class pass before and after because that wording is kept; no red state occurred for them."
+  AC-6:
+    tests:
+      - tests.test_worktree_skill_instruction_source.TestAC3DecodedCommandUnderVerbatimRule.test_ac3_existing_verbatim_rule_is_unchanged
+    red_confirmed: true
+    red_reason: "After the expected string was changed to the new sentence fragment and before SKILL.md was edited, the test failed on the subTest expected='The only prefix allowed is `cd \"{worktree_path}\" &&` in the same Bash call' (AssertionError: the fragment not found in the gate section)."
+  AC-7:
+    tests:
+      - tests.test_implementer_cd_chain_docs.TestAC7Mechanics.test_this_module_imports_only_the_standard_library
+    red_confirmed: false
+    red_reason: "The standard-library check passed as soon as the new module existed, so no red state occurred. That em-workflow/scripts/merge-task.sh is unchanged has no executable check that can fail for this task: the task's diff does not list it. The whole-suite pass (including tests/test_muse_consent_no_new_questions.py and tests/test_merge_unverified_exit_doc_contract.py, which read the edited SKILL.md) is the run recorded in final_failures."
