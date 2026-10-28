@@ -7,18 +7,22 @@ goal: '# bash_guard.py の cd 前置形の判定で、通常ファイルの後�
 
   ## やりたいこと
 
-  bash_guard.py の cd 前置形の判定で、通常ファイルや存在しない要素の後ろに `..` が続くパス（例: `.../em-workflow/hooks/bash_guard.py/..`）を、Bash が移動できない形として許可から外す。
+  bash_guard.py の cd 前置形の判定で、通常ファイルや存在しない要素の後ろに `..` が続くパス（例: `.../em-workflow/hooks/bash_guard.py/..`）を、Bash
+  が移動できない形として許可から外す。
 
 
   ## 背景・なぜ
 
-  `is_below()` は物理パスを `os.path.realpath(path)`（strict=False）で解決するため、通常ファイルの後ろの `..` を字句のまま取り除く。論理パスが存在しない形（`/proc/self/root/..` を前に置く形など）では物理パスへのフォールバック分岐で True になる。一方、Bash の cd は「Not a directory」で失敗し、`&&` の後ろの承認済みコマンドは実行されない。
+  `is_below()` は物理パスを `os.path.realpath(path)`（strict=False）で解決するため、通常ファイルの後ろの `..`
+  を字句のまま取り除く。論理パスが存在しない形（`/proc/self/root/..` を前に置く形など）では物理パスへのフォールバック分岐で True になる。一方、Bash
+  の cd は「Not a directory」で失敗し、`&&` の後ろの承認済みコマンドは実行されない。
 
 
   実害はなく、docstring と command-execution-protocol.md の「Bash が物理パスへのフォールバックで着く場所」という記述と判定が食い違うだけ。論理パスが存在する形では、変更前から同じ食い違いがある。
 
 
-  feature is-below-physical-fallback の review round 1 で comprehensive レビュアーが報告し、evaluator が low に下げた指摘。
+  feature is-below-physical-fallback の review round 1 で comprehensive レビュアーが報告し、evaluator
+  が low に下げた指摘。
 
 
   ## 受け入れ条件
@@ -82,7 +86,8 @@ workflow:
   - DESIGN.md
   - design/
   status: skipped
-  skipped_reason: 'UI のないフックの判定ロジックの修正で、変更は is_below() の物理パス側の判定とテストケースの追加に限られるため（design-step 推奨: skipped。tier reduced でも design は削減対象）'
+  skipped_reason: 'UI のないフックの判定ロジックの修正で、変更は is_below() の物理パス側の判定とテストケースの追加に限られるため（design-step
+    推奨: skipped。tier reduced でも design は削減対象）'
 - id: create-plan
   artifacts:
   - IMPLEMENTATION.md
@@ -95,7 +100,7 @@ workflow:
   base_commit: be04a40fe80cbb238af8bf0784d0578f95f71336
   completed_at_commit: d2ad14502f2e5340bf752b3f3d0d627e1bd1d553
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -131,11 +136,19 @@ tasks:
     branch: em-workflow/cd-prefix-non-directory-dotdot/task0001
     notes: null
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
   perspectives: {}
   residual_critical_high: 0
   needs_rework: false
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
 requirements:
   FR1:
     title: 物理パスの存在判定は書かれたとおりのパスで行う
