@@ -110,7 +110,8 @@ workflow:
   completed_at_commit: 78df3b7c3d360f6e3b5a082a5be58d05d9d51e56
   base_commit: 3fb5138c39d789ee335559978658717a79dc16c5
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: c16a624b0383f28857528280d3ee58243317c56c
 - id: verify
   status: pending
   result: null
@@ -193,8 +194,13 @@ tasks:
     branch: em-workflow/cd-prefix-toplevel-operators/task0003
     notes: null
 review:
-  status: pending
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
   plan:
     floor:
     - comprehensive
