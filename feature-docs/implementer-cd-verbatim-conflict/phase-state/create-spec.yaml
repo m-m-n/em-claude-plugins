@@ -3,9 +3,9 @@ feature: implementer-cd-verbatim-conflict
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: 1aea515343bb41e2bf35ab5e98af19aaff5e993c
+base_revision: bc0acca7fe1e98f56706ab4ef145de4fd9aded73
 last_input_digest: sha256:21c63cc0f47b5332cc9e84a3ac498168235292595bfb8fb3c2707a6eac6c7a88
-active_request_id: create-spec-run-0004
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -160,14 +160,23 @@ worker_runs:
     tests/test_worktree_skill_instruction_source.py: sha256:f7f78f54b06d681e16d3645431f69c378ef76b5de40a354cb8388f5647c360f2
   self_write_set: []
 - request_id: create-spec-run-0004
-  status: dispatched
+  status: completed
   input_digest: sha256:21c63cc0f47b5332cc9e84a3ac498168235292595bfb8fb3c2707a6eac6c7a88
-  output_digest: null
+  output_digest: sha256:7e66b149513d8ffb022497640a4ec51c7253e82a73d22599285e72aaf5ad3f4e
   dispatch_digest_inputs:
     em-workflow/references/contracts/spec-writer-contract.md: sha256:9032c6287d75f4a88e556bd3962c32ab8b4905cf3b6ececa895206788bcd0b63
     em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
     em-workflow/references/templates/spec-document.md: sha256:203dfcddbe507886ce861694fccd20ae25e5af0bd1b0efa5e935991add950cbd
-artifacts: []
+  self_write_set:
+  - feature-docs/implementer-cd-verbatim-conflict/REQUIREMENTS.md
+  - feature-docs/implementer-cd-verbatim-conflict/SPEC.md
+artifacts:
+- path: feature-docs/implementer-cd-verbatim-conflict/REQUIREMENTS.md
+  sha256: sha256:70eae36eb0da38dd2b1c6d2ac5ee7b6478d1febcfff5be936dac0798c1347832
+  produced_by: create-spec-run-0004
+- path: feature-docs/implementer-cd-verbatim-conflict/SPEC.md
+  sha256: sha256:2f22ad1ae6ffc2dcf80f07c55e5c64274d2c3ab0da65db65a3e7b1fd1f7766ea
+  produced_by: create-spec-run-0004
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
