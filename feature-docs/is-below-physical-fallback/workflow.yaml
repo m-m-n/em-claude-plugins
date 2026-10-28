@@ -107,7 +107,8 @@ workflow:
   base_commit: 035dbfc644347587b9a77f897f3b2757fd60876f
   completed_at_commit: e05cedbaf0f72cbf52264104de054627ed75fabc
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 9b66af7de95b28b2d1985d516e5dd8504be6e9fd
 - id: verify
   status: pending
   result: null
@@ -146,8 +147,15 @@ tasks:
     branch: em-workflow/is-below-physical-fallback/task0001
     notes: null
 review:
-  status: pending
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  residual_critical_high: 0
+  needs_rework: false
   plan:
     floor:
     - comprehensive
