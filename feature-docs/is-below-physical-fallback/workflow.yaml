@@ -107,7 +107,7 @@ workflow:
   base_commit: 035dbfc644347587b9a77f897f3b2757fd60876f
   completed_at_commit: e05cedbaf0f72cbf52264104de054627ed75fabc
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -148,6 +148,14 @@ tasks:
 review:
   status: pending
   rounds_completed: 0
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
 requirements:
   FR1:
     title: 論理パスが使えないときの物理パス判定
