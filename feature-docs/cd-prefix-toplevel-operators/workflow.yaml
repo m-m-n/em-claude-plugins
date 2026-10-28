@@ -118,7 +118,8 @@ workflow:
   failed_items: []
   completed_at_commit: ae728158026d4112990fc26150c7b0280b061cf4
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: 4872b2b79f1c51b1ea77c35817a298f890e09fdc
 tasks:
   task0001:
     title: 'bash_guard.py: exclude top-level operators from the cd prefix allow'
