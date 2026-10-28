@@ -15,3 +15,16 @@ records:
     bash_guard.py:191–198 はコマンド全体が宣言集合にも承認集合にも一致しなければ判定せず、command-execution-protocol.md
     の Verbatim execution rule も変形した文字列を通常の権限確認へ回すと明記している。今回の許可条件を満たさない場合は、この既存判定を維持するのが妥当だと判断する;
     options not chosen: deny_when_relevant'
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-10-28T09:50:31+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: task0003 deviation not auto-added
+  normalized_answer: task0003 deviation not auto-added
+  resolution_note: 'task_id: task0003; reported deviation names no path to add and
+    no AC/requirement identifier (missing evidence parts: path, identifier, failure
+    outcome) - it reports running project commands and merge-task.sh as `cd "<worktree>"
+    && <cmd>` because a standalone cd did not persist; no file outside expected_files
+    changed'
