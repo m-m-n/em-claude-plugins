@@ -1,7 +1,7 @@
 schema_version: 1
 feature: implementer-cd-verbatim-conflict
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: bc0acca7fe1e98f56706ab4ef145de4fd9aded73
 last_input_digest: sha256:21c63cc0f47b5332cc9e84a3ac498168235292595bfb8fb3c2707a6eac6c7a88

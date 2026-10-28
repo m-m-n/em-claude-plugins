@@ -1,0 +1,282 @@
+schema_version: 1
+feature: implementer-cd-verbatim-conflict
+created: '2026-10-28'
+base_branch: main
+goal: |
+  # implementer の単独 cd と承認文字列一致の両立不能（2026-10-28）
+
+  ## 事象
+
+  - 対象: emterm の feature `pty-reattach-timeout-investigation`、task0001（implementer）
+  - 停止: 2026-10-28 00:21 JST、`stop_reason: implement_task_failed`（`failed_kind: decision`）
+  - em-workflow 0.3.91（2026-10-27 21:47 JST 導入、停止時点で最新）
+  - implementer が単独の `cd "<worktree>"` を実行した直後の `pwd` がプロジェクトルートを返した。
+    承認済みコマンド `CARGO_TARGET_DIR=src-tauri/target cargo test --manifest-path src-tauri/Cargo.toml --lib`
+    を worktree で一字一句のまま実行する手段が無く、計測前に停止した。
+    基準計測 1 回はメイン作業ツリーで実行された。
+  - 停止セッション: `01a17def-7a54-779d-a654-2bc895cb01ad`（subagent `agent-a789562504cc0af28`）
+
+  ## セッションログの分析
+
+  ### サブエージェントでは単独の cd が次の呼び出しに残らない
+
+  - emterm の implementer 実行（2026-10-03〜10-11）で、単独 `cd` の後の `pwd` は毎回プロジェクトルート。
+    10/24 の変更前からこの挙動だった。
+  - Claude Code の Bash ツールで `cd` が次の呼び出しに残るのはメインセッションのみ。
+
+  ### 過去に動いていた理由
+
+  - emterm の implementer は 10/03〜10/11 の全実行で `cd X && <cmd>` を 1 呼び出しで数十回ずつ使っていた。
+  - 0.3.77 以降（10/24〜10/27）も、web-sip-phone・em-claude-plugins の implementer は
+    `cd X && make test`、`cd X && python3 -m unittest …` 等の連結形で実行し完走していた。
+    連結形は承認文字列と一致しないため、通常の permission フローで許可されていた。
+  - emterm の同タスク 1 回目（2026-10-28 00:12 JST）も `cd "<worktree>"` と cargo を 1 コマンドにまとめて実行していた。
+  - 同タスク 2 回目（00:20 JST）は指示どおり単独 `cd` を実行し、`pwd` で未移動を確認し、
+    承認文字列を変えない規則に従って連結形を使わず停止した。
+
+  ### 指示の変遷
+
+  - 0.3.75 まで: `agents/implementer.md` は「cwd は残らないので `cd "{worktree_path}" && <cmd>` を同じ呼び出しで」。
+    `skills/worktree-task-workflow/SKILL.md` は「前置禁止、単独 `cd` で移動（cwd は残る）」で、両者が食い違っていた。
+  - 0.3.77（2026-10-24 18:03 JST 導入、コミット `683a9a1fa`）: implementer も
+    「コマンドの直前に単独の `cd "{worktree_path}"` を実行し、`&&` で繋がない」に統一。
+
+  ## 0.3.77 の変更理由（セッション `c1fb0f8c-fad1-4ccb-a432-5a2845a6b1b7`）
+
+  1. web-sip-phone でオーケストレーターが統合用 worktree に `cd` したまま implementer を起動し、
+     implementer が cwd を引き継いだ。自分の担当 worktree への Write が `cross-repo-write-guard` に拒否された。
+  2. 承認済みコマンドは文字列一致で照合されるため、`cd … &&` の前置は禁止され、単独 `cd` で移動する規則があった。
+  3. `cd X && コマンド` 案はユーザーが却下した（「`&&` で繋ぐのはダメ。結局それでおかしなことになってるから今のルールがある」）。
+  4. ユーザーの指示で implementer 側も同じ規則にそろえた。前提は「cwd はリセットされうるので毎回直前に `cd` する」。
+  5. 同時に、オーケストレーターの実行後ルート復帰と、`queue_launch_guard` によるルート外からの implementer 起動拒否を追加した。
+
+  ## 原因
+
+  - 「承認文字列を一字一句そのまま実行する」規則と、「サブエージェントでは単独 `cd` が残らない」事実が両立しない。
+  - 0.3.77 は「サブエージェントの cwd はリセットされうる」と書いたが、実際には一度も残らない。
+  - 結果として、implementer が規則を守ると worktree で承認済みコマンドを実行する手段が無い。
+    規則を破って連結した実行だけが完走していた。
+  - emterm はコマンドが `CARGO_TARGET_DIR=` で始まり、permission の allow ルールに乗りにくく分類器判定に回る。
+    連結形で通るかも分類器次第になる。
+
+  ## 修正案
+
+  `bash_guard` に「`cd "<worktree>" && <承認済みコマンド>`」の形を承認扱いで通す判定を足し、
+  implementer の指示をその形に戻す。
+
+  1. `em-workflow/hooks/bash_guard.py`: `cd <パス> && <残り>` を分解し、次をすべて満たすときだけ allow。
+      - `cd` が 1 つ、パスが 1 つ
+      - パスがそのリポジトリの `.claude/worktrees/em-workflow/` 配下
+      - `<残り>` が承認文字列と完全一致
+      - 拒否パターン判定は従来どおり先に行う
+  2. `em-workflow/agents/implementer.md`・`em-workflow/skills/worktree-task-workflow/SKILL.md`:
+     テスト・ビルド・`merge_script` は `cd "{worktree_path}" && <コマンド>` の 1 呼び出しで実行する。
+     「cwd は呼び出し間で残らない」と記述する。
+  3. `em-workflow/references/command-execution-protocol.md`: 1. の形を例外として追記。
+     オーケストレーターの「単独 `cd` で移動し、実行後に単独 `cd` でルートに戻る」は維持する
+     （メインセッションでは `cd … &&` の移動が残り、10/24 の問題が再発するため）。
+  4. テスト: `tests/test_bash_guard*` に許可ケースと拒否ケース
+     （worktree 外への `cd`、`cd` 複数、`;` や `|` の混在、残り部分の不一致）を追加。
+  5. フックのハッシュを固定しているテスト（10/24 時点では `tests/test_merge_unverified_exit_doc_contract.py`）があれば更新。
+
+  ## 関連
+
+  - emterm の Notion タスク:
+    <notion-url>
+    （中断のまま。修正反映後に `implement` の `failed` を解除し
+    `/em-workflow:develop --batch --once --pr pty-reattach-timeout-investigation` で再開する）
+  - emterm のブランチ: `em-workflow/pty-reattach-timeout-investigation/integration`,
+    `em-workflow/pty-reattach-timeout-investigation/task0001`
+parent_branch: em-workflow/implementer-cd-verbatim-conflict/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.75
+      '2': 0.25
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.07
+      '2': 0.89
+      '3': 0.04
+  at: '2026-10-28T08:50:31+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 36afa146af9903f230505d2d7435b02750849ef1
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'UI が無い。変更するのは PreToolUse hook の判定と、エージェント・スキル・参照文書の文言だけ（design-step.recommendation: decide_autonomously、source: batch-decision-table）。'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: 53f950623fc6bb0891f724771748775f4e3c0602
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: 'bash_guard: worktree への cd 前置形の許可'
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: 禁止パターンの判定が先
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: 条件を満たさない形は今の判定のまま
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: implementer.md の指示を連結形に戻す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: worktree-task-workflow/SKILL.md の指示を連結形に戻す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: command-execution-protocol.md に例外を書き足す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: bash_guard の deny 時 additionalContext を書き分ける
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: README.md と workflow-schema.md の説明
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR9:
+    title: bash_guard のテストケース
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 決定的な判定
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 許可範囲を広げすぎない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: hook 分類テストの前提を守る
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: hash 固定ファイルを変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: hook の登録と順序を変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR6:
+    title: SKILL の gate 節の文言の制約
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR7:
+    title: version を変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR8:
+    title: テストの実行方法
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
