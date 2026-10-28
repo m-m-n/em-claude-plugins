@@ -195,7 +195,7 @@ tasks:
     - NFR6
     - NFR7
     - NFR8
-    status: in_progress
+    status: merged
     notes: 'batch retry consumed (1/1). first failure: blocked before any edit; standalone cd did not persist between subagent Bash calls and the installed rules forbid the chained form.'
     branch: em-workflow/implementer-cd-verbatim-conflict/task0002
   task0003:
