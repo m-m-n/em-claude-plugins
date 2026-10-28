@@ -144,9 +144,11 @@ workflow:
   status: completed
   completed_at_commit: dca1f33470bc9057e339b67a82dd61aa81e1a0c4
 - id: verify
-  status: in_progress
-  result: null
+  status: completed
+  result: pass
   failed_items: []
+  completed_at_commit: 69ad35d70d61a27f7492bd194058df2009de4769
+  summary: 'python3 -m unittest discover -s tests: 11901 tests OK (skipped=1)。TS-1〜TS-9 合格（TS-8: bash_guard.py の import は標準ライブラリのみ、TS-9: 変更しないファイルの差分なし）。SC-1〜SC-5 合格。build / format は該当なし。除外要件なし。'
 - id: retrospect
   status: pending
 tasks:
