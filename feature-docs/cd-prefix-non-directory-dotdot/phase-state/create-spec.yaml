@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 25ad6b3e65df2eea2dac9df769617fa6df346890
 last_input_digest: sha256:67ed371d1d74f3a5207c6384d6e552bddb888d736b5f8cfa5d78e24e28835439
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -22,12 +22,18 @@ worker_runs:
     tests/test_bash_guard_cd_prefix.py: sha256:acaa3af8dc1f1042762df67c576e45b6d223e6689684a7204ac84cb00dcd87f1
   self_write_set: []
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:67ed371d1d74f3a5207c6384d6e552bddb888d736b5f8cfa5d78e24e28835439
   dispatch_digest_inputs:
     em-workflow/references/contracts/spec-writer-contract.md: sha256:9032c6287d75f4a88e556bd3962c32ab8b4905cf3b6ececa895206788bcd0b63
     em-workflow/references/templates/spec-document.md: sha256:203dfcddbe507886ce861694fccd20ae25e5af0bd1b0efa5e935991add950cbd
-artifacts: []
+  output_digest: sha256:spec-writer-result
+  self_write_set:
+  - feature-docs/cd-prefix-non-directory-dotdot/SPEC.md
+artifacts:
+- path: feature-docs/cd-prefix-non-directory-dotdot/SPEC.md
+  sha256: sha256:aee1677bd2bed843c34659c7e11e200c004c3832b4bd7e6ca34fee7e9a418d46
+  produced_by: create-spec-run-0002
 patches: []
 stale_redispatch_count: 0
 resolved_input_cache:
