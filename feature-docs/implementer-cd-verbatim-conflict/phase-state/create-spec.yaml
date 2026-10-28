@@ -3,9 +3,9 @@ feature: implementer-cd-verbatim-conflict
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: 4df8093a698e989f93f1a459d99926a749e1f254
-last_input_digest: sha256:67993c6d48b267015ee8e0af7f1aed9735fa99b53b506781c07ba38e28b61d9f
-active_request_id: create-spec-run-0003
+base_revision: 1aea515343bb41e2bf35ab5e98af19aaff5e993c
+last_input_digest: sha256:21c63cc0f47b5332cc9e84a3ac498168235292595bfb8fb3c2707a6eac6c7a88
+active_request_id: create-spec-run-0004
 packets:
   create-spec-q0001:
     status: answered
@@ -135,9 +135,9 @@ worker_runs:
   dispatch_digest_inputs: *id001
   self_write_set: []
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:67993c6d48b267015ee8e0af7f1aed9735fa99b53b506781c07ba38e28b61d9f
-  output_digest: null
+  output_digest: sha256:5d9b4ade819ae76edd600b8794e079b15fbbf30d0be21ae07b31820b2d78c1a6
   dispatch_digest_inputs:
     CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
     em-workflow/README.md: sha256:369437c34ef84e712c86adc6497562bced67854f7694778c597676713f13b994
@@ -158,6 +158,15 @@ worker_runs:
     tests/test_hooks_registration.py: sha256:57081b42d003d8508c7c232855dccdd875dcd929926b14f662028ef218a24a82
     tests/test_merge_unverified_exit_doc_contract.py: sha256:5fc37ff0d9de2b906f46fe9680a503258e817ebb543a97264cd879afbe2f98a3
     tests/test_worktree_skill_instruction_source.py: sha256:f7f78f54b06d681e16d3645431f69c378ef76b5de40a354cb8388f5647c360f2
+  self_write_set: []
+- request_id: create-spec-run-0004
+  status: dispatched
+  input_digest: sha256:21c63cc0f47b5332cc9e84a3ac498168235292595bfb8fb3c2707a6eac6c7a88
+  output_digest: null
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/spec-writer-contract.md: sha256:9032c6287d75f4a88e556bd3962c32ab8b4905cf3b6ececa895206788bcd0b63
+    em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
+    em-workflow/references/templates/spec-document.md: sha256:203dfcddbe507886ce861694fccd20ae25e5af0bd1b0efa5e935991add950cbd
 artifacts: []
 patches: []
 progress_fingerprint: null
