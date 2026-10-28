@@ -1,17 +1,68 @@
 schema_version: 1
 feature: cd-prefix-toplevel-operators
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: 4cc7bfeb884976452039171758505a01b4cf391f
 last_input_digest: sha256:42f27e4f593271c63553b81a363205afd312850c139d14d7e990eac996d51479
 active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-28T23:27:46+09:00'
+    questions:
+    - question_id: requirement.fix-approach
+      status: answered
+    - question_id: requirement.operator-detection-precision
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+answers:
+  requirement.fix-approach:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-28T23:27:46+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - exclude_toplevel_operators
+    freeform: null
+    normalized_answer: 承認文字列のトップレベルに単独の &、;、||、改行があれば cd 前置形の allow 条件を満たさないとし、文字列全体を今の判定表で判定する（新しい
+      deny は足さない）。cd "{worktree_path}" && <承認文字列> の実行形は変えない。該当する承認文字列は implementer
+      が実行せず notes で報告すると手順書に書く。
+    resolution_note: 'gate: create-spec.requirement-clarification; policy: codex_consultation,
+      record_as_assumption; codex_consulted: true (turn 1); analyst recommendation
+      と Codex が一致。理由: 実行形と文書試験を維持でき、括弧で包む方式の # コメント問題を避けられる'
+  requirement.operator-detection-precision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-28T23:27:46+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - quote_and_redirect_aware
+    freeform: null
+    normalized_answer: '引用と転送を区別する。単一引用・二重引用・バックスラッシュエスケープの中の文字は数えない（単一引用内のバックスラッシュは通常文字、二重引用内のエスケープは
+      Bash の規則に従う）。&&、|&、>&、<&、&>、&>> の一部の & は数えない（引用外で最長一致で認識）。それ以外の単独の &、;、||、改行は除外する。安全側の追加条件:
+      閉じていない引用・末尾のバックスラッシュ・文字列内部の改行、$'' と $" と #（位置を問わず）、引用外の括弧・波括弧、$(...)・${...}・バッククォート、二重引用内の置換構文があれば除外する（入れ子は解析しない）。'
+    resolution_note: 'gate: create-spec.requirement-clarification; policy: codex_consultation,
+      record_as_assumption; codex_consulted: true (2 turns)。turn 1 で Codex は any_occurrence
+      を推したが、turn 2 で「implementer は cd 前置形でしか承認コマンドを実行できず、any_occurrence では 2>&1 を含む承認コマンドが無人実行で動かなくなる」点を検討し
+      quote_and_redirect_aware に収束。安全側の追加条件を採用'
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-28T23:27:46+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 'design step を skip する（analyst 推奨: hook・文書・unittest のみで UI
+      変更なし）'
+    resolution_note: 'gate: create-spec.design-step; policy: select decide_autonomously'
 worker_runs:
-  - request_id: create-spec-run-0001
-    status: dispatched
-    input_digest: sha256:42f27e4f593271c63553b81a363205afd312850c139d14d7e990eac996d51479
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:42f27e4f593271c63553b81a363205afd312850c139d14d7e990eac996d51479
+  output_digest: sha256:98c6954a27db21d406e1565dd8f76c93ee7231b7468fd0dabc60c22967b87ee8
 artifacts: []
 patches: []
 progress_fingerprint: null
@@ -19,6 +70,19 @@ stale_redispatch_count: 0
 resolved_input_cache:
   reference_scan_targets:
     resolved_at_generation: 1
-    paths: ["em-workflow/hooks/bash_guard.py", "em-workflow/references/command-execution-protocol.md", "tests/test_bash_guard_cd_prefix.py", "tests/test_cd_prefix_exception_docs.py", "tests/test_implementer_cd_chain_docs.py", "em-workflow/README.md", "em-workflow/references/workflow-schema.md", "em-workflow/agents/implementer.md", "em-workflow/skills/worktree-task-workflow/SKILL.md", "em-workflow/skills/develop/SKILL.md", "feature-docs/implementer-cd-verbatim-conflict/SPEC.md", "feature-docs/implementer-cd-verbatim-conflict/reviews/round1.yaml", ".claude/rules/hook-tests.md"]
+    paths:
+    - em-workflow/hooks/bash_guard.py
+    - em-workflow/references/command-execution-protocol.md
+    - tests/test_bash_guard_cd_prefix.py
+    - tests/test_cd_prefix_exception_docs.py
+    - tests/test_implementer_cd_chain_docs.py
+    - em-workflow/README.md
+    - em-workflow/references/workflow-schema.md
+    - em-workflow/agents/implementer.md
+    - em-workflow/skills/worktree-task-workflow/SKILL.md
+    - em-workflow/skills/develop/SKILL.md
+    - feature-docs/implementer-cd-verbatim-conflict/SPEC.md
+    - feature-docs/implementer-cd-verbatim-conflict/reviews/round1.yaml
+    - .claude/rules/hook-tests.md
     truncated: false
 last_error: null
