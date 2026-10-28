@@ -1,0 +1,79 @@
+feature: implementer-cd-verbatim-conflict
+collected_at: '2026-10-28T10:31:49+09:00'
+session_ids:
+- e87af080-ab12-4b81-9195-3d233c996217.jsonl
+signals:
+  review_critical_high:
+  - stable_id: 61f034be00484674
+    category: security
+    file: em-workflow/hooks/bash_guard.py
+    title: シンボリックリンクの後ろの .. で cd 先の領域制限を回避できる
+    resolution: fixed
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: description_plus_code の最終読みで bucket 2（新しいロジック・複数モジュール・外部契約の変更）が 0.89 となり、threshold_rows:full で full に決定
+    bases:
+    - basis: description_only
+      score:
+        type: score
+        score: 1.25
+        confidence: 0.75
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.75
+          '2': 0.25
+          '3': 0.0
+      observed_at: '2026-10-28T08:48:33+09:00'
+    - basis: description_plus_code
+      score:
+        type: score
+        score: 1.97
+        confidence: 0.89
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.07
+          '2': 0.89
+          '3': 0.04
+      observed_at: '2026-10-28T08:50:31+09:00'
+    pre_survey_estimate:
+      files_expected:
+      - em-workflow/hooks/bash_guard.py
+      - em-workflow/agents/implementer.md
+      - em-workflow/skills/worktree-task-workflow/SKILL.md
+      - em-workflow/references/command-execution-protocol.md
+      - tests/test_bash_guard.py
+      - tests/test_worktree_skill_instruction_source.py
+      changed_lines_approx: 300
+      new_functions_needed: 2
+      new_files_needed: 1
+      new_dependencies_needed: 0
+      covering_tests_exist: false
+      spillover_modules:
+      - tests/test_worktree_skill_instruction_source.py
+      work_still_required: true
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 12
+      body_change_kind: new_logic
+      change_containment: multiple_modules
+      caller_and_dependency_count: 9
+      changes_external_contract: true
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+- task0002 の初回は、インストール済みプラグイン（修正前の版）の implementer が単独 cd が永続しない問題そのものに当たり、承認文字列の連結形を拒否して失敗した。batch の自動 retry 1 回で merged になった。task0003 は連結形を逸脱として報告して成功した。自分自身を直す feature では、修正前の規則で implementer が動く点に注意する
+- 'review の未解決 medium 2 件（b3582a48847b9e2f: 承認文字列にトップレベルの & / ; / || があると後続が元の cwd で動く、1ff4933d3c9b729c: 論理パスが存在しないだけで有効な cd 前置形を allow から外す）は、SPEC の FR1 の設計に関わるため後続の変更で扱う候補'

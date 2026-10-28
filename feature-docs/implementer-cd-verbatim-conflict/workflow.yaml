@@ -150,7 +150,8 @@ workflow:
   completed_at_commit: 69ad35d70d61a27f7492bd194058df2009de4769
   summary: 'python3 -m unittest discover -s tests: 11901 tests OK (skipped=1)。TS-1〜TS-9 合格（TS-8: bash_guard.py の import は標準ライブラリのみ、TS-9: 変更しないファイルの差分なし）。SC-1〜SC-5 合格。build / format は該当なし。除外要件なし。'
 - id: retrospect
-  status: pending
+  status: completed
+  completed_at_commit: a0f253b5b213672e5966652f8a2622f3628415f1
 tasks:
   task0001:
     title: 'bash_guard: worktree への cd 前置形の許可と deny 時の案内の書き分け'
