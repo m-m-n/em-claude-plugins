@@ -309,7 +309,8 @@ may instead run an approved string as
 `cd "{worktree_path}" && <approved string>` in a single Bash call; the hook
 allows that form when the path is deeper than `.claude/worktrees/em-workflow/`
 under the main working tree and everything after `&&` is an approved string
-exactly.
+exactly. An approved string with a lone `&`, `;`, `||` or line break at its
+top level is not covered by that form.
 Details: `references/command-execution-protocol.md`.
 
 Schema consequences:

@@ -117,15 +117,43 @@ depends on the role:
   between Bash calls, so a separate `cd` call is lost before the command
   runs. The implementer runs an approved string in a single Bash call as
   `cd "{worktree_path}" && <approved string>`, and everything after `&&` is
-  the approved string, exactly as recorded. The hook allows this form when
-  all of the following hold:
+  the approved string, exactly as recorded. The implementer does not run an
+  approved string that the conditions below exclude, in any form, and reports
+  it in `notes`. The hook allows this form when all of the following hold:
     - the command starts with `cd`, then one double-quoted absolute path,
       with no `cd` options;
     - only spaces or tabs sit between the closing quote and the first `&&`;
     - the path's realpath is an existing directory deeper than
       `.claude/worktrees/em-workflow/` under the main working tree;
     - everything after the first `&&` matches an approved string exactly
-      (surrounding whitespace aside).
+      (surrounding whitespace aside);
+    - that remainder has no lone `&`, no `;`, no `||` and no line break at its
+      top level. A lone `&` is an `&` that is not part of a recognized token:
+      `&&`, `|&`, `>&`, `<&`, `&>` and `&>>`, where the longest token is taken
+      first, so `&&&` is `&&` followed by a lone `&`, and a `|` that starts
+      neither `||` nor `|&` is a pipe, which is not counted. The top level is
+      found by one left-to-right scan of the remainder in three quoting
+      states: unquoted, where `'` opens a single-quoted span, `"` opens a
+      double-quoted span, and a backslash escapes the next character, which no
+      rule counts; single-quoted, where every character is ordinary, a
+      backslash included, and only `'` ends the span; double-quoted, where a
+      backslash followed by `$`, a backtick, `"`, a backslash or a line break
+      escapes that character, any other backslash is an ordinary character,
+      and an unescaped `"` ends the span. A lone `&`, a `;` and a `||` count
+      only when unquoted and unescaped; a line break (LF or CR) counts
+      anywhere, inside quotes included;
+    - that remainder holds none of the following constructs, which the hook
+      does not parse and therefore excludes on the safe side. Nesting is not
+      parsed, so one occurrence of any of them is enough:
+        - an unclosed quote: the scan ends inside a single-quoted or
+          double-quoted span;
+        - a trailing backslash: the scan ends on a backslash that has no
+          following character, outside single quotes;
+        - `$'` or `$"` anywhere in the remainder;
+        - `#` anywhere in the remainder, inside quotes included;
+        - `(`, `)`, `{` or `}` when unquoted and unescaped;
+        - `$(`, `${` or a backtick anywhere in the remainder: unquoted,
+          inside double quotes, and inside single quotes too.
 - **Every role**: never prefix environment assignments. The
   `cd "{worktree_path}" && ` prefix above is the only prefix allowed, and
   only for the implementer. Never split, join, quote-wrap, or "improve" the
