@@ -1,0 +1,110 @@
+task_id: task0001
+baseline_failures: []          # before any edit: python3 -m unittest discover -s tests -> Ran 11901 tests, OK (skipped=1); no failing test
+final_failures: []             # re-executed after the implementation and again after writing this record: python3 -m unittest discover -s tests -> OK (skipped=1, the same single skip as the baseline); no failing test
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestPhysicalFallbackAllowed.test_ac1_proc_self_root_dotdot_before_an_absolute_worktree_path_is_allowed
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged path check (new tests written first), all four
+      subtests (cwd repo1 / wtree x target wtree / task0001) failed with
+      AssertionError: 'silent' != 'allow', because the single-realpath
+      condition rejected a logical path that does not exist. The test is
+      skipped, not failed, when /proc/self/root is not a directory; it ran
+      here.
+  AC-2:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestPhysicalFallbackAllowed.test_ac2_link_dotdot_name_forms_are_allowed_from_the_main_worktree
+      - tests.test_bash_guard_cd_prefix.TestPhysicalFallbackAllowed.test_ac2_link_dotdot_name_forms_are_allowed_from_a_git_worktree
+      - tests.test_bash_guard_cd_prefix.TestPhysicalFallbackAllowed.test_ac2_the_allow_reason_is_the_cd_prefix_reason
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged path check, each of the four forms (logical
+      path absent, deeper directory, target's parent, logical path an existing
+      file) failed from both working-directory kinds with AssertionError:
+      'silent' != 'allow'; test_ac2_the_allow_reason_is_the_cd_prefix_reason
+      failed the same way. The fixture-layout guard test
+      test_ac2_the_fixture_layout_matches_the_claimed_logical_paths passed
+      (it only checks the fixture, so it is not listed).
+  AC-3:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestPhysicalFallbackNotAllowed.test_ac3_logical_destination_that_exists_outside_the_area_is_silent
+      - tests.test_bash_guard_cd_prefix.TestPhysicalFallbackNotAllowed.test_ac3_the_fixture_layout_matches_the_claimed_destinations
+      - tests.test_bash_guard_cd_prefix.TestAc3PathConditions.test_ac3_forms_breaking_a_path_condition_are_silent
+    red_confirmed: false
+    red_reason: >-
+      This criterion pins behavior that did not change (FR2, FR4): the
+      pre-change check already returned False for a logical destination that
+      exists outside the area, so these tests passed before the
+      implementation and no red state occurred. They are not vacuous: against
+      mutated copies of the hook (physical path only, or logical path only,
+      or the area itself accepted, or a string-prefix comparison) they fail
+      (observed with the test module pointed at each mutated copy). The
+      existing TestAc3PathConditions test gained the new forms through the
+      PATH_CASES table.
+  AC-4:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestPhysicalFallbackNotAllowed.test_ac4_physical_path_that_is_not_below_the_area_is_silent
+      - tests.test_bash_guard_cd_prefix.TestPhysicalFallbackNotAllowed.test_ac4_the_fixture_layout_matches_the_claimed_destinations
+      - tests.test_bash_guard_cd_prefix.TestAc3PathConditions.test_ac3_forms_breaking_a_path_condition_are_silent
+    red_confirmed: false
+    red_reason: >-
+      The five forms (physical path outside the area, the area itself, under a
+      prefix-sharing sibling, absent, a file) are silent both before and after
+      the change, because the old check rejected every logical path that does
+      not exist; the tests passed before the implementation and no red state
+      occurred. They guard the new branch: against mutated copies of the hook
+      (no area comparison on the physical path, string-prefix comparison, the
+      area itself accepted) they fail, observed with the test module pointed
+      at each mutated copy.
+  AC-5:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestNulInPath.test_ac5_the_path_check_returns_false_for_a_path_with_a_nul
+      - tests.test_bash_guard_cd_prefix.TestNulInPath.test_ac5_a_resolution_error_makes_the_path_check_false
+      - tests.test_bash_guard_cd_prefix.TestNulInPath.test_ac5_through_the_hook_a_nul_path_exits_zero_silently_without_allow
+    red_confirmed: false
+    red_reason: >-
+      The pre-change check already caught ValueError and returned False for
+      an embedded NUL, so these tests passed before the implementation and no
+      red state occurred. They protect the new resolution code: against a
+      mutated copy that no longer catches ValueError, all three fail
+      (observed with the test module pointed at the mutated copy).
+  AC-6:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestAc1AllowedPrefixForm.test_ac1_no_child_process_uses_the_prefixed_path
+      - tests.test_bash_guard_cd_prefix.TestAc7StandardLibraryOnly.test_ac7_hook_imports_only_standard_library_modules
+      - tests.test_bash_guard_cd_prefix.TestAc7StandardLibraryOnly.test_ac7_this_test_module_imports_only_standard_library_modules
+      - tests.test_bash_guard_cd_prefix.TestAc7StandardLibraryOnly.test_ac7_hook_executable_text_has_no_status_substring
+      - tests.test_hook_classification_pin.TestObserveHookSource.test_bash_guard_reads_workflow_yaml_but_not_task_status
+      - tests.test_hook_classification_pin.TestHookClassificationPin.test_documented_classification_matches_observed_classification_for_every_row
+    red_confirmed: false
+    red_reason: >-
+      Regression-preservation criterion: the existing tests listed here detect
+      a non-stdlib import, a `status` substring in the hook's executable text,
+      a changed hook classification, and the prefixed path reaching a child
+      process; no red state occurred for this change (they were green before
+      and stayed green with unchanged expectations). The whole suite passes
+      under the workflow.yaml test command. The new tests import only the
+      standard library and run on the existing Fixture (temporary approval
+      store through EM_WORKFLOW_APPROVALS, CLAUDE_PROJECT_DIR removed, every
+      new link and file under the temporary root).
+  AC-7:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestPathConditionWording.test_ac7_the_hook_docstring_states_the_new_condition
+      - tests.test_bash_guard_cd_prefix.TestPathConditionWording.test_ac7_the_hook_docstring_no_longer_states_the_single_realpath_condition
+      - tests.test_bash_guard_cd_prefix.TestPathConditionWording.test_ac7_the_protocol_rule_states_the_new_condition
+      - tests.test_bash_guard_cd_prefix.TestPathConditionWording.test_ac7_the_protocol_rule_no_longer_states_the_single_realpath_condition
+      - tests.test_bash_guard_cd_prefix.TestPathConditionWording.test_ac7_both_places_define_the_two_terms
+      - tests.test_cd_prefix_exception_docs.TestVerbatimSection.test_ac1_states_hook_conditions_realpath_under_worktrees_dir
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged docstring and protocol text, the first five
+      tests failed: the docstring and the Verbatim execution rule still stated
+      "the realpath of <path> is an existing directory" / "the path's realpath
+      is an existing directory deeper than", and neither defined a logical
+      path or a physical path (AssertionError: False is not true for the four
+      state-tests; the two-terms test failed for both the docstring and the
+      protocol). The existing test_cd_prefix_exception_docs test stayed green
+      and is kept as a guard that the reworded bullet still names the
+      realpath and the area directory.

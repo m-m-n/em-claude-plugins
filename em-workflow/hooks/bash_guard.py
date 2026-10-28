@@ -26,11 +26,19 @@ had no cd prefix (never a new deny):
   - syntax: `cd`, blanks, one double-quoted absolute path (no `"`, `$`,
     backtick, backslash or line break in it), blanks, then the first `&&`;
     everything after that `&&` is the remainder
-  - path: the realpath of <path> is an existing directory strictly below
-    <main worktree>/.claude/worktrees/em-workflow (compared per path
-    component), where the main worktree is the parent of the git common dir
-    of the hook's cwd; <path> is only resolved, never used as the directory
-    or argument of a child process
+  - path: the area is <main worktree>/.claude/worktrees/em-workflow, where
+    the main worktree is the parent of the git common dir of the hook's cwd.
+    The logical path (the realpath of <path> with each `..` first collapsed
+    against the component written before it, as Bash's default cd does) and
+    the physical path (the realpath of <path> exactly as written, each `..`
+    applying to the directory already resolved) are compared per path
+    component. When the logical path is an existing directory, the logical
+    path and the physical path must both be existing directories strictly
+    below the area. Otherwise the physical path alone must be an existing
+    directory strictly below the area, which is where Bash lands through its
+    physical-path fallback. A resolution error counts as not below.
+    <path> is only resolved, never used as the directory or argument of a
+    child process
   - approval: the remainder, with surrounding blanks removed, equals one
     approved string of the cwd's project
 The refusal patterns are applied to the whole command first.
@@ -214,31 +222,44 @@ def worktree_area(common_dir):
         return None
 
 
+def strictly_below(path, area):
+    """True when path lies strictly below area, compared per path component.
+    The area itself, and a sibling that only shares a name prefix, are not
+    below it."""
+    area_parts = area.split(os.sep)
+    path_parts = path.split(os.sep)
+    return (
+        len(path_parts) > len(area_parts)
+        and path_parts[: len(area_parts)] == area_parts
+    )
+
+
 def is_below(path, area):
-    """True when the realpath of path is an existing directory strictly below
-    area. Compared per path component; path is only resolved."""
+    """True when path reaches an existing directory strictly below area the
+    way Bash's cd does. path is only resolved, never handed to a child process.
+
+    Bash first moves to the logical path (each `..` collapsed against the
+    component written before it, then links resolved). When that move fails
+    it falls back to the physical path (links resolved component by component,
+    each `..` applying to the directory already resolved). So:
+      - logical path is an existing directory: both paths must be existing
+        directories strictly below area;
+      - otherwise: the physical path alone must be an existing directory
+        strictly below area.
+    Any resolution error is False.
+    """
     try:
-        # The shell resolves `..` lexically (logical path); realpath resolves
-        # links first (physical path). Require both to land below area.
-        resolved = os.path.realpath(path)
+        physical = os.path.realpath(path)
         logical = os.path.realpath(os.path.normpath(path))
-        if not os.path.isdir(resolved) or not os.path.isdir(logical):
-            return False
+        if os.path.isdir(logical):
+            return (
+                os.path.isdir(physical)
+                and strictly_below(logical, area)
+                and strictly_below(physical, area)
+            )
+        return os.path.isdir(physical) and strictly_below(physical, area)
     except (OSError, ValueError):
         return False
-    area_parts = area.split(os.sep)
-    logical_parts = logical.split(os.sep)
-    if not (
-        len(logical_parts) > len(area_parts)
-        and logical_parts[: len(area_parts)] == area_parts
-    ):
-        return False
-    resolved_parts = resolved.split(os.sep)
-    area_parts = area.split(os.sep)
-    return (
-        len(resolved_parts) > len(area_parts)
-        and resolved_parts[: len(area_parts)] == area_parts
-    )
 
 
 def is_cd_prefixed_approved(command, approved, common_dir):
