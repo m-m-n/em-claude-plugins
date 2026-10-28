@@ -1,0 +1,24 @@
+schema_version: 1
+feature: cd-prefix-toplevel-operators
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: 4cc7bfeb884976452039171758505a01b4cf391f
+last_input_digest: sha256:42f27e4f593271c63553b81a363205afd312850c139d14d7e990eac996d51479
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: dispatched
+    input_digest: sha256:42f27e4f593271c63553b81a363205afd312850c139d14d7e990eac996d51479
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache:
+  reference_scan_targets:
+    resolved_at_generation: 1
+    paths: ["em-workflow/hooks/bash_guard.py", "em-workflow/references/command-execution-protocol.md", "tests/test_bash_guard_cd_prefix.py", "tests/test_cd_prefix_exception_docs.py", "tests/test_implementer_cd_chain_docs.py", "em-workflow/README.md", "em-workflow/references/workflow-schema.md", "em-workflow/agents/implementer.md", "em-workflow/skills/worktree-task-workflow/SKILL.md", "em-workflow/skills/develop/SKILL.md", "feature-docs/implementer-cd-verbatim-conflict/SPEC.md", "feature-docs/implementer-cd-verbatim-conflict/reviews/round1.yaml", ".claude/rules/hook-tests.md"]
+    truncated: false
+last_error: null
