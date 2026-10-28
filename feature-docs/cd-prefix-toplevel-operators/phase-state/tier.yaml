@@ -1,0 +1,72 @@
+schema_version: 2
+feature: cd-prefix-toplevel-operators
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.12
+    confidence: 0.88
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.88
+      '2': 0.12
+      '3': 0.0
+  observed_at: '2026-10-28T23:07:03+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.62
+    confidence: 0.6
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.39
+      '2': 0.6
+      '3': 0.01
+  observed_at: '2026-10-28T23:11:35+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/hooks/bash_guard.py
+  - em-workflow/references/command-execution-protocol.md
+  - tests/test_bash_guard_cd_prefix.py
+  - tests/test_cd_prefix_exception_docs.py
+  changed_lines_approx: 100
+  new_functions_needed: 1
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules:
+  - em-workflow/README.md
+  - em-workflow/references/workflow-schema.md
+  - em-workflow/agents/implementer.md
+  - em-workflow/skills/worktree-task-workflow/SKILL.md
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 8
+  body_change_kind: new_logic
+  change_containment: single_module
+  caller_and_dependency_count: 4
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: 概算はトップレベル演算子を対象外にする方式を前提とする。em-workflow/hooks/bash_guard.py:198 は残り全体を分離し、:244
+    は承認一致と移動先だけを検査する。呼出元は :300、直接依存は :246/:252/:253 の3関数。HEAD 3fb5138 のコードをファイル変更なしで検証し、承認ストアのみメモリで差し替えると3演算子とも
+    allow。実際の Bash で & の後続は元の cwd、cd 失敗を模擬すると ; と || の後続も元の cwd になった。tests/test_bash_guard_cd_prefix.py:57/:288
+    は && を許可し、:325 は未承認の後続追加を検査するが、承認済みの3演算子の回帰試験はない。em-workflow/references/command-execution-protocol.md:116
+    に演算子制限はない。文書試験33件は合格。波及先の記載は README.md:118、workflow-schema.md:307、implementer.md:94、worktree-task-workflow/SKILL.md:123。引数・出力形式の変更は不要で、実行許可条件が変わる
+decided_at: '2026-10-28T23:11:44+09:00'
