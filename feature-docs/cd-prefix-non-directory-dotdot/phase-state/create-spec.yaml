@@ -1,7 +1,7 @@
 schema_version: 1
 feature: cd-prefix-non-directory-dotdot
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 25ad6b3e65df2eea2dac9df769617fa6df346890
 last_input_digest: sha256:67ed371d1d74f3a5207c6384d6e552bddb888d736b5f8cfa5d78e24e28835439
@@ -27,7 +27,7 @@ worker_runs:
   dispatch_digest_inputs:
     em-workflow/references/contracts/spec-writer-contract.md: sha256:9032c6287d75f4a88e556bd3962c32ab8b4905cf3b6ececa895206788bcd0b63
     em-workflow/references/templates/spec-document.md: sha256:203dfcddbe507886ce861694fccd20ae25e5af0bd1b0efa5e935991add950cbd
-  output_digest: sha256:spec-writer-result
+  output_digest: sha256:165b94bd074cbd95afaf144b81166e7d53431c5ba13dfe6b21871534ebad51b8
   self_write_set:
   - feature-docs/cd-prefix-non-directory-dotdot/SPEC.md
 artifacts:

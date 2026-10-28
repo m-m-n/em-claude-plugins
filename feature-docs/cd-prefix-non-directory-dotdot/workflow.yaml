@@ -1,0 +1,206 @@
+schema_version: 1
+feature: cd-prefix-non-directory-dotdot
+created: '2026-10-29'
+base_branch: main
+goal: '# bash_guard.py の cd 前置形の判定で、通常ファイルの後ろに .. が続く Bash が移動できないパスを許可する
+
+
+  ## やりたいこと
+
+  bash_guard.py の cd 前置形の判定で、通常ファイルや存在しない要素の後ろに `..` が続くパス（例: `.../em-workflow/hooks/bash_guard.py/..`）を、Bash が移動できない形として許可から外す。
+
+
+  ## 背景・なぜ
+
+  `is_below()` は物理パスを `os.path.realpath(path)`（strict=False）で解決するため、通常ファイルの後ろの `..` を字句のまま取り除く。論理パスが存在しない形（`/proc/self/root/..` を前に置く形など）では物理パスへのフォールバック分岐で True になる。一方、Bash の cd は「Not a directory」で失敗し、`&&` の後ろの承認済みコマンドは実行されない。
+
+
+  実害はなく、docstring と command-execution-protocol.md の「Bash が物理パスへのフォールバックで着く場所」という記述と判定が食い違うだけ。論理パスが存在する形では、変更前から同じ食い違いがある。
+
+
+  feature is-below-physical-fallback の review round 1 で comprehensive レビュアーが報告し、evaluator が low に下げた指摘。
+
+
+  ## 受け入れ条件
+
+  - 通常ファイルや存在しない要素の後ろに `..` が続くパスを cd 前置形の許可に含めない
+
+  - その形を silent のケースとして `tests/test_bash_guard_cd_prefix.py` の PATH_CASES に加えたテストがある
+
+  - 既存の cd 前置形のテストがすべて通る
+
+
+  ## スコープ外
+
+  `/proc/self/cwd` のようなプロセス依存のパスの扱い（別タスク）
+
+
+  ## 制約・前提
+
+  `os.path.realpath(path, strict=True)` でも途中の通常ファイルを拒否するかは Python の版による。版に依存しない形で確かめる。
+
+  '
+parent_branch: em-workflow/cd-prefix-non-directory-dotdot/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.98
+      '2': 0.02
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.93
+      '2': 0.07
+      '3': 0.0
+  at: '2026-10-29T01:02:40+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: 9249981a12e955e5ee5453d5494bd2664fc1b1d9
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'UI のないフックの判定ロジックの修正で、変更は is_below() の物理パス側の判定とテストケースの追加に限られるため（design-step 推奨: skipped。tier reduced でも design は削減対象）'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: null
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: 物理パスの存在判定は書かれたとおりのパスで行う
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-5
+  FR2:
+    title: 論理パスが存在する形も許可しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+  FR3:
+    title: 論理パスが存在しない形も許可しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-3
+  FR4:
+    title: 許可しない形は判定なしにする
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+  FR5:
+    title: PATH_CASES に silent のケースを加える
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-4
+  FR6:
+    title: /proc/self/root/.. を前に置く形のテスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-3
+  NFR1:
+    title: Python の版に依存しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-4
+  NFR2:
+    title: 標準ライブラリだけを使う
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-6
+  NFR3:
+    title: 解決エラーは False
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-6
+  NFR4:
+    title: パスを子プロセスに渡さない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-6
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
