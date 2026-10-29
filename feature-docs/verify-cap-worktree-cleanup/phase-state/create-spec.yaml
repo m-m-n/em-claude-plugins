@@ -3,18 +3,111 @@ feature: verify-cap-worktree-cleanup
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: d98c7d41fd738eac090add8b669501cecbb0bae5
-last_input_digest: sha256:ee3c49b3e7c22a193741a2f18d9f5a651222e44e5ebce041366cadf2854682fd
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+base_revision: de262580e930351e69062de0590521df71d41dd8
+last_input_digest: sha256:f5364a0fee3f99e1befb89a717503ac4279072f18287b1e1fc11f297fd425834
+active_request_id: create-spec-run-0002
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-29T22:44:00+09:00'
+    questions:
+    - question_id: requirement.alignment-direction
+      status: answered
+    - question_id: requirement.exemption-condition
+      status: answered
+    - question_id: requirement.exemption-shapes
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+answers:
+  requirement.alignment-direction:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-29T22:58:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - guard_exempts_cap_reached
+    freeform: null
+    normalized_answer: フック側で除外する。cap 到達で verify が failed のまま Step C に入った走行では failed-run-cleanup-guard
+      が判定を出さず、SKILL.md の worktree 削除規定と cap 到達走行の detail 文言はそのまま残す
+    resolution_note: 'Codex consulted (harness: codex, 1 turn); Opus escalation not
+      run; options: guard_exempts_cap_reached / skill_keeps_worktree; chosen guard_exempts_cap_reached;
+      key point: SKILL.md already specifies continuation to Step C and worktree removal,
+      so a narrow hook exemption keeps the defined completion flow'
+  requirement.exemption-condition:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-29T22:58:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - status_plus_cap_counters
+    freeform: null
+    normalized_answer: status と cap の記録で判定する。failed のトップレベル step が verify だけで、retrospect
+      が completed、他の step が completed か skipped、かつ batch.verify_rework が系譜 cap（failed_id_counts
+      のいずれかの値が 2 以上）または hard cap（rounds が 3 以上）の到達を示すときだけ除外する。cap 記録が欠落・不正なら除外せず従来の
+      failed 判定を維持する
+    resolution_note: 'Codex consulted (harness: codex, 1 turn); Opus escalation not
+      run; options: status_only / status_plus_cap_counters; chosen status_plus_cap_counters
+      (Codex recommendation; analyst had recommended status_only); key point: a verify
+      failure below the cap is outside the SKILL.md exception, so status alone is
+      insufficient grounds to allow deletion of investigation state; missing/invalid
+      counters keep the deny'
+  requirement.exemption-shapes:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-29T22:58:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - s1_and_s3
+    freeform: null
+    normalized_answer: S1（git worktree remove）と S3（gh pr create）だけを除外する。S2（git branch
+      -d）は deny のまま残す。静的に解決できない対象の判定もコマンド形を区別し S2 の保護を保つ
+    resolution_note: 'Codex consulted (harness: codex, 1 turn); Opus escalation not
+      run; options: all_three_shapes / s1_and_s3 / s1_only; chosen s1_and_s3 (Codex
+      recommendation; analyst had recommended all_three_shapes); key point: with --pr,
+      S3 runs before S1 so both must pass, while batch Step C keeps the branch so
+      S2 protection need not be relaxed'
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-29T22:58:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design_step_recommendation（skip）をそのまま採用する
+    resolution_note: batch-policies.yaml create-spec.design-step -> decide_autonomously
 worker_runs:
-  - request_id: create-spec-run-0001
-    status: dispatched
-    input_digest: sha256:ee3c49b3e7c22a193741a2f18d9f5a651222e44e5ebce041366cadf2854682fd
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:ee3c49b3e7c22a193741a2f18d9f5a651222e44e5ebce041366cadf2854682fd
+  output_digest: sha256:ac2ed46c317222a57e127225065482d51d7a4a6fc7f3a256f1259511bb88aca0
+  self_write_set: []
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:f5364a0fee3f99e1befb89a717503ac4279072f18287b1e1fc11f297fd425834
+  dispatch_digest_inputs:
+    .claude/rules/hook-tests.md: sha256:69fcdbd53cfc7f685bbe9050757167a9ac9f0b4a38dac7d8c7533d65945fea38
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    em-workflow/README.md: sha256:6c58dd0e8878f435258cc07904d650a949e93a085acbc9af40547fcc444c3541
+    em-workflow/hooks/destructive-guard.py: sha256:805ce5e2be55d037e301d3775e81a929b8ca5714f31bf64dab2fd268e7945286
+    em-workflow/hooks/failed-run-cleanup-guard.py: sha256:eafa3d481f5f03324ad2861266919108c5e810cdb44838cd47b111d30f41d29d
+    em-workflow/hooks/hooks.json: sha256:f9cb781c13f4ea79bb8dcbc44da225f2fada57c8824ea211c6711d1d05e6c0dc
+    em-workflow/references/batch-mode.md: sha256:f585a0f99584494dd483e22b3564f8fe3d36e399245a6d3091d5aa14e26c41f5
+    em-workflow/references/batch-terminal-line.md: sha256:133c9d9a3c6f410b0f2c719a72dd061fc618afbf740ad0ac371c1bc3448caf12
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
+    em-workflow/references/workflow-schema.md: sha256:7d6fcf022e4409981ec5b23e0b77865d2aad25813afc615d2a42f462a5fa690a
+    em-workflow/skills/develop/SKILL.md: sha256:3ad5a832b19ea3e64bbae71d17802ddec407deb9145fee6c3e361f7753ddf6e4
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+    tests/test_failed_run_cleanup_guard.py: sha256:2ec9c9cd17477a25c61106a4e44edd1b98b0da571fa903c2cca735865f4f05f0
+    tests/test_guard_deferral_parity.py: sha256:bb6fa5a582508a23666c5b41f83fe135ec69add3ca2964e25908577f6e926b74
+    tests/test_guardrail_hooks_migration.py: sha256:876b051e72b68c4847ba5b10c4d01757359c590a8c63ce9f9605ca70fc7051b8
+    tests/test_hooks_registration.py: sha256:57081b42d003d8508c7c232855dccdd875dcd929926b14f662028ef218a24a82
+    tests/test_step_c_verify_failed_default.py: sha256:575581be26ef3c0e2023c3f1273c83c5adeff0b6e27b3d14e9eacd4fd70c2d9e
+    tests/test_verify_cap_run_continuation.py: sha256:2794e0c811b0a85341e44abdb65517952c535c70e26d97cac1b0b96b676b66cd
 artifacts: []
 patches: []
-progress_fingerprint: null
+progress_fingerprint: sha256:4db7c67f7a015d46b4a83c876256282d58f81e52794c39681e032813ac82813f
 stale_redispatch_count: 0
 resolved_input_cache: {}
 last_error: null
