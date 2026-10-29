@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: efd56d448505149f1513bdc80754433a003c7f0e
 last_input_digest: sha256:d2c4dae48cd44569d8d673d0697ef033fec34df46852f61188695609c4effaaf
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -108,13 +108,23 @@ worker_runs:
   output_digest: sha256:2d0f064ed9f10f93a7f1cf97e7e5d3473f6461a79f6781e9aaeab20ceb26f070
   self_write_set: []
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:d2c4dae48cd44569d8d673d0697ef033fec34df46852f61188695609c4effaaf
   dispatch_digest_inputs:
     em-workflow/references/contracts/spec-writer-contract.md: sha256:9032c6287d75f4a88e556bd3962c32ab8b4905cf3b6ececa895206788bcd0b63
     em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
     em-workflow/references/templates/spec-document.md: sha256:203dfcddbe507886ce861694fccd20ae25e5af0bd1b0efa5e935991add950cbd
-artifacts: []
+  output_digest: sha256:8c20bff508246a4ded3efa4fb5cb39c8b18e6e8d0858edef165e3e9ff5b0138a
+  self_write_set:
+  - feature-docs/verify-cap-worktree-cleanup/REQUIREMENTS.md
+  - feature-docs/verify-cap-worktree-cleanup/SPEC.md
+artifacts:
+- path: feature-docs/verify-cap-worktree-cleanup/REQUIREMENTS.md
+  sha256: sha256:38513c3482397a9a44daa80906385e4cbf366787f96c2a518ea812162269410d
+  produced_by: create-spec-run-0003
+- path: feature-docs/verify-cap-worktree-cleanup/SPEC.md
+  sha256: sha256:6b25388bb3721ad3a74d9e201543a8d571cd1bac37488dead9ae91e86c98b94f
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: sha256:4db7c67f7a015d46b4a83c876256282d58f81e52794c39681e032813ac82813f
 stale_redispatch_count: 0
