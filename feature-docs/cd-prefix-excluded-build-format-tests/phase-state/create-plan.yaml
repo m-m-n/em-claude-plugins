@@ -1,16 +1,16 @@
 schema_version: 1
 feature: cd-prefix-excluded-build-format-tests
 phase: create-plan
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: 27bb26399263fb542271e977eeb806fc28e8cd33
 last_input_digest: sha256:48f687e17405a0f9ab693a35deb9b369210e8a92cc97fe25f2f9d8857ed21cce
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:48f687e17405a0f9ab693a35deb9b369210e8a92cc97fe25f2f9d8857ed21cce
   dispatch_digest_inputs:
     em-workflow/references/contracts/planner-contract.md: sha256:6476cc99ea8a1d2d4f376d1702bd636b1ab9898655397ec80ab1d6fb47cbe9e8
@@ -23,8 +23,26 @@ worker_runs:
     em-workflow/skills/plan-writing/SKILL.md: sha256:880bd01ad6c60af5695495e0a6784de7fe98e1ea9463dc6703164f8ffffdbccb
     feature-docs/cd-prefix-excluded-build-format-tests/SPEC.md: sha256:369d8864aa18a562169d732a96fe41b5e950564ab0a7a1812abb1d48f11e06bd
     feature-docs/cd-prefix-excluded-build-format-tests/workflow.yaml: sha256:dc3ecfb435edebb6e89e35b8bac767a70fc1ad1a69ec9278911e01418b34f9de
-artifacts: []
-patches: []
+  output_digest: sha256:8db52c9f5a2d95e5c7e137768ed2ccbce035e6634d401d40c67f147bd0ddced2
+  self_write_set:
+  - feature-docs/cd-prefix-excluded-build-format-tests/THREAT-MODEL.md
+  - feature-docs/cd-prefix-excluded-build-format-tests/VERIFICATION.md
+  - feature-docs/cd-prefix-excluded-build-format-tests/tasks/task0001.md
+artifacts:
+- path: feature-docs/cd-prefix-excluded-build-format-tests/THREAT-MODEL.md
+  sha256: sha256:79dfa26d47e9c1d100c35ddb950d6475a30eaa30263a701c83e9dfbf71b92065
+  produced_by: create-plan-run-0001
+- path: feature-docs/cd-prefix-excluded-build-format-tests/VERIFICATION.md
+  sha256: sha256:01e03758cf05aaab689cb32337c9d3216a9219d6013592b299e74cd7ffd69062
+  produced_by: create-plan-run-0001
+- path: feature-docs/cd-prefix-excluded-build-format-tests/tasks/task0001.md
+  sha256: sha256:3e54c90fc4ad4695cbae30a0a57b9a6180debb336c3627155d4db9ce71cbdc10
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: cd-prefix-excluded-build-format-tests-p0001
+  status: validated
+  base_input_digest: sha256:48f687e17405a0f9ab693a35deb9b369210e8a92cc97fe25f2f9d8857ed21cce
+  base_workflow_blob: 50479ecced7a00aa8b89cb3a0826af4b4ab8736b
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
