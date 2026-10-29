@@ -1,0 +1,32 @@
+schema_version: 1
+feature: build-format-both-excluded-tests
+phase: create-spec
+status: in_progress
+generation: 1
+base_revision: 253479d5a5713d83ff34f7e36d5e90b847ac1f4b
+last_input_digest: sha256:99a36dd095aae63a188a76b89726a79f64b65c9a17ba0eb52eb3f966a4fcdc5c
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:99a36dd095aae63a188a76b89726a79f64b65c9a17ba0eb52eb3f966a4fcdc5c
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache:
+  reference_scan_targets:
+    resolved_at_generation: 1
+    paths:
+    - em-workflow/agents/implementer.md
+    - em-workflow/skills/worktree-task-workflow/SKILL.md
+    - tests/test_implementer_cd_prefix_build_format_docs.py
+    - tests/test_implementer_cd_prefix_exclusion_docs.py
+    - tests/test_worktree_skill_instruction_source.py
+    - tests/test_implementer_untrusted_data_rule.py
+    - feature-docs/cd-prefix-excluded-build-format-tests/SPEC.md
+    - feature-docs/cd-prefix-excluded-build-format-tests/reviews/round1.yaml
+    truncated: false
+last_error: null
