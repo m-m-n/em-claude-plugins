@@ -132,8 +132,8 @@ tasks:
     - NFR5
     - NFR6
     - NFR7
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/verify-cap-worktree-cleanup/task0001
     notes: null
   task0002:
     title: "README hook-list row for failed-run-cleanup-guard"
@@ -146,8 +146,8 @@ tasks:
     requirements:
     - FR7
     - NFR7
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/verify-cap-worktree-cleanup/task0002
     notes: null
 review:
   status: pending
