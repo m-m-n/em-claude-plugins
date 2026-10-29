@@ -35,3 +35,21 @@ records:
     の要点: /proc/self/root はプロセスのルートを指し、drop なら例外を増やさず Q1 と同じ基準で扱える。物理パスへのフォールバックは hop/../sub で検証でき、ファイル・不存在要素の後ろの
     .. を許可しない既存検証（870–915 行）は維持すべき。Codex は既存 SPEC（is-below-physical-fallback）の更新にも触れたが、完了済み feature の記録として編集しない（analyst
     の A2）を維持し、本 feature の SPEC で上書きする決定として扱う。オーケストレーターは drop を比較的よいと判断して採用'
+- question_id: implement.deviation-auto-addition
+  packet_id: null
+  answered_at: '2026-10-29T10:08:00+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: declined
+  normalized_answer: not auto-added to tasks.task0001.files
+  resolution_note: 'task_id: task0001; deviation path: test-docs/cd-prefix-non-directory-dotdot/task0001.tests.yaml (renamed/moved test IDs updated so test_tests_yaml_id_resolution keeps passing); declined: the identifier part is missing (no AC-n of task0001 nor a registered requirement id is named; only an existing record-check test is named). The change remains an ordinary deviation for the containment check.'
+- question_id: implement.deviation-auto-addition
+  packet_id: null
+  answered_at: '2026-10-29T10:08:00+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: declined
+  normalized_answer: not auto-added to tasks.task0001.files
+  resolution_note: 'task_id: task0001; deviation path: test-docs/is-below-physical-fallback/task0001.tests.yaml (one moved/renamed test ID updated so test_tests_yaml_id_resolution keeps passing); declined: the identifier part is missing (no AC-n of task0001 nor a registered requirement id is named; only an existing record-check test is named). The change remains an ordinary deviation for the containment check.'
