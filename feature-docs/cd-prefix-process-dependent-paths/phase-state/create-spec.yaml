@@ -1,7 +1,7 @@
 schema_version: 1
 feature: cd-prefix-process-dependent-paths
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 6dca3688a4771c03c56dea6394e78b06ddd4756b
 last_input_digest: sha256:d72b6fb66b2f6d32705c99a3e277b74c657135637167a981686f923594494ed6
