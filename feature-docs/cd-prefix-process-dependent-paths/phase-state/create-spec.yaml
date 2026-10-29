@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 6dca3688a4771c03c56dea6394e78b06ddd4756b
 last_input_digest: sha256:d72b6fb66b2f6d32705c99a3e277b74c657135637167a981686f923594494ed6
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -72,9 +72,18 @@ worker_runs:
   input_digest: sha256:236015ab8e67beba4fac05c8c2fd7ac6ea12c128d13a81f803301e27c1d0f386
   self_write_set: []
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:d72b6fb66b2f6d32705c99a3e277b74c657135637167a981686f923594494ed6
-artifacts: []
+  self_write_set:
+  - feature-docs/cd-prefix-process-dependent-paths/REQUIREMENTS.md
+  - feature-docs/cd-prefix-process-dependent-paths/SPEC.md
+artifacts:
+- path: feature-docs/cd-prefix-process-dependent-paths/REQUIREMENTS.md
+  sha256: sha256:f450a6c35382ef36b88b2e50265c3dabb65a3f12f5094302d951d6f8195f3dda
+  produced_by: create-spec-run-0003
+- path: feature-docs/cd-prefix-process-dependent-paths/SPEC.md
+  sha256: sha256:299452aa47bd1f5bf6456310751c30226516445f57367a3917332b83885c4ab5
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
