@@ -5,12 +5,46 @@ status: in_progress
 generation: 1
 base_revision: cf6696ff332bed9b55b6b76ab47f7b5d48a67c48
 last_input_digest: sha256:eb6d678083d179643fa59089ced340880e35bd95e422909db37c4a531de20f15
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-29T09:00:34+09:00'
+    questions:
+    - question_id: requirement.build-format-uncovered-tests-value
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+answers:
+  requirement.build-format-uncovered-tests-value:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-29T09:00:34+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - fail_for_build_only
+    freeform: null
+    normalized_answer: '承認済みの build コマンドが cd 前置形の対象外で実行されなかったときは tests: "fail" にする。format コマンドが対象外で実行されなかったときは、tests
+      を test コマンドの結果どおりにする（format の不実行だけでは "fail" にしない）。どちらの場合も、実行しなかったコマンドと、cd 前置形がそのコマンドを対象にしないので実行しなかったことを
+      notes に書く。status（merged / failed）の扱いと Step 7 のフィールド構成は変えない。'
+    resolution_note: 'gate: create-spec.requirement-clarification; policy: codex_consultation, record_as_assumption;
+      codex_consulted: true (2 turns)。analyst は fail_for_both を推奨。Codex は turn 1・turn 2 とも fail_for_build_only
+      を推奨: Step 4b は build の成功を先へ進む条件にしているが format の成功を条件にする記述はどちらの手順書にも無く、fail_for_both は新しい合格条件を足すことになる。turn
+      1 の補足（build 不実行時に status failed も報告）は turn 2 で A2 の範囲外として撤回。オーケストレーターは既存の規則に根拠がある fail_for_build_only
+      を比較的よいと判断して採用'
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-29T09:00:34+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 'design step を skip する（analyst 推奨: 手順書 2 つへの文の追加と文書試験だけで UI 変更なし）'
+    resolution_note: 'gate: create-spec.design-step; policy: select decide_autonomously'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:eb6d678083d179643fa59089ced340880e35bd95e422909db37c4a531de20f15
 artifacts: []
 patches: []
