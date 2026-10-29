@@ -82,7 +82,8 @@ workflow:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: b04b8786e8246c9599aafeecf41e8be5f41f134b
 - id: implement
   status: pending
   base_commit: null
@@ -94,7 +95,50 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: "Refuse /proc and /dev/fd paths in the cd prefix path check"
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/hooks/bash_guard.py
+    - tests/test_bash_guard_cd_prefix.py
+    skills:
+    - backend-impl
+    domains:
+    - auth
+    - input-handling
+    - external-io
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR6
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    - NFR6
+    - NFR7
+    status: pending
+    notes: null
+  task0002:
+    title: "State the /proc and /dev/fd rule in the hook docstring and the protocol"
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/hooks/bash_guard.py
+    - em-workflow/references/command-execution-protocol.md
+    - tests/test_bash_guard_cd_prefix.py
+    skills: []
+    domains: []
+    complexity: medium
+    requirements:
+    - FR5
+    - NFR6
+    status: pending
+    notes: null
 review:
   status: pending
   rounds_completed: 0
@@ -107,7 +151,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-2
@@ -119,7 +164,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-7
@@ -128,7 +174,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-6
     - TS-7
@@ -137,7 +184,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-4
     - TS-5
@@ -147,15 +195,18 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0002
     tests:
     - TS-9
+    - TS-17
   FR6:
     title: 回帰テスト
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-2
@@ -168,51 +219,66 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-12
   NFR2:
     title: 実行テキストに status という部分文字列を含めない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-13
   NFR3:
     title: path は解決するだけで子プロセスを起動しない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-14
   NFR4:
     title: 解決中の OSError / ValueError で判定は False
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-5
+    - TS-11
   NFR5:
     title: 辿るリンク数に上限を設ける
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-10
   NFR6:
     title: 新しいテストは標準ライブラリだけを使い、実環境の状態を読まない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-15
   NFR7:
     title: is_below のシグネチャと呼び出し元を変えない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-16
 batch:
   review_rework_count: 0
   verify_rework:

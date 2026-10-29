@@ -1,7 +1,7 @@
 schema_version: 1
 feature: cd-prefix-process-dependent-paths
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: b9ce41f29b96b03dabd97b79084480794e680bdc
 last_input_digest: sha256:792f4519fa7fe9bf640311370d7d5474ad8193d509ef6da6aba7a20438d3684e
@@ -49,7 +49,7 @@ artifacts:
   produced_by: create-plan-run-0001
 patches:
 - patch_id: cd-prefix-process-dependent-paths-create-plan-p0001
-  status: pending
+  status: applied
   base_input_digest: sha256:792f4519fa7fe9bf640311370d7d5474ad8193d509ef6da6aba7a20438d3684e
   base_workflow_blob: 431c4275ee4138ecf6a0f8a53b4cbc475b1b3609
 progress_fingerprint: null
