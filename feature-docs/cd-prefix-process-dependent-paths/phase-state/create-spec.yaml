@@ -1,11 +1,11 @@
 schema_version: 1
 feature: cd-prefix-process-dependent-paths
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: 6dca3688a4771c03c56dea6394e78b06ddd4756b
-last_input_digest: sha256:94f97bac8f74b5a47e1bb6e643485076caf6bb5060eb07dca29dc61e231f4cfa
-active_request_id: null
+last_input_digest: sha256:236015ab8e67beba4fac05c8c2fd7ac6ea12c128d13a81f803301e27c1d0f386
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     status: answered
@@ -67,6 +67,9 @@ worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
   input_digest: sha256:94f97bac8f74b5a47e1bb6e643485076caf6bb5060eb07dca29dc61e231f4cfa
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:236015ab8e67beba4fac05c8c2fd7ac6ea12c128d13a81f803301e27c1d0f386
 artifacts: []
 patches: []
 progress_fingerprint: null
