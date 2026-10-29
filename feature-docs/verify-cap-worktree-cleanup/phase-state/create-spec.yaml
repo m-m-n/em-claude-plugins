@@ -1,7 +1,7 @@
 schema_version: 1
 feature: verify-cap-worktree-cleanup
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: efd56d448505149f1513bdc80754433a003c7f0e
 last_input_digest: sha256:d2c4dae48cd44569d8d673d0697ef033fec34df46852f61188695609c4effaaf
