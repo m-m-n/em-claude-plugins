@@ -1,0 +1,76 @@
+task_id: task0002
+baseline_failures: []          # before any edit: python3 -m unittest discover -s tests -> Ran 12050 tests, OK (skipped=1); no failing test
+final_failures: []             # re-executed after the implementation and after writing this record: python3 -m unittest discover -s tests -> OK (skipped=1, the same single skip as the baseline); no failing test
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathWording.test_ac1_the_hook_docstring_states_the_rule
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathWording.test_ac1_the_statement_sits_in_the_path_item_of_the_docstring
+      - tests.test_bash_guard_cd_prefix_operators.TestAc6DocstringStatesTheConditions
+    red_confirmed: true
+    red_reason: >-
+      Run against the unedited docstring (new wording tests written first),
+      test_ac1_the_hook_docstring_states_the_rule and
+      test_ac1_the_statement_sits_in_the_path_item_of_the_docstring failed
+      with AssertionError: False is not true, because the docstring carried
+      none of the needles for the /proc and /dev/fd statement.
+      TestAc6DocstringStatesTheConditions passed before the edit (it pins the
+      paragraph that must stay intact), so it is not what carries the red.
+  AC-2:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathWording.test_ac2_the_protocol_rule_states_the_rule
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathWording.test_ac2_the_statement_sits_in_the_path_item_of_the_protocol_rule
+      - tests.test_cd_prefix_exception_docs
+    red_confirmed: true
+    red_reason: >-
+      Run against the unedited Verbatim execution rule,
+      test_ac2_the_protocol_rule_states_the_rule and
+      test_ac2_the_statement_sits_in_the_path_item_of_the_protocol_rule failed
+      with AssertionError: False is not true, because the rule carried none of
+      the needles for the /proc and /dev/fd statement.
+      tests.test_cd_prefix_exception_docs passed before the edit (it pins the
+      existing protocol wording that must stay), so it is not what carries the
+      red.
+  AC-3:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestPathConditionWording
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathWording.test_ac3_neither_place_describes_the_proc_self_root_prefix_as_allowed
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing
+      TestPathConditionWording detects the required strings, the two
+      parenthetical definitions and the forbidden single-realpath phrases in
+      both texts; no red state occurred for this change. The criterion is a
+      preservation constraint on the edit (the strings must survive, the
+      /proc/self/root/.. prefix must not be described as allowed), so it
+      holds before the edit and there is no failing state to observe. The
+      new test_ac3 test passed before the edit for the same reason.
+  AC-4:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathWording.test_ac4_the_matcher_fires_on_forged_text_with_one_needle_removed
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathWording.test_ac4_the_matcher_does_not_fire_on_unrelated_text
+    red_confirmed: true
+    red_reason: >-
+      Run against the unedited texts, test_ac4_the_matcher_fires_on_forged_text_with_one_needle_removed
+      failed with AssertionError: False is not true : the docstring does not
+      carry the statement the forgeries start from, because the texts it
+      removes one needle from did not carry the statement yet.
+      test_ac4_the_matcher_does_not_fire_on_unrelated_text passed before the
+      edit (it feeds the matcher unrelated text only), so it is not what
+      carries the red.
+  AC-5:
+    tests:
+      - tests.test_bash_guard_cd_prefix
+      - tests.test_bash_guard_cd_prefix_operators
+      - tests.test_cd_prefix_exception_docs
+      - tests.test_cd_prefix_operator_exclusion_docs
+      - tests.test_implementer_cd_prefix_exclusion_docs
+    red_confirmed: false
+    red_reason: >-
+      The verifiable outcome is the project test command
+      python3 -m unittest discover -s tests, which is not one selectable test.
+      A dedicated new module is out of scope, but the listed existing modules
+      read bash_guard.py and command-execution-protocol.md and detect any
+      wording or behavior regression in them; no red state occurred for this
+      criterion because the baseline run was already green (Ran 12050 tests,
+      OK, skipped=1).

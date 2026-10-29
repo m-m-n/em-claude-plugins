@@ -1057,6 +1057,100 @@ class TestPathConditionWording(unittest.TestCase):
                 self.assertRegex(flat, r"physical path \([^)]*as written[^)]*\)")
 
 
+# Needles that carry the statement about /proc and /dev/fd. `/proc` keeps its
+# slash: the docstring already says "child process", so a bare `proc` would
+# match before the statement exists.
+PROCESS_DEPENDENT_PATH_NEEDLES = (
+    "/proc",
+    "/dev/fd",
+    "fails the path check",
+    "first component is `proc`",
+    "`dev` and `fd`",
+    "judged on the path as written",
+    "each stage reached while resolving the logical path and the physical path",
+    "the target of each link followed",
+    "final realpath alone",
+)
+
+
+def _states_process_dependent_path_rule(text):
+    """True when the text states that a path under /proc or /dev/fd fails the
+    path check, judged on the path as written, on each stage of the resolution
+    of both the logical path and the physical path, and on the target of each
+    link followed."""
+    flat = " ".join(text.split()).lower()
+    return all(needle in flat for needle in PROCESS_DEPENDENT_PATH_NEEDLES)
+
+
+def _docstring_path_item(docstring):
+    """The `path:` item of the `cd prefix:` paragraph, whitespace flattened."""
+    match = re.search(r"^  - path:(.*?)^  - approval:", docstring, re.DOTALL | re.MULTILINE)
+    return " ".join(match.group(1).split()) if match else None
+
+
+def _rule_path_item(rule):
+    """The path item of the Verbatim execution rule (already flattened)."""
+    start = rule.find("the path reaches an existing directory")
+    end = rule.find("everything after the first `&&` matches")
+    if start < 0 or end < start:
+        return None
+    return rule[start:end]
+
+
+class TestProcessDependentPathWording(unittest.TestCase):
+    """AC-1 to AC-4 (FR5, NFR6): the hook docstring and the protocol's Verbatim
+    execution rule both state that a path under /proc or /dev/fd fails the
+    path check, and how that is judged."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.docstring = _load_guard_module().__doc__
+        cls.rule = _verbatim_execution_rule(PROTOCOL_PATH.read_text(encoding="utf-8"))
+
+    def test_ac4_the_matcher_fires_on_forged_text_with_one_needle_removed(self):
+        self.assertIsNotNone(self.rule, "section 'Verbatim execution rule' not found")
+        for name, text in (("docstring", self.docstring), ("protocol", self.rule)):
+            flat = " ".join(text.split()).lower()
+            self.assertTrue(
+                _states_process_dependent_path_rule(flat),
+                f"the {name} does not carry the statement the forgeries start from",
+            )
+            for needle in PROCESS_DEPENDENT_PATH_NEEDLES:
+                with self.subTest(place=name, needle=needle):
+                    forged = flat.replace(needle, "")
+                    self.assertNotIn(needle, forged)
+                    self.assertFalse(_states_process_dependent_path_rule(forged))
+
+    def test_ac4_the_matcher_does_not_fire_on_unrelated_text(self):
+        self.assertFalse(_states_process_dependent_path_rule(""))
+        self.assertFalse(_states_process_dependent_path_rule("the realpath of <path> only"))
+        self.assertFalse(_states_process_dependent_path_rule("never used as a child process"))
+
+    def test_ac1_the_hook_docstring_states_the_rule(self):
+        self.assertTrue(_states_process_dependent_path_rule(self.docstring))
+
+    def test_ac1_the_statement_sits_in_the_path_item_of_the_docstring(self):
+        item = _docstring_path_item(self.docstring)
+        self.assertIsNotNone(item, "path item of the 'cd prefix:' paragraph not found")
+        self.assertTrue(_states_process_dependent_path_rule(item))
+
+    def test_ac2_the_protocol_rule_states_the_rule(self):
+        self.assertIsNotNone(self.rule, "section 'Verbatim execution rule' not found")
+        self.assertTrue(_states_process_dependent_path_rule(self.rule))
+
+    def test_ac2_the_statement_sits_in_the_path_item_of_the_protocol_rule(self):
+        self.assertIsNotNone(self.rule, "section 'Verbatim execution rule' not found")
+        item = _rule_path_item(self.rule)
+        self.assertIsNotNone(item, "path item of the Verbatim execution rule not found")
+        self.assertTrue(_states_process_dependent_path_rule(item))
+
+    def test_ac3_neither_place_describes_the_proc_self_root_prefix_as_allowed(self):
+        self.assertIsNotNone(self.rule, "section 'Verbatim execution rule' not found")
+        for name, text in (("docstring", self.docstring), ("protocol", self.rule)):
+            with self.subTest(place=name):
+                self.assertNotIn("/proc/self/root", " ".join(text.split()))
+
+
 def _imported_top_level_modules(source):
     found = set()
     for node in ast.walk(ast.parse(source)):
