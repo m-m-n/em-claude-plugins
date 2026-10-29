@@ -109,6 +109,16 @@ run at any point, the baseline run included, the report sets `tests: "fail"`,
 and `notes` says that the test command was not run because the cd prefix form
 does not cover it.
 
+When the approved string that the cd prefix form does not cover is the build
+command (`project_commands.build`), the build command is not run, the report
+sets `tests: "fail"`, and `notes` says that the build command was not run
+because the cd prefix form does not cover it. When the approved string that the
+cd prefix form does not cover is the format command (`project_commands.format`),
+the format command is not run, the report's `tests` follows the result of the
+test command, not running the format command does not, on its own, make `tests`
+"fail", and `notes` says that the format command was not run because the cd
+prefix form does not cover it.
+
 ### Step 4: Implement (TDD)
 
 Run `project_commands.test` / `build` / `format` per the command-approval
