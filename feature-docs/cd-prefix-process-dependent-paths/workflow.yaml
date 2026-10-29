@@ -144,6 +144,10 @@ tasks:
     notes: null
 review:
   status: pending
+  plan:
+    floor: [comprehensive, security, performance, architecture, spec]
+    discretionary: []
+    cross_validation: true
   rounds_completed: 0
   perspectives: {}
   residual_critical_high: 0
