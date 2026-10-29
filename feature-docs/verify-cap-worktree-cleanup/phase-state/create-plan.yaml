@@ -1,7 +1,7 @@
 schema_version: 1
 feature: verify-cap-worktree-cleanup
 phase: create-plan
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: 7ed21b70798921cc68bf057b99a47303d03ee7ef
 last_input_digest: sha256:25faa87cfdc3b0c305a0830dc251028d86709340865ac35420f9801e88a7a24f
@@ -10,9 +10,9 @@ packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:25faa87cfdc3b0c305a0830dc251028d86709340865ac35420f9801e88a7a24f
-  output_digest: null
+  output_digest: sha256:8f917933c94c54e371db8e22f32e440e97a53cb46bf74f5c61db63e292dc45d7
   dispatch_digest_inputs:
     em-workflow/references/contracts/planner-contract.md: sha256:6476cc99ea8a1d2d4f376d1702bd636b1ab9898655397ec80ab1d6fb47cbe9e8
     em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
@@ -25,8 +25,33 @@ worker_runs:
     feature-docs/verify-cap-worktree-cleanup/REQUIREMENTS.md: sha256:38513c3482397a9a44daa80906385e4cbf366787f96c2a518ea812162269410d
     feature-docs/verify-cap-worktree-cleanup/SPEC.md: sha256:6b25388bb3721ad3a74d9e201543a8d571cd1bac37488dead9ae91e86c98b94f
     feature-docs/verify-cap-worktree-cleanup/workflow.yaml: sha256:373e4504fb1d6f2ae37a5eda2d9c29fc9a93a139dcd2632f9320d702deaf4f85
-artifacts: []
-patches: []
+  self_write_set:
+  - feature-docs/verify-cap-worktree-cleanup/IMPLEMENTATION.md
+  - feature-docs/verify-cap-worktree-cleanup/THREAT-MODEL.md
+  - feature-docs/verify-cap-worktree-cleanup/VERIFICATION.md
+  - feature-docs/verify-cap-worktree-cleanup/tasks/task0001.md
+  - feature-docs/verify-cap-worktree-cleanup/tasks/task0002.md
+artifacts:
+- path: feature-docs/verify-cap-worktree-cleanup/IMPLEMENTATION.md
+  sha256: sha256:bef5ce952fe90384126c02af19abc086e669b2a33e935fd7b2482b58340532bb
+  produced_by: create-plan-run-0001
+- path: feature-docs/verify-cap-worktree-cleanup/THREAT-MODEL.md
+  sha256: sha256:15aa5cf418e10c8f3f8f1f61f97e7b24da5983c0c57067bbaf28ec76e597d618
+  produced_by: create-plan-run-0001
+- path: feature-docs/verify-cap-worktree-cleanup/VERIFICATION.md
+  sha256: sha256:f7867c4468ae8f39eb76ff8bd89f465aa63e299783dbd2de333dbafee01c12e0
+  produced_by: create-plan-run-0001
+- path: feature-docs/verify-cap-worktree-cleanup/tasks/task0001.md
+  sha256: sha256:61ab9f890f5293eff9c44f016c0e259a673abdf21c7f02a9fc8b314edf145351
+  produced_by: create-plan-run-0001
+- path: feature-docs/verify-cap-worktree-cleanup/tasks/task0002.md
+  sha256: sha256:b410d86dec64d3ab5163db3805e72fef76818ab53032b976b60a808edeed7c40
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: create-plan-p0001
+  status: validated
+  base_input_digest: sha256:25faa87cfdc3b0c305a0830dc251028d86709340865ac35420f9801e88a7a24f
+  base_workflow_blob: d09640bbff5f3ed4b063fcfa1e041dc97aa6a3ba
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
