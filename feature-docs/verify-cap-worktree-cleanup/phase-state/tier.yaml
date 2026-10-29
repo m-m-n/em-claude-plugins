@@ -1,0 +1,72 @@
+schema_version: 2
+feature: verify-cap-worktree-cleanup
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.06
+    confidence: 0.94
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.94
+      '2': 0.06
+      '3': 0.0
+  observed_at: '2026-10-29T22:38:00+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.67
+    confidence: 0.67
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.33
+      '2': 0.67
+      '3': 0.0
+  observed_at: '2026-10-29T22:45:00+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/hooks/failed-run-cleanup-guard.py
+  - em-workflow/skills/develop/SKILL.md
+  - em-workflow/README.md
+  - tests/test_failed_run_cleanup_guard.py
+  changed_lines_approx: 150
+  new_functions_needed: 1
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules:
+  - em-workflow/README.md
+  - tests/test_guard_deferral_parity.py
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 8
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  caller_and_dependency_count: 4
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: 概算は現行の削除規定にフックを合わせる案を前提とする。em-workflow/skills/develop/SKILL.md:527-540
+    は cap 到達時の継続、1014-1027 は削除を規定する。em-workflow/hooks/failed-run-cleanup-guard.py:573-599,684-696
+    は workflow のステップだけを読み、failed があれば拒否する。em-workflow/references/workflow-schema.md:271-276
+    に cap 判定用の履歴がある。tests/test_failed_run_cleanup_guard.py:288-338,412-447 は既存の拒否・無判定・batch
+    判定を検証するが、cap 到達後の削除は未検証。tests/test_verify_cap_run_continuation.py:431-435 は完了報告の文言を検証する。直接連携する4箇所は
+    hooks/hooks.json:26、hooks/destructive-guard.py:8850、上記フックテスト、tests/test_guard_deferral_parity.py:36。README.md:132
+    の拒否条件にも例外の反映が必要となる
+decided_at: '2026-10-29T22:45:30+09:00'
