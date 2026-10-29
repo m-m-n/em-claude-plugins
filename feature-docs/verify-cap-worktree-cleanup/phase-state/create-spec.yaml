@@ -4,7 +4,7 @@ phase: create-spec
 status: dispatching
 generation: 1
 base_revision: de262580e930351e69062de0590521df71d41dd8
-last_input_digest: sha256:f5364a0fee3f99e1befb89a717503ac4279072f18287b1e1fc11f297fd425834
+last_input_digest: sha256:c8f908c19ac562eab56b09f394e31066c1f6239f40559ab37c4ea6a9c8fdbf1b
 active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
@@ -85,7 +85,7 @@ worker_runs:
   self_write_set: []
 - request_id: create-spec-run-0002
   status: dispatched
-  input_digest: sha256:f5364a0fee3f99e1befb89a717503ac4279072f18287b1e1fc11f297fd425834
+  input_digest: sha256:c8f908c19ac562eab56b09f394e31066c1f6239f40559ab37c4ea6a9c8fdbf1b
   dispatch_digest_inputs:
     .claude/rules/hook-tests.md: sha256:69fcdbd53cfc7f685bbe9050757167a9ac9f0b4a38dac7d8c7533d65945fea38
     CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
