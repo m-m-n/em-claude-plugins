@@ -1,0 +1,34 @@
+schema_version: 1
+feature: cd-prefix-process-dependent-paths
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: 6dca3688a4771c03c56dea6394e78b06ddd4756b
+last_input_digest: sha256:94f97bac8f74b5a47e1bb6e643485076caf6bb5060eb07dca29dc61e231f4cfa
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:94f97bac8f74b5a47e1bb6e643485076caf6bb5060eb07dca29dc61e231f4cfa
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache:
+  design_system_candidates:
+    resolved_at_generation: 1
+    paths: []
+    truncated: false
+  reference_scan_targets:
+    resolved_at_generation: 1
+    paths:
+    - em-workflow/hooks/bash_guard.py
+    - tests/test_bash_guard_cd_prefix.py
+    - tests/test_bash_guard_cd_prefix_operators.py
+    - tests/test_cd_prefix_exception_docs.py
+    - em-workflow/references/command-execution-protocol.md
+    - feature-docs/is-below-physical-fallback/SPEC.md
+    truncated: false
+last_error: null
