@@ -40,7 +40,7 @@ artifacts:
   produced_by: create-plan-run-0001
 patches:
 - patch_id: cd-prefix-excluded-build-format-tests-p0001
-  status: validated
+  status: applied
   base_input_digest: sha256:48f687e17405a0f9ab693a35deb9b369210e8a92cc97fe25f2f9d8857ed21cce
   base_workflow_blob: 50479ecced7a00aa8b89cb3a0826af4b4ab8736b
 progress_fingerprint: null

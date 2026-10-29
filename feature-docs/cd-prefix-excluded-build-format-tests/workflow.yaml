@@ -2,29 +2,45 @@ schema_version: 1
 feature: cd-prefix-excluded-build-format-tests
 created: '2026-10-29'
 base_branch: main
-goal: |
-  cd 前置形の対象外になった承認文字列が build / format コマンドのとき、implementer 報告の tests の値が決まっていない
+goal: 'cd 前置形の対象外になった承認文字列が build / format コマンドのとき、implementer 報告の tests の値が決まっていない
+
 
   ## やりたいこと
 
-  承認済みの build / format コマンドが cd 前置形の対象外（トップレベルに `&` / `;` / `||` を含む）になったとき、implementer の報告の `tests` に何を書くかを決めて手順書に書く。
+
+  承認済みの build / format コマンドが cd 前置形の対象外（トップレベルに `&` / `;` / `||` を含む）になったとき、implementer
+  の報告の `tests` に何を書くかを決めて手順書に書く。
+
 
   ## 背景・なぜ
 
-  feature cd-prefix-toplevel-operators の create-plan で、test コマンドが対象外のときは実行せず `tests: "fail"` にし、実行しなかった理由を notes に書くと決めた（Codex に相談し、選択肢 B を採用）。build / format コマンドが対象外のときの `tests` の値は、SPEC にもこの回答にも無く、決まっていない。
+
+  feature cd-prefix-toplevel-operators の create-plan で、test コマンドが対象外のときは実行せず `tests:
+  "fail"` にし、実行しなかった理由を notes に書くと決めた（Codex に相談し、選択肢 B を採用）。build / format コマンドが対象外のときの
+  `tests` の値は、SPEC にもこの回答にも無く、決まっていない。
+
 
   ## 受け入れ条件 / 完了の定義
 
+
   - [ ] build / format コマンドが対象外のときの `tests` の値が手順書に書かれている
+
   - [ ] その記述を確かめる文書試験がある
+
 
   ## スコープ外
 
+
   test コマンドが対象外のときの扱い（feature cd-prefix-toplevel-operators で決定済み）
+
 
   ## 制約・前提
 
-  該当箇所: `em-workflow/agents/implementer.md` の Step 3 / Step 7、`em-workflow/skills/worktree-task-workflow/SKILL.md` の Command execution gate 節。feature cd-prefix-toplevel-operators のマージ後に着手する。
+
+  該当箇所: `em-workflow/agents/implementer.md` の Step 3 / Step 7、`em-workflow/skills/worktree-task-workflow/SKILL.md`
+  の Command execution gate 節。feature cd-prefix-toplevel-operators のマージ後に着手する。
+
+  '
 parent_branch: em-workflow/cd-prefix-excluded-build-format-tests/integration
 tier: reduced
 tier_decision:
@@ -67,7 +83,8 @@ workflow:
   - DESIGN.md
   - design/
   status: skipped
-  skipped_reason: '手順書 2 つへの文の追加と文書試験だけの変更で、UI もデザインの要素も無い（design-step.decision: decide_autonomously、source: batch-decision-table。tier reduced でも design は削減対象）'
+  skipped_reason: '手順書 2 つへの文の追加と文書試験だけの変更で、UI もデザインの要素も無い（design-step.decision: decide_autonomously、source:
+    batch-decision-table。tier reduced でも design は削減対象）'
 - id: create-plan
   artifacts:
   - IMPLEMENTATION.md
@@ -82,7 +99,34 @@ workflow:
   status: pending
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: tests value and notes for a build or format command the cd prefix form
+      does not cover
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/agents/implementer.md
+    - em-workflow/skills/worktree-task-workflow/SKILL.md
+    - tests/test_implementer_cd_prefix_build_format_docs.py
+    skills: []
+    domains:
+    - api-contract
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    status: pending
+    notes: null
+    branch: null
 review:
   status: pending
   rounds_completed: 0
@@ -95,7 +139,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS1
   FR2:
@@ -103,7 +148,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS2
   FR3:
@@ -111,7 +157,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS1
     - TS2
@@ -120,7 +167,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS6
   FR5:
@@ -128,7 +176,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS3
     - TS4
@@ -138,7 +187,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS6
   NFR2:
@@ -146,7 +196,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS6
   NFR3:
@@ -154,7 +205,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS6
   NFR4:
@@ -162,14 +214,16 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests: []
   NFR5:
     title: 試験の実行方法
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS6
 batch:
