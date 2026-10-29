@@ -5,13 +5,31 @@ status: in_progress
 generation: 1
 base_revision: 253479d5a5713d83ff34f7e36d5e90b847ac1f4b
 last_input_digest: sha256:99a36dd095aae63a188a76b89726a79f64b65c9a17ba0eb52eb3f966a4fcdc5c
-active_request_id: create-spec-run-0001
+active_request_id: create-spec-run-0002
 packets: {}
-answers: {}
+answers:
+  design-step.decision:
+    packet_id: null
+    answered_at: '2026-10-30T08:25:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 'design step を skip する（analyst 推奨: 手順書 2 つへの文の追加と文書試験だけで UI
+      変更なし）'
+    resolution_note: 'gate: create-spec.design-step; policy: select decide_autonomously'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:99a36dd095aae63a188a76b89726a79f64b65c9a17ba0eb52eb3f966a4fcdc5c
+  self_write_set: []
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:ac5d2d8b46762f844550f7b4c20b517a4c4e8756844db12a722dff127f9bf512
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/spec-writer-contract.md: sha256:9032c6287d75f4a88e556bd3962c32ab8b4905cf3b6ececa895206788bcd0b63
+    em-workflow/references/templates/spec-document.md: sha256:203dfcddbe507886ce861694fccd20ae25e5af0bd1b0efa5e935991add950cbd
 artifacts: []
 patches: []
 progress_fingerprint: null
