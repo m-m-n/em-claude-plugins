@@ -89,7 +89,8 @@ workflow:
   base_commit: 6a4de273770bd2421840c4a7bde60ba12aec7f4d
   completed_at_commit: 7f328114f2494b0e575822867e5b243fb1388d7d
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 9f581d3668aac74cfef033594e4b1c707b7f0e57
 - id: verify
   status: pending
   result: null
@@ -143,13 +144,18 @@ tasks:
     branch: em-workflow/cd-prefix-process-dependent-paths/task0002
     notes: null
 review:
-  status: pending
+  status: completed
   plan:
     floor: [comprehensive, security, performance, architecture, spec]
     discretionary: []
     cross_validation: true
-  rounds_completed: 0
-  perspectives: {}
+  rounds_completed: 1
+  perspectives:
+    security: completed
+    comprehensive: completed
+    performance: completed
+    architecture: completed
+    spec: completed
   residual_critical_high: 0
   needs_rework: false
 requirements:
