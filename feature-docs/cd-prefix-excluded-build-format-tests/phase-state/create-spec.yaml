@@ -4,8 +4,8 @@ phase: create-spec
 status: in_progress
 generation: 1
 base_revision: cf6696ff332bed9b55b6b76ab47f7b5d48a67c48
-last_input_digest: sha256:eb6d678083d179643fa59089ced340880e35bd95e422909db37c4a531de20f15
-active_request_id: null
+last_input_digest: sha256:4089ae88171ef82a66cba503788419a2f3f1e1bfbe4e1c71b4fd6ef28dc79a2e
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     status: answered
@@ -46,6 +46,9 @@ worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
   input_digest: sha256:eb6d678083d179643fa59089ced340880e35bd95e422909db37c4a531de20f15
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:4089ae88171ef82a66cba503788419a2f3f1e1bfbe4e1c71b4fd6ef28dc79a2e
 artifacts: []
 patches: []
 progress_fingerprint: null
@@ -63,5 +66,8 @@ resolved_input_cache:
     - tests/test_cd_prefix_exception_docs.py
     - feature-docs/cd-prefix-toplevel-operators/SPEC.md
     - feature-docs/cd-prefix-toplevel-operators/tasks/task0003.md
+    - tests/test_implementer_cd_chain_docs.py
+    - tests/test_worktree_skill_instruction_source.py
+    - tests/test_implementer_untrusted_data_rule.py
     truncated: false
 last_error: null
