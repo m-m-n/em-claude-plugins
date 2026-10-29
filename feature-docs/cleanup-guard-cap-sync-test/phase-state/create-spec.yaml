@@ -1,15 +1,15 @@
 schema_version: 1
 feature: cleanup-guard-cap-sync-test
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: f298d7906d2fbb1eb50897fcd5699a0825596810
-last_input_digest: sha256:9c3bb00146fc628f543f901073f6c22219fce011c4a4fa29d3074f28ef17832e
-active_request_id: create-spec-run-0001
+last_input_digest: sha256:3c2c25c90199a17eb1f37716cb33af7105b0dc54b42921c7d41178a0d280c10b
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     status: answered
-    issued_at: '2026-10-30T08:17:00+09:00'
+    issued_at: '2026-10-30T08:16:00+09:00'
     questions:
     - question_id: requirement.lineage-cap-extraction
       status: answered
@@ -20,7 +20,7 @@ packets:
 answers:
   requirement.lineage-cap-extraction:
     packet_id: create-spec-q0001
-    answered_at: '2026-10-30T08:24:00+09:00'
+    answered_at: '2026-10-30T08:18:00+09:00'
     source: batch-codex-consultation
     answer_mode: single_select
     selected_option_ids:
@@ -35,7 +35,7 @@ answers:
       match the reach-condition numbers'
   requirement.ac2-verification:
     packet_id: create-spec-q0001
-    answered_at: '2026-10-30T08:24:00+09:00'
+    answered_at: '2026-10-30T08:18:00+09:00'
     source: batch-codex-consultation
     answer_mode: single_select
     selected_option_ids:
@@ -47,7 +47,7 @@ answers:
       AC2 permanently in the suite without editing repository files'
   design-step.decision:
     packet_id: create-spec-q0001
-    answered_at: '2026-10-30T08:24:00+09:00'
+    answered_at: '2026-10-30T08:18:00+09:00'
     source: batch-decision-table
     answer_mode: single_select
     selected_option_ids:
@@ -61,6 +61,9 @@ worker_runs:
   input_digest: sha256:9c3bb00146fc628f543f901073f6c22219fce011c4a4fa29d3074f28ef17832e
   output_digest: sha256:c9d715959cc25c462271b02f99222ad6cbd07e928051f132276521f00434de2a
   self_write_set: []
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:3c2c25c90199a17eb1f37716cb33af7105b0dc54b42921c7d41178a0d280c10b
 artifacts: []
 patches: []
 progress_fingerprint: sha256:1a548d9353883945260b3f3d9d6fc097db8144c9eb2b088ae3faafe56471c1b7
