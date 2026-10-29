@@ -2,36 +2,23 @@ schema_version: 1
 feature: cleanup-guard-cap-sync-test
 created: '2026-10-30'
 base_branch: main
-goal: 'em-workflow: failed-run-cleanup-guard の cap 閾値と develop SKILL.md の cap の一致を確かめるテストを追加する
-
+goal: |
+  em-workflow: failed-run-cleanup-guard の cap 閾値と develop SKILL.md の cap の一致を確かめるテストを追加する
 
   ## やりたいこと
-
-  em-workflow/hooks/failed-run-cleanup-guard.py の cap 閾値（LINEAGE_CAP_COUNT=2 / HARD_CAP_ROUNDS=3）が、em-workflow/skills/develop/SKILL.md
-  の「batch 自動 rework の系譜 cap」の値と一致することを確かめるテストを追加する。
-
+  em-workflow/hooks/failed-run-cleanup-guard.py の cap 閾値（LINEAGE_CAP_COUNT=2 / HARD_CAP_ROUNDS=3）が、em-workflow/skills/develop/SKILL.md の「batch 自動 rework の系譜 cap」の値と一致することを確かめるテストを追加する。
 
   ## 背景・なぜ
-
-  現状は「SKILL.md と一致する」とコメントに書いてあるだけで、一致を確かめるテストが無い。SKILL.md 側の cap を変えると、cap に到達した走行で S1（git worktree remove）/
-  S3（gh pr create）が deny に戻り、Step C の completion_aborted が再発するが、どのテストも落ちない。
-
+  現状は「SKILL.md と一致する」とコメントに書いてあるだけで、一致を確かめるテストが無い。SKILL.md 側の cap を変えると、cap に到達した走行で S1（git worktree remove）/ S3（gh pr create）が deny に戻り、Step C の completion_aborted が再発するが、どのテストも落ちない。
 
   feature verify-cap-worktree-cleanup のレビューで指摘された（finding eb2fb3b6d77c856e、severity medium、未解決）。
 
-
   ## 受け入れ条件 / 完了の定義
-
   - [ ] tests/test_failed_run_cleanup_guard.py に、SKILL.md から系譜 cap の回数と hard cap の rounds を読み取り、フックの定数と一致することを確かめるテストがある
-
   - [ ] SKILL.md 側の値を変えるとそのテストが落ちる
 
-
   ## スコープ外
-
   フックの判定ロジックは変えない。
-
-  '
 parent_branch: em-workflow/cleanup-guard-cap-sync-test/integration
 tier: reduced
 tier_decision:
