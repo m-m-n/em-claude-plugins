@@ -108,7 +108,7 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/cd-prefix-excluded-build-format-tests/task0001
 review:
