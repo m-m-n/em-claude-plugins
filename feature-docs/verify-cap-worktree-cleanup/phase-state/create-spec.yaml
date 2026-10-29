@@ -22,7 +22,7 @@ packets:
 answers:
   requirement.alignment-direction:
     packet_id: create-spec-q0001
-    answered_at: '2026-10-29T22:58:00+09:00'
+    answered_at: '2026-10-29T22:46:00+09:00'
     source: batch-codex-consultation
     answer_mode: single_select
     selected_option_ids:
@@ -36,7 +36,7 @@ answers:
       so a narrow hook exemption keeps the defined completion flow'
   requirement.exemption-condition:
     packet_id: create-spec-q0001
-    answered_at: '2026-10-29T22:58:00+09:00'
+    answered_at: '2026-10-29T22:46:00+09:00'
     source: batch-codex-consultation
     answer_mode: single_select
     selected_option_ids:
@@ -54,7 +54,7 @@ answers:
       counters keep the deny'
   requirement.exemption-shapes:
     packet_id: create-spec-q0001
-    answered_at: '2026-10-29T22:58:00+09:00'
+    answered_at: '2026-10-29T22:46:00+09:00'
     source: batch-codex-consultation
     answer_mode: single_select
     selected_option_ids:
@@ -69,7 +69,7 @@ answers:
       S2 protection need not be relaxed'
   design-step.decision:
     packet_id: create-spec-q0001
-    answered_at: '2026-10-29T22:58:00+09:00'
+    answered_at: '2026-10-29T22:46:00+09:00'
     source: batch-decision-table
     answer_mode: single_select
     selected_option_ids:
