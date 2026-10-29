@@ -1,20 +1,69 @@
 schema_version: 1
 feature: cleanup-guard-cap-sync-test
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: f298d7906d2fbb1eb50897fcd5699a0825596810
 last_input_digest: sha256:9c3bb00146fc628f543f901073f6c22219fce011c4a4fa29d3074f28ef17832e
 active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-30T08:17:00+09:00'
+    questions:
+    - question_id: requirement.lineage-cap-extraction
+      status: answered
+    - question_id: requirement.ac2-verification
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+answers:
+  requirement.lineage-cap-extraction:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-30T08:24:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - label_and_reach
+    freeform: null
+    normalized_answer: SKILL.md の系譜 cap と hard cap の箇条から「（値 N）」の表示値と「が N に達した」の到達条件の数値の両方を読む。系譜 cap は到達回数
+      == LINEAGE_CAP_COUNT かつ 表示値 + 1 == LINEAGE_CAP_COUNT、hard cap は到達ラウンド数 == HARD_CAP_ROUNDS かつ 表示値
+      == HARD_CAP_ROUNDS を確かめる
+    resolution_note: 'Codex consulted (harness: codex, 1 turn); Opus escalation not run; options: label_and_reach
+      / reach_only / label_only; chosen label_and_reach (Codex recommendation, same as analyst); key point:
+      reading only one of the two numbers leaves a change to the other undetected, and the hook constants
+      match the reach-condition numbers'
+  requirement.ac2-verification:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-30T08:24:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - in_test_mutation
+    freeform: null
+    normalized_answer: 抽出と比較を SKILL.md の本文を引数に取る関数にまとめ、実際の SKILL.md の本文のメモリ上のコピーで 4 つの数値を 1 つずつ変えたものに対して不一致が報告されることをテストで自動確認する。実ファイルは書き換えない
+    resolution_note: 'Codex consulted (harness: codex, 1 turn); Opus escalation not run; options: in_test_mutation
+      / manual_verify; chosen in_test_mutation (Codex recommendation, same as analyst); key point: pins
+      AC2 permanently in the suite without editing repository files'
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-30T08:24:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design_step_recommendation（skip）をそのまま採用する
+    resolution_note: batch-policies.yaml create-spec.design-step -> decide_autonomously
 worker_runs:
-  - request_id: create-spec-run-0001
-    status: dispatched
-    input_digest: sha256:9c3bb00146fc628f543f901073f6c22219fce011c4a4fa29d3074f28ef17832e
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:9c3bb00146fc628f543f901073f6c22219fce011c4a4fa29d3074f28ef17832e
+  output_digest: sha256:c9d715959cc25c462271b02f99222ad6cbd07e928051f132276521f00434de2a
+  self_write_set: []
 artifacts: []
 patches: []
-progress_fingerprint: null
+progress_fingerprint: sha256:1a548d9353883945260b3f3d9d6fc097db8144c9eb2b088ae3faafe56471c1b7
 stale_redispatch_count: 0
 resolved_input_cache: {}
 last_error: null
