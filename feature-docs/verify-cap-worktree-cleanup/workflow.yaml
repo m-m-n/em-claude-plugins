@@ -132,7 +132,7 @@ tasks:
     - NFR5
     - NFR6
     - NFR7
-    status: in_progress
+    status: merged
     branch: em-workflow/verify-cap-worktree-cleanup/task0001
     notes: null
   task0002:
