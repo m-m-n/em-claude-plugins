@@ -20,6 +20,7 @@ import importlib.util
 import io
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -1224,6 +1225,306 @@ class TestModuleDocstringStatesTheJudgmentModel(unittest.TestCase):
         for term in self.TERMS:
             with self.subTest(term=term):
                 self.assertIn(term, doc)
+
+
+# ---------------------------------------------------------------------------
+# develop SKILL.md cap values stay in sync with the hook's cap constants
+# ---------------------------------------------------------------------------
+SKILL_MD_PATH = REPO_ROOT / "em-workflow" / "skills" / "develop" / "SKILL.md"
+
+CAP_PARAGRAPH_MARKER = "**batch 自動 rework の系譜 cap**"
+
+# (item name, pattern with one capture group for the number N). The "ID が
+# N 回目" ordinal in the lineage cap bullet matches none of them on purpose.
+CAP_ITEM_PATTERNS = (
+    ("lineage cap label", re.compile(r"系譜 cap（値 ([0-9]+)）")),
+    ("lineage cap reach condition", re.compile(r"累積出現回数が ([0-9]+) に達した")),
+    ("hard cap label", re.compile(r"hard cap（値 ([0-9]+)）")),
+    (
+        "hard cap reach condition",
+        re.compile(r"`batch\.verify_rework\.rounds`（[^）]*）が ([0-9]+) に達した"),
+    ),
+)
+
+
+def find_cap_mismatches(skill_text, lineage_cap_count, hard_cap_rounds):
+    """Compare the batch automatic-rework cap values written in the develop
+    SKILL.md text with the hook's constants. Returns a list of mismatch
+    descriptions; an empty list means consistent. Pure: no file access, the
+    text is not modified, and missing or ambiguous content is reported as
+    entries instead of raised."""
+    occurrences = skill_text.count(CAP_PARAGRAPH_MARKER)
+    if occurrences != 1:
+        state = "missing" if occurrences == 0 else f"ambiguous ({occurrences} found)"
+        return [f"lineage cap paragraph: {state}"]
+
+    # The bullet list after the marker: first bullet line before the next
+    # heading, then bullets plus their indented continuation lines, ended by
+    # the first line that is neither (a blank line, or an unindented text).
+    after_marker = skill_text.split(CAP_PARAGRAPH_MARKER, 1)[1]
+    lines = re.split(r"\r?\n", after_marker)[1:]
+    items = []
+    current = None
+    for line in lines:
+        is_bullet = re.match(r"[-*+] ", line) is not None
+        if current is None:
+            if line.startswith("#"):
+                break
+            if is_bullet:
+                current = [line]
+        elif is_bullet:
+            items.append(current)
+            current = [line]
+        elif line.strip() and line[0] in " \t":
+            current.append(line)
+        else:
+            break
+    if current is not None:
+        items.append(current)
+    # A line break plus the indentation after it becomes one space.
+    normalized = [re.sub(r"\n[ \t]*", " ", "\n".join(item)) for item in items]
+
+    mismatches = []
+    found = {}
+    for name, pattern in CAP_ITEM_PATTERNS:
+        values = [
+            int(match.group(1))
+            for item in normalized
+            for match in pattern.finditer(item)
+        ]
+        if not values:
+            mismatches.append(f"{name}: missing")
+        elif len(values) > 1:
+            mismatches.append(f"{name}: ambiguous ({len(values)} matches: {values})")
+        else:
+            found[name] = values[0]
+
+    rules = (
+        ("lineage cap reach condition", 0, "LINEAGE_CAP_COUNT", lineage_cap_count),
+        ("lineage cap label", 1, "LINEAGE_CAP_COUNT", lineage_cap_count),
+        ("hard cap reach condition", 0, "HARD_CAP_ROUNDS", hard_cap_rounds),
+        ("hard cap label", 0, "HARD_CAP_ROUNDS", hard_cap_rounds),
+    )
+    for name, plus, constant_name, constant_value in rules:
+        if name in found and found[name] + plus != constant_value:
+            mismatches.append(
+                f"{name}: SKILL.md says {found[name]}"
+                + (f" (+{plus} = {found[name] + plus})" if plus else "")
+                + f", but {constant_name} is {constant_value}"
+            )
+    return mismatches
+
+# Each distinct integer used to replace a value in a mutated copy is the
+# original plus this offset: always different from the original, and
+# recognizable when it shows up in a mismatch message.
+MUTATION_OFFSET = 1000
+
+
+def read_cap_inputs():
+    """(SKILL.md text, LINEAGE_CAP_COUNT, HARD_CAP_ROUNDS). The text is read
+    with a plain read_text, so an absent SKILL.md raises instead of skipping."""
+    module = load_hook_module()
+    return (
+        SKILL_MD_PATH.read_text(encoding="utf-8"),
+        module.LINEAGE_CAP_COUNT,
+        module.HARD_CAP_ROUNDS,
+    )
+
+
+def replace_exactly_once(test, text, target, replacement):
+    """Copy of TEXT with the single occurrence of TARGET replaced."""
+    test.assertEqual(
+        text.count(target), 1, f"target must occur exactly once: {target!r}"
+    )
+    return text.replace(target, replacement)
+
+
+def bullet_regex(label_prefix):
+    """Whole bullet (first line plus indented continuation lines, with its
+    trailing line break) whose first line starts with `- LABEL_PREFIX`."""
+    return re.compile(
+        r"^- " + re.escape(label_prefix) + r".*(?:\n[ \t]+.*)*\n", re.MULTILINE
+    )
+
+
+class TestSkillCapValuesMatchHookConstants(unittest.TestCase):
+    def test_current_tree_reports_no_cap_mismatch(self):
+        # AC-1
+        text, lineage_cap, hard_cap = read_cap_inputs()
+        mismatches = find_cap_mismatches(text, lineage_cap, hard_cap)
+        self.assertEqual(mismatches, [], "\n".join(mismatches))
+
+
+class TestMutatedCapValueIsReported(unittest.TestCase):
+    def setUp(self):
+        self.text, self.lineage_cap, self.hard_cap = read_cap_inputs()
+
+    def assert_mismatch_names(self, mutated, new_value, constant_name):
+        mismatches = find_cap_mismatches(mutated, self.lineage_cap, self.hard_cap)
+        self.assertTrue(
+            any(str(new_value) in m and constant_name in m for m in mismatches),
+            f"no mismatch names {new_value} and {constant_name}: {mismatches}",
+        )
+
+    def test_lineage_cap_label_changed_reports_mismatch(self):
+        # AC-2: the label carries LINEAGE_CAP_COUNT minus 1
+        old = self.lineage_cap - 1
+        new = old + MUTATION_OFFSET
+        mutated = replace_exactly_once(
+            self, self.text, f"系譜 cap（値 {old}）", f"系譜 cap（値 {new}）"
+        )
+        self.assert_mismatch_names(mutated, new, "LINEAGE_CAP_COUNT")
+
+    def test_lineage_cap_reach_condition_changed_reports_mismatch(self):
+        # AC-2
+        new = self.lineage_cap + MUTATION_OFFSET
+        mutated = replace_exactly_once(
+            self,
+            self.text,
+            f"累積出現回数が {self.lineage_cap} に達した",
+            f"累積出現回数が {new} に達した",
+        )
+        self.assert_mismatch_names(mutated, new, "LINEAGE_CAP_COUNT")
+
+    def test_hard_cap_label_changed_reports_mismatch(self):
+        # AC-2
+        new = self.hard_cap + MUTATION_OFFSET
+        mutated = replace_exactly_once(
+            self,
+            self.text,
+            f"hard cap（値 {self.hard_cap}）",
+            f"hard cap（値 {new}）",
+        )
+        self.assert_mismatch_names(mutated, new, "HARD_CAP_ROUNDS")
+
+    def test_hard_cap_reach_condition_changed_reports_mismatch(self):
+        # AC-2: the target phrase sits on one physical line of the real file
+        # (the field name and the parenthetical are on the line above)
+        new = self.hard_cap + MUTATION_OFFSET
+        mutated = replace_exactly_once(
+            self,
+            self.text,
+            f"ラウンド数）が {self.hard_cap} に達した",
+            f"ラウンド数）が {new} に達した",
+        )
+        self.assert_mismatch_names(mutated, new, "HARD_CAP_ROUNDS")
+
+
+class TestUnrelatedNumberIsIgnored(unittest.TestCase):
+    def test_lineage_cap_ordinal_changed_reports_no_mismatch(self):
+        # AC-5: the "ID が N 回目" number is not one of the four values
+        text, lineage_cap, hard_cap = read_cap_inputs()
+        mutated = replace_exactly_once(
+            self,
+            text,
+            f"ID が {lineage_cap} 回目",
+            f"ID が {lineage_cap + MUTATION_OFFSET} 回目",
+        )
+        mismatches = find_cap_mismatches(mutated, lineage_cap, hard_cap)
+        self.assertEqual(mismatches, [], "\n".join(mismatches))
+
+
+class TestMalformedCapParagraphIsReported(unittest.TestCase):
+    def setUp(self):
+        self.text, self.lineage_cap, self.hard_cap = read_cap_inputs()
+
+    def mismatches_of(self, text):
+        return find_cap_mismatches(text, self.lineage_cap, self.hard_cap)
+
+    def assert_reports(self, mismatches, item, state):
+        self.assertTrue(
+            any(item in m and state in m for m in mismatches),
+            f"no mismatch says {item!r} is {state}: {mismatches}",
+        )
+
+    def remove_bullet(self, label_prefix):
+        regex = bullet_regex(label_prefix)
+        self.assertEqual(len(regex.findall(self.text)), 1, label_prefix)
+        return regex.sub("", self.text, count=1)
+
+    def test_lineage_cap_bullet_removed_reports_its_items_missing(self):
+        # AC-3
+        mismatches = self.mismatches_of(self.remove_bullet("系譜 cap（値"))
+        for item in ("lineage cap label", "lineage cap reach condition"):
+            with self.subTest(item=item):
+                self.assert_reports(mismatches, item, "missing")
+
+    def test_hard_cap_bullet_removed_reports_its_items_missing(self):
+        # AC-3
+        mismatches = self.mismatches_of(self.remove_bullet("hard cap（値"))
+        for item in ("hard cap label", "hard cap reach condition"):
+            with self.subTest(item=item):
+                self.assert_reports(mismatches, item, "missing")
+
+    def test_lineage_cap_label_reworded_reports_label_missing(self):
+        # AC-3
+        old = self.lineage_cap - 1
+        mutated = replace_exactly_once(
+            self, self.text, f"系譜 cap（値 {old}）", f"系譜 cap（上限 {old}）"
+        )
+        self.assert_reports(
+            self.mismatches_of(mutated), "lineage cap label", "missing"
+        )
+
+    def test_hard_cap_label_reworded_reports_label_missing(self):
+        # AC-3
+        mutated = replace_exactly_once(
+            self,
+            self.text,
+            f"hard cap（値 {self.hard_cap}）",
+            f"hard cap（上限 {self.hard_cap}）",
+        )
+        self.assert_reports(self.mismatches_of(mutated), "hard cap label", "missing")
+
+    def duplicate_bullet(self, label_prefix):
+        regex = bullet_regex(label_prefix)
+        self.assertEqual(len(regex.findall(self.text)), 1, label_prefix)
+        return regex.sub(lambda m: m.group(0) + m.group(0), self.text, count=1)
+
+    def test_lineage_cap_bullet_duplicated_reports_its_items_ambiguous(self):
+        # AC-4
+        mismatches = self.mismatches_of(self.duplicate_bullet("系譜 cap（値"))
+        for item in ("lineage cap label", "lineage cap reach condition"):
+            with self.subTest(item=item):
+                self.assert_reports(mismatches, item, "ambiguous")
+
+    def test_hard_cap_bullet_duplicated_reports_its_items_ambiguous(self):
+        # AC-4
+        mismatches = self.mismatches_of(self.duplicate_bullet("hard cap（値"))
+        for item in ("hard cap label", "hard cap reach condition"):
+            with self.subTest(item=item):
+                self.assert_reports(mismatches, item, "ambiguous")
+
+    def test_paragraph_marker_removed_reports_paragraph_missing(self):
+        # AC-3: nothing is read when the paragraph cannot be located
+        marker = "**batch 自動 rework の系譜 cap**"
+        mutated = replace_exactly_once(self, self.text, marker, "")
+        self.assertEqual(
+            self.mismatches_of(mutated), ["lineage cap paragraph: missing"]
+        )
+
+    def test_empty_text_reports_paragraph_missing(self):
+        # AC-3
+        self.assertEqual(
+            self.mismatches_of(""), ["lineage cap paragraph: missing"]
+        )
+
+    def test_paragraph_marker_duplicated_reports_paragraph_ambiguous(self):
+        # AC-4
+        marker = "**batch 自動 rework の系譜 cap**"
+        mismatches = self.mismatches_of(self.text + "\n" + marker + "\n")
+        self.assert_reports(mismatches, "lineage cap paragraph", "ambiguous")
+
+    def test_blank_line_inside_list_reports_later_bullet_missing(self):
+        # AC-3: the list ends at the first blank line, so a bullet after it is
+        # outside the list (fail-closed)
+        mutated = replace_exactly_once(
+            self, self.text, "\n- hard cap（値", "\n\n- hard cap（値"
+        )
+        mismatches = self.mismatches_of(mutated)
+        for item in ("hard cap label", "hard cap reach condition"):
+            with self.subTest(item=item):
+                self.assert_reports(mismatches, item, "missing")
 
 
 if __name__ == "__main__":
