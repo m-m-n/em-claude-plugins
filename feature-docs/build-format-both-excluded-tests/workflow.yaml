@@ -98,7 +98,8 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
+    branch: em-workflow/build-format-both-excluded-tests/task0001
 review:
   status: pending
   rounds_completed: 0
