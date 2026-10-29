@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """PreToolUse(Bash) guard that blocks cleanup of a failed em-workflow run.
 
-Denies exactly three command shapes when they target an em-workflow
+Covers exactly three command shapes when they target an em-workflow
 integration worktree whose `workflow.yaml` still records a failed top-level
 step -- so the state needed to investigate the failure is not destroyed by
 the very run that hit it:
@@ -16,27 +16,80 @@ Everything else -- and every mention of one of these shapes inside quotes,
 inside a here-document body, or as an argument to some other command -- is
 out of scope and produces no decision at all.
 
+Judgment model. A feature with a failed top-level step is in one of two
+states.
+
+  Excluded state -- verify failed at the batch rework cap after a completed
+  retrospect. All of these hold:
+
+    (a) The only top-level step with status `failed` is the step with id
+        `verify`.
+    (b) A step with id `retrospect` exists and its status is `completed`.
+    (c) Every other top-level step has status `completed` or `skipped`.
+    (d) `batch.verify_rework` shows that a cap was reached: the lineage cap
+        when any `failed_id_counts` value is 2 or more, the hard cap when
+        `rounds` is 3 or more (the values of develop SKILL.md's lineage-cap
+        definition).
+
+  Failed, not excluded -- every other feature with a failed step.
+
+Cap-record reading (d), structured fields only:
+
+  - If `batch` or `batch.verify_rework` is absent or is not a mapping, the
+    feature is not excluded.
+  - An absent `rounds` member reads as 0. An absent `failed_id_counts` member
+    reads as an empty mapping.
+  - A member that is present with an invalid type makes the whole cap record
+    invalid, and the feature is not excluded. Invalid: `rounds` is not an
+    integer (a boolean is not an integer); `failed_id_counts` is not a
+    mapping; a `failed_id_counts` value is not an integer (a boolean is not
+    an integer).
+  - The obsolete `verify_rework_count` key is ignored. A `batch` block that
+    merely exists is not evidence of a batch run.
+
+A step entry that is not a mapping, or whose `id` or `status` is missing or is
+not a string, also leaves the feature not excluded; so does any other shape
+the classification cannot read. The classification never raises.
+
+Outcome per shape for a feature with a failed step:
+
+  shape   excluded state   failed, not excluded
+  S1      no decision      deny
+  S2      deny             deny
+  S3      no decision      deny
+
+Unresolvable targets (variable expansion, command substitution, or a glob
+decides the path or branch name) are judged by whether any em-workflow
+integration worktree reachable from the payload's cwd is failed. The count
+differs per shape: S1 counts an excluded-state worktree as healthy, S2
+counts it as failed. The aggregate is computed and memoized separately for
+each shape; a result computed for one shape is never reused for another.
+When no worktree can be enumerated the target stays unresolvable.
+
 Decision model:
 
-  deny  -- the resolved target feature's workflow.yaml has a step whose
-            `status` is `failed`
-  ask   -- the target cannot be resolved statically (variable expansion,
-            command substitution, or a glob decides it), demoted to `deny`
+  deny  -- the resolved target feature has a failed step and the outcome
+            table above says deny
+  ask   -- an unresolvable target, when some reachable worktree counts as
+            failed for the shape or none can be enumerated; demoted to `deny`
             under CLAUDE_BATCH (same discipline as kill-guard/destructive-
             guard)
   (none) -- every other case: out-of-scope command, unresolved target,
-            missing/unparsable workflow.yaml, unavailable YAML parser, or
-            any unexpected internal error
+            S1/S3 for an excluded-state feature, missing/unparsable
+            workflow.yaml, unavailable YAML parser, or any unexpected
+            internal error
 
-This guard never emits `allow`. Static analysis only: no external process is
-started and nothing is written; the only file access is bounded read-only
+This guard never emits `allow`: excluding a feature means no decision, with
+empty stdout and exit 0. Static analysis only: no external process is started
+and nothing is written; the only file access is bounded read-only
 path/existence checks to locate the target worktree, plus at most one
-`workflow.yaml` read per resolved target.
+`workflow.yaml` read per worktree per run.
 
-`workflow.yaml` is untrusted, read-only input: only the structured
-`status` field of each top-level workflow step is consulted. Free-text
-fields (e.g. `goal`) are never scanned for the failure phrase, and no
-natural-language content in the file ever influences the decision.
+`workflow.yaml` is untrusted, read-only input. Only these structured fields
+are consulted: the `id` and `status` of each top-level workflow step, and
+`rounds` and `failed_id_counts` of `batch.verify_rework`. Free-text fields
+(e.g. `goal`, notes) are never scanned, and no natural-language content in the
+file ever influences the decision.
 
 Output: a PreToolUse permission decision on stdout; exit 0 either way.
 """
@@ -122,6 +175,16 @@ WORKTREE_TAIL_LEN = 5
 # repository root from a task worktree several levels below it, never
 # unbounded.
 MAX_ANCESTOR_STEPS = 12
+
+# Cap thresholds of the excluded state; they match develop SKILL.md's
+# lineage-cap definition (lineage cap: a failed item ID seen this many times;
+# hard cap: this many rework rounds).
+LINEAGE_CAP_COUNT = 2
+HARD_CAP_ROUNDS = 3
+
+# Shapes that get no decision for a feature in the excluded state. S2
+# (`branch_delete`) is not among them: it is denied for any failed feature.
+EXCLUDED_NO_DECISION_KINDS = frozenset({"worktree_remove", "pr_create"})
 
 _UNRESOLVABLE = object()
 
@@ -570,10 +633,11 @@ def resolve_pr_create(cwd):
     return None
 
 
-def read_workflow_steps(worktree_dir, feature):
-    """The top-level `workflow:` step sequence of the target worktree's own
-    `feature-docs/{feature}/workflow.yaml`, or None on any failure to read
-    or parse it (FR10, NFR4: fail-open, this is not the guard's problem)."""
+def read_workflow(worktree_dir, feature):
+    """The parsed `feature-docs/{feature}/workflow.yaml` mapping of the target
+    worktree, or None on any failure to read or parse it, or when it has no
+    top-level `workflow:` step sequence (FR10, NFR4: fail-open, this is not
+    the guard's problem). The one place a workflow.yaml is opened."""
     path = os.path.join(worktree_dir, "feature-docs", feature, "workflow.yaml")
     try:
         with open(path, "r", encoding="utf-8") as fh:
@@ -582,10 +646,9 @@ def read_workflow_steps(worktree_dir, feature):
         return None
     if not isinstance(data, dict):
         return None
-    steps = data.get("workflow")
-    if not isinstance(steps, list):
+    if not isinstance(data.get("workflow"), list):
         return None
-    return steps
+    return data
 
 
 def failed_step_id(steps):
@@ -599,26 +662,116 @@ def failed_step_id(steps):
     return None
 
 
+def is_integer(value):
+    """An integer, with a boolean not counting as one."""
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def cap_reached(data):
+    """Whether `batch.verify_rework` of the parsed workflow.yaml shows that a
+    cap was reached (condition (d) of the excluded state). Reads only
+    `rounds` and `failed_id_counts`; any invalid shape reads as not reached."""
+    batch = data.get("batch")
+    if not isinstance(batch, dict):
+        return False
+    record = batch.get("verify_rework")
+    if not isinstance(record, dict):
+        return False
+    rounds = record["rounds"] if "rounds" in record else 0
+    counts = record["failed_id_counts"] if "failed_id_counts" in record else {}
+    if not is_integer(rounds) or not isinstance(counts, dict):
+        return False
+    if not all(is_integer(v) for v in counts.values()):
+        return False
+    return rounds >= HARD_CAP_ROUNDS or any(
+        v >= LINEAGE_CAP_COUNT for v in counts.values()
+    )
+
+
+def is_excluded_state(data):
+    """Whether the parsed workflow.yaml is in the excluded state: verify is
+    the only failed step, retrospect is completed, every other step is
+    completed or skipped, and a cap was reached (conditions (a)-(d)).
+
+    Total over any parsed value: every shape it cannot classify -- a step
+    entry that is not a mapping, an id or status that is missing or not a
+    string, an invalid cap record -- is "not excluded", and it never raises
+    (a raise would reach the fail-open path and silence a deny)."""
+    try:
+        steps = data.get("workflow")
+        if not isinstance(steps, list):
+            return False
+        retrospect_statuses = []
+        failed_ids = []
+        for step in steps:
+            if not isinstance(step, dict):
+                return False
+            step_id = step.get("id")
+            status = step.get("status")
+            if not isinstance(step_id, str) or not isinstance(status, str):
+                return False
+            if status == "failed":
+                failed_ids.append(step_id)
+            elif status not in ("completed", "skipped"):
+                return False
+            if step_id == "retrospect":
+                retrospect_statuses.append(status)
+        if failed_ids != ["verify"]:
+            return False
+        if not retrospect_statuses or any(
+            status != "completed" for status in retrospect_statuses
+        ):
+            return False
+        return cap_reached(data)
+    except Exception:
+        return False
+
+
+# integration worktree path -> (failed step id or None, excluded?) or None
+# when its workflow.yaml could not be read. Each workflow.yaml is read at
+# most once per run, however many statements and shapes consult it.
+_WORKTREE_STATE_CACHE = {}
+
+
+def worktree_state(worktree_dir, feature):
+    """(failed step id or None, excluded state?) for one integration
+    worktree, or None when its workflow.yaml is unreadable. Memoized."""
+    if worktree_dir in _WORKTREE_STATE_CACHE:
+        return _WORKTREE_STATE_CACHE[worktree_dir]
+    state = None
+    data = read_workflow(worktree_dir, feature)
+    if data is not None:
+        state = (failed_step_id(data["workflow"]), is_excluded_state(data))
+    _WORKTREE_STATE_CACHE[worktree_dir] = state
+    return state
+
+
 _FAILED_SCAN_CACHE = {}
 
 
-def any_failed_worktree(cwd):
-    """Whether the `ask` for a statically-unresolvable operand should be
-    kept, based on em-workflow integration worktrees reachable from the
-    given cwd (walking ancestors, same as locate_worktree_by_ancestor_walk).
+def any_failed_worktree(cwd, kind):
+    """Whether the `ask` for a statically-unresolvable operand of shape KIND
+    should be kept, based on em-workflow integration worktrees reachable from
+    the given cwd (walking ancestors, same as locate_worktree_by_ancestor_walk).
 
     Returns False (silent, no ask) only when at least one em-workflow
-    integration worktree could be enumerated and every one of them is
-    healthy. Returns True (keep the `ask`) both when some enumerable
-    worktree still records a failed step in its own workflow.yaml, and
-    when no worktree can be enumerated at all -- the inability to enumerate
-    must not be read as "healthy" (FR7's protection is preserved).
+    integration worktree could be enumerated and every one of them counts as
+    healthy for KIND. A worktree in the excluded state counts as healthy for
+    the shapes in EXCLUDED_NO_DECISION_KINDS (S1) and as failed for the others
+    (S2). Returns True (keep the `ask`) both when some enumerable worktree
+    counts as failed, and when no worktree can be enumerated at all -- the
+    inability to enumerate must not be read as "healthy" (FR7's protection is
+    preserved).
 
-    The answer depends only on cwd, so it is memoized: a command carrying
-    several unresolvable target statements must not re-read and re-parse
-    every worktree's workflow.yaml once per statement."""
-    if cwd in _FAILED_SCAN_CACHE:
-        return _FAILED_SCAN_CACHE[cwd]
+    The answer depends only on cwd and KIND, so it is memoized per (cwd,
+    KIND): a command carrying several unresolvable target statements must not
+    re-scan the worktrees once per statement, and a result computed for one
+    shape is never reused for another. The per-worktree classification
+    underneath is shared (worktree_state), so no workflow.yaml is read twice."""
+    cache_key = (cwd, kind)
+    if cache_key in _FAILED_SCAN_CACHE:
+        return _FAILED_SCAN_CACHE[cache_key]
+    excluded_is_healthy = kind in EXCLUDED_NO_DECISION_KINDS
     found_any_worktree = False
     found_failed = False
     if cwd and yaml is not None:
@@ -635,17 +788,20 @@ def any_failed_worktree(cwd):
                     if not os.path.isdir(integration_dir):
                         continue
                     found_any_worktree = True
-                    steps = read_workflow_steps(integration_dir, feature)
-                    if steps is not None and failed_step_id(steps) is not None:
-                        found_failed = True
-                        break  # 判定はもう変わらない
+                    state = worktree_state(integration_dir, feature)
+                    if state is None or state[0] is None:
+                        continue
+                    if excluded_is_healthy and state[1]:
+                        continue
+                    found_failed = True
+                    break  # 判定はもう変わらない
                 break
             parent = os.path.dirname(current)
             if parent == current:
                 break
             current = parent
     result = found_failed or not found_any_worktree
-    _FAILED_SCAN_CACHE[cwd] = result
+    _FAILED_SCAN_CACHE[cache_key] = result
     return result
 
 
@@ -661,10 +817,10 @@ def evaluate(kind, operand, cwd):
 
     if target is _UNRESOLVABLE:
         # Before asking, check whether every em-workflow integration
-        # worktree reachable from the payload's cwd is healthy (see
-        # any_failed_worktree()); if none could even be enumerated, or any
-        # has a failed step, the ask is kept.
-        if not any_failed_worktree(cwd):
+        # worktree reachable from the payload's cwd is healthy for this
+        # shape (see any_failed_worktree()); if none could even be
+        # enumerated, or any counts as failed, the ask is kept.
+        if not any_failed_worktree(cwd, kind):
             return
         decide(
             "ask",
@@ -681,13 +837,16 @@ def evaluate(kind, operand, cwd):
     if yaml is None:
         return  # D4: fail-open when the parser is unavailable
 
-    steps = read_workflow_steps(worktree_dir, feature)
-    if steps is None:
+    state = worktree_state(worktree_dir, feature)
+    if state is None:
         return
 
-    step_id = failed_step_id(steps)
+    step_id, excluded = state
     if step_id is None:
         return
+
+    if excluded and kind in EXCLUDED_NO_DECISION_KINDS:
+        return  # excluded state: S1/S3 get no decision (S2 is denied below)
 
     decide(
         "deny",

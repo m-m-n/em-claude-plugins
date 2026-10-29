@@ -1,0 +1,118 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests before any edit: Ran 12125 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and the commit of the hook/tests: Ran 12156 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_failed_run_cleanup_guard.TestExcludedStateGetsNoDecisionForS1AndS3.test_ac1_worktree_remove_yields_no_decision
+      - tests.test_failed_run_cleanup_guard.TestExcludedStateGetsNoDecisionForS1AndS3.test_ac1_pr_create_yields_no_decision
+      - tests.test_failed_run_cleanup_guard.TestExcludedStateGetsNoDecisionForS1AndS3.test_ac1_pr_create_from_below_the_worktree_yields_no_decision
+    red_confirmed: true
+    red_reason: >
+      Observed before the hook was changed: every sub-case (lineage cap and
+      hard cap, with and without CLAUDE_BATCH, S1 and S3) failed with
+      "'{"hookSpecificOutput": {"hookEventName": ... "permissionDecision":
+      "deny" ...}}' != ''" -- the hook denied an excluded-state feature.
+  AC-2:
+    tests:
+      - tests.test_failed_run_cleanup_guard.TestExcludedStateStillDeniesS2.test_ac2_branch_delete_is_denied_with_todays_wording
+      - tests.test_failed_run_cleanup_guard.TestExcludedStateStillDeniesS2.test_ac2_branch_delete_is_denied_under_claude_batch_too
+    red_confirmed: false
+    red_reason: >
+      S2 is denied for any failed feature today, so both tests passed before
+      the hook was changed and no red state occurred; they pin the unchanged
+      behavior. Detection check with the implementation present: adding
+      branch_delete to EXCLUDED_NO_DECISION_KINDS made both tests fail.
+  AC-3:
+    tests:
+      - tests.test_failed_run_cleanup_guard.TestBreakingOneExclusionConditionDenies.test_ac3_worktree_remove_is_denied_when_one_condition_breaks
+      - tests.test_failed_run_cleanup_guard.TestBreakingOneExclusionConditionDenies.test_ac3_pr_create_is_denied_when_one_condition_breaks
+      - tests.test_failed_run_cleanup_guard.TestBreakingOneExclusionConditionDenies.test_ac3_malformed_step_shapes_are_denied_not_excluded
+    red_confirmed: false
+    red_reason: >
+      Every row expects today's deny, which the unchanged hook already
+      produced, so all three tests passed before the hook was changed and no
+      red state occurred. Detection checks with the implementation present:
+      letting a boolean count as an integer failed the "rounds is true" and
+      "a failed_id_counts value is true beside a valid lineage count" rows;
+      skipping the not-a-mapping check failed the plain-string, null and list
+      step-entry rows.
+  AC-4:
+    tests:
+      - tests.test_failed_run_cleanup_guard.TestCapRecordIsReadFromStructuredFieldsOnly.test_ac4_a_present_member_alone_is_enough_for_s1
+      - tests.test_failed_run_cleanup_guard.TestCapRecordIsReadFromStructuredFieldsOnly.test_ac4_a_present_member_alone_is_enough_for_s3
+      - tests.test_failed_run_cleanup_guard.TestCapRecordIsReadFromStructuredFieldsOnly.test_ac4_missing_or_non_cap_evidence_is_denied_for_s1
+      - tests.test_failed_run_cleanup_guard.TestCapRecordIsReadFromStructuredFieldsOnly.test_ac4_missing_or_non_cap_evidence_is_denied_for_s3
+      - tests.test_failed_run_cleanup_guard.TestCapRecordIsReadFromStructuredFieldsOnly.test_ac4_free_text_decoys_do_not_make_a_retrospect_pending_run_excluded
+      - tests.test_failed_run_cleanup_guard.TestCapRecordIsReadFromStructuredFieldsOnly.test_ac4_free_text_decoys_do_not_make_a_capless_run_excluded
+      - tests.test_failed_run_cleanup_guard.TestCapRecordIsReadFromStructuredFieldsOnly.test_ac4_free_text_decoys_do_not_change_the_excluded_outcome
+    red_confirmed: true
+    red_reason: >
+      Observed before the hook was changed: the no-decision rows failed
+      (test_ac4_a_present_member_alone_is_enough_for_s1 and ..._for_s3, both
+      rows each, and test_ac4_free_text_decoys_do_not_change_the_excluded_outcome)
+      with the same "deny != ''" assertion. The deny-side tests passed before
+      the change because they pin today's deny, which is unchanged; only the
+      no-decision half of this criterion was red.
+  AC-5:
+    tests:
+      - tests.test_failed_run_cleanup_guard.TestUnresolvableTargetsAreJudgedPerShape.test_ac5_worktree_remove_with_only_an_excluded_worktree_is_silent
+      - tests.test_failed_run_cleanup_guard.TestUnresolvableTargetsAreJudgedPerShape.test_ac5_branch_delete_with_only_an_excluded_worktree_asks
+      - tests.test_failed_run_cleanup_guard.TestUnresolvableTargetsAreJudgedPerShape.test_ac5_branch_delete_with_only_an_excluded_worktree_denies_under_batch
+      - tests.test_failed_run_cleanup_guard.TestUnresolvableTargetsAreJudgedPerShape.test_ac5_a_chained_payload_asks_in_either_order
+      - tests.test_failed_run_cleanup_guard.TestUnresolvableTargetsAreJudgedPerShape.test_ac5_a_chained_payload_reads_each_workflow_yaml_at_most_once
+      - tests.test_failed_run_cleanup_guard.TestUnresolvableTargetsAreJudgedPerShape.test_ac5_s1_then_s2_over_excluded_and_healthy_reads_each_file_once
+      - tests.test_failed_run_cleanup_guard.TestUnresolvableTargetsAreJudgedPerShape.test_ac5_a_failed_not_excluded_worktree_asks_for_both_shapes
+      - tests.test_failed_run_cleanup_guard.TestUnresolvableTargetsAreJudgedPerShape.test_ac5_an_excluded_worktree_beside_a_failed_one_asks_for_s1
+      - tests.test_failed_run_cleanup_guard.TestUnresolvableTargetsAreJudgedPerShape.test_ac5_an_excluded_worktree_beside_a_healthy_one_is_silent_for_s1
+      - tests.test_failed_run_cleanup_guard.TestUnresolvableTargetsAreJudgedPerShape.test_ac5_no_enumerable_worktree_asks_for_both_shapes
+    red_confirmed: true
+    red_reason: >
+      Observed before the hook was changed: test_ac5_worktree_remove_with_only_an_excluded_worktree_is_silent
+      (batch off and on) and test_ac5_an_excluded_worktree_beside_a_healthy_one_is_silent_for_s1
+      failed because the hook asked for `git worktree remove "$WT"` over an
+      excluded-only fixture. The ask and deny-under-batch rows, the
+      failed-not-excluded rows and the no-worktree rows already passed
+      because they pin unchanged behavior. Detection checks with the
+      implementation present: keying the aggregate memo by cwd alone (shared
+      between shapes) failed the S1-then-S2 chain tests, and dropping the
+      per-worktree memo failed the read-once test.
+  AC-6:
+    tests:
+      - tests.test_failed_run_cleanup_guard.TestExcludedStatePathsKeepTheInvariants.test_ac6_fixture_tree_is_byte_identical_after_excluded_runs
+      - tests.test_failed_run_cleanup_guard.TestExcludedStatePathsKeepTheInvariants.test_ac6_excluded_state_never_produces_an_allow_decision
+      - tests.test_failed_run_cleanup_guard.TestExcludedStatePathsKeepTheInvariants.test_ac6_unreadable_workflow_yaml_stays_silent_for_every_shape
+      - tests.test_failed_run_cleanup_guard.TestExcludedStatePathsKeepTheInvariants.test_ac6_no_decision_when_yaml_cannot_be_imported_for_an_excluded_run
+      - tests.test_failed_run_cleanup_guard.TestExcludedStatePathsKeepTheInvariants.test_ac6_the_excluded_run_leaves_the_stderr_clean
+      - tests.test_failed_run_cleanup_guard.TestNeverAllowStaticAndUnmodified
+      - tests.test_failed_run_cleanup_guard.TestNoDecisionCases
+      - tests.test_failed_run_cleanup_guard.TestFailsOpenWhenYamlParserUnavailable
+      - tests.test_guard_deferral_parity
+      - tests.test_verify_cap_run_continuation
+      - tests.test_step_c_verify_failed_default
+      - tests.test_hooks_registration
+      - tests.test_guardrail_hooks_migration
+    red_confirmed: false
+    red_reason: >
+      An invariant and regression criterion: the existing
+      TestNeverAllowStaticAndUnmodified (no subprocess, no allow, no write),
+      TestNoDecisionCases and TestFailsOpenWhenYamlParserUnavailable
+      (missing or unparsable workflow.yaml, unavailable PyYAML) and the four
+      named modules detect it, and they passed before and after the change,
+      so no red state occurred. The added TestExcludedStatePathsKeepTheInvariants
+      repeats those invariants on the excluded-state paths and also passed
+      from the start. That neither em-workflow/.claude-plugin/plugin.json nor
+      .claude-plugin/marketplace.json is modified is checked with git diff,
+      not by a test.
+  AC-7:
+    tests:
+      - tests.test_failed_run_cleanup_guard.TestModuleDocstringStatesTheJudgmentModel.test_ac7_docstring_names_the_excluded_state_model
+    red_confirmed: true
+    red_reason: >
+      Observed before the docstring was rewritten: the test failed for the
+      terms 'excluded state', 'lineage cap', 'hard cap', 'failed_id_counts',
+      'rounds', 'retrospect' and 'unresolvable' ("'excluded state' not found
+      in "PreToolUse(Bash) guard that blocks cleanup of a failed em-workflow
+      run. ..."). The test checks that the docstring names the model's terms;
+      whether conditions (a)-(d), the outcome table and the per-shape
+      counting are stated correctly is checked by inspection in verify.
