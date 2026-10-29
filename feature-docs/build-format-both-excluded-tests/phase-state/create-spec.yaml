@@ -1,7 +1,7 @@
 schema_version: 1
 feature: build-format-both-excluded-tests
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: 253479d5a5713d83ff34f7e36d5e90b847ac1f4b
 last_input_digest: sha256:ac5d2d8b46762f844550f7b4c20b517a4c4e8756844db12a722dff127f9bf512
