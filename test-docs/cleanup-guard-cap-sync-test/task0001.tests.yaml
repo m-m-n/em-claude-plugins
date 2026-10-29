@@ -1,0 +1,80 @@
+task_id: task0001
+baseline_failures: []          # full suite before any edit: 12158 tests, OK (skipped=1)
+final_failures: []             # full suite re-executed after implementation and this record
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_failed_run_cleanup_guard.TestSkillCapValuesMatchHookConstants.test_current_tree_reports_no_cap_mismatch
+    red_confirmed: true
+    red_reason: >-
+      Written before the extraction-and-comparison function existed: the test
+      errored with "NameError: name 'find_cap_mismatches' is not defined".
+      The test is green against the current tree by design once the function
+      exists; the missing function is its red.
+  AC-2:
+    tests:
+      - tests.test_failed_run_cleanup_guard.TestMutatedCapValueIsReported.test_lineage_cap_label_changed_reports_mismatch
+      - tests.test_failed_run_cleanup_guard.TestMutatedCapValueIsReported.test_lineage_cap_reach_condition_changed_reports_mismatch
+      - tests.test_failed_run_cleanup_guard.TestMutatedCapValueIsReported.test_hard_cap_label_changed_reports_mismatch
+      - tests.test_failed_run_cleanup_guard.TestMutatedCapValueIsReported.test_hard_cap_reach_condition_changed_reports_mismatch
+    red_confirmed: true
+    red_reason: >-
+      Before the function existed each of the four errored with "NameError:
+      name 'find_cap_mismatches' is not defined" (after the exactly-once
+      target assertion had already passed).
+  AC-3:
+    tests:
+      - tests.test_failed_run_cleanup_guard.TestMalformedCapParagraphIsReported.test_lineage_cap_bullet_removed_reports_its_items_missing
+      - tests.test_failed_run_cleanup_guard.TestMalformedCapParagraphIsReported.test_hard_cap_bullet_removed_reports_its_items_missing
+      - tests.test_failed_run_cleanup_guard.TestMalformedCapParagraphIsReported.test_lineage_cap_label_reworded_reports_label_missing
+      - tests.test_failed_run_cleanup_guard.TestMalformedCapParagraphIsReported.test_hard_cap_label_reworded_reports_label_missing
+      - tests.test_failed_run_cleanup_guard.TestMalformedCapParagraphIsReported.test_paragraph_marker_removed_reports_paragraph_missing
+      - tests.test_failed_run_cleanup_guard.TestMalformedCapParagraphIsReported.test_empty_text_reports_paragraph_missing
+      - tests.test_failed_run_cleanup_guard.TestMalformedCapParagraphIsReported.test_blank_line_inside_list_reports_later_bullet_missing
+    red_confirmed: true
+    red_reason: >-
+      Before the function existed each errored with "NameError: name
+      'find_cap_mismatches' is not defined".
+  AC-4:
+    tests:
+      - tests.test_failed_run_cleanup_guard.TestMalformedCapParagraphIsReported.test_lineage_cap_bullet_duplicated_reports_its_items_ambiguous
+      - tests.test_failed_run_cleanup_guard.TestMalformedCapParagraphIsReported.test_hard_cap_bullet_duplicated_reports_its_items_ambiguous
+      - tests.test_failed_run_cleanup_guard.TestMalformedCapParagraphIsReported.test_paragraph_marker_duplicated_reports_paragraph_ambiguous
+    red_confirmed: true
+    red_reason: >-
+      Before the function existed each errored with "NameError: name
+      'find_cap_mismatches' is not defined".
+  AC-5:
+    tests:
+      - tests.test_failed_run_cleanup_guard.TestUnrelatedNumberIsIgnored.test_lineage_cap_ordinal_changed_reports_no_mismatch
+    red_confirmed: true
+    red_reason: >-
+      Before the function existed the test errored with "NameError: name
+      'find_cap_mismatches' is not defined" (after the exactly-once target
+      assertion had already passed).
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      The outcome is a property of the task's diff (only
+      tests/test_failed_run_cleanup_guard.py changed; hook and SKILL.md
+      byte-identical to the base; git status identical before and after
+      running the module), checked by running git commands after
+      implementation. A search of tests/ by repository-relative path and by
+      basename (failed-run-cleanup-guard.py, SKILL.md under skills/develop,
+      test_failed_run_cleanup_guard.py) found tests that read those files,
+      but none that compares a diff with the base or the working tree before
+      and after a run, so no executable check exists that could be made to
+      fail first.
+  AC-7:
+    tests:
+      - tests.test_failed_run_cleanup_guard
+    red_confirmed: false
+    red_reason: >-
+      The criterion is verified by running python3 -m unittest
+      tests.test_failed_run_cleanup_guard and python3 -m unittest discover -s
+      tests after implementation, plus a reading of the added imports (only
+      re was added, standard library) and class and method names. Its new
+      tests are the ones listed under AC-1 to AC-5, whose red was observed;
+      the existing tests of the module passed before any edit (baseline), so
+      no red state occurred for this criterion as a whole.
