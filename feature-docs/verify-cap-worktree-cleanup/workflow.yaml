@@ -1,0 +1,244 @@
+schema_version: 1
+feature: verify-cap-worktree-cleanup
+created: '2026-10-29'
+base_branch: main
+goal: |
+  # em-workflow: verify が rework 上限到達で failed のまま Step C に入ると、failed-run-cleanup-guard が worktree 削除を拒否して完了処理が止まる
+
+  種別: バグ
+
+  ## 現象
+
+  batch の develop で、verify が rework 上限（系譜 cap）到達で `failed` のまま retrospect を終えて Step C（完了処理）に入ると、`git worktree remove` が failed-run-cleanup-guard フックに拒否され、`stop_reason: completion_aborted` で停止する。integration worktree が残る。
+
+  develop の `skills/develop/SKILL.md` は、cap 到達で verify が `failed` のときも Step C に進み、いずれの分岐でも `git worktree remove` で integration worktree を削除すると定めている。一方 `hooks/failed-run-cleanup-guard.py` は、対象 feature の `workflow.yaml` に `status: failed` のステップがあれば `git worktree remove` を常に deny する（batch では ask も deny）。両者が食い違っている。
+
+  観測: 別プロジェクトの feature、em-workflow 0.3.94。
+
+  ## 再現手順
+
+  1. batch の develop で、verify が系譜 cap に達して `failed` のまま retrospect まで完了する状態を作る
+  2. 次の起動で Step C に入る
+  3. `git worktree remove <integration worktree>` が failed-run-cleanup-guard に拒否され、completion_aborted で停止する
+
+  ## 期待する挙動
+
+  develop の Step C の規定とフックの判定が一致し、cap 到達で verify が `failed` のまま Step C に入った場合の扱い（worktree を削除するか残すか）がどちらか一方に揃っている。Step C が completion_aborted で止まらない。
+
+  ## 完了の定義
+
+  - 再現手順で現象が起きない
+  - 再発を検出するテストがある
+
+  ## 該当箇所
+
+  - `em-workflow/skills/develop/SKILL.md` の「batch: verify の cap 到達に対する停止条件の例外」と「Step C: 完了処理」の 2.
+  - `em-workflow/hooks/failed-run-cleanup-guard.py`（S1: `git worktree remove`）
+
+  ## 実害・発生条件
+
+  verify が cap 到達で `failed` のまま完了処理に入る batch 実行は、毎回 Step C で停止してタスクが「中断」になる。worktree の削除を人が手で行う必要がある。
+
+  ## 実行時の追加指示
+
+  - 不明点は Codex に相談し、比較的良いと判断した選択肢を採用する。
+  - 相談内容は（オーケストレーターが）Notion のタスクページにコメントとして記録する。
+parent_branch: em-workflow/verify-cap-worktree-cleanup/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.94
+      '2': 0.06
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.33
+      '2': 0.67
+      '3': 0.0
+  at: '2026-10-29T22:39:00+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 908a10a42b505e107346ead2491509495a9dbe7a
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI・画面・ビジュアルの変更が無く、フックの判定・文書・テストの修正だけのため
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: 6ef900dc353fc0b56a832b58421500bf4ae232b3
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  plan: null
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: 揃える方向
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-3
+  FR2:
+    title: 除外状態の判定
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-5
+  FR3:
+    title: cap 記録の読み方
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-5
+  FR4:
+    title: S2 は従来どおり
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-4
+  FR5:
+    title: 静的に解決できない対象での扱い
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-6
+  FR6:
+    title: 除外状態以外の deny の維持
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+    - TS-7
+  FR7:
+    title: 文書の更新
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-8
+  FR8:
+    title: 再発検出テスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-7
+  NFR1:
+    title: allow を出さない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-7
+  NFR2:
+    title: 静的解析のみ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-7
+  NFR3:
+    title: 信頼できない入力
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: fail-open の維持
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-7
+  NFR5:
+    title: cap 値の一致
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR6:
+    title: テスト規約
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR7:
+    title: version
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
