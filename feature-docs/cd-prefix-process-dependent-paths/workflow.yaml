@@ -122,7 +122,8 @@ tasks:
     - NFR5
     - NFR6
     - NFR7
-    status: pending
+    status: in_progress
+    branch: em-workflow/cd-prefix-process-dependent-paths/task0001
     notes: null
   task0002:
     title: "State the /proc and /dev/fd rule in the hook docstring and the protocol"
@@ -137,7 +138,8 @@ tasks:
     requirements:
     - FR5
     - NFR6
-    status: pending
+    status: in_progress
+    branch: em-workflow/cd-prefix-process-dependent-paths/task0002
     notes: null
 review:
   status: pending
