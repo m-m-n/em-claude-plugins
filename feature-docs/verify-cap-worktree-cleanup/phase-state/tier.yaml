@@ -20,7 +20,7 @@ bases:
       '1': 0.94
       '2': 0.06
       '3': 0.0
-  observed_at: '2026-10-29T22:38:00+09:00'
+  observed_at: '2026-10-29T22:36:00+09:00'
 - basis: description_plus_code
   score:
     type: score
@@ -39,7 +39,7 @@ bases:
       '1': 0.33
       '2': 0.67
       '3': 0.0
-  observed_at: '2026-10-29T22:45:00+09:00'
+  observed_at: '2026-10-29T22:38:30+09:00'
 pre_survey_estimate:
   files_expected:
   - em-workflow/hooks/failed-run-cleanup-guard.py
@@ -69,4 +69,4 @@ pre_survey_estimate:
     判定を検証するが、cap 到達後の削除は未検証。tests/test_verify_cap_run_continuation.py:431-435 は完了報告の文言を検証する。直接連携する4箇所は
     hooks/hooks.json:26、hooks/destructive-guard.py:8850、上記フックテスト、tests/test_guard_deferral_parity.py:36。README.md:132
     の拒否条件にも例外の反映が必要となる
-decided_at: '2026-10-29T22:45:30+09:00'
+decided_at: '2026-10-29T22:39:00+09:00'
