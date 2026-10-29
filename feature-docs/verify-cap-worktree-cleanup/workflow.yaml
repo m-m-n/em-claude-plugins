@@ -97,7 +97,8 @@ workflow:
   completed_at_commit: b9b6a83bb41b65a0c57835a2a3fe0ef9122bf579
   base_commit: 6ef900dc353fc0b56a832b58421500bf4ae232b3
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 5d2ab4d97bd30018dc608991782950615695b460
 - id: verify
   status: pending
   result: null
@@ -151,8 +152,8 @@ tasks:
     branch: em-workflow/verify-cap-worktree-cleanup/task0002
     notes: null
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
   plan:
     floor:
     - comprehensive
@@ -161,7 +162,11 @@ review:
     - spec
     discretionary: []
     cross_validation: true
-  perspectives: {}
+  perspectives:
+    security: completed
+    comprehensive: completed
+    architecture: completed
+    spec: completed
   residual_critical_high: 0
   needs_rework: false
 requirements:
