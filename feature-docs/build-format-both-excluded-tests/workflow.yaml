@@ -104,6 +104,14 @@ tasks:
 review:
   status: pending
   rounds_completed: 0
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: false
 requirements:
   FR1:
     title: format の不実行は他の規則の fail を覆さない
