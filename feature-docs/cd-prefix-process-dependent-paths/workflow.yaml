@@ -99,7 +99,8 @@ workflow:
   excluded: []
   completed_at_commit: cb653be0de5c3f96f376aeaea0f60d68b659cef8
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: 541384af193d3ccb8ef35b610ea186777312458b
 tasks:
   task0001:
     title: "Refuse /proc and /dev/fd paths in the cd prefix path check"
