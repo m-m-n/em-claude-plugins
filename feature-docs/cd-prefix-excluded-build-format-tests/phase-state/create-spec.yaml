@@ -5,7 +5,7 @@ status: in_progress
 generation: 1
 base_revision: cf6696ff332bed9b55b6b76ab47f7b5d48a67c48
 last_input_digest: sha256:4089ae88171ef82a66cba503788419a2f3f1e1bfbe4e1c71b4fd6ef28dc79a2e
-active_request_id: null
+active_request_id: create-spec-run-0003
 packets:
   create-spec-q0001:
     status: answered
@@ -50,6 +50,12 @@ worker_runs:
   status: completed
   input_digest: sha256:4089ae88171ef82a66cba503788419a2f3f1e1bfbe4e1c71b4fd6ef28dc79a2e
   self_write_set: []
+- request_id: create-spec-run-0003
+  status: dispatched
+  input_digest: sha256:d205059d8d17ec84fa312bf3afa736c8e99ffa4c9d573f930f380586b828ee74
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/spec-writer-contract.md: sha256:9032c6287d75f4a88e556bd3962c32ab8b4905cf3b6ececa895206788bcd0b63
+    em-workflow/references/templates/spec-document.md: sha256:203dfcddbe507886ce861694fccd20ae25e5af0bd1b0efa5e935991add950cbd
 artifacts: []
 patches: []
 progress_fingerprint: null
