@@ -4,7 +4,7 @@ final_failures: []             # re-executed after the implementation and again 
 acceptance_tests:
   AC-1:
     tests:
-      - tests.test_bash_guard_cd_prefix.TestPhysicalFallbackAllowed.test_ac1_proc_self_root_dotdot_before_an_absolute_worktree_path_is_allowed
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathNotAllowed.test_ac5_proc_self_root_dotdot_before_an_absolute_worktree_path_is_silent
     red_confirmed: true
     red_reason: >-
       Run against the unchanged path check (new tests written first), all four

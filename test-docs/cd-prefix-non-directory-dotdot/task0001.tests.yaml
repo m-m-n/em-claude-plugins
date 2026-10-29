@@ -5,7 +5,7 @@ acceptance_tests:
   AC-1:
     tests:
       - tests.test_bash_guard_cd_prefix.TestNonDirectoryBeforeDotDot.test_ac1_the_path_check_is_false_for_a_non_directory_before_dotdot
-      - tests.test_bash_guard_cd_prefix.TestNonDirectoryBeforeDotDot.test_ac1_proc_self_root_dotdot_in_front_changes_nothing
+      - tests.test_bash_guard_cd_prefix.TestNonDirectoryBeforeDotDot.test_ac1_proc_self_root_dotdot_in_front_is_never_below
       - tests.test_bash_guard_cd_prefix.TestNonDirectoryBeforeDotDot.test_ac1_the_path_check_is_still_true_for_existing_directory_forms
     red_confirmed: true
     red_reason: >-
@@ -61,7 +61,7 @@ acceptance_tests:
       - tests.test_bash_guard_cd_prefix.TestAc1AllowedPrefixForm.test_ac1_allow_when_cwd_is_a_git_worktree
       - tests.test_bash_guard_cd_prefix.TestAc2SyntaxConditions.test_ac2_forms_breaking_a_syntax_condition_are_silent
       - tests.test_bash_guard_cd_prefix.TestAc4RefusalPatternStillDenies.test_ac4_refusal_pattern_in_the_remainder_denies
-      - tests.test_bash_guard_cd_prefix.TestPhysicalFallbackAllowed.test_ac1_proc_self_root_dotdot_before_an_absolute_worktree_path_is_allowed
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathNotAllowed.test_ac5_proc_self_root_dotdot_before_an_absolute_worktree_path_is_silent
       - tests.test_bash_guard_cd_prefix.TestPhysicalFallbackAllowed.test_ac2_link_dotdot_name_forms_are_allowed_from_the_main_worktree
       - tests.test_bash_guard_cd_prefix.TestPhysicalFallbackAllowed.test_ac2_link_dotdot_name_forms_are_allowed_from_a_git_worktree
       - tests.test_bash_guard_cd_prefix.TestPhysicalFallbackNotAllowed.test_ac3_logical_destination_that_exists_outside_the_area_is_silent

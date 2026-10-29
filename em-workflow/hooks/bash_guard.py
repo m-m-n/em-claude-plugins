@@ -258,9 +258,83 @@ def resolves_to_directory(path):
     return stat.S_ISDIR(os.stat(path).st_mode)
 
 
+# The most links the Linux kernel follows while resolving one path. A loop
+# always exceeds it, so it is also the loop detection of the stage walk.
+FOLLOWED_LINK_LIMIT = 40
+
+
+def _under_proc_or_dev_fd(text):
+    """True when text, read lexically, names /proc or /dev/fd or a location
+    below one of them: after dropping empty components and `.`, the first
+    component is `proc`, or the first two are `dev` then `fd`. `..` is not
+    interpreted, and the file system is not consulted."""
+    parts = [part for part in text.split("/") if part not in ("", ".")]
+    return parts[:1] == ["proc"] or parts[:2] == ["dev", "fd"]
+
+
+def _stage_walk_refuses(path):
+    """True when resolving the absolute path text component by component, the
+    way the kernel does, reaches a stage under /proc or /dev/fd, or follows a
+    link whose target text is under one, or follows more than
+    FOLLOWED_LINK_LIMIT links, or meets an error other than an absent or
+    non-directory stage. The walk stops at the first refused stage, so it never
+    resolves anything inside /proc.
+
+    A stage that does not exist, or a non-directory, ends the walk without
+    refusal: the operating system cannot resolve any further stage of the
+    path, and the caller's rule decides it exactly as before."""
+    pending = path.split("/")
+    reached = []  # components of the location reached so far; never a link
+    followed = 0
+    try:
+        while pending:
+            name = pending.pop(0)
+            if name in ("", "."):
+                continue
+            if name == "..":
+                if reached:
+                    reached.pop()
+                if _under_proc_or_dev_fd("/" + "/".join(reached)):
+                    return True
+                continue
+            stage = "/" + "/".join(reached + [name])
+            if _under_proc_or_dev_fd(stage):
+                return True
+            try:
+                mode = os.lstat(stage).st_mode
+            except (FileNotFoundError, NotADirectoryError):
+                return False
+            if stat.S_ISLNK(mode):
+                followed += 1
+                if followed > FOLLOWED_LINK_LIMIT:
+                    return True
+                target = os.readlink(stage)
+                if _under_proc_or_dev_fd(target):
+                    return True
+                if target.startswith("/"):
+                    reached = []
+                pending = target.split("/") + pending
+                continue
+            if not stat.S_ISDIR(mode):
+                return False
+            reached.append(name)
+    except (OSError, ValueError):
+        return True
+    return False
+
+
 def is_below(path, area):
     """True when path reaches an existing directory strictly below area the
     way Bash's cd does. path is only resolved, never handed to a child process.
+
+    A path under /proc or /dev/fd fails the path check: the operating system
+    resolves such a path against the process that asks, and the hook process is
+    not the Bash process. This is judged on the path as written, on each stage
+    reached while resolving the logical path and the physical path component by
+    component, and on the target of each link followed, never on the final
+    realpath alone. A link loop or more than FOLLOWED_LINK_LIMIT followed links
+    fails the check as well. This precondition runs before the rule below and
+    never replaces it.
 
     Bash first moves to the logical path (each `..` collapsed against the
     component written before it, then links resolved). When that move fails
@@ -276,6 +350,10 @@ def is_below(path, area):
     Any resolution error is False.
     """
     try:
+        if _under_proc_or_dev_fd(path):
+            return False
+        if _stage_walk_refuses(os.path.normpath(path)) or _stage_walk_refuses(path):
+            return False
         physical = os.path.realpath(path)
         logical = os.path.realpath(os.path.normpath(path))
         physical_is_directory = os.path.isdir(physical) and resolves_to_directory(path)
