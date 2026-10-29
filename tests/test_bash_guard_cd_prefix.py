@@ -36,8 +36,9 @@ also accepts a path that Bash reaches through its physical-path fallback
 (the logical path is not an existing directory, the physical path is an
 existing directory strictly below the area).
 
-- AC-1: `/proc/self/root/..` followed by an absolute worktree path is allowed
-  (skipped when `/proc/self/root` is not a directory).
+- AC-1: `/proc/self/root/..` followed by an absolute worktree path was
+  allowed; it is no longer allowed (feature cd-prefix-process-dependent-paths:
+  a path under /proc or /dev/fd fails the path check).
 - AC-2: a link outside the area, `..`, then a name under the target's parent
   is allowed (logical path absent, or an existing file).
 - AC-3 (TM-1): a logical destination that exists outside the area is never
@@ -64,11 +65,36 @@ component, or a link to either, placed before a `..`, is never allowed.
 - AC-6: the path check starts no child process.
 - AC-7: a resolution error or a NUL in an added form makes the check False.
 
+Feature cd-prefix-process-dependent-paths, task0001
+(feature-docs/cd-prefix-process-dependent-paths/tasks/task0001.md): the path
+check is False for a path that is, or passes through, a location under /proc
+or /dev/fd, because the operating system resolves such a path against the
+process that asks. The hook process and the Bash process can differ, so the
+form must never be allowed. This is judged on the path as written, on each
+stage reached while resolving the logical path and the physical path component
+by component, and on the target of each link followed.
+
+- AC-1: the hook subprocess runs in a working directory of its own
+  (`Fixture.run_hook(..., process_cwd=...)`); `/proc/self/cwd/<name>` and
+  `/proc/self/cwd/../<name>` are not allowed.
+- AC-2: the path check is False for the /proc and /dev/fd forms and their
+  lexical variants.
+- AC-3: the path check is False for a link inside the area that points at one.
+- AC-4: directories named `proc`, `procfoo` and `dev/fd` inside the area, and
+  the existing in-area forms, are still below the area.
+- AC-5: the `/proc/self/root/..` prefix form is silent; no new deny.
+- AC-6: a link loop, a chain beyond the followed-link bound and a probe or
+  link-reading error make the check False; the hook exits 0 and writes nothing
+  to stderr.
+- AC-7: the signature and the caller of the path check are unchanged; the path
+  check starts no child process for the added forms.
+
 Standard library only.
 """
 
 import ast
 import contextlib
+import inspect
 import json
 import os
 import re
@@ -317,7 +343,10 @@ class Fixture:
         if proc.returncode != 0:
             raise RuntimeError(f"--record failed: {proc.stderr}")
 
-    def run_hook(self, command, cwd, store=None, extra_env=None):
+    def run_hook(self, command, cwd, store=None, extra_env=None, process_cwd=None):
+        """Run the hook as a subprocess. The JSON payload's `cwd` is always
+        `cwd`; the subprocess's own working directory is `cwd` too unless
+        `process_cwd` names another one."""
         payload = {"tool_name": "Bash", "tool_input": {"command": command}, "cwd": str(cwd)}
         proc = subprocess.run(
             [sys.executable, str(GUARD_PATH)],
@@ -325,7 +354,7 @@ class Fixture:
             capture_output=True,
             text=True,
             env=self.env(store or self.store, extra_env),
-            cwd=str(cwd),
+            cwd=str(cwd if process_cwd is None else process_cwd),
         )
         return proc
 
@@ -682,18 +711,10 @@ PROC_ROOT = "/proc/self/root"
 
 
 class TestPhysicalFallbackAllowed(CdPrefixCase):
-    """AC-1, AC-2 (FR1, FR3, FR8): the logical path is not an existing
-    directory and the physical path is an existing directory strictly below
-    the area."""
-
-    @unittest.skipUnless(os.path.isdir(PROC_ROOT), "/proc/self/root is not a directory")
-    def test_ac1_proc_self_root_dotdot_before_an_absolute_worktree_path_is_allowed(self):
-        for cwd in (FIX.repo, FIX.worktree):
-            for target in (FIX.worktree, FIX.inside):
-                with self.subTest(cwd=cwd.name, target=target.name):
-                    command = 'cd "' + PROC_ROOT + "/.." + str(target) + '" && ' + PLAIN_COMMAND
-                    decision, _ = decide(FIX.run_hook(command, cwd))
-                    self.assertEqual(decision, ALLOW)
+    """AC-2 (FR1, FR3, FR8): the logical path is not an existing directory and
+    the physical path is an existing directory strictly below the area. (The
+    `/proc/self/root/..` prefix form that was AC-1 here is no longer allowed;
+    see TestProcessDependentPathNotAllowed.)"""
 
     def test_ac2_link_dotdot_name_forms_are_allowed_from_the_main_worktree(self):
         self.check_cases(FALLBACK_ALLOW_CASES, FIX.repo)
@@ -847,13 +868,17 @@ class TestNonDirectoryBeforeDotDot(CdPrefixCase):
                 self.assertIs(self.guard.is_below(path, self.area), True)
 
     @unittest.skipUnless(os.path.isdir(PROC_ROOT), "/proc/self/root is not a directory")
-    def test_ac1_proc_self_root_dotdot_in_front_changes_nothing(self):
+    def test_ac1_proc_self_root_dotdot_in_front_is_never_below(self):
+        # The non-directory forms stay False with the prefix in front. The
+        # plain inside directory, which this test used to expect True, is
+        # False too: a path under /proc fails the path check, whatever it
+        # resolves to (feature cd-prefix-process-dependent-paths, D2).
         for label, template in NON_DIRECTORY_FORMS:
             with self.subTest(label=label):
                 path = PROC_ROOT + "/.." + FIX.expand(template)
                 self.assertIs(self.guard.is_below(path, self.area), False)
         path = PROC_ROOT + "/.." + str(FIX.inside)
-        self.assertIs(self.guard.is_below(path, self.area), True)
+        self.assertIs(self.guard.is_below(path, self.area), False)
 
     # -- AC-2, AC-3 -------------------------------------------------------
 
@@ -966,6 +991,586 @@ class TestNonDirectoryBeforeDotDot(CdPrefixCase):
         ):
             with self.subTest(label=label):
                 self.assertIs(self.guard.is_below(path, self.area), False)
+
+
+# ---------------------------------------------------------------------------
+# Feature cd-prefix-process-dependent-paths, task0001: a path under /proc or
+# /dev/fd fails the path check. The operating system resolves such a path
+# against the process that asks, and the hook process is not the Bash process.
+# ---------------------------------------------------------------------------
+
+PROC_SELF = "/proc/self"
+DEV_FD = "/dev/fd"
+SHARED = "shared"
+
+needs_proc = unittest.skipUnless(os.path.isdir(PROC_SELF), "/proc/self is not a directory")
+needs_dev_fd = unittest.skipUnless(
+    os.path.isdir(PROC_SELF) and os.path.isdir(DEV_FD),
+    "/proc/self or /dev/fd is not a directory",
+)
+
+
+@contextlib.contextmanager
+def _working_directory(path):
+    """Move this process into path; the previous directory is restored."""
+    previous = os.getcwd()
+    os.chdir(str(path))
+    try:
+        yield
+    finally:
+        os.chdir(previous)
+
+
+def _link(target, link):
+    """Create the symbolic link once; an existing one is left alone."""
+    if not os.path.lexists(str(link)):
+        os.symlink(str(target), str(link))
+    return link
+
+
+def _link_chain(directory, count, final):
+    """directory/l0 -> l1 -> ... -> l<count-1> -> final. Following l0 follows
+    exactly `count` links. Returns the path of l0."""
+    directory.mkdir(parents=True, exist_ok=True)
+    for index in range(count):
+        target = "l%d" % (index + 1) if index < count - 1 else final
+        _link(target, directory / ("l%d" % index))
+    return directory / "l0"
+
+
+class Layout:
+    """A dedicated subdirectory of the area for the process dependent cases,
+    so the layout seen by the other tests of this module is unchanged.
+
+        procdep/work/shared      the hook process's working directory is work,
+        procdep/shared           so /proc/self/cwd/shared and
+                                 /proc/self/cwd/../shared both land below the
+                                 area
+        procdep/names/...        directories named like the excluded locations
+        procdep/links/...        links inside the area to /proc and /dev/fd
+        procdep/loops/...        link loops
+        procdep/chain<N>/l0      a chain that follows N links, then shared
+    """
+
+    def __init__(self):
+        self.top = FIX.region / "procdep"
+        self.work = self.top / "work"
+        self.under_work = self.work / SHARED
+        self.beside_work = self.top / SHARED
+        self.names = self.top / "names"
+        self.links = self.top / "links"
+        self.loops = self.top / "loops"
+        for directory in (
+            self.under_work,
+            self.beside_work,
+            self.names / "proc",
+            self.names / "procfoo",
+            self.names / "dev" / "fd",
+            self.links,
+            self.loops,
+        ):
+            directory.mkdir(parents=True, exist_ok=True)
+        self.cwd_link = _link("/proc/self/cwd", self.links / "cwd-link")
+        self.self_link = _link("/proc/self", self.links / "self-link")
+        self.ping = _link("pong", self.loops / "ping")
+        _link("ping", self.loops / "pong")
+        self.selfish = _link("selfish", self.loops / "selfish")
+
+    def chain(self, count):
+        return _link_chain(self.top / ("chain%d" % count), count, self.beside_work)
+
+    def cwd_forms(self):
+        """(label, written path) for the forms that name the process's own
+        working directory. With the process in work, each lands on an
+        existing directory strictly below the area."""
+        return [
+            ("cwd then a name", PROC_SELF + "/cwd/" + SHARED),
+            ("cwd, .., then a name", PROC_SELF + "/cwd/../" + SHARED),
+        ]
+
+
+def _first_component_directory():
+    """An existing directory directly below the root, as /<name>."""
+    return "/" + FIX.inside.parts[1]
+
+
+@contextlib.contextmanager
+def _no_child_process():
+    """The standard library's child-process entry points raise while active."""
+    entry_points = (
+        (subprocess, ("Popen", "run", "call", "check_call", "check_output",
+                      "getoutput", "getstatusoutput")),
+        (os, ("system", "popen", "fork", "forkpty", "posix_spawn", "posix_spawnp",
+              "execv", "execve", "execvp", "execvpe",
+              "spawnv", "spawnve", "spawnvp", "spawnvpe")),
+    )
+    with contextlib.ExitStack() as stack:
+        for owner, names in entry_points:
+            for name in names:
+                if hasattr(owner, name):
+                    stack.enter_context(
+                        mock.patch.object(
+                            owner,
+                            name,
+                            side_effect=AssertionError(
+                                f"{owner.__name__}.{name} called by the path check"
+                            ),
+                        )
+                    )
+        yield
+
+
+class TestProcessDependentPathNotAllowed(CdPrefixCase):
+    """AC-1, AC-3 (hook level), AC-5, AC-6 (hook level), TM-1 .. TM-4: a cd
+    prefix form whose path is, or passes through, a location under /proc or
+    /dev/fd is judged as if it had no cd prefix, so there is no output."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.layout = Layout()
+        cls.guard = _load_guard_module()
+
+    def prefixed(self, written):
+        return 'cd "' + written + '" && ' + PLAIN_COMMAND
+
+    # -- AC-1 -------------------------------------------------------------
+
+    @needs_proc
+    def test_ac1_the_fixture_lands_the_hook_process_below_the_area_and_bash_elsewhere(self):
+        # Guards the fixture: with the hook subprocess in work, the same path
+        # text names an existing directory strictly below the area, so the
+        # hook would have allowed the form before the exclusion. Bash runs in
+        # the input cwd, where the text names something else.
+        area = str(FIX.region)
+        for label, written in self.layout.cwd_forms():
+            with self.subTest(label=label):
+                hook_side = written.replace(PROC_SELF + "/cwd", str(self.layout.work), 1)
+                self.assertTrue(os.path.isdir(hook_side))
+                self.assertTrue(self.guard.strictly_below(os.path.realpath(hook_side), area))
+                for cwd in (FIX.repo, FIX.worktree):
+                    bash_side = written.replace(PROC_SELF + "/cwd", str(cwd), 1)
+                    landed = os.path.realpath(bash_side)
+                    self.assertFalse(
+                        os.path.isdir(bash_side) and self.guard.strictly_below(landed, area)
+                    )
+
+    @needs_proc
+    def test_ac1_cwd_forms_are_silent_when_the_hook_process_runs_elsewhere(self):
+        for cwd in (FIX.repo, FIX.worktree):
+            for label, written in self.layout.cwd_forms():
+                with self.subTest(cwd=cwd.name, label=label):
+                    proc = FIX.run_hook(
+                        self.prefixed(written), cwd, process_cwd=self.layout.work
+                    )
+                    decision, _ = decide(proc)
+                    self.assertEqual(decision, SILENT)
+
+    def test_ac1_an_ordinary_path_is_still_allowed_with_a_separate_process_cwd(self):
+        for cwd in (FIX.repo, FIX.worktree):
+            with self.subTest(cwd=cwd.name):
+                proc = FIX.run_hook(
+                    self.prefixed(str(self.layout.under_work)),
+                    cwd,
+                    process_cwd=self.layout.work,
+                )
+                decision, _ = decide(proc)
+                self.assertEqual(decision, ALLOW)
+
+    def test_ac1_run_hook_without_the_parameter_runs_in_the_input_cwd(self):
+        with mock.patch.object(subprocess, "run", wraps=subprocess.run) as spy:
+            FIX.run_hook(PLAIN_COMMAND, FIX.repo)
+            FIX.run_hook(PLAIN_COMMAND, FIX.repo, process_cwd=self.layout.work)
+        omitted, given = spy.call_args_list
+        self.assertEqual(omitted.kwargs["cwd"], str(FIX.repo))
+        self.assertEqual(given.kwargs["cwd"], str(self.layout.work))
+        for call in (omitted, given):
+            self.assertEqual(json.loads(call.kwargs["input"])["cwd"], str(FIX.repo))
+
+    # -- AC-3 (hook level) --------------------------------------------------
+
+    @needs_proc
+    def test_ac3_a_link_to_the_process_cwd_inside_the_area_is_silent(self):
+        for cwd in (FIX.repo, FIX.worktree):
+            for label, written in (
+                ("link to cwd", str(self.layout.cwd_link) + "/" + SHARED),
+                ("link to cwd, .., then a name", str(self.layout.cwd_link) + "/../" + SHARED),
+                ("link to /proc/self, then cwd", str(self.layout.self_link) + "/cwd/" + SHARED),
+            ):
+                with self.subTest(cwd=cwd.name, label=label):
+                    proc = FIX.run_hook(
+                        self.prefixed(written), cwd, process_cwd=self.layout.work
+                    )
+                    decision, _ = decide(proc)
+                    self.assertEqual(decision, SILENT)
+
+    # -- AC-5 -------------------------------------------------------------
+
+    @unittest.skipUnless(os.path.isdir(PROC_ROOT), "/proc/self/root is not a directory")
+    def test_ac5_proc_self_root_dotdot_before_an_absolute_worktree_path_is_silent(self):
+        for cwd in (FIX.repo, FIX.worktree):
+            for target in (FIX.worktree, FIX.inside):
+                with self.subTest(cwd=cwd.name, target=target.name):
+                    command = 'cd "' + PROC_ROOT + "/.." + str(target) + '" && ' + PLAIN_COMMAND
+                    decision, _ = decide(FIX.run_hook(command, cwd))
+                    self.assertEqual(decision, SILENT)
+
+    def test_ac5_the_approved_string_run_alone_is_still_allowed(self):
+        for cwd in (FIX.repo, FIX.worktree):
+            with self.subTest(cwd=cwd.name):
+                decision, _ = decide(FIX.run_hook(PLAIN_COMMAND, cwd))
+                self.assertEqual(decision, ALLOW)
+
+    @unittest.skipUnless(os.path.isdir(PROC_ROOT), "/proc/self/root is not a directory")
+    def test_ac5_a_refused_form_with_a_declared_but_unapproved_remainder_is_silent(self):
+        # No new deny: the declared command is judged exactly as if the cd
+        # prefix were absent from the form, and the form is not the declared
+        # string, so there is no decision.
+        for cwd in (FIX.repo, FIX.worktree):
+            with self.subTest(cwd=cwd.name):
+                command = 'cd "' + PROC_ROOT + "/.." + str(FIX.inside) + '" && ' + DECLARED_COMMAND
+                decision, _ = decide(FIX.run_hook(command, cwd))
+                self.assertEqual(decision, SILENT)
+
+    # -- AC-6 (hook level) --------------------------------------------------
+
+    def test_ac6_a_loop_or_an_over_bound_chain_exits_zero_silently_and_is_not_allowed(self):
+        forms = (
+            ("link loop", str(self.layout.ping)),
+            ("below a link loop", str(self.layout.ping) + "/" + SHARED),
+            ("link to itself", str(self.layout.selfish)),
+            ("chain beyond the bound", str(self.layout.chain(45))),
+        )
+        for cwd in (FIX.repo, FIX.worktree):
+            for label, written in forms:
+                with self.subTest(cwd=cwd.name, label=label):
+                    proc = FIX.run_hook(self.prefixed(written), cwd)
+                    self.assertEqual(proc.returncode, 0)
+                    self.assertEqual(proc.stderr, "")
+                    decision, _ = decide(proc)
+                    self.assertNotEqual(decision, ALLOW)
+                    self.assertEqual(decision, SILENT)
+
+    def test_ac6_a_short_chain_of_links_is_still_allowed(self):
+        for cwd in (FIX.repo, FIX.worktree):
+            with self.subTest(cwd=cwd.name):
+                decision, _ = decide(
+                    FIX.run_hook(self.prefixed(str(self.layout.chain(3))), cwd)
+                )
+                self.assertEqual(decision, ALLOW)
+
+
+class TestProcessDependentPathCheck(unittest.TestCase):
+    """AC-2, AC-3, AC-4, AC-5 (module level): the path check applied to the
+    area of the fixture."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.guard = _load_guard_module()
+        cls.area = str(FIX.region)
+        cls.layout = Layout()
+
+    def assert_would_have_been_below(self, written):
+        # Guards the fixture: the form names an existing directory strictly
+        # below the area, so the path check had no other reason to refuse it.
+        self.assertTrue(os.path.isdir(written), written)
+        self.assertTrue(
+            self.guard.strictly_below(os.path.realpath(written), self.area), written
+        )
+
+    def assert_false_below_the_area(self, forms):
+        for label, written in forms:
+            with self.subTest(label=label):
+                self.assert_would_have_been_below(written)
+                self.assertIs(self.guard.is_below(written, self.area), False)
+
+    # -- AC-2 -------------------------------------------------------------
+
+    @needs_proc
+    def test_ac2_forms_that_name_the_process_cwd_are_false(self):
+        forms = [
+            ("cwd then a name", PROC_SELF + "/cwd/" + SHARED),
+            ("cwd, .., then a name", PROC_SELF + "/cwd/../" + SHARED),
+            ("own pid, cwd, then a name", "/proc/%d/cwd/%s" % (os.getpid(), SHARED)),
+            ("trailing slash", PROC_SELF + "/cwd/" + SHARED + "/"),
+            ("doubled leading slash", "//proc/self/cwd/" + SHARED),
+            ("dot component after the root", "/./proc/self/cwd/" + SHARED),
+            (
+                "existing directory, .., then proc",
+                _first_component_directory() + "/../proc/self/cwd/" + SHARED,
+            ),
+        ]
+        if os.path.isdir("/proc/thread-self"):
+            forms.append(("thread-self, cwd, then a name", "/proc/thread-self/cwd/" + SHARED))
+        with _working_directory(self.layout.work):
+            self.assert_false_below_the_area(forms)
+
+    @needs_proc
+    def test_ac2_the_root_of_the_process_is_false_with_and_without_dotdot(self):
+        forms = [
+            ("root then the inside directory", PROC_ROOT + str(FIX.inside)),
+            ("root, .., then the inside directory", PROC_ROOT + "/.." + str(FIX.inside)),
+            ("root then the worktree", PROC_ROOT + str(FIX.worktree)),
+        ]
+        self.assert_false_below_the_area(forms)
+
+    @needs_proc
+    def test_ac2_proc_self_fd_forms_are_false(self):
+        fd = os.open(str(self.layout.under_work), os.O_RDONLY | os.O_DIRECTORY)
+        self.addCleanup(os.close, fd)
+        self.assert_false_below_the_area(
+            [
+                ("proc self fd", "%s/fd/%d" % (PROC_SELF, fd)),
+                ("proc self fd, trailing slash", "%s/fd/%d/" % (PROC_SELF, fd)),
+            ]
+        )
+
+    @needs_dev_fd
+    def test_ac2_dev_fd_forms_are_false(self):
+        fd = os.open(str(self.layout.under_work), os.O_RDONLY | os.O_DIRECTORY)
+        self.addCleanup(os.close, fd)
+        self.assert_false_below_the_area(
+            [
+                ("dev fd", "%s/%d" % (DEV_FD, fd)),
+                ("dev fd, dot component", "/dev/./fd/%d" % fd),
+                ("dev fd, doubled slash", "/dev//fd/%d" % fd),
+            ]
+        )
+
+    @needs_proc
+    def test_ac2_the_logical_walk_refuses_a_form_only_the_collapsed_path_reaches(self):
+        # `..` collapsed against the missing first component leaves a path
+        # under /proc. The as-written resolution cannot get there, so the
+        # existing rule's as-written query is replaced by one that agrees;
+        # the logical resolution is then the only thing that can refuse.
+        form = "/does-not-exist-for-the-walk/../proc/self/cwd/" + SHARED
+        with _working_directory(self.layout.work):
+            self.assertTrue(os.path.isdir(os.path.normpath(form)))
+            with mock.patch.object(self.guard, "resolves_to_directory", return_value=True):
+                self.assertIs(self.guard.is_below(form, self.area), False)
+
+    # -- AC-3 -------------------------------------------------------------
+
+    @needs_proc
+    def test_ac3_a_link_to_the_process_cwd_is_false(self):
+        forms = [
+            ("link to cwd then a name", str(self.layout.cwd_link) + "/" + SHARED),
+            ("link to cwd, .., then a name", str(self.layout.cwd_link) + "/../" + SHARED),
+            ("link to cwd itself", str(self.layout.cwd_link)),
+        ]
+        with _working_directory(self.layout.work):
+            self.assert_false_below_the_area(forms)
+
+    @needs_proc
+    def test_ac3_a_link_to_proc_self_followed_by_cwd_is_false(self):
+        forms = [
+            ("link to /proc/self, cwd, then a name",
+             str(self.layout.self_link) + "/cwd/" + SHARED),
+        ]
+        with _working_directory(self.layout.work):
+            self.assert_false_below_the_area(forms)
+
+    @needs_dev_fd
+    def test_ac3_a_link_to_a_dev_fd_entry_is_false(self):
+        fd = os.open(str(self.layout.under_work), os.O_RDONLY | os.O_DIRECTORY)
+        self.addCleanup(os.close, fd)
+        link = self.layout.links / ("fd-link-%d" % fd)
+        os.symlink("%s/%d" % (DEV_FD, fd), str(link))
+        self.addCleanup(os.unlink, str(link))
+        self.assert_false_below_the_area(
+            [("link to a /dev/fd entry", str(link)), ("trailing slash", str(link) + "/")]
+        )
+
+    # -- AC-4 -------------------------------------------------------------
+
+    def test_ac4_directories_named_like_the_excluded_ones_are_below(self):
+        for name in ("proc", "procfoo", "dev/fd"):
+            with self.subTest(name=name):
+                path = str(self.layout.names / name)
+                self.assertTrue(os.path.isdir(path))
+                self.assertIs(self.guard.is_below(path, self.area), True)
+
+    def test_ac4_the_existing_in_area_forms_are_below(self):
+        for label, path in (
+            ("existing directory below the area", str(FIX.inside)),
+            ("deeper directory below the area", str(FIX.deep)),
+            ("link, .., then a name under the target's parent", FIX.expand("@HOP@/../sub")),
+        ):
+            with self.subTest(label=label):
+                self.assertIs(self.guard.is_below(path, self.area), True)
+
+    def test_ac4_the_lexical_predicate_is_true_for_the_excluded_locations(self):
+        for text in (
+            "/proc",
+            "/dev/fd",
+            "//proc/x",
+            "/./proc/x",
+            "/proc/x/",
+            "/proc/self/cwd",
+            "/dev/fd/3",
+            "/dev/./fd",
+            "/dev//fd/3",
+            "//dev/fd",
+        ):
+            with self.subTest(text=text):
+                self.assertIs(self.guard._under_proc_or_dev_fd(text), True)
+
+    def test_ac4_the_lexical_predicate_is_false_for_everything_else(self):
+        for text in (
+            "/procfoo",
+            "/dev",
+            "/dev/null",
+            "/dev/fdx",
+            "/dev/x/fd",
+            "/",
+            "",
+            "/x/proc",
+            "/x/dev/fd",
+            self.area + "/proc",
+            self.area + "/dev/fd",
+        ):
+            with self.subTest(text=text):
+                self.assertIs(self.guard._under_proc_or_dev_fd(text), False)
+
+    def test_ac4_the_lexical_predicate_does_not_touch_the_file_system(self):
+        with mock.patch.object(os, "lstat", side_effect=AssertionError("file system touched")):
+            with mock.patch.object(os, "stat", side_effect=AssertionError("file system touched")):
+                self.assertIs(self.guard._under_proc_or_dev_fd("/proc/self/cwd"), True)
+                self.assertIs(self.guard._under_proc_or_dev_fd("/procfoo"), False)
+
+    # -- AC-5 -------------------------------------------------------------
+
+    @needs_proc
+    def test_ac5_the_proc_self_root_dotdot_prefix_form_is_false(self):
+        for target in (FIX.worktree, FIX.inside):
+            with self.subTest(target=target.name):
+                path = PROC_ROOT + "/.." + str(target)
+                self.assertIs(self.guard.is_below(path, self.area), False)
+
+
+class TestLinkBoundAndProbeErrors(unittest.TestCase):
+    """AC-6 (TM-3, TM-4): a link loop, a chain beyond the followed-link bound,
+    and an error while a stage is probed or a link target is read make the
+    path check False."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.guard = _load_guard_module()
+        cls.area = str(FIX.region)
+        cls.layout = Layout()
+
+    def test_ac6_a_link_loop_is_false(self):
+        for label, path in (
+            ("two links pointing at each other", str(self.layout.ping)),
+            ("below the loop", str(self.layout.ping) + "/" + SHARED),
+            ("a link pointing at itself", str(self.layout.selfish)),
+        ):
+            with self.subTest(label=label):
+                self.assertIs(self.guard.is_below(path, self.area), False)
+
+    def test_ac6_a_chain_beyond_the_bound_is_false_and_a_short_chain_is_true(self):
+        self.assertIs(self.guard.is_below(str(self.layout.chain(3)), self.area), True)
+        self.assertIs(self.guard.is_below(str(self.layout.chain(45)), self.area), False)
+
+    def test_ac6_the_walk_alone_decides_the_followed_link_bound(self):
+        # The as-written query of the existing rule is replaced by one that
+        # agrees, so only the walk can refuse. The bound is the Linux kernel's
+        # own limit for one resolution: 40 links are followed, the 41st is not.
+        with mock.patch.object(self.guard, "resolves_to_directory", return_value=True):
+            for count, expected in ((3, True), (40, True), (41, False), (45, False)):
+                with self.subTest(links=count):
+                    self.assertIs(
+                        self.guard.is_below(str(self.layout.chain(count)), self.area),
+                        expected,
+                    )
+
+    def test_ac6_the_walk_alone_refuses_a_loop(self):
+        with mock.patch.object(self.guard, "resolves_to_directory", return_value=True):
+            for path in (str(self.layout.ping), str(self.layout.selfish)):
+                with self.subTest(path=path):
+                    self.assertIs(self.guard.is_below(path, self.area), False)
+
+    def test_ac6_an_error_while_a_stage_is_probed_makes_the_check_false(self):
+        target = str(self.layout.under_work)
+        self.assertIs(self.guard.is_below(target, self.area), True)
+        real_lstat = os.lstat
+        for error in (OSError("simulated"), ValueError("simulated")):
+
+            def probe(path, *args, **kwargs):
+                if os.fspath(path) == target:
+                    raise error
+                return real_lstat(path, *args, **kwargs)
+
+            with self.subTest(error=type(error).__name__):
+                with mock.patch.object(os, "lstat", new=probe):
+                    self.assertIs(self.guard.is_below(target, self.area), False)
+
+    def test_ac6_an_error_while_a_link_target_is_read_makes_the_check_false(self):
+        path = str(self.layout.chain(3))
+        self.assertIs(self.guard.is_below(path, self.area), True)
+        for error in (OSError("simulated"), ValueError("simulated")):
+            with self.subTest(error=type(error).__name__):
+                with mock.patch.object(os, "readlink", side_effect=error):
+                    self.assertIs(self.guard.is_below(path, self.area), False)
+
+    def test_ac6_a_missing_stage_or_a_non_directory_stage_is_not_an_error(self):
+        # The two endings that are not failures: the existing rule decides.
+        with mock.patch.object(self.guard, "resolves_to_directory", return_value=True):
+            for label, path in (
+                ("missing stage then ..", str(FIX.inside) + "/does-not-exist/../sub"),
+                ("regular file then ..", str(FIX.file) + "/../task0001"),
+            ):
+                with self.subTest(label=label):
+                    self.assertIs(self.guard.is_below(path, self.area), True)
+
+
+class TestProcessDependentPathContract(unittest.TestCase):
+    """AC-7: what the change leaves as it was."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.guard = _load_guard_module()
+        cls.area = str(FIX.region)
+        cls.layout = Layout()
+
+    def test_ac7_is_below_keeps_its_parameters(self):
+        self.assertEqual(list(inspect.signature(self.guard.is_below).parameters), ["path", "area"])
+
+    def test_ac7_the_caller_still_passes_the_path_and_the_area_unchanged(self):
+        command = 'cd "' + str(FIX.inside) + '" && ' + PLAIN_COMMAND
+        with mock.patch.object(self.guard, "is_below", return_value=True) as spy:
+            result = self.guard.is_cd_prefixed_approved(
+                command, {PLAIN_COMMAND}, str(FIX.repo / ".git")
+            )
+        self.assertIs(result, True)
+        spy.assert_called_once_with(str(FIX.inside), self.area)
+
+    @needs_proc
+    def test_ac7_the_path_check_starts_no_child_process_for_the_added_forms(self):
+        fd = os.open(str(self.layout.under_work), os.O_RDONLY | os.O_DIRECTORY)
+        self.addCleanup(os.close, fd)
+        paths = [
+            PROC_SELF + "/cwd/" + SHARED,
+            PROC_SELF + "/cwd/../" + SHARED,
+            "/proc/thread-self/cwd/" + SHARED,
+            "/proc/%d/cwd/%s" % (os.getpid(), SHARED),
+            "%s/fd/%d" % (PROC_SELF, fd),
+            "%s/%d" % (DEV_FD, fd),
+            PROC_ROOT + str(FIX.inside),
+            PROC_ROOT + "/.." + str(FIX.inside),
+            "//proc/self/cwd/" + SHARED,
+            "/./proc/self/cwd/" + SHARED,
+            _first_component_directory() + "/../proc/self/cwd/" + SHARED,
+            str(self.layout.cwd_link) + "/" + SHARED,
+            str(self.layout.self_link) + "/cwd/" + SHARED,
+            str(self.layout.ping),
+            str(self.layout.chain(45)),
+            str(self.layout.chain(3)),
+            str(self.layout.names / "proc"),
+            str(FIX.inside),
+        ]
+        with _working_directory(self.layout.work), _no_child_process():
+            for path in paths:
+                self.guard.is_below(path, self.area)
 
 
 def _verbatim_execution_rule(text):

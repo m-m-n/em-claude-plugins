@@ -1,0 +1,131 @@
+task_id: task0001
+baseline_failures: []          # before any edit: python3 -m unittest discover -s tests -> Ran 12050 tests, OK (skipped=1); no failing test
+final_failures: []             # re-executed after the implementation and after writing this record: python3 -m unittest discover -s tests -> OK (skipped=1, the same single skip as the baseline); no failing test
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathNotAllowed.test_ac1_cwd_forms_are_silent_when_the_hook_process_runs_elsewhere
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathNotAllowed.test_ac1_the_fixture_lands_the_hook_process_below_the_area_and_bash_elsewhere
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathNotAllowed.test_ac1_an_ordinary_path_is_still_allowed_with_a_separate_process_cwd
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathNotAllowed.test_ac1_run_hook_without_the_parameter_runs_in_the_input_cwd
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged path check (new tests written first),
+      test_ac1_cwd_forms_are_silent_when_the_hook_process_runs_elsewhere failed
+      in all four subtests (input cwd repo1 and wtree, each of the two
+      /proc/self/cwd forms) with AssertionError: 'allow' != 'silent', because
+      the hook process resolved the form against its own working directory.
+      The other three tests passed before the change by design: the fixture
+      guard states the fact that made the old check allow the forms, the
+      ordinary-path test pins the unchanged allow, and the run_hook test pins
+      that omitting process_cwd keeps the subprocess in the input cwd.
+  AC-2:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathCheck.test_ac2_forms_that_name_the_process_cwd_are_false
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathCheck.test_ac2_the_root_of_the_process_is_false_with_and_without_dotdot
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathCheck.test_ac2_proc_self_fd_forms_are_false
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathCheck.test_ac2_dev_fd_forms_are_false
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathCheck.test_ac2_the_logical_walk_refuses_a_form_only_the_collapsed_path_reaches
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged path check, every listed test failed with
+      AssertionError: True is not False for every form (cwd, cwd/.., thread-self,
+      own pid, trailing slash, //proc, /./proc, /<dir>/../proc, /proc/self/fd/N,
+      /dev/fd/N and its lexical variants, /proc/self/root with and without
+      ..): the old rule returned True because each form resolves to an existing
+      directory strictly below the area. Each test first asserts that
+      resolution, so the False it then expects is the new behavior.
+  AC-3:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathCheck.test_ac3_a_link_to_the_process_cwd_is_false
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathCheck.test_ac3_a_link_to_proc_self_followed_by_cwd_is_false
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathCheck.test_ac3_a_link_to_a_dev_fd_entry_is_false
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathNotAllowed.test_ac3_a_link_to_the_process_cwd_inside_the_area_is_silent
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged path check, the three module-level tests failed
+      with AssertionError: True is not False (link to /proc/self/cwd, link to
+      /proc/self followed by /cwd/<name>, link to /dev/fd/<N>, with and
+      without a trailing slash), and the hook-level test failed in all six
+      subtests (cwd repo1 and wtree, three forms) with AssertionError: 'allow'
+      != 'silent'.
+  AC-4:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathCheck.test_ac4_directories_named_like_the_excluded_ones_are_below
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathCheck.test_ac4_the_existing_in_area_forms_are_below
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathCheck.test_ac4_the_lexical_predicate_is_true_for_the_excluded_locations
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathCheck.test_ac4_the_lexical_predicate_is_false_for_everything_else
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathCheck.test_ac4_the_lexical_predicate_does_not_touch_the_file_system
+    red_confirmed: true
+    red_reason: >-
+      Run with no implementation present, the three predicate tests errored
+      with AttributeError: module has no attribute _under_proc_or_dev_fd (the
+      lexical predicate did not exist yet), which is the observed red.
+      test_ac4_directories_named_like_the_excluded_ones_are_below and
+      test_ac4_the_existing_in_area_forms_are_below passed before the change by
+      design: they pin the True results that the new exclusion must not take
+      away.
+  AC-5:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathNotAllowed.test_ac5_proc_self_root_dotdot_before_an_absolute_worktree_path_is_silent
+      - tests.test_bash_guard_cd_prefix.TestNonDirectoryBeforeDotDot.test_ac1_proc_self_root_dotdot_in_front_is_never_below
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathCheck.test_ac5_the_proc_self_root_dotdot_prefix_form_is_false
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathNotAllowed.test_ac5_the_approved_string_run_alone_is_still_allowed
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathNotAllowed.test_ac5_a_refused_form_with_a_declared_but_unapproved_remainder_is_silent
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged path check, the changed existing test (now
+      test_ac5_proc_self_root_dotdot_before_an_absolute_worktree_path_is_silent)
+      failed in all four subtests with AssertionError: 'allow' != 'silent',
+      test_ac1_proc_self_root_dotdot_in_front_is_never_below failed on its final
+      assertion with AssertionError: True is not False, and the module-level
+      prefix-form test failed for both targets with True is not False. The
+      approved-string-alone test and the declared-but-unapproved-remainder test
+      passed before the change by design: they pin that no allowance is lost
+      and no deny is added.
+  AC-6:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestLinkBoundAndProbeErrors.test_ac6_the_walk_alone_decides_the_followed_link_bound
+      - tests.test_bash_guard_cd_prefix.TestLinkBoundAndProbeErrors.test_ac6_an_error_while_a_stage_is_probed_makes_the_check_false
+      - tests.test_bash_guard_cd_prefix.TestLinkBoundAndProbeErrors.test_ac6_an_error_while_a_link_target_is_read_makes_the_check_false
+      - tests.test_bash_guard_cd_prefix.TestLinkBoundAndProbeErrors.test_ac6_a_link_loop_is_false
+      - tests.test_bash_guard_cd_prefix.TestLinkBoundAndProbeErrors.test_ac6_the_walk_alone_refuses_a_loop
+      - tests.test_bash_guard_cd_prefix.TestLinkBoundAndProbeErrors.test_ac6_a_chain_beyond_the_bound_is_false_and_a_short_chain_is_true
+      - tests.test_bash_guard_cd_prefix.TestLinkBoundAndProbeErrors.test_ac6_a_missing_stage_or_a_non_directory_stage_is_not_an_error
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathNotAllowed.test_ac6_a_loop_or_an_over_bound_chain_exits_zero_silently_and_is_not_allowed
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathNotAllowed.test_ac6_a_short_chain_of_links_is_still_allowed
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged path check, three tests were observed failing.
+      test_ac6_the_walk_alone_decides_the_followed_link_bound failed for the
+      chains of 41 and 45 links with AssertionError: True is not False (the
+      as-written query is replaced by one that agrees, and the lenient realpath
+      follows any number of links). test_ac6_an_error_while_a_stage_is_probed_makes_the_check_false
+      failed for the OSError subtest with True is not False (the lenient
+      realpath swallows an OSError from lstat), and
+      test_ac6_an_error_while_a_link_target_is_read_makes_the_check_false failed
+      for its OSError subtest the same way. The loop tests, the hook-level loop
+      and over-bound chain test, the unstubbed over-bound chain check and the
+      ValueError subtests passed before the change: the existing as-written
+      query (os.stat) already fails with ELOOP for a loop or for more than the
+      kernel's limit of followed links, so those pin the contract (exit 0, empty
+      stderr, not allowed) rather than carry a red state of their own.
+  AC-7:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathContract.test_ac7_is_below_keeps_its_parameters
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathContract.test_ac7_the_caller_still_passes_the_path_and_the_area_unchanged
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathContract.test_ac7_the_path_check_starts_no_child_process_for_the_added_forms
+      - tests.test_bash_guard_cd_prefix.TestAc7StandardLibraryOnly.test_ac7_hook_imports_only_standard_library_modules
+      - tests.test_bash_guard_cd_prefix.TestAc7StandardLibraryOnly.test_ac7_hook_executable_text_has_no_status_substring
+      - tests.test_bash_guard_cd_prefix.TestNulInPath.test_ac5_a_resolution_error_makes_the_path_check_false
+    red_confirmed: false
+    red_reason: >-
+      This criterion pins behavior that must not change (signature and caller
+      of the path check, no child process, standard-library-only imports, no
+      status substring, existing resolution-error and NUL cases, and the whole
+      suite passing). Every test listed here passed before the implementation,
+      so no red state occurred. A dedicated new module is out of scope: the
+      existing tests/test_bash_guard_cd_prefix.py detects each of these
+      behaviors, and the three new tests of TestProcessDependentPathContract
+      extend that coverage to the added forms. No existing expectation other
+      than the two named in AC-5 was edited.
