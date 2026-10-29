@@ -146,7 +146,7 @@ tasks:
     requirements:
     - FR7
     - NFR7
-    status: in_progress
+    status: merged
     branch: em-workflow/verify-cap-worktree-cleanup/task0002
     notes: null
 review:
