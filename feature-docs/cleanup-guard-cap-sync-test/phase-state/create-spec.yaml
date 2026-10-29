@@ -75,12 +75,18 @@ worker_runs:
   output_digest: sha256:81ea173258bb8ef807c6adc5e96349cb880865ddac8d41c95d4f2de16bf285fe
   self_write_set: []
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:98b184b6647d5e0af3f245984d2b5d9c7010cec296a7393d220dfa284ff67d62
   dispatch_digest_inputs:
     em-workflow/references/contracts/spec-writer-contract.md: sha256:9032c6287d75f4a88e556bd3962c32ab8b4905cf3b6ececa895206788bcd0b63
     em-workflow/references/templates/spec-document.md: sha256:203dfcddbe507886ce861694fccd20ae25e5af0bd1b0efa5e935991add950cbd
-artifacts: []
+  output_digest: sha256:a9be02251f7b771d2875d71c390393c33ec4cbaf72c64666e9c6f2c3331879bb
+  self_write_set:
+  - feature-docs/cleanup-guard-cap-sync-test/SPEC.md
+artifacts:
+- path: feature-docs/cleanup-guard-cap-sync-test/SPEC.md
+  sha256: sha256:52ca72e624ae0731b48ecc675c65f553aacf3200715a683f248fd202c900a23d
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: sha256:1a548d9353883945260b3f3d9d6fc097db8144c9eb2b088ae3faafe56471c1b7
 stale_redispatch_count: 0
