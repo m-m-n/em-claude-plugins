@@ -1,0 +1,55 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Documentation criterion with no executable check that can be made to
+      fail: task0002.md Test Notes assign AC-1 to inspection in verify
+      (TS-8) and require no README-content test. A search of tests/ by the
+      path em-workflow/README.md and by the basename README.md found no
+      test that reads the failed-run-cleanup-guard.py entry's content; the
+      only test that reads the entry at all,
+      tests.test_guardrail_hooks_migration.TestReadmeDocumentsTheClassifierSideEffect.test_readme_names_every_bundled_guard_hook,
+      asserts only that the file name appears in the README. No red state
+      occurred for this change. Verified by reading the rewritten entry: it
+      says `git worktree remove` and `gh pr create` get no decision for a
+      feature in the excluded state and names all four conditions.
+  AC-2:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Documentation criterion with no executable check that can be made to
+      fail (inspection in verify, TS-8). The same search of tests/ by path
+      and basename found no test that reads this content. Verified by
+      reading the rewritten entry: it says `git branch -d` / `--delete` is
+      still denied for a feature in the excluded state, and that every
+      failed state that is not the excluded state keeps its existing deny.
+  AC-3:
+    tests:
+      - tests.test_guardrail_hooks_migration.TestReadmeDocumentsTheClassifierSideEffect.test_readme_names_every_bundled_guard_hook
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing
+      test_readme_names_every_bundled_guard_hook detects removal of the
+      hooks/failed-run-cleanup-guard.py name from the README; no red state
+      occurred for this change. The single-entry scope is checked by
+      reading `git diff` of em-workflow/README.md (one line changed; the
+      table keeps its 3-column shape, 5 pipe-split fields as in every
+      neighbouring row). The full run of `python3 -m unittest discover -s
+      tests` passes before the edit (12125 tests, OK, skipped=1) and after
+      it (12126 tests, OK, skipped=1).
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Checked by the file list of the diff (`git diff --name-only`): only
+      em-workflow/README.md and this record changed, so neither
+      em-workflow/.claude-plugin/plugin.json nor
+      .claude-plugin/marketplace.json is modified. The existing
+      tests.test_plugin_version_parity tests read those registries but
+      assert version relations, not that this task left them unmodified; no
+      executable check can be made to fail for "unmodified", and no red
+      state occurred.
