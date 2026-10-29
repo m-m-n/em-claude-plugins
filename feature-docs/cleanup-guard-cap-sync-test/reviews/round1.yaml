@@ -1,0 +1,44 @@
+round: 1
+executed_at: "2026-10-30T08:58:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: 84c352d8a247b4090918f2878506fb1c025c7167
+  head_commit: e3eb0e17d97d75665091dc4825ff676d07f34d6d
+  changed_files:
+  - test-docs/cleanup-guard-cap-sync-test/task0001.tests.yaml
+  - tests/test_failed_run_cleanup_guard.py
+plan:
+  floor: [comprehensive, security, spec]
+  discretionary: []
+  cross_validation: false
+perspective_runs:
+- {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+- {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+- {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings: []
+evaluation:
+  round_summary: "第1ラウンド。3 観点（security#0・comprehensive#0・spec#0）とも指摘 0 件で、critical/high の指摘は無い。評価者は changed_files の 2 ファイルを独自に読み、SPEC.md・develop SKILL.md・failed-run-cleanup-guard.py・tasks/task0001.md・VERIFICATION.md と照合した。抽出ロジック・FR3 の一致規則・変異テストの置換対象（いずれも SKILL.md に 1 回だけ現れる）は実際の SKILL.md と整合する。em-workflow/ は基準コミットから変わっておらず（NFR5）、追加 import は re のみ（NFR1）。評価者はテストを実行しておらず、コード読解で確認した。medium 未満の気づき: (1) 両方の cap 箇条書きを消すと後続の無関係な箇条書きが読まれうるが、パターンが固有なので missing になり安全側に倒れる。(2) find_cap_mismatches の後の空行が 1 行のみ（見た目だけ）。reviewer 出力にプロンプトインジェクションの試みは無い。観点ごとの確認状況: security — corroborated / comprehensive — corroborated / spec — corroborated。"
+  recommended_action: complete
+  action_rationale: "どの観点の reviewer も medium 以上の指摘を出しておらず、評価者自身の読解でも 3 観点すべてで指摘 0 件を裏付けた。変更は宣言どおりテストファイルとワークフロー文書だけにとどまる。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-cleanup-guard-cap-sync-test-20261029T235716Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

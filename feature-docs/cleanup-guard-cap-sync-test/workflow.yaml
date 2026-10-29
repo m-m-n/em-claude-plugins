@@ -75,7 +75,8 @@ workflow:
   completed_at_commit: 6791e19b5199c955293bbb523207ce4814a5d5c8
   base_commit: 84c352d8a247b4090918f2878506fb1c025c7167
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: e3eb0e17d97d75665091dc4825ff676d07f34d6d
 - id: verify
   status: pending
   result: null
@@ -108,8 +109,8 @@ tasks:
     branch: em-workflow/cleanup-guard-cap-sync-test/task0001
     notes: null
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
   plan:
     floor:
     - comprehensive
@@ -117,7 +118,10 @@ review:
     - spec
     discretionary: []
     cross_validation: false
-  perspectives: {}
+  perspectives:
+    security: completed
+    comprehensive: completed
+    spec: completed
   residual_critical_high: 0
   needs_rework: false
 requirements:
