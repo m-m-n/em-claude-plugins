@@ -2,45 +2,29 @@ schema_version: 1
 feature: cd-prefix-excluded-build-format-tests
 created: '2026-10-29'
 base_branch: main
-goal: 'cd 前置形の対象外になった承認文字列が build / format コマンドのとき、implementer 報告の tests の値が決まっていない
-
+goal: |
+  cd 前置形の対象外になった承認文字列が build / format コマンドのとき、implementer 報告の tests の値が決まっていない
 
   ## やりたいこと
 
-
-  承認済みの build / format コマンドが cd 前置形の対象外（トップレベルに `&` / `;` / `||` を含む）になったとき、implementer
-  の報告の `tests` に何を書くかを決めて手順書に書く。
-
+  承認済みの build / format コマンドが cd 前置形の対象外（トップレベルに `&` / `;` / `||` を含む）になったとき、implementer の報告の `tests` に何を書くかを決めて手順書に書く。
 
   ## 背景・なぜ
 
-
-  feature cd-prefix-toplevel-operators の create-plan で、test コマンドが対象外のときは実行せず `tests:
-  "fail"` にし、実行しなかった理由を notes に書くと決めた（Codex に相談し、選択肢 B を採用）。build / format コマンドが対象外のときの
-  `tests` の値は、SPEC にもこの回答にも無く、決まっていない。
-
+  feature cd-prefix-toplevel-operators の create-plan で、test コマンドが対象外のときは実行せず `tests: "fail"` にし、実行しなかった理由を notes に書くと決めた（Codex に相談し、選択肢 B を採用）。build / format コマンドが対象外のときの `tests` の値は、SPEC にもこの回答にも無く、決まっていない。
 
   ## 受け入れ条件 / 完了の定義
 
-
   - [ ] build / format コマンドが対象外のときの `tests` の値が手順書に書かれている
-
   - [ ] その記述を確かめる文書試験がある
-
 
   ## スコープ外
 
-
   test コマンドが対象外のときの扱い（feature cd-prefix-toplevel-operators で決定済み）
-
 
   ## 制約・前提
 
-
-  該当箇所: `em-workflow/agents/implementer.md` の Step 3 / Step 7、`em-workflow/skills/worktree-task-workflow/SKILL.md`
-  の Command execution gate 節。feature cd-prefix-toplevel-operators のマージ後に着手する。
-
-  '
+  該当箇所: `em-workflow/agents/implementer.md` の Step 3 / Step 7、`em-workflow/skills/worktree-task-workflow/SKILL.md` の Command execution gate 節。feature cd-prefix-toplevel-operators のマージ後に着手する。
 parent_branch: em-workflow/cd-prefix-excluded-build-format-tests/integration
 tier: reduced
 tier_decision:
@@ -83,14 +67,14 @@ workflow:
   - DESIGN.md
   - design/
   status: skipped
-  skipped_reason: '手順書 2 つへの文の追加と文書試験だけの変更で、UI もデザインの要素も無い（design-step.decision: decide_autonomously、source:
-    batch-decision-table。tier reduced でも design は削減対象）'
+  skipped_reason: '手順書 2 つへの文の追加と文書試験だけの変更で、UI もデザインの要素も無い（design-step.decision: decide_autonomously、source: batch-decision-table。tier reduced でも design は削減対象）'
 - id: create-plan
   artifacts:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: 71dd0866478d30a6188977da6828cb7f2f798889
 - id: implement
   status: pending
 - id: review
@@ -101,8 +85,7 @@ workflow:
   status: pending
 tasks:
   task0001:
-    title: tests value and notes for a build or format command the cd prefix form
-      does not cover
+    title: tests value and notes for a build or format command the cd prefix form does not cover
     plan: tasks/task0001.md
     files:
     - em-workflow/agents/implementer.md

@@ -1,7 +1,7 @@
 schema_version: 1
 feature: cd-prefix-excluded-build-format-tests
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 27bb26399263fb542271e977eeb806fc28e8cd33
 last_input_digest: sha256:48f687e17405a0f9ab693a35deb9b369210e8a92cc97fe25f2f9d8857ed21cce
