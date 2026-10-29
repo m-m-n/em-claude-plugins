@@ -119,6 +119,10 @@ test command, not running the format command does not, on its own, make `tests`
 "fail", and `notes` says that the format command was not run because the cd
 prefix form does not cover it.
 
+Not running the format command does not override a `tests: "fail"` that
+another rule decides, for example when the build command is also an approved
+string that the cd prefix form does not cover.
+
 ### Step 4: Implement (TDD)
 
 Run `project_commands.test` / `build` / `format` per the command-approval
