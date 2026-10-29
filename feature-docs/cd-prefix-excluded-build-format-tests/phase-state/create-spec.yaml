@@ -1,7 +1,7 @@
 schema_version: 1
 feature: cd-prefix-excluded-build-format-tests
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: cf6696ff332bed9b55b6b76ab47f7b5d48a67c48
 last_input_digest: sha256:4089ae88171ef82a66cba503788419a2f3f1e1bfbe4e1c71b4fd6ef28dc79a2e
