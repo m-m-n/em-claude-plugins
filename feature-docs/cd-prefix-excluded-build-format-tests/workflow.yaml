@@ -89,7 +89,8 @@ workflow:
   failed_items: []
   excluded_scenarios: []
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: 6df6d2232ddcb734512824d7c74b0b95b5c6745e
 tasks:
   task0001:
     title: tests value and notes for a build or format command the cd prefix form does not cover
