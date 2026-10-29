@@ -20,7 +20,7 @@ bases:
       '1': 0.97
       '2': 0.03
       '3': 0.0
-  observed_at: '2026-10-30T08:20:00+09:00'
+  observed_at: '2026-10-30T08:06:00+09:00'
 - basis: description_plus_code
   score:
     type: score
@@ -39,7 +39,7 @@ bases:
       '1': 0.97
       '2': 0.03
       '3': 0.0
-  observed_at: '2026-10-30T08:24:00+09:00'
+  observed_at: '2026-10-30T08:12:00+09:00'
 pre_survey_estimate:
   files_expected:
   - tests/test_failed_run_cleanup_guard.py
@@ -60,4 +60,4 @@ pre_survey_estimate:
   evidence: em-workflow/hooks/failed-run-cleanup-guard.py:182-183 の定数は2と3。em-workflow/skills/develop/SKILL.md:884-890
     は系譜capの見出しが「値1」だが、到達条件は累積出現回数2、hard capはrounds 3と記載。tests/test_failed_run_cleanup_guard.py:564-565
     は閾値を直書きし、SKILL.mdとの一致を検証するテストはない。同:626-633 のload_hook_module()を再利用できる
-decided_at: '2026-10-30T08:24:30+09:00'
+decided_at: '2026-10-30T08:12:30+09:00'
