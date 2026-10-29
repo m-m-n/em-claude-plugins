@@ -1,0 +1,105 @@
+schema_version: 1
+feature: cd-prefix-process-dependent-paths
+phase: create-spec
+status: completed
+generation: 1
+base_revision: 6dca3688a4771c03c56dea6394e78b06ddd4756b
+last_input_digest: sha256:d72b6fb66b2f6d32705c99a3e277b74c657135637167a981686f923594494ed6
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-29T09:16:23+09:00'
+    questions:
+    - question_id: requirement.process-dependent-paths.handling
+      status: answered
+    - question_id: requirement.proc-self-root-prefix.keep
+      status: answered
+    - question_id: design-step.recommendation
+      status: answered
+answers:
+  requirement.process-dependent-paths.handling:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-29T09:16:23+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - exclude_procfs
+    freeform: null
+    normalized_answer: cd 前置形のパス条件で、書かれたパス、または論理パス・物理パスの解決で辿るどこかの段（辿ったリンクの行き先を含む）が /proc か /dev/fd の配下なら、パス条件を満たさない扱いにする（cd
+      前置なしと同じ判定。新しい deny は出さない）。/proc・/dev/fd の配下かどうかはパス要素単位で判定し、//proc・/./proc・/x/../proc のような字句上の変形も対象にする。最終
+      realpath や normpath の結果だけには頼らない。/procfoo や作業領域内の通常の proc ディレクトリは除外しない。
+    resolution_note: 'gate: create-spec.requirement-clarification; category: security; route: batch relaxed
+      route (fail-closed classification の batch 緩和) → Codex consultation; codex_consulted: true (1 turn,
+      harness codex); opus_escalation: false。 options: exclude_procfs / exclude_written_prefix / resolve_against_input_cwd。chosen:
+      exclude_procfs。not chosen: exclude_written_prefix（作業領域内に置いた /proc/self/cwd へのシンボリックリンクの抜け道が残る）、resolve_against_input_cwd（入力
+      cwd と Bash の実際の cwd の一致が保証されず、既存テストも両者を揃えている）。Codex の要点: フック内で解決しても除外すれば cwd の一致に依存せず自動 allow を防げる。判定失敗は新しい
+      deny を生まないので、追跡の複雑さより抜け道を残さない方を取る。CAVEAT として字句上の変形と途中の段・リンク先の検査、/dev/fd → /proc/self/fd の追跡、/procfoo
+      を除外しない条件を SPEC に明記するよう助言。オーケストレーターは worker 推奨とも一致する exclude_procfs を比較的よいと判断して採用'
+  requirement.proc-self-root-prefix.keep:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-29T09:16:23+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - drop
+    freeform: null
+    normalized_answer: /proc/self/root/.. を worktree の絶対パスの前に置く形も、ほかの /proc のパスと同じく許可しない。既存テスト 2 件の期待値を変える（allow
+      → 出力なし、True → False）。
+    resolution_note: 'gate: create-spec.requirement-clarification; category: security; route: batch relaxed
+      route (fail-closed classification の batch 緩和) → Codex consultation; codex_consulted: true (1 turn,
+      harness codex); opus_escalation: false。 options: drop / keep。chosen: drop。not chosen: keep（Q1 の除外に専用の書き換え規則と検証条件が増える）。Codex
+      の要点: /proc/self/root はプロセスのルートを指し、drop なら例外を増やさず Q1 と同じ基準で扱える。物理パスへのフォールバックは hop/../sub で検証でき、ファイル・不存在要素の後ろの
+      .. を許可しない既存検証（870–915 行）は維持すべき。Codex は既存 SPEC（is-below-physical-fallback）の更新にも触れたが、完了済み feature
+      の記録として編集しない（analyst の A2）を維持し、本 feature の SPEC で上書きする決定として扱う。オーケストレーターは drop を比較的よいと判断して採用'
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-29T09:16:23+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - skip
+    freeform: null
+    normalized_answer: 'design step を skip する（analyst 推奨: UI なし。フックの判定関数・文書・テストのみ）'
+    resolution_note: 'gate: create-spec.design-step; policy: select decide_autonomously → analyst 推奨の
+      skip を採用'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:94f97bac8f74b5a47e1bb6e643485076caf6bb5060eb07dca29dc61e231f4cfa
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:236015ab8e67beba4fac05c8c2fd7ac6ea12c128d13a81f803301e27c1d0f386
+  self_write_set: []
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:d72b6fb66b2f6d32705c99a3e277b74c657135637167a981686f923594494ed6
+  self_write_set:
+  - feature-docs/cd-prefix-process-dependent-paths/REQUIREMENTS.md
+  - feature-docs/cd-prefix-process-dependent-paths/SPEC.md
+artifacts:
+- path: feature-docs/cd-prefix-process-dependent-paths/REQUIREMENTS.md
+  sha256: sha256:f450a6c35382ef36b88b2e50265c3dabb65a3f12f5094302d951d6f8195f3dda
+  produced_by: create-spec-run-0003
+- path: feature-docs/cd-prefix-process-dependent-paths/SPEC.md
+  sha256: sha256:299452aa47bd1f5bf6456310751c30226516445f57367a3917332b83885c4ab5
+  produced_by: create-spec-run-0003
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache:
+  design_system_candidates:
+    resolved_at_generation: 1
+    paths: []
+    truncated: false
+  reference_scan_targets:
+    resolved_at_generation: 1
+    paths:
+    - em-workflow/hooks/bash_guard.py
+    - tests/test_bash_guard_cd_prefix.py
+    - tests/test_bash_guard_cd_prefix_operators.py
+    - tests/test_cd_prefix_exception_docs.py
+    - em-workflow/references/command-execution-protocol.md
+    - feature-docs/is-below-physical-fallback/SPEC.md
+    truncated: false
+last_error: null

@@ -1,0 +1,58 @@
+schema_version: 1
+feature: cd-prefix-process-dependent-paths
+phase: create-plan
+status: completed
+generation: 1
+base_revision: b9ce41f29b96b03dabd97b79084480794e680bdc
+last_input_digest: sha256:792f4519fa7fe9bf640311370d7d5474ad8193d509ef6da6aba7a20438d3684e
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: completed
+  input_digest: sha256:792f4519fa7fe9bf640311370d7d5474ad8193d509ef6da6aba7a20438d3684e
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/planner-contract.md: sha256:6476cc99ea8a1d2d4f376d1702bd636b1ab9898655397ec80ab1d6fb47cbe9e8
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
+    em-workflow/references/workflow-schema.md: sha256:7d6fcf022e4409981ec5b23e0b77865d2aad25813afc615d2a42f462a5fa690a
+    em-workflow/skills/plan-writing/SKILL.md: sha256:880bd01ad6c60af5695495e0a6784de7fe98e1ea9463dc6703164f8ffffdbccb
+    feature-docs/cd-prefix-process-dependent-paths/REQUIREMENTS.md: sha256:f450a6c35382ef36b88b2e50265c3dabb65a3f12f5094302d951d6f8195f3dda
+    feature-docs/cd-prefix-process-dependent-paths/SPEC.md: sha256:299452aa47bd1f5bf6456310751c30226516445f57367a3917332b83885c4ab5
+    feature-docs/cd-prefix-process-dependent-paths/workflow.yaml: sha256:fbd3fb1e6e01875b6d84a52b2a8b9be861a0aa7e7620bf29e987857ffead52a6
+  output_digest: sha256:84dbe33f5901c9e681295a26cb06288e7aa606ffcafcf20d484a5c21d2c160e9
+  self_write_set:
+  - feature-docs/cd-prefix-process-dependent-paths/IMPLEMENTATION.md
+  - feature-docs/cd-prefix-process-dependent-paths/THREAT-MODEL.md
+  - feature-docs/cd-prefix-process-dependent-paths/VERIFICATION.md
+  - feature-docs/cd-prefix-process-dependent-paths/tasks/task0001.md
+  - feature-docs/cd-prefix-process-dependent-paths/tasks/task0002.md
+artifacts:
+- path: feature-docs/cd-prefix-process-dependent-paths/IMPLEMENTATION.md
+  sha256: sha256:94bf6fb0b2a9aa0302ac8d31602323ac3bec14e8a5f16c0546b38a6ddf4d9f55
+  produced_by: create-plan-run-0001
+- path: feature-docs/cd-prefix-process-dependent-paths/THREAT-MODEL.md
+  sha256: sha256:65efbe25a40a3e4260347b683a1ec3130e1da6f21b52563a15294c79d958c0bc
+  produced_by: create-plan-run-0001
+- path: feature-docs/cd-prefix-process-dependent-paths/VERIFICATION.md
+  sha256: sha256:5492460ed1a2fa6ced6f16712dc08e072b253e57980d0edb7d79d2053d8f48de
+  produced_by: create-plan-run-0001
+- path: feature-docs/cd-prefix-process-dependent-paths/tasks/task0001.md
+  sha256: sha256:45a48f587a9f371e2aa205654a5c306f7c014934931fefe17ca141ecf5ed708f
+  produced_by: create-plan-run-0001
+- path: feature-docs/cd-prefix-process-dependent-paths/tasks/task0002.md
+  sha256: sha256:5fcce83c323ba495f520f65c69e4b253e0a3700b94e389d3d6a5f8526d516dbd
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: cd-prefix-process-dependent-paths-create-plan-p0001
+  status: applied
+  base_input_digest: sha256:792f4519fa7fe9bf640311370d7d5474ad8193d509ef6da6aba7a20438d3684e
+  base_workflow_blob: 431c4275ee4138ecf6a0f8a53b4cbc475b1b3609
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

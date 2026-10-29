@@ -1,0 +1,55 @@
+schema_version: 1
+feature: cd-prefix-process-dependent-paths
+records:
+- question_id: requirement.process-dependent-paths.handling
+  packet_id: create-spec-q0001
+  answered_at: '2026-10-29T09:16:23+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - exclude_procfs
+  freeform: null
+  normalized_answer: cd 前置形のパス条件で、書かれたパス、または論理パス・物理パスの解決で辿るどこかの段（辿ったリンクの行き先を含む）が /proc か /dev/fd の配下なら、パス条件を満たさない扱いにする（cd
+    前置なしと同じ判定。新しい deny は出さない）。/proc・/dev/fd の配下かどうかはパス要素単位で判定し、//proc・/./proc・/x/../proc のような字句上の変形も対象にする。最終
+    realpath や normpath の結果だけには頼らない。/procfoo や作業領域内の通常の proc ディレクトリは除外しない。
+  resolution_note: 'gate: create-spec.requirement-clarification; category: security; route: batch relaxed
+    route (fail-closed classification の batch 緩和) → Codex consultation; codex_consulted: true (1 turn,
+    harness codex); opus_escalation: false。 options: exclude_procfs / exclude_written_prefix / resolve_against_input_cwd。chosen:
+    exclude_procfs。not chosen: exclude_written_prefix（作業領域内に置いた /proc/self/cwd へのシンボリックリンクの抜け道が残る）、resolve_against_input_cwd（入力
+    cwd と Bash の実際の cwd の一致が保証されず、既存テストも両者を揃えている）。Codex の要点: フック内で解決しても除外すれば cwd の一致に依存せず自動 allow を防げる。判定失敗は新しい
+    deny を生まないので、追跡の複雑さより抜け道を残さない方を取る。CAVEAT として字句上の変形と途中の段・リンク先の検査、/dev/fd → /proc/self/fd の追跡、/procfoo
+    を除外しない条件を SPEC に明記するよう助言。オーケストレーターは worker 推奨とも一致する exclude_procfs を比較的よいと判断して採用'
+- question_id: requirement.proc-self-root-prefix.keep
+  packet_id: create-spec-q0001
+  answered_at: '2026-10-29T09:16:23+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - drop
+  freeform: null
+  normalized_answer: /proc/self/root/.. を worktree の絶対パスの前に置く形も、ほかの /proc のパスと同じく許可しない。既存テスト 2 件の期待値を変える（allow
+    → 出力なし、True → False）。
+  resolution_note: 'gate: create-spec.requirement-clarification; category: security; route: batch relaxed
+    route (fail-closed classification の batch 緩和) → Codex consultation; codex_consulted: true (1 turn,
+    harness codex); opus_escalation: false。 options: drop / keep。chosen: drop。not chosen: keep（Q1 の除外に専用の書き換え規則と検証条件が増える）。Codex
+    の要点: /proc/self/root はプロセスのルートを指し、drop なら例外を増やさず Q1 と同じ基準で扱える。物理パスへのフォールバックは hop/../sub で検証でき、ファイル・不存在要素の後ろの
+    .. を許可しない既存検証（870–915 行）は維持すべき。Codex は既存 SPEC（is-below-physical-fallback）の更新にも触れたが、完了済み feature の記録として編集しない（analyst
+    の A2）を維持し、本 feature の SPEC で上書きする決定として扱う。オーケストレーターは drop を比較的よいと判断して採用'
+- question_id: implement.deviation-auto-addition
+  packet_id: null
+  answered_at: '2026-10-29T10:08:00+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: declined
+  normalized_answer: not auto-added to tasks.task0001.files
+  resolution_note: 'task_id: task0001; deviation path: test-docs/cd-prefix-non-directory-dotdot/task0001.tests.yaml (renamed/moved test IDs updated so test_tests_yaml_id_resolution keeps passing); declined: the identifier part is missing (no AC-n of task0001 nor a registered requirement id is named; only an existing record-check test is named). The change remains an ordinary deviation for the containment check.'
+- question_id: implement.deviation-auto-addition
+  packet_id: null
+  answered_at: '2026-10-29T10:08:00+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: declined
+  normalized_answer: not auto-added to tasks.task0001.files
+  resolution_note: 'task_id: task0001; deviation path: test-docs/is-below-physical-fallback/task0001.tests.yaml (one moved/renamed test ID updated so test_tests_yaml_id_resolution keeps passing); declined: the identifier part is missing (no AC-n of task0001 nor a registered requirement id is named; only an existing record-check test is named). The change remains an ordinary deviation for the containment check.'

@@ -133,7 +133,13 @@ depends on the role:
       path and the physical path must both be existing directories strictly
       below that directory. Otherwise the physical path alone must be an
       existing directory strictly below it, which is where Bash lands through
-      its physical-path fallback;
+      its physical-path fallback. A path under /proc or /dev/fd fails the path
+      check: it is under /proc when its first component is `proc`, and under
+      /dev/fd when its first two components are `dev` and `fd`, empty and `.`
+      components ignored. This is judged on the path as written, on each stage
+      reached while resolving the logical path and the physical path component
+      by component, and on the target of each link followed, not on the final
+      realpath alone;
     - everything after the first `&&` matches an approved string exactly
       (surrounding whitespace aside);
     - that remainder has no lone `&`, no `;`, no `||` and no line break at its
