@@ -1,0 +1,32 @@
+feature: verify-cap-worktree-cleanup
+collected_at: "2026-10-29T23:58:00+09:00"
+session_ids: [01a18825-b61b-72fb-9dcd-cde8b9f60c16]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の最終読み（score 1.67, confidence 0.67）を評価器の閾値表に当て、削減なしの full を採用"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.06, confidence: 0.94}
+        observed_at: "2026-10-29T22:36:00+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.67, confidence: 0.67}
+        observed_at: "2026-10-29T22:38:30+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/hooks/failed-run-cleanup-guard.py
+        - em-workflow/skills/develop/SKILL.md
+        - em-workflow/README.md
+        - tests/test_failed_run_cleanup_guard.py
+      changed_lines_approx: 150
+      change_containment: multiple_modules
+      body_change_kind: new_logic
+follow_up_drafts: []
+lessons_candidates:
+  - "review round1 の medium（eb2fb3b6d77c856e: cap 閾値が SKILL.md とフックで二重定義、一致テスト無し）が unresolved のまま残った"
