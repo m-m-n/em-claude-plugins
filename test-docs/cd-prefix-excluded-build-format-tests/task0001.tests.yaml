@@ -1,0 +1,51 @@
+task_id: task0001
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 12050 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> OK
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_implementer_cd_prefix_build_format_docs.TestAC1BuildStatement.test_ac1_each_section_holds_exactly_one_build_sentence
+      - tests.test_implementer_cd_prefix_build_format_docs.TestAC1BuildStatement.test_ac1_the_build_sentence_is_not_the_test_command_sentence
+    red_confirmed: true
+    red_reason: "Run before the sentences were added, both tests failed for implementer.md Step 3 and for the SKILL.md Command execution gate: AssertionError: 0 != 1, with the section's sentence list showing only the existing test-command sentence and no build sentence."
+  AC-2:
+    tests:
+      - tests.test_implementer_cd_prefix_build_format_docs.TestAC2FormatStatement.test_ac2_each_section_holds_exactly_one_format_sentence
+      - tests.test_implementer_cd_prefix_build_format_docs.TestAC2FormatStatement.test_ac2_the_format_sentence_is_not_the_build_sentence
+    red_confirmed: true
+    red_reason: "Run before the sentences were added, both tests failed for both sections: AssertionError: 0 != 1 (no sentence names project_commands.format with the not-run, tests-follows and notes statements). The companion guard test_ac2_no_sentence_sets_fail_for_the_format_case passed before and after, because it only rejects an offending sentence and none existed."
+  AC-3:
+    tests:
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestAC4TestCommandReportValue.test_ac4_one_sentence_ties_the_not_covered_string_to_the_test_command
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestAC4TestCommandReportValue.test_ac4_the_existing_deny_bullet_is_unchanged
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestAC3HandlingInBothSections.test_ac3_handling_sentence_is_in_both_sections
+      - tests.test_implementer_cd_chain_docs.TestAC5SkillCommandExecutionGate.test_ac5_deny_rule_and_hard_refuse_are_unchanged
+      - tests.test_implementer_untrusted_data_rule.TestGuardNoReportFieldAdded.test_report_json_keys_are_unchanged
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing modules detect the behavior: the test-command sentence still unique in each section, the handling sentence exactly once in each section, the deny bullet and the Hard-refuse bullet unchanged, and the Step 7 JSON key set unchanged; no red state occurred for this change. All five were green in the baseline and stayed green after the sentences were added."
+  AC-4:
+    tests:
+      - tests.test_implementer_cd_prefix_build_format_docs.TestSectionScoping.test_ac4_a_renamed_step3_heading_raises_instead_of_passing_on_empty_text
+      - tests.test_implementer_cd_prefix_build_format_docs.TestSectionScoping.test_ac4_a_renamed_gate_heading_raises_instead_of_passing_on_empty_text
+      - tests.test_implementer_cd_prefix_build_format_docs.TestSectionScoping.test_ac4_matching_on_a_document_with_a_renamed_heading_never_reaches_a_match
+    red_confirmed: false
+    red_reason: "The tests check the section extractor inside the new module on inline text, so there is no implementation that existed before them to fail against, and they passed on their first run. Non-vacuity was shown with a temporary mutated copy of the module (since removed) whose section_text returned an empty string for a missing heading: all three failed with AssertionError: AssertionError not raised."
+  AC-5:
+    tests:
+      - tests.test_implementer_cd_prefix_build_format_docs.TestMatchersAreNotVacuous.test_build_matcher_accepts_the_intended_sentence
+      - tests.test_implementer_cd_prefix_build_format_docs.TestMatchersAreNotVacuous.test_build_matcher_finds_nothing_in_the_existing_test_command_sentence
+      - tests.test_implementer_cd_prefix_build_format_docs.TestMatchersAreNotVacuous.test_build_matcher_finds_nothing_in_the_existing_deny_sentence
+      - tests.test_implementer_cd_prefix_build_format_docs.TestMatchersAreNotVacuous.test_format_matcher_accepts_the_intended_sentence
+      - tests.test_implementer_cd_prefix_build_format_docs.TestMatchersAreNotVacuous.test_format_matcher_rejects_a_sentence_that_sets_fail_for_the_format_case
+      - tests.test_implementer_cd_prefix_build_format_docs.TestMatchersAreNotVacuous.test_format_matcher_rejects_a_sentence_without_notes
+    red_confirmed: false
+    red_reason: "The tests check the matchers inside the new module on inline text, so there is no implementation that existed before them to fail against, and they passed on their first run. Non-vacuity was shown with a temporary mutated copy of the module (since removed) whose matchers accepted every sentence naming tests and notes: the rejection tests failed (the existing test-command sentence, the existing deny sentence, the forged format sentence that sets fail, the forged format sentence without notes, and the other forged sentences were all matched)."
+  AC-6:
+    tests:
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestAC6ExistingConstraintsStayIntact.test_step3_adds_no_second_copy_of_the_pinned_sentences
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestAC6ExistingConstraintsStayIntact.test_gate_section_adds_no_second_copy_of_the_pinned_sentences
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestAC6ExistingConstraintsStayIntact.test_no_sentence_asks_for_a_separate_cd_or_forbids_chaining_or_says_may_reset
+      - tests.test_implementer_cd_prefix_exclusion_docs.TestAC5NoSafeSideRestatement.test_ac5_neither_section_restates_the_safe_side_constructs
+      - tests.test_implementer_cd_prefix_build_format_docs.TestAC6Mechanics.test_this_module_imports_only_the_standard_library
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope for the neighbouring-module criterion, but the existing modules named in the plan (test_implementer_cd_prefix_exclusion_docs, test_cd_prefix_operator_exclusion_docs, test_cd_prefix_exception_docs, test_implementer_cd_chain_docs, test_worktree_skill_instruction_source, test_implementer_untrusted_data_rule) detect the exactly-one-sentence counts, the wording constraints and the report key set; no red state occurred for this change. The stdlib-only test is new and passed on its first run. The full-suite run python3 -m unittest discover -s tests passed with the six modules unedited."
