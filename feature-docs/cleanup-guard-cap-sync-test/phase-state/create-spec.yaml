@@ -1,11 +1,11 @@
 schema_version: 1
 feature: cleanup-guard-cap-sync-test
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: f298d7906d2fbb1eb50897fcd5699a0825596810
 last_input_digest: sha256:98b184b6647d5e0af3f245984d2b5d9c7010cec296a7393d220dfa284ff67d62
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
