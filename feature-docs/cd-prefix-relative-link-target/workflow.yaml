@@ -94,7 +94,8 @@ workflow:
   failed_items: []
   completed_at_commit: 88ea919499cd50481137acf3c237a0e41cc8485c
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: ba30669e97bf996571a8633cce7c82f34bb23c84
 tasks:
   task0001:
     title: Judge relative link targets at the resolution stages only
