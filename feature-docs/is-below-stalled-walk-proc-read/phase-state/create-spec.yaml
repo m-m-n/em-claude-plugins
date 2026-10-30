@@ -5,7 +5,7 @@ status: in_progress
 generation: 1
 base_revision: a9c21eef174ea50ad4caf786527149554e2b8e60
 last_input_digest: sha256:8426652875d5f204d15d54fc3d61081b826c805fc520a3e16241bf632c7ccf0b
-active_request_id: create-spec-run-0002
+active_request_id: create-spec-run-0003
 packets:
   create-spec-q0001:
     path: null
@@ -49,6 +49,10 @@ worker_runs:
   note: first return failed validation (design-step option vocabulary); corrected
     in place by the same worker
 - request_id: create-spec-run-0002
+  status: superseded
+  input_digest: sha256:8426652875d5f204d15d54fc3d61081b826c805fc520a3e16241bf632c7ccf0b
+  note: dispatched without task_description by orchestrator error; superseded by run-0003
+- request_id: create-spec-run-0003
   status: dispatched
   input_digest: sha256:8426652875d5f204d15d54fc3d61081b826c805fc520a3e16241bf632c7ccf0b
 artifacts: []
