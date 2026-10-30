@@ -1,0 +1,201 @@
+schema_version: 1
+feature: is-below-stalled-walk-proc-read
+created: '2026-10-31'
+base_branch: main
+goal: |
+  # bash_guard.py の is_below で、段階検査が不存在要素で止まった後に realpath が /proc 配下を参照する
+
+  種別: 改善
+
+  ## やりたいこと
+
+  `em-workflow/hooks/bash_guard.py` の `is_below` で、段階検査（`_stage_walk_refuses`）が不存在要素や通常ファイルの段で止まったとき、その後の `realpath` が /proc 配下を lstat / readlink しないようにする。
+
+  ## 背景・なぜ
+
+  リンクの行き先が `proc/missing/../../../../proc/self/cwd` のように途中に不存在要素を含み、その後の `..` で根まで戻って /proc を指すとき、段階検査は不存在の段で False を返す。続いて `is_below` の非 strict な `realpath` が不存在要素を字句的に通り抜け、/proc や /proc/self を lstat / readlink する。
+
+  判定は常に False のままで、誤った許可は起きない（True には `resolves_to_directory(path)` の成功が要る）。同じ経路は、絶対の行き先 `/area/task/missing/../../../proc/self/cwd` や、先頭が proc でない相対の行き先 `x/missing/../../../../proc/self/cwd` では以前から存在する。feature cd-prefix-relative-link-target で相対の行き先の字句検査を外したため、この経路に入る入力が少し広がった。影響は hook プロセスが /proc を読み取ることだけ。
+
+  feature cd-prefix-relative-link-target の review round 1 で comprehensive 観点が medium として報告し、評価者が low に下げた指摘（同 feature の FR4「他の判定は変えない」の範囲外として持ち越し）。
+
+  ## 受け入れ条件 / 完了の定義
+
+  - [ ] 段階検査が不存在要素・通常ファイルの段で止まった場合に、物理パス側・論理パス側のどちらでも /proc・/dev/fd 配下を lstat / readlink しない
+  - [ ] `is_below` の判定結果は変わらない
+  - [ ] 不存在要素を含む相対の行き先・絶対の行き先のリンクで /proc の参照が起きないことを、ファイル操作を記録するテストで確かめる
+
+  ## 制約・前提
+
+  物理パス側は、`realpath` を呼ぶ前に `resolves_to_directory(path)` の成功を確かめる案がある。論理パス側の `realpath(normpath(path))` は別途検討が要る。
+parent_branch: em-workflow/is-below-stalled-walk-proc-read/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.87
+      '2': 0.12
+      '3': 0.01
+    description_plus_code:
+      '0': 0.0
+      '1': 0.77
+      '2': 0.23
+      '3': 0.0
+  at: '2026-10-30T23:40:30+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 9fdf905993b3eace74ffb3de13fdf6021740ad73
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'Python フックの内部判定・テスト・文言だけの変更で、UI や視覚的な出力がない（design-step: decide_autonomously、batch）'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+requirements:
+  FR1:
+    title: Continue a stalled stage walk with the lenient realpath rule
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS2
+    - TS3
+  FR2:
+    title: Refuse at a /proc or /dev/fd stage during continuation
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS2
+    - TS3
+  FR3:
+    title: No refusal when continuation never reaches /proc or /dev/fd
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS5
+  FR4:
+    title: Link bound and errors during continuation
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS6
+  FR5:
+    title: Update the rule statements
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS7
+  FR6:
+    title: What stays unchanged
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: Tests that record file operations
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS2
+    - TS3
+  FR8:
+    title: Guard test for the recorder
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS4
+  NFR1:
+    title: Direction and scope of judgment changes
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS3
+    - TS5
+  NFR2:
+    title: No reads under /proc or /dev/fd
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS1
+    - TS2
+    - TS3
+  NFR3:
+    title: Existing tests are kept
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS5
+  NFR4:
+    title: Implementation constraints
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

@@ -1,7 +1,7 @@
 schema_version: 1
 feature: is-below-stalled-walk-proc-read
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: a9c21eef174ea50ad4caf786527149554e2b8e60
 last_input_digest: sha256:076751815ab5a24d958eae41f5c3ad6b53102c350e125a4cebf24ae0af723876
