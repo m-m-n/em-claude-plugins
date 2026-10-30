@@ -3,15 +3,19 @@ feature: cd-prefix-relative-link-target
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: 80315344710418d6d350df802635ffec10be041c
-last_input_digest: sha256:0f17ed44d8afaaebd951f7940f16a928fb09cbf59b2c79e200e3f59dde9f5da5
-active_request_id: create-spec-run-0001
+base_revision: 5ab37437f0b873a21ba69b5fd3c1fc98cc9d15c1
+last_input_digest: sha256:d216db42cdd35d86d75109df0d38144a3b11fcd1351af1397ee7ff4f72406bcc
+active_request_id: create-spec-run-0002
 packets: {}
 answers: {}
 worker_runs:
-  - request_id: create-spec-run-0001
-    status: dispatched
-    input_digest: sha256:0f17ed44d8afaaebd951f7940f16a928fb09cbf59b2c79e200e3f59dde9f5da5
+- request_id: create-spec-run-0001
+  status: completed
+  input_digest: sha256:0f17ed44d8afaaebd951f7940f16a928fb09cbf59b2c79e200e3f59dde9f5da5
+  output_digest: sha256:7defc84e4cedf4381550c230cba2773373fea138195f4b75339f3283a1d9291f
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:d216db42cdd35d86d75109df0d38144a3b11fcd1351af1397ee7ff4f72406bcc
 artifacts: []
 patches: []
 progress_fingerprint: null
@@ -20,10 +24,10 @@ resolved_input_cache:
   reference_scan_targets:
     resolved_at_generation: 1
     paths:
-      - em-workflow/hooks/bash_guard.py
-      - tests/test_bash_guard_cd_prefix.py
-      - tests/test_bash_guard_cd_prefix_operators.py
-      - em-workflow/references/command-execution-protocol.md
-      - test-docs/cd-prefix-process-dependent-paths/task0001.tests.yaml
+    - em-workflow/hooks/bash_guard.py
+    - tests/test_bash_guard_cd_prefix.py
+    - tests/test_bash_guard_cd_prefix_operators.py
+    - em-workflow/references/command-execution-protocol.md
+    - test-docs/cd-prefix-process-dependent-paths/task0001.tests.yaml
     truncated: false
 last_error: null
