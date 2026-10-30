@@ -39,7 +39,7 @@ artifacts:
   produced_by: create-plan-run-0001
 patches:
 - patch_id: cd-prefix-relative-link-target-p0001
-  status: pending
+  status: applied
   base_input_digest: sha256:db393113e4643fab425654008f207abcd6c4254a08d61c4f85e9084adc80910f
   base_workflow_blob: 3d02f18e79b83e7de5ca30c28c39186345c78f45
 progress_fingerprint: null
