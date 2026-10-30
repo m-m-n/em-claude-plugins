@@ -1,0 +1,105 @@
+round: 1
+executed_at: '2026-10-31T00:52:29+09:00'
+scope:
+  review_mode: diff
+  base_commit: 874249010d0c751568056583b52854e830ba00f7
+  head_commit: 8286722485ff96b4164ee32f37d301b5140f68d6
+  changed_files:
+  - em-workflow/hooks/bash_guard.py
+  - em-workflow/references/command-execution-protocol.md
+  - test-docs/is-below-stalled-walk-proc-read/task0001.tests.yaml
+  - tests/test_bash_guard_cd_prefix.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 918bc20116f26ac0
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/bash_guard.py
+  line: 339
+  title: 停止後の段階走査が要素数の二乗で遅くなる
+  description: _stage_walk_refuses は存在しない段階や非ディレクトリの段階で止まらず経路の最後まで走査を続ける。各反復で到達済みの全要素を結合し（334行）、_under_proc_or_dev_fd が全要素を分割して走査し（335行、283行）、os.lstat を呼ぶ（338行）。ENAMETOOLONG も停止後は普通の名前として続行するため要素数に上限がなく、処理量は要素数の二乗になる。判定結果は False（fail-closed）のままで、影響はフックの応答遅延のみ。
+  suggestion: 続行中の簿記を差分で持つ（/proc・/dev/fd 判定は reached の先頭2要素と name で決まる）。ENOENT / ENOTDIR / ENAMETOOLONG の要素が reached に残る間は lstat を省き、.. で既存の場所へ戻った時点で再開する。pending.pop(0) は deque か逆順スタックにする。補助策として、エンコード後の長さが PATH_MAX 以上の経路は走査前に False を返す（判定は変わらない）。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 100
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（critical/high のみ）。後続タスクとして起票'
+- stable_id: 3979d9c470c153b2
+  severity: medium
+  category: security
+  file: em-workflow/hooks/bash_guard.py
+  line: 339
+  title: 長い未解決経路で cd 前置判定のフックを長時間占有できる
+  description: cd "<長い経路>" && <承認済みコマンド> を送ると、bash_guard.py の is_below → _stage_walk_refuses が /dev/null 等で停止した後も NotADirectoryError・ENAMETOOLONG を普通の名前として扱い、全要素を二乗の処理量で走査する。結果は False（fail-closed）で許可の不正取得はできない。影響は可用性（無人実行の遅延）のみ。
+  suggestion: 続行中の処理量を経路長に対して線形に抑える。あわせて、エンコード後の長さが PATH_MAX 以上の経路は走査前に False にする。
+  reproduction: ファイルを作成せず、python3 -B で runpy.run_path('em-workflow/hooks/bash_guard.py') を読み込む。path = '/dev/null' + '/x' * 32000、command = 'cd "' + path + '" && make test' を構築し、is_cd_prefixed_approved(command, {'make test'}, '/tmp/review-project/.git') の実行時間を測る。確認環境では False が返るまで約21.53秒かかった。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 100
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（critical/high のみ）。後続タスクとして起票'
+evaluation:
+  round_summary: ラウンド1（diff、cross_validation=true）。comprehensive#0 と security#0 が bash_guard.py 339行付近の同じ原因（停止後も続く段階走査の処理量が要素数の二乗）を独立に報告。結果は fail-closed のまま。critical / high なし。インジェクションの試みなし。comprehensive / security / architecture / spec いずれも corroborated。SPEC の Performance は Not applicable のため二乗の遅延は SPEC 違反ではない。読んだファイルは上限10件のうち6件。
+  recommended_action: complete
+  action_rationale: critical / high はなく完了条件を満たす。同じ箇所への medium 2件は fail-closed で影響はフックの遅延に限られ、修正方針も明確なため後続対応として記録して完了してよい。
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-is-below-stalled-walk-proc-read-20261030T155229Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

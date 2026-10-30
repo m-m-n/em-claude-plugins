@@ -96,7 +96,8 @@ workflow:
   completed_at_commit: 807e3cca0010ac28fcbe3a272043a900dfca316a
   base_commit: 874249010d0c751568056583b52854e830ba00f7
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 8286722485ff96b4164ee32f37d301b5140f68d6
 - id: verify
   status: pending
 - id: retrospect
@@ -132,7 +133,15 @@ tasks:
     notes: null
     branch: em-workflow/is-below-stalled-walk-proc-read/task0001
 review:
-  status: in_progress
+  status: completed
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  residual_critical_high: 0
+  needs_rework: false
   plan:
     floor:
     - comprehensive
