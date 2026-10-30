@@ -1,0 +1,44 @@
+schema_version: 2
+feature: build-format-both-excluded-tests
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    score: 0.99
+    confidence: 0.99
+    probabilities:
+      '0': 0.01
+      '1': 0.99
+      '2': 0.0
+      '3': 0.0
+  observed_at: '2026-10-30T08:13:03+09:00'
+- basis: description_plus_code
+  score:
+    score: 1.02
+    confidence: 0.96
+    probabilities:
+      '0': 0.01
+      '1': 0.96
+      '2': 0.03
+      '3': 0.0
+  observed_at: '2026-10-30T08:15:17+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/agents/implementer.md
+  - em-workflow/skills/worktree-task-workflow/SKILL.md
+  - tests/test_implementer_cd_prefix_build_format_docs.py
+  changed_lines_approx: 60
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 4
+  body_change_kind: wording_or_rule_addition
+  change_containment: multiple_modules
+  caller_and_dependency_count: 0
+  changes_external_contract: false
+  changes_behavior: true
+decided_at: '2026-10-30T08:15:30+09:00'

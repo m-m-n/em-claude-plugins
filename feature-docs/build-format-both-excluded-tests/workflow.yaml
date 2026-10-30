@@ -1,0 +1,212 @@
+schema_version: 1
+feature: build-format-both-excluded-tests
+created: '2026-10-30'
+base_branch: main
+goal: |
+  # ビルドと整形が両方とも cd 前置形の対象外のとき、implementer 報告の tests の値をどちらの規則で決めるかが書かれていない
+
+  ## やりたいこと
+  承認済みの build と format の両方が cd 前置形の対象外になったとき、implementer の報告の `tests` をどの規則で決めるかを手順書に書く。
+
+  ## 背景
+  feature cd-prefix-excluded-build-format-tests の review round 1 で medium の指摘として残った。`em-workflow/agents/implementer.md` の Step 3 と `em-workflow/skills/worktree-task-workflow/SKILL.md` の Command execution gate 節で、build の文は `tests: "fail"` を求め、format の文は test コマンドの結果に従うと無条件に書いている。build と format が両方とも対象外で test が成功すると、両方を満たす値が無い。
+
+  ## 受け入れ条件
+  - format を実行しなかったことが、他の規則が決める `tests: "fail"` を覆さないと両文書に書かれている
+  - build と format が同時に対象外になる場合を確かめる文書試験と、偽の文のケースがある
+
+  ## 制約・前提
+  feature cd-prefix-excluded-build-format-tests のマージ後に着手する。format の照合器（`find_format_sentences`）は同じ文に `the report sets tests: "fail"` があると退けるため、別の文として書く。
+parent_branch: em-workflow/build-format-both-excluded-tests/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.01
+      '1': 0.99
+      '2': 0.0
+      '3': 0.0
+    description_plus_code:
+      '0': 0.01
+      '1': 0.96
+      '2': 0.03
+      '3': 0.0
+  at: '2026-10-30T08:15:30+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: ee4fa574886ffb9514e553dfb215bd6aee66bb68
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: '手順書 2 つへの文の追加と文書試験だけの変更で、UI も設計が要る構造も無い（design-step.decision: decide_autonomously、source: batch-decision-table。tier reduced でも design は削減対象）'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: completed
+  completed_at_commit: a0f0bea7a599e5bf75b4786559cd61657d7269d5
+- id: implement
+  status: completed
+  base_commit: 00c2de9b3b4b628bd2e115bf01b46a50764f2b07
+  completed_at_commit: 07c8d4f03b93cedfc3adca2109898cab261e05f3
+- id: review
+  status: completed
+  completed_at_commit: d62b287d2a2617dfd21d67756374655e5c3d53e8
+- id: verify
+  status: completed
+  completed_at_commit: cf0b0f3134376c73b22f2b9b786c5e7be2596266
+  result: pass
+  failed_items: []
+  summary: 'test: python3 -m unittest discover -s tests は 12189 件成功（skip 1）。build / format は未定義。TS1-TS6 すべて合致、手動確認（両文書の追加文の読み）も矛盾なし。除外要件なし'
+- id: retrospect
+  status: completed
+  completed_at_commit: df67c37749b6731e5ab7929c9048b9633a84fdc4
+tasks:
+  task0001:
+    title: State that format non-execution never overrides another rule's fail, and pin it with a document test
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/agents/implementer.md
+    - em-workflow/skills/worktree-task-workflow/SKILL.md
+    - tests/test_implementer_build_format_both_excluded_docs.py
+    skills: []
+    domains:
+    - api-contract
+    - config-infra
+    complexity: medium
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    status: merged
+    branch: em-workflow/build-format-both-excluded-tests/task0001
+review:
+  status: completed
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  residual_critical_high: 0
+  needs_rework: false
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: false
+requirements:
+  FR1:
+    title: format の不実行は他の規則の fail を覆さない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS1
+  FR2:
+    title: 別の文として書き足す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS1
+    - TS5
+  FR3:
+    title: 文書試験
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS1
+    - TS2
+    - TS3
+    - TS4
+  NFR1:
+    title: 既存の文書試験を変えずに通す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS5
+  NFR2:
+    title: 既存の照合器と一致させない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS5
+  NFR3:
+    title: 既存の文言の制約
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS5
+  NFR4:
+    title: version を変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS6
+  NFR5:
+    title: 試験の実行方法
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS5
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

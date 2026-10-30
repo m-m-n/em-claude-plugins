@@ -146,6 +146,9 @@ approval rule below exactly as stated there. Your obligations:
   format command does not, on its own, make `tests` "fail", and `notes` says
   that the format command was not run because the cd prefix form does not
   cover it.
+- Not running the format command does not override a `tests: "fail"` that
+  another rule decides, for example when the build command is also an approved
+  string that the cd prefix form does not cover.
 - If the hook denies a command: do NOT retry, rephrase, or restructure the
   command to evade the match. Run nothing, set `tests: "fail"`, and explain
   in `notes` (per-command AskUserQuestion is unavailable to you — the

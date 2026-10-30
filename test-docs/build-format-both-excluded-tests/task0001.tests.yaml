@@ -1,0 +1,59 @@
+task_id: task0001
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 12158 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 12189 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_implementer_build_format_both_excluded_docs.TestAC1Step3Statement.test_ac1_step3_holds_exactly_one_fr1_sentence
+      - tests.test_implementer_build_format_both_excluded_docs.TestAC1Step3Statement.test_ac1_the_step3_fr1_sentence_is_not_the_existing_format_sentence
+    red_confirmed: true
+    red_reason: "Both failed against the unchanged implementer.md, first with the stubbed matcher and again with the real matcher: AssertionError: 0 != 1 : [<the Step 3 sentences>]. They pass once the FR1 sentence is added to Step 3."
+  AC-2:
+    tests:
+      - tests.test_implementer_build_format_both_excluded_docs.TestAC2GateStatement.test_ac2_gate_section_holds_exactly_one_fr1_sentence
+      - tests.test_implementer_build_format_both_excluded_docs.TestAC2GateStatement.test_ac2_the_gate_fr1_sentence_is_not_the_existing_format_sentence
+    red_confirmed: true
+    red_reason: "Both failed against the unchanged SKILL.md, first with the stubbed matcher and again with the real matcher: AssertionError: 0 != 1 : [<the gate section sentences>]. They pass once the FR1 sentence is added to the gate section."
+  AC-3:
+    tests:
+      - tests.test_implementer_build_format_both_excluded_docs.TestAC3MatcherIsNotVacuous.test_ac3_the_matcher_accepts_the_intended_sentence
+      - tests.test_implementer_build_format_both_excluded_docs.TestAC3MatcherIsNotVacuous.test_ac3_the_matcher_accepts_the_intended_sentence_in_a_wrapped_bullet
+      - tests.test_implementer_build_format_both_excluded_docs.TestAC3MatcherIsNotVacuous.test_ac3_the_intended_sentence_splits_into_exactly_one_sentence
+      - tests.test_implementer_build_format_both_excluded_docs.TestAC3MatcherIsNotVacuous.test_ac3_false_sentence_1_both_excluded_but_tests_follows_the_test_command
+      - tests.test_implementer_build_format_both_excluded_docs.TestAC3MatcherIsNotVacuous.test_ac3_false_sentence_2_the_not_override_statement_without_the_build_case
+      - tests.test_implementer_build_format_both_excluded_docs.TestAC3MatcherIsNotVacuous.test_ac3_false_sentence_3_the_existing_format_sentence_in_prose_form
+      - tests.test_implementer_build_format_both_excluded_docs.TestAC3MatcherIsNotVacuous.test_ac3_false_sentence_3_the_existing_format_sentence_in_bullet_form
+    red_confirmed: true
+    red_reason: "Against the stubbed matcher (returns nothing) the two accept tests failed with AssertionError: 0 != 1. The reject tests and the sentence-splitting test passed against the stub (a matcher that returns nothing rejects everything, and the splitter was already in place), so they are pinned by the accept pair and by mutations of the real matcher, each observed to fail exactly the intended reject test and then restored: dropping the build element failed false sentence 2 (plus the negated-build and split-sentence fixtures); dropping the negation failed the does-override fixture; dropping 'another rule' failed the without-another-rule fixture; widening format to any command failed the other-command fixture; matching the whole text instead of per sentence failed the split-sentence fixture."
+  AC-4:
+    tests:
+      - tests.test_implementer_build_format_both_excluded_docs.TestAC4RenamedHeadings.test_ac4_a_renamed_step3_heading_raises_instead_of_passing_on_empty_text
+      - tests.test_implementer_build_format_both_excluded_docs.TestAC4RenamedHeadings.test_ac4_a_renamed_gate_heading_raises_instead_of_passing_on_empty_text
+      - tests.test_implementer_build_format_both_excluded_docs.TestAC4RenamedHeadings.test_ac4_matching_on_a_renamed_step3_document_never_reaches_a_match
+      - tests.test_implementer_build_format_both_excluded_docs.TestAC4RenamedHeadings.test_ac4_matching_on_a_renamed_gate_document_never_reaches_a_match
+      - tests.test_implementer_build_format_both_excluded_docs.TestAC4RenamedHeadings.test_ac4_the_real_step3_document_with_its_heading_renamed_raises
+      - tests.test_implementer_build_format_both_excluded_docs.TestAC4RenamedHeadings.test_ac4_the_real_gate_document_with_its_heading_renamed_raises
+    red_confirmed: true
+    red_reason: "All six failed with AssertionError: AssertionError not raised against a stubbed section extraction that returned an empty string for every heading; they pass with the real extraction, which raises for a missing heading. The renamed documents are built in memory; the real files are never edited."
+  AC-5:
+    tests:
+      - tests.test_implementer_cd_prefix_build_format_docs
+      - tests.test_implementer_cd_prefix_exclusion_docs
+      - tests.test_cd_prefix_operator_exclusion_docs
+      - tests.test_cd_prefix_exception_docs
+      - tests.test_implementer_cd_chain_docs
+      - tests.test_worktree_skill_instruction_source
+      - tests.test_implementer_untrusted_data_rule
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the seven existing modules detect an added sentence that matches an existing matcher (the format, build and test-command sentences each staying exactly one, the forbidden-phrase and wording checks) and detect any change to the existing sentences; no red state occurred for this change. They were green in the baseline run and stayed green with the new sentences and with the new module present. The full-suite run (python3 -m unittest discover -s tests) is the outcome of this criterion."
+  AC-6:
+    tests:
+      - tests.test_implementer_build_format_both_excluded_docs.TestAC6Mechanics.test_ac6_this_module_imports_only_the_standard_library
+    red_confirmed: false
+    red_reason: "The module imported only standard-library modules from its first write, so the check passed on its first run; no red state occurred for this change. Non-vacuity was shown by temporarily adding 'import yaml' to the module: the test failed with AssertionError: Lists differ: ['yaml'] != []; the import was then removed."
+  AC-7:
+    tests:
+      - tests.test_implementer_cd_prefix_build_format_docs
+      - tests.test_implementer_cd_prefix_exclusion_docs
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing modules detect an alteration of the existing format, build and test-command sentences in the two documents; no red state occurred for this change. The added-lines-only property of the two documents and the unchanged plugin manifests are properties of the task branch's diff, not of any test: they were checked with git diff against the task's base commit (implementer.md 4 added / 0 removed, SKILL.md 3 added / 0 removed, plugin.json and marketplace.json not in the diff)."
