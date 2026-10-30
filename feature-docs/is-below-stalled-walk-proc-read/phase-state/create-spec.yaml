@@ -1,0 +1,27 @@
+schema_version: 1
+feature: is-below-stalled-walk-proc-read
+phase: create-spec
+status: in_progress
+generation: 1
+base_revision: a9c21eef174ea50ad4caf786527149554e2b8e60
+last_input_digest: sha256:281fa4bb1a3478fe34da234d5fa2c874b49ab7f34a745f0dff27f5f977a50c72
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:281fa4bb1a3478fe34da234d5fa2c874b49ab7f34a745f0dff27f5f977a50c72
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache:
+  reference_scan_targets:
+    resolved_at_generation: 1
+    paths:
+    - em-workflow/hooks/bash_guard.py
+    - tests/test_bash_guard_cd_prefix.py
+    - em-workflow/references/command-execution-protocol.md
+    truncated: false
+last_error: null
