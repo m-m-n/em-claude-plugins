@@ -1,5 +1,5 @@
 feature: cleanup-guard-cap-sync-test
-collected_at: "2026-10-30T09:20:00+09:00"
+collected_at: "2026-10-30T09:07:00+09:00"
 session_ids: [01a18a21-1566-749b-a96b-a8da05e74cfd]
 signals:
   review_critical_high: []
