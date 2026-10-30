@@ -5,7 +5,7 @@ status: in_progress
 generation: 1
 base_revision: a9c21eef174ea50ad4caf786527149554e2b8e60
 last_input_digest: sha256:076751815ab5a24d958eae41f5c3ad6b53102c350e125a4cebf24ae0af723876
-active_request_id: create-spec-run-0004
+active_request_id: null
 packets:
   create-spec-q0001:
     path: null
@@ -57,9 +57,18 @@ worker_runs:
   input_digest: sha256:8426652875d5f204d15d54fc3d61081b826c805fc520a3e16241bf632c7ccf0b
   output_digest: sha256:9fd8a8fb5ea5c10ab08e79906082f68d80230856075565eafb2445e0b38ce62d
 - request_id: create-spec-run-0004
-  status: dispatched
+  status: completed
   input_digest: sha256:076751815ab5a24d958eae41f5c3ad6b53102c350e125a4cebf24ae0af723876
-artifacts: []
+  self_write_set:
+  - feature-docs/is-below-stalled-walk-proc-read/REQUIREMENTS.md
+  - feature-docs/is-below-stalled-walk-proc-read/SPEC.md
+artifacts:
+- path: feature-docs/is-below-stalled-walk-proc-read/REQUIREMENTS.md
+  sha256: sha256:5a37964fa571e66e7a0766831af892338a39664c6d6fa3f9b6de9cf8e6ad1745
+  produced_by: create-spec-run-0004
+- path: feature-docs/is-below-stalled-walk-proc-read/SPEC.md
+  sha256: sha256:20ed761687341b91f5c4e5eff4621f9a9e2843a41e43740744183bae5bc5874c
+  produced_by: create-spec-run-0004
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
