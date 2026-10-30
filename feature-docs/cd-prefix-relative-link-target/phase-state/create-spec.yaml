@@ -1,0 +1,29 @@
+schema_version: 1
+feature: cd-prefix-relative-link-target
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: 80315344710418d6d350df802635ffec10be041c
+last_input_digest: sha256:0f17ed44d8afaaebd951f7940f16a928fb09cbf59b2c79e200e3f59dde9f5da5
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: dispatched
+    input_digest: sha256:0f17ed44d8afaaebd951f7940f16a928fb09cbf59b2c79e200e3f59dde9f5da5
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache:
+  reference_scan_targets:
+    resolved_at_generation: 1
+    paths:
+      - em-workflow/hooks/bash_guard.py
+      - tests/test_bash_guard_cd_prefix.py
+      - tests/test_bash_guard_cd_prefix_operators.py
+      - em-workflow/references/command-execution-protocol.md
+      - test-docs/cd-prefix-process-dependent-paths/task0001.tests.yaml
+    truncated: false
+last_error: null
