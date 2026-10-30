@@ -89,6 +89,31 @@ by component, and on the target of each link followed.
 - AC-7: the signature and the caller of the path check are unchanged; the path
   check starts no child process for the added forms.
 
+Feature cd-prefix-relative-link-target, task0001
+(feature-docs/cd-prefix-relative-link-target/tasks/task0001.md): a link whose
+target is relative is no longer refused because its target text reads like
+/proc or /dev/fd. It is joined to the directory that holds the link and judged
+only at the resolution stages; an absolute target keeps the lexical refusal.
+
+- AC-1: the links in `procdep/names/` whose relative targets are `proc`,
+  `./proc` and `dev/fd` are below the area, at the module level and through
+  the hook (`TestRelativeLinkTarget`).
+- AC-2: the control links whose absolute targets name the same locations are
+  below the area.
+- AC-3 (TM-1): a link whose relative target climbs to the root with `..` and
+  names `proc/self/cwd` is not below the area (the number of `..` follows the
+  depth of the link directory).
+- AC-4 (TM-1): while the path check judges that path, no file-system probe and
+  no link read is made of a location under /proc or /dev/fd.
+- AC-5 (TM-2): the existing absolute-target tests of
+  `TestProcessDependentPathCheck` stay as they were.
+- AC-6: no existing assertion is removed or weakened; this module imports the
+  standard library only.
+- AC-7: the stage-walk docstring, the path item of the module docstring, the
+  path item of the protocol's Verbatim execution rule and the paragraph of the
+  `is_below` docstring on /proc and /dev/fd state both halves of the rule
+  (`TestLinkTargetWording`).
+
 Standard library only.
 """
 
@@ -1047,7 +1072,19 @@ class Layout:
                                  /proc/self/cwd/../shared both land below the
                                  area
         procdep/names/...        directories named like the excluded locations
+        procdep/names/link-proc, link-dot-proc, link-dev-fd
+                                 links whose relative targets are `proc`,
+                                 `./proc` and `dev/fd` (directories of names)
+        procdep/names/link-abs-proc, link-abs-dot-proc, link-abs-dev-fd
+                                 control links whose absolute targets name the
+                                 same locations: <names>/proc, <names>/./proc
+                                 and <names>/dev/fd
         procdep/links/...        links inside the area to /proc and /dev/fd
+        procdep/links/climb-link a link whose relative target climbs to the
+                                 root with `..` components (at least as many
+                                 as the path components of links, so the
+                                 count follows the depth of the temporary
+                                 directory) and then names proc/self/cwd
         procdep/loops/...        link loops
         procdep/chain<N>/l0      a chain that follows N links, then shared
     """
@@ -1072,6 +1109,26 @@ class Layout:
             directory.mkdir(parents=True, exist_ok=True)
         self.cwd_link = _link("/proc/self/cwd", self.links / "cwd-link")
         self.self_link = _link("/proc/self", self.links / "self-link")
+        # Relative targets that name directories of names, and controls whose
+        # absolute targets name the same locations.
+        self.relative_name_links = (
+            ("proc", _link("proc", self.names / "link-proc")),
+            ("./proc", _link("./proc", self.names / "link-dot-proc")),
+            ("dev/fd", _link("dev/fd", self.names / "link-dev-fd")),
+        )
+        self.absolute_name_links = (
+            (str(self.names / "proc"),
+             _link(str(self.names / "proc"), self.names / "link-abs-proc")),
+            (str(self.names) + "/./proc",
+             _link(str(self.names) + "/./proc", self.names / "link-abs-dot-proc")),
+            (str(self.names / "dev" / "fd"),
+             _link(str(self.names / "dev" / "fd"), self.names / "link-abs-dev-fd")),
+        )
+        # A relative target that climbs to the root and then names /proc. The
+        # number of `..` follows the depth of the links directory (surplus
+        # `..` at the root stay at the root).
+        self.climb_target = "/".join([".."] * len(self.links.parts) + ["proc", "self", "cwd"])
+        self.climb_link = _link(self.climb_target, self.links / "climb-link")
         self.ping = _link("pong", self.loops / "ping")
         _link("ping", self.loops / "pong")
         self.selfish = _link("selfish", self.loops / "selfish")
@@ -1567,10 +1624,162 @@ class TestProcessDependentPathContract(unittest.TestCase):
             str(self.layout.chain(3)),
             str(self.layout.names / "proc"),
             str(FIX.inside),
+            *[str(link) for _target, link in self.layout.relative_name_links],
+            *[str(link) for _target, link in self.layout.absolute_name_links],
+            str(self.layout.climb_link) + "/" + SHARED,
         ]
         with _working_directory(self.layout.work), _no_child_process():
             for path in paths:
                 self.guard.is_below(path, self.area)
+
+
+# ---------------------------------------------------------------------------
+# Feature cd-prefix-relative-link-target, task0001: a link whose target is
+# relative is no longer refused because its target text reads like /proc or
+# /dev/fd. It is joined to the directory that holds the link and judged only
+# at the resolution stages. An absolute target keeps the lexical refusal.
+# ---------------------------------------------------------------------------
+
+
+def _is_proc_or_dev_fd_location(path):
+    """True when path, normalized, is /proc or /dev/fd or lies below one of
+    them. Written apart from the hook's own predicate, so the recording checks
+    below do not rely on the code they observe."""
+    normal = os.path.normpath(os.path.abspath(os.fspath(path)))
+    return any(
+        normal == root or normal.startswith(root + "/") for root in ("/proc", "/dev/fd")
+    )
+
+
+@contextlib.contextmanager
+def _recorded_probes():
+    """Record the path of every os.lstat / os.stat probe ("probes") and every
+    os.readlink call ("reads") made while active. The calls go through."""
+    record = {"probes": [], "reads": []}
+    real = {name: getattr(os, name) for name in ("lstat", "stat", "readlink")}
+
+    def recording(kind, name):
+        def call(path, *args, **kwargs):
+            record[kind].append(os.fspath(path))
+            return real[name](path, *args, **kwargs)
+
+        return call
+
+    with contextlib.ExitStack() as stack:
+        for kind, name in (("probes", "lstat"), ("probes", "stat"), ("reads", "readlink")):
+            stack.enter_context(mock.patch.object(os, name, new=recording(kind, name)))
+        yield record
+
+
+class TestRelativeLinkTarget(CdPrefixCase):
+    """AC-1 .. AC-5 (FR1, FR2, FR3, NFR2; TM-1, TM-2): a link with a relative
+    target is judged at the resolution stages only; a link with an absolute
+    target keeps the lexical refusal."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.layout = Layout()
+        cls.guard = _load_guard_module()
+        cls.area = str(FIX.region)
+
+    def prefixed(self, written):
+        return 'cd "' + written + '" && ' + PLAIN_COMMAND
+
+    def assert_would_have_been_below(self, written):
+        # Guards the fixture: the form names an existing directory strictly
+        # below the area, so the path check has no other reason to refuse it.
+        self.assertTrue(os.path.isdir(written), written)
+        self.assertTrue(
+            self.guard.strictly_below(os.path.realpath(written), self.area), written
+        )
+
+    # -- AC-1 -------------------------------------------------------------
+
+    def test_ac1_the_fixture_links_have_the_claimed_relative_targets(self):
+        for target, link in self.layout.relative_name_links:
+            with self.subTest(target=target):
+                self.assertEqual(os.readlink(str(link)), target)
+                self.assertFalse(os.path.isabs(target))
+                self.assert_would_have_been_below(str(link))
+
+    def test_ac1_a_link_with_a_relative_target_naming_an_in_area_directory_is_below(self):
+        for target, link in self.layout.relative_name_links:
+            with self.subTest(target=target):
+                self.assertIs(self.guard.is_below(str(link), self.area), True)
+
+    def test_ac1_the_hook_allows_the_cd_prefix_form_for_each_relative_link(self):
+        for cwd in (FIX.repo, FIX.worktree):
+            for target, link in self.layout.relative_name_links:
+                with self.subTest(cwd=cwd.name, target=target):
+                    proc = FIX.run_hook(self.prefixed(str(link)), cwd)
+                    decision, _ = decide(proc)
+                    self.assertEqual(decision, ALLOW)
+
+    # -- AC-2 -------------------------------------------------------------
+
+    def test_ac2_a_link_with_an_absolute_target_naming_the_same_location_is_below(self):
+        for target, link in self.layout.absolute_name_links:
+            with self.subTest(target=target):
+                self.assertEqual(os.readlink(str(link)), target)
+                self.assertTrue(os.path.isabs(target))
+                self.assert_would_have_been_below(str(link))
+                self.assertIs(self.guard.is_below(str(link), self.area), True)
+
+    # -- AC-3 -------------------------------------------------------------
+
+    def test_ac3_the_climbing_link_has_a_relative_target_with_enough_dotdot(self):
+        target = os.readlink(str(self.layout.climb_link))
+        self.assertFalse(os.path.isabs(target))
+        parts = target.split("/")
+        self.assertEqual(parts[-3:], ["proc", "self", "cwd"])
+        climbing = parts[:-3]
+        self.assertEqual(set(climbing), {".."})
+        self.assertGreaterEqual(len(climbing), len(self.layout.links.parts) - 1)
+
+    @needs_proc
+    def test_ac3_a_relative_target_climbing_to_the_root_and_naming_proc_is_false(self):
+        written = str(self.layout.climb_link) + "/" + SHARED
+        with _working_directory(self.layout.work):
+            self.assert_would_have_been_below(written)
+            self.assertIs(self.guard.is_below(written, self.area), False)
+
+    @needs_proc
+    def test_ac3_the_hook_is_silent_for_the_climbing_link(self):
+        written = str(self.layout.climb_link) + "/" + SHARED
+        for cwd in (FIX.repo, FIX.worktree):
+            with self.subTest(cwd=cwd.name):
+                proc = FIX.run_hook(self.prefixed(written), cwd, process_cwd=self.layout.work)
+                decision, _ = decide(proc)
+                self.assertEqual(decision, SILENT)
+
+    # -- AC-4 -------------------------------------------------------------
+
+    @needs_proc
+    def test_ac4_the_recording_sees_a_probe_and_a_link_read_under_proc(self):
+        # Guards the recording the next test relies on.
+        with _recorded_probes() as record:
+            os.lstat("/proc/self")
+            os.readlink("/proc/self")
+        self.assertEqual(record["probes"], ["/proc/self"])
+        self.assertEqual(record["reads"], ["/proc/self"])
+        self.assertTrue(_is_proc_or_dev_fd_location("/proc/self"))
+        self.assertTrue(_is_proc_or_dev_fd_location("/dev/fd/3"))
+        self.assertFalse(_is_proc_or_dev_fd_location(str(self.layout.names / "proc")))
+
+    @needs_proc
+    def test_ac4_no_probe_and_no_link_read_is_made_under_proc_or_dev_fd(self):
+        written = str(self.layout.climb_link) + "/" + SHARED
+        with _working_directory(self.layout.work):
+            self.assert_would_have_been_below(written)  # outside the recording
+            with _recorded_probes() as record:
+                result = self.guard.is_below(written, self.area)
+        self.assertIs(result, False)
+        # The walk did read the climbing link, so the recording is not empty.
+        self.assertIn(str(self.layout.climb_link), record["reads"])
+        for kind in ("probes", "reads"):
+            for path in record[kind]:
+                with self.subTest(kind=kind, path=path):
+                    self.assertFalse(_is_proc_or_dev_fd_location(path))
 
 
 def _verbatim_execution_rule(text):
@@ -1754,6 +1963,114 @@ class TestProcessDependentPathWording(unittest.TestCase):
         for name, text in (("docstring", self.docstring), ("protocol", self.rule)):
             with self.subTest(place=name):
                 self.assertNotIn("/proc/self/root", " ".join(text.split()))
+
+
+# The two halves of the link-target rule. Each is one contiguous phrase after
+# whitespace is flattened and the text lower-cased, and the same pair stands in
+# every place that describes the rule.
+LINK_TARGET_RULE_NEEDLES = (
+    "the lexical check of a link's target text applies only to an absolute target",
+    "a relative target is joined to the directory that holds the link"
+    " and judged at the resolution stages",
+)
+
+# The unqualified clause the stage-walk docstring carried before the rule was
+# narrowed to absolute targets.
+UNQUALIFIED_LINK_TARGET_CLAUSE = "follows a link whose target text is under one"
+
+
+def _states_link_target_rule(text):
+    """True when the text states both halves: the lexical check of a link's
+    target text applies only to an absolute target, and a relative target is
+    joined to the directory that holds the link and judged at the resolution
+    stages."""
+    flat = " ".join(text.split()).lower()
+    return all(needle in flat for needle in LINK_TARGET_RULE_NEEDLES)
+
+
+def _paragraph_containing(docstring, marker):
+    """The first blank-line separated paragraph of the docstring that holds
+    marker, or None."""
+    for paragraph in re.split(r"\n[ \t]*\n", docstring):
+        if marker in paragraph:
+            return paragraph
+    return None
+
+
+class TestLinkTargetWording(unittest.TestCase):
+    """AC-7 (FR5): the four places that describe the link-target check state
+    both halves of the rule."""
+
+    @classmethod
+    def setUpClass(cls):
+        guard = _load_guard_module()
+        cls.rule = _verbatim_execution_rule(PROTOCOL_PATH.read_text(encoding="utf-8"))
+        cls.places = {
+            "stage walk docstring": guard._stage_walk_refuses.__doc__,
+            "module docstring, path item": _docstring_path_item(guard.__doc__),
+            "protocol, path item": _rule_path_item(cls.rule) if cls.rule else None,
+            "is_below docstring, /proc and /dev/fd paragraph": _paragraph_containing(
+                guard.is_below.__doc__, "/dev/fd"
+            ),
+        }
+
+    def test_ac7_the_matcher_fires_on_the_statement_and_stops_when_one_half_is_removed(self):
+        statement = " ".join(LINK_TARGET_RULE_NEEDLES)
+        self.assertTrue(_states_link_target_rule(statement))
+        self.assertTrue(_states_link_target_rule("Intro.  " + statement.upper() + "\n tail"))
+        for needle in LINK_TARGET_RULE_NEEDLES:
+            with self.subTest(needle=needle):
+                forged = statement.replace(needle, "")
+                self.assertNotIn(needle, forged)
+                self.assertFalse(_states_link_target_rule(forged))
+
+    def test_ac7_the_matcher_does_not_fire_on_unrelated_or_the_old_text(self):
+        self.assertFalse(_states_link_target_rule(""))
+        self.assertFalse(_states_link_target_rule("the realpath of <path> only"))
+        self.assertFalse(
+            _states_link_target_rule("or follows a link whose target text is under one")
+        )
+
+    def test_ac7_all_four_places_are_found(self):
+        for name, text in self.places.items():
+            with self.subTest(place=name):
+                self.assertIsNotNone(text, f"{name} not found")
+
+    def test_ac7_each_place_states_both_halves(self):
+        for name, text in self.places.items():
+            with self.subTest(place=name):
+                self.assertIsNotNone(text, f"{name} not found")
+                self.assertTrue(_states_link_target_rule(text))
+
+    def test_ac7_forging_one_half_in_each_place_stops_the_matcher(self):
+        for name, text in self.places.items():
+            self.assertIsNotNone(text, f"{name} not found")
+            flat = " ".join(text.split()).lower()
+            self.assertTrue(
+                _states_link_target_rule(flat),
+                f"the {name} does not carry the statement the forgeries start from",
+            )
+            for needle in LINK_TARGET_RULE_NEEDLES:
+                with self.subTest(place=name, needle=needle):
+                    forged = flat.replace(needle, "")
+                    self.assertNotIn(needle, forged)
+                    self.assertFalse(_states_link_target_rule(forged))
+
+    def test_ac7_the_stage_walk_docstring_no_longer_carries_the_unqualified_clause(self):
+        flat = " ".join(self.places["stage walk docstring"].split())
+        self.assertNotIn(UNQUALIFIED_LINK_TARGET_CLAUSE, flat)
+
+    def test_ac7_the_two_path_items_say_the_same_thing(self):
+        # The sentence pair is the same text in the module docstring and in the
+        # protocol; neither carries more or less of it.
+        pair = {}
+        for name in ("module docstring, path item", "protocol, path item"):
+            flat = " ".join(self.places[name].split()).lower()
+            first = flat.index(LINK_TARGET_RULE_NEEDLES[0])
+            second = flat.index(LINK_TARGET_RULE_NEEDLES[1])
+            self.assertLess(first, second, name)
+            pair[name] = flat[first : second + len(LINK_TARGET_RULE_NEEDLES[1])]
+        self.assertEqual(len(set(pair.values())), 1)
 
 
 def _imported_top_level_modules(source):
