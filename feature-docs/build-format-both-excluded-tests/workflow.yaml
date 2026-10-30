@@ -81,7 +81,7 @@ workflow:
   failed_items: []
   summary: 'test: python3 -m unittest discover -s tests は 12189 件成功（skip 1）。build / format は未定義。TS1-TS6 すべて合致、手動確認（両文書の追加文の読み）も矛盾なし。除外要件なし'
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: State that format non-execution never overrides another rule's fail, and pin it with a document test
