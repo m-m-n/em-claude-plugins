@@ -127,9 +127,9 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/is-below-stalled-walk-proc-read/task0001
 review:
   status: pending
 requirements:
