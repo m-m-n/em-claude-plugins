@@ -1,0 +1,164 @@
+schema_version: 1
+feature: cd-prefix-relative-link-target
+created: '2026-10-30'
+base_branch: main
+goal: |
+  # bash_guard.py の cd 前置形の判定で、相対リンクの行き先を /proc・/dev/fd 配下と字句判定して誤って拒否する
+
+  種別: バグ
+
+  ## 現象
+  `em-workflow/hooks/bash_guard.py` の `_stage_walk_refuses` は、`os.readlink()` の戻り値を絶対パスか相対パスかを区別せずに `_under_proc_or_dev_fd()` で字句判定している。そのため、許可領域内の普通のディレクトリ `<area>/proc` や `<area>/dev/fd` を指す相対リンク（行き先 `proc`、`./proc`、`dev/fd`）でも cd 前置形の判定が拒否になる。
+
+  判定は安全側に倒れる（cd プレフィックスが無いものとして判定される）ためセキュリティ上の穴ではないが、feature cd-prefix-process-dependent-paths の SPEC FR1（ルート直下にない proc・dev/fd という名前のディレクトリは除外しない）と FR4（他の判定は変えない）に反する回帰になっている。
+
+  ## 再現手順
+  1. 許可領域内に実ディレクトリ `<area>/proc` を作る
+  2. `<area>/alias -> proc`（相対の行き先）のシンボリックリンクを作る
+  3. `is_below('<area>/alias', area)` を評価する
+  4. 変更前は True、変更後は False になる（行き先を絶対パス `<area>/proc` にすると変更後も True）
+
+  ## 期待する挙動
+  相対の行き先を持つリンクは字句判定せず、解決後の段階の検査で判定する。`<area>/proc`・`<area>/dev/fd` を指す相対リンクでは `is_below` が True になる。行き先が絶対パスの `/proc/self/cwd`・`/proc/self`・`/dev/fd/<N>` は引き続き False。
+
+  ## 完了の定義
+  - 再現手順で現象が起きない
+  - 再発を検出するテストがある（相対の行き先 `proc`・`./proc`・`dev/fd` のケース）
+
+  ## 該当箇所
+  `em-workflow/hooks/bash_guard.py:317-318`（`_stage_walk_refuses`）
+
+  ## 実害・発生条件
+  許可領域内に proc・dev/fd という名前のディレクトリと、そこへの相対リンクがある場合だけ。承認済みコマンドの自動許可が効かず、確認に回る。review round 1 の medium finding（stable_id `6bbedec4f375664a`）。
+parent_branch: em-workflow/cd-prefix-relative-link-target/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.01
+      '1': 0.94
+      '2': 0.05
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.94
+      '2': 0.06
+      '3': 0.0
+  at: '2026-10-30T19:58:05+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: 726299b261b29368c4195d3cbea9708147030d8b
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'UI を持たないフックの判定ロジックの修正で、画面設計の対象がない（design-step: decide_autonomously、batch。tier
+    reduced でも design は削減対象）'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: 75efce79cf463a2e8f082bd6e0b2bdf0741ccd67
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: 相対の行き先は字句判定しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: 絶対の行き先の判定は変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: 相対の行き先が解決の結果 /proc・/dev/fd に届く場合は拒否する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: 他の判定は変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: 記述を挙動にそろえる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: version を変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: /proc の中まで解決しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: テストは標準ライブラリのみ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

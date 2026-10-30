@@ -1,7 +1,7 @@
 schema_version: 1
 feature: cd-prefix-relative-link-target
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 192d2d01fe4a0e5cc2946f419318d1f4283ff4cc
 last_input_digest: sha256:d216db42cdd35d86d75109df0d38144a3b11fcd1351af1397ee7ff4f72406bcc
