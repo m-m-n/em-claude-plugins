@@ -3,9 +3,9 @@ feature: cd-prefix-relative-link-target
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: 5ab37437f0b873a21ba69b5fd3c1fc98cc9d15c1
+base_revision: 192d2d01fe4a0e5cc2946f419318d1f4283ff4cc
 last_input_digest: sha256:d216db42cdd35d86d75109df0d38144a3b11fcd1351af1397ee7ff4f72406bcc
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -14,9 +14,14 @@ worker_runs:
   input_digest: sha256:0f17ed44d8afaaebd951f7940f16a928fb09cbf59b2c79e200e3f59dde9f5da5
   output_digest: sha256:7defc84e4cedf4381550c230cba2773373fea138195f4b75339f3283a1d9291f
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:d216db42cdd35d86d75109df0d38144a3b11fcd1351af1397ee7ff4f72406bcc
-artifacts: []
+  self_write_set:
+  - feature-docs/cd-prefix-relative-link-target/SPEC.md
+artifacts:
+- path: feature-docs/cd-prefix-relative-link-target/SPEC.md
+  sha256: sha256:7ce86c03a8ac93dcea5614aacfd37fd6f9eac7447eef8a8ad1e67c54787e3666
+  produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
