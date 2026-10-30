@@ -120,6 +120,14 @@ tasks:
     branch: em-workflow/cd-prefix-relative-link-target/task0001
 review:
   status: pending
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
   rounds_completed: 0
   residual_critical_high: 0
   needs_rework: false
