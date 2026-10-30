@@ -1,0 +1,73 @@
+round: 1
+executed_at: '2026-10-30T20:42:00+09:00'
+scope:
+  review_mode: diff
+  base_commit: 75efce79cf463a2e8f082bd6e0b2bdf0741ccd67
+  head_commit: 9358c061c062e8927c57dd9c7a4606ab6afee4a1
+  changed_files:
+  - em-workflow/hooks/bash_guard.py
+  - em-workflow/references/command-execution-protocol.md
+  - test-docs/cd-prefix-relative-link-target/task0001.tests.yaml
+  - tests/test_bash_guard_cd_prefix.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings: []
+evaluation:
+  round_summary: '第1ラウンド（cross_validation=true、diff モード）。レビュアー4本はすべて完了し、critical / high の報告は0件だった。comprehensive#0 の medium 1件は、コード読解で挙動を確認した（相対対象の字句検査を外したことで、不存在要素を含む `proc/...` の対象では、段階検査が止まった後に realpath が /proc を参照する）。ただし判定は常に False のままで、同じ経路は変更前から絶対対象や先頭が proc でない相対対象に存在する。SPEC の NFR2 と task0001 の AC-4 の範囲にも反しないため、low に下げて残した。各観点の確認状況は次のとおり（読んだファイルは7件で、上限10件の範囲内）。comprehensive: corroborated（報告された挙動を確認し、重大度は low に変更）。security: corroborated（TM-1: 相対対象は link を持つディレクトリ `reached` を起点に、各段と各 `..` の後の位置が _under_proc_or_dev_fd で検査される。カーネルが解決できる経路は全段が検査されるので、誤った許可は生じない。TM-2: 絶対対象の字句検査は 328–330 行に残っている）。architecture: corroborated（変更は _stage_walk_refuses 内の分岐の移動と、説明文4か所の更新に限られる）。spec: corroborated（FR1 から FR5 まで満たしている。説明文の4か所に規則の前半と後半の両方があり、既存の検査語句 ''the target of each link followed'' も残っている。NFR1: plugin.json と marketplace.json は変更されていない。NFR3: テストは標準ライブラリだけを使う）。レビュアー出力に、指示の注入を試みる内容は無かった。'
+  recommended_action: complete
+  action_rationale: critical / high / medium の指摘は無い。残した1件は low で、判定への影響が無く、変更前から存在する経路を少し広げたものにとどまる。直す場合も今回の機能の範囲（FR4）の外になるため、このラウンドで修正や追加ラウンドを行う必要はない。
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-cd-prefix-relative-link-target-20261030T114132Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
