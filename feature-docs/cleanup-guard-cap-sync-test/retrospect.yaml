@@ -1,0 +1,28 @@
+feature: cleanup-guard-cap-sync-test
+collected_at: "2026-10-30T09:20:00+09:00"
+session_ids: [01a18a21-1566-749b-a96b-a8da05e74cfd]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: "description_plus_code の最終読みでバケット 1（ルールとテストの小さな追加）の確率 0.97、スコア 1.03"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.04, confidence: 0.97}
+        observed_at: "2026-10-30T08:06:00+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.03, confidence: 0.97}
+        observed_at: "2026-10-30T08:12:00+09:00"
+    pre_survey_estimate:
+      files_expected: [tests/test_failed_run_cleanup_guard.py]
+      changed_lines_approx: 25
+      new_functions_needed: 1
+      new_files_needed: 0
+      change_containment: single_module
+follow_up_drafts: []
+lessons_candidates: []
