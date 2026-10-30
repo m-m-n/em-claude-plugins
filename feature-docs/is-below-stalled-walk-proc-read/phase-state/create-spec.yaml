@@ -5,13 +5,49 @@ status: in_progress
 generation: 1
 base_revision: a9c21eef174ea50ad4caf786527149554e2b8e60
 last_input_digest: sha256:281fa4bb1a3478fe34da234d5fa2c874b49ab7f34a745f0dff27f5f977a50c72
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+active_request_id: null
+packets:
+  create-spec-q0001:
+    path: null
+    status: answered
+    question_ids:
+    - requirement.logical-side-stalled-walk
+    - design-step.decision
+answers:
+  requirement.logical-side-stalled-walk:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-30T23:58:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - refuse_on_proc_stage
+    freeform: null
+    normalized_answer: 論理パス側で、非 strict な realpath と同じ継続規則で不存在・非ディレクトリの段を字句的に通り抜けたとき
+      /proc・/dev/fd の段に着くなら、/proc を読まずに is_below を False にする。判定が変わるのはこの隅だけで、向きは False（安全側）のみ。
+    resolution_note: 'gate create-spec.requirement-clarification; batch-policies action
+      codex_consultation (record_as_assumption). Codex consulted 1 turn (harness:
+      codex): chose refuse_on_proc_stage, confirmed the corner is real by reading
+      bash_guard.py (current judgment depends on the hook process cwd via /proc/self/cwd),
+      kernel_logical widens False->True, physical_only_scope leaves AC-1 unmet. Orchestrator
+      judged the mapping: matches option refuse_on_proc_stage and the worker''s recommendation.
+      Opus escalation: not run. Recorded as assumption: the True->False change in
+      this corner is an accepted exception to ''is_below judgment unchanged''.'
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-30T23:58:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design_step_recommendation (skip) を採用する
+    resolution_note: gate create-spec.design-step; batch-policies option_id decide_autonomously
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:281fa4bb1a3478fe34da234d5fa2c874b49ab7f34a745f0dff27f5f977a50c72
+  note: first return failed validation (design-step option vocabulary); corrected
+    in place by the same worker
 artifacts: []
 patches: []
 progress_fingerprint: null
