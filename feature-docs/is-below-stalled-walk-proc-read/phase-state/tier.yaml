@@ -1,0 +1,62 @@
+schema_version: 2
+feature: is-below-stalled-walk-proc-read
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.12
+    confidence: 0.86
+    legend:
+      '0': '0: Only a wording or rule-text change: no new logic, and no test change.'
+      '1': '1: A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.'
+      '2': '2: New logic, a change reaching across several modules, or a change to
+        an external contract.'
+      '3': '3: A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.87
+      '2': 0.12
+      '3': 0.01
+  observed_at: '2026-10-30T23:35:20+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.23
+    confidence: 0.77
+    legend:
+      '0': '0: Only a wording or rule-text change: no new logic, and no test change.'
+      '1': '1: A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.'
+      '2': '2: New logic, a change reaching across several modules, or a change to
+        an external contract.'
+      '3': '3: A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.77
+      '2': 0.23
+      '3': 0.0
+  observed_at: '2026-10-30T23:40:09+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/hooks/bash_guard.py
+  - tests/test_bash_guard_cd_prefix.py
+  changed_lines_approx: 100
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 18
+  body_change_kind: new_logic
+  change_containment: single_module
+  caller_and_dependency_count: 8
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: em-workflow/hooks/bash_guard.py:321、337では不存在・通常ファイルの段で段階検査がFalseを返す。378、379では物理側・論理側のrealpathが380の実在確認より先に実行されており、参照抑止は未実装。261の既存関数で物理側の事前確認ができる。論理側には別途処理が必要で、tests/test_bash_guard_cd_prefix.py:750では論理側が不存在・通常ファイルでも許可する既存動作を検証している。ファイルを作成しない模擬実行では、論理側だけが不存在要素から/procへ進み、物理側が実在する構成で現行処理がTrueを返すことも確認したため、背景の『常にFalse』は論理側全体には成立しない。tests/test_bash_guard_cd_prefix.py:1655に操作記録、1644に禁止配下の検出、1770に参照禁止の既存テストがあるが、対象リンクには途中の不存在要素がない。概算は既存関数・記録処理を拡張し、停止理由2種×行き先の相対・絶対2種×物理・論理2側×禁止配下2種の16条件と、論理側のTrue・False維持2条件を追加する前提。新規関数数は実装用関数を数えた。呼出元・依存数は345のis_belowについて、本番呼出元1関数（406）と直接呼ぶ既存7関数を合計した。変更対象の振る舞いはファイル参照であり、引数と真偽値の契約は維持する。通常の既存テストは197以降でファイルを作成するため実行していない。
+decided_at: '2026-10-30T23:40:30+09:00'
