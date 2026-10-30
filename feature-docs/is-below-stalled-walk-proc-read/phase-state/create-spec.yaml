@@ -4,8 +4,8 @@ phase: create-spec
 status: in_progress
 generation: 1
 base_revision: a9c21eef174ea50ad4caf786527149554e2b8e60
-last_input_digest: sha256:281fa4bb1a3478fe34da234d5fa2c874b49ab7f34a745f0dff27f5f977a50c72
-active_request_id: null
+last_input_digest: sha256:8426652875d5f204d15d54fc3d61081b826c805fc520a3e16241bf632c7ccf0b
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     path: null
@@ -48,6 +48,9 @@ worker_runs:
   input_digest: sha256:281fa4bb1a3478fe34da234d5fa2c874b49ab7f34a745f0dff27f5f977a50c72
   note: first return failed validation (design-step option vocabulary); corrected
     in place by the same worker
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:8426652875d5f204d15d54fc3d61081b826c805fc520a3e16241bf632c7ccf0b
 artifacts: []
 patches: []
 progress_fingerprint: null
