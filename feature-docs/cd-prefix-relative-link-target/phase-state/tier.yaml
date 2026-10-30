@@ -1,0 +1,64 @@
+schema_version: 2
+feature: cd-prefix-relative-link-target
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.05
+    confidence: 0.94
+    legend:
+      '0': '0: Only a wording or rule-text change: no new logic, and no test change.'
+      '1': '1: A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.'
+      '2': '2: New logic, a change reaching across several modules, or a change to
+        an external contract.'
+      '3': '3: A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.01
+      '1': 0.94
+      '2': 0.05
+      '3': 0.0
+  observed_at: '2026-10-30T19:58:05+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.06
+    confidence: 0.94
+    legend:
+      '0': '0: Only a wording or rule-text change: no new logic, and no test change.'
+      '1': '1: A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.'
+      '2': '2: New logic, a change reaching across several modules, or a change to
+        an external contract.'
+      '3': '3: A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.94
+      '2': 0.06
+      '3': 0.0
+  observed_at: '2026-10-30T19:58:05+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/hooks/bash_guard.py
+  - tests/test_bash_guard_cd_prefix.py
+  changed_lines_approx: 15
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 3
+  body_change_kind: new_logic
+  change_containment: single_function
+  caller_and_dependency_count: 2
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: em-workflow/hooks/bash_guard.py:318 は絶対・相対の区別前にリンク先を字句判定する。絶対パス限定の条件追加と相対先3ケースの追加を想定した概算。:307
+    に解決段階の検査がある。呼出元・依存数はリポジトリ内の is_below（:361）と _under_proc_or_dev_fd（:318）を数えた。tests/test_bash_guard_cd_prefix.py:1385
+    は実ディレクトリのみを検査し、:1354・:1364・:1373 は絶対リンク先の拒否を検査する。指定された相対リンク先3種のテストはない
+decided_at: '2026-10-30T19:58:05+09:00'
