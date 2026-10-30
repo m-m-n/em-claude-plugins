@@ -115,7 +115,7 @@ tasks:
     - NFR1
     - NFR2
     - NFR3
-    status: in_progress
+    status: merged
     branch: em-workflow/cd-prefix-relative-link-target/task0001
 review:
   status: pending
