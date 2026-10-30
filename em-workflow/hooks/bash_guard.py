@@ -42,7 +42,10 @@ had no cd prefix (never a new deny):
     components ignored. This is judged on the path as written, on each stage
     reached while resolving the logical path and the physical path component
     by component, and on the target of each link followed, not on the final
-    realpath alone. A resolution error counts as not below.
+    realpath alone. The lexical check of a link's target text applies only to
+    an absolute target; a relative target is joined to the directory that holds
+    the link and judged at the resolution stages. A resolution error counts as
+    not below.
     <path> is only resolved, never used as the directory or argument of a
     child process
   - approval: the remainder, with surrounding blanks removed, equals one
@@ -281,10 +284,17 @@ def _under_proc_or_dev_fd(text):
 def _stage_walk_refuses(path):
     """True when resolving the absolute path text component by component, the
     way the kernel does, reaches a stage under /proc or /dev/fd, or follows a
-    link whose target text is under one, or follows more than
+    link whose absolute target text is under one, or follows more than
     FOLLOWED_LINK_LIMIT links, or meets an error other than an absent or
     non-directory stage. The walk stops at the first refused stage, so it never
     resolves anything inside /proc.
+
+    The lexical check of a link's target text applies only to an absolute
+    target; a relative target is joined to the directory that holds the link
+    and judged at the resolution stages. Every stage it leads to, the location
+    left after each `..` included, is checked like any other stage, so a
+    relative target is refused only when a stage it leads to is under /proc or
+    /dev/fd.
 
     A stage that does not exist, or a non-directory, ends the walk without
     refusal: the operating system cannot resolve any further stage of the
@@ -315,10 +325,13 @@ def _stage_walk_refuses(path):
                 if followed > FOLLOWED_LINK_LIMIT:
                     return True
                 target = os.readlink(stage)
-                if _under_proc_or_dev_fd(target):
-                    return True
                 if target.startswith("/"):
+                    if _under_proc_or_dev_fd(target):
+                        return True
                     reached = []
+                # A relative target starts from the directory that holds the
+                # link, which is `reached`; the stage checks of this loop
+                # judge each stage it leads to.
                 pending = target.split("/") + pending
                 continue
             if not stat.S_ISDIR(mode):
@@ -338,9 +351,11 @@ def is_below(path, area):
     not the Bash process. This is judged on the path as written, on each stage
     reached while resolving the logical path and the physical path component by
     component, and on the target of each link followed, never on the final
-    realpath alone. A link loop or more than FOLLOWED_LINK_LIMIT followed links
-    fails the check as well. This precondition runs before the rule below and
-    never replaces it.
+    realpath alone. The lexical check of a link's target text applies only to
+    an absolute target; a relative target is joined to the directory that holds
+    the link and judged at the resolution stages. A link loop or more than
+    FOLLOWED_LINK_LIMIT followed links fails the check as well. This
+    precondition runs before the rule below and never replaces it.
 
     Bash first moves to the logical path (each `..` collapsed against the
     component written before it, then links resolved). When that move fails

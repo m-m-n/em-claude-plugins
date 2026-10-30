@@ -1,0 +1,115 @@
+task_id: task0001
+baseline_failures: []          # before any edit: python3 -m unittest discover -s tests -> Ran 12206 tests, OK (skipped=1); no failing test
+final_failures: []             # re-executed after the implementation and after writing this record: python3 -m unittest discover -s tests -> Ran 12223 tests, OK (skipped=1, the same single skip as the baseline); no failing test
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestRelativeLinkTarget.test_ac1_a_link_with_a_relative_target_naming_an_in_area_directory_is_below
+      - tests.test_bash_guard_cd_prefix.TestRelativeLinkTarget.test_ac1_the_hook_allows_the_cd_prefix_form_for_each_relative_link
+      - tests.test_bash_guard_cd_prefix.TestRelativeLinkTarget.test_ac1_the_fixture_links_have_the_claimed_relative_targets
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged path check (new tests written first),
+      test_ac1_a_link_with_a_relative_target_naming_an_in_area_directory_is_below
+      failed in all three subtests (targets proc, ./proc, dev/fd) with
+      AssertionError: False is not True, and
+      test_ac1_the_hook_allows_the_cd_prefix_form_for_each_relative_link failed
+      in all six subtests (input cwd repo1 and wtree, each of the three links)
+      with AssertionError: 'silent' != 'allow', because the lexical check read
+      the relative target text as under /proc or /dev/fd. The fixture test
+      passed before the change by design: it guards that each link has the
+      claimed relative target and names an existing directory strictly below
+      the area.
+  AC-2:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestRelativeLinkTarget.test_ac2_a_link_with_an_absolute_target_naming_the_same_location_is_below
+    red_confirmed: false
+    red_reason: >-
+      Control case: the three links whose absolute targets are <names>/proc,
+      <names>/./proc and <names>/dev/fd were below the area before the change
+      and stay below it, so the test passed before any implementation; no red
+      state occurred. It pins that the change does not take away the True
+      result for an absolute target that names an ordinary in-area directory.
+  AC-3:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestRelativeLinkTarget.test_ac3_a_relative_target_climbing_to_the_root_and_naming_proc_is_false
+      - tests.test_bash_guard_cd_prefix.TestRelativeLinkTarget.test_ac3_the_hook_is_silent_for_the_climbing_link
+      - tests.test_bash_guard_cd_prefix.TestRelativeLinkTarget.test_ac3_the_climbing_link_has_a_relative_target_with_enough_dotdot
+    red_confirmed: false
+    red_reason: >-
+      The behavior pre-existed: the target text of the climbing link starts
+      with `..`, so the lexical check never matched it, and the stage checks
+      (the per-stage check and the check after each `..`) already refused the
+      stage /proc. The tests passed before the change by design; they pin that
+      removing the lexical check of relative targets does not lose the refusal.
+      The fixture guard inside the first test asserts that the path otherwise
+      names an existing directory strictly below the area. No red state
+      occurred.
+  AC-4:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestRelativeLinkTarget.test_ac4_no_probe_and_no_link_read_is_made_under_proc_or_dev_fd
+      - tests.test_bash_guard_cd_prefix.TestRelativeLinkTarget.test_ac4_the_recording_sees_a_probe_and_a_link_read_under_proc
+    red_confirmed: false
+    red_reason: >-
+      The behavior pre-existed: the walk already checks each stage before it
+      probes it, so nothing under /proc or /dev/fd was probed or read before
+      the change either. The tests passed before the change by design and pin
+      NFR2 for the new flow. The second test guards the recording itself (a
+      probe and a link read under /proc are seen), so the first cannot pass
+      because the recording is empty; the first also asserts that the climbing
+      link was read. No red state occurred.
+  AC-5:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathCheck.test_ac3_a_link_to_the_process_cwd_is_false
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathCheck.test_ac3_a_link_to_proc_self_followed_by_cwd_is_false
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathCheck.test_ac3_a_link_to_a_dev_fd_entry_is_false
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathNotAllowed.test_ac3_a_link_to_the_process_cwd_inside_the_area_is_silent
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing tests listed
+      detect the absolute-target links to /proc/self/cwd, to /proc/self
+      followed by cwd/<name>, and to /dev/fd/<N> being refused; they are
+      unmodified and passed before and after the change; no red state occurred
+      for this change.
+  AC-6:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestAc7StandardLibraryOnly.test_ac7_this_test_module_imports_only_standard_library_modules
+    red_confirmed: false
+    red_reason: >-
+      The verifiable outcome is the project test command,
+      python3 -m unittest discover -s tests, ending with no failure and the
+      same single skip as the baseline, with no existing assertion removed or
+      weakened (the diff of tests/test_bash_guard_cd_prefix.py only adds
+      lines, among them the added forms in the path list of
+      test_ac7_the_path_check_starts_no_child_process_for_the_added_forms) and
+      tests/test_bash_guard_cd_prefix_operators.py untouched. The listed
+      existing test detects non-standard-library imports of the test module;
+      it passed before and after, so no red state occurred.
+  AC-7:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestLinkTargetWording.test_ac7_each_place_states_both_halves
+      - tests.test_bash_guard_cd_prefix.TestLinkTargetWording.test_ac7_the_stage_walk_docstring_no_longer_carries_the_unqualified_clause
+      - tests.test_bash_guard_cd_prefix.TestLinkTargetWording.test_ac7_the_two_path_items_say_the_same_thing
+      - tests.test_bash_guard_cd_prefix.TestLinkTargetWording.test_ac7_forging_one_half_in_each_place_stops_the_matcher
+      - tests.test_bash_guard_cd_prefix.TestLinkTargetWording.test_ac7_the_matcher_fires_on_the_statement_and_stops_when_one_half_is_removed
+      - tests.test_bash_guard_cd_prefix.TestLinkTargetWording.test_ac7_the_matcher_does_not_fire_on_unrelated_or_the_old_text
+      - tests.test_bash_guard_cd_prefix.TestLinkTargetWording.test_ac7_all_four_places_are_found
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathWording.test_ac4_the_matcher_fires_on_forged_text_with_one_needle_removed
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathWording.test_ac1_the_statement_sits_in_the_path_item_of_the_docstring
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathWording.test_ac2_the_statement_sits_in_the_path_item_of_the_protocol_rule
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathWording.test_ac3_neither_place_describes_the_proc_self_root_prefix_as_allowed
+    red_confirmed: true
+    red_reason: >-
+      Run before the four descriptions were changed,
+      test_ac7_each_place_states_both_halves failed in all four subtests
+      (stage walk docstring, module docstring path item, protocol path item,
+      is_below docstring paragraph) with AssertionError: False is not true,
+      test_ac7_the_stage_walk_docstring_no_longer_carries_the_unqualified_clause
+      failed with the old clause 'follows a link whose target text is under
+      one' unexpectedly found, and test_ac7_the_two_path_items_say_the_same_thing
+      errored because the sentence pair was not in the path items. The
+      remaining new tests check the matcher against forged text and passed
+      before the change by design; the listed TestProcessDependentPathWording
+      tests are the existing wording tests (PROCESS_DEPENDENT_PATH_NEEDLES, the
+      path-item placement, the absence of /proc/self/root), unmodified and
+      passing before and after.

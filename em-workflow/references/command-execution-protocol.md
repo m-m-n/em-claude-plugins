@@ -139,7 +139,9 @@ depends on the role:
       components ignored. This is judged on the path as written, on each stage
       reached while resolving the logical path and the physical path component
       by component, and on the target of each link followed, not on the final
-      realpath alone;
+      realpath alone. The lexical check of a link's target text applies only to
+      an absolute target; a relative target is joined to the directory that
+      holds the link and judged at the resolution stages;
     - everything after the first `&&` matches an approved string exactly
       (surrounding whitespace aside);
     - that remainder has no lone `&`, no `;`, no `||` and no line break at its
