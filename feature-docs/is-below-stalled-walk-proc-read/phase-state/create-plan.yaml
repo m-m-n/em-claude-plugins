@@ -1,16 +1,16 @@
 schema_version: 1
 feature: is-below-stalled-walk-proc-read
 phase: create-plan
-status: dispatching
+status: applying_patch
 generation: 1
-base_revision: 57ea9b16058028f563eabf946a5a10a29273cbc1
+base_revision: e311aa7364e739d30f243d5cdab3c5e3440bf46a
 last_input_digest: sha256:05910040390101af5616950ec7b1332072d6f51b2ccb65a340f8ce38b7430081
 active_request_id: create-plan-run-0001
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:05910040390101af5616950ec7b1332072d6f51b2ccb65a340f8ce38b7430081
   dispatch_digest_inputs:
     em-workflow/references/contracts/planner-contract.md: sha256:6476cc99ea8a1d2d4f376d1702bd636b1ab9898655397ec80ab1d6fb47cbe9e8
@@ -24,8 +24,30 @@ worker_runs:
     feature-docs/is-below-stalled-walk-proc-read/REQUIREMENTS.md: sha256:5a37964fa571e66e7a0766831af892338a39664c6d6fa3f9b6de9cf8e6ad1745
     feature-docs/is-below-stalled-walk-proc-read/SPEC.md: sha256:20ed761687341b91f5c4e5eff4621f9a9e2843a41e43740744183bae5bc5874c
     feature-docs/is-below-stalled-walk-proc-read/workflow.yaml: sha256:4baddb06e8d5d8d12613834746a17916073e96f01b7535e909e2f543237cbcfa
-artifacts: []
-patches: []
+  output_digest: sha256:4233ee0ea39f3726cb4491d3b540beee56bfa0069b96149fdfba894a407eeebb
+  self_write_set:
+  - feature-docs/is-below-stalled-walk-proc-read/IMPLEMENTATION.md
+  - feature-docs/is-below-stalled-walk-proc-read/THREAT-MODEL.md
+  - feature-docs/is-below-stalled-walk-proc-read/VERIFICATION.md
+  - feature-docs/is-below-stalled-walk-proc-read/tasks/task0001.md
+artifacts:
+- path: feature-docs/is-below-stalled-walk-proc-read/IMPLEMENTATION.md
+  sha256: sha256:b1d9dac3aae977fdc3998a778222c8fb960811afe6a666e27bfb986d96c1c641
+  produced_by: create-plan-run-0001
+- path: feature-docs/is-below-stalled-walk-proc-read/THREAT-MODEL.md
+  sha256: sha256:1330b0fad2ac74c7b730dab4628bff78a26c561c95d63088d84c266109487e3c
+  produced_by: create-plan-run-0001
+- path: feature-docs/is-below-stalled-walk-proc-read/VERIFICATION.md
+  sha256: sha256:3caf6bfe5a6309553bad6f7cd4046f4c055d748e42a52699d8cedad19a97cb20
+  produced_by: create-plan-run-0001
+- path: feature-docs/is-below-stalled-walk-proc-read/tasks/task0001.md
+  sha256: sha256:853d2e4b6bbbcdced3b553bf6f8ee27399f4f232a152dfb001285b8ae544e4d9
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: create-plan-p0001
+  status: validated
+  base_input_digest: sha256:05910040390101af5616950ec7b1332072d6f51b2ccb65a340f8ce38b7430081
+  base_workflow_blob: f0dba799d64cdb456988ad6bb54c668f53aa3018
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
