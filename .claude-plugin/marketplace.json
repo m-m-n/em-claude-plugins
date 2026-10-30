@@ -24,7 +24,7 @@
       },
       "category": "workflow",
       "source": "./em-workflow",
-      "version": "0.3.97"
+      "version": "0.3.98"
     },
     {
       "name": "plugin-dev",
