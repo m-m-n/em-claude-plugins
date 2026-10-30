@@ -75,7 +75,11 @@ workflow:
   status: completed
   completed_at_commit: d62b287d2a2617dfd21d67756374655e5c3d53e8
 - id: verify
-  status: in_progress
+  status: completed
+  completed_at_commit: cf0b0f3134376c73b22f2b9b786c5e7be2596266
+  result: pass
+  failed_items: []
+  summary: 'test: python3 -m unittest discover -s tests は 12189 件成功（skip 1）。build / format は未定義。TS1-TS6 すべて合致、手動確認（両文書の追加文の読み）も矛盾なし。除外要件なし'
 - id: retrospect
   status: pending
 tasks:
