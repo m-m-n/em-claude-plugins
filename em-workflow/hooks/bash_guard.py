@@ -44,8 +44,10 @@ had no cd prefix (never a new deny):
     by component, and on the target of each link followed, not on the final
     realpath alone. The lexical check of a link's target text applies only to
     an absolute target; a relative target is joined to the directory that holds
-    the link and judged at the resolution stages. A resolution error counts as
-    not below.
+    the link and judged at the resolution stages. The stage check continues
+    past an absent or non-directory stage the way the lenient realpath does, so
+    a stage under /proc or /dev/fd after such a stage fails the path check too.
+    A resolution error counts as not below.
     <path> is only resolved, never used as the directory or argument of a
     child process
   - approval: the remainder, with surrounding blanks removed, equals one
@@ -285,9 +287,9 @@ def _stage_walk_refuses(path):
     """True when resolving the absolute path text component by component, the
     way the kernel does, reaches a stage under /proc or /dev/fd, or follows a
     link whose absolute target text is under one, or follows more than
-    FOLLOWED_LINK_LIMIT links, or meets an error other than an absent or
-    non-directory stage. The walk stops at the first refused stage, so it never
-    resolves anything inside /proc.
+    FOLLOWED_LINK_LIMIT links, or, before the walk stalls, meets an error other
+    than an absent or non-directory stage. The walk stops at the first refused
+    stage, so it never resolves anything inside /proc.
 
     The lexical check of a link's target text applies only to an absolute
     target; a relative target is joined to the directory that holds the link
@@ -296,12 +298,28 @@ def _stage_walk_refuses(path):
     relative target is refused only when a stage it leads to is under /proc or
     /dev/fd.
 
-    A stage that does not exist, or a non-directory, ends the walk without
-    refusal: the operating system cannot resolve any further stage of the
-    path, and the caller's rule decides it exactly as before."""
+    The walk stalls at the first stage that does not exist, or that exists and
+    is neither a directory nor a link. The stage check continues past an absent
+    or non-directory stage the way the lenient realpath does, which is what the
+    realpath calls of the caller do next: from the stall to the end of the path
+    the stage joins as an ordinary name and a later `..` removes it; stages are
+    probed and links followed again once the walk is back at an existing
+    location; a relative target resolves from the directory that holds the
+    link and an absolute target resets to the root; the /proc and /dev/fd
+    checks apply unchanged, before probing; links followed after the stall
+    count toward the same FOLLOWED_LINK_LIMIT; and an operating-system error
+    while a stage is probed or a link is read after the stall makes the name an
+    ordinary name, with no refusal. Any other exception, for example an
+    embedded NUL, refuses. When the walk reaches the end of the path it does
+    not refuse, and the caller's rule decides."""
     pending = path.split("/")
-    reached = []  # components of the location reached so far; never a link
+    # Components of the location reached so far. Before the stall every one is
+    # an existing directory and never a link. After the stall it may also hold
+    # ordinary names that do not exist, regular files, and a link whose target
+    # could not be read.
+    reached = []
     followed = 0
+    stalled = False
     try:
         while pending:
             name = pending.pop(0)
@@ -319,12 +337,25 @@ def _stage_walk_refuses(path):
             try:
                 mode = os.lstat(stage).st_mode
             except (FileNotFoundError, NotADirectoryError):
-                return False
+                stalled = True
+                reached.append(name)
+                continue
+            except OSError:
+                if not stalled:
+                    raise
+                reached.append(name)
+                continue
             if stat.S_ISLNK(mode):
                 followed += 1
                 if followed > FOLLOWED_LINK_LIMIT:
                     return True
-                target = os.readlink(stage)
+                try:
+                    target = os.readlink(stage)
+                except OSError:
+                    if not stalled:
+                        raise
+                    reached.append(name)
+                    continue
                 if target.startswith("/"):
                     if _under_proc_or_dev_fd(target):
                         return True
@@ -335,7 +366,7 @@ def _stage_walk_refuses(path):
                 pending = target.split("/") + pending
                 continue
             if not stat.S_ISDIR(mode):
-                return False
+                stalled = True
             reached.append(name)
     except (OSError, ValueError):
         return True
@@ -353,7 +384,10 @@ def is_below(path, area):
     component, and on the target of each link followed, never on the final
     realpath alone. The lexical check of a link's target text applies only to
     an absolute target; a relative target is joined to the directory that holds
-    the link and judged at the resolution stages. A link loop or more than
+    the link and judged at the resolution stages. The stage check continues
+    past an absent or non-directory stage the way the lenient realpath does, so
+    a stage under /proc or /dev/fd after such a stage is refused before the
+    realpath calls below can reach it. A link loop or more than
     FOLLOWED_LINK_LIMIT followed links fails the check as well. This
     precondition runs before the rule below and never replaces it.
 

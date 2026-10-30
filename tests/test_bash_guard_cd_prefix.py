@@ -114,6 +114,30 @@ only at the resolution stages; an absolute target keeps the lexical refusal.
   `is_below` docstring on /proc and /dev/fd state both halves of the rule
   (`TestLinkTargetWording`).
 
+Feature is-below-stalled-walk-proc-read, task0001
+(feature-docs/is-below-stalled-walk-proc-read/tasks/task0001.md): the stage
+walk no longer ends at an absent or non-directory stage. It continues under
+the lenient realpath rule and refuses at any /proc or /dev/fd stage, so the
+path check never probes or reads anything under /proc or /dev/fd for a
+stalled path, on the logical-path side or the physical-path side.
+
+- AC-1: link forms that stall and then climb to /proc or /dev/fd are not below
+  the area, and nothing under /proc or /dev/fd is probed or read
+  (`TestStalledWalkNeverReachesProc`).
+- AC-2: the logical-path corner form, which the old rule judged below the
+  area, is not below the area, at the module level and through the hook
+  (`TestStalledLogicalCorner`).
+- AC-3: the recorder guard test, the lenient realpath on a stalled form is
+  seen reaching /proc (`TestStalledWalkNeverReachesProc`).
+- AC-4: stalls that reach neither /proc nor /dev/fd are not refused
+  (`TestStalledWalkLeavesOtherStallsAlone`).
+- AC-5: links after the stall count toward the same bound, and an error after
+  the stall is an ordinary name while an error before it still refuses
+  (`TestStalledWalkLinkBoundAndErrors`).
+- AC-6: the four rule statements say the stage check continues past a stall
+  (`TestStalledWalkWording`).
+- AC-7: what the change leaves as it was (`TestStalledWalkContract`).
+
 Standard library only.
 """
 
@@ -2071,6 +2095,621 @@ class TestLinkTargetWording(unittest.TestCase):
             self.assertLess(first, second, name)
             pair[name] = flat[first : second + len(LINK_TARGET_RULE_NEEDLES[1])]
         self.assertEqual(len(set(pair.values())), 1)
+
+
+# ---------------------------------------------------------------------------
+# Feature is-below-stalled-walk-proc-read, task0001: the stage walk continues
+# past an absent or non-directory stage under the lenient realpath rule, so
+# the realpath calls that follow never probe or read anything under /proc or
+# /dev/fd.
+# ---------------------------------------------------------------------------
+
+PROC_TAIL = ["proc", "self", "cwd"]
+
+
+def _climb(depth_path, placed):
+    """The `..` components that climb to the root from a location `placed`
+    components below depth_path. Counted as Layout.climb_target counts, from
+    the number of path parts of depth_path; surplus `..` at the root stay at
+    the root."""
+    return [".."] * (len(depth_path.parts) + placed)
+
+
+class StalledLayout:
+    """A dedicated subdirectory of procdep for the stalled forms, under names
+    no other test uses, so the layout seen by the other tests is unchanged.
+
+        stalled/links/inner      an existing directory below the area
+        stalled/links/regfile    a regular file
+        stalled/links/link-a     relative target proc/missing/, `..` up to the
+                                 root, then proc/self/cwd         (form a)
+        stalled/links/link-b     the same with x/missing/          (form b)
+        stalled/links/link-c     absolute target <inside>/missing/, `..` up to
+                                 the root, then proc/self/cwd      (form c)
+        stalled/links/link-d     relative target regfile/, `..` up to the
+                                 root, then proc/self/cwd          (form d)
+        stalled/links/link-e-<n> like form b, ending in dev/fd/<n> (form e)
+        stalled/corner/...       the logical-path corner: written as
+                                 corner/hop/../name, hop is a link to
+                                 corner/hopdest/inner, corner/hopdest/name is
+                                 an existing directory, and corner/name is a
+                                 stalling link that climbs to
+                                 proc/self/cwd/shared
+    """
+
+    def __init__(self):
+        self.base = Layout()
+        self.top = self.base.top / "stalled"
+        self.links = self.top / "links"
+        self.corner = self.top / "corner"
+        self.inner = self.links / "inner"
+        hopdest = self.corner / "hopdest"
+        for directory in (self.inner, hopdest / "inner", hopdest / "name"):
+            directory.mkdir(parents=True, exist_ok=True)
+        self.regular_file = self.links / "regfile"
+        if not self.regular_file.exists():
+            self.regular_file.write_text("not a directory\n", encoding="utf-8")
+
+        def climbing(head, depth_path, placed, tail):
+            return head + "/".join(_climb(depth_path, placed) + tail)
+
+        self.form_a = _link(
+            climbing("proc/missing/", self.links, 2, PROC_TAIL), self.links / "link-a"
+        )
+        self.form_b = _link(
+            climbing("x/missing/", self.links, 2, PROC_TAIL), self.links / "link-b"
+        )
+        self.form_c = _link(
+            climbing(str(FIX.inside) + "/missing/", FIX.inside, 1, PROC_TAIL),
+            self.links / "link-c",
+        )
+        self.form_d = _link(
+            climbing("regfile/", self.links, 1, PROC_TAIL), self.links / "link-d"
+        )
+        # Only the as-written resolution goes through form b; the logical path
+        # collapses past it and names the existing directory.
+        self.physical_only = str(self.form_b) + "/../inner"
+        # The logical-path corner.
+        self.corner_hop = _link(str(hopdest / "inner"), self.corner / "hop")
+        self.corner_name = _link(
+            climbing("x/missing/", self.corner, 2, PROC_TAIL + [SHARED]),
+            self.corner / "name",
+        )
+        self.corner_written = str(self.corner) + "/hop/../name"
+
+    def dev_fd_link(self, fd):
+        """Form e: like form b, ending in dev/fd/<fd>."""
+        target = "x/missing/" + "/".join(_climb(self.links, 2) + ["dev", "fd", str(fd)])
+        return _link(target, self.links / ("link-e-%d" % fd))
+
+    def proc_forms(self):
+        """(label, written path, link that the walk reads) for the forms that
+        end in /proc/self/cwd."""
+        return [
+            ("(a) relative target proc/missing/", str(self.form_a), str(self.form_a)),
+            ("(b) relative target x/missing/", str(self.form_b), str(self.form_b)),
+            ("(c) absolute target <inside>/missing/", str(self.form_c), str(self.form_c)),
+            ("(d) target stalls at a regular file", str(self.form_d), str(self.form_d)),
+            ("physical-only variant of (b)", self.physical_only, str(self.form_b)),
+        ]
+
+
+def _proc_or_dev_fd_paths(record):
+    """The recorded probe and read paths that lie under /proc or /dev/fd."""
+    return [
+        (kind, path)
+        for kind in ("probes", "reads")
+        for path in record[kind]
+        if _is_proc_or_dev_fd_location(path)
+    ]
+
+
+@contextlib.contextmanager
+def _failing_only_at(name, failing_path, error):
+    """os.<name> raises error for failing_path only; every other call goes
+    through to the real function. Yields the list of the failures raised, so
+    a test can tell that the walk did reach the path."""
+    real = getattr(os, name)
+    raised = []
+
+    def call(path, *args, **kwargs):
+        if os.fspath(path) == failing_path:
+            raised.append(failing_path)
+            raise error
+        return real(path, *args, **kwargs)
+
+    with mock.patch.object(os, name, new=call):
+        yield raised
+
+
+class TestStalledWalkNeverReachesProc(unittest.TestCase):
+    """AC-1, AC-3 (FR1, FR2, FR7, FR8, NFR2): a link form that stalls and then
+    climbs to /proc or /dev/fd is not below the area, and nothing under /proc
+    or /dev/fd is probed or read while it is judged."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.guard = _load_guard_module()
+        cls.area = str(FIX.region)
+        cls.layout = StalledLayout()
+
+    def assert_judged_without_touching_proc(self, written, link):
+        with _working_directory(self.layout.base.work):
+            with _recorded_probes() as record:
+                result = self.guard.is_below(written, self.area)
+        self.assertIs(result, False)
+        # The walk did read the link, so the recording is not empty.
+        self.assertIn(link, record["reads"])
+        self.assertEqual(_proc_or_dev_fd_paths(record), [])
+
+    # -- AC-1 -------------------------------------------------------------
+
+    def test_ac1_the_fixture_links_stall_at_an_absent_stage_or_a_regular_file(self):
+        # Guards the fixture: each target names, first, a stage that is absent
+        # or not a directory, and then climbs to the root before naming /proc.
+        for label, link, stall in (
+            ("a", self.layout.form_a, self.layout.links / "proc"),
+            ("b", self.layout.form_b, self.layout.links / "x"),
+            ("c", self.layout.form_c, FIX.inside / "missing"),
+            ("d", self.layout.form_d, self.layout.regular_file),
+        ):
+            with self.subTest(form=label):
+                target = os.readlink(str(link))
+                self.assertEqual(target.split("/")[-3:], PROC_TAIL)
+                self.assertEqual(os.path.isabs(target), label == "c")
+                if label == "d":
+                    self.assertTrue(stall.is_file())
+                else:
+                    self.assertFalse(os.path.lexists(str(stall)))
+                # Enough `..` to climb from the location after the stall.
+                climbing = [part for part in target.split("/") if part == ".."]
+                self.assertGreaterEqual(len(climbing), len(stall.parts))
+
+    @needs_proc
+    def test_ac1_the_fixture_lenient_realpath_lands_below_the_area(self):
+        # Guards the fixture: with the process in work, the lenient realpath of
+        # each /proc form lands on an existing directory strictly below the
+        # area, so the path check has no other reason to refuse it.
+        with _working_directory(self.layout.base.work):
+            for label, written, _link in self.layout.proc_forms()[:4]:
+                with self.subTest(form=label):
+                    landed = os.path.realpath(written)
+                    self.assertEqual(landed, str(self.layout.base.work))
+                    self.assertTrue(os.path.isdir(landed))
+                    self.assertTrue(self.guard.strictly_below(landed, self.area))
+
+    @needs_proc
+    def test_ac1_a_stalled_form_that_climbs_to_proc_is_false_and_nothing_under_proc_is_touched(self):
+        for label, written, link in self.layout.proc_forms():
+            with self.subTest(form=label):
+                self.assert_judged_without_touching_proc(written, link)
+
+    @needs_dev_fd
+    def test_ac1_a_stalled_form_that_climbs_to_dev_fd_is_false_and_nothing_under_dev_fd_is_touched(self):
+        fd = os.open(str(self.layout.base.under_work), os.O_RDONLY | os.O_DIRECTORY)
+        self.addCleanup(os.close, fd)
+        link = self.layout.dev_fd_link(fd)
+        with _working_directory(self.layout.base.work):
+            landed = os.path.realpath(str(link))
+        self.assertEqual(landed, str(self.layout.base.under_work))
+        self.assertTrue(self.guard.strictly_below(landed, self.area))
+        self.assert_judged_without_touching_proc(str(link), str(link))
+
+    def test_ac1_a_refusal_of_either_walk_returns_false_before_any_realpath_call(self):
+        with mock.patch.object(
+            os.path, "realpath", side_effect=AssertionError("realpath called after a refusal")
+        ):
+            for label, written, _link in self.layout.proc_forms():
+                with self.subTest(form=label):
+                    self.assertIs(self.guard.is_below(written, self.area), False)
+
+    # -- AC-3 -------------------------------------------------------------
+
+    @needs_proc
+    def test_ac3_the_recorder_sees_the_lenient_realpath_reach_proc_on_a_stalled_form(self):
+        # The recorder guard test: a direct call to the lenient realpath on a
+        # stalled form records a probe or a read under /proc, so the recording
+        # of AC-1 and AC-2 cannot pass because it sees nothing.
+        for label, link in (("(a)", self.layout.form_a), ("(b)", self.layout.form_b)):
+            with self.subTest(form=label):
+                with _recorded_probes() as record:
+                    os.path.realpath(str(link))
+                self.assertTrue(_proc_or_dev_fd_paths(record), record)
+
+
+class TestStalledLogicalCorner(CdPrefixCase):
+    """AC-2 (FR1, FR2, FR7, NFR1, NFR2): written as <hop>/../<name>, the
+    physical resolution lands on an existing directory below the area, while
+    the logical collapse lands on a stalling link that climbs to
+    proc/self/cwd/shared. The old rule judged the form below the area when the
+    process cwd was procdep/work."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.guard = _load_guard_module()
+        cls.area = str(FIX.region)
+        cls.layout = StalledLayout()
+        cls.written = cls.layout.corner_written
+
+    def prefixed(self, written):
+        return 'cd "' + written + '" && ' + PLAIN_COMMAND
+
+    @needs_proc
+    def test_ac2_the_fixture_makes_the_old_rule_judge_the_form_below_the_area(self):
+        # Guards the fixture, outside any recording. With the process in work,
+        # the logical and the physical realpath are existing directories
+        # strictly below the area, and the as-written resolution is a
+        # directory. With the stage walk set not to refuse, which is what the
+        # old walk did for this form, the rest of the rule says True.
+        with _working_directory(self.layout.base.work):
+            logical = os.path.realpath(os.path.normpath(self.written))
+            physical = os.path.realpath(self.written)
+            self.assertEqual(logical, str(self.layout.base.under_work))
+            self.assertEqual(physical, str(self.layout.corner / "hopdest" / "name"))
+            for resolved in (logical, physical):
+                self.assertTrue(os.path.isdir(resolved))
+                self.assertTrue(self.guard.strictly_below(resolved, self.area))
+            self.assertTrue(self.guard.resolves_to_directory(self.written))
+            with mock.patch.object(self.guard, "_stage_walk_refuses", return_value=False):
+                self.assertIs(self.guard.is_below(self.written, self.area), True)
+
+    @needs_proc
+    def test_ac2_is_below_is_false_and_nothing_under_proc_is_touched(self):
+        with _working_directory(self.layout.base.work):
+            with _recorded_probes() as record:
+                result = self.guard.is_below(self.written, self.area)
+        self.assertIs(result, False)
+        self.assertIn(str(self.layout.corner_name), record["reads"])
+        self.assertEqual(_proc_or_dev_fd_paths(record), [])
+
+    def test_ac2_the_logical_walk_refuses_and_the_physical_walk_does_not(self):
+        self.assertIs(self.guard._stage_walk_refuses(os.path.normpath(self.written)), True)
+        self.assertIs(self.guard._stage_walk_refuses(self.written), False)
+
+    @needs_proc
+    def test_ac2_the_form_is_false_even_when_the_as_written_query_agrees(self):
+        with _working_directory(self.layout.base.work):
+            with mock.patch.object(self.guard, "resolves_to_directory", return_value=True):
+                self.assertIs(self.guard.is_below(self.written, self.area), False)
+
+    def test_ac2_the_logical_refusal_returns_false_before_any_realpath_call(self):
+        with mock.patch.object(
+            os.path, "realpath", side_effect=AssertionError("realpath called after a refusal")
+        ):
+            self.assertIs(self.guard.is_below(self.written, self.area), False)
+
+    @needs_proc
+    def test_ac2_the_hook_is_silent_from_the_main_worktree_and_from_a_git_worktree(self):
+        for cwd in (FIX.repo, FIX.worktree):
+            with self.subTest(cwd=cwd.name):
+                proc = FIX.run_hook(
+                    self.prefixed(self.written), cwd, process_cwd=self.layout.base.work
+                )
+                decision, _ = decide(proc)
+                self.assertEqual(decision, SILENT)
+
+
+class TestStalledWalkLeavesOtherStallsAlone(unittest.TestCase):
+    """AC-4 (FR3, NFR1): a stall that reaches neither /proc nor /dev/fd is not
+    refused by either walk, and nothing under them is probed or read."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.guard = _load_guard_module()
+        cls.area = str(FIX.region)
+
+    def forms(self):
+        return [
+            ("missing stage, .., sub", str(FIX.inside) + "/does-not-exist/../sub"),
+            ("regular file, .., task0001", str(FIX.file) + "/../task0001"),
+            ("dangling link, .., task0001", str(FIX.dangling) + "/../task0001"),
+        ]
+
+    def test_ac4_neither_walk_refuses_a_stall_that_reaches_no_proc_or_dev_fd(self):
+        for label, written in self.forms():
+            for walk_name, text in (
+                ("logical-path walk", os.path.normpath(written)),
+                ("physical-path walk", written),
+            ):
+                with self.subTest(form=label, walk=walk_name):
+                    self.assertIs(self.guard._stage_walk_refuses(text), False)
+
+    def test_ac4_the_walks_probe_and_read_nothing_under_proc_or_dev_fd(self):
+        with _recorded_probes() as record:
+            for _label, written in self.forms():
+                self.guard._stage_walk_refuses(os.path.normpath(written))
+                self.guard._stage_walk_refuses(written)
+        self.assertEqual(_proc_or_dev_fd_paths(record), [])
+        self.assertTrue(record["probes"])
+
+    def test_ac4_surplus_dotdot_after_a_stall_stay_at_the_root_and_do_not_refuse(self):
+        written = str(FIX.inside) + "/does-not-exist" + "/.." * 40 + "/no-such-top-level-name"
+        self.assertIs(self.guard._stage_walk_refuses(written), False)
+
+
+class TestStalledWalkLinkBoundAndErrors(unittest.TestCase):
+    """AC-5 (FR4, TM-2, TM-3): the links followed after the stall count toward
+    the same bound as the links before it, and an operating-system error after
+    the stall is an ordinary name while the same error before it refuses."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.guard = _load_guard_module()
+        cls.area = str(FIX.region)
+        cls.layout = Layout()
+
+    # -- the link bound ---------------------------------------------------
+
+    def total_links_form(self, chain_count):
+        """One link before the stall (the dangling link, whose target is
+        absent), then `..`, then a chain that follows chain_count links."""
+        self.layout.chain(chain_count)
+        return str(FIX.dangling) + "/../procdep/chain%d/l0" % chain_count
+
+    def test_ac5_the_walk_refuses_when_the_total_is_41_and_not_when_it_is_40(self):
+        for chain_count, total, expected in ((39, 40, False), (40, 41, True)):
+            written = self.total_links_form(chain_count)
+            with self.subTest(total=total):
+                self.assertIs(self.guard._stage_walk_refuses(written), expected)
+
+    def test_ac5_the_logical_walk_never_stalls_so_the_physical_walk_alone_decides(self):
+        for chain_count in (39, 40):
+            written = self.total_links_form(chain_count)
+            with self.subTest(chain=chain_count):
+                self.assertIs(
+                    self.guard._stage_walk_refuses(os.path.normpath(written)), False
+                )
+
+    def test_ac5_is_below_is_false_for_the_41_link_form_even_when_the_as_written_query_agrees(self):
+        with mock.patch.object(self.guard, "resolves_to_directory", return_value=True):
+            self.assertIs(self.guard.is_below(self.total_links_form(40), self.area), False)
+            # Control: with 40 links in total the same rule says True, so the
+            # refusal above is the link count and nothing else.
+            self.assertIs(self.guard.is_below(self.total_links_form(39), self.area), True)
+
+    # -- errors after and before the stall ----------------------------------
+
+    def stall_between_stages(self):
+        """<inside>/sub is probed before the stall, <inside>/sub/missing-x is
+        the stall, and <inside>/sub/deeper is probed after it."""
+        return str(FIX.inside) + "/sub/missing-x/../deeper"
+
+    def test_ac5_the_form_without_an_injected_error_is_not_refused(self):
+        self.assertIs(self.guard._stage_walk_refuses(self.stall_between_stages()), False)
+
+    def test_ac5_an_error_at_one_stage_probed_after_the_stall_does_not_refuse(self):
+        for error in (OSError("simulated"), PermissionError(13, "simulated")):
+            with self.subTest(error=type(error).__name__):
+                with _failing_only_at("lstat", str(FIX.deep), error) as raised:
+                    self.assertIs(
+                        self.guard._stage_walk_refuses(self.stall_between_stages()), False
+                    )
+                # The walk did probe the stage, so the error was really met.
+                self.assertEqual(raised, [str(FIX.deep)])
+
+    def test_ac5_the_same_error_at_a_stage_before_the_stall_still_refuses(self):
+        for error in (OSError("simulated"), PermissionError(13, "simulated")):
+            with self.subTest(error=type(error).__name__):
+                with _failing_only_at("lstat", str(FIX.inside / "sub"), error) as raised:
+                    self.assertIs(
+                        self.guard._stage_walk_refuses(self.stall_between_stages()), True
+                    )
+                self.assertEqual(raised, [str(FIX.inside / "sub")])
+
+    def test_ac5_a_value_error_after_the_stall_still_refuses(self):
+        with _failing_only_at("lstat", str(FIX.deep), ValueError("simulated")) as raised:
+            self.assertIs(self.guard._stage_walk_refuses(self.stall_between_stages()), True)
+        self.assertEqual(raised, [str(FIX.deep)])
+        # A real embedded NUL in a stage probed after the stall.
+        self.assertIs(
+            self.guard._stage_walk_refuses(str(FIX.inside) + "/missing-x/../sub\x00"), True
+        )
+
+    def link_after_the_stall(self):
+        """The first link of chain3 is read after the stall at missing-x."""
+        self.layout.chain(3)
+        return str(FIX.inside) + "/missing-x/../../procdep/chain3/l0"
+
+    def link_before_the_stall(self):
+        """The first link of chain3 is read before the stall, which is below
+        the directory the chain ends in."""
+        self.layout.chain(3)
+        return str(self.layout.top / "chain3" / "l0") + "/missing-x"
+
+    def test_ac5_the_link_forms_without_an_injected_error_are_not_refused(self):
+        self.assertIs(self.guard._stage_walk_refuses(self.link_after_the_stall()), False)
+        self.assertIs(self.guard._stage_walk_refuses(self.link_before_the_stall()), False)
+
+    def test_ac5_an_error_at_one_link_read_after_the_stall_does_not_refuse(self):
+        failing = str(self.layout.top / "chain3" / "l0")
+        for error in (OSError("simulated"), PermissionError(13, "simulated")):
+            with self.subTest(error=type(error).__name__):
+                with _failing_only_at("readlink", failing, error) as raised:
+                    self.assertIs(
+                        self.guard._stage_walk_refuses(self.link_after_the_stall()), False
+                    )
+                self.assertEqual(raised, [failing])
+
+    def test_ac5_the_same_error_at_a_link_read_before_the_stall_still_refuses(self):
+        failing = str(self.layout.top / "chain3" / "l0")
+        for error in (OSError("simulated"), PermissionError(13, "simulated")):
+            with self.subTest(error=type(error).__name__):
+                with _failing_only_at("readlink", failing, error) as raised:
+                    self.assertIs(
+                        self.guard._stage_walk_refuses(self.link_before_the_stall()), True
+                    )
+                self.assertEqual(raised, [failing])
+
+    def test_ac5_a_value_error_at_a_link_read_after_the_stall_still_refuses(self):
+        failing = str(self.layout.top / "chain3" / "l0")
+        with _failing_only_at("readlink", failing, ValueError("simulated")) as raised:
+            self.assertIs(self.guard._stage_walk_refuses(self.link_after_the_stall()), True)
+        self.assertEqual(raised, [failing])
+
+    def test_ac5_a_name_whose_probe_failed_after_the_stall_is_an_ordinary_name(self):
+        # After the error the walk goes on: a later stage under /proc is still
+        # refused, and a later `..` removes the name again.
+        climbing = [".."] * (len(FIX.deep.parts) + 1)
+        proc_after = self.stall_between_stages() + "/" + "/".join(climbing + PROC_TAIL)
+        with _failing_only_at("lstat", str(FIX.deep), OSError("simulated")) as raised:
+            self.assertIs(self.guard._stage_walk_refuses(self.stall_between_stages()), False)
+            self.assertIs(self.guard._stage_walk_refuses(proc_after), True)
+        self.assertEqual(raised, [str(FIX.deep)] * 2)
+
+
+# The statement the four places carry, as one phrase after whitespace is
+# flattened and the text lower-cased.
+STALL_CONTINUATION_NEEDLE = (
+    "the stage check continues past an absent or non-directory stage"
+    " the way the lenient realpath does"
+)
+
+# The sentence the stage-walk docstring carried before the walk continued.
+STALL_ENDING_PHRASE = "ends the walk without refusal"
+
+
+def _states_stall_continuation(text):
+    """True when the text states that the stage check continues past an absent
+    or non-directory stage the way the lenient realpath does."""
+    flat = " ".join(text.split()).lower()
+    return STALL_CONTINUATION_NEEDLE in flat
+
+
+def _stall_continuation_statement(text):
+    """The statement, from the needle to the end of its clause (the next
+    period or semicolon), or None."""
+    flat = " ".join(text.split()).lower()
+    match = re.search(re.escape(STALL_CONTINUATION_NEEDLE) + r"[^.;]*", flat)
+    return match.group(0) if match else None
+
+
+class TestStalledWalkWording(unittest.TestCase):
+    """AC-6 (FR5): the four places that describe the stage check state that it
+    continues past an absent or non-directory stage the way the lenient
+    realpath does; the two path items say it in identical wording."""
+
+    @classmethod
+    def setUpClass(cls):
+        guard = _load_guard_module()
+        cls.rule = _verbatim_execution_rule(PROTOCOL_PATH.read_text(encoding="utf-8"))
+        cls.places = {
+            "stage walk docstring": guard._stage_walk_refuses.__doc__,
+            "module docstring, path item": _docstring_path_item(guard.__doc__),
+            "protocol, path item": _rule_path_item(cls.rule) if cls.rule else None,
+            "is_below docstring, /proc and /dev/fd paragraph": _paragraph_containing(
+                guard.is_below.__doc__, "/dev/fd"
+            ),
+        }
+
+    def test_ac6_the_matcher_fires_on_the_statement_and_stops_when_it_is_removed(self):
+        statement = "Intro. " + STALL_CONTINUATION_NEEDLE.upper() + ", tail."
+        self.assertTrue(_states_stall_continuation(statement))
+        self.assertTrue(_states_stall_continuation("a\n  " + STALL_CONTINUATION_NEEDLE))
+        forged = statement.lower().replace(STALL_CONTINUATION_NEEDLE, "")
+        self.assertNotIn(STALL_CONTINUATION_NEEDLE, forged)
+        self.assertFalse(_states_stall_continuation(forged))
+        self.assertFalse(_states_stall_continuation(""))
+        self.assertFalse(
+            _states_stall_continuation("A stage that does not exist ends the walk without refusal.")
+        )
+
+    def test_ac6_the_statement_extractor_stops_at_the_end_of_the_clause(self):
+        text = "x. " + STALL_CONTINUATION_NEEDLE + ", so that y; z."
+        self.assertEqual(
+            _stall_continuation_statement(text), STALL_CONTINUATION_NEEDLE + ", so that y"
+        )
+        self.assertIsNone(_stall_continuation_statement("nothing here"))
+
+    def test_ac6_all_four_places_are_found(self):
+        for name, text in self.places.items():
+            with self.subTest(place=name):
+                self.assertIsNotNone(text, f"{name} not found")
+
+    def test_ac6_the_stage_walk_docstring_no_longer_says_the_walk_ends_without_refusal(self):
+        flat = " ".join(self.places["stage walk docstring"].split()).lower()
+        self.assertNotIn(STALL_ENDING_PHRASE, flat)
+
+    def test_ac6_each_place_states_the_continuation(self):
+        for name, text in self.places.items():
+            with self.subTest(place=name):
+                self.assertIsNotNone(text, f"{name} not found")
+                self.assertTrue(_states_stall_continuation(text))
+
+    def test_ac6_the_two_path_items_carry_the_same_continuation_statement(self):
+        statements = {}
+        for name in ("module docstring, path item", "protocol, path item"):
+            self.assertIsNotNone(self.places[name], f"{name} not found")
+            statement = _stall_continuation_statement(self.places[name])
+            self.assertIsNotNone(statement, name)
+            statements[name] = statement
+        self.assertEqual(len(set(statements.values())), 1, statements)
+
+    def test_ac6_the_statement_sits_inside_the_one_is_below_paragraph_that_names_dev_fd(self):
+        docstring = _load_guard_module().is_below.__doc__
+        holder = _paragraph_containing(docstring, "/dev/fd")
+        self.assertIsNotNone(holder)
+        self.assertTrue(_states_stall_continuation(holder))
+
+    def test_ac6_no_place_describes_the_proc_self_root_prefix_or_the_single_realpath_rule(self):
+        for name, text in self.places.items():
+            with self.subTest(place=name):
+                self.assertIsNotNone(text, f"{name} not found")
+                self.assertNotIn("/proc/self/root", " ".join(text.split()))
+                self.assertFalse(_states_single_realpath_condition(text))
+
+
+class TestStalledWalkContract(unittest.TestCase):
+    """AC-7 (FR6, NFR3, NFR4): what the change leaves as it was."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.guard = _load_guard_module()
+        cls.area = str(FIX.region)
+        cls.layout = StalledLayout()
+
+    def test_ac7_the_signatures_and_the_link_bound_are_unchanged(self):
+        self.assertEqual(list(inspect.signature(self.guard.is_below).parameters), ["path", "area"])
+        self.assertEqual(
+            list(inspect.signature(self.guard._stage_walk_refuses).parameters), ["path"]
+        )
+        self.assertEqual(self.guard.FOLLOWED_LINK_LIMIT, 40)
+
+    def test_ac7_the_first_as_written_query_comes_after_both_realpath_calls(self):
+        events = []
+        real_realpath = os.path.realpath
+        real_query = self.guard.resolves_to_directory
+
+        def realpath(path, **kwargs):
+            events.append("realpath")
+            return real_realpath(path, **kwargs)
+
+        def query(path):
+            events.append("resolves_to_directory")
+            return real_query(path)
+
+        with mock.patch.object(os.path, "realpath", new=realpath):
+            with mock.patch.object(self.guard, "resolves_to_directory", new=query):
+                self.assertIs(self.guard.is_below(str(FIX.inside), self.area), True)
+        self.assertEqual(events.count("realpath"), 2, events)
+        self.assertIn("resolves_to_directory", events)
+        self.assertGreater(
+            events.index("resolves_to_directory"), len(events) - 1 - events[::-1].index("realpath")
+        )
+
+    @needs_proc
+    def test_ac7_the_path_check_starts_no_child_process_for_the_added_forms(self):
+        fd = os.open(str(self.layout.base.under_work), os.O_RDONLY | os.O_DIRECTORY)
+        self.addCleanup(os.close, fd)
+        paths = [written for _label, written, _link in self.layout.proc_forms()]
+        paths += [
+            str(self.layout.dev_fd_link(fd)),
+            self.layout.corner_written,
+            str(FIX.dangling) + "/../procdep/chain40/l0",
+            str(FIX.inside) + "/does-not-exist/../sub",
+        ]
+        with _working_directory(self.layout.base.work), _no_child_process():
+            for path in paths:
+                self.guard.is_below(path, self.area)
 
 
 def _imported_top_level_modules(source):

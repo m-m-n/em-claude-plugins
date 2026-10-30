@@ -141,7 +141,10 @@ depends on the role:
       by component, and on the target of each link followed, not on the final
       realpath alone. The lexical check of a link's target text applies only to
       an absolute target; a relative target is joined to the directory that
-      holds the link and judged at the resolution stages;
+      holds the link and judged at the resolution stages. The stage check
+      continues past an absent or non-directory stage the way the lenient
+      realpath does, so a stage under /proc or /dev/fd after such a stage fails
+      the path check too;
     - everything after the first `&&` matches an approved string exactly
       (surrounding whitespace aside);
     - that remainder has no lone `&`, no `;`, no `||` and no line break at its
