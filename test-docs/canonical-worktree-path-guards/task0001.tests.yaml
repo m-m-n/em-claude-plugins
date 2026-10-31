@@ -1,0 +1,120 @@
+task_id: task0001
+baseline_failures: []          # before any edit: python3 -m unittest discover -s tests -> Ran 12289 tests, OK (skipped=1); no failing test
+final_failures: []             # re-executed after the implementation and after writing this record: python3 -m unittest discover -s tests -> Ran 12324 tests, OK (skipped=1); no failing test
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_queue_launch_guard_linked_layout.TestLinkedLayoutMainWorktreeLaunch.test_launch_from_main_worktree_is_allowed_and_recorded_in_every_placement
+    red_confirmed: false
+    red_reason: >-
+      The launch from the main worktree was already allowed before the change,
+      because a worktree path without the segment left the project root
+      undetermined and the cwd check was skipped (fail-open); the test passed
+      against the unchanged hook. It pins that the new derivation does not turn
+      that allow into a false deny: deriving the root as the git common dir
+      itself instead of its parent made it fail for all three link placements
+      (mutation run, not a red state of this change).
+  AC-2:
+    tests:
+      - tests.test_queue_launch_guard_linked_layout.TestLinkedLayoutOtherWorktreeLaunch.test_launch_from_integration_worktree_is_denied_naming_the_main_worktree
+      - tests.test_queue_launch_guard_linked_layout.TestLinkedLayoutOtherWorktreeLaunch.test_denied_launch_leaves_no_launched_event_and_no_journal
+      - tests.test_queue_launch_guard_linked_layout.TestLinkedLayoutOtherWorktreeLaunch.test_launch_from_the_task_worktree_itself_is_also_denied
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged hook (tests written first), the two
+      per-placement tests failed for each of the three link placements and the
+      task-worktree test failed, all with AssertionError: '' == '' : expected a
+      deny decision, got no output, because the hook skipped the cwd check and
+      appended a launched event.
+  AC-3:
+    tests:
+      - tests.test_queue_launch_guard_linked_layout.TestSegmentAbsentFailOpen.test_existing_directory_inside_a_non_repository_fails_open
+      - tests.test_queue_launch_guard_linked_layout.TestSegmentAbsentFailOpen.test_nonexistent_absolute_path_fails_open
+      - tests.test_queue_launch_guard.TestCwdOutsideProjectRoot.test_worktree_path_outside_layout_fails_open
+    red_confirmed: false
+    red_reason: >-
+      These cases were fail-open before the change (a path without the segment
+      had no project root) and stay fail-open: the two new tests and the
+      existing test_worktree_path_outside_layout_fails_open, which is not
+      modified, all passed against the unchanged hook. No red state occurred
+      for this change; they pin that the new fallback adds no denial when git
+      cannot resolve a common dir.
+  AC-4:
+    tests:
+      - tests.test_queue_launch_guard_linked_layout.TestFallbackCallShape.test_path_with_the_segment_triggers_no_process_at_all
+      - tests.test_queue_launch_guard_linked_layout.TestFallbackCallShape.test_path_with_the_segment_triggers_no_git_common_dir_call_in_the_cwd_check
+      - tests.test_queue_launch_guard_linked_layout.TestFallbackCallShape.test_last_occurrence_of_the_segment_gives_the_root
+      - tests.test_queue_launch_guard_linked_layout.TestFallbackCallShape.test_segment_at_the_start_of_the_path_is_undetermined_without_fallback
+      - tests.test_queue_launch_guard_linked_layout.TestFallbackCallShape.test_path_without_the_segment_triggers_exactly_one_git_common_dir_call
+      - tests.test_queue_launch_guard_linked_layout.TestFallbackCallShape.test_the_fallback_timeout_is_the_existing_bounded_constant
+      - tests.test_queue_launch_guard_linked_layout.TestFallbackCallShape.test_cwd_check_without_the_segment_makes_one_common_dir_call
+      - tests.test_queue_launch_guard_linked_layout.TestFallbackCallShape.test_root_is_the_parent_directory_of_the_normalized_output
+      - tests.test_queue_launch_guard_linked_layout.TestFallbackCallShape.test_missing_or_non_string_cwd_skips_the_check_before_any_git_call
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged hook (tests written first),
+      test_path_without_the_segment_triggers_exactly_one_git_common_dir_call
+      failed with AssertionError: None != '/proj' (no fallback ran),
+      test_cwd_check_without_the_segment_makes_one_common_dir_call failed with
+      AssertionError: 0 != 1, and
+      test_root_is_the_parent_directory_of_the_normalized_output failed for
+      each scripted output. The segment-present, segment-at-start and
+      missing-cwd tests describe behavior that already held (no git call) and
+      passed before the change.
+  AC-5:
+    tests:
+      - tests.test_queue_launch_guard_linked_layout.TestFallbackFailures.test_each_failure_leaves_the_project_root_undetermined
+      - tests.test_queue_launch_guard_linked_layout.TestFallbackFailures.test_each_failure_yields_no_denial_although_the_cwd_toplevel_resolves
+      - tests.test_queue_launch_guard_linked_layout.TestFallbackFailures.test_a_resolved_common_dir_with_another_toplevel_is_a_denial
+      - tests.test_queue_launch_guard_linked_layout.TestFallbackFailures.test_the_hook_exits_zero_with_no_output_and_records_the_launch
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged hook (tests written first), every failure
+      case (fails to start, times out, exits non-zero, whitespace-only output,
+      empty output, relative output) failed with AssertionError: 0 != 1,
+      because each case asserts that the one git-common-dir call was actually
+      attempted before the root is judged undetermined; the control
+      test_a_resolved_common_dir_with_another_toplevel_is_a_denial failed
+      with AssertionError: None != '/proj'. The invalid-value case
+      (ValueError) was added after the red run and was not itself observed
+      failing before the implementation.
+  AC-6:
+    tests:
+      - tests.test_queue_launch_guard_linked_layout.TestHookDocstring.test_the_docstring_was_read_from_the_hook_file
+      - tests.test_queue_launch_guard_linked_layout.TestHookDocstring.test_each_current_statement_is_present
+      - tests.test_queue_launch_guard_linked_layout.TestHookDocstring.test_each_presence_search_rejects_a_forged_text_without_the_statement
+      - tests.test_queue_launch_guard_linked_layout.TestHookDocstring.test_the_presence_search_is_not_defeated_by_line_wrapping
+      - tests.test_queue_launch_guard_linked_layout.TestHookDocstring.test_the_outside_layout_skip_statement_is_absent
+      - tests.test_queue_launch_guard_linked_layout.TestHookDocstring.test_the_absence_search_finds_the_statement_in_the_pre_change_excerpt
+      - tests.test_queue_launch_guard_linked_layout.TestHookDocstring.test_the_absence_search_finds_the_statement_in_a_forged_docstring
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged hook (tests written first),
+      test_each_current_statement_is_present failed for each of the three
+      statements with AssertionError: False is not true,
+      test_each_presence_search_rejects_a_forged_text_without_the_statement
+      failed for the same three statements because the statement was not in
+      the docstring to remove, and
+      test_the_outside_layout_skip_statement_is_absent failed with
+      AssertionError: True is not false.
+  AC-7:
+    tests:
+      - tests.test_queue_launch_guard_linked_layout.TestStdlibAndDeterminism.test_the_hook_imports_only_standard_library_modules
+      - tests.test_queue_launch_guard_linked_layout.TestStdlibAndDeterminism.test_this_module_imports_only_standard_library_modules
+      - tests.test_queue_launch_guard_linked_layout.TestStdlibAndDeterminism.test_the_import_check_flags_a_third_party_import
+      - tests.test_queue_launch_guard_linked_layout.TestStdlibAndDeterminism.test_this_module_imports_no_other_test_module
+      - tests.test_queue_launch_guard_linked_layout.TestStdlibAndDeterminism.test_this_module_neither_sleeps_nor_imports_a_timing_module
+      - tests.test_queue_launch_guard_linked_layout.TestStdlibAndDeterminism.test_the_timing_check_flags_a_sleeping_source
+      - tests.test_queue_launch_guard_linked_layout.TestStdlibAndDeterminism.test_each_placement_is_a_symlink_to_a_directory_inside_the_project
+      - tests.test_queue_launch_guard_linked_layout.TestStdlibAndDeterminism.test_the_fixture_environment_drops_the_repository_selecting_variables
+      - tests.test_queue_launch_guard.TestStdlibOnly.test_imports_are_all_stdlib
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope for the hook's stdlib property,
+      but the existing test_queue_launch_guard.TestStdlibOnly detects a
+      non-stdlib import in the hook; no red state occurred for this change. The
+      new module's own checks (standard library only, no timing, symlink
+      fixtures) describe properties the hook and the module held from the
+      start, so they passed on their first run; the import and timing checks
+      are shown to find a forged third-party import and a forged sleeping
+      source.

@@ -39,10 +39,20 @@ that field) or, failing that, its prompt contains a `# Task assignment`
 block with a valid `task_id:` line. Anything else is none of this hook's
 concern: exit 0, no output, no journal write.
 
+Project root: the directory the cwd check compares the cwd's git toplevel
+with. When the worktree path contains the `.claude/worktrees/em-workflow/`
+segment, the project root is the prefix before its last occurrence. When the
+segment is absent, the project root is the parent directory of the git common
+dir resolved from the worktree path (`git rev-parse --path-format=absolute
+--git-common-dir`, run once with the worktree path as its working directory);
+this is the case in a linked layout, where `.claude`, `.claude/worktrees` or
+`.claude/worktrees/em-workflow` is a link and the canonical worktree path has
+no such segment. When neither resolves, the project root is undetermined and
+the cwd check is skipped (fail-open).
+
 Fail-open convention: this hook is a net, not an authority. Any unexpected
 state — malformed stdin, an invalid task id or worktree path, an unreadable
-journal, an uncreatable journal location, a missing cwd, a worktree path
-outside the `.claude/worktrees/em-workflow/` layout, a cwd whose git
+journal, an uncreatable journal location, a missing cwd, a cwd whose git
 toplevel cannot be resolved — exits 0 silently rather than
 risk blocking (or crashing) the user's session. The orchestrator protocol
 and the resume guard remain authoritative.
@@ -114,14 +124,51 @@ def valid_worktree_path(worktree_path):
     )
 
 
+def git_common_dir_root(worktree_path):
+    """The parent directory of the git common dir resolved from
+    `worktree_path`, or None when git cannot resolve one.
+
+    One `git rev-parse` run with `worktree_path` as its working directory,
+    bounded by GIT_TIMEOUT_SECONDS. A process that cannot start (a missing
+    working directory included), a timeout, a non-zero exit, and output that
+    is empty or not an absolute path all leave the root undetermined.
+    """
+    try:
+        proc = subprocess.run(
+            ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
+            cwd=worktree_path,
+            capture_output=True,
+            text=True,
+            timeout=GIT_TIMEOUT_SECONDS,
+        )
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return None
+    if proc.returncode != 0:
+        return None
+    common_dir = proc.stdout.strip()
+    if not common_dir or not os.path.isabs(common_dir):
+        return None
+    return os.path.dirname(os.path.normpath(common_dir))
+
+
 def project_root_for(worktree_path):
-    """The project root a task worktree belongs to, or None when the path
-    does not follow the worktree layout."""
+    """The project root a task worktree belongs to, or None when it cannot
+    be determined.
+
+    The `.claude/worktrees/em-workflow/` segment decides when the normalized
+    path contains it: the root is the prefix before its last occurrence (a
+    segment at the very start of the path leaves the root undetermined, with
+    no fallback). When the segment does not occur at all, as in a linked
+    layout where the canonical path lacks it, the root is the parent of the
+    git common dir resolved from the worktree path.
+    """
     norm = os.path.normpath(worktree_path)
     index = norm.rfind(WORKTREES_SEGMENT)
-    if index <= 0:
+    if index > 0:
+        return norm[:index]
+    if index == 0:
         return None
-    return norm[:index]
+    return git_common_dir_root(worktree_path)
 
 
 def git_toplevel(cwd):
@@ -143,8 +190,9 @@ def git_toplevel(cwd):
 
 
 def cwd_outside_project_root(cwd, worktree_path):
-    """The project root when `cwd`'s git toplevel is resolvable and is not
-    it (the launch must be denied); None otherwise."""
+    """The project root when it is determined, `cwd`'s git toplevel is
+    resolvable and is not it (the launch must be denied); None otherwise
+    (including every undecidable state)."""
     if not isinstance(cwd, str) or not cwd:
         return None
     project_root = project_root_for(worktree_path)
