@@ -106,7 +106,109 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: 'merge SKILL: head_sha binding, worktree cd before HEAD check, post-lock re-decision, host-qualified repo'
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/skills/merge/SKILL.md
+    - tests/test_merge_skill_doc.py
+    - test-docs/unattended-merge-medium-fixes/task0001.tests.yaml
+    skills:
+    - infra-impl
+    domains:
+    - concurrency
+    - external-io
+    - api-contract
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR5
+    - FR6
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    - NFR6
+    status: pending
+    notes: null
+    branch: null
+  task0002:
+    title: merge-preflight approval comparison trims leading/trailing blanks
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/scripts/merge-preflight.py
+    - tests/test_merge_preflight.py
+    - test-docs/unattended-merge-medium-fixes/task0002.tests.yaml
+    skills:
+    - backend-impl
+    domains:
+    - auth
+    - input-handling
+    complexity: high
+    requirements:
+    - FR4
+    - FR6
+    - NFR1
+    - NFR2
+    - NFR5
+    - NFR6
+    status: pending
+    notes: null
+    branch: null
+  task0003:
+    title: merge-pr.py compares the host and accepts HOST/OWNER/NAME
+    plan: tasks/task0003.md
+    files:
+    - em-workflow/scripts/merge-pr.py
+    - tests/test_merge_pr.py
+    - test-docs/unattended-merge-medium-fixes/task0003.tests.yaml
+    skills:
+    - backend-impl
+    domains:
+    - external-io
+    - input-handling
+    - api-contract
+    complexity: high
+    requirements:
+    - FR5
+    - FR6
+    - NFR1
+    - NFR2
+    - NFR4
+    - NFR5
+    - NFR6
+    status: pending
+    notes: null
+    branch: null
+  task0004:
+    title: merge-ci-wait.py accepts HOST/OWNER/NAME
+    plan: tasks/task0004.md
+    files:
+    - em-workflow/scripts/merge-ci-wait.py
+    - tests/test_merge_ci_wait.py
+    - test-docs/unattended-merge-medium-fixes/task0004.tests.yaml
+    skills:
+    - backend-impl
+    domains:
+    - external-io
+    - input-handling
+    - api-contract
+    complexity: medium
+    requirements:
+    - FR5
+    - FR6
+    - NFR1
+    - NFR2
+    - NFR4
+    - NFR5
+    - NFR6
+    status: pending
+    notes: null
+    branch: null
 review:
   status: pending
   rounds_completed: 0
@@ -116,7 +218,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS1
   FR2:
@@ -124,7 +227,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS2
   FR3:
@@ -132,7 +236,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS3
   FR4:
@@ -140,7 +245,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0002
     tests:
     - TS4
     - TS5
@@ -149,7 +255,10 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0003
+    - task0004
     tests:
     - TS6
     - TS7
@@ -159,57 +268,103 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS1
+    - TS2
+    - TS3
+    - TS4
+    - TS5
+    - TS6
+    - TS7
+    - TS8
   FR7:
     title: architecture / spec 観点の分割レビュー
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: []
-    tests: []
+    tests:
+    - TS9
   NFR1:
     title: plugin.json と marketplace.json の version を変えない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS10
   NFR2:
     title: fail-closed を保つ
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS1
+    - TS3
+    - TS4
+    - TS6
+    - TS7
+    - TS8
   NFR3:
     title: 新しい状態ファイルを持たず、workflow.yaml にも書き込まない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS13
   NFR4:
     title: ガード hook が判定する操作には検証済みのリテラルだけを載せる
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0003
+    - task0004
+    tests:
+    - TS7
+    - TS8
+    - TS13
   NFR5:
     title: feature-docs/unattended-merge/ 配下の文書は変えない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS11
   NFR6:
     title: Notion の URL とホームディレクトリの絶対パスを書かない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS12
 batch:
   review_rework_count: 0
   verify_rework:
