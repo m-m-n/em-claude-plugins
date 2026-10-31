@@ -101,7 +101,31 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Terminal state for the control-character stop, with regression tests
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/references/implement-phase.md
+    - em-workflow/references/workflow-schema.md
+    - tests/test_canonical_worktree_path_docs.py
+    - tests/test_workflow_schema_journal_readers_doc_contract.py
+    skills: []
+    domains:
+    - input-handling
+    - concurrency
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: pending
 review:
   status: pending
   rounds_completed: 0
@@ -111,64 +135,87 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
   FR2:
     title: Cite the abort phase rather than restating it
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-3
   FR3:
     title: Keep the existing stop sentence unique
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-4
   FR4:
     title: Keep the failed_kind write-path count accurate
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-5
   FR5:
     title: Regression tests in tests/test_canonical_worktree_path_docs.py
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-5
   NFR1:
     title: Standard-library-only test module; locate text by headings and stable phrases
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-5
   NFR2:
     title: No change to queue_stop_guard.py
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-6
   NFR3:
     title: No plugin version change
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-6
   NFR4:
     title: Keep the existing control-character paragraph wording
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-4
 batch:
   review_rework_count: 0
   verify_rework:
