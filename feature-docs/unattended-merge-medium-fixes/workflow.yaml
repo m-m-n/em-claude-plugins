@@ -134,7 +134,7 @@ tasks:
     - NFR4
     - NFR5
     - NFR6
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/unattended-merge-medium-fixes/task0001
   task0002:
