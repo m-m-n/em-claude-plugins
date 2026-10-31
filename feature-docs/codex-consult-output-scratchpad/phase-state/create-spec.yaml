@@ -1,0 +1,32 @@
+schema_version: 1
+feature: codex-consult-output-scratchpad
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: 16583f9c6f4f9a8e186d5b8c334bd6c7e6daff07
+last_input_digest: sha256:8bcf31690bae2b73117356f2fc6232a0736d6a362b8a8e2f589c212d8b251545
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:8bcf31690bae2b73117356f2fc6232a0736d6a362b8a8e2f589c212d8b251545
+  dispatch_digest_inputs:
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    em-review/agents/codex-reviewer.md: sha256:c22c4c2344550ab73a6144d6e94d60a49907181331fcf966505cea1f5236b98e
+    em-review/references/review-phase.md: sha256:c6ec907c3508c25464fe61bb062d50e804d432b284dd98d63eee1b045e13a4fb
+    em-workflow/agents/codex-reviewer.md: sha256:f687e1d7fa79ca2c72494ce11871dcb30169b8efe5b0fa5d591082cd9657f1da
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
+    em-workflow/references/question-resolution.md: sha256:61740f211d857d9a8b4ca4bcd052e96a489e259b9cc6e5948bd07465329ff49d
+    em-workflow/references/review-phase.md: sha256:310a61d8927edf4deedbd859738c7e460ca44b3b937425df25e796c346060618
+    em-workflow/skills/develop/SKILL.md: sha256:3ad5a832b19ea3e64bbae71d17802ddec407deb9145fee6c3e361f7753ddf6e4
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+    tests/test_codex_reviewer_temp_file_isolation.py: sha256:1a68a76e6206d38dd61be6146056919e1f27ad0846647ef6d2888216d898da94
+    tests/test_question_resolution_doc.py: sha256:d4c19bcde091007fecff9041e48e44a7e55cb2e936f80f9799dd9d8035251f85
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
