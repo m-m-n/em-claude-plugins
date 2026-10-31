@@ -215,6 +215,25 @@ tasks:
 review:
   status: pending
   rounds_completed: 0
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - performance
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
+    split_targets:
+      note: 'FR7: round 1 は この feature の差分（base b1694fa9c）に floor 全観点。round 2-7 は unattended-merge の変更（round2.yaml scope.changed_files、現 HEAD との差分、base 8136b9a04）を 6 分割し、architecture / spec だけを対象ごとに 1 ラウンドずつ走らせる'
+      rounds:
+        '1': B
+        '2': A1-core
+        '3': A2-hooks
+        '4': A3-docs-small-tests
+        '5': A4-tests-scripts
+        '6': A5-tests-pr-preflight
+        '7': A6-tests-skill-doc
 requirements:
   FR1:
     title: ローカルマージを head_sha に束縛する
