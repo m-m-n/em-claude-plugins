@@ -1,0 +1,80 @@
+task_id: task0004
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 12456 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 12512 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_merge_pr.TestRepo.test_ac1_github_remote_returns_github_with_the_name_gh_reports
+      - tests.test_merge_pr.TestRepo.test_ac1_the_remotes_url_is_what_gh_is_asked_to_resolve
+      - tests.test_merge_pr.TestRepo.test_ac1_repo_name_comes_from_gh_not_from_the_url
+      - tests.test_merge_pr.TestRepo.test_ac1_ssh_style_remote_is_resolved
+      - tests.test_merge_pr.TestRepo.test_ac1_non_github_remote_stops_remote_not_github
+      - tests.test_merge_pr.TestRepo.test_ac1_local_path_remote_is_not_github_and_not_offered_to_gh
+      - tests.test_merge_pr.TestRepo.test_ac1_file_scheme_remote_is_not_github_and_not_offered_to_gh
+      - tests.test_merge_pr.TestRepo.test_ac1_credentials_in_the_remote_url_never_reach_gh_or_stdout
+      - tests.test_merge_pr.TestRepo.test_ac1_a_remote_that_does_not_exist_stops_remote_unresolved
+    red_confirmed: true
+    red_reason: "Run with em-workflow/scripts/merge-pr.py absent, every test failed in decide() or in the AC-6 cleanup with AssertionError: 2 != 0 : exit 2, stderr: python3: can't open file '<worktree>/em-workflow/scripts/merge-pr.py': [Errno 2] No such file or directory."
+  AC-2:
+    tests:
+      - tests.test_merge_pr.TestRepo.test_ac2_default_repository_that_differs_stops_remote_unresolved_naming_both
+      - tests.test_merge_pr.TestRepo.test_ac2_default_repository_that_cannot_be_determined_stops_remote_unresolved
+      - tests.test_merge_pr.TestRepo.test_ac2_default_repository_missing_from_the_stub_stops_remote_unresolved
+      - tests.test_merge_pr.TestRepo.test_ac2_default_repository_comparison_ignores_letter_case
+      - tests.test_merge_pr.TestRepo.test_ac2_default_repository_query_names_no_repository
+      - tests.test_merge_pr.TestRepo.test_ac2_remote_that_gh_cannot_resolve_is_decided_before_the_default_is_compared
+    red_confirmed: true
+    red_reason: "Run with the script absent, each test failed with AssertionError: 2 != 0 : exit 2, stderr: python3: can't open file '<worktree>/em-workflow/scripts/merge-pr.py': [Errno 2] No such file or directory. After implementation, mutating the script to skip the default-repository comparison made test_ac2_default_repository_that_differs_stops_remote_unresolved_naming_both fail, and making the comparison case-sensitive made the case test fail; the script was restored afterwards."
+  AC-3:
+    tests:
+      - tests.test_merge_pr.TestResolve.test_ac3_merged_pr_returns_merged_with_number_url_and_merge_commit
+      - tests.test_merge_pr.TestResolve.test_ac3_a_merged_pr_wins_over_an_open_one
+      - tests.test_merge_pr.TestResolve.test_ac3_open_non_draft_pr_returns_open_with_number_url_and_head
+      - tests.test_merge_pr.TestResolve.test_ac3_an_open_non_draft_pr_wins_over_a_draft_and_a_closed_one
+      - tests.test_merge_pr.TestResolve.test_ac3_no_pr_returns_none_with_the_create_head_and_base
+      - tests.test_merge_pr.TestResolve.test_ac3_closed_only_stops_pr_closed
+      - tests.test_merge_pr.TestResolve.test_ac3_open_draft_stops_pr_draft
+      - tests.test_merge_pr.TestResolve.test_ac3_a_draft_stops_even_when_a_closed_pr_also_exists
+      - tests.test_merge_pr.TestResolve.test_ac3_prs_for_another_head_or_base_are_ignored
+      - tests.test_merge_pr.TestResolve.test_ac3_a_cross_repository_pr_with_the_same_head_name_is_ignored
+      - tests.test_merge_pr.TestResolve.test_ac3_the_list_is_requested_for_every_state_of_the_explicit_repository
+    red_confirmed: true
+    red_reason: "Run with the script absent, each test failed with AssertionError: 2 != 0 : exit 2, stderr: python3: can't open file '<worktree>/em-workflow/scripts/merge-pr.py': [Errno 2] No such file or directory."
+  AC-4:
+    tests:
+      - tests.test_merge_pr.TestState.test_ac4_open_mergeable_pr_with_the_expected_head_is_ready
+      - tests.test_merge_pr.TestState.test_ac4_unknown_mergeability_counts_as_not_conflicting
+      - tests.test_merge_pr.TestState.test_ac4_closed_pr_stops_pr_closed
+      - tests.test_merge_pr.TestState.test_ac4_merged_pr_returns_merged_with_url_and_merge_commit
+      - tests.test_merge_pr.TestState.test_ac4_merged_wins_even_when_the_head_differs
+      - tests.test_merge_pr.TestState.test_ac4_draft_pr_stops_pr_draft
+      - tests.test_merge_pr.TestState.test_ac4_conflicting_pr_stops_pr_conflicting
+      - tests.test_merge_pr.TestState.test_ac4_head_different_from_the_expected_one_stops_pr_head_moved
+      - tests.test_merge_pr.TestState.test_ac4_closed_is_decided_before_draft_conflict_and_head
+      - tests.test_merge_pr.TestState.test_ac4_draft_is_decided_before_conflict_and_head
+      - tests.test_merge_pr.TestState.test_ac4_conflict_is_decided_before_head
+      - tests.test_merge_pr.TestState.test_ac4_the_pr_is_read_with_the_explicit_repository
+      - tests.test_merge_pr.TestState.test_ac4_a_different_pr_number_in_the_answer_is_an_internal_failure
+    red_confirmed: true
+    red_reason: "Run with the script absent, each test failed with AssertionError: 2 != 0 : exit 2, stderr: python3: can't open file '<worktree>/em-workflow/scripts/merge-pr.py': [Errno 2] No such file or directory (the internal-failure test failed with AssertionError: 2 unexpectedly found in (0, 2)). After implementation, mutating the script to drop the head comparison made the head-moved test fail, and swapping the closed and draft checks made the precedence test fail; the script was restored afterwards."
+  AC-5:
+    tests:
+      - tests.test_merge_pr.TestMalformedOutput.test_ac5_resolve_rejects_malformed_pr_lists
+      - tests.test_merge_pr.TestMalformedOutput.test_ac5_resolve_rejects_a_malformed_entry_even_when_it_would_not_be_chosen
+      - tests.test_merge_pr.TestMalformedOutput.test_ac5_resolve_exiting_non_zero_is_an_internal_failure
+      - tests.test_merge_pr.TestMalformedOutput.test_ac5_state_rejects_malformed_pr_documents
+      - tests.test_merge_pr.TestMalformedOutput.test_ac5_state_exiting_non_zero_is_an_internal_failure
+      - tests.test_merge_pr.TestMalformedOutput.test_ac5_repo_rejects_malformed_repository_answers
+      - tests.test_merge_pr.TestMalformedOutput.test_ac5_a_gh_that_never_answers_ends_within_the_time_limit
+      - tests.test_merge_pr.TestMalformedOutput.test_ac5_the_time_limit_covers_the_state_and_repo_calls_too
+    red_confirmed: true
+    red_reason: "Run with the script absent, each test failed: the malformed-output and time-limit cases with AssertionError: 2 unexpectedly found in (0, 2) : exit 2, stderr: python3: can't open file '<worktree>/em-workflow/scripts/merge-pr.py': [Errno 2] No such file or directory (every sub-case of the table-driven tests failed). After implementation, mutating the script to accept an http URL made the non-https sub-cases fail; the script was restored afterwards."
+  AC-6:
+    tests:
+      - tests.test_merge_pr.TestOperationBoundary.test_ac6_all_subcommands_use_only_read_operations_with_an_explicit_repository
+      - tests.test_merge_pr.TestOperationBoundary.test_ac6_git_is_used_only_to_read_the_remote_url
+      - tests.test_merge_pr.TestOperationBoundary.test_ac6_resolve_and_state_do_not_use_git_at_all
+      - tests.test_merge_pr.TestOperationBoundary.test_ac6_the_boundary_check_itself_rejects_write_shaped_calls
+      - tests.test_merge_pr.TestOperationBoundary.test_ac6_the_script_source_names_no_gh_write_verb
+    red_confirmed: true
+    red_reason: "Run with the script absent, test_ac6_all_subcommands_use_only_read_operations_with_an_explicit_repository, test_ac6_git_is_used_only_to_read_the_remote_url and test_ac6_resolve_and_state_do_not_use_git_at_all failed with AssertionError: 2 != 0 : exit 2 (script not found), and test_ac6_the_script_source_names_no_gh_write_verb errored with FileNotFoundError on the script path. test_ac6_the_boundary_check_itself_rejects_write_shaped_calls passed before the script existed: it is a non-vacuity guard for the log checker that every other test applies after it ends (gh log shapes, explicit repository, git log shapes, unchanged refs/config/status)."
