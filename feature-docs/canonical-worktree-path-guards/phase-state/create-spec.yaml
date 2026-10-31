@@ -1,11 +1,11 @@
 schema_version: 1
 feature: canonical-worktree-path-guards
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: e322614ac4d9b617c7e531e2ca88d2fdcc6b1e46
-last_input_digest: sha256:ba8ddf4d5b3fe6e02a5ec0a41e752fd8a03a1351e0ae5dccc1acedc1f5b969d1
-active_request_id: create-spec-run-0001
+last_input_digest: sha256:843a7d0270a7dc074dc06749f22958438166a77bb91d3c7512b23d62b94689bd
+active_request_id: create-spec-run-0003
 packets:
   create-spec-q0001:
     status: answered
@@ -78,6 +78,12 @@ worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
   input_digest: sha256:ba8ddf4d5b3fe6e02a5ec0a41e752fd8a03a1351e0ae5dccc1acedc1f5b969d1
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:ba8ddf4d5b3fe6e02a5ec0a41e752fd8a03a1351e0ae5dccc1acedc1f5b969d1
+- request_id: create-spec-run-0003
+  status: dispatched
+  input_digest: sha256:843a7d0270a7dc074dc06749f22958438166a77bb91d3c7512b23d62b94689bd
 artifacts: []
 patches: []
 progress_fingerprint: null
