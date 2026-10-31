@@ -1,0 +1,158 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_rework_docs_only_route_doc.TestDocsOnlySubsectionPlacementAndScope.test_heading_present_exactly_once
+      - tests.test_rework_docs_only_route_doc.TestDocsOnlySubsectionPlacementAndScope.test_heading_follows_the_whole_wording_route_and_precedes_section_10
+      - tests.test_rework_docs_only_route_doc.TestDocsOnlySubsectionPlacementAndScope.test_heading_sits_inside_section_9
+      - tests.test_rework_docs_only_route_doc.TestDocsOnlySubsectionPlacementAndScope.test_new_subsection_uses_its_own_labels_not_the_wording_routes
+      - tests.test_rework_docs_only_route_doc.TestDocsOnlySubsectionPlacementAndScope.test_scope_names_ineligibility_and_the_four_resolution_targets
+      - tests.test_rework_docs_only_route_doc.TestDocsOnlySubsectionPlacementAndScope.test_scope_sends_spec_or_requirements_changes_to_the_spec_change_transition
+      - tests.test_rework_docs_only_route_doc.TestDocsOnlySubsectionPlacementAndScope.test_scope_matcher_would_reject_a_scope_without_the_spec_change_rule
+      - tests.test_rework_docs_only_route_doc.TestDocsOnlySubsectionPlacementAndScope.test_section_9_table_adds_the_docs_only_route_to_the_two_planning_documents
+      - tests.test_rework_docs_only_route_doc.TestDocsOnlySubsectionPlacementAndScope.test_section_9_table_has_a_row_for_existing_task_plans
+      - tests.test_rework_docs_only_route_doc.TestDocsOnlySubsectionPlacementAndScope.test_section_9_table_keeps_the_new_task_plan_and_spec_rows
+      - tests.test_rework_docs_only_route_doc.TestDocsOnlySubsectionPlacementAndScope.test_section_9_table_matcher_would_reject_an_unchanged_row
+    red_confirmed: true
+    red_reason: >-
+      Ran `python3 -m unittest tests.test_rework_docs_only_route_doc` against the
+      unmodified document: the placement, label, scope and Section 9 table tests
+      failed with `AssertionError: missing marker: '### Docs-only correction
+      route'`, `AssertionError: 0 != 1` (heading count) and `AssertionError: 'the
+      docs-only correction route below' not found in "Per Section 8's coverage
+      rules"`. The two non-vacuity matcher tests and the unchanged-row test passed
+      before the edit by design.
+  AC-2:
+    tests:
+      - tests.test_rework_docs_only_route_doc.TestDecisionOrderAndWordingRouteEdits.test_decision_order_is_stated_in_the_new_subsection
+      - tests.test_rework_docs_only_route_doc.TestDecisionOrderAndWordingRouteEdits.test_decision_order_names_the_routes_in_the_stated_order
+      - tests.test_rework_docs_only_route_doc.TestDecisionOrderAndWordingRouteEdits.test_order_matcher_would_reject_a_swapped_order
+      - tests.test_rework_docs_only_route_doc.TestDecisionOrderAndWordingRouteEdits.test_guard_names_the_docs_only_route_and_keeps_its_pinned_strings
+      - tests.test_rework_docs_only_route_doc.TestDecisionOrderAndWordingRouteEdits.test_ordering_names_the_docs_only_route_and_keeps_the_gate_citation
+      - tests.test_rework_docs_only_route_doc.TestDecisionOrderAndWordingRouteEdits.test_ordering_matcher_would_reject_the_base_ordering
+      - tests.test_rework_docs_only_route_doc.TestDecisionOrderAndWordingRouteEdits.test_introductory_paragraph_is_byte_identical
+      - tests.test_rework_docs_only_route_doc.TestDecisionOrderAndWordingRouteEdits.test_applies_to_is_byte_identical
+      - tests.test_rework_docs_only_route_doc.TestDecisionOrderAndWordingRouteEdits.test_eligibility_block_is_byte_identical
+      - tests.test_rework_docs_only_route_doc.TestDecisionOrderAndWordingRouteEdits.test_eligibility_block_keeps_three_numbered_conditions_and_conjunctive
+      - tests.test_rework_docs_only_route_doc.TestDecisionOrderAndWordingRouteEdits.test_outcome_is_byte_identical
+      - tests.test_rework_docs_only_route_doc.TestDecisionOrderAndWordingRouteEdits.test_byte_identity_matcher_would_catch_a_reflow
+    red_confirmed: true
+    red_reason: >-
+      Ran `python3 -m unittest tests.test_rework_docs_only_route_doc` against the
+      unmodified document: the decision-order tests failed with `AssertionError:
+      missing marker: '### Docs-only correction route'`, and the Guard and
+      Ordering tests failed with `AssertionError: 'Docs-only correction route' not
+      found in '**Guard**: failing any ONE of the three conditions ...'` (and the
+      same for the Ordering paragraph). The byte-identity pins of the introductory
+      paragraph, Applies to, Eligibility block and Outcome passed before the edit
+      by design: they are preservation pins whose literals were copied from the
+      base revision, and they stay green after the edit.
+  AC-3:
+    tests:
+      - tests.test_rework_docs_only_route_doc.TestDocsOnlyRoundResult.test_states_that_no_task_is_synthesized
+      - tests.test_rework_docs_only_route_doc.TestDocsOnlyRoundResult.test_rework_planner_corrects_the_documents_per_the_cited_contract
+      - tests.test_rework_docs_only_route_doc.TestDocsOnlyRoundResult.test_requirement_test_references_change_through_the_cited_tests_replacement
+      - tests.test_rework_docs_only_route_doc.TestDocsOnlyRoundResult.test_only_the_origin_step_returns_to_pending
+      - tests.test_rework_docs_only_route_doc.TestDocsOnlyRoundResult.test_implement_not_returning_to_pending_has_a_sentence_of_its_own
+      - tests.test_rework_docs_only_route_doc.TestDocsOnlyRoundResult.test_matcher_fails_on_a_subsection_that_only_says_origin_step
+      - tests.test_rework_docs_only_route_doc.TestDocsOnlyRoundResult.test_matcher_fails_when_the_implement_clause_shares_the_origin_sentence
+      - tests.test_rework_docs_only_route_doc.TestDocsOnlyRoundResult.test_matcher_accepts_the_standalone_sentence
+      - tests.test_rework_docs_only_route_doc.TestDocsOnlyRoundResult.test_invariant_1_is_not_reworded
+      - tests.test_rework_docs_only_route_doc.TestDocsOnlyRoundResult.test_invariant_1_is_stated_as_not_engaged_by_this_route
+      - tests.test_rework_docs_only_route_doc.TestDocsOnlyRoundResult.test_all_eleven_invariants_keep_their_text
+      - tests.test_rework_docs_only_route_doc.TestDocsOnlyRoundResult.test_section_11_digest_would_detect_an_edited_invariant
+    red_confirmed: true
+    red_reason: >-
+      Ran `python3 -m unittest tests.test_rework_docs_only_route_doc` against the
+      unmodified document: the result-paragraph tests (no task, planner corrects,
+      tests replacement, origin step only, standalone `implement` sentence,
+      Invariant 1 not engaged) failed with `AssertionError: missing marker: '###
+      Docs-only correction route'`. The Invariant 1 literal pin, the Section 11
+      digest pin and the three matcher negative samples passed before the edit by
+      design (preservation pins and non-vacuity samples).
+  AC-4:
+    tests:
+      - tests.test_rework_docs_only_route_doc.TestMixedRoundAndDeclaration.test_mixed_round_splits_docs_only_and_code_items
+      - tests.test_rework_docs_only_route_doc.TestMixedRoundAndDeclaration.test_mixed_round_with_a_task_returns_implement_and_the_origin_step
+      - tests.test_rework_docs_only_route_doc.TestMixedRoundAndDeclaration.test_origin_step_only_result_is_limited_to_docs_only_rounds
+      - tests.test_rework_docs_only_route_doc.TestMixedRoundAndDeclaration.test_mixed_matcher_would_reject_a_paragraph_without_the_limit
+      - tests.test_rework_docs_only_route_doc.TestMixedRoundAndDeclaration.test_declaration_cites_payload_doc_corrections_and_the_contract
+      - tests.test_rework_docs_only_route_doc.TestMixedRoundAndDeclaration.test_declaration_covers_every_correction_through_this_route
+      - tests.test_rework_docs_only_route_doc.TestMixedRoundAndDeclaration.test_declaration_does_not_restate_the_entry_shape
+      - tests.test_rework_docs_only_route_doc.TestMixedRoundAndDeclaration.test_shape_leak_would_be_detected
+    red_confirmed: true
+    red_reason: >-
+      Ran `python3 -m unittest tests.test_rework_docs_only_route_doc` against the
+      unmodified document: the mixed-round and declaration tests failed with
+      `AssertionError: missing marker: '### Docs-only correction route'` (the
+      entry-shape absence test fails there too, because it needs the subsection to
+      exist before it can check what the subsection leaves out). The two non-
+      vacuity samples passed before the edit by design.
+  AC-5:
+    tests:
+      - tests.test_rework_docs_only_route_doc.TestConsistencyWithTheSpecification.test_every_change_stays_consistent_with_spec_and_requirements
+      - tests.test_rework_docs_only_route_doc.TestConsistencyWithTheSpecification.test_the_route_never_changes_spec_or_requirements
+      - tests.test_rework_docs_only_route_doc.TestConsistencyWithTheSpecification.test_a_weakening_correction_is_not_a_docs_only_correction
+      - tests.test_rework_docs_only_route_doc.TestConsistencyWithTheSpecification.test_a_weakening_correction_continues_to_synthesis_or_spec_change
+      - tests.test_rework_docs_only_route_doc.TestConsistencyWithTheSpecification.test_matcher_would_reject_a_paragraph_without_the_weakening_rule
+    red_confirmed: true
+    red_reason: >-
+      Ran `python3 -m unittest tests.test_rework_docs_only_route_doc` against the
+      unmodified document: the four TM-7 assertions failed with `AssertionError:
+      missing marker: '### Docs-only correction route'`. The non-vacuity sample
+      passed before the edit by design.
+  AC-6:
+    tests:
+      - tests.test_rework_docs_only_route_doc.TestFeatureDocsFilesRuleAndSection12.test_section_7_states_the_feature_docs_files_rule
+      - tests.test_rework_docs_only_route_doc.TestFeatureDocsFilesRuleAndSection12.test_section_7_states_the_segment_normalization
+      - tests.test_rework_docs_only_route_doc.TestFeatureDocsFilesRuleAndSection12.test_section_7_limits_the_rule_to_append_rework_entries
+      - tests.test_rework_docs_only_route_doc.TestFeatureDocsFilesRuleAndSection12.test_section_7_keeps_its_base_sentences
+      - tests.test_rework_docs_only_route_doc.TestFeatureDocsFilesRuleAndSection12.test_section_7_matcher_would_reject_a_loose_rule
+      - tests.test_rework_docs_only_route_doc.TestFeatureDocsFilesRuleAndSection12.test_section_12_lists_the_files_rule
+      - tests.test_rework_docs_only_route_doc.TestFeatureDocsFilesRuleAndSection12.test_section_12_lists_the_empty_entries_rule
+      - tests.test_rework_docs_only_route_doc.TestFeatureDocsFilesRuleAndSection12.test_section_12_lists_the_rename_aware_coverage_rule
+      - tests.test_rework_docs_only_route_doc.TestFeatureDocsFilesRuleAndSection12.test_section_12_keeps_its_six_base_bullets_unchanged
+      - tests.test_rework_docs_only_route_doc.TestFeatureDocsFilesRuleAndSection12.test_section_12_has_exactly_three_additional_bullets
+      - tests.test_rework_docs_only_route_doc.TestFeatureDocsFilesRuleAndSection12.test_section_12_matcher_would_reject_the_base_bullet_list
+    red_confirmed: true
+    red_reason: >-
+      Ran `python3 -m unittest tests.test_rework_docs_only_route_doc` against the
+      unmodified document: the Section 7 tests failed with `AssertionError: Regex
+      didn't match: "(?i)a rework-synthesized task's `files` contain no path whose
+      first path segment is exactly `feature-docs`" not found in '## 7. Metadata
+      derivation ...'`, and the Section 12 tests failed with `AssertionError: 0 !=
+      1` (no bullet for the files rule, the empty-entries rule or the rename-aware
+      coverage rule) and `AssertionError: 6 != 9`. The base-sentence pin, the six-
+      base-bullets pin and the two non-vacuity samples passed before the edit by
+      design.
+  AC-7:
+    tests:
+      - tests.test_rework_docs_only_route_doc.TestPreservedStructure.test_thirteen_numbered_sections_in_base_order
+      - tests.test_rework_docs_only_route_doc.TestPreservedStructure.test_no_fourteenth_section
+      - tests.test_rework_docs_only_route_doc.TestPreservedStructure.test_exactly_eleven_invariants
+      - tests.test_rework_docs_only_route_doc.TestPreservedStructure.test_section_2_keeps_the_statement_that_puts_the_subsection_on_all_routes
+      - tests.test_rework_docs_only_route_doc.TestPreservedStructure.test_no_classification_gate_verdict_between_wording_route_and_section_10
+      - tests.test_rework_docs_only_route_doc.TestPreservedStructure.test_verdict_leak_would_be_detected
+      - tests.test_rework_docs_only_route_doc.TestPreservedStructure.test_wording_route_blocks_still_extract_from_the_first_label_occurrence
+      - tests.test_rework_docs_only_route_doc.TestModuleHygiene.test_module_imports_only_the_standard_library
+      - tests.test_rework_docs_only_route_doc.TestModuleHygiene.test_module_reads_only_the_rework_task_synthesis_document
+      - tests.test_rework_synthesis_contract.TestReworkSynthesisSSOTExistsAndStructure.test_all_thirteen_sections_present_in_order
+      - tests.test_rework_synthesis_contract.TestReworkSynthesisSSOTInvariants.test_invariant_list_has_eleven_items
+      - tests.test_wording_correction_route.TestRouteDoesNotRestateOwnedRules.test_does_not_restate_classification_gate_verdicts
+      - tests.test_wording_correction_route.TestWordingCorrectionRouteExistsAsDistinctBranch.test_route_is_a_subsection_not_a_new_numbered_top_level_section
+    red_confirmed: false
+    red_reason: >-
+      This criterion is a preservation requirement (13 sections in base order, no
+      `## 14.`, 11 invariants, no verdict literal in the Wording-correction route
+      range, stdlib-only module, whole suite green): the behavior pre-existed, so
+      its checks passed against the unmodified document. The existing
+      `tests.test_rework_synthesis_contract` (thirteen sections, eleven
+      invariants) and `tests.test_wording_correction_route` (no `## 14.`, no
+      verdict literal) detect the same behavior; no red state occurred for this
+      change. The one new-module test in this list that failed before the edit
+      (`test_wording_route_blocks_still_extract_from_the_first_label_occurrence`,
+      `AssertionError: -1 == -1 : missing heading`) checks the placement of the
+      new subsection, which AC-1 owns. The whole-suite part is verified by
+      `python3 -m unittest discover -s tests`, whose result is final_failures.

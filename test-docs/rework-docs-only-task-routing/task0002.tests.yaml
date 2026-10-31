@@ -1,0 +1,123 @@
+task_id: task0002
+baseline_failures: []          # full suite, 13058 tests (1 skipped), 0 failures before any change
+final_failures: []             # full suite re-executed after implementation and this record, 13100 tests (1 skipped), 0 failures
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_rework_planner_docs_only_doc.ScopeTableTests.test_agent_table_has_existing_task_row_and_docs_only_conditions
+      - tests.test_rework_planner_docs_only_doc.ScopeTableTests.test_contract_table_has_existing_task_row_and_docs_only_conditions
+      - tests.test_rework_planner_docs_only_doc.ScopeTableTests.test_contract_table_keeps_always_created_and_spec_change_row
+      - tests.test_rework_planner_docs_only_doc.ScopeTableTests.test_agent_table_keeps_existing_rows
+      - tests.test_rework_planner_docs_only_doc.ScopeTableTests.test_negative_sample_table_without_the_row_is_detected
+    red_confirmed: true
+    red_reason: >-
+      Before the document edits the two docs-only row tests failed for both
+      documents: AssertionError: '' is not true : no row for the existing
+      `tasks/*.md` (the tables had no such row). The keeps-existing-rows
+      tests and the negative sample pin text that pre-exists the change and
+      passed throughout.
+  AC-2:
+    tests:
+      - tests.test_rework_planner_docs_only_doc.AgentRouteTests.test_opening_names_the_route_as_the_only_exception_with_citation
+      - tests.test_rework_planner_docs_only_doc.AgentRouteTests.test_process_checks_the_route_decision_order_first
+      - tests.test_rework_planner_docs_only_doc.AgentRouteTests.test_process_corrects_directly_with_no_task_and_declares
+      - tests.test_rework_planner_docs_only_doc.AgentRouteTests.test_process_changes_test_references_through_the_tests_replacement
+      - tests.test_rework_planner_docs_only_doc.AgentRouteTests.test_process_splits_a_mixed_round_within_the_same_dispatch
+      - tests.test_rework_planner_docs_only_doc.AgentRouteTests.test_existing_never_rewrite_sentence_is_kept
+      - tests.test_rework_planner_docs_only_doc.AgentRouteTests.test_negative_sample_without_the_route_is_detected
+      - tests.test_rework_planner_docs_only_doc.AgentOutputTests.test_output_names_doc_corrections_and_points_to_the_contract
+      - tests.test_rework_planner_docs_only_doc.AgentOutputTests.test_negative_sample_output_without_it_is_detected
+    red_confirmed: true
+    red_reason: >-
+      Before the agent edits the AgentRouteTests class errored in setUpClass
+      (AssertionError: heading not found: '## Route check and docs-only
+      corrections'), so every test in it was red; two of them
+      (test_existing_never_rewrite_sentence_is_kept and the negative sample)
+      pin text that pre-exists and would pass on their own.
+      test_output_names_doc_corrections_and_points_to_the_contract failed
+      with AssertionError: [] is not true (the Output section did not name
+      payload.doc_corrections).
+  AC-3:
+    tests:
+      - tests.test_rework_planner_docs_only_doc.AgentFilesRuleTests.test_agent_states_the_feature_docs_files_rule_with_owner_citation
+      - tests.test_rework_planner_docs_only_doc.AgentFilesRuleTests.test_negative_sample_without_the_rule_is_detected
+    red_confirmed: true
+    red_reason: >-
+      test_agent_states_the_feature_docs_files_rule_with_owner_citation
+      failed before the edit with AssertionError: [] is not true (no
+      paragraph stated the feature-docs first-path-segment rule citing
+      Section 7). The negative sample passes by construction.
+  AC-4:
+    tests:
+      - tests.test_rework_planner_docs_only_doc.WritePolicyTests.test_each_rewritten_existing_task_plan_is_a_replace_own_target
+      - tests.test_rework_planner_docs_only_doc.WritePolicyTests.test_alignment_with_the_spec_writer_replace_own_definition
+      - tests.test_rework_planner_docs_only_doc.WritePolicyTests.test_spec_and_requirements_never_become_targets
+      - tests.test_rework_planner_docs_only_doc.WritePolicyTests.test_negative_sample_without_the_listing_is_detected
+    red_confirmed: true
+    red_reason: >-
+      The three contract tests failed before the edit with AssertionError:
+      [] is not true (the write_policy section had no tasks/*.md listing
+      paragraph, no replace_own alignment paragraph and no statement that
+      SPEC.md and REQUIREMENTS.md never become targets). The negative sample
+      passes by construction.
+  AC-5:
+    tests:
+      - tests.test_rework_planner_docs_only_doc.DocCorrectionsSectionTests.test_section_sits_between_rationale_and_spec_change_sections
+      - tests.test_rework_planner_docs_only_doc.DocCorrectionsSectionTests.test_section_defines_the_four_fields
+      - tests.test_rework_planner_docs_only_doc.DocCorrectionsSectionTests.test_origin_pair_is_the_invariant_six_pair_cited
+      - tests.test_rework_planner_docs_only_doc.DocCorrectionsSectionTests.test_obligation_to_declare_every_docs_only_correction
+      - tests.test_rework_planner_docs_only_doc.DocCorrectionsSectionTests.test_declaration_is_the_traceability_record
+      - tests.test_rework_planner_docs_only_doc.DocCorrectionsSectionTests.test_section_holds_no_numbered_list
+      - tests.test_rework_planner_docs_only_doc.CoverageCheckTwoTests.test_check_two_accepts_a_renamed_id_only_through_a_declared_pair
+      - tests.test_rework_planner_docs_only_doc.CoverageCheckTwoTests.test_checklist_has_exactly_four_numbered_items
+      - tests.test_rework_planner_docs_only_doc.CoverageCheckTwoTests.test_baseline_first_appears_after_item_four
+      - tests.test_rework_planner_docs_only_doc.CoverageCheckTwoTests.test_negative_sample_fifth_numbered_item_fails_the_count_pin
+      - tests.test_worker_contracts_planning.TestReworkPlannerContract.test_rework_index_four_validation_checks_present
+      - tests.test_worker_contracts_planning.TestReworkPlannerContract.test_check_three_depends_on_a_supplied_baseline
+    red_confirmed: true
+    red_reason: >-
+      Before the contract edits the DocCorrectionsSectionTests class errored
+      in setUpClass (AssertionError: heading not found:
+      '## `payload.doc_corrections`') and
+      test_check_two_accepts_a_renamed_id_only_through_a_declared_pair failed
+      (AssertionError: 'only through a declared `scenario_renames` pair' not
+      found in 'Every ID in `covered_by_existing` already exists in
+      `verification_index`.'). The four-item count, the baseline-after-item-4
+      pin and the negative samples pin shape that pre-exists the change and
+      passed throughout; the existing tests.test_worker_contracts_planning
+      checks of the same region keep passing with the amended check 2 (no
+      new red state for them).
+  AC-6:
+    tests:
+      - tests.test_rework_planner_docs_only_doc.AgentPatchShapeTests.test_docs_only_patch_shape_is_described
+      - tests.test_rework_planner_docs_only_doc.AgentPatchShapeTests.test_round_with_tasks_description_remains
+      - tests.test_rework_planner_docs_only_doc.AgentPatchShapeTests.test_negative_sample_without_docs_only_shape_is_detected
+    red_confirmed: true
+    red_reason: >-
+      test_docs_only_patch_shape_is_described failed before the edit with
+      AssertionError: [] is not true : no paragraph carries the whole
+      docs-only shape. test_round_with_tasks_description_remains pins the
+      existing round-with-tasks description and passed throughout (it guards
+      against the edit weakening it); the negative sample passes by
+      construction.
+  AC-7:
+    tests:
+      - tests.test_rework_planner_docs_only_doc.UnchangedConstraintTests.test_implementer_feature_docs_constraint_is_unchanged
+      - tests.test_rework_planner_docs_only_doc.UnchangedConstraintTests.test_gate_identifiers_section_keeps_exactly_its_base_tokens
+      - tests.test_rework_planner_docs_only_doc.UnchangedConstraintTests.test_negative_sample_added_gate_token_is_detected
+      - tests.test_rework_planner_docs_only_doc.UnchangedConstraintTests.test_contract_carries_neither_phase_r5_nor_reviews_round
+      - tests.test_rework_planner_docs_only_doc.UnchangedConstraintTests.test_negative_sample_forbidden_strings_are_detectable
+    red_confirmed: false
+    red_reason: >-
+      These pins guard behavior that pre-exists the change (the implementer
+      constraint, the Gate identifiers section holding only
+      rework.spec-change, and the absence of Phase R5 and reviews/round in
+      the contract), so they were green before the implementation and no
+      red state occurred; their value is catching a later edit that breaks
+      the unchanged state. The searched existing tests
+      (tests.test_spec_change_gate_binding reads the Gate identifiers
+      section; tests.test_canonical_worktree_path_docs reads implementer.md
+      Inputs and Step 3 only) do not pin the Never modify `feature-docs/**`
+      sentence, so no existing test covers that one. The standard-library-only
+      import rule and the whole-suite-passes outcome are covered by the full
+      suite run recorded in final_failures.

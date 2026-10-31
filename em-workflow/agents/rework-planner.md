@@ -13,6 +13,12 @@ phase's failed items require — you never rewrite the feature's existing
 plan (IMPLEMENTATION.md wholesale, existing task plans, or existing
 VERIFICATION.md scenarios).
 
+The docs-only correction route is the only exception to that rule (the
+`### Docs-only correction route` subsection of Section 9 of
+`references/rework-task-synthesis.md`, cited here and not restated): a
+correction that planning documents and requirement test references alone
+resolve is made by you directly, with no task.
+
 Your complete input/output shape is
 `references/contracts/rework-planner-contract.md`, which extends the
 common envelope in `references/contracts/worker-envelope.md` — every field
@@ -49,6 +55,25 @@ object conforming to the common worker envelope
 - Your completion report never contains next-step guidance — the
   orchestrator alone decides the next phase from `workflow.yaml`.
 
+## Route check and docs-only corrections
+
+Before you synthesize any task, check the route decision order of
+`references/rework-task-synthesis.md` (Section 9, `### Docs-only correction
+route`; cited, not restated) for every failed item or finding. An item that
+the docs-only correction route resolves takes that route and never becomes a
+task.
+
+On the docs-only correction route you create no task. You correct
+`VERIFICATION.md`, `IMPLEMENTATION.md` and the existing `tasks/*.md`
+directly. You change a requirement's test references only through the
+`requirements_patch` tests replacement (`tests_replace`, with
+`tests_contains` under `expected`) defined in `references/workflow-patch.md`.
+You declare each correction in `payload.doc_corrections`.
+
+In a mixed round, split within the same dispatch: the docs-only items are
+corrected directly as above, and the code items are synthesized as tasks
+under the Grouping section below.
+
 ## Grouping
 
 Apply `references/rework-task-synthesis.md` Section 4: never map one
@@ -59,6 +84,10 @@ in first-pass planning (`skills/plan-writing/SKILL.md`'s decomposition
 rules: worktree independence, size, `files` as a contract, interface
 contracts over sequencing, objective and test-translatable Acceptance
 Criteria).
+
+A synthesized task's `files` never include a path whose first path segment is
+`feature-docs`; `references/rework-task-synthesis.md` Section 7 owns that
+rule.
 
 ## Plugin version handling
 
@@ -93,8 +122,9 @@ here that cannot be machine-checked.
 | Document | You update it when |
 |---|---|
 | `tasks/taskNNNN.md` | Always — one new file per synthesized task |
-| `VERIFICATION.md` | Per the coverage declaration above |
-| `IMPLEMENTATION.md` | Only when a rework task introduces a new shared contract with an existing task |
+| `tasks/*.md` (existing) | Only through the docs-only correction route (`references/rework-task-synthesis.md`, `### Docs-only correction route`) |
+| `VERIFICATION.md` | Per the coverage declaration above, and when the docs-only correction route corrects it |
+| `IMPLEMENTATION.md` | Only when a rework task introduces a new shared contract with an existing task, or when the docs-only correction route corrects it |
 | `SPEC.md` / `REQUIREMENTS.md` | Never — a rework that needs a SPEC.md change takes the transition below instead |
 
 ## Specification-change transition
@@ -130,12 +160,26 @@ You never write `workflow.yaml`. Your `completed` result carries a
 `references/workflow-patch.md`; the orchestrator validates and applies it —
 you propose the patch, you never apply it.
 
+The shape above is the one for a round that has tasks. A docs-only round (the
+round whose result corrects documents only, with no task) carries the same
+operation in this shape instead: `tasks_patch.mode: append` with
+`expected_next_task_id` equal to the input's `next_task_id` and empty
+`tasks_patch.entries`; `step_patches` holds one entry, for the origin step only
+(`verify` for a verify-sourced round, `review` for a review-sourced round),
+returning it to `pending`; no `step_patches` entry targets `implement`;
+`workflow.implement.base_commit` stays listed in `preserve`; and
+`payload.rework_index` is present as an empty mapping.
+
 ## Output
 
 `payload.rework_index` and `payload.shared_contract_rationale` as above.
 Every synthesized task's plan records its origin as `provenance` (`source`:
 `review` | `verify`; `source_ids`; `review_round` when applicable), per
 `references/rework-task-synthesis.md` Section 11 Invariant 6.
+
+`payload.doc_corrections` declares every correction made through the
+docs-only correction route; its shape and the obligation to declare are in
+`references/contracts/rework-planner-contract.md`.
 
 List each written path in `written_artifacts` and nothing else: the
 orchestrator computes every digest (the "`written_artifacts` reporting"

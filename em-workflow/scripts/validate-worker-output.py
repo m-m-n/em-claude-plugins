@@ -1315,6 +1315,23 @@ def validate_task_entry(task_id, entry, mode, registries, workflow):
             errors.append(err("provenance", f"{p}.provenance must be a mapping"))
         elif provenance.get("source") not in ("review", "verify"):
             errors.append(err("provenance", f"{p}.provenance.source must be 'review' or 'verify'"))
+        # rework-docs-only-task-routing/task0004 (FR3, TM-1): `append` is the
+        # mode bound to `append_rework`, so this is the rework-synthesized
+        # task entry; `replace_planning` entries are never checked. A path
+        # is a planning document when its first normalized segment
+        # (path_segments: `\` as `/`, empty and `.` dropped) is exactly
+        # `feature-docs` -- exact segment equality, so `feature-docs-archive/x`
+        # and `src/feature-docs/x` pass. The rule's prose is owned by
+        # references/rework-task-synthesis.md, cited not restated.
+        for f in files:
+            if isinstance(f, str) and path_segments(f)[:1] == ["feature-docs"]:
+                errors.append(
+                    err(
+                        "rework-task-feature-docs",
+                        f"{p}.files entry {f!r} is a feature-docs planning document; "
+                        "a rework-synthesized task's files must not reach feature-docs/**",
+                    )
+                )
     return errors
 
 
@@ -1486,6 +1503,29 @@ def validate_workflow_patch(
             errors.append(err("step_patches", f"step_patches[{i}].set may only contain 'status'"))
         if workflow is not None and sp.get("step_id") not in workflow_step_ids(workflow):
             errors.append(err("step_patches", f"step_patches[{i}].step_id {sp.get('step_id')!r} does not exist in workflow.yaml"))
+
+    # rework-docs-only-task-routing/task0004 (FR5, TM-2): a docs-only round
+    # is recognized by empty task entries (no new patch field marks it), so
+    # an `append_rework` patch whose `tasks_patch.entries` is absent or empty
+    # must not return `implement` to `pending` -- implement stays completed.
+    # "Empty" follows this function's own reading of `entries` above
+    # (`tasks_patch.get("entries") or {}`). Structural layer: runs with and
+    # without --dry-run-apply. The rule's prose is owned by
+    # references/rework-task-synthesis.md ("Docs-only correction route"),
+    # cited not restated.
+    if operation == "append_rework" and not tasks_patch.get("entries"):
+        for i, sp in enumerate(step_patches):
+            if not isinstance(sp, dict) or sp.get("step_id") != "implement":
+                continue
+            sp_set = sp.get("set")
+            if isinstance(sp_set, dict) and sp_set.get("status") == "pending":
+                errors.append(
+                    err(
+                        "docs-only-implement-reset",
+                        f"step_patches[{i}] sets implement to 'pending' on an append_rework patch "
+                        "with no tasks_patch.entries (a docs-only round); implement must stay completed",
+                    )
+                )
 
     preserve = data.get("preserve")
     if preserve is None:
@@ -2154,7 +2194,14 @@ def validate_worker_result(
     # --- rework_index coverage (5.4.4) ---
     if worker == "rework-planner" and status == "completed":
         errors.extend(
-            _validate_rework_index(payload.get("rework_index") or {}, workflow_patch, envelope, feature_dir, baseline_dir)
+            _validate_rework_index(
+                payload.get("rework_index") or {},
+                workflow_patch,
+                envelope,
+                feature_dir,
+                baseline_dir,
+                payload=payload,
+            )
         )
 
     return errors
@@ -2285,9 +2332,45 @@ def _validate_task_plans_against_patch(workflow_patch, feature_dir):
     return errors
 
 
-def _validate_rework_index(rework_index, workflow_patch, envelope, feature_dir, baseline_dir):
+def _declared_scenario_renames(payload):
+    """rework-docs-only-task-routing/task0004 (FR6, FR7, TM-5): the rename
+    relation the rework-planner declared in
+    `payload.doc_corrections[].scenario_renames`, as a set of
+    `(from, to)` pairs. The validator consumes only `scenario_renames`
+    (`doc_corrections` itself stays optional); a malformed declaration
+    contributes no pair and never raises -- `doc_corrections` not a list,
+    an entry not a mapping, `scenario_renames` not a list, a pair not a
+    mapping, or a pair whose `from` / `to` is not a non-blank string."""
+    pairs = set()
+    doc_corrections = payload.get("doc_corrections") if isinstance(payload, dict) else None
+    if not isinstance(doc_corrections, list):
+        return pairs
+    for correction in doc_corrections:
+        if not isinstance(correction, dict):
+            continue
+        renames = correction.get("scenario_renames")
+        if not isinstance(renames, list):
+            continue
+        for pair in renames:
+            if not isinstance(pair, dict):
+                continue
+            old_id, new_id = pair.get("from"), pair.get("to")
+            if isinstance(old_id, str) and old_id.strip() and isinstance(new_id, str) and new_id.strip():
+                pairs.add((old_id, new_id))
+    return pairs
+
+
+def _validate_rework_index(rework_index, workflow_patch, envelope, feature_dir, baseline_dir, payload=None):
     errors = []
     verification_index = (envelope or {}).get("verification_index") or {}
+    # Rename-aware coverage rule (rework-docs-only-task-routing/task0004):
+    # a `covered_by_existing` ID that is not a verification_index key passes
+    # only when a declared pair maps one of those keys (`from`) to it
+    # (`to`). `payload` is the result's payload; None (a caller that has no
+    # payload) declares nothing.
+    renamed_to_existing = {
+        new_id for (old_id, new_id) in _declared_scenario_renames(payload) if old_id in verification_index
+    }
 
     # bs10 (round 2, validator half): without a baseline directory there is
     # nothing to diff VERIFICATION.md against, so "new" cannot be verified --
@@ -2342,8 +2425,15 @@ def _validate_rework_index(rework_index, workflow_patch, envelope, feature_dir, 
         if not covered and not new_sc:
             errors.append(err("rework-index", f"{task_id}: covered_by_existing and new_scenarios are both empty"))
         for cid in covered:
-            if cid not in verification_index:
-                errors.append(err("rework-index", f"{task_id}: covered_by_existing {cid!r} not in verification_index"))
+            if cid not in verification_index and cid not in renamed_to_existing:
+                errors.append(
+                    err(
+                        "rework-index",
+                        f"{task_id}: covered_by_existing {cid!r} not in verification_index, and no "
+                        "declared rename maps it to the verification index "
+                        "(payload.doc_corrections[].scenario_renames)",
+                    )
+                )
         if new_sc and baseline_dir is None:
             errors.append(
                 err(

@@ -141,9 +141,9 @@ tasks:
     - NFR2
     - NFR4
     - NFR5
-    status: pending
+    status: merged
     notes: null
-    branch: null
+    branch: em-workflow/rework-docs-only-task-routing/task0001
   task0002:
     title: 'rework-planner documents: docs-only scope, write_policy, files rule, doc_corrections'
     plan: tasks/task0002.md
@@ -164,9 +164,9 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: pending
+    status: merged
     notes: null
-    branch: null
+    branch: em-workflow/rework-docs-only-task-routing/task0002
   task0003:
     title: Requirement tests replacement in requirements_patch, and the docs-only round fixture
     plan: tasks/task0003.md
@@ -197,9 +197,9 @@ tasks:
     - FR9
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/rework-docs-only-task-routing/task0003
   task0004:
     title: 'Validator rejections: feature-docs task files, implement reset on a docs-only round, rename-aware coverage'
     plan: tasks/task0004.md
@@ -218,6 +218,7 @@ tasks:
     - em-workflow/references/fixtures/worker-result/rework-planner/invalid-mixed-round-renamed-scenario-undeclared/input.json
     - em-workflow/references/fixtures/worker-result/rework-planner/invalid-mixed-round-renamed-scenario-undeclared/envelope.json
     - tests/test_rework_docs_only_validator_rules.py
+    - tests/test_gate_option_vocabulary.py
     skills:
     - backend-impl
     domains:
@@ -231,9 +232,9 @@ tasks:
     - FR7
     - FR9
     - NFR5
-    status: pending
+    status: merged
     notes: null
-    branch: null
+    branch: em-workflow/rework-docs-only-task-routing/task0004
   task0005:
     title: develop verify-failure branches, --once note, and review-phase rework pointer
     plan: tasks/task0005.md
@@ -251,9 +252,9 @@ tasks:
     - NFR1
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/rework-docs-only-task-routing/task0005
 review:
   status: pending
   rounds_completed: 0

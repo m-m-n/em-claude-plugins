@@ -24,6 +24,12 @@ rework-planner never calls AskUserQuestion itself and never writes
 the `workflow_patch` it returns (operation `append_rework`, per
 `references/workflow-patch.md`).
 
+The docs-only correction route (`### Docs-only correction route` in Section 9
+of `references/rework-task-synthesis.md`; cited, not restated) is the one case
+in which the rework-planner rewrites existing plan documents
+(`VERIFICATION.md`, `IMPLEMENTATION.md` and existing `tasks/*.md`): it
+corrects them directly and creates no task for that correction.
+
 ## Additional input: `rework_source`
 
 ```yaml
@@ -122,8 +128,9 @@ text.
 | Document | Update condition |
 |---|---|
 | `tasks/taskNNNN.md` | Always created (new task plans only) |
-| `VERIFICATION.md` | Per the verification coverage rules below |
-| `IMPLEMENTATION.md` | Only when a rework task introduces a new shared contract (interface, data format) with an existing task; otherwise left unchanged |
+| `tasks/*.md` (existing) | Only through the docs-only correction route (`references/rework-task-synthesis.md`, `### Docs-only correction route`) |
+| `VERIFICATION.md` | Per the verification coverage rules below, and when the docs-only correction route corrects it |
+| `IMPLEMENTATION.md` | Only when a rework task introduces a new shared contract (interface, data format) with an existing task, or when the docs-only correction route corrects it; otherwise left unchanged |
 | `SPEC.md` / `REQUIREMENTS.md` | Never updated by rework-planner. A rework that requires a SPEC change instead takes the specification-change transition below |
 
 ## `write_policy`
@@ -138,6 +145,23 @@ extended, so they must be listed in `write_policy.targets` with
 `action: replace_own` (same-phase rewrite of the rework-planner's own prior
 output) whenever the update condition above says they are touched, and are
 absent from `targets` entirely on a run that does not touch them.
+
+Each existing `tasks/*.md` that a round rewrites through the docs-only
+correction route is likewise listed in `write_policy.targets` with
+`action: replace_own`; none is listed on a round that does not rewrite it —
+the same treatment this section gives `VERIFICATION.md` and
+`IMPLEMENTATION.md`.
+
+Alignment with `references/contracts/spec-writer-contract.md`: that contract
+defines `replace_own` as overwriting "the same-phase output the worker itself
+produced earlier". The planning documents under `feature-docs/{feature}/` are
+output of the planning workers (implementation-planner at create-plan,
+rework-planner at rework), and this contract reads "same-phase output the
+worker itself produced" as that planning lineage's output — the reading the
+listing of `VERIFICATION.md` and `IMPLEMENTATION.md` above already relies on.
+The orchestrator's handling of `expect_digest` and its pre-dispatch
+verification are unchanged (`references/artifact-digest.md`). `SPEC.md` and
+`REQUIREMENTS.md` never become `targets` of this worker.
 
 ## Verification coverage rule: `payload.rework_index`
 
@@ -158,7 +182,10 @@ coverage or new scenarios (or both).
 The validation script (5.11.1) performs these four checks:
 
 1. Every rework task appears in `rework_index`.
-2. Every ID in `covered_by_existing` already exists in `verification_index`.
+2. Every ID in `covered_by_existing` already exists in `verification_index`;
+   an ID outside `verification_index` passes only through a declared
+   `scenario_renames` pair (`payload.doc_corrections`, below) that has it as
+   `to` and whose `from` is in `verification_index`.
 3. Every ID in `new_scenarios` actually exists in the `VERIFICATION.md` diff
    (i.e. the scenario was really added, not merely claimed).
 4. If `new_scenarios` is non-empty, the same IDs also appear in the
@@ -190,6 +217,47 @@ so the rework-planner MUST always output
 `IMPLEMENTATION.md` was extended, or the reason it was not, if it was left
 unchanged. This is the human-readable basis reviewers use to judge that
 decision.
+
+## `payload.doc_corrections`
+
+The declaration of every correction the rework-planner made through the
+docs-only correction route (`### Docs-only correction route` in Section 9 of
+`references/rework-task-synthesis.md`; cited, not restated). It is the
+traceability record of each docs-only correction: which origin required it
+and which documents it touched.
+
+```yaml
+doc_corrections:
+  - origin_kind: verify            # review or verify
+    origin_id: F-2                 # the origin's identifier
+    documents:
+      - VERIFICATION.md
+      - tasks/taskNNNN.md
+    scenario_renames:              # optional
+      - from: TS1
+        to: TS-1
+```
+
+`doc_corrections` is a list; each entry is a mapping with these fields:
+
+- `origin_kind` and `origin_id` — the origin pair that
+  `references/rework-task-synthesis.md` Section 11 Invariant 6 defines (cited,
+  not restated): `origin_kind` is `review` or `verify`, and `origin_id` is the
+  finding's `stable_id` or the failed item's ID accordingly.
+- `documents` — a non-empty list of feature-directory-relative paths of the
+  documents the correction rewrote; each is `VERIFICATION.md`,
+  `IMPLEMENTATION.md` or an existing `tasks/taskNNNN.md`.
+- `scenario_renames` — optional; a list of pairs, each a mapping with `from`
+  and `to`, present when the correction renames a scenario ID.
+
+**Obligation.** The rework-planner declares every docs-only correction: the
+list is non-empty on every `completed` result that corrected documents through
+the docs-only correction route (a docs-only round and a mixed round alike), and
+absent or empty on a result that did not.
+
+The key is not among the validation script's required payload keys. The
+validation script reads only `scenario_renames`, for check 2 above; a malformed
+entry contributes nothing to that check and never raises.
 
 ## Specification-change transition
 

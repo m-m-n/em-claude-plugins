@@ -1,0 +1,127 @@
+task_id: task0004
+baseline_failures: []          # before any edit: python3 -m unittest discover -s tests (Ran 13058 tests, skipped=1). Its one failure, tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical, was caused by this task's own validator edit landing during that run (sha256 of the unedited validator equals the pinned value), so it is not an inherited failure.
+final_failures: []             # re-executed after the implementation and the hash-pin refresh: python3 -m unittest discover -s tests -> no failing test
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_rework_docs_only_validator_rules.TestFeatureDocsFilesRule.test_ac1_all_planning_documents_are_rejected
+      - tests.test_rework_docs_only_validator_rules.TestFeatureDocsFilesRule.test_ac1_code_and_planning_documents_mixed_are_rejected
+      - tests.test_rework_docs_only_validator_rules.TestFeatureDocsFilesRule.test_ac1_leading_dot_slash_and_separator_forms_are_rejected
+      - tests.test_rework_docs_only_validator_rules.TestFeatureDocsFilesRule.test_ac1_rejected_through_an_append_rework_patch
+      - tests.test_rework_docs_only_validator_rules.TestFeatureDocsFilesRule.test_ac1_replace_planning_entries_are_not_checked
+    red_confirmed: true
+    red_reason: >-
+      Before the validator edit the first four tests FAILED: validate_task_entry and
+      validate_workflow_patch returned no errors where the rework-task-feature-docs code
+      was asserted (all-planning-documents, mixed code and planning documents, the
+      leading ./, backslash and double-slash forms, and the append_rework patch path).
+      The three invalid-task-files / docs-only fixtures with feature-docs paths also
+      exited 0 under the CLI before the edit. test_ac1_replace_planning_entries_are_not_checked
+      is a negative control that was green before and after (the rule did not exist yet);
+      it pins that replace_planning entries stay unchecked.
+  AC-2:
+    tests:
+      - tests.test_rework_docs_only_validator_rules.TestFeatureDocsFilesRule.test_ac2_code_only_task_is_accepted
+      - tests.test_rework_docs_only_validator_rules.TestFeatureDocsFilesRule.test_ac2_lookalike_paths_do_not_trigger_the_rule
+      - tests.test_rework_docs_only_validator_rules.TestFixtures.test_ac6_prefix_matches_the_exit_code_and_the_reported_codes
+    red_confirmed: false
+    red_reason: >-
+      The behavior pre-existed: before the edit no rule rejected any files path, so a
+      code-only task, feature-docs-archive/x, src/feature-docs/x, feature-docs.md,
+      Feature-Docs/x and docs/feature-docs were all accepted and these tests (and the
+      valid-task-files-code-only fixture, exit 0) were green before any implementation.
+      The criterion is a boundary on how far the new rule reaches, so it has no red state;
+      the tests guard against an over-broad rule (for example a string-prefix match).
+  AC-3:
+    tests:
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyImplementReset.test_ac3_empty_or_absent_entries_with_implement_pending_is_rejected
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyImplementReset.test_ac3_rejection_names_the_offending_step_patch
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyImplementReset.test_ac3_rejected_with_dry_run_apply
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyImplementReset.test_ac3_rejected_through_worker_result_with_and_without_dry_run
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyImplementReset.test_ac3_cli_workflow_patch_exits_1_with_the_code
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyImplementReset.test_ac3_patch_with_entries_returning_implement_is_accepted
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyImplementReset.test_ac3_empty_entries_returning_only_the_origin_step_is_accepted
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyImplementReset.test_ac3_empty_entries_with_implement_not_set_to_pending_is_accepted
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyImplementReset.test_ac3_rule_is_limited_to_append_rework
+    red_confirmed: true
+    red_reason: >-
+      Before the validator edit the rejection tests FAILED (absent, null and empty
+      entries; the named step_patches index; with dry-run; through worker-result with and
+      without dry-run; the CLI exit 1 for --kind workflow-patch): the validator returned
+      no errors, or exit 0 from the CLI, where docs-only-implement-reset was asserted.
+      The invalid-docs-only-round-resets-implement fixture exited 0 before the edit. The
+      accept-side tests (patch with entries, only verify or only review returned, implement
+      not set to pending, replace_planning) were green before and after; they pin the
+      rule's boundary.
+  AC-4:
+    tests:
+      - tests.test_rework_docs_only_validator_rules.TestRenameAwareCoverage.test_ac4_declared_rename_makes_the_renamed_id_covered
+      - tests.test_rework_docs_only_validator_rules.TestRenameAwareCoverage.test_ac4_undeclared_rename_is_rejected_with_a_message_naming_the_missing_declaration
+      - tests.test_rework_docs_only_validator_rules.TestRenameAwareCoverage.test_ac4_declared_from_missing_from_verification_index_is_rejected
+      - tests.test_rework_docs_only_validator_rules.TestRenameAwareCoverage.test_ac4_declared_to_that_differs_from_the_covered_id_is_rejected
+      - tests.test_rework_docs_only_validator_rules.TestRenameAwareCoverage.test_ac4_reversed_pair_does_not_count
+      - tests.test_rework_docs_only_validator_rules.TestRenameAwareCoverage.test_ac4_pair_found_in_any_doc_corrections_entry_counts
+      - tests.test_rework_docs_only_validator_rules.TestRenameAwareCoverage.test_ac4_id_that_is_a_verification_index_key_passes_without_any_declaration
+      - tests.test_rework_docs_only_validator_rules.TestRenameAwareCoverage.test_ac4_only_the_renamed_id_is_excused
+    red_confirmed: true
+    red_reason: >-
+      Before the validator edit test_ac4_declared_rename_makes_the_renamed_id_covered,
+      test_ac4_pair_found_in_any_doc_corrections_entry_counts and
+      test_ac4_only_the_renamed_id_is_excused FAILED, and the
+      valid-mixed-round-renamed-scenario-declared fixture exited 1 with the rework-index
+      error "task0007: covered_by_existing 'TS-3' not in verification_index" (the rename
+      declaration was not consulted). test_ac4_undeclared_rename_is_rejected_with_a_message_naming_the_missing_declaration
+      FAILED on the missing "no declared rename" wording. The remaining tests (declared
+      from absent, different to, reversed pair, ID that is a verification_index key) are
+      rejection or pass-through controls that were already green: undeclared renames were
+      rejected by the pre-existing rework-index rule. The
+      invalid-mixed-round-renamed-scenario-undeclared fixture exited 1 before and after.
+  AC-5:
+    tests:
+      - tests.test_rework_docs_only_validator_rules.TestRenameAwareCoverage.test_ac5_malformed_doc_corrections_shapes_are_judged_as_no_rename_declared
+      - tests.test_rework_docs_only_validator_rules.TestRenameAwareCoverage.test_ac5_a_malformed_declaration_does_not_hide_a_well_formed_pair
+      - tests.test_rework_docs_only_validator_rules.TestRenameAwareCoverage.test_ac5_malformed_shapes_through_the_cli_exit_1_not_2
+    red_confirmed: true
+    red_reason: >-
+      Before the validator edit all 20 malformed-shape cases of
+      test_ac5_malformed_doc_corrections_shapes_are_judged_as_no_rename_declared FAILED
+      on the missing "no declared rename" wording of the rework-index message, and
+      test_ac5_a_malformed_declaration_does_not_hide_a_well_formed_pair FAILED with the
+      rework-index error (the well-formed pair was not consulted). The no-exception
+      half has no red state: nothing read doc_corrections before the edit, so
+      test_ac5_malformed_shapes_through_the_cli_exit_1_not_2 was green before and after.
+  AC-6:
+    tests:
+      - tests.test_rework_docs_only_validator_rules.TestFixtures.test_ac6_the_six_fixtures_exist_with_input_and_envelope
+      - tests.test_rework_docs_only_validator_rules.TestFixtures.test_ac6_prefix_matches_the_exit_code_and_the_reported_codes
+      - tests.test_rework_docs_only_validator_rules.TestFixtures.test_ac6_no_fixture_uses_tests_replace
+      - tests.test_rework_docs_only_validator_rules.TestFixtures.test_ac6_mixed_round_pair_differs_only_in_the_rename_declaration
+      - tests.test_validate_worker_output.TestFixtureCorpusDataDriven.test_every_fixture_matches_its_declared_exit_code
+    red_confirmed: true
+    red_reason: >-
+      The six fixtures were written first and run through the CLI before the validator
+      edit: invalid-task-files-feature-docs-only, invalid-task-files-code-and-feature-docs
+      and invalid-docs-only-round-resets-implement exited 0 (expected 1) and
+      valid-mixed-round-renamed-scenario-declared exited 1 (expected 0);
+      test_ac6_prefix_matches_the_exit_code_and_the_reported_codes FAILED for exactly
+      those four cases. The existing data-driven runner
+      (test_every_fixture_matches_its_declared_exit_code) walks the same directories; its
+      red was not run separately. The existence, tests_replace-absence and
+      mixed-round-pair tests assert properties of the fixture files themselves and were
+      green from the moment the fixtures were written.
+  AC-7:
+    tests:
+      - tests.test_rework_docs_only_validator_rules.TestStandardLibraryOnly.test_ac7_this_module_imports_only_standard_library_modules
+      - tests.test_validate_worker_output.TestFixtureCorpusDataDriven.test_every_fixture_matches_its_declared_exit_code
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical
+    red_confirmed: false
+    red_reason: >-
+      The standard-library-only check was green from the moment the module was written,
+      and "every existing fixture and test passes unchanged" is a full-suite property with
+      no executable check that can fail before the implementation. The coverage clause
+      (the module covers AC-1 to AC-5 with asserted error codes) is verified by the AC-1
+      to AC-5 tests, which were observed red. The existing
+      test_validate_worker_output_py_byte_identical hash pin did FAIL once the validator
+      was edited and was cleared by refreshing its pinned sha256 in
+      tests/test_gate_option_vocabulary.py, following that file's refresh-don't-remove
+      convention; the test itself is unchanged.
