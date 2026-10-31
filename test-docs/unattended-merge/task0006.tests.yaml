@@ -1,0 +1,106 @@
+task_id: task0006
+baseline_failures: []          # `python3 -m unittest discover -s tests` from the repository
+                                # root before any file was touched: 12456 tests, all passing
+                                # (1 skipped).
+final_failures: []             # same command re-run after implementation and after this record
+                                # was written: 12520 tests, all passing (1 skipped).
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_merge_ci_wait.TestSettleWindow.test_ac1_zero_checks_before_and_after_settle_is_no_checks
+      - tests.test_merge_ci_wait.TestSettleWindow.test_ac1_gh_text_form_of_no_checks_is_zero_checks
+      - tests.test_merge_ci_wait.TestSettleWindow.test_ac1_zero_settle_concludes_at_first_poll
+      - tests.test_merge_ci_wait.TestSettleWindow.test_ac1_checks_appearing_inside_window_are_waited_on_to_passed
+      - tests.test_merge_ci_wait.TestSettleWindow.test_ac1_checks_appearing_inside_window_as_pending_are_waited_on
+      - tests.test_merge_ci_wait.TestSettleWindow.test_ac1_checks_that_appear_then_fail_are_not_no_checks
+      - tests.test_merge_ci_wait.TestSettleWindow.test_ac1_budget_ending_inside_settle_window_is_pending_not_no_checks
+    red_confirmed: true
+    red_reason: >-
+      Watched every test in the module fail before em-workflow/scripts/merge-ci-wait.py
+      existed ("script under test is missing" from the run_cli helper; the first run
+      showed the interpreter's "can't open file ... merge-ci-wait.py"). All passed once
+      the script was written.
+  AC-2:
+    tests:
+      - tests.test_merge_ci_wait.TestCheckDecision.test_ac2_all_passing_is_passed
+      - tests.test_merge_ci_wait.TestCheckDecision.test_ac2_skipped_counts_as_pass
+      - tests.test_merge_ci_wait.TestCheckDecision.test_ac2_only_skipped_checks_is_passed
+      - tests.test_merge_ci_wait.TestCheckDecision.test_ac2_failing_check_stops_ci_failed_naming_it
+      - tests.test_merge_ci_wait.TestCheckDecision.test_ac2_cancelled_check_stops_ci_failed_naming_it
+      - tests.test_merge_ci_wait.TestCheckDecision.test_ac2_every_failed_check_is_named
+      - tests.test_merge_ci_wait.TestCheckDecision.test_ac2_failure_stops_without_waiting_for_pending_checks
+      - tests.test_merge_ci_wait.TestCheckDecision.test_ac2_detail_carries_names_only
+      - tests.test_merge_ci_wait.TestCheckDecision.test_ac2_hostile_check_names_are_sanitised
+      - tests.test_merge_ci_wait.TestCheckDecision.test_ac2_many_failed_checks_keep_detail_bounded
+      - tests.test_merge_ci_wait.TestCheckDecision.test_ac2_unknown_or_missing_bucket_is_pending_never_passed
+      - tests.test_merge_ci_wait.TestCheckDecision.test_ac2_pending_then_pass_is_passed
+      - tests.test_merge_ci_wait.TestCheckDecision.test_ac2_failing_exit_code_with_json_body_is_still_read
+      - tests.test_merge_ci_wait.TestCheckDecision.test_ac2_transient_gh_failure_is_retried
+      - tests.test_merge_ci_wait.TestCheckDecision.test_ac2_persistent_gh_failure_is_an_internal_failure_never_passed
+      - tests.test_merge_ci_wait.TestCheckDecision.test_ac2_malformed_checks_output_is_never_passed
+    red_confirmed: true
+    red_reason: >-
+      Watched the module fail before the script existed ("script under test is missing").
+      The negative-only cases (never passed / not echoed) first passed vacuously against
+      the missing script; they were then given a positive assertion that gh was actually
+      polled and re-run red before the implementation was written.
+  AC-3:
+    tests:
+      - tests.test_merge_ci_wait.TestDeadlineCarriesAcrossInvocations.test_ac3_budget_exhausted_before_deadline_is_pending_with_computed_deadline
+      - tests.test_merge_ci_wait.TestDeadlineCarriesAcrossInvocations.test_ac3_following_call_with_that_deadline_continues_to_passed
+      - tests.test_merge_ci_wait.TestDeadlineCarriesAcrossInvocations.test_ac3_following_call_can_stay_pending_with_the_same_deadline
+      - tests.test_merge_ci_wait.TestDeadlineCarriesAcrossInvocations.test_ac3_deadline_passing_while_pending_stops_ci_timeout
+      - tests.test_merge_ci_wait.TestDeadlineCarriesAcrossInvocations.test_ac3_following_call_whose_deadline_passes_stops_ci_timeout
+      - tests.test_merge_ci_wait.TestDeadlineCarriesAcrossInvocations.test_ac3_deadline_already_past_at_start_is_ci_timeout_without_polling
+      - tests.test_merge_ci_wait.TestDeadlineCarriesAcrossInvocations.test_ac3_deadline_is_echoed_by_every_outcome
+      - tests.test_merge_ci_wait.TestDeadlineCarriesAcrossInvocations.test_ac3_deadline_in_is_relative_to_now_not_a_fixed_epoch
+    red_confirmed: true
+    red_reason: >-
+      Watched the module fail before the script existed ("script under test is missing").
+      All passed once the script was written.
+  AC-4:
+    tests:
+      - tests.test_merge_ci_wait.TestBoundedInvocation.test_ac4_hanging_checks_read_returns_within_budget_as_pending
+      - tests.test_merge_ci_wait.TestBoundedInvocation.test_ac4_hanging_head_read_returns_within_budget_as_pending
+      - tests.test_merge_ci_wait.TestBoundedInvocation.test_ac4_hanging_gh_at_the_deadline_is_ci_timeout_within_the_deadline
+      - tests.test_merge_ci_wait.TestBoundedInvocation.test_ac4_a_hang_does_not_block_the_next_invocation
+      - tests.test_merge_ci_wait.TestBoundedInvocation.test_ac4_default_budget_keeps_worst_case_below_600_seconds
+      - tests.test_merge_ci_wait.TestBoundedInvocation.test_ac4_documented_defaults_match_the_contract
+      - tests.test_merge_ci_wait.TestBoundedInvocation.test_ac4_budget_above_the_bash_limit_is_refused
+      - tests.test_merge_ci_wait.TestBoundedInvocation.test_ac4_per_call_limit_cuts_a_hang_and_the_wait_recovers_in_one_invocation
+      - tests.test_merge_ci_wait.TestBoundedInvocation.test_ac4_terminating_the_script_takes_the_hung_gh_child_with_it
+    red_confirmed: true
+    red_reason: >-
+      Watched the hang / budget / defaults tests fail before the script existed ("script
+      under test is missing"; the budget-above-limit case first passed only because the
+      interpreter itself exits 2 for a missing file, and was then given usage-text
+      assertions and re-run red). The last two tests (per-call limit recovery in one
+      invocation, termination takes the hung child) were added after the script existed
+      and were not observed red.
+  AC-5:
+    tests:
+      - tests.test_merge_ci_wait.TestPrHeadMoved.test_ac5_head_differing_from_expected_stops_pr_head_moved
+      - tests.test_merge_ci_wait.TestPrHeadMoved.test_ac5_checks_are_not_read_when_head_moved
+      - tests.test_merge_ci_wait.TestPrHeadMoved.test_ac5_moved_head_wins_over_failing_checks
+      - tests.test_merge_ci_wait.TestPrHeadMoved.test_ac5_head_moving_between_polls_is_caught_on_the_next_poll
+      - tests.test_merge_ci_wait.TestPrHeadMoved.test_ac5_unexpected_head_text_is_never_trusted_as_equal
+      - tests.test_merge_ci_wait.TestPrHeadMoved.test_ac5_hostile_head_text_is_not_echoed
+    red_confirmed: true
+    red_reason: >-
+      Watched the module fail before the script existed ("script under test is missing").
+      The three negative-only cases first passed vacuously against the missing script;
+      they were then given a positive assertion that the head was read and re-run red
+      before the implementation was written.
+  AC-6:
+    tests:
+      - tests.test_merge_ci_wait.TestReadOnlyAndPacing.test_ac6_log_holds_only_read_operations_on_the_given_repo_and_pr
+      - tests.test_merge_ci_wait.TestReadOnlyAndPacing.test_ac6_every_poll_reads_head_before_checks
+      - tests.test_merge_ci_wait.TestReadOnlyAndPacing.test_ac6_log_names_the_repo_and_pr_given_on_the_command_line
+      - tests.test_merge_ci_wait.TestReadOnlyAndPacing.test_ac6_polls_are_separated_by_the_interval
+      - tests.test_merge_ci_wait.TestReadOnlyAndPacing.test_ac6_no_busy_loop_while_pending
+      - tests.test_merge_ci_wait.TestReadOnlyAndPacing.test_ac6_wait_is_a_script_loop_not_gh_watch
+    red_confirmed: true
+    red_reason: >-
+      Watched the module fail before the script existed ("script under test is missing").
+      The gh-watch case first passed vacuously (empty invocation log) and was then given
+      the missing-script guard in the run helper and re-run red.
