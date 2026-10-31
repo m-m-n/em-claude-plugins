@@ -1,0 +1,67 @@
+schema_version: 2
+feature: unattended-merge
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 2.64
+    confidence: 0.65
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.0
+      '2': 0.35
+      '3': 0.65
+  observed_at: '2026-10-31T18:06:04+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 2.68
+    confidence: 0.69
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.0
+      '2': 0.31
+      '3': 0.69
+  observed_at: '2026-10-31T18:08:12+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/skills/merge/SKILL.md
+  - em-workflow/README.md
+  - tests/test_merge_skill.py
+  changed_lines_approx: 350
+  new_functions_needed: 0
+  new_files_needed: 2
+  new_dependencies_needed: []
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 12
+  body_change_kind: new_logic
+  change_containment: single_module
+  caller_and_dependency_count: 7
+  changes_external_contract: true
+  changes_behavior: true
+  evidence: skills/ に完成済み feature の無人マージ用スキルはない。scripts/merge-task.sh は task→integration
+    専用で、早送りを許容し、競合時は終了する。develop/SKILL.md:988-1015 は batch でマージせず、--pr でも PR 作成まで。workflow-schema.md:30-71
+    に base_branch、parent_branch、テストコマンドがある。既存テストは task マージと develop の結果形式を対象とし、今回の
+    PR 更新・仕様に基づく競合解消・CI 待機・再開を網羅しない。loop-develop 本体は本リポジトリに見当たらない。依存箇所は外部起動元、Git、gh、workflow.yaml、仕様書、Codex
+    呼び出し、コマンド承認処理の7つとして数えた。追加パスと件数はスキル定義内に手順と結果形式を記述する案の概算。ファイル変更とテスト実行はしていない
+decided_at: '2026-10-31T18:08:29+09:00'
