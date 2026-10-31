@@ -1,12 +1,26 @@
 schema_version: 1
 feature: cd-prefix-canonical-path-only
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: e9499d39b9762f4e95df029526a3ce199a1b36b8
 last_input_digest: sha256:5559110c7c20161ffa84179f108bad97a4b593cb5782964e0faff057e2388e5c
 active_request_id: create-spec-run-0001
-packets: {}
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-31T11:36:32+09:00'
+    questions:
+    - question_id: requirement.area-symlink
+      status: answered
+    - question_id: requirement.allowed-scope
+      status: answered
+    - question_id: requirement.path-length-bound
+      status: answered
+    - question_id: requirement.legacy-test-records
+      status: answered
+    - question_id: design-step.recommendation
+      status: answered
 answers:
   create-spec.feature-identity:
     packet_id: null
@@ -17,9 +31,85 @@ answers:
     - derive_from_task_description
     freeform: null
     normalized_answer: 'feature name derived from the task description: cd-prefix-canonical-path-only'
+  requirement.area-symlink:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-31T11:36:32+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - resolved_area_below_main_tree
+    freeform: null
+    normalized_answer: worktree_area() が解決した許可領域が、メインの作業ツリーの realpath の厳密に下にあるときだけ許可領域として使う。そうでなければ
+      cd 前置形を許可しない。
+    resolution_note: 'gate create-spec.requirement-clarification; batch-policies action
+      codex_consultation (record_as_assumption). Codex consulted 1 turn (harness:
+      codex), all four questions batched in one consultation. Codex chose resolved_area_below_main_tree
+      (current worktree_area() trusts the link target unconditionally; restricting
+      to the main tree prevents widening outside it). Orchestrator judged the mapping:
+      matches the option and the worker''s recommendation. Opus escalation: not run.
+      Recorded as assumption.'
+  requirement.allowed-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-31T11:36:32+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - whole_area
+    freeform: null
+    normalized_answer: 許可領域の厳密に下にある既存ディレクトリなら深さは問わない（現状と同じ）。
+    resolution_note: 'gate create-spec.requirement-clarification; batch-policies action
+      codex_consultation (record_as_assumption). Codex consulted 1 turn (harness:
+      codex), all four questions batched in one consultation. Codex chose whole_area
+      (the hook does not know the assignment; a depth-2 limit identifies no task and
+      only narrows). Orchestrator judged the mapping: matches the option and the worker''s
+      recommendation. Opus escalation: not run. Recorded as assumption.'
+  requirement.path-length-bound:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-31T11:36:32+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - pathconf_on_root
+    freeform: null
+    normalized_answer: 上限は os.pathconf('/', 'PC_PATH_MAX') で実行時に得る。len(os.fsencode(path))
+      が上限以上なら、ファイルシステムを走査する前に不許可にする。取得に失敗したとき、値が正でないときも不許可にする。PC_PATH_MAX はディレクトリからの相対パスの上限なので、絶対パス全体に対する保守的な受理上限として扱う。
+    resolution_note: 'gate create-spec.requirement-clarification; batch-policies action
+      codex_consultation (record_as_assumption). Codex consulted 1 turn (harness:
+      codex), all four questions batched in one consultation. Codex chose pathconf_on_root
+      over the worker-recommended pathconf_on_area: the bound can be obtained without
+      touching the allowed area, so the length check can run before worktree_area()
+      and any walk. Orchestrator judged the comparison: root is comparatively better
+      for the ''reject before walking'' criterion; mapped to pathconf_on_root. Opus
+      escalation: not run. Recorded as assumption.'
+  requirement.legacy-test-records:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-31T11:36:32+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - edit_legacy_records
+    freeform: null
+    normalized_answer: 削除したテスト ID を過去 feature の *.tests.yaml から外す。残るテストへ付け替えられるものは付け替える。
+    resolution_note: 'gate create-spec.requirement-clarification; batch-policies action
+      codex_consultation (record_as_assumption). Codex consulted 1 turn (harness:
+      codex), all four questions batched in one consultation. Codex chose edit_legacy_records
+      (implementer.md already directs fixing record IDs broken by deletion/rename;
+      keeping old names that test different judgments would mismatch the records).
+      Orchestrator judged the mapping: matches the option and the worker''s recommendation.
+      Opus escalation: not run. Recorded as assumption.'
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-31T11:36:32+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design_step_recommendation (skip) を採用する
+    resolution_note: gate create-spec.design-step; batch-policies option_id decide_autonomously
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:5559110c7c20161ffa84179f108bad97a4b593cb5782964e0faff057e2388e5c
   output_digest: null
   dispatch_digest_inputs:
