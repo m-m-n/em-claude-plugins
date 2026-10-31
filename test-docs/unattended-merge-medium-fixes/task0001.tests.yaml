@@ -3,8 +3,12 @@ baseline_failures: []          # `python3 -m unittest discover -s tests` from th
                                 # before any file was touched: 13058 tests, all passing
                                 # (1 skipped).
 final_failures: []             # same command re-run after the SKILL.md and test changes and
-                                # after this record was written: no failure, so the set is empty
-                                # and a subset of the baseline.
+                                # after this record was written: 13093 tests, all passing
+                                # (1 skipped), so the set is empty and a subset of the baseline.
+                                # Afterwards only the docstring and line wraps of
+                                # tests/test_merge_skill_doc.py changed; that module and the
+                                # record check (tests.test_tests_yaml_id_resolution) were re-run
+                                # and pass.
 acceptance_tests:
   AC-1:
     tests:
