@@ -1,0 +1,39 @@
+schema_version: 1
+feature: unattended-merge
+phase: rework
+status: dispatching
+generation: 1
+base_revision: a8f7ad8702a0b84611794fb1ef77529b6557decd
+last_input_digest: sha256:dd04ebc85c942730890ef9d2121406530a044046b01cf1834d86ed342c180a7b
+active_request_id: rework-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: rework-run-0001
+  status: dispatched
+  input_digest: sha256:dd04ebc85c942730890ef9d2121406530a044046b01cf1834d86ed342c180a7b
+  output_digest: null
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/rework-planner-contract.md: sha256:828186fb170bb2339ed6e585c4aab81c4add81abb531ed14154e2dead37474af
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/skills/plan-writing/SKILL.md: sha256:880bd01ad6c60af5695495e0a6784de7fe98e1ea9463dc6703164f8ffffdbccb
+    feature-docs/unattended-merge/IMPLEMENTATION.md: sha256:6698d5256f044972f6014c3a8e80b92bdfc883e8615c30e5db54defc60ee77ee
+    feature-docs/unattended-merge/SPEC.md: sha256:f12079f29254d1a8afc8d4202d8cb8e0ee2d18728bc0e3e37b3cdce392b22bb4
+    feature-docs/unattended-merge/VERIFICATION.md: sha256:4b180ef48ff25208497efdb3d8ba18f1ae3c5d61faab54020017ca0e472b6c55
+    feature-docs/unattended-merge/tasks/task0001.md: sha256:e6eee169298dec5461b4ccccf2c403194096c9908f5a1b88ce9f8b3654eaaeb4
+    feature-docs/unattended-merge/tasks/task0002.md: sha256:ddae06eafee2d2f9e450e1e3a891f6ed3b146b3876210a354657c1dcb9699c1d
+    feature-docs/unattended-merge/tasks/task0003.md: sha256:fe56452a05cc974c9c5f2bf4d845a573623739fe195843c6c929a445679989f5
+    feature-docs/unattended-merge/tasks/task0004.md: sha256:cb7342ffbf9089acb6991dfa31a2c99ed5b8651cca85c50ee36381851fd3867b
+    feature-docs/unattended-merge/tasks/task0005.md: sha256:3ab588133a9ab6c43869472890dca310b4e63d8541b7e57969342cb83699e668
+    feature-docs/unattended-merge/tasks/task0006.md: sha256:285a71117843b9c101cc1d9fe61c097fb9b2df9c7fb3bd5a50755f5c70e4c346
+    feature-docs/unattended-merge/tasks/task0007.md: sha256:bdcfc10da80d0d074134b3bad3d20492ff12d25163eac8993a3adfb1f5959612
+    feature-docs/unattended-merge/tasks/task0008.md: sha256:88e65c30c711ec853b99c578e5de29182e205625e699b2158cc04724ceff467d
+    feature-docs/unattended-merge/tasks/task0009.md: sha256:ef6046530767d21cc254ecb3395b2f69b5abaddad871fbc37f62d7ce92450436
+    feature-docs/unattended-merge/workflow.yaml: sha256:031dd73040827420d87a36f23e858fa8f2a0db621d579588fa3ddc83775fed27
+artifacts: []
+patches: []
+stale_redispatch_count: 0
+last_error: null
