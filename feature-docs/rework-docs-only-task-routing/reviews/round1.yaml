@@ -1,0 +1,174 @@
+round: 1
+executed_at: '2026-11-01T05:45:35+09:00'
+scope:
+  review_mode: diff
+  base_commit: b1694fa9c1a164357ce522a54798a66d0f9aaa73
+  head_commit: 7500015516d2e705175ee2ce299cd9b1b0c79500
+  changed_files:
+  - em-workflow/agents/rework-planner.md
+  - em-workflow/references/contracts/rework-planner-contract.md
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-docs-only-round-resets-implement/envelope.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-docs-only-round-resets-implement/input.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-mixed-round-renamed-scenario-undeclared/envelope.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-mixed-round-renamed-scenario-undeclared/input.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-task-files-code-and-feature-docs/envelope.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-task-files-code-and-feature-docs/input.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-task-files-feature-docs-only/envelope.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-task-files-feature-docs-only/input.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/valid-docs-only-round/DRY_RUN_APPLY
+  - em-workflow/references/fixtures/worker-result/rework-planner/valid-docs-only-round/digest-source.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/valid-docs-only-round/envelope.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/valid-docs-only-round/input.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/valid-docs-only-round/workflow.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/valid-mixed-round-renamed-scenario-declared/envelope.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/valid-mixed-round-renamed-scenario-declared/input.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/valid-task-files-code-only/envelope.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/valid-task-files-code-only/input.json
+  - em-workflow/references/fixtures/workflow-patch/append_rework/invalid-tests-replace-expected-mismatch/DRY_RUN_APPLY
+  - em-workflow/references/fixtures/workflow-patch/append_rework/invalid-tests-replace-expected-mismatch/digest-source.json
+  - em-workflow/references/fixtures/workflow-patch/append_rework/invalid-tests-replace-expected-mismatch/input.json
+  - em-workflow/references/fixtures/workflow-patch/append_rework/invalid-tests-replace-expected-mismatch/workflow.json
+  - em-workflow/references/review-phase.md
+  - em-workflow/references/rework-task-synthesis.md
+  - em-workflow/references/workflow-patch.md
+  - em-workflow/scripts/validate-worker-output.py
+  - em-workflow/skills/develop/SKILL.md
+  - test-docs/rework-docs-only-task-routing/task0001.tests.yaml
+  - test-docs/rework-docs-only-task-routing/task0002.tests.yaml
+  - test-docs/rework-docs-only-task-routing/task0003.tests.yaml
+  - test-docs/rework-docs-only-task-routing/task0004.tests.yaml
+  - test-docs/rework-docs-only-task-routing/task0005.tests.yaml
+  - tests/test_develop_docs_only_rework_doc.py
+  - tests/test_gate_option_vocabulary.py
+  - tests/test_requirements_tests_replace.py
+  - tests/test_rework_docs_only_route_doc.py
+  - tests/test_rework_docs_only_validator_rules.py
+  - tests/test_rework_planner_docs_only_doc.py
+  - tests/test_tier_record_schema_v2.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: review_data_too_large
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: c588505add1da8c7
+  severity: medium
+  category: security
+  file: em-workflow/scripts/validate-worker-output.py
+  line: 2371
+  title: 改名申告の改名先 (to) が変更後の VERIFICATION.md に実在するか検査していない
+  description: renamed_to_existing (2371-2373) は from が envelope の verification_index のキーであることだけを条件に to を受理集合へ入れる。to が現在の VERIFICATION.md に存在するか、baseline との差分で from→to の改名が実際に起きたかは見ていない。scenario_renames は rework-planner 自身の申告で信頼できない出力なので、既存 ID を 1 つ from に書けば任意の to を covered_by_existing に通せる。SSOT 側 (rework-task-synthesis.md Section 12 の Rename-aware coverage、rework-planner-contract.md の check 2) も from の条件しか定めていない。
+  suggestion: feature_dir と baseline_dir がそろうときは、改名による受理を to が after_ids にある・from が before_ids にある・from が after_ids にない の 3 条件がすべて成り立つときに限る。文書の差分を取れないときは fail-closed で拒否する。rework-task-synthesis.md Section 12、契約の check 2、THREAT-MODEL の TM-5 を同じ規則に揃え、架空の to を拒否する invalid フィクスチャを足す。
+  reproduction: valid-mixed-round-renamed-scenario-declared/input.json をメモリ上で読み、task0007 の covered_by_existing を ["TS-9999"]、scenario_renames を [{"from":"TS3","to":"TS-9999"}] に変更する。同梱の envelope.json と validate_worker_result に渡すとエラーは [] になる。同じ入力から改名申告を外すと rework-index エラーになる。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: 'medium severity: not an auto-fix candidate (Phase R4 gate is critical/high); not counted in residual_critical_high'
+- stable_id: 33f072c3b90c3aea
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/validate-worker-output.py
+  line: 2427
+  title: 改名で文書から消えた旧シナリオ ID を covered_by_existing として受理してしまう
+  description: 2427-2428 行は cid が verification_index にあれば無条件で通す。verification_index は改名前の値なので、TS3→TS-3 を申告して VERIFICATION.md から TS3 が消えても covered_by_existing=['TS3'] は通る。根本原因は 2371 行の finding と同じで、改名を考慮したカバレッジ規則が変更後の文書を見ていないこと。
+  suggestion: 申告済みの改名の from を受理集合から外す。after_ids を計算できるときは covered_by_existing の各 ID が after_ids にあることも確かめる。2371 行の修正と同じ変更で対応し、旧 ID を参照する invalid フィクスチャを足す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: 'medium severity: not an auto-fix candidate (Phase R4 gate is critical/high); not counted in residual_critical_high'
+- stable_id: 6ed87da72e3f5de3
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/validate-worker-output.py
+  line: 1516
+  title: 文書のみの回の step_patches 検査が SSOT の機械検査規則より狭い
+  description: rework-task-synthesis.md Section 12 は、tasks_patch.entries が空の append_rework patch について step_patches は起点ステップ 1 件だけで implement を対象にしないと定め、Section 9 はその起点ステップを pending に戻すと定めている。1516-1528 行が拒否するのは implement を pending にする step patch だけで、verify の set.status を completed に変えた patch、step_patches が空の patch、起点以外の step が混ざる patch も通る。
+  suggestion: append_rework で entries が空のときは、step_patches がちょうど 1 件で、その step_id が起点ステップ (verify / review)、set.status が pending であることを求める。implement を対象にする entry は status を問わず拒否する。各ケースに invalid フィクスチャを足す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: 'medium severity: not an auto-fix candidate (Phase R4 gate is critical/high); not counted in residual_critical_high'
+- stable_id: a3ac237a09af8436
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/validate-worker-output.py
+  line: 1788
+  title: from と to が重なる tests_replace を受理し、逐次適用で参照が失われる
+  description: _apply_tests_replace は pair を順に適用する。tests=[TS-1,TS-2] に TS-1→TS-2、TS-2→TS-3 を適用すると [TS-3] になり、入れ替えも 1 件に減る。_validate_tests_replace_entry はどちらの pair も通す。workflow-patch.md は適用順や重なりの扱いを定めていない。
+  suggestion: 1 つの entry の中で from の集合と to の集合が交わる場合は構造検査で拒否し、その規則を workflow-patch.md の Tests replacement 節に書く (または元の配列に対する一括置換と定義して SSOT と実装を揃える)。連鎖と入れ替えの invalid フィクスチャを足す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: 'medium severity: not an auto-fix candidate (Phase R4 gate is critical/high); not counted in residual_critical_high'
+evaluation:
+  round_summary: Round 1 (diff、cross_validation=true)。medium 4 件で、すべて em-workflow/scripts/validate-worker-output.py にある。critical / high はない。security と comprehensive の指摘は読解で再現を確認した。architecture は corroborated。spec は spec#0 が review_data_too_large で skip したため not verified。reviewer の出力にインジェクションの試みはなかった。
+  recommended_action: auto_fix
+  action_rationale: medium 4 件だけで、修正は validate-worker-output.py の局所的な変更と SSOT の文章・フィクスチャの追加で済む。spec 観点はこの round で未レビュー。
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-rework-docs-only-task-routing-20261031T204541Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
