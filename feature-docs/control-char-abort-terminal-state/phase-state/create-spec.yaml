@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 966ce074c5f00a91c0c49e13479c3ae52562d696
 last_input_digest: sha256:50638b739073863af16c6fe45f6ea35897318129f5703056ef102f765ba2cca3
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets: {}
 answers:
   create-spec.feature-identity:
@@ -55,12 +55,18 @@ worker_runs:
   output_digest: sha256:9e1cf3ba71522dcf4a8a0993fc67121bfa95fc2c9b2463860157b07d9da54c26
   self_write_set: []
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:50638b739073863af16c6fe45f6ea35897318129f5703056ef102f765ba2cca3
   dispatch_digest_inputs:
     em-workflow/references/contracts/spec-writer-contract.md: sha256:9032c6287d75f4a88e556bd3962c32ab8b4905cf3b6ececa895206788bcd0b63
     em-workflow/references/templates/spec-document.md: sha256:203dfcddbe507886ce861694fccd20ae25e5af0bd1b0efa5e935991add950cbd
-artifacts: []
+  output_digest: sha256:310a264731b70d8e0c4e849af8404e3ebe5ec415ec5d460e095f8c0213a577cd
+  self_write_set:
+  - feature-docs/control-char-abort-terminal-state/SPEC.md
+artifacts:
+- path: feature-docs/control-char-abort-terminal-state/SPEC.md
+  sha256: sha256:c80999d18b9dd763b265a5e662016702602d4c377d481504ac2c62743cf32199
+  produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: sha256:84ca09fd6b6d922436b3c201953fd2bc9a2d59e546938916f92b2e8d7fb9d9de
 stale_redispatch_count: 0
