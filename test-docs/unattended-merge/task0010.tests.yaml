@@ -1,0 +1,81 @@
+task_id: task0010
+baseline_failures:             # 4a: python3 -m unittest discover -s tests -> Ran 12973 tests, FAILED (failures=10, skipped=1); 10 failures = 8 tests (the force-push test fails in 3 subTests), all in the two destructive-guard modules inherited from the parent branch
+  - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+  - tests.test_destructive_guard_command_substitution.TestSourceHygieneAndDeterminism.test_no_new_filesystem_or_subprocess_calls
+  - tests.test_destructive_guard_merge_allow.TestAC1CanonicalFormIsAllowed.test_ac1_allowed_from_a_subdirectory_of_the_worktree
+  - tests.test_destructive_guard_merge_allow.TestAC1CanonicalFormIsAllowed.test_ac1_allowed_from_the_integration_worktree
+  - tests.test_destructive_guard_merge_allow.TestAC3LaterSegmentsAreStillJudged.test_ac3_a_harmless_segment_does_not_change_the_allow
+  - tests.test_destructive_guard_merge_allow.TestAC3LaterSegmentsAreStillJudged.test_ac3_force_push_after_the_merge_is_denied
+  - tests.test_destructive_guard_merge_allow.TestAC3LaterSegmentsAreStillJudged.test_ac3_recursive_delete_after_the_merge_is_denied
+  - tests.test_destructive_guard_merge_allow.TestAC4WorkingDirectoryShape.test_ac4_a_climb_that_stays_inside_the_worktree_is_normalized
+final_failures:                # actually re-executed after implementation and after this record: python3 -m unittest discover -s tests; same 8 inherited tests, no other failure
+  - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+  - tests.test_destructive_guard_command_substitution.TestSourceHygieneAndDeterminism.test_no_new_filesystem_or_subprocess_calls
+  - tests.test_destructive_guard_merge_allow.TestAC1CanonicalFormIsAllowed.test_ac1_allowed_from_a_subdirectory_of_the_worktree
+  - tests.test_destructive_guard_merge_allow.TestAC1CanonicalFormIsAllowed.test_ac1_allowed_from_the_integration_worktree
+  - tests.test_destructive_guard_merge_allow.TestAC3LaterSegmentsAreStillJudged.test_ac3_a_harmless_segment_does_not_change_the_allow
+  - tests.test_destructive_guard_merge_allow.TestAC3LaterSegmentsAreStillJudged.test_ac3_force_push_after_the_merge_is_denied
+  - tests.test_destructive_guard_merge_allow.TestAC3LaterSegmentsAreStillJudged.test_ac3_recursive_delete_after_the_merge_is_denied
+  - tests.test_destructive_guard_merge_allow.TestAC4WorkingDirectoryShape.test_ac4_a_climb_that_stays_inside_the_worktree_is_normalized
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_merge_pr.TestTask0010Bindings.test_task0010_ac1_state_without_base_exits_2_and_prints_nothing
+    red_confirmed: true
+    red_reason: "Run against the unchanged script, the test failed with AssertionError: 0 != 2 : ('state', '--project-root', ..., '--head', 'aaaa...'): state without --base was accepted and decided (a PR into release came back ready) instead of exiting 2."
+  AC-2:
+    tests:
+      - tests.test_merge_pr.TestTask0010Bindings.test_task0010_ac2_a_pr_into_another_base_stops_pr_head_moved_naming_both
+      - tests.test_merge_pr.TestTask0010Bindings.test_task0010_ac2_the_same_pr_into_the_expected_base_is_ready
+      - tests.test_merge_pr.TestTask0010Bindings.test_task0010_ac2_the_base_comparison_is_exact
+      - tests.test_merge_pr.TestTask0010Bindings.test_task0010_ac2_closed_draft_and_conflict_are_still_decided_before_the_base
+      - tests.test_merge_pr.TestTask0010Bindings.test_task0010_ac2_a_moved_head_and_a_wrong_base_both_stop_pr_head_moved
+      - tests.test_merge_pr.TestTask0010Bindings.test_task0010_ac2_a_merged_pr_into_another_base_is_not_reported_merged
+      - tests.test_merge_pr.TestTask0010Bindings.test_task0010_ac2_a_missing_or_non_string_base_in_the_answer_is_an_internal_failure
+    red_confirmed: false
+    red_reason: "The behavior the criterion states (a PR whose baseRefName differs from an explicitly passed --base stops pr_head_moved, the same stub with the matching base is ready) already existed while --base was optional; the literal pair and the ordering and exactness tests passed before any change, so no red state occurred for it (the new mandatory argument is AC-1). Two extra tests in this entry did fail first: test_task0010_ac2_a_merged_pr_into_another_base_is_not_reported_merged (AssertionError: 'merged' != 'stop') and test_task0010_ac2_a_missing_or_non_string_base_in_the_answer_is_an_internal_failure (the unchanged script did not fail on a null, numeric or object baseRefName)."
+  AC-3:
+    tests:
+      - tests.test_merge_pr.TestTask0010Bindings.test_task0010_ac3_a_merged_pr_with_another_head_stops_pr_head_moved
+      - tests.test_merge_pr.TestTask0010Bindings.test_task0010_ac3_a_merged_pr_with_the_expected_head_returns_merged
+      - tests.test_merge_pr.TestTask0010Bindings.test_task0010_ac3_the_head_check_of_a_merged_pr_precedes_its_mergeability
+    red_confirmed: true
+    red_reason: "Run against the unchanged script, test_task0010_ac3_a_merged_pr_with_another_head_stops_pr_head_moved and test_task0010_ac3_the_head_check_of_a_merged_pr_precedes_its_mergeability failed with AssertionError: 'merged' != 'stop' (a MERGED PR with another head was reported merged). The equal-head case, test_task0010_ac3_a_merged_pr_with_the_expected_head_returns_merged, passed before the change (that behavior pre-existed and is kept)."
+  AC-4:
+    tests:
+      - tests.test_merge_pr.TestTask0010Bindings.test_task0010_ac4_a_merged_pr_with_another_head_alone_gives_none
+      - tests.test_merge_pr.TestTask0010Bindings.test_task0010_ac4_with_an_open_pr_as_well_the_open_pr_is_returned
+      - tests.test_merge_pr.TestTask0010Bindings.test_task0010_ac4_a_merged_pr_at_the_integration_tip_returns_merged
+      - tests.test_merge_pr.TestTask0010Bindings.test_task0010_ac4_the_tip_decides_not_the_pr_head_of_the_open_pr
+      - tests.test_merge_pr.TestTask0010Bindings.test_task0010_ac4_an_ignored_merged_pr_leaves_the_draft_and_closed_classes_intact
+      - tests.test_merge_pr.TestTask0010Bindings.test_task0010_ac4_a_merged_pr_with_another_head_is_never_a_closed_pr
+      - tests.test_merge_pr.TestTask0010Bindings.test_task0010_ac4_the_highest_numbered_matching_merged_pr_is_used
+      - tests.test_merge_pr.TestTask0010Bindings.test_task0010_ac4_a_merged_pr_of_another_branch_or_a_fork_does_not_match_the_tip
+    red_confirmed: true
+    red_reason: "Run against the unchanged script, every test failed in decide() with AssertionError: 2 != 0 : exit 2, stderr: usage: merge-pr.py ... unrecognized arguments: --integration-tip; the script had no integration-tip input, so a MERGED PR with any head could not be told apart from the current tip."
+  AC-5:
+    tests:
+      - tests.test_merge_pr.TestTask0010Bindings.test_task0010_ac5_resolve_without_integration_tip_exits_2_and_prints_nothing
+      - tests.test_merge_pr.TestTask0010Bindings.test_task0010_ac5_a_value_that_is_not_40_lowercase_hex_exits_2
+    red_confirmed: true
+    red_reason: "Run against the unchanged script, the missing-argument test failed with AssertionError: 0 != 2 (resolve decided without --integration-tip), and every invalid-value subTest failed because stderr did not contain 'not a 40-character lowercase hex SHA' (the old parser rejected the unknown option, not the value)."
+  AC-6:
+    tests:
+      - tests.test_merge_skill_doc.TestPrDecisionBindings.test_ac6_every_state_form_passes_the_base_branch
+      - tests.test_merge_skill_doc.TestPrDecisionBindings.test_ac6_step_5_2_resolve_passes_the_integration_tip_from_preflight
+      - tests.test_merge_skill_doc.TestPrDecisionBindings.test_ac6_step_5_3_re_resolve_passes_the_integration_tip_from_preflight
+      - tests.test_merge_skill_doc.TestPrDecisionBindings.test_ac6_step_13_2_post_merge_re_resolve_passes_the_merged_head
+      - tests.test_merge_skill_doc.TestPrDecisionBindings.test_ac6_step_13_2_no_longer_calls_the_re_resolve_the_same_as_step_5_2
+      - tests.test_merge_skill_doc.TestPrDecisionBindings.test_ac6_every_resolve_form_in_the_skill_passes_an_integration_tip
+      - tests.test_merge_skill_doc.TestPrDecisionBindings.test_ac6_the_new_option_values_stay_literal_identifiers
+      - tests.test_merge_skill_doc.TestPrDecisionBindings.test_ac6_the_matchers_fire_on_forged_forms
+    red_confirmed: true
+    red_reason: "Run against the unchanged SKILL.md, six tests failed: the state form lacked --base <base_branch> (False is not true), the step 5.2 resolve form lacked --integration-tip <integration_tip>, step 5.3 text did not contain it, step 13.2 had no resolve form (0 != 1 : []), and the text '手順 5.2 と同じ呼び出し' was still present. The literal-identifier and forged-matcher tests passed before the change; they guard the new forms."
+  AC-7:
+    tests:
+      - tests.test_merge_pr.TestState.test_ac4_merged_pr_with_another_head_is_not_merged_it_stops_pr_head_moved
+      - tests.test_merge_pr.TestArguments.test_missing_options_are_usage_errors
+      - tests.test_merge_pr.TestResolve.test_ac3_merged_pr_returns_merged_with_number_url_and_merge_commit
+      - tests.test_merge_pr.TestOperationBoundary.test_ac6_all_subcommands_use_only_read_operations_with_an_explicit_repository
+    red_confirmed: true
+    red_reason: "With the script restored to its unchanged version, the existing merge-pr tests updated to pass --base / --integration-tip failed (every resolve-based test with 'unrecognized arguments: --integration-tip', among them the tests listed here; test_missing_options_are_usage_errors failed on 0 != 2; and test_ac4_merged_pr_with_another_head_is_not_merged_it_stops_pr_head_moved failing on 'merged' != 'stop'). The suite-wide pass is the final python3 -m unittest discover -s tests run, whose only failures are the inherited baseline."

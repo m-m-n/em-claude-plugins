@@ -55,7 +55,7 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash, TaskStop
 
 走行の間だけ手元に持つ値（ファイルには書かない）。
 
-`feature`、`project_root`、`worktree_path`、`base_branch`、`commands`、`integration_tip`（事前判定が読んだ先端。参照用）、`route`（`local` / `pr`）、`remote`、`repo`、`pr_number`、`pr_url`、`head_sha`、`integrated_base`、`redo_count`（0 から数える）、`lock_token`、`hold_task_id`、`merge_commit`。
+`feature`、`project_root`、`worktree_path`、`base_branch`、`commands`、`integration_tip`（事前判定が読んだ先端。手順 5 の `resolve` に渡す）、`route`（`local` / `pr`）、`remote`、`repo`、`pr_number`、`pr_url`、`head_sha`、`integrated_base`、`redo_count`（0 から数える）、`lock_token`、`hold_task_id`、`merge_commit`。
 
 ## 手順
 
@@ -130,8 +130,10 @@ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/merge-git.py main-tree --project-root "<pr
    Bash 呼び出し（timeout: 600000）:
 
    ```bash
-   python3 ${CLAUDE_PLUGIN_ROOT}/scripts/merge-pr.py resolve --project-root "<project_root>" --repo <repo> --feature <feature> --base <base_branch>
+   python3 ${CLAUDE_PLUGIN_ROOT}/scripts/merge-pr.py resolve --project-root "<project_root>" --repo <repo> --feature <feature> --base <base_branch> --integration-tip <integration_tip>
    ```
+
+   `--integration-tip` には、事前判定が返した `integration_tip` をそのまま渡す。`resolve` は、この先端をヘッドにするマージ済み PR だけを `merged` とする。先端がそれより進んでいれば、以前にマージされた PR は無視され、その後の PR（`open`）か PR なし（`none`）として判断される。
 
    - `merged`: `pr_url` と `merge_commit` を保持して「マージ済みの経路」へ進む。
    - `stop`（`pr_closed` / `pr_draft`）: 終端（route は `pr`）。
@@ -162,7 +164,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/merge-git.py main-tree --project-root "<pr
    gh pr create --head <create_head> --base <create_base> --title "<feature>" --body "Unattended merge of feature <feature>: em-workflow/<feature>/integration into <base_branch>."
    ```
 
-   失敗したら `pr_create_failed`（route は `pr`）。成功したら手順 5.2 の `resolve` をもう一度呼び、`open` が返ることを確かめて `pr_number` と `pr_url` を保持する。`open` 以外なら `pr_create_failed`。
+   失敗したら `pr_create_failed`（route は `pr`）。成功したら手順 5.2 の `resolve` を、同じ `--integration-tip <integration_tip>` でもう一度呼び、`open` が返ることを確かめて `pr_number` と `pr_url` を保持する。`open` 以外なら `pr_create_failed`。
 
 ### 6. ロック
 
@@ -440,11 +442,11 @@ PR ルートでは、同じ呼び出しの末尾に `--remote <remote>` を付�
    Bash 呼び出し（timeout: 600000）:
 
    ```bash
-   python3 ${CLAUDE_PLUGIN_ROOT}/scripts/merge-pr.py state --project-root "<project_root>" --repo <repo> --pr <pr_number> --head <head_sha>
+   python3 ${CLAUDE_PLUGIN_ROOT}/scripts/merge-pr.py state --project-root "<project_root>" --repo <repo> --pr <pr_number> --head <head_sha> --base <base_branch>
    ```
 
-   - `merged`: `pr_url` と `merge_commit` を保持して「マージ済みの経路」へ進む。
-   - `stop`（`pr_closed` / `pr_draft` / `pr_conflicting` / `pr_head_moved`）: 終端。
+   - `merged`: `pr_url` と `merge_commit` を保持して「マージ済みの経路」へ進む（PR のヘッドが `head_sha` で、PR の base が `base_branch` のときだけ返る）。
+   - `stop`（`pr_closed` / `pr_draft` / `pr_conflicting` / `pr_head_moved`）: 終端（PR の base が `base_branch` と違う場合と、マージ済みでもヘッドが `head_sha` と違う場合は `pr_head_moved`）。
    - `ready`: 作業ディレクトリを worktree にして、正規の形の `gh pr merge` を実行する。
 
    Bash 呼び出し（timeout: 60000）:
@@ -459,7 +461,14 @@ PR ルートでは、同じ呼び出しの末尾に `--remote <remote>` を付�
    gh pr merge <pr_number> --merge --match-head-commit <head_sha>
    ```
 
-   失敗したら `merge_failed`。成功したら、`merge-pr.py resolve`（手順 5.2 と同じ呼び出し）をもう一度呼ぶ。マージキューが必須のブランチでは、`gh pr merge` はキューへの登録でも成功するので、成功しただけでは `merged` にしない。
+   失敗したら `merge_failed`。成功したら、`merge-pr.py resolve` をもう一度呼ぶ。`--integration-tip` には、いまマージした先端 `head_sha` を渡す（手順 5.2 の `integration_tip` ではない）。マージキューが必須のブランチでは、`gh pr merge` はキューへの登録でも成功するので、成功しただけでは `merged` にしない。
+
+   Bash 呼び出し（timeout: 600000）:
+
+   ```bash
+   python3 ${CLAUDE_PLUGIN_ROOT}/scripts/merge-pr.py resolve --project-root "<project_root>" --repo <repo> --feature <feature> --base <base_branch> --integration-tip <head_sha>
+   ```
+
    - `merged` が返った: `pr_url` と `merge_commit` を読み、結果を `merged` として手順 14・15 へ進む。
    - `merged` 以外（open でキュー登録中の場合を含む）が返った、`resolve` 自体が失敗した、または出力を読めなかった: `merged` にしない。手順 14 でロックを解放し、worktree を残したまま（手順 15 は行わない）`merge_failed` で終端する。`detail` は `gh pr merge succeeded but the PR is not confirmed MERGED` と状態の要点。
 3. ローカルルート。まず、メイン作業ツリーの状態を確かめる（手順 4 の `main-tree` と同じ呼び出し）。`ready` でなければ `main_tree_not_ready` で終端。次に、作業ディレクトリをプロジェクトルートにする。
