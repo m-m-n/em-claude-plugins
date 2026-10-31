@@ -113,7 +113,7 @@ workflow:
   failed_items: []
   summary: 'python3 -m unittest discover -s tests: 12369 tests OK (skipped=1). Focused run: 961 tests OK. TS1-TS14 / AC1-AC8 / TM-1-TM-4 pass; manual AC1 and SC-2 wording consistency confirmed. Build/format/E2E: not configured. Excluded requirements: none.'
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: 'Launch guard: git-common-dir project-root fallback'
