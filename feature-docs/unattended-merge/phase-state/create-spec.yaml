@@ -1,16 +1,236 @@
 schema_version: 1
 feature: unattended-merge
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: 943968d70080a623dd5db1af00fa58410ff75684
 last_input_digest: sha256:ffef0b5a7a9ba044bf05cb149663a4f19fcd1b282c92f5a7000c8563f15bbe69
 active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-31T18:19:36+09:00'
+    questions:
+    - question_id: requirement.skill-name
+      status: answered
+    - question_id: requirement.target-argument
+      status: answered
+    - question_id: requirement.no-pr-on-remote
+      status: answered
+    - question_id: requirement.precondition
+      status: answered
+    - question_id: requirement.conflict-unattributable
+      status: answered
+    - question_id: requirement.test-scope
+      status: answered
+    - question_id: requirement.command-approval
+      status: answered
+    - question_id: requirement.test-failure
+      status: answered
+    - question_id: requirement.ci-wait
+      status: answered
+    - question_id: requirement.cleanup
+      status: answered
+    - question_id: requirement.local-base-update
+      status: answered
+    - question_id: requirement.result-format
+      status: answered
+    - question_id: requirement.resume-state
+      status: answered
+    - question_id: requirement.interactive-mode
+      status: answered
+    - question_id: requirement.concurrency
+      status: answered
+    - question_id: requirement.base-moved
+      status: answered
+    - question_id: requirement.implementation-form
+      status: answered
+    - question_id: design.step.recommendation
+      status: answered
+answers:
+  requirement.skill-name:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-31T18:19:36+09:00'
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids:
+    - merge
+    freeform: null
+    normalized_answer: 'merge: /em-workflow:merge。skills/merge/SKILL.md'
+    resolution_note: 'gate: create-spec.requirement-clarification (functional-requirement); codex_consulted: true (harness entry: codex, 1 turn); options: merge, merge-feature, land; chosen: merge; not chosen: merge-feature, land; key points: 既存の develop・review と同じ動詞による命名で、操作を直接表せる（em-workflow/README.md:42）。配置も skills/<name>/SKILL.md という規約にそのまま従える（.claude/rules/slash-commands-as-skills.md:7）; opus_escalation: not run'
+  requirement.target-argument:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-31T18:19:36+09:00'
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids:
+    - feature-name
+    freeform: null
+    normalized_answer: 'feature 名のみ: 引数の feature 名から em-workflow/{feature}/integration ブランチと、その head の PR を解決する。develop の再開と同じ指定方法'
+    resolution_note: 'gate: create-spec.requirement-clarification (functional-requirement); codex_consulted: true (harness entry: codex, 1 turn); options: feature-name, feature-or-pr; chosen: feature-name; not chosen: feature-or-pr; key points: develop は明示された feature 名から integration ブランチを解決して再開するため、同じ指定方法なら対象の判定を共通化できる（em-workflow/skills/develop/SKILL.md:115-119）。pr_url は未設定の場合があり、必須の識別情報にはできない（em-workflow/references/batch-terminal-line.md:121-132）; opus_escalation: not run'
+  requirement.no-pr-on-remote:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-31T18:19:36+09:00'
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids:
+    - create-pr
+    freeform: null
+    normalized_answer: 'PR を作って続行: integration ブランチを push し gh pr create で base への PR を作ってから、通常の PR 手順を進める'
+    resolution_note: 'gate: create-spec.requirement-clarification (edge-case); codex_consulted: true (harness entry: codex, 1 turn); options: create-pr, stop, local-then-push; chosen: create-pr; not chosen: stop, local-then-push; key points: develop --batch は --pr 未指定だと push も PR 作成もしないため、PR 不在は通常の完了状態として発生する（em-workflow/skills/develop/SKILL.md:997-1014）。既存の PR 作成手順を引き継ぐ方が、リモートでは PR を経由する条件を保ちながら無人マージを完遂できる; opus_escalation: not run'
+  requirement.precondition:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-31T18:19:36+09:00'
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids:
+    - all-completed-verify-pass
+    freeform: null
+    normalized_answer: '全 step 完了必須: 全 step が completed / skipped で、verify が failed でないときだけマージする。満たさなければ理由付きで返す'
+    resolution_note: 'gate: create-spec.requirement-clarification (functional-requirement); codex_consulted: true (harness entry: codex, 1 turn); options: all-completed-verify-pass, retrospect-completed, no-check; chosen: all-completed-verify-pass; not chosen: retrospect-completed, no-check; key points: develop は verify が failed のままでも retrospect と完了処理へ進めるため、retrospect 完了だけでは検証成功を保証できない（em-workflow/skills/develop/SKILL.md:878-904,982）。全 step の completed / skipped を確認する方が、未完了の変更を取り込む危険を抑えられる; opus_escalation: not run'
+  requirement.conflict-unattributable:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-31T18:19:36+09:00'
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids:
+    - stop
+    freeform: null
+    normalized_answer: 'マージせず返す: 意図を仕様書から読み取れないことを理由に、解消せず「マージできなかった」を返す'
+    resolution_note: 'gate: create-spec.requirement-clarification (edge-case); codex_consulted: true (harness entry: codex, 1 turn); options: stop, resolve-with-history; chosen: stop; not chosen: resolve-with-history; key points: em-workflow の仕様書は feature-docs/{feature}/ として最終マージに含まれる（em-workflow/README.md:36）。対応する仕様書を確認できなければ、両側の仕様から意図を判断する条件を満たせないため、履歴だけで解消せず停止する; opus_escalation: not run'
+  requirement.test-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-31T18:19:36+09:00'
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids:
+    - build-test-e2e
+    freeform: null
+    normalized_answer: 'build+test+e2e: build_command・test_command・e2e_test_command（空は飛ばす）'
+    resolution_note: 'gate: create-spec.requirement-clarification (testing); codex_consulted: true (harness entry: codex, 1 turn); options: test-only, build-test, build-test-e2e; chosen: build-test-e2e; not chosen: test-only, build-test; key points: 既存の verify はビルドとテストに加え、E2E コマンドがあれば同じ実行規律で検証する（em-workflow/skills/develop/SKILL.md:826-836）。base 取り込み後も、記録された E2E を含めて再実行する方が統合による不具合を検出できる; opus_escalation: not run'
+  requirement.command-approval:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-31T18:19:36+09:00'
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids:
+    - stop
+    freeform: null
+    normalized_answer: 'マージせず返す: 承認を記録せず、未承認コマンドを理由に「マージできなかった」を返す'
+    resolution_note: 'gate: create-spec.requirement-clarification (security); codex_consulted: true (harness entry: codex, 1 turn); options: stop, auto-record; chosen: stop; not chosen: auto-record; key points: 自動承認の例外は develop --batch に対して定義されており、通常は未承認コマンドの実行や承認回避を認めていない（em-workflow/references/command-execution-protocol.md:93-103,194-200）。マージ処理が新たな実行権限を与えず停止する方が安全である; opus_escalation: not run'
+  requirement.test-failure:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-31T18:19:36+09:00'
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids:
+    - stop
+    freeform: null
+    normalized_answer: 'マージせず返す: push せず、失敗したコマンドと出力の要点を理由として返す'
+    resolution_note: 'gate: create-spec.requirement-clarification (edge-case); codex_consulted: true (harness entry: codex, 1 turn); options: stop, bounded-fix; chosen: stop; not chosen: bounded-fix; key points: 既存の自動修正は rework-planner によるタスク登録と workflow.yaml の状態遷移を伴う develop の責務になっている（em-workflow/skills/develop/SKILL.md:859-881）。マージ中に別の修正経路を増やさず、失敗内容を返す方が変更範囲と再開判断を明確にできる; opus_escalation: not run'
+  requirement.ci-wait:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-31T18:19:36+09:00'
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids:
+    - 60min-proceed
+    freeform: null
+    normalized_answer: '60分 / 無ければ続行: 最大 60 分待つ。チェックが 1 件も無ければ待たずにマージへ進む'
+    resolution_note: 'gate: create-spec.requirement-clarification (functional-requirement); codex_consulted: true (harness entry: codex, 1 turn); options: 60min-proceed, 30min-proceed, 60min-stop; chosen: 60min-proceed; not chosen: 30min-proceed, 60min-stop; key points: このリポジトリの GitHub Actions は main への push を起点としており、PR チェックがない構成も扱う必要がある（.github/workflows/plugin-version-bump.yml:3-5）。ローカル検証を前提に CI 未設定なら続行し、設定済みの CI には30分より余裕を持たせつつ60分で待機を打ち切る; opus_escalation: not run'
+  requirement.cleanup:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-31T18:19:36+09:00'
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids:
+    - worktree-only
+    freeform: null
+    normalized_answer: 'worktree だけ: worktree だけ削除し、ブランチは残す'
+    resolution_note: 'gate: create-spec.requirement-clarification (functional-requirement); codex_consulted: true (harness entry: codex, 1 turn); options: delete-all, worktree-only; chosen: worktree-only; not chosen: delete-all; key points: 既存の再開はブランチを起点とし、merge-task.sh もコミットの包含関係から実行済みを判定するため、ブランチを残す方が再実行と調査に使える（em-workflow/README.md:37、em-workflow/scripts/merge-task.sh:222-248）。リモートブランチ削除は既存ガードが deny にするため、全部削除は現行の権限制約とも衝突する（em-workflow/hooks/destructive-guard.py:7661-7664）; opus_escalation: not run'
+  requirement.local-base-update:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-31T18:19:36+09:00'
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids:
+    - main-tree-only
+    freeform: null
+    normalized_answer: 'メインツリーで: メイン作業ツリーが base を checkout していてクリーンなときだけ git merge --no-ff する。それ以外はマージせず返す'
+    resolution_note: 'gate: create-spec.requirement-clarification (edge-case); codex_consulted: true (harness entry: codex, 1 turn); options: main-tree-only, ref-update-fallback; chosen: main-tree-only; not chosen: ref-update-fallback; key points: develop のローカルマージもメイン作業ツリーの状態を確認し、dirty なら退避せず中断する（em-workflow/skills/develop/SKILL.md:1000-1009）。merge-task.sh の直接参照更新は専用 integration ブランチに限定された仕組みなので、ユーザーの base に広げない方が単純で安全である（em-workflow/scripts/merge-task.sh:121-158）; opus_escalation: not run'
+  requirement.result-format:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-31T18:19:36+09:00'
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids:
+    - new-contract
+    freeform: null
+    normalized_answer: '専用の契約文書: 新しい references 文書を SSOT にする。書式（bare YAML・キー固定順・二重引用符・エスケープ）は batch-terminal-line.md に揃え、キーと reason code の値域は独自に定める'
+    resolution_note: 'gate: create-spec.requirement-clarification (technical-requirement); codex_consulted: true (harness entry: codex, 1 turn); options: new-contract, extend-terminal-line, json; chosen: new-contract; not chosen: extend-terminal-line, json; key points: 既存契約の step と reason は develop 用の閉じた値域で、completed 時の step も retrospect に固定されている（em-workflow/references/batch-terminal-line.md:76-104）。出力の書式を揃えた専用契約にすれば、既存の消費側との互換性を保ちながらマージ結果を定義できる; opus_escalation: not run'
+  requirement.resume-state:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-31T18:19:36+09:00'
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids:
+    - derive-from-git
+    freeform: null
+    normalized_answer: 'git/PR 状態から: 新しい状態ファイルを持たず、PR の状態・ブランチの包含関係・リモートとの差分から毎回判断する'
+    resolution_note: 'gate: create-spec.requirement-clarification (technical-requirement); codex_consulted: true (harness entry: codex, 1 turn); options: derive-from-git, workflow-yaml-block; chosen: derive-from-git; not chosen: workflow-yaml-block; key points: workflow.yaml の書き込み者は develop に限定されており、新スキルの進捗を書き込むと所有規則の変更が必要になる（em-workflow/references/workflow-schema.md:7-17）。既存の包含関係による実行済み判定を使う方が、状態コミットを増やさず再実行できる（em-workflow/scripts/merge-task.sh:222-248）; opus_escalation: not run'
+  requirement.interactive-mode:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-31T18:19:36+09:00'
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids:
+    - batch-only
+    freeform: null
+    normalized_answer: 'batch 専用: --batch が無ければ使い方を表示して何もしない'
+    resolution_note: 'gate: create-spec.requirement-clarification (user-experience); codex_consulted: true (harness entry: codex, 1 turn); options: confirm-irreversible, same-as-batch, batch-only; chosen: batch-only; not chosen: confirm-irreversible, same-as-batch; key points: 今回必要なのは外部からの無人起動であり、既存の batch 規約も --batch を起動ごとの明示指定として扱っている（em-workflow/references/batch-mode.md:15-27）。未指定時は何もしない方が、不要な対話経路を増やさず誤起動も防げる; opus_escalation: not run'
+  requirement.concurrency:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-31T18:19:36+09:00'
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids:
+    - repo-lock
+    freeform: null
+    normalized_answer: '排他ロック: git common dir 上のロックで、base 取り込みからマージ完了までをリポジトリ単位で直列化する（merge-task.sh と同じ方式）'
+    resolution_note: 'gate: create-spec.requirement-clarification (edge-case); codex_consulted: true (harness entry: codex, 1 turn); options: repo-lock, no-lock; chosen: repo-lock; not chosen: no-lock; key points: merge-task.sh は git common dir の flock で判定から更新まで直列化しており、同じリポジトリ内の排他方式を踏襲できる（em-workflow/scripts/merge-task.sh:160-176）。複数の呼び出しや CI 待機をまたいでもロックを保持する方式と、取得待ちの上限を定める必要がある; opus_escalation: not run'
+  requirement.base-moved:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-31T18:19:36+09:00'
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids:
+    - redo-3
+    freeform: null
+    normalized_answer: '3 回までやり直す: 取り込みからやり直す。3 回で収まらなければマージせず返す'
+    resolution_note: 'gate: create-spec.requirement-clarification (edge-case); codex_consulted: true (harness entry: codex, 1 turn); options: redo-3, merge-anyway, stop; chosen: redo-3; not chosen: merge-anyway, stop; key points: 既存のマージ処理も親の更新を比較して、想定外に進んでいた場合は更新を失敗させる（em-workflow/scripts/merge-task.sh:279-282）。再取り込みと検証を最大3回に制限する方が、未検証の組み合わせでのマージと無限のやり直しを防げる; opus_escalation: not run'
+  requirement.implementation-form:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-31T18:19:36+09:00'
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids:
+    - script-plus-prose
+    freeform: null
+    normalized_answer: 'スクリプト併用: 状態判定・取り込み・push・CI 待ち・マージなどの決まった手順は scripts/ のスクリプトにして unittest で検証し、コンフリクト解消の判断だけ SKILL.md で行う'
+    resolution_note: 'gate: create-spec.requirement-clarification (technical-requirement); codex_consulted: true (harness entry: codex, 1 turn); options: script-plus-prose, prose-only; chosen: script-plus-prose; not chosen: prose-only; key points: 既存の merge-task.sh と同様に、状態判定や更新をスクリプトにすると、一時リポジトリを使う unittest の規約で再実行や競合を検証できる（test/README.md:7,38-45）。ただし、内部で実行する workflow コマンドにも承認・禁止パターンの検査を適用し、外側のスクリプト呼び出しだけで検査を済ませないことが必要である（em-workflow/hooks/bash_guard.py:437-493）; opus_escalation: not run'
+  design.step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-31T18:19:36+09:00'
+    source: batch-decision-table
+    answer_mode: select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 推奨（design step を skip）をそのまま採用する
+    resolution_note: 'gate: create-spec.design-step; batch-policies.yaml option decide_autonomously'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:ffef0b5a7a9ba044bf05cb149663a4f19fcd1b282c92f5a7000c8563f15bbe69
   dispatch_digest_inputs:
     .claude-plugin/marketplace.json: sha256:d158a0570d33f889fe3c1fe9382f805b0ae450fee2beb41e5376eb8f5690ba85
@@ -36,6 +256,8 @@ worker_runs:
     em-workflow/skills/review/SKILL.md: sha256:8e197fa5f58ae2da9454476135b92ad530079c428bedd2e00cb4e6fb711380bc
     test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
     tests/test_check_plugin_invariants.py: sha256:35b31e481577a6260e9b08cf4c18e58b7c83d1993f708326ce6e5a4e4fbb941a
+  output_digest: sha256:216d3a45f1db8817c132fe589b59a4d765327b495057f7645e2c70a2a3e19206
+  self_write_set: []
 artifacts: []
 patches: []
 progress_fingerprint: null

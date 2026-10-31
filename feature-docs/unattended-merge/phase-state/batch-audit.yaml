@@ -1,0 +1,13 @@
+schema_version: 1
+feature: unattended-merge
+records:
+- question_id: requirement.command-approval
+  packet_id: create-spec-q0001
+  answered_at: '2026-10-31T18:19:36+09:00'
+  source: batch-codex-consultation
+  answer_mode: select
+  selected_option_ids:
+  - stop
+  freeform: null
+  normalized_answer: 'マージせず返す: 承認を記録せず、未承認コマンドを理由に「マージできなかった」を返す'
+  resolution_note: 'gate: create-spec.requirement-clarification (security); codex_consulted: true (harness entry: codex, 1 turn); options: stop, auto-record; chosen: stop; not chosen: auto-record; key points: 自動承認の例外は develop --batch に対して定義されており、通常は未承認コマンドの実行や承認回避を認めていない（em-workflow/references/command-execution-protocol.md:93-103,194-200）。マージ処理が新たな実行権限を与えず停止する方が安全である; opus_escalation: not run'
