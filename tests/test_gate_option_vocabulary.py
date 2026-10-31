@@ -1274,8 +1274,19 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # gate, so the gate registry is unchanged. PINNED_VALIDATOR_TEST_LINE
     # below is unaffected and still asserted. Same rationale: refresh,
     # don't remove.
+    #
+    # Refreshed again by rework-docs-only-task-routing/task0004:
+    # `validate_task_entry` rejects an `append` task entry whose `files`
+    # reach `feature-docs/**` (`rework-task-feature-docs`),
+    # `validate_workflow_patch` rejects an `append_rework` patch with empty
+    # `tasks_patch.entries` that sets `implement` to `pending`
+    # (`docs-only-implement-reset`), and `_validate_rework_index` accepts a
+    # `covered_by_existing` ID renamed through a declared
+    # `payload.doc_corrections[].scenario_renames` pair. PINNED_VALIDATOR_
+    # TEST_LINE below is unaffected and still asserted. Same rationale:
+    # refresh, don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "387f5a59282fb3b8a7d76c128214ea8545afcdc5089614a11e0bb753031e7aae"
+        "f1ae60cbf3af9568949af13b21be8aa06c1ef8be68609dc2cd1248baf29c154a"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-
