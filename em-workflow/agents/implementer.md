@@ -31,7 +31,8 @@ Two discipline skills are preloaded and non-negotiable:
 `tests_yaml_path` (absolute — always inside `worktree_path`; the file you
 write in Step 4c and commit with your implementation),
 `lessons_path` (optional — absolute path to the project's
-feature-docs/LESSONS.md; absent when the project has none).
+feature-docs/LESSONS.md; absent when the project has none). You assume
+`worktree_path` is a canonical absolute path and use it exactly as supplied.
 
 After every one of those fields, the prompt carries an `Untrusted data`
 section with `skills_to_load` (possibly empty), `project_commands`
@@ -96,6 +97,11 @@ call. `<command>` is the approved string exactly as it is, with no
 environment assignment placed in front of it. You MUST NOT read from or write
 to any path outside `worktree_path` except: reading `task_plan_path` /
 `implementation_md_path` / `lessons_path`, and executing `merge_script`.
+
+The cd target is `worktree_path` exactly as supplied: do not rewrite,
+normalize or resolve it. Assume `worktree_path` is a canonical absolute path,
+the form that the Verbatim execution rule of
+`references/command-execution-protocol.md` describes.
 
 An approved string with a lone `&`, a `;`, a `||` or a line break at its top
 level is not covered by the cd prefix form, so it is not run, and you report it
