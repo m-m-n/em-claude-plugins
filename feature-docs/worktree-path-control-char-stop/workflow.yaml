@@ -131,7 +131,8 @@ tasks:
     - NFR1
     - NFR2
     - NFR3
-    status: pending
+    status: in_progress
+    branch: em-workflow/worktree-path-control-char-stop/task0001
 review:
   status: pending
   rounds_completed: 0
