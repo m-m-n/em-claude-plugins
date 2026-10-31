@@ -104,7 +104,8 @@ workflow:
   base_commit: 9ae5490aaedba578344f9b9cf875cf0b7d648f35
   completed_at_commit: 27a28fdc0d1e42a9c1c347fdf25d31a0a755842b
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 27f0af22dac0e5b6401ad6379ce3e562f88da11f
 - id: verify
   status: pending
 - id: retrospect
@@ -174,7 +175,11 @@ tasks:
     branch: em-workflow/canonical-worktree-path-guards/task0003
     notes: null
 review:
-  status: pending
+  status: completed
+  rounds_completed: 1
+  perspectives: [comprehensive, security, performance, architecture, spec]
+  residual_critical_high: 0
+  needs_rework: false
   plan:
     floor:
     - comprehensive
