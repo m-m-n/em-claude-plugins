@@ -4,8 +4,8 @@ phase: create-spec
 status: dispatching
 generation: 1
 base_revision: 81eca035a5666d20a94040e3cc56ecfb3e881bd7
-last_input_digest: sha256:ee02661c5915d52260e5cacf12fc9b2361cd0209a938132e1c540bf1bf4dd255
-active_request_id: create-spec-run-0002
+last_input_digest: sha256:8b8ba78d53d60d9a8cb69a5c5d7c306b5f77e9eefa9e709be11a536abf192212
+active_request_id: create-spec-run-0003
 packets:
   create-spec-q0001:
     status: answered
@@ -131,7 +131,7 @@ worker_runs:
     tests/test_merge_preflight.py: sha256:84b835c8471445b7afba215f4116dee63511d3ec8c88cffcd99608cde4190256
     tests/test_merge_skill_doc.py: sha256:f2a421addf8377d3f6646171a70417e8bb99890e1992d8a13d1b748173f4f036
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:ee02661c5915d52260e5cacf12fc9b2361cd0209a938132e1c540bf1bf4dd255
   dispatch_digest_inputs:
     CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
@@ -156,6 +156,15 @@ worker_runs:
     tests/test_merge_pr.py: sha256:ee719f79c2bb814259033c0b5116cce396a9169024c7321b380147e5dbcca01d
     tests/test_merge_preflight.py: sha256:84b835c8471445b7afba215f4116dee63511d3ec8c88cffcd99608cde4190256
     tests/test_merge_skill_doc.py: sha256:f2a421addf8377d3f6646171a70417e8bb99890e1992d8a13d1b748173f4f036
+  output_digest: sha256:5b9fea4d12fd6ddb16654a00f143539b7fd94faf3767cffe51bc693497520b12
+  self_write_set: []
+- request_id: create-spec-run-0003
+  status: dispatched
+  input_digest: sha256:8b8ba78d53d60d9a8cb69a5c5d7c306b5f77e9eefa9e709be11a536abf192212
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/spec-writer-contract.md: sha256:9032c6287d75f4a88e556bd3962c32ab8b4905cf3b6ececa895206788bcd0b63
+    em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
+    em-workflow/references/templates/spec-document.md: sha256:203dfcddbe507886ce861694fccd20ae25e5af0bd1b0efa5e935991add950cbd
 artifacts: []
 patches: []
 progress_fingerprint: null
