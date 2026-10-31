@@ -1,7 +1,7 @@
 schema_version: 1
 feature: codex-consult-output-scratchpad
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 16583f9c6f4f9a8e186d5b8c334bd6c7e6daff07
 last_input_digest: sha256:547413e1a1d51daed93ec8a368fb07d03b280e66ca82d7fa355fc525b4bce286

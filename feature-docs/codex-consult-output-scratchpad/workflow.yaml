@@ -1,0 +1,190 @@
+schema_version: 1
+feature: codex-consult-output-scratchpad
+created: '2026-10-31'
+base_branch: main
+goal: '# em-workflow の Codex 相談で、run_codex_exec.sh の出力がプロジェクトルートに consult1.out / consult1.err として残る
+
+
+  種別: バグ
+
+
+  ## 現象
+
+  develop の質問解決ステップで Codex に相談したとき、オーケストレーターが `run_codex_exec.sh` の出力を相対パスでリダイレクトし、プロジェクトルートに `consult1.out` / `consult1.err` が残った。
+
+
+  実行されたコマンド:
+
+  ```
+
+  S=<scratchpad>; P=''...''
+
+  <em-workflow>/scripts/run_codex_exec.sh readonly -C <対象プロジェクトのルート> "$P" > consult1.out 2>consult1.err
+
+  ```
+
+  `S` に scratchpad を設定しているが、リダイレクト先が `$S/` ではなくカレント（プロジェクトルート）になっている。別セッションでは `$S/consult1.txt` と正しく scratchpad に書いており、毎回ではない。
+
+
+  ## 再現手順
+
+  1. 未確定の質問が出るタスクで `/em-workflow:develop` を実行する
+
+  2. 質問解決ステップで Codex 相談が走る
+
+  3. オーケストレーターが出力をファイルにリダイレクトした場合、置き場所がプロジェクトルートになることがある
+
+
+  ## 期待する挙動
+
+  Codex 相談の出力をファイルに残す場合、scratchpad に置かれ、プロジェクトルートに未追跡ファイルが残らない。
+
+
+  ## 完了の定義
+
+  - [ ] 再現手順で現象が起きない
+
+  - [ ] 再発を検出するテストがある
+
+
+  ## 該当箇所
+
+  `em-workflow/references/question-resolution.md:466-476`（手順 2. Wrapper invocation）
+
+  呼び出し形のみ規定しており、出力をファイルに保存するか・どこに置くかが書かれていない。手順 2 に「出力をファイルに残すときは scratchpad に置く。プロジェクトルートに書かない」旨を追記する。
+
+
+  ## 実害・発生条件
+
+  対象プロジェクトの作業ツリーに未追跡ファイルが残り、`git status` が汚れる。誤ってコミットされる可能性がある。
+
+  '
+parent_branch: em-workflow/codex-consult-output-scratchpad/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.08
+      '1': 0.92
+      '2': 0.0
+      '3': 0.0
+    description_plus_code:
+      '0': 0.01
+      '1': 0.99
+      '2': 0.0
+      '3': 0.0
+  at: '2026-10-31T15:11:02+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: dbf335d1b0e69f5c165d92b96c8ad391e274ea3d
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'UI を持たない変更（手順文書と文書テストのみ）、design-system 候補 0 件（create-spec.design-step: decide_autonomously -> skipped）。tier reduced でも design step は削減対象'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review: {}
+requirements:
+  FR1:
+    title: Scratchpad placement of saved wrapper output
+    status: resolved
+    tasks: []
+    tests: []
+  FR2:
+    title: Project-root prohibition
+    status: resolved
+    tasks: []
+    tests: []
+  FR3:
+    title: Invocation form unchanged
+    status: resolved
+    tasks: []
+    tests: []
+  FR4:
+    title: Citation from the develop tier pre-survey
+    status: resolved
+    tasks: []
+    tests: []
+  FR5:
+    title: Regression test for question-resolution.md
+    status: resolved
+    tasks: []
+    tests: []
+  FR6:
+    title: Regression test for the SKILL.md citation
+    status: resolved
+    tasks: []
+    tests: []
+  NFR1:
+    title: No undefined shell variables
+    status: resolved
+    tasks: []
+    tests: []
+  NFR2:
+    title: question-resolution.md test retention
+    status: resolved
+    tasks: []
+    tests: []
+  NFR3:
+    title: SKILL.md test retention
+    status: resolved
+    tasks: []
+    tests: []
+  NFR4:
+    title: Doc redaction
+    status: resolved
+    tasks: []
+    tests: []
+  NFR5:
+    title: Plugin version untouched
+    status: resolved
+    tasks: []
+    tests: []
+  NFR6:
+    title: Document language
+    status: resolved
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
