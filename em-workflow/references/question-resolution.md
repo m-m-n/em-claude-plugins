@@ -483,6 +483,14 @@ per-command approval fallback):
    already spent still count against the ceiling below. A non-zero exit on
    the last available entry ends the consultation, and whatever is still
    unmapped goes to the Opus escalation exactly as the ceiling case does.
+   When the output of a `run_codex_exec.sh` call (stdout or stderr) is
+   saved to a file, that file is placed in the session scratchpad
+   directory: the per-session scratchpad directory the harness provides.
+   This holds on every turn, on either harness entry, including the turns
+   after a mid-consultation move from `codex` to `litellm`. The file is
+   never written under `{project_root}`, and the redirect target is never
+   a path relative to the current directory. Saving the output stays
+   optional: when nothing is saved, this rule imposes nothing.
 3. **One turn per call.** The wrapper holds no conversation state across
    invocations — each call is a single request/response. To let Codex's
    suggestion improve across turns, the orchestrator includes a summary of

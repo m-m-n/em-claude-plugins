@@ -545,6 +545,352 @@ class TestAC6MatchersCanFail(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
+# codex-consult-output-scratchpad task0001 (AC-4, AC-5, AC-6): step 3 (Codex
+# pre-survey) cites -- and never restates -- the saved-output placement rule
+# that `references/question-resolution.md` defines in step 2 ("Wrapper
+# invocation") of the Codex consultation procedure.
+# ---------------------------------------------------------------------------
+
+QUESTION_RESOLUTION_PATH = PLUGIN_ROOT / "references" / "question-resolution.md"
+STEP3_START_MARKER = CODEX_PRESURVEY_MARKER
+STEP3_END_MARKER = "4. **no-work 停止**"
+
+# The English rule sentences defined in question-resolution.md step 2. They
+# are held here only so the citation can be shown to NOT repeat them;
+# `test_rule_sentences_are_the_ones_question_resolution_defines` ties each to
+# the defining document, so a stale copy fails instead of silently passing.
+RULE_SENTENCES = (
+    "When the output of a `run_codex_exec.sh` call (stdout or stderr) is "
+    "saved to a file, that file is placed in the session scratchpad "
+    "directory: the per-session scratchpad directory the harness provides.",
+    "This holds on every turn, on either harness entry, including the turns "
+    "after a mid-consultation move from `codex` to `litellm`.",
+    "The file is never written under `{project_root}`, and the redirect "
+    "target is never a path relative to the current directory.",
+    "Saving the output stays optional: when nothing is saved, this rule "
+    "imposes nothing.",
+)
+
+# Terms that belong to the rule itself; the citation carries none of them,
+# in English or Japanese. Matched case-insensitively on whitespace-stripped
+# text, so a Japanese restatement is caught as well as an English one.
+PLACEMENT_TERMS = (
+    "scratchpad",
+    "スクラッチパッド",
+    "project root",
+    "プロジェクトルート",
+    "project_root",
+)
+
+# Pre-fix step 3 text, copied from the base revision (before the citation
+# existed), including the head of step 4 so the region slicer sees both
+# markers. Deliberately NOT read from the edited document, so the negative
+# twin keeps representing the pre-fix wording after the fix.
+PRE_FIX_STEP3_TEXT = """\
+3. **Codex 事前調査**: `${CLAUDE_PLUGIN_ROOT}/scripts/run_codex_exec.sh
+   readonly` による読み取り専用の事前調査を 1 回行う。2. の判定呼び出し
+   が使用可能かどうかにかかわらず必ず実行する — 使用不可であっても次の
+   no-work 停止に到達できるようにするため。求める事実の定義は
+   `tier-rules.yaml` の `codex_output_schema` を参照する（ここでは書き
+   写さない）。
+4. **no-work 停止**: 3. の Codex 事前調査が使用可能で、かつ「作業が残って
+"""
+
+
+def _step3_region(text):
+    """The step 3 region -- the text between the "3. **Codex 事前調査**" and
+    "4. **no-work 停止**" markers, within whatever section text is passed
+    (the real code passes `TIER_SECTION`). Fails (an AssertionError, never a
+    silent empty string) when either marker is missing or ambiguous, when the
+    markers are out of order, or when the region between them is empty."""
+    for marker in (STEP3_START_MARKER, STEP3_END_MARKER):
+        count = text.count(marker)
+        if count != 1:
+            raise AssertionError(
+                f"expected marker exactly once, found {count}x: {marker!r}"
+            )
+    start = text.index(STEP3_START_MARKER)
+    end = text.index(STEP3_END_MARKER)
+    if end < start:
+        raise AssertionError(
+            "step 3 markers are out of order: "
+            f"{STEP3_END_MARKER!r} precedes {STEP3_START_MARKER!r}"
+        )
+    region = text[start + len(STEP3_START_MARKER) : end]
+    if not region.strip():
+        raise AssertionError("step 3 region is empty")
+    return region
+
+
+def _cites_saved_output_placement_rule(region):
+    """AC-4 matcher: the region names `references/question-resolution.md`,
+    the "Codex consultation procedure" and its "Wrapper invocation" step 2 as
+    governing where a saved pre-survey output goes."""
+    return (
+        _contains(region, "`references/question-resolution.md`")
+        and _contains(region, "Codex consultation procedure")
+        and _contains(region, "step 2（Wrapper invocation）")
+        and _contains(region, "保存した出力の置き場所")
+    )
+
+
+def _restates_saved_output_rule(region):
+    """AC-5 matcher (true = violation): the region repeats one of the rule
+    sentences verbatim, or carries one of the rule's placement terms."""
+    stripped = _strip_ws(region).lower()
+    for sentence in RULE_SENTENCES:
+        if _strip_ws(sentence).lower() in stripped:
+            return True
+    return any(_strip_ws(term).lower() in stripped for term in PLACEMENT_TERMS)
+
+
+_BRACED_VARIABLE_RE = re.compile(r"\$\{[^}]*\}")
+_BARE_VARIABLE_RE = re.compile(r"\$[A-Za-z_][A-Za-z0-9_]*")
+_GUARDED_VARIABLE_RE = re.compile(r"\$\{[A-Za-z_][A-Za-z0-9_]*:-[^}]*\}")
+
+
+def _shell_variable_tokens(text):
+    """Every shell-variable token in `text`, braced (`${NAME...}`) and bare
+    (`$NAME`) alike. Braced tokens are taken first and blanked out, so a
+    variable nested in a braced default is not counted twice."""
+    tokens = _BRACED_VARIABLE_RE.findall(text)
+    remainder = _BRACED_VARIABLE_RE.sub(" ", text)
+    tokens += _BARE_VARIABLE_RE.findall(remainder)
+    return tokens
+
+
+def _unguarded_new_variables(region, pre_fix_region):
+    """NFR1 check (AC-6): every shell-variable token in `region` is either
+    already present in the pre-fix region or in the guarded default form
+    `${VAR:-default}`. Returns the offending tokens."""
+    allowed = set(_shell_variable_tokens(pre_fix_region))
+    return [
+        token
+        for token in _shell_variable_tokens(region)
+        if token not in allowed and not _GUARDED_VARIABLE_RE.fullmatch(token)
+    ]
+
+
+class TestStep3SavedOutputCitation(unittest.TestCase):
+    def setUp(self):
+        self.region = _step3_region(TIER_SECTION)
+
+    def test_ac4_step3_region_is_located_inside_the_tier_section(self):
+        # The slice comes from the module's existing TIER_SECTION locator,
+        # and still contains the step's original, unchanged sentences.
+        self.assertIn(STEP3_START_MARKER, TIER_SECTION)
+        self.assertTrue(_contains(self.region, "読み取り専用の事前調査を 1 回行う"))
+        self.assertTrue(_contains(self.region, "`codex_output_schema` を参照する"))
+
+    def test_ac4_step3_cites_question_resolution_codex_procedure_step2(self):
+        self.assertTrue(_contains(self.region, "`references/question-resolution.md`"))
+        self.assertTrue(_contains(self.region, "Codex consultation procedure"))
+        self.assertTrue(_contains(self.region, "Wrapper invocation"))
+        self.assertTrue(_cites_saved_output_placement_rule(self.region))
+
+    def test_ac4_citation_is_a_japanese_sentence_about_saved_pre_survey_output(self):
+        self.assertTrue(_contains(self.region, "事前調査が返す JSON をファイルに保存する場合"))
+        self.assertTrue(_contains(self.region, "保存した出力の置き場所"))
+        self.assertTrue(_contains(self.region, "に従う"))
+
+    def test_ac4_cited_target_exists_in_question_resolution(self):
+        # The names the citation uses are real identifiers of the cited
+        # document, not invented ones.
+        norm = re.sub(r"\s+", " ", _read(QUESTION_RESOLUTION_PATH))
+        self.assertIn("### Codex consultation procedure", norm)
+        self.assertIn("2. **Wrapper invocation.**", norm)
+
+    def test_ac5_rule_sentences_are_the_ones_question_resolution_defines(self):
+        # Ties the RULE_SENTENCES copies to their defining document, so a
+        # reworded rule makes this fail instead of leaving the
+        # non-restatement check below comparing against stale text.
+        defining = _read(QUESTION_RESOLUTION_PATH)
+        for sentence in RULE_SENTENCES:
+            with self.subTest(sentence=sentence[:50]):
+                self.assertTrue(_contains(defining, sentence))
+
+    def test_ac5_step3_does_not_restate_the_rule_sentences_verbatim(self):
+        for sentence in RULE_SENTENCES:
+            with self.subTest(sentence=sentence[:50]):
+                self.assertFalse(_contains(self.region, sentence))
+
+    def test_ac5_step3_carries_no_placement_term(self):
+        stripped = _strip_ws(self.region).lower()
+        for term in PLACEMENT_TERMS:
+            with self.subTest(term=term):
+                self.assertNotIn(_strip_ws(term).lower(), stripped)
+
+    def test_ac5_step3_is_not_a_restatement_by_the_combined_matcher(self):
+        self.assertFalse(_restates_saved_output_rule(self.region))
+
+    def test_ac6_step3_introduces_no_unguarded_shell_variable(self):
+        pre_fix_region = _step3_region(PRE_FIX_STEP3_TEXT)
+        self.assertEqual(_unguarded_new_variables(self.region, pre_fix_region), [])
+
+    def test_ac6_step3_variable_tokens_are_the_pre_fix_ones(self):
+        # Non-vacuity of the check above: the pre-fix region does carry a
+        # shell variable, and the fixed region carries exactly that set.
+        pre_fix_region = _step3_region(PRE_FIX_STEP3_TEXT)
+        self.assertEqual(
+            _shell_variable_tokens(pre_fix_region), ["${CLAUDE_PLUGIN_ROOT}"]
+        )
+        self.assertEqual(
+            sorted(_shell_variable_tokens(self.region)),
+            sorted(_shell_variable_tokens(pre_fix_region)),
+        )
+
+    def test_step3_keeps_the_existing_markers_and_neighbouring_steps(self):
+        # The step markers the rest of this module indexes are unchanged and
+        # still appear in order.
+        self.assertTrue(_calls_described_in_order(TIER_SECTION))
+        self.assertLess(
+            TIER_SECTION.index(STEP3_START_MARKER),
+            TIER_SECTION.index(STEP3_END_MARKER),
+        )
+
+
+class TestStep3CitationMatchersCanFail(unittest.TestCase):
+    """Negative twins and extractor failure modes for the step 3 citation.
+    The twin is the pre-fix step 3 text, passed through the same slicer and
+    the identical predicates the real-section assertions use."""
+
+    def setUp(self):
+        self.pre_fix_region = _step3_region(PRE_FIX_STEP3_TEXT)
+
+    def test_pre_fix_literal_is_non_trivial(self):
+        self.assertGreater(len(_strip_ws(self.pre_fix_region)), 100)
+        self.assertTrue(_contains(self.pre_fix_region, "`tier-rules.yaml`"))
+
+    def test_ac5_citation_matcher_does_not_match_pre_fix_step3(self):
+        self.assertFalse(_cites_saved_output_placement_rule(self.pre_fix_region))
+
+    def test_ac5_each_citation_name_is_absent_from_pre_fix_step3(self):
+        for name in (
+            "`references/question-resolution.md`",
+            "Codex consultation procedure",
+            "Wrapper invocation",
+            "保存した出力の置き場所",
+        ):
+            with self.subTest(name=name):
+                self.assertFalse(_contains(self.pre_fix_region, name))
+
+    def test_ac5_citation_matcher_passes_on_a_region_that_carries_the_citation(self):
+        # Non-vacuity: the matcher is not constant-False.
+        cited = (
+            "   事前調査が返す JSON をファイルに保存する場合、その保存した出力の\n"
+            "   置き場所は `references/question-resolution.md` の Codex consultation\n"
+            "   procedure、step 2（Wrapper invocation）に従う。\n"
+        )
+        forged = PRE_FIX_STEP3_TEXT.replace(
+            "4. **no-work 停止**", cited + "4. **no-work 停止**"
+        )
+        self.assertTrue(_cites_saved_output_placement_rule(_step3_region(forged)))
+
+    def test_ac5_citation_matcher_needs_every_name(self):
+        cited = (
+            "事前調査が返す JSON をファイルに保存する場合、その保存した出力の"
+            "置き場所は `references/question-resolution.md` の Codex "
+            "consultation procedure、step 2（Wrapper invocation）に従う。"
+        )
+        self.assertTrue(_cites_saved_output_placement_rule(cited))
+        for dropped in (
+            "`references/question-resolution.md`",
+            "Codex consultation procedure",
+            "Wrapper invocation",
+        ):
+            with self.subTest(dropped=dropped):
+                self.assertFalse(
+                    _cites_saved_output_placement_rule(cited.replace(dropped, "X"))
+                )
+
+    def test_ac5_restatement_matcher_is_clean_on_pre_fix_step3(self):
+        self.assertFalse(_restates_saved_output_rule(self.pre_fix_region))
+
+    def test_ac5_restatement_matcher_detects_a_verbatim_rule_sentence(self):
+        for sentence in RULE_SENTENCES:
+            with self.subTest(sentence=sentence[:50]):
+                forged = self.pre_fix_region + "\n   " + sentence + "\n"
+                self.assertTrue(_restates_saved_output_rule(forged))
+
+    def test_ac5_restatement_matcher_detects_each_placement_term(self):
+        # A Japanese restatement shares no verbatim English sentence with the
+        # rule; the placement terms are what catch it.
+        for term in PLACEMENT_TERMS:
+            for variant in (term, term.upper(), term.replace(" ", "\n   ")):
+                with self.subTest(term=term, variant=variant):
+                    forged = self.pre_fix_region + "\n   " + variant + "に置く。\n"
+                    self.assertTrue(_restates_saved_output_rule(forged))
+
+    def test_ac5_restatement_matcher_detects_a_japanese_restatement(self):
+        forged = (
+            self.pre_fix_region
+            + "\n   保存した出力はセッションのスクラッチパッドに置く。\n"
+        )
+        self.assertTrue(_restates_saved_output_rule(forged))
+
+    def test_ac6_pre_fix_region_passes_the_variable_check(self):
+        self.assertEqual(
+            _unguarded_new_variables(self.pre_fix_region, self.pre_fix_region),
+            [],
+        )
+
+    def test_ac6_bare_redirect_through_undefined_variable_fails_the_check(self):
+        # The incident's form: the orchestrator-local `$S` used as the
+        # redirect directory.
+        forged = (
+            self.pre_fix_region
+            + "\n   出力は `> $S/presurvey.out 2> $S/presurvey.err` に保存する。\n"
+        )
+        self.assertEqual(
+            _unguarded_new_variables(forged, self.pre_fix_region), ["$S", "$S"]
+        )
+
+    def test_ac6_braced_variable_without_default_fails_the_check(self):
+        forged = self.pre_fix_region + "\n   `> ${S}/presurvey.out`\n"
+        self.assertEqual(
+            _unguarded_new_variables(forged, self.pre_fix_region), ["${S}"]
+        )
+
+    def test_ac6_guarded_default_form_is_accepted(self):
+        forged = self.pre_fix_region + "\n   `> ${SCRATCH_DIR:-/tmp}/presurvey.out`\n"
+        self.assertEqual(_unguarded_new_variables(forged, self.pre_fix_region), [])
+
+    def test_ac6_variable_nested_in_a_guarded_default_is_not_double_counted(self):
+        self.assertEqual(
+            _shell_variable_tokens("${CODEX_HOME:-$HOME/.codex} と $PROMPT"),
+            ["${CODEX_HOME:-$HOME/.codex}", "$PROMPT"],
+        )
+
+    # --- region slicer: fails loudly, never a silent empty string ----------
+
+    def test_slicer_fails_when_start_marker_missing(self):
+        forged = PRE_FIX_STEP3_TEXT.replace(STEP3_START_MARKER, "3. **調査**")
+        with self.assertRaises(AssertionError):
+            _step3_region(forged)
+
+    def test_slicer_fails_when_end_marker_missing(self):
+        forged = PRE_FIX_STEP3_TEXT.replace(STEP3_END_MARKER, "4. **停止**")
+        with self.assertRaises(AssertionError):
+            _step3_region(forged)
+
+    def test_slicer_fails_when_markers_are_out_of_order(self):
+        start = PRE_FIX_STEP3_TEXT.index(STEP3_START_MARKER)
+        end = PRE_FIX_STEP3_TEXT.index(STEP3_END_MARKER)
+        forged = PRE_FIX_STEP3_TEXT[end:] + PRE_FIX_STEP3_TEXT[start:end]
+        with self.assertRaises(AssertionError):
+            _step3_region(forged)
+
+    def test_slicer_fails_when_a_marker_occurs_twice(self):
+        with self.assertRaises(AssertionError):
+            _step3_region(PRE_FIX_STEP3_TEXT + PRE_FIX_STEP3_TEXT)
+
+    def test_slicer_fails_when_region_is_empty(self):
+        forged = STEP3_START_MARKER + "\n" + STEP3_END_MARKER + ": text\n"
+        with self.assertRaises(AssertionError):
+            _step3_region(forged)
+
+
+# ---------------------------------------------------------------------------
 # AC-7 (part 2): this module's own hygiene (stdlib-only imports).
 # ---------------------------------------------------------------------------
 
