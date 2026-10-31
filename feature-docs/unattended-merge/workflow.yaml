@@ -297,9 +297,9 @@ tasks:
     - NFR4
     - NFR7
     - NFR8
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/unattended-merge/task0008
   task0009:
     title: Plugin manifest descriptions and minor version
     plan: tasks/task0009.md
