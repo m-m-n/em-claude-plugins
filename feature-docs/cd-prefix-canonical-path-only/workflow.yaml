@@ -1,0 +1,220 @@
+schema_version: 1
+feature: cd-prefix-canonical-path-only
+created: '2026-10-31'
+base_branch: main
+goal: |
+  # bash_guard.py の cd 前置形の判定を正規の絶対パスだけに絞る
+
+  ## やりたいこと (必須)
+
+  `em-workflow/hooks/bash_guard.py` の cd 前置形の判定を、正規の絶対パスだけを許可する形に絞る。段階検査（`_stage_walk_refuses`）、物理パスへのフォールバック、/proc・/dev/fd の特別扱いを取り除く。
+
+  ## 背景・なぜ (必須)
+
+  10/28〜10/31 に、cd 前置形の判定を直す feature が 7 件続いた（implementer-cd-verbatim-conflict、is-below-physical-fallback、cd-prefix-toplevel-operators、cd-prefix-non-directory-dotdot、cd-prefix-process-dependent-paths、cd-prefix-relative-link-target、is-below-stalled-walk-proc-read）。修正のたびに、その修正から次の指摘が出ている。最初の high を除き、指摘はすべて fail-closed 側の誤判定か、実運用では起きない経路だった。
+
+  `em-workflow/references/command-execution-protocol.md` は cd 先を `{worktree_path}` に限っているので、Bash のパス解決を再現する必要はない。
+
+  このタスクは「bash\_guard.py の段階検査の続行が要素数の二乗で遅くなる」（破棄）を吸収する。
+
+  ## 受け入れ条件 / 完了の定義 (必須)
+
+  - [ ] 次をすべて満たすパスだけを許可する
+    - 絶対パスで、ルート以外に空要素・`.`・`..` を含まない（正規化してから受け入れることはしない）
+    - 字句的に `strictly_below(path, area)` を満たす
+    - `os.path.realpath(path, strict=True) == path`
+    - `isdir(path)`
+  - [ ] パスの長さに上限を設け、上限を超えたら走査の前に不許可にする。上限は固定の PATH\_MAX ではなく、環境に合ったバイト数にする
+  - [ ] 既存の引用符などの構文の制限と、例外が出たら不許可にする動作を変えない
+  - [ ] `_stage_walk_refuses`、物理パスへのフォールバック、/proc・/dev/fd の特別扱いを取り除く
+  - [ ] 許可領域そのものがシンボリックリンクを含む場合の扱いを決めて SPEC に書く（`worktree_area()` の解決先を信頼するか、元の作業ツリーの配下に限るか）
+  - [ ] 許可する範囲を決めて SPEC に書く（許可領域の配下全体か、割り当てた `{worktree_path}` そのものか）
+  - [ ] `command-execution-protocol.md`、hook の docstring、implementer の手順書の cd 前置形の条件を、新しい判定に合わせる
+  - [ ] 末尾の `/`・重複した `/`・`.`・`..`・リンクを含むパスを不許可とするテストがある
+  - [ ] 長いパス（例: `'/dev/null' + '/x' * 32000`）で判定がすぐに返ることを確かめるテストがある
+  - [ ] 取り除いた判定のためのテストを整理し、残ったテストがすべて通る
+
+  ## スコープ外 (任意)
+
+  検査してから実行するまでの間に、ディレクトリや祖先がリンクに差し替えられる問題（事前のフックだけでは解消できない）
+
+  ## 制約・前提 (任意)
+
+  implementer が cd 先に渡す `{worktree_path}` が正規の絶対パスであることを確かめ、そうでなければ生成する側で正規のパスにそろえる。
+parent_branch: em-workflow/cd-prefix-canonical-path-only/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.07
+      '2': 0.93
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.0
+      '2': 0.99
+      '3': 0.01
+  at: '2026-10-31T11:26:27+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: c996dd291f2e45c3a6393a4e997738d5886e4fa7
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'UI も視覚的な要素もなく、フックの判定ロジック、文書、テストの変更だけだから（design-step: decide_autonomously、batch）'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  perspectives: []
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: Allow only canonical absolute paths
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: Length bound
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: Syntax, exclusion rules, decision table and exception handling are unchanged
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: Remove the old checks
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: Allowed area containing links
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: Allowed scope
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: Align documents with the new check
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: Canonicalize worktree_path at the producer
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR9:
+    title: Tests
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR10:
+    title: Test records of past features
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: Standard library only
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: No child processes
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: Hook output discipline
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: Decision time
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: Fail closed
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
