@@ -1,11 +1,11 @@
 schema_version: 1
 feature: unattended-merge
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 8c887a57504d4130c68c1d14ec518da660bcf66c
 last_input_digest: sha256:be14f9ba2cd6b793cd8c6aa71bab86868315737bb8996a9f28f0b61b952a8151
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:

@@ -2,7 +2,43 @@ schema_version: 1
 feature: unattended-merge
 created: '2026-10-31'
 base_branch: main
-goal: "# develop で完成した feature を無人でマージするスキルを追加する\n\n## やりたいこと\n\ndevelop で完成した feature を、無人でマージまで進めるスキルを em-workflow に追加する。\n\n## 背景・なぜ\n\n今は develop が作った PR やブランチを人がマージしている。これを自動化したい。\n\n## 受け入れ条件 / 完了の定義\n\n- `--batch` で無人実行できるマージ用のスキルがある\n- リモートがあるリポジトリでは、PR を対象にする\n  - PR が開いていてマージできる状態か確かめる\n  - base ブランチの最新を PR のブランチに取り込む\n  - コンフリクトしたら解消する。両方の変更の意図を、それぞれの feature の仕様書から読み取って判断する\n  - テストを実行する（workflow.yaml に記録されたコマンド）\n  - push して CI の完了を待つ\n  - PR をマージコミットでマージする\n- リモートが無いリポジトリでは、同じ手順をローカルで行い、integration ブランチを base ブランチにマージコミットでマージする\n- 途中で止まっても、やり直せば続きから進む\n  - すでにマージ済みなら何もせず成功を返す\n- 結果（マージした / できなかった理由）を構造化して返す\n\n## スコープ外\n\n- Notion のステータス更新（loop-develop 側で行う）\n\n## 制約・前提\n\n- loop-develop のディスパッチャーから claude-batch 経由で起動される\n\n## 追加指示（起動時）\n\n- 不明点は Codex に相談し、相対的に良いと判断した選択肢を採用する\n"
+goal: |
+  # develop で完成した feature を無人でマージするスキルを追加する
+
+  ## やりたいこと
+
+  develop で完成した feature を、無人でマージまで進めるスキルを em-workflow に追加する。
+
+  ## 背景・なぜ
+
+  今は develop が作った PR やブランチを人がマージしている。これを自動化したい。
+
+  ## 受け入れ条件 / 完了の定義
+
+  - `--batch` で無人実行できるマージ用のスキルがある
+  - リモートがあるリポジトリでは、PR を対象にする
+    - PR が開いていてマージできる状態か確かめる
+    - base ブランチの最新を PR のブランチに取り込む
+    - コンフリクトしたら解消する。両方の変更の意図を、それぞれの feature の仕様書から読み取って判断する
+    - テストを実行する（workflow.yaml に記録されたコマンド）
+    - push して CI の完了を待つ
+    - PR をマージコミットでマージする
+  - リモートが無いリポジトリでは、同じ手順をローカルで行い、integration ブランチを base ブランチにマージコミットでマージする
+  - 途中で止まっても、やり直せば続きから進む
+    - すでにマージ済みなら何もせず成功を返す
+  - 結果（マージした / できなかった理由）を構造化して返す
+
+  ## スコープ外
+
+  - Notion のステータス更新（loop-develop 側で行う）
+
+  ## 制約・前提
+
+  - loop-develop のディスパッチャーから claude-batch 経由で起動される
+
+  ## 追加指示（起動時）
+
+  - 不明点は Codex に相談し、相対的に良いと判断した選択肢を採用する
 parent_branch: em-workflow/unattended-merge/integration
 tier: full
 tier_decision:
@@ -51,7 +87,8 @@ workflow:
   - VERIFICATION.md
   - THREAT-MODEL.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: 2471c5c82fc5455c0755b0a69d238e48650ddc82
 - id: implement
   status: pending
 - id: review
