@@ -169,7 +169,7 @@ tasks:
     requirements:
     - FR5
     - NFR1
-    status: in_progress
+    status: merged
     branch: em-workflow/canonical-worktree-path-guards/task0003
     notes: null
 review:
