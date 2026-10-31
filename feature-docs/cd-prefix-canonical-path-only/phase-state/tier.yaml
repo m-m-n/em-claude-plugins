@@ -1,0 +1,73 @@
+schema_version: 2
+feature: cd-prefix-canonical-path-only
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.93
+    confidence: 0.93
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.07
+      '2': 0.93
+      '3': 0.0
+  observed_at: '2026-10-31T11:06:27+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 2.01
+    confidence: 0.99
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.0
+      '2': 0.99
+      '3': 0.01
+  observed_at: '2026-10-31T11:25:27+09:00'
+pre_survey_estimate:
+  files_expected: 13
+  changed_lines_approx: 2000
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  added_test_cases_approx: 10
+  caller_and_dependency_count: 8
+  covering_tests_exist: true
+  work_still_required: true
+  changes_external_contract: true
+  changes_behavior: true
+  spillover_modules:
+  - em-workflow/references/command-execution-protocol.md
+  - em-workflow/agents/implementer.md
+  - em-workflow/skills/worktree-task-workflow/SKILL.md
+  - em-workflow/references/implement-phase.md
+  - feature-docs の対象 SPEC.md
+  - test-docs の旧判定を参照する6記録
+  test_change_kind: new_behavior_tests
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  evidence: '未達: em-workflow/hooks/bash_guard.py:410 は段階検査を2回実行し、:412 は非strictのrealpath、:421
+    は物理パスへのフォールバックを使用する。:407 の判定にバイト長上限はなく、:325 で要素を逐次処理する。読み取りのみの直接確認では末尾/・重複/・.・..を含む既存ディレクトリがすべてTrueになった。維持対象:
+    :215 の引用符などの構文制限、:422 のOSError/ValueError時のFalse。領域: :246 は許可領域をrealpathで解決し、:440
+    はその配下を判定する。割り当てたworktree_pathとの一致検査はない。既存SPECも領域の解決先より深い範囲を規定する（feature-docs/implementer-cd-verbatim-conflict/SPEC.md:49）。文書:
+    hookの説明はbash_guard.py:29、旧条件はcommand-execution-protocol.md:126に残る。implementer.md:28
+    は絶対パスのみを要求し、:94 とworktree-task-workflow/SKILL.md:123がcd前置を指示する。生成手順はimplement-phase.md:203、受け渡しは:411で、正規形の検証・変換は記載されていない。テスト:
+    tests/test_bash_guard_cd_prefix.pyに149件、test_bash_guard_cd_prefix_operators.pyに25件のテストメソッドがある。前者:555はリンクと..の許可、:1729は領域内リンクの許可、:2670は削除対象関数の存在を固定する。一般の非正規パス拒否と長大パスの即時終了を確認するテストは見当たらない。旧判定を参照するtest-docsが6記録あり、ID削除時には対応が必要（例:
+    test-docs/is-below-physical-fallback/task0001.tests.yaml:18、検証処理はtests/test_tests_yaml_id_resolution.py:972）。呼出関係はis_belowの実行時呼出元1件と直接依存7件。ファイル変更は行っていない。既存テスト一式は一時ファイルを作成するため実行していない（tests/test_bash_guard_cd_prefix.py:221）。概数項目は変更候補の推定であり、確定した実装量ではない'
+decided_at: '2026-10-31T11:26:27+09:00'
