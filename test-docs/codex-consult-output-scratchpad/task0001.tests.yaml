@@ -1,0 +1,103 @@
+task_id: task0001
+baseline_failures: []           # full run of the unmodified worktree: 12310 tests, OK (1 skipped)
+final_failures: []              # full run re-executed after implementation: 12376 tests, OK (1 skipped)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_ac1_saved_output_goes_to_session_scratchpad
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_ac1_scratchpad_is_named_in_prose_as_the_harness_directory
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_ac1_saving_stays_optional
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_ac1_rule_governs_every_turn_on_either_harness_entry
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_ac7_rule_is_defined_only_in_this_document
+    red_confirmed: true
+    red_reason: "AssertionError before the rule existed: 'that file is placed in the session scratchpad directory', 'the per-session scratchpad directory the harness provides', 'Saving the output stays optional' and the on-either-harness-entry phrase were not found in the step 2 region; test_ac7_rule_is_defined_only_in_this_document: 0 != 1"
+  AC-2:
+    tests:
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_ac2_project_root_and_cwd_relative_paths_are_prohibited
+    red_confirmed: true
+    red_reason: "AssertionError before the rule existed: 'never written under `{project_root}`' not found in the step 2 region"
+  AC-3:
+    tests:
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_wrapper_invocation_region_lies_inside_codex_procedure
+      - tests.test_question_resolution_doc.TestWrapperOutputPlacementMatchers.test_extractor_returns_whitespace_collapsed_region
+      - tests.test_question_resolution_doc.TestWrapperOutputPlacementMatchers.test_extractor_fails_when_start_marker_missing
+      - tests.test_question_resolution_doc.TestWrapperOutputPlacementMatchers.test_extractor_fails_when_end_marker_missing
+      - tests.test_question_resolution_doc.TestWrapperOutputPlacementMatchers.test_extractor_fails_when_markers_are_out_of_order
+      - tests.test_question_resolution_doc.TestWrapperOutputPlacementMatchers.test_extractor_fails_when_a_marker_occurs_twice
+      - tests.test_question_resolution_doc.TestWrapperOutputPlacementMatchers.test_extractor_fails_when_region_is_empty
+      - tests.test_question_resolution_doc.TestWrapperOutputPlacementMatchers.test_pre_fix_literal_is_non_trivial
+      - tests.test_question_resolution_doc.TestWrapperOutputPlacementMatchers.test_ac3_placement_matcher_does_not_match_pre_fix_step2
+      - tests.test_question_resolution_doc.TestWrapperOutputPlacementMatchers.test_ac3_prohibition_matcher_does_not_match_pre_fix_step2
+      - tests.test_question_resolution_doc.TestWrapperOutputPlacementMatchers.test_ac3_harness_entry_matcher_does_not_match_pre_fix_step2
+      - tests.test_question_resolution_doc.TestWrapperOutputPlacementMatchers.test_ac3_each_phrase_is_absent_from_pre_fix_step2
+      - tests.test_question_resolution_doc.TestWrapperOutputPlacementMatchers.test_ac3_matchers_pass_on_a_region_that_carries_the_rule
+      - tests.test_question_resolution_doc.TestWrapperOutputPlacementMatchers.test_ac3_placement_matcher_needs_both_stream_names
+      - tests.test_question_resolution_doc.TestWrapperOutputPlacementMatchers.test_ac3_prohibition_matcher_needs_both_prohibitions
+    red_confirmed: false
+    red_reason: "Negative twins assert that the matchers do NOT match the pre-fix step 2 text, and the extractor already raised on a missing or out-of-order marker, so these pass by design with no red state. Their discriminating power was shown by mutation instead: with the three matchers forced to True, test_ac3_placement_matcher_does_not_match_pre_fix_step2, test_ac3_prohibition_matcher_does_not_match_pre_fix_step2, test_ac3_harness_entry_matcher_does_not_match_pre_fix_step2, test_ac3_placement_matcher_needs_both_stream_names and test_ac3_prohibition_matcher_needs_both_prohibitions failed."
+  AC-4:
+    tests:
+      - tests.test_develop_tier_staged_procedure.TestStep3SavedOutputCitation.test_ac4_step3_cites_question_resolution_codex_procedure_step2
+      - tests.test_develop_tier_staged_procedure.TestStep3SavedOutputCitation.test_ac4_citation_is_a_japanese_sentence_about_saved_pre_survey_output
+    red_confirmed: true
+    red_reason: "AssertionError: False is not true -- the step 3 region named neither references/question-resolution.md, the Codex consultation procedure nor Wrapper invocation before the citation existed"
+  AC-5:
+    tests:
+      - tests.test_develop_tier_staged_procedure.TestStep3SavedOutputCitation.test_ac4_step3_region_is_located_inside_the_tier_section
+      - tests.test_develop_tier_staged_procedure.TestStep3SavedOutputCitation.test_ac4_cited_target_exists_in_question_resolution
+      - tests.test_develop_tier_staged_procedure.TestStep3SavedOutputCitation.test_ac5_rule_sentences_are_the_ones_question_resolution_defines
+      - tests.test_develop_tier_staged_procedure.TestStep3SavedOutputCitation.test_ac5_step3_does_not_restate_the_rule_sentences_verbatim
+      - tests.test_develop_tier_staged_procedure.TestStep3SavedOutputCitation.test_ac5_step3_carries_no_placement_term
+      - tests.test_develop_tier_staged_procedure.TestStep3SavedOutputCitation.test_ac5_step3_is_not_a_restatement_by_the_combined_matcher
+      - tests.test_develop_tier_staged_procedure.TestStep3SavedOutputCitation.test_step3_keeps_the_existing_markers_and_neighbouring_steps
+      - tests.test_develop_tier_staged_procedure.TestStep3CitationMatchersCanFail.test_pre_fix_literal_is_non_trivial
+      - tests.test_develop_tier_staged_procedure.TestStep3CitationMatchersCanFail.test_ac5_citation_matcher_does_not_match_pre_fix_step3
+      - tests.test_develop_tier_staged_procedure.TestStep3CitationMatchersCanFail.test_ac5_each_citation_name_is_absent_from_pre_fix_step3
+      - tests.test_develop_tier_staged_procedure.TestStep3CitationMatchersCanFail.test_ac5_citation_matcher_passes_on_a_region_that_carries_the_citation
+      - tests.test_develop_tier_staged_procedure.TestStep3CitationMatchersCanFail.test_ac5_citation_matcher_needs_every_name
+      - tests.test_develop_tier_staged_procedure.TestStep3CitationMatchersCanFail.test_ac5_restatement_matcher_is_clean_on_pre_fix_step3
+      - tests.test_develop_tier_staged_procedure.TestStep3CitationMatchersCanFail.test_ac5_restatement_matcher_detects_a_verbatim_rule_sentence
+      - tests.test_develop_tier_staged_procedure.TestStep3CitationMatchersCanFail.test_ac5_restatement_matcher_detects_each_placement_term
+      - tests.test_develop_tier_staged_procedure.TestStep3CitationMatchersCanFail.test_ac5_restatement_matcher_detects_a_japanese_restatement
+      - tests.test_develop_tier_staged_procedure.TestStep3CitationMatchersCanFail.test_slicer_fails_when_start_marker_missing
+      - tests.test_develop_tier_staged_procedure.TestStep3CitationMatchersCanFail.test_slicer_fails_when_end_marker_missing
+      - tests.test_develop_tier_staged_procedure.TestStep3CitationMatchersCanFail.test_slicer_fails_when_markers_are_out_of_order
+      - tests.test_develop_tier_staged_procedure.TestStep3CitationMatchersCanFail.test_slicer_fails_when_a_marker_occurs_twice
+      - tests.test_develop_tier_staged_procedure.TestStep3CitationMatchersCanFail.test_slicer_fails_when_region_is_empty
+    red_confirmed: false
+    red_reason: "The criterion asserts absence (no restatement of the rule in step 3) and non-match (the citation matcher against the pre-fix step 3 text), which hold before the fix by design, so only the tie-in test_ac5_rule_sentences_are_the_ones_question_resolution_defines went red before the rule existed (sentences not found in question-resolution.md). Discriminating power of the rest was shown by mutation: with a restating sentence or a Japanese scratchpad term added to step 3, the verbatim, placement-term and combined-matcher tests failed; with the citation matcher forced to True, the negative twin test failed."
+  AC-6:
+    tests:
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_ac6_step2_introduces_no_unguarded_shell_variable
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_ac6_step2_variable_tokens_are_the_pre_fix_ones
+      - tests.test_question_resolution_doc.TestWrapperOutputPlacementMatchers.test_ac6_bare_redirect_through_undefined_variable_fails_the_check
+      - tests.test_question_resolution_doc.TestWrapperOutputPlacementMatchers.test_ac6_braced_variable_without_default_fails_the_check
+      - tests.test_question_resolution_doc.TestWrapperOutputPlacementMatchers.test_ac6_guarded_default_form_is_accepted
+      - tests.test_question_resolution_doc.TestWrapperOutputPlacementMatchers.test_ac6_pre_fix_region_passes_the_variable_check
+      - tests.test_question_resolution_doc.TestWrapperOutputPlacementMatchers.test_ac6_variable_nested_in_a_guarded_default_is_not_double_counted
+      - tests.test_develop_tier_staged_procedure.TestStep3SavedOutputCitation.test_ac6_step3_introduces_no_unguarded_shell_variable
+      - tests.test_develop_tier_staged_procedure.TestStep3SavedOutputCitation.test_ac6_step3_variable_tokens_are_the_pre_fix_ones
+      - tests.test_develop_tier_staged_procedure.TestStep3CitationMatchersCanFail.test_ac6_bare_redirect_through_undefined_variable_fails_the_check
+      - tests.test_develop_tier_staged_procedure.TestStep3CitationMatchersCanFail.test_ac6_braced_variable_without_default_fails_the_check
+      - tests.test_develop_tier_staged_procedure.TestStep3CitationMatchersCanFail.test_ac6_guarded_default_form_is_accepted
+      - tests.test_develop_tier_staged_procedure.TestStep3CitationMatchersCanFail.test_ac6_pre_fix_region_passes_the_variable_check
+      - tests.test_develop_tier_staged_procedure.TestStep3CitationMatchersCanFail.test_ac6_variable_nested_in_a_guarded_default_is_not_double_counted
+    red_confirmed: false
+    red_reason: "The check asserts that no new unguarded shell variable exists, which holds before the fix because the pre-fix regions add none; a synthetic region with a bare $S redirect, an unguarded braced variable and a guarded default form pin the check's behaviour both ways. Mutation shown: adding a bare $S redirect to the step 3 region made test_ac6_step3_introduces_no_unguarded_shell_variable and test_ac6_step3_variable_tokens_are_the_pre_fix_ones fail."
+  AC-7:
+    tests:
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_ac7_step2_retains_invocation_line_litellm_values_and_timeout
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_ac7_step2_carries_no_forbidden_token
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_codex_procedure_wrapper_invocation
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_no_fallback_provider_name_leaked
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_no_rate_limit_detection_description
+      - tests.test_question_resolution_doc.TestQuestionResolutionDoc.test_no_new_gate_id_minted
+      - tests.test_question_resolution_doc.TestWrapperOutputPlacementMatchers.test_ac7_retention_matcher_fails_when_timeout_sentence_changes
+      - tests.test_question_resolution_doc.TestWrapperOutputPlacementMatchers.test_ac7_retention_matcher_fails_when_a_litellm_value_is_dropped
+      - tests.test_question_resolution_doc.TestWrapperOutputPlacementMatchers.test_ac7_retention_matcher_fails_when_invocation_line_changes
+      - tests.test_question_resolution_doc.TestWrapperOutputPlacementMatchers.test_ac7_forbidden_token_matcher_is_clean_on_pre_fix_step2
+      - tests.test_question_resolution_doc.TestWrapperOutputPlacementMatchers.test_ac7_forbidden_token_matcher_detects_each_forbidden_token
+      - tests.test_develop_tier_staged_procedure.TestAC6ForbiddenTokens.test_no_violations_in_real_section
+      - tests.test_develop_tier_staged_procedure.TestAC1CallOrder.test_calls_described_in_order
+    red_confirmed: false
+    red_reason: "Retention and forbidden-token checks (b) and (c) assert that existing text is unchanged and that no forbidden token was added, which hold before the fix by design; the existing test_codex_procedure_wrapper_invocation, the document-wide provider-name, rate-limit and gate_id pins and the tier-section forbidden-token and call-order tests already detect these behaviours and no red state occurred for this change. Checks (a) and (d), the added-lines-only diff and the no-Notion-URL, no-home-path, no-plugin-version-change diff, are performed at the verify phase; check (c), the full discover run, is recorded in final_failures."

@@ -252,6 +252,9 @@ feature 名が fail-closed 識別子ゲートを通過した直後、`workflow.y
    no-work 停止に到達できるようにするため。求める事実の定義は
    `tier-rules.yaml` の `codex_output_schema` を参照する（ここでは書き
    写さない）。
+   事前調査が返す JSON をファイルに保存する場合、その保存した出力の
+   置き場所は `references/question-resolution.md` の Codex consultation
+   procedure、step 2（Wrapper invocation）に従う。
 4. **no-work 停止**: 3. の Codex 事前調査が使用可能で、かつ「作業が残って
    いない」旨を報告した場合、判定を先へ進めず、5. の判定呼び出しも
    いかなる workflow step も実行せずにここで走行を終える。結果は停止状態を
