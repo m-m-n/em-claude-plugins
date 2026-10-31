@@ -29,8 +29,9 @@ add).  Diagnostics go to stderr only.
       several PRs share a class, the highest PR number is used.  `head` is
       the PR's head commit SHA.
 
-  state    --project-root P --repo O/N --pr N --head SHA
-      Read the PR's state right before the merge.
+  state    --project-root P --repo O/N --pr N --head SHA [--base B]
+      When --base is given, a PR whose base branch differs from B is a
+      `pr_head_moved` stop.  Read the PR's state right before the merge.
       outcome `merged` (+ `pr_url`, `merge_commit`)
       outcome `ready`  (+ `pr_url`, `head`)
       stop `pr_closed` / `pr_draft` / `pr_conflicting` / `pr_head_moved`
@@ -179,6 +180,7 @@ def build_parser():
     p.add_argument("--repo", required=True, type=arg_repo)
     p.add_argument("--pr", required=True, type=arg_pr)
     p.add_argument("--head", required=True, type=arg_sha)
+    p.add_argument("--base", required=False, default=None, type=arg_branch)
     return parser
 
 
@@ -397,7 +399,9 @@ PR_LIST_FIELDS = (
     "number,url,state,isDraft,headRefName,baseRefName,headRefOid,"
     "isCrossRepository,mergeCommit"
 )
-PR_VIEW_FIELDS = "number,url,state,isDraft,mergeable,headRefOid,mergeCommit"
+PR_VIEW_FIELDS = (
+    "number,url,state,isDraft,mergeable,headRefOid,baseRefName,mergeCommit"
+)
 
 
 # --- resolve -----------------------------------------------------------------
@@ -484,6 +488,7 @@ def cmd_state(args):
     if doc is None:
         raise InternalFailure("gh pr view failed")
     pr = parse_pr(doc, with_branches=False)
+    base_ref = doc.get("baseRefName") if isinstance(doc, dict) else None
     if pr["number"] != args.pr:
         raise InternalFailure("gh returned a different PR than requested")
 
@@ -500,6 +505,12 @@ def cmd_state(args):
         return stop(
             "pr_head_moved",
             "PR #%d head is %s, expected %s" % (num, pr["head_sha"], args.head),
+            pr_url=url,
+        )
+    if args.base is not None and base_ref != args.base:
+        return stop(
+            "pr_head_moved",
+            "PR #%d base is %s, expected %s" % (num, base_ref, args.base),
             pr_url=url,
         )
     return result("ready", pr_url=url, head=pr["head_sha"])

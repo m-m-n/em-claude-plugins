@@ -8780,6 +8780,22 @@ def is_integration_worktree_cwd(cwd):
         else:
             root = "/" + "/".join(segs[: i + 5])
             project = "/" + "/".join(segs[:i])
+            # Below the root, any directory with its own `.git` (nested clone,
+            # submodule) or any symlink is a different repository: no exception.
+            rest = []
+            for seg in segs[i + 5 :]:
+                if seg == "..":
+                    rest.pop()
+                else:
+                    rest.append(seg)
+            cur = root
+            try:
+                for seg in rest:
+                    cur = os.path.join(cur, seg)
+                    if os.path.islink(cur) or os.path.lexists(os.path.join(cur, ".git")):
+                        return False
+            except Exception:
+                return False
             return _is_registered_integration_worktree(root, project, segs[i + 3])
     return False
 
