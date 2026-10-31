@@ -70,14 +70,17 @@ EM_REVIEW_BASELINE_VERSION = "0.5.7"
 # (orphan-recovery-plugin-root-path task0002, FR6); canonicalizing the
 # marketplace with that entry removed gives the previous value, so the entry
 # addition is the only non-version change it absorbs.
+# Re-baselined by unattended-merge task0009 (FR23): the em-workflow
+# descriptions now mention /em-workflow:merge; the digests below cover the
+# non-version content as it reads after that edit.
 EM_WORKFLOW_MANIFEST_NONVERSION_SHA256 = (
-    "bf70d7104511c338b6f076c3d9ab08b6a19b757b59d45397324242f11008ebf0"
+    "95f2c7b517b2768a1abb0f87061783cf96000c7a5625a96744a6eb99cd73e250"
 )
 EM_REVIEW_MANIFEST_NONVERSION_SHA256 = (
     "6f6b717184be5c2a250c80e39f0a526e103f9d752d039fa47f6343e9bd0dc3b3"
 )
 MARKETPLACE_NONVERSION_SHA256 = (
-    "e19b9efbf3a9d089661a145070011ee539ccccaedb5aaa4697ee9d18fa7812fc"
+    "7eed644b599c660721bf9daf172530532ab4b159402acdfd56317a21564fc216"
 )
 
 VERSION_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")

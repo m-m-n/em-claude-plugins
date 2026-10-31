@@ -449,11 +449,14 @@ def _marketplace_em_workflow_entry(data):
 # (canonical JSON with the `version` key removed, sha256 of the UTF-8
 # bytes) -- unaffected by whether IMPLEMENTATION.md SC-6's commit-guard
 # fallback ends up bumping the version in this task's commit.
+# Re-baselined by unattended-merge task0009 (FR23): the em-workflow
+# descriptions now mention /em-workflow:merge; the digests below cover the
+# non-version content as it reads after that edit.
 PLUGIN_JSON_NON_VERSION_SHA256 = (
-    "bf70d7104511c338b6f076c3d9ab08b6a19b757b59d45397324242f11008ebf0"
+    "95f2c7b517b2768a1abb0f87061783cf96000c7a5625a96744a6eb99cd73e250"
 )
 MARKETPLACE_ENTRY_NON_VERSION_SHA256 = (
-    "ff0048295446075c937c1764ffe844dce42ef8b8d32ff1578c13b5ee5cf2e5da"
+    "c5a092391b33869aa40a5e45064264d342f9c0096625cd49b937a99ddedd0279"
 )
 
 

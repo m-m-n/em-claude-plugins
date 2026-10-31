@@ -533,11 +533,14 @@ class TestModuleImportsStandardLibraryOnly(unittest.TestCase):
 # (IMPLEMENTATION.md SC-6) -- the commit-guard fallback may have bumped it
 # in the same commit as this task's document edits.
 BASE_PLUGIN_JSON_VERSION = "0.2.14"
+# Re-baselined by unattended-merge task0009 (FR23): the em-workflow
+# descriptions now mention /em-workflow:merge; the digests below cover the
+# non-version content as it reads after that edit.
 BASE_PLUGIN_JSON_NON_VERSION_SHA256 = (
-    "9685ad84dff340269c26b03a0357a9ef26dabe290b607c2ac93940a127727f44"
+    "b9ddee6705b352947f3aff96fbd3f3a7815dc20c83494f99c68a43f2c1947ba6"
 )
 BASE_MARKETPLACE_NON_VERSION_SHA256 = (
-    "95992d59d4019b210d7730324f6d1b2922893fbef8817383f5709bf5adf1d381"
+    "f457656ef7aef26f5f66cfa12e593e50a177239b9f4ced4ae4e6aa9fa33886d2"
 )
 
 
