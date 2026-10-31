@@ -44,6 +44,7 @@ SDD・並列実装・多観点レビューを統合した開発ワークフロ�
 | コマンド | 用途 |
 |---------|------|
 | `/em-workflow:develop [feature-path] [--report-only] [--batch] [--pr] [タスク記述]` | 統合開発フローの自走実行・再開（`--batch` は無人実行モード、`--pr` は完了時に PR 作成） |
+| `/em-workflow:merge --batch <feature>` | develop が全 step を終えた feature を、人が張り付かずに base ブランチへ取り込む（batch 専用。`--batch` なしは使い方の表示のみ）。base の取り込み・コンフリクト解消・検証コマンドを経て、PR ルートでは push と CI 待ちのうえ `gh pr merge`、ローカルルートでは `git merge --no-ff` で取り込み、integration worktree を片付ける。マージ済みなら何もせず成功を返す。どの終端でも最後のメッセージは `references/merge-result.md` の書式の結果だけ |
 | `/em-workflow:design [feature-name]` | 実機確認後のデザイン詰め（tokens / モック / DESIGN.md を合意ループで対話更新。コードには触れない。引数なしはシステム全体がデフォルト） |
 | `/em-workflow:review [--report-only]` | SDD を通さない日常レビュー（workflow.yaml 不在時は baseline + 裁量層で観点選択） |
 | `/em-workflow:retrospect [feature ...]` | retrospect.yaml の横断分析 → 承認付きで feature-docs/LESSONS.md / プロジェクト CLAUDE.md へ還元（プラグイン改善は報告のみ） |

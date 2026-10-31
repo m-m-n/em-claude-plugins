@@ -1,0 +1,118 @@
+task_id: task0008
+baseline_failures: []          # `python3 -m unittest discover -s tests` from the repository
+                                # root before any file was touched: 12572 tests, all passing
+                                # (1 skipped).
+final_failures: []             # same command re-run after implementation and after this record
+                                # was written: 12631 tests, all passing (2 skipped: the baseline's
+                                # one plus tests.test_merge_skill_doc's check that reads
+                                # merge-result.md, which another task delivers).
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_merge_skill_doc.TestPlacementAndArguments.test_ac1_skill_has_frontmatter_name_merge_and_a_description
+      - tests.test_merge_skill_doc.TestPlacementAndArguments.test_ac1_frontmatter_allowed_tools_cover_the_skill_and_exclude_questions
+      - tests.test_merge_skill_doc.TestPlacementAndArguments.test_ac1_arguments_are_substituted_at_the_end_of_the_document
+      - tests.test_merge_skill_doc.TestPlacementAndArguments.test_ac1_no_commands_directory_is_used_for_the_skill
+      - tests.test_merge_skill_doc.TestPlacementAndArguments.test_ac1_readme_skill_table_lists_the_merge_skill
+      - tests.test_merge_skill_doc.TestPlacementAndArguments.test_ac1_usage_only_rule_is_stated_before_any_tool_call
+      - tests.test_merge_skill_doc.TestPlacementAndArguments.test_ac1_argument_checks_come_before_the_first_bash_form
+      - tests.test_merge_skill_doc.TestPlacementAndArguments.test_ac1_pattern_check_precedes_every_bash_call_carrying_the_name
+    red_confirmed: true
+    red_reason: >-
+      Watched every test in the module error with FileNotFoundError on
+      em-workflow/skills/merge/SKILL.md before the skill existed. After SKILL.md was
+      written, the README row test still failed (AssertionError: 0 rows naming
+      /em-workflow:merge) until the README was edited.
+  AC-2:
+    tests:
+      - tests.test_merge_skill_doc.TestDirectCommandForms.test_ac2_verification_commands_run_after_a_standalone_cd_exactly_as_given
+      - tests.test_merge_skill_doc.TestDirectCommandForms.test_ac2_push_of_the_integration_branch_has_no_option_and_follows_a_cd
+      - tests.test_merge_skill_doc.TestDirectCommandForms.test_ac2_pr_create_runs_from_the_project_root_with_head_and_base
+      - tests.test_merge_skill_doc.TestDirectCommandForms.test_ac2_canonical_pr_merge_runs_from_the_worktree_with_the_verified_head
+      - tests.test_merge_skill_doc.TestDirectCommandForms.test_ac2_worktree_add_attaches_the_existing_integration_branch
+      - tests.test_merge_skill_doc.TestDirectCommandForms.test_ac2_worktree_remove_uses_the_literal_path_without_force_from_the_root
+      - tests.test_merge_skill_doc.TestDirectCommandForms.test_ac2_local_merge_runs_in_the_main_tree_with_no_ff_no_edit
+      - tests.test_merge_skill_doc.TestDirectCommandForms.test_ac2_guard_sensitive_forms_carry_literals_only
+      - tests.test_merge_skill_doc.TestDirectCommandForms.test_ac2_literal_matcher_fires_on_forged_forms
+      - tests.test_merge_skill_doc.TestDirectCommandForms.test_ac2_script_calls_are_the_closed_set_and_none_performs_a_guarded_operation
+      - tests.test_merge_skill_doc.TestDirectCommandForms.test_ac2_every_bash_form_starts_with_a_known_command
+      - tests.test_merge_skill_doc.TestDirectCommandForms.test_ac2_the_conflict_commit_is_the_only_commit
+      - tests.test_merge_skill_doc.TestScriptContractAgreement.test_ac2_options_of_the_lock_and_ci_wait_scripts_exist_in_those_scripts
+      - tests.test_merge_skill_doc.TestScriptContractAgreement.test_ac2_options_exist_in_every_other_decision_script_when_present
+    red_confirmed: true
+    red_reason: >-
+      Watched every test in the module error with FileNotFoundError on
+      em-workflow/skills/merge/SKILL.md before the skill existed. After SKILL.md was
+      written, the literal-matcher test failed on its forged form (a dollar sign inside
+      double quotes was blanked out by the matcher) and was fixed in the test.
+  AC-3:
+    tests:
+      - tests.test_merge_skill_doc.TestForbiddenForms.test_ac3_loop_keywords_are_absent_from_command_forms
+      - tests.test_merge_skill_doc.TestForbiddenForms.test_ac3_loop_matcher_fires_on_forged_forms
+      - tests.test_merge_skill_doc.TestForbiddenForms.test_ac3_no_question_tool_and_no_gate_identifier_anywhere
+      - tests.test_merge_skill_doc.TestForbiddenForms.test_ac3_prohibited_forms_are_absent_from_command_forms
+      - tests.test_merge_skill_doc.TestForbiddenForms.test_ac3_prohibited_matcher_fires_on_forged_forms
+      - tests.test_merge_skill_doc.TestForbiddenForms.test_ac3_every_foreground_bash_call_states_a_timeout_of_at_most_600_seconds
+      - tests.test_merge_skill_doc.TestForbiddenForms.test_ac3_ci_wait_is_repeated_script_calls_carrying_the_returned_deadline
+    red_confirmed: true
+    red_reason: >-
+      Watched every test in the module error with FileNotFoundError on
+      em-workflow/skills/merge/SKILL.md before the skill existed. After SKILL.md was
+      written, the prohibited-forms test failed once on a bare inline `git push`
+      mention (the matcher required two arguments) and the matcher was narrowed to
+      options and refspecs.
+  AC-4:
+    tests:
+      - tests.test_merge_skill_doc.TestLockLifecycle.test_ac4_lifecycle_runs_token_hold_verify_then_integrate_then_verify_again
+      - tests.test_merge_skill_doc.TestLockLifecycle.test_ac4_the_hold_runs_in_the_background_and_its_task_id_is_kept
+      - tests.test_merge_skill_doc.TestLockLifecycle.test_ac4_every_terminal_after_the_hold_started_stops_the_background_task
+      - tests.test_merge_skill_doc.TestLockLifecycle.test_ac4_lock_busy_and_lock_lost_end_the_run_with_their_own_reason
+    red_confirmed: true
+    red_reason: >-
+      Watched every test in the module error with FileNotFoundError on
+      em-workflow/skills/merge/SKILL.md before the skill existed.
+  AC-5:
+    tests:
+      - tests.test_merge_skill_doc.TestConflictResolution.test_ac5_attribution_rule_is_pattern_match_plus_base_side_feature_docs
+      - tests.test_merge_skill_doc.TestConflictResolution.test_ac5_spec_commit_and_conflicted_text_are_data
+      - tests.test_merge_skill_doc.TestConflictResolution.test_ac5_permitted_actions_are_limited_without_hook_bypass
+      - tests.test_merge_skill_doc.TestConflictResolution.test_ac5_unattributable_path_aborts_then_checks_clean_then_reports
+      - tests.test_merge_skill_doc.TestConflictResolution.test_ac5_verification_commands_follow_a_successful_resolution
+      - tests.test_merge_skill_doc.TestConflictResolution.test_ac5_the_features_own_workflow_yaml_is_never_edited
+    red_confirmed: true
+    red_reason: >-
+      Watched every test in the module error with FileNotFoundError on
+      em-workflow/skills/merge/SKILL.md before the skill existed.
+  AC-6:
+    tests:
+      - tests.test_merge_skill_doc.TestTerminals.test_ac6_reason_table_holds_exactly_the_28_codes_once_each
+      - tests.test_merge_skill_doc.TestTerminals.test_ac6_every_reason_code_appears_in_the_skill
+      - tests.test_merge_skill_doc.TestTerminals.test_ac6_terminal_results_merged_already_merged_and_not_merged_are_defined
+      - tests.test_merge_skill_doc.TestTerminals.test_ac6_every_terminal_ends_with_the_renderer_output_as_the_whole_message
+      - tests.test_merge_skill_doc.TestTerminals.test_ac6_renderer_input_is_written_with_the_file_tool_never_through_the_shell
+      - tests.test_merge_skill_doc.TestTerminals.test_ac6_fallback_result_is_the_contract_documents
+      - tests.test_merge_skill_doc.TestTerminals.test_ac6_redo_loop_is_bounded_by_base_check
+      - tests.test_merge_skill_doc.TestTerminals.test_ac6_already_merged_skips_the_merge_steps_and_goes_to_cleanup
+      - tests.test_merge_skill_doc.TestTerminals.test_ac6_not_merged_keeps_the_worktree
+      - tests.test_merge_skill_doc.TestTerminals.test_ac6_a_removal_failure_keeps_the_result_with_worktree_removed_false
+      - tests.test_merge_skill_doc.TestRenderLocationUnderWriteGuards.test_ac6_render_location_is_silent_for_the_cross_repo_write_guard_under_batch
+      - tests.test_merge_skill_doc.TestRenderLocationUnderWriteGuards.test_ac6_render_location_is_silent_for_the_doc_redaction_guard
+      - tests.test_merge_skill_doc.TestRenderLocationUnderWriteGuards.test_ac6_the_guard_check_is_not_vacuous_a_location_outside_tmp_is_denied
+    red_confirmed: true
+    red_reason: >-
+      Watched every test in the module error with FileNotFoundError on
+      em-workflow/skills/merge/SKILL.md before the skill existed (the guard tests error
+      in setUp, which reads the skill). After SKILL.md was written, the terminal-values
+      test failed once because the results table header did not name worktree_removed
+      in code formatting.
+  AC-7:
+    tests:
+      - tests.test_merge_skill_doc.TestResumptionAndText.test_ac7_interrupted_states_are_handled_as_designed
+      - tests.test_merge_skill_doc.TestResumptionAndText.test_ac7_commit_message_and_pr_text_are_fixed_shapes_of_validated_identifiers
+      - tests.test_merge_skill_doc.TestResumptionAndText.test_ac7_no_notion_url_and_no_absolute_home_path
+      - tests.test_merge_skill_doc.TestResumptionAndText.test_ac7_the_skill_writes_no_state_file_and_never_writes_workflow_yaml
+      - tests.test_merge_skill_doc.TestResumptionAndText.test_ac7_the_only_file_the_skill_creates_is_the_transient_render_input
+    red_confirmed: true
+    red_reason: >-
+      Watched every test in the module error with FileNotFoundError on
+      em-workflow/skills/merge/SKILL.md before the skill existed.
