@@ -102,7 +102,7 @@ workflow:
   failed_items: []
   completed_at_commit: eaafa855106f9bf3551ee457abac02531c2f4d13
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: Merge result contract and renderer
