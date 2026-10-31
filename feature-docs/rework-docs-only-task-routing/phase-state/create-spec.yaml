@@ -4,8 +4,8 @@ phase: create-spec
 status: dispatching
 generation: 1
 base_revision: 9e55d1e9935d55d19970816e6db5193b256a4a27
-last_input_digest: sha256:f4974f8ed7e59866a3bde379fa80de9fc036aead9759e5da248fd225b21a6fad
-active_request_id: create-spec-run-0002
+last_input_digest: sha256:3a34e6ccaa67eeaad4c33b644c062c2b661abe29f8a29b6887557c0ef7a813b3
+active_request_id: create-spec-run-0003
 packets:
   create-spec-q0001:
     status: answered
@@ -132,7 +132,7 @@ worker_runs:
     tests/test_tier_rework_path.py: sha256:480c5465838f0eb9ae23634a4859ce126547ecb88874151ec1c261357166e3bf
     tests/test_wording_correction_route.py: sha256:acdad2a1ac3eead948c04081d81689ebd0a9f9ebf473d900623a3b8bb74bd892
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:f4974f8ed7e59866a3bde379fa80de9fc036aead9759e5da248fd225b21a6fad
   dispatch_digest_inputs:
     CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
@@ -151,6 +151,15 @@ worker_runs:
     tests/test_rework_synthesis_contract.py: sha256:96fc45998c5471153fcd4b5c2bd68d3174761a0f902efcef6e5fc9065bb724ac
     tests/test_tier_rework_path.py: sha256:480c5465838f0eb9ae23634a4859ce126547ecb88874151ec1c261357166e3bf
     tests/test_wording_correction_route.py: sha256:acdad2a1ac3eead948c04081d81689ebd0a9f9ebf473d900623a3b8bb74bd892
+  output_digest: sha256:949ce4a58dbcf295b60b66536ffb1569e64d414fe749e60af34439659d483f56
+  self_write_set: []
+- request_id: create-spec-run-0003
+  status: dispatched
+  input_digest: sha256:3a34e6ccaa67eeaad4c33b644c062c2b661abe29f8a29b6887557c0ef7a813b3
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/spec-writer-contract.md: sha256:9032c6287d75f4a88e556bd3962c32ab8b4905cf3b6ececa895206788bcd0b63
+    em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
+    em-workflow/references/templates/spec-document.md: sha256:203dfcddbe507886ce861694fccd20ae25e5af0bd1b0efa5e935991add950cbd
 artifacts: []
 patches: []
 progress_fingerprint: null
