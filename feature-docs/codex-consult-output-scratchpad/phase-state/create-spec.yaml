@@ -7,10 +7,45 @@ base_revision: 16583f9c6f4f9a8e186d5b8c334bd6c7e6daff07
 last_input_digest: sha256:8bcf31690bae2b73117356f2fc6232a0736d6a362b8a8e2f589c212d8b251545
 active_request_id: create-spec-run-0001
 packets: {}
-answers: {}
+answers:
+  create-spec.scope-orchestrator-wrapper-sites:
+    packet_id: null
+    answered_at: '2026-10-31T15:15:40+09:00'
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids:
+    - q1_b
+    freeform: null
+    normalized_answer: Apply the scratchpad rule in question-resolution.md step 2
+      and have develop SKILL.md tier pre-survey (Step A tier 決定 step 3) cite it
+    resolution_note: 'gate: create-spec.requirement-clarification (orchestrator-raised
+      scoping question on analyst assumption A-1); codex_consulted: true (harness
+      entry: codex, 1 turn); options: q1_a step-2 only / q1_b step 2 + develop SKILL.md
+      tier pre-survey citing step 2 / q1_c shared general rule; chosen: q1_b; not
+      chosen: q1_a, q1_c; key points: the tier pre-survey calls the same wrapper from
+      the orchestrator with no output-placement rule (same bug class); citing the
+      step-2 rule avoids restating; codex-cli.yaml is timeout-only so a shared rule
+      location is unnecessary; opus_escalation: not run'
+  create-spec.regression-test-shape:
+    packet_id: null
+    answered_at: '2026-10-31T15:15:40+09:00'
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids:
+    - q2_b
+    freeform: null
+    normalized_answer: Region-scoped assertions plus negative twins for both question-resolution.md
+      step 2 and SKILL.md tier pre-survey step 3
+    resolution_note: 'gate: create-spec.requirement-clarification (test shape); codex_consulted:
+      true (harness entry: codex, same turn); options: q2_a question-resolution doc
+      test only / q2_b plus a region-scoped assertion for the SKILL.md pre-survey
+      step; chosen: q2_b; not chosen: q2_a; key points: existing test only pins the
+      call shape; existing section extractor returns the whole remainder so assertions
+      must be bounded to step 2..3 and SKILL.md step 3..4, each with a negative twin
+      on pre-fix text; opus_escalation: not run'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:8bcf31690bae2b73117356f2fc6232a0736d6a362b8a8e2f589c212d8b251545
   dispatch_digest_inputs:
     CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
