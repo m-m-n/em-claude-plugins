@@ -1,0 +1,128 @@
+task_id: task0003
+baseline_failures: []          # python3 -m unittest discover -s tests: Ran 12456 tests, OK (skipped=1), before any edit
+final_failures: []             # python3 -m unittest discover -s tests re-run after implementation and this record: no failures
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_merge_git.RouteTests.test_ac1_upstream_remote_among_two_remotes
+      - tests.test_merge_git.RouteTests.test_ac1_single_remote_without_upstream
+      - tests.test_merge_git.RouteTests.test_ac1_two_remotes_without_upstream_stops
+      - tests.test_merge_git.RouteTests.test_ac1_no_remote_is_local
+      - tests.test_merge_git.RouteTests.test_ac1_no_remote_and_base_absent_locally_stops
+      - tests.test_merge_git.RouteTests.test_ac1_upstream_of_dot_counts_as_no_upstream
+      - tests.test_merge_git.RouteTests.test_ac1_upstream_of_dot_with_one_remote_uses_it
+      - tests.test_merge_git.RouteTests.test_ac1_upstream_naming_a_missing_remote_is_ignored
+      - tests.test_merge_git.RouteTests.test_ac1_unsafe_remote_name_stops
+      - tests.test_merge_git.RouteTests.test_ac1_unsafe_upstream_remote_name_stops
+      - tests.test_merge_git.RouteTests.test_ac1_unsafe_base_name_stops
+      - tests.test_merge_git.RouteTests.test_ac1_works_from_a_linked_worktree
+    red_confirmed: true
+    red_reason: >-
+      With merge-git.py temporarily moved out of the worktree (no implementation present), every
+      listed route test failed on the returncode assertion `2 != 0` (python3 could not open the
+      script file); with the script in place they pass.
+  AC-2:
+    tests:
+      - tests.test_merge_git.MergedTests.test_ac2_not_merged_and_nothing_changes
+      - tests.test_merge_git.MergedTests.test_ac2_merged_when_base_contains_the_integration_tip
+      - tests.test_merge_git.MergedTests.test_ac2_not_merged_when_base_only_advanced
+      - tests.test_merge_git.MergedTests.test_ac2_merged_after_the_worktree_is_gone
+      - tests.test_merge_git.MergedTests.test_ac2_missing_base_stops
+    red_confirmed: true
+    red_reason: >-
+      With merge-git.py temporarily moved out of the worktree (no implementation present), every
+      listed merged test failed on the returncode assertion `2 != 0` (python3 could not open the
+      script file); with the script in place they pass.
+  AC-3:
+    tests:
+      - tests.test_merge_git.WorktreeStateTests.test_ac3_absent
+      - tests.test_merge_git.WorktreeStateTests.test_ac3_clean
+      - tests.test_merge_git.WorktreeStateTests.test_ac3_untracked_files_do_not_make_it_unclean
+      - tests.test_merge_git.WorktreeStateTests.test_ac3_merge_in_progress_then_clean_after_abort
+      - tests.test_merge_git.WorktreeStateTests.test_ac3_conflicted_merge_is_merge_in_progress
+      - tests.test_merge_git.WorktreeStateTests.test_ac3_dirty_worktree_stops
+      - tests.test_merge_git.WorktreeStateTests.test_ac3_staged_change_stops
+      - tests.test_merge_git.WorktreeStateTests.test_ac3_another_branch_stops
+      - tests.test_merge_git.WorktreeStateTests.test_ac3_detached_head_stops
+      - tests.test_merge_git.WorktreeStateTests.test_ac3_unregistered_directory_stops
+      - tests.test_merge_git.WorktreeStateTests.test_ac3_registration_with_missing_directory_stops
+      - tests.test_merge_git.WorktreeStateTests.test_ac3_branch_checked_out_elsewhere_stops
+      - tests.test_merge_git.WorktreeStateTests.test_ac3_other_operation_in_progress_stops
+      - tests.test_merge_git.WorktreeStateTests.test_ac3_symlink_in_place_of_the_worktree_stops
+      - tests.test_merge_git.WorktreeStateTests.test_ac3_state_never_modifies_anything
+    red_confirmed: true
+    red_reason: >-
+      With merge-git.py temporarily moved out of the worktree (no implementation present), every
+      listed worktree-state test failed on the returncode assertion `2 != 0` (python3 could not
+      open the script file); with the script in place they pass.
+  AC-4:
+    tests:
+      - tests.test_merge_git.IntegrateTests.test_ac4_clean_case_creates_one_merge_commit
+      - tests.test_merge_git.IntegrateTests.test_ac4_local_base_branch_is_not_modified
+      - tests.test_merge_git.IntegrateTests.test_ac4_already_contained_base_is_up_to_date
+      - tests.test_merge_git.IntegrateTests.test_ac4_second_integration_after_the_first_is_up_to_date
+      - tests.test_merge_git.IntegrateTests.test_ac4_conflict_lists_paths_and_leaves_the_merge_in_progress
+      - tests.test_merge_git.IntegrateTests.test_ac4_conflict_with_a_delete_modify_pair
+      - tests.test_merge_git.IntegrateTests.test_ac4_conflicted_paths_keep_unusual_but_valid_names
+      - tests.test_merge_git.IntegrateTests.test_ac4_remote_fetched_tip_is_what_gets_integrated
+      - tests.test_merge_git.IntegrateTests.test_ac4_remote_without_news_is_up_to_date
+      - tests.test_merge_git.IntegrateTests.test_ac4_fetch_failure_stops_with_git_failed
+      - tests.test_merge_git.IntegrateTests.test_ac4_hooks_are_not_bypassed
+      - tests.test_merge_git.IntegrateTests.test_ac4_requires_a_clean_worktree
+      - tests.test_merge_git.IntegrateTests.test_ac4_absent_worktree_is_not_created
+      - tests.test_merge_git.IntegrateTests.test_ac4_merge_in_progress_is_not_continued
+      - tests.test_merge_git.IntegrateTests.test_ac4_missing_local_base_stops
+    red_confirmed: true
+    red_reason: >-
+      With merge-git.py temporarily moved out of the worktree (no implementation present), every
+      listed integrate test failed on the returncode assertion `2 != 0` (python3 could not open
+      the script file); with the script in place they pass.
+  AC-5:
+    tests:
+      - tests.test_merge_git.BaseCheckTests.test_ac5_unchanged_when_the_tip_equals_the_integrated_base
+      - tests.test_merge_git.BaseCheckTests.test_ac5_redo_counts_0_1_2_redo_and_3_stops
+      - tests.test_merge_git.BaseCheckTests.test_ac5_remote_is_fetched_first
+      - tests.test_merge_git.BaseCheckTests.test_ac5_fetch_failure_stops_with_git_failed
+      - tests.test_merge_git.BaseCheckTests.test_ac5_malformed_arguments_exit_2
+    red_confirmed: true
+    red_reason: >-
+      With merge-git.py temporarily moved out of the worktree (no implementation present), every
+      listed base-check test failed on the returncode assertion `2 != 0` (python3 could not open
+      the script file); with the script in place they pass.
+  AC-6:
+    tests:
+      - tests.test_merge_git.MainTreeTests.test_ac6_ready_on_a_clean_base_branch
+      - tests.test_merge_git.MainTreeTests.test_ac6_ready_while_integration_worktree_exists
+      - tests.test_merge_git.MainTreeTests.test_ac6_another_branch_stops
+      - tests.test_merge_git.MainTreeTests.test_ac6_detached_head_stops
+      - tests.test_merge_git.MainTreeTests.test_ac6_tracked_modification_stops
+      - tests.test_merge_git.MainTreeTests.test_ac6_staged_modification_stops
+      - tests.test_merge_git.MainTreeTests.test_ac6_untracked_file_stops
+      - tests.test_merge_git.MainTreeTests.test_ac6_uncommitted_worktrees_ignore_line_is_tolerated
+      - tests.test_merge_git.MainTreeTests.test_ac6_untracked_gitignore_with_only_the_worktrees_line_is_tolerated
+      - tests.test_merge_git.MainTreeTests.test_ac6_gitignore_with_any_other_change_stops
+      - tests.test_merge_git.MainTreeTests.test_ac6_gitignore_exception_does_not_cover_other_dirt
+      - tests.test_merge_git.MainTreeTests.test_ac6_project_root_must_be_the_main_working_tree
+      - tests.test_merge_git.MainTreeTests.test_ac6_merge_in_progress_stops
+    red_confirmed: true
+    red_reason: >-
+      With merge-git.py temporarily moved out of the worktree (no implementation present), every
+      listed main-tree test failed on the returncode assertion `2 != 0` (python3 could not open
+      the script file); with the script in place they pass.
+  AC-7:
+    tests:
+      - tests.test_merge_local_route.LocalRouteCoreTests.test_ac7_core_case_lands_a_merge_commit_and_removes_the_worktree
+      - tests.test_merge_local_route.LocalRouteCoreTests.test_ac7_core_case_is_resumable_after_the_merge
+      - tests.test_merge_local_route.LocalRouteFullChainTests.test_ac7_full_chain_passes_with_preflight_first
+      - tests.test_merge_git.BoundaryTests.test_ac7_shim_records_the_scripts_git_invocations
+      - tests.test_merge_git.BoundaryTests.test_ac7_boundary_check_rejects_forbidden_invocations
+      - tests.test_merge_git.BoundaryTests.test_ac7_every_subcommand_runs_only_allowed_git_operations
+    red_confirmed: true
+    red_reason: >-
+      With merge-git.py temporarily moved out of the worktree, the two core-case tests and the
+      boundary tests that run the script failed on `2 != 0` (python3 could not open the script
+      file). test_ac7_boundary_check_rejects_forbidden_invocations only exercises the log
+      checker itself and was green without the script. The full-chain test is skipped in this
+      worktree because em-workflow/scripts/merge-preflight.py is not present here, so it was
+      neither observed red nor green; its wiring was exercised once against a throwaway stand-in
+      preflight that was deleted afterwards. The verify phase confirms the real run.
