@@ -242,6 +242,7 @@ tasks:
     - em-workflow/skills/develop/SKILL.md
     - em-workflow/references/review-phase.md
     - tests/test_develop_docs_only_rework_doc.py
+    - tests/test_tier_record_schema_v2.py
     skills: []
     domains:
     - api-contract
@@ -252,7 +253,7 @@ tasks:
     - NFR1
     - NFR4
     - NFR5
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/rework-docs-only-task-routing/task0005
 review:
