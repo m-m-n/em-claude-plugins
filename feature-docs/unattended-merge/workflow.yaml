@@ -119,9 +119,9 @@ tasks:
     - NFR5
     - NFR7
     - NFR8
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/unattended-merge/task0001
   task0002:
     title: 'Preflight: target resolution, precondition, review findings, command approval'
     plan: tasks/task0002.md
@@ -143,9 +143,9 @@ tasks:
     - FR22
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/unattended-merge/task0002
   task0003:
     title: Local git decisions and base integration
     plan: tasks/task0003.md
@@ -171,9 +171,9 @@ tasks:
     - NFR2
     - NFR3
     - NFR5
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/unattended-merge/task0003
   task0004:
     title: GitHub repository and PR decisions
     plan: tasks/task0004.md
@@ -195,9 +195,9 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/unattended-merge/task0004
   task0005:
     title: Repository-wide merge lock
     plan: tasks/task0005.md
@@ -214,9 +214,9 @@ tasks:
     - FR10
     - FR22
     - NFR5
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/unattended-merge/task0005
   task0006:
     title: Bounded CI wait
     plan: tasks/task0006.md
@@ -233,9 +233,9 @@ tasks:
     - FR22
     - NFR1
     - NFR5
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/unattended-merge/task0006
   task0007:
     title: destructive-guard limited allow for the canonical gh pr merge
     plan: tasks/task0007.md
