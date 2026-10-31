@@ -6,7 +6,7 @@ acceptance_tests:
     tests:
       - tests.test_bash_guard_cd_prefix.TestNonDirectoryBeforeDotDot.test_ac1_the_path_check_is_false_for_a_non_directory_before_dotdot
       - tests.test_bash_guard_cd_prefix.TestNonDirectoryBeforeDotDot.test_ac1_proc_self_root_dotdot_in_front_is_never_below
-      - tests.test_bash_guard_cd_prefix.TestNonDirectoryBeforeDotDot.test_ac1_the_path_check_is_still_true_for_existing_directory_forms
+      - tests.test_bash_guard_cd_prefix.TestNonDirectoryBeforeDotDot.test_ac1_the_path_check_is_true_only_for_the_canonical_directory_forms
     red_confirmed: true
     red_reason: >-
       Run against the unchanged path check (new tests written first),
@@ -43,7 +43,6 @@ acceptance_tests:
   AC-4:
     tests:
       - tests.test_bash_guard_cd_prefix.TestNonDirectoryBeforeDotDot.test_ac4_the_fixture_layout_matches_the_claimed_resolution
-      - tests.test_bash_guard_cd_prefix.TestNonDirectoryBeforeDotDot.test_ac4_the_decision_does_not_depend_on_strict_mode_realpath
     red_confirmed: true
     red_reason: >-
       Run against the unchanged path check,
@@ -62,11 +61,9 @@ acceptance_tests:
       - tests.test_bash_guard_cd_prefix.TestAc2SyntaxConditions.test_ac2_forms_breaking_a_syntax_condition_are_silent
       - tests.test_bash_guard_cd_prefix.TestAc4RefusalPatternStillDenies.test_ac4_refusal_pattern_in_the_remainder_denies
       - tests.test_bash_guard_cd_prefix.TestProcessDependentPathNotAllowed.test_ac5_proc_self_root_dotdot_before_an_absolute_worktree_path_is_silent
-      - tests.test_bash_guard_cd_prefix.TestPhysicalFallbackAllowed.test_ac2_link_dotdot_name_forms_are_allowed_from_the_main_worktree
-      - tests.test_bash_guard_cd_prefix.TestPhysicalFallbackAllowed.test_ac2_link_dotdot_name_forms_are_allowed_from_a_git_worktree
       - tests.test_bash_guard_cd_prefix.TestPhysicalFallbackNotAllowed.test_ac3_logical_destination_that_exists_outside_the_area_is_silent
       - tests.test_bash_guard_cd_prefix.TestPhysicalFallbackNotAllowed.test_ac4_physical_path_that_is_not_below_the_area_is_silent
-      - tests.test_bash_guard_cd_prefix.TestPathConditionWording.test_ac7_the_hook_docstring_states_the_new_condition
+      - tests.test_bash_guard_cd_prefix.TestPathConditionWording.test_ac6_each_place_states_the_new_condition
       - tests.test_bash_guard_cd_prefix.TestAc7StandardLibraryOnly.test_ac7_hook_imports_only_standard_library_modules
       - tests.test_bash_guard_cd_prefix.TestAc7StandardLibraryOnly.test_ac7_hook_executable_text_has_no_status_substring
     red_confirmed: false
@@ -93,8 +90,6 @@ acceptance_tests:
       the plain inside directory.
   AC-7:
     tests:
-      - tests.test_bash_guard_cd_prefix.TestNonDirectoryBeforeDotDot.test_ac7_a_resolution_error_in_the_as_written_step_makes_the_check_false
-      - tests.test_bash_guard_cd_prefix.TestNonDirectoryBeforeDotDot.test_ac7_the_as_written_step_alone_can_refuse_an_ordinary_directory
       - tests.test_bash_guard_cd_prefix.TestNonDirectoryBeforeDotDot.test_ac7_a_nul_inserted_into_an_added_form_makes_the_check_false
       - tests.test_bash_guard_cd_prefix.TestNulInPath.test_ac5_a_resolution_error_makes_the_path_check_false
     red_confirmed: true

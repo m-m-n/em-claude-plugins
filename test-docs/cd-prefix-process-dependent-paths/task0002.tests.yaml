@@ -4,8 +4,6 @@ final_failures: []             # re-executed after the implementation and after 
 acceptance_tests:
   AC-1:
     tests:
-      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathWording.test_ac1_the_hook_docstring_states_the_rule
-      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathWording.test_ac1_the_statement_sits_in_the_path_item_of_the_docstring
       - tests.test_bash_guard_cd_prefix_operators.TestAc6DocstringStatesTheConditions
     red_confirmed: true
     red_reason: >-
@@ -18,8 +16,6 @@ acceptance_tests:
       paragraph that must stay intact), so it is not what carries the red.
   AC-2:
     tests:
-      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathWording.test_ac2_the_protocol_rule_states_the_rule
-      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathWording.test_ac2_the_statement_sits_in_the_path_item_of_the_protocol_rule
       - tests.test_cd_prefix_exception_docs
     red_confirmed: true
     red_reason: >-
@@ -34,7 +30,7 @@ acceptance_tests:
   AC-3:
     tests:
       - tests.test_bash_guard_cd_prefix.TestPathConditionWording
-      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathWording.test_ac3_neither_place_describes_the_proc_self_root_prefix_as_allowed
+      - tests.test_bash_guard_cd_prefix.TestPathConditionWording.test_ac6_no_place_holds_a_term_of_the_removed_checks
     red_confirmed: false
     red_reason: >-
       A dedicated new module is out of scope, but the existing
@@ -47,8 +43,10 @@ acceptance_tests:
       new test_ac3 test passed before the edit for the same reason.
   AC-4:
     tests:
-      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathWording.test_ac4_the_matcher_fires_on_forged_text_with_one_needle_removed
-      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathWording.test_ac4_the_matcher_does_not_fire_on_unrelated_text
+      - tests.test_bash_guard_cd_prefix.TestPathConditionWording.test_ac6_the_statement_matcher_fires_on_forged_text
+      - tests.test_bash_guard_cd_prefix.TestPathConditionWording.test_ac6_the_absence_matcher_fires_on_forged_text
+      - tests.test_bash_guard_cd_prefix.TestPathConditionWording.test_ac6_the_statement_matcher_does_not_pass_unrelated_text
+      - tests.test_bash_guard_cd_prefix.TestPathConditionWording.test_ac6_the_absence_matcher_stays_silent_on_clean_text
     red_confirmed: true
     red_reason: >-
       Run against the unedited texts, test_ac4_the_matcher_fires_on_forged_text_with_one_needle_removed

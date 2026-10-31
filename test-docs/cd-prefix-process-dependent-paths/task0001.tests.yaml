@@ -25,7 +25,6 @@ acceptance_tests:
       - tests.test_bash_guard_cd_prefix.TestProcessDependentPathCheck.test_ac2_the_root_of_the_process_is_false_with_and_without_dotdot
       - tests.test_bash_guard_cd_prefix.TestProcessDependentPathCheck.test_ac2_proc_self_fd_forms_are_false
       - tests.test_bash_guard_cd_prefix.TestProcessDependentPathCheck.test_ac2_dev_fd_forms_are_false
-      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathCheck.test_ac2_the_logical_walk_refuses_a_form_only_the_collapsed_path_reaches
     red_confirmed: true
     red_reason: >-
       Run against the unchanged path check, every listed test failed with
@@ -52,10 +51,7 @@ acceptance_tests:
   AC-4:
     tests:
       - tests.test_bash_guard_cd_prefix.TestProcessDependentPathCheck.test_ac4_directories_named_like_the_excluded_ones_are_below
-      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathCheck.test_ac4_the_existing_in_area_forms_are_below
-      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathCheck.test_ac4_the_lexical_predicate_is_true_for_the_excluded_locations
-      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathCheck.test_ac4_the_lexical_predicate_is_false_for_everything_else
-      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathCheck.test_ac4_the_lexical_predicate_does_not_touch_the_file_system
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathCheck.test_ac4_the_canonical_in_area_forms_are_below
     red_confirmed: true
     red_reason: >-
       Run with no implementation present, the three predicate tests errored
@@ -85,15 +81,10 @@ acceptance_tests:
       and no deny is added.
   AC-6:
     tests:
-      - tests.test_bash_guard_cd_prefix.TestLinkBoundAndProbeErrors.test_ac6_the_walk_alone_decides_the_followed_link_bound
-      - tests.test_bash_guard_cd_prefix.TestLinkBoundAndProbeErrors.test_ac6_an_error_while_a_stage_is_probed_makes_the_check_false
-      - tests.test_bash_guard_cd_prefix.TestLinkBoundAndProbeErrors.test_ac6_an_error_while_a_link_target_is_read_makes_the_check_false
+      - tests.test_bash_guard_cd_prefix.TestLinkBoundAndProbeErrors.test_ac6_an_error_while_a_path_component_is_probed_makes_the_check_false
       - tests.test_bash_guard_cd_prefix.TestLinkBoundAndProbeErrors.test_ac6_a_link_loop_is_false
-      - tests.test_bash_guard_cd_prefix.TestLinkBoundAndProbeErrors.test_ac6_the_walk_alone_refuses_a_loop
-      - tests.test_bash_guard_cd_prefix.TestLinkBoundAndProbeErrors.test_ac6_a_chain_beyond_the_bound_is_false_and_a_short_chain_is_true
-      - tests.test_bash_guard_cd_prefix.TestLinkBoundAndProbeErrors.test_ac6_a_missing_stage_or_a_non_directory_stage_is_not_an_error
+      - tests.test_bash_guard_cd_prefix.TestLinkBoundAndProbeErrors.test_ac6_a_chain_of_links_is_false_whatever_its_length
       - tests.test_bash_guard_cd_prefix.TestProcessDependentPathNotAllowed.test_ac6_a_loop_or_an_over_bound_chain_exits_zero_silently_and_is_not_allowed
-      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathNotAllowed.test_ac6_a_short_chain_of_links_is_still_allowed
     red_confirmed: true
     red_reason: >-
       Run against the unchanged path check, three tests were observed failing.

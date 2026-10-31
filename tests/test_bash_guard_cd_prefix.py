@@ -1,6 +1,5 @@
 """Contract tests for the `cd "<P>" && <approved command>` allowance in
-`em-workflow/hooks/bash_guard.py` (feature implementer-cd-verbatim-conflict,
-task0001).
+`em-workflow/hooks/bash_guard.py`.
 
 Every case drives the hook as a subprocess with PreToolUse JSON on standard
 input and reads the decision from standard output, in the same shape as
@@ -18,125 +17,58 @@ approval store and the real repository's workflow.yaml are never read.
 Paths used for comparison are realpaths, so a temporary directory reached
 through a symbolic link does not skew the cases.
 
-Covers task0001 Acceptance Criteria
-(feature-docs/implementer-cd-verbatim-conflict/tasks/task0001.md):
+Feature cd-prefix-canonical-path-only, task0001
+(feature-docs/cd-prefix-canonical-path-only/tasks/task0001.md): the path check
+allows only a canonical absolute path strictly below an area that lies inside
+the main worktree, and refuses an over-long path before any file-system
+access. It no longer reproduces Bash's path resolution: a path is never
+normalized and then accepted, a link is never followed to a destination, and
+no location receives special handling.
 
-- AC-1: allow for `cd "P" && X` (syntax and path conditions met, X approved).
-- AC-2: silent for every form that breaks a syntax condition.
-- AC-3: silent for every form that breaks a path condition.
-- AC-4: a refusal pattern in X still denies, with the refusal reason.
-- AC-5: commands without a `cd` prefix are judged as before; no new deny.
-- AC-6: the guidance of the unapproved deny names the three audiences.
-- AC-7: standard-library-only imports; no `status` substring in the
-  executable text of the hook.
+- AC-1: the allowed directories, from the main worktree and from a git
+  worktree (`ALLOW_CASES`, `TestAc1AllowedPrefixForm`).
+- AC-2: non-canonical text, links, and other paths are silent through the hook
+  and False for a direct `is_below` call (`TestCanonicalPathOnly`).
+- AC-3: the length bound is checked first, in the candidate decision and in
+  `is_below`, with a run-time bound; boundary lengths; the file-system call
+  count grows linearly (`TestLengthBound`).
+- AC-4: the area containment rule, with the three link layouts of the fixture
+  (`TestAreaContainment`).
+- AC-5: undecidable input is not allowed and never raises, and the path check
+  starts no child process (`TestFailClosed`); a refusal pattern in the remainder
+  still denies (`TestAc4RefusalPatternStillDenies`).
+- AC-6: the removed symbols are gone, and the module docstring's path item, the
+  `is_below` docstring and the protocol's path item state the new condition and
+  none of the old one (`TestRemovedSymbols`, `TestPathConditionWording`).
+- AC-7: no test names a removed symbol; this module imports the standard
+  library only (`TestRemovedSymbolsAreNotNamed`, `TestAc7StandardLibraryOnly`).
 
-Feature is-below-physical-fallback, task0001
-(feature-docs/is-below-physical-fallback/tasks/task0001.md): the path check
-also accepts a path that Bash reaches through its physical-path fallback
-(the logical path is not an existing directory, the physical path is an
-existing directory strictly below the area).
+Earlier features, as they apply now. A form whose path the new check refuses is
+a silent case.
 
-- AC-1: `/proc/self/root/..` followed by an absolute worktree path was
-  allowed; it is no longer allowed (feature cd-prefix-process-dependent-paths:
-  a path under /proc or /dev/fd fails the path check).
-- AC-2: a link outside the area, `..`, then a name under the target's parent
-  is allowed (logical path absent, or an existing file).
-- AC-3 (TM-1): a logical destination that exists outside the area is never
-  allowed, whatever the physical path is.
-- AC-4 (TM-2): when the logical path is not a directory, a physical path that
-  is not an existing directory strictly below the area is not allowed.
-- AC-5 (TM-4): an embedded NUL makes the path check return False.
-- AC-7: the hook docstring and the protocol's Verbatim execution rule state
-  the new path condition.
-
-Feature cd-prefix-non-directory-dotdot, task0001
-(feature-docs/cd-prefix-non-directory-dotdot/tasks/task0001.md): the physical
-path counts as an existing directory only when the operating system resolves
-the path exactly as written to a directory, so a regular file, a missing
-component, or a link to either, placed before a `..`, is never allowed.
-
-- AC-1: the path check is False for `<area>/afile/../task0001` and
-  `<area>/task0001/does-not-exist/..`, with or without `/proc/self/root/..`
-  in front, and still True for `<area>/task0001` and `<root>/hop/../sub`.
-- AC-2, AC-3: the same forms are silent through the hook.
-- AC-4: the fixture layout shows the forms were allowed before, and the
-  decision does not depend on strict-mode realpath.
-- AC-5: every existing case above is left as it was.
-- AC-6: the path check starts no child process.
-- AC-7: a resolution error or a NUL in an added form makes the check False.
-
-Feature cd-prefix-process-dependent-paths, task0001
-(feature-docs/cd-prefix-process-dependent-paths/tasks/task0001.md): the path
-check is False for a path that is, or passes through, a location under /proc
-or /dev/fd, because the operating system resolves such a path against the
-process that asks. The hook process and the Bash process can differ, so the
-form must never be allowed. This is judged on the path as written, on each
-stage reached while resolving the logical path and the physical path component
-by component, and on the target of each link followed.
-
-- AC-1: the hook subprocess runs in a working directory of its own
-  (`Fixture.run_hook(..., process_cwd=...)`); `/proc/self/cwd/<name>` and
-  `/proc/self/cwd/../<name>` are not allowed.
-- AC-2: the path check is False for the /proc and /dev/fd forms and their
-  lexical variants.
-- AC-3: the path check is False for a link inside the area that points at one.
-- AC-4: directories named `proc`, `procfoo` and `dev/fd` inside the area, and
-  the existing in-area forms, are still below the area.
-- AC-5: the `/proc/self/root/..` prefix form is silent; no new deny.
-- AC-6: a link loop, a chain beyond the followed-link bound and a probe or
-  link-reading error make the check False; the hook exits 0 and writes nothing
-  to stderr.
-- AC-7: the signature and the caller of the path check are unchanged; the path
-  check starts no child process for the added forms.
-
-Feature cd-prefix-relative-link-target, task0001
-(feature-docs/cd-prefix-relative-link-target/tasks/task0001.md): a link whose
-target is relative is no longer refused because its target text reads like
-/proc or /dev/fd. It is joined to the directory that holds the link and judged
-only at the resolution stages; an absolute target keeps the lexical refusal.
-
-- AC-1: the links in `procdep/names/` whose relative targets are `proc`,
-  `./proc` and `dev/fd` are below the area, at the module level and through
-  the hook (`TestRelativeLinkTarget`).
-- AC-2: the control links whose absolute targets name the same locations are
-  below the area.
-- AC-3 (TM-1): a link whose relative target climbs to the root with `..` and
-  names `proc/self/cwd` is not below the area (the number of `..` follows the
-  depth of the link directory).
-- AC-4 (TM-1): while the path check judges that path, no file-system probe and
-  no link read is made of a location under /proc or /dev/fd.
-- AC-5 (TM-2): the existing absolute-target tests of
-  `TestProcessDependentPathCheck` stay as they were.
-- AC-6: no existing assertion is removed or weakened; this module imports the
-  standard library only.
-- AC-7: the stage-walk docstring, the path item of the module docstring, the
-  path item of the protocol's Verbatim execution rule and the paragraph of the
-  `is_below` docstring on /proc and /dev/fd state both halves of the rule
-  (`TestLinkTargetWording`).
-
-Feature is-below-stalled-walk-proc-read, task0001
-(feature-docs/is-below-stalled-walk-proc-read/tasks/task0001.md): the stage
-walk no longer ends at an absent or non-directory stage. It continues under
-the lenient realpath rule and refuses at any /proc or /dev/fd stage, so the
-path check never probes or reads anything under /proc or /dev/fd for a
-stalled path, on the logical-path side or the physical-path side.
-
-- AC-1: link forms that stall and then climb to /proc or /dev/fd are not below
-  the area, and nothing under /proc or /dev/fd is probed or read
-  (`TestStalledWalkNeverReachesProc`).
-- AC-2: the logical-path corner form, which the old rule judged below the
-  area, is not below the area, at the module level and through the hook
-  (`TestStalledLogicalCorner`).
-- AC-3: the recorder guard test, the lenient realpath on a stalled form is
-  seen reaching /proc (`TestStalledWalkNeverReachesProc`).
-- AC-4: stalls that reach neither /proc nor /dev/fd are not refused
-  (`TestStalledWalkLeavesOtherStallsAlone`).
-- AC-5: links after the stall count toward the same bound, and an error after
-  the stall is an ordinary name while an error before it still refuses
-  (`TestStalledWalkLinkBoundAndErrors`).
-- AC-6: the four rule statements say the stage check continues past a stall
-  (`TestStalledWalkWording`).
-- AC-7: what the change leaves as it was (`TestStalledWalkContract`).
+- implementer-cd-verbatim-conflict, task0001: the allowed form, the syntax
+  conditions, the path conditions, the refusal patterns, the commands without a
+  prefix, the deny guidance (`TestAc1AllowedPrefixForm` to
+  `TestAc6DenyGuidance`, `TestAc7StandardLibraryOnly`).
+- is-below-physical-fallback, task0001: a link outside the area, `..`, then a
+  name under the target's parent, is silent (`TestFormerFallbackForms`); a
+  logical destination outside the area, or a physical path that is not below
+  the area, is silent (`TestPhysicalFallbackNotAllowed`); an embedded NUL makes
+  the path check return False (`TestNulInPath`).
+- cd-prefix-non-directory-dotdot, task0001: a regular file, a missing component
+  or a link to either, placed before a `..`, is never allowed
+  (`TestNonDirectoryBeforeDotDot`).
+- cd-prefix-process-dependent-paths, task0001: a path that is, or passes
+  through, a location under /proc or /dev/fd is never allowed, and the hook
+  process's own working directory plays no part
+  (`TestProcessDependentPathNotAllowed`, `TestProcessDependentPathCheck`,
+  `TestLinkBoundAndProbeErrors`, `TestProcessDependentPathContract`).
+- cd-prefix-relative-link-target, task0001: a link, whatever its target text,
+  is not below the area (`TestRelativeLinkTarget`).
+- is-below-stalled-walk-proc-read, task0001: the forms that stall and then
+  climb to /proc or /dev/fd are not below the area
+  (`TestStalledWalkNeverReachesProc`, `TestStalledLogicalCorner`,
+  `TestStalledWalkContract`).
 
 Standard library only.
 """
@@ -144,6 +76,7 @@ Standard library only.
 import ast
 import contextlib
 import inspect
+import io
 import json
 import os
 import re
@@ -303,6 +236,46 @@ class Fixture:
         self.nongit = root / "plain"
         self.nongit.mkdir()
 
+        # Layouts for the area containment rule (feature
+        # cd-prefix-canonical-path-only, FR5), one repository each. `resolved`
+        # is the canonical path of an existing task directory; `through` is
+        # the same directory named through the link.
+        #   area-out:   .claude/worktrees/em-workflow -> directory outside the repository
+        #   claude-out: .claude -> directory outside the repository
+        #   area-in:    .claude/worktrees/em-workflow -> directory inside the repository
+        repo = root / "repo-area-out"
+        _make_repo(repo)
+        target = root / "area-out-target"
+        (target / "task0001").mkdir(parents=True)
+        (repo / ".claude" / "worktrees").mkdir(parents=True)
+        os.symlink(target, repo / ".claude" / "worktrees" / "em-workflow")
+        self.layout_area_out = types.SimpleNamespace(
+            repo=repo,
+            resolved=target / "task0001",
+            through=repo / ".claude" / "worktrees" / "em-workflow" / "task0001",
+        )
+        repo = root / "repo-claude-out"
+        _make_repo(repo)
+        target = root / "claude-out-target"
+        (target / "worktrees" / "em-workflow" / "task0001").mkdir(parents=True)
+        os.symlink(target, repo / ".claude")
+        self.layout_claude_out = types.SimpleNamespace(
+            repo=repo,
+            resolved=target / "worktrees" / "em-workflow" / "task0001",
+            through=repo / ".claude" / "worktrees" / "em-workflow" / "task0001",
+        )
+        repo = root / "repo-area-in"
+        _make_repo(repo)
+        target = repo / "real-area"
+        (target / "task0001").mkdir(parents=True)
+        (repo / ".claude" / "worktrees").mkdir(parents=True)
+        os.symlink(target, repo / ".claude" / "worktrees" / "em-workflow")
+        self.layout_area_in = types.SimpleNamespace(
+            repo=repo,
+            resolved=target / "task0001",
+            through=repo / ".claude" / "worktrees" / "em-workflow" / "task0001",
+        )
+
         # A declared (workflow.yaml) but never approved command.
         wf_dir = self.repo / "feature-docs" / "demo"
         wf_dir.mkdir(parents=True)
@@ -331,6 +304,9 @@ class Fixture:
         self.store_nongit = root / "approvals-nongit.json"
         self.record(self.store, self.repo, APPROVED_COMMANDS)
         self.record(self.store_nongit, self.nongit, APPROVED_COMMANDS)
+        self.store_layouts = root / "approvals-layouts.json"
+        for layout in (self.layout_area_out, self.layout_claude_out, self.layout_area_in):
+            self.record(self.store_layouts, layout.repo, APPROVED_COMMANDS)
         key = _git(self.repo, "rev-parse", "--path-format=absolute", "--git-common-dir")
         # `--record` refuses refusal patterns, so this store is written directly.
         self.store_sudo.write_text(
@@ -538,6 +514,25 @@ NON_DIRECTORY_DOTDOT_CASES = (
      'cd "@DANGLING@/../task0001" && ' + PLAIN_COMMAND),
 )
 
+# Feature is-below-physical-fallback AC-2, as it stands now: the logical path
+# is absent or a file, the physical path is an existing directory strictly below
+# the area. Bash lands there through its physical-path fallback; the path check
+# does not follow it, so every form is silent (feature
+# cd-prefix-canonical-path-only, TS3).
+FORMER_FALLBACK_FORMS = (
+    ("link outside the area, .., then a directory under the target's parent",
+     "@HOP@/../sub"),
+    ("same, a deeper directory under the target's parent", "@HOP@/../sub/deeper"),
+    ("same, the target's parent itself is the destination", "@HOPTASK@/../task0001"),
+    ("logical path is an existing file, physical path is a directory below the area",
+     "@HOPDIR@/hop/../sub"),
+)
+
+FORMER_FALLBACK_CASES = tuple(
+    (SILENT, label, 'cd "' + form + '" && ' + PLAIN_COMMAND)
+    for label, form in FORMER_FALLBACK_FORMS
+)
+
 PATH_CASES = (
     (SILENT, "existing directory outside the area", 'cd "@OUT@" && ' + PLAIN_COMMAND),
     (SILENT, "area of another repository", 'cd "@OTHER@" && ' + PLAIN_COMMAND),
@@ -548,20 +543,7 @@ PATH_CASES = (
     (SILENT, "path that does not exist", 'cd "@MISSING@" && ' + PLAIN_COMMAND),
     (SILENT, "path that is a file", 'cd "@FILE@" && ' + PLAIN_COMMAND),
     (SILENT, "root directory", 'cd "/" && ' + PLAIN_COMMAND),
-) + TM1_CASES + TM2_CASES + NON_DIRECTORY_DOTDOT_CASES
-
-# AC-2: the logical path is absent or a file, the physical path is an existing
-# directory strictly below the area.
-FALLBACK_ALLOW_CASES = (
-    (ALLOW, "link outside the area, .., then a directory under the target's parent",
-     'cd "@HOP@/../sub" && ' + PLAIN_COMMAND),
-    (ALLOW, "same, a deeper directory under the target's parent",
-     'cd "@HOP@/../sub/deeper" && ' + PLAIN_COMMAND),
-    (ALLOW, "same, the target's parent itself is the destination",
-     'cd "@HOPTASK@/../task0001" && ' + PLAIN_COMMAND),
-    (ALLOW, "logical path is an existing file, physical path is a directory below the area",
-     'cd "@HOPDIR@/hop/../sub" && ' + PLAIN_COMMAND),
-)
+) + TM1_CASES + TM2_CASES + NON_DIRECTORY_DOTDOT_CASES + FORMER_FALLBACK_CASES
 
 
 class CdPrefixCase(unittest.TestCase):
@@ -759,21 +741,34 @@ def _load_guard_module():
 PROC_ROOT = "/proc/self/root"
 
 
-class TestPhysicalFallbackAllowed(CdPrefixCase):
-    """AC-2 (FR1, FR3, FR8): the logical path is not an existing directory and
-    the physical path is an existing directory strictly below the area. (The
-    `/proc/self/root/..` prefix form that was AC-1 here is no longer allowed;
-    see TestProcessDependentPathNotAllowed.)"""
+class TestFormerFallbackForms(CdPrefixCase):
+    """Feature is-below-physical-fallback AC-2, as it stands now (feature
+    cd-prefix-canonical-path-only FR1, FR4; TS3): the logical path is not an
+    existing directory and the physical path is an existing directory strictly
+    below the area. Bash lands there through its physical-path fallback; the
+    path check does not follow it, so each form is silent through the hook and
+    False for a direct call. (The `/proc/self/root/..` prefix form that was
+    AC-1 there is silent too; see TestProcessDependentPathNotAllowed.)"""
 
-    def test_ac2_link_dotdot_name_forms_are_allowed_from_the_main_worktree(self):
-        self.check_cases(FALLBACK_ALLOW_CASES, FIX.repo)
+    @classmethod
+    def setUpClass(cls):
+        cls.guard = _load_guard_module()
+        cls.area = str(FIX.region)
 
-    def test_ac2_link_dotdot_name_forms_are_allowed_from_a_git_worktree(self):
-        self.check_cases(FALLBACK_ALLOW_CASES, FIX.worktree)
+    def test_ac2_link_dotdot_name_forms_are_silent_from_the_main_worktree(self):
+        self.check_cases(FORMER_FALLBACK_CASES, FIX.repo)
+
+    def test_ac2_link_dotdot_name_forms_are_silent_from_a_git_worktree(self):
+        self.check_cases(FORMER_FALLBACK_CASES, FIX.worktree)
+
+    def test_ac2_link_dotdot_name_forms_are_not_below_the_area(self):
+        for label, template in FORMER_FALLBACK_FORMS:
+            with self.subTest(label=label):
+                self.assertIs(self.guard.is_below(FIX.expand(template), self.area), False)
 
     def test_ac2_the_fixture_layout_matches_the_claimed_logical_paths(self):
-        # Guards the fixture: the logical path of each allowed form really is
-        # absent (or a file), and its physical path a directory below the area.
+        # Guards the fixture: the logical path of each form really is absent
+        # (or a file), and its physical path a directory below the area.
         absent = os.path.normpath(str(FIX.hop) + "/../sub")
         self.assertFalse(os.path.exists(absent))
         self.assertTrue(os.path.isdir(os.path.realpath(str(FIX.hop) + "/../sub")))
@@ -781,16 +776,6 @@ class TestPhysicalFallbackAllowed(CdPrefixCase):
         self.assertTrue(os.path.isfile(as_file))
         self.assertTrue(
             os.path.isdir(os.path.realpath(str(FIX.hopdir) + "/hop/../sub"))
-        )
-
-    def test_ac2_the_allow_reason_is_the_cd_prefix_reason(self):
-        _, exact = decide(FIX.run_hook(PLAIN_COMMAND, FIX.repo))
-        decision, prefixed = decide(
-            FIX.run_hook(FIX.expand('cd "@HOP@/../sub" && ' + PLAIN_COMMAND), FIX.repo)
-        )
-        self.assertEqual(decision, ALLOW)
-        self.assertNotEqual(
-            prefixed["permissionDecisionReason"], exact["permissionDecisionReason"]
         )
 
 
@@ -892,9 +877,9 @@ NON_DIRECTORY_FORMS = REQUIRED_NON_DIRECTORY_FORMS + (
 
 
 class TestNonDirectoryBeforeDotDot(CdPrefixCase):
-    """cd-prefix-non-directory-dotdot AC-1 .. AC-4, AC-6, AC-7: the physical
-    path is an existing directory only when the operating system resolves the
-    path exactly as written to a directory."""
+    """cd-prefix-non-directory-dotdot AC-1 .. AC-4, AC-6, AC-7, as they stand
+    now: a regular file, a missing component, or a link to either, placed before
+    a `..`, is never allowed, because a `..` component alone refuses the path."""
 
     @classmethod
     def setUpClass(cls):
@@ -908,20 +893,21 @@ class TestNonDirectoryBeforeDotDot(CdPrefixCase):
             with self.subTest(label=label):
                 self.assertIs(self.guard.is_below(FIX.expand(template), self.area), False)
 
-    def test_ac1_the_path_check_is_still_true_for_existing_directory_forms(self):
-        for label, path in (
-            ("existing directory below the area", str(FIX.inside)),
-            ("link, .., then a name under the target's parent", FIX.expand("@HOP@/../sub")),
+    def test_ac1_the_path_check_is_true_only_for_the_canonical_directory_forms(self):
+        for label, path, expected in (
+            ("existing directory below the area", str(FIX.inside), True),
+            ("link, .., then a name under the target's parent",
+             FIX.expand("@HOP@/../sub"), False),
         ):
             with self.subTest(label=label):
-                self.assertIs(self.guard.is_below(path, self.area), True)
+                self.assertIs(self.guard.is_below(path, self.area), expected)
 
     @unittest.skipUnless(os.path.isdir(PROC_ROOT), "/proc/self/root is not a directory")
     def test_ac1_proc_self_root_dotdot_in_front_is_never_below(self):
         # The non-directory forms stay False with the prefix in front. The
         # plain inside directory, which this test used to expect True, is
-        # False too: a path under /proc fails the path check, whatever it
-        # resolves to (feature cd-prefix-process-dependent-paths, D2).
+        # False too: the prefix is a link component and a `..` component, so
+        # the path is not canonical, whatever it resolves to.
         for label, template in NON_DIRECTORY_FORMS:
             with self.subTest(label=label):
                 path = PROC_ROOT + "/.." + FIX.expand(template)
@@ -976,18 +962,6 @@ class TestNonDirectoryBeforeDotDot(CdPrefixCase):
                 self.assertTrue(os.path.isdir(lenient))
                 self.assertTrue(self.guard.strictly_below(lenient, self.area))
 
-    def test_ac4_the_decision_does_not_depend_on_strict_mode_realpath(self):
-        real_realpath = os.path.realpath
-
-        def always_lenient(path, **_ignored_strict_request):
-            return real_realpath(path)
-
-        with mock.patch.object(os.path, "realpath", new=always_lenient):
-            for label, written in self.written_forms():
-                with self.subTest(label=label):
-                    self.assertIs(self.guard.is_below(written, self.area), False)
-            self.assertIs(self.guard.is_below(str(FIX.inside), self.area), True)
-
     # -- AC-6 -------------------------------------------------------------
 
     def test_ac6_the_path_check_starts_no_child_process(self):
@@ -1017,20 +991,6 @@ class TestNonDirectoryBeforeDotDot(CdPrefixCase):
                 self.guard.is_below(path, self.area)
 
     # -- AC-7 -------------------------------------------------------------
-
-    def test_ac7_a_resolution_error_in_the_as_written_step_makes_the_check_false(self):
-        paths = [str(FIX.inside)] + [FIX.expand(t) for _label, t in NON_DIRECTORY_FORMS]
-        for error in (OSError("simulated"), ValueError("simulated")):
-            for path in paths:
-                with self.subTest(error=type(error).__name__, path=path):
-                    with mock.patch.object(
-                        self.guard, "resolves_to_directory", side_effect=error
-                    ):
-                        self.assertIs(self.guard.is_below(path, self.area), False)
-
-    def test_ac7_the_as_written_step_alone_can_refuse_an_ordinary_directory(self):
-        with mock.patch.object(self.guard, "resolves_to_directory", return_value=False):
-            self.assertIs(self.guard.is_below(str(FIX.inside), self.area), False)
 
     def test_ac7_a_nul_inserted_into_an_added_form_makes_the_check_false(self):
         for label, path in (
@@ -1204,7 +1164,9 @@ def _no_child_process():
 class TestProcessDependentPathNotAllowed(CdPrefixCase):
     """AC-1, AC-3 (hook level), AC-5, AC-6 (hook level), TM-1 .. TM-4: a cd
     prefix form whose path is, or passes through, a location under /proc or
-    /dev/fd is judged as if it had no cd prefix, so there is no output."""
+    /dev/fd is judged as if it had no cd prefix, so there is no output. Since
+    feature cd-prefix-canonical-path-only that holds because such a path is
+    not canonical or holds a link component, not because of the location."""
 
     @classmethod
     def setUpClass(cls):
@@ -1331,18 +1293,21 @@ class TestProcessDependentPathNotAllowed(CdPrefixCase):
                     self.assertNotEqual(decision, ALLOW)
                     self.assertEqual(decision, SILENT)
 
-    def test_ac6_a_short_chain_of_links_is_still_allowed(self):
+    def test_ac6_a_short_chain_of_links_is_silent(self):
+        # A chain of three links ends below the area, but a link is not a
+        # canonical path, however short the chain.
         for cwd in (FIX.repo, FIX.worktree):
             with self.subTest(cwd=cwd.name):
                 decision, _ = decide(
                     FIX.run_hook(self.prefixed(str(self.layout.chain(3))), cwd)
                 )
-                self.assertEqual(decision, ALLOW)
+                self.assertEqual(decision, SILENT)
 
 
 class TestProcessDependentPathCheck(unittest.TestCase):
     """AC-2, AC-3, AC-4, AC-5 (module level): the path check applied to the
-    area of the fixture."""
+    area of the fixture. A form under /proc or /dev/fd is False; a directory
+    inside the area that is merely named like one is below the area."""
 
     @classmethod
     def setUpClass(cls):
@@ -1417,18 +1382,6 @@ class TestProcessDependentPathCheck(unittest.TestCase):
             ]
         )
 
-    @needs_proc
-    def test_ac2_the_logical_walk_refuses_a_form_only_the_collapsed_path_reaches(self):
-        # `..` collapsed against the missing first component leaves a path
-        # under /proc. The as-written resolution cannot get there, so the
-        # existing rule's as-written query is replaced by one that agrees;
-        # the logical resolution is then the only thing that can refuse.
-        form = "/does-not-exist-for-the-walk/../proc/self/cwd/" + SHARED
-        with _working_directory(self.layout.work):
-            self.assertTrue(os.path.isdir(os.path.normpath(form)))
-            with mock.patch.object(self.guard, "resolves_to_directory", return_value=True):
-                self.assertIs(self.guard.is_below(form, self.area), False)
-
     # -- AC-3 -------------------------------------------------------------
 
     @needs_proc
@@ -1470,53 +1423,13 @@ class TestProcessDependentPathCheck(unittest.TestCase):
                 self.assertTrue(os.path.isdir(path))
                 self.assertIs(self.guard.is_below(path, self.area), True)
 
-    def test_ac4_the_existing_in_area_forms_are_below(self):
+    def test_ac4_the_canonical_in_area_forms_are_below(self):
         for label, path in (
             ("existing directory below the area", str(FIX.inside)),
             ("deeper directory below the area", str(FIX.deep)),
-            ("link, .., then a name under the target's parent", FIX.expand("@HOP@/../sub")),
         ):
             with self.subTest(label=label):
                 self.assertIs(self.guard.is_below(path, self.area), True)
-
-    def test_ac4_the_lexical_predicate_is_true_for_the_excluded_locations(self):
-        for text in (
-            "/proc",
-            "/dev/fd",
-            "//proc/x",
-            "/./proc/x",
-            "/proc/x/",
-            "/proc/self/cwd",
-            "/dev/fd/3",
-            "/dev/./fd",
-            "/dev//fd/3",
-            "//dev/fd",
-        ):
-            with self.subTest(text=text):
-                self.assertIs(self.guard._under_proc_or_dev_fd(text), True)
-
-    def test_ac4_the_lexical_predicate_is_false_for_everything_else(self):
-        for text in (
-            "/procfoo",
-            "/dev",
-            "/dev/null",
-            "/dev/fdx",
-            "/dev/x/fd",
-            "/",
-            "",
-            "/x/proc",
-            "/x/dev/fd",
-            self.area + "/proc",
-            self.area + "/dev/fd",
-        ):
-            with self.subTest(text=text):
-                self.assertIs(self.guard._under_proc_or_dev_fd(text), False)
-
-    def test_ac4_the_lexical_predicate_does_not_touch_the_file_system(self):
-        with mock.patch.object(os, "lstat", side_effect=AssertionError("file system touched")):
-            with mock.patch.object(os, "stat", side_effect=AssertionError("file system touched")):
-                self.assertIs(self.guard._under_proc_or_dev_fd("/proc/self/cwd"), True)
-                self.assertIs(self.guard._under_proc_or_dev_fd("/procfoo"), False)
 
     # -- AC-5 -------------------------------------------------------------
 
@@ -1529,9 +1442,8 @@ class TestProcessDependentPathCheck(unittest.TestCase):
 
 
 class TestLinkBoundAndProbeErrors(unittest.TestCase):
-    """AC-6 (TM-3, TM-4): a link loop, a chain beyond the followed-link bound,
-    and an error while a stage is probed or a link target is read make the
-    path check False."""
+    """AC-6 (TM-3, TM-4): a link loop, a chain of links of any length, and an
+    error while a path component is probed make the path check False."""
 
     @classmethod
     def setUpClass(cls):
@@ -1548,29 +1460,16 @@ class TestLinkBoundAndProbeErrors(unittest.TestCase):
             with self.subTest(label=label):
                 self.assertIs(self.guard.is_below(path, self.area), False)
 
-    def test_ac6_a_chain_beyond_the_bound_is_false_and_a_short_chain_is_true(self):
-        self.assertIs(self.guard.is_below(str(self.layout.chain(3)), self.area), True)
-        self.assertIs(self.guard.is_below(str(self.layout.chain(45)), self.area), False)
+    def test_ac6_a_chain_of_links_is_false_whatever_its_length(self):
+        # Every chain ends in a directory below the area, but a link is never
+        # a canonical path.
+        for count in (3, 40, 41, 45):
+            with self.subTest(links=count):
+                self.assertIs(
+                    self.guard.is_below(str(self.layout.chain(count)), self.area), False
+                )
 
-    def test_ac6_the_walk_alone_decides_the_followed_link_bound(self):
-        # The as-written query of the existing rule is replaced by one that
-        # agrees, so only the walk can refuse. The bound is the Linux kernel's
-        # own limit for one resolution: 40 links are followed, the 41st is not.
-        with mock.patch.object(self.guard, "resolves_to_directory", return_value=True):
-            for count, expected in ((3, True), (40, True), (41, False), (45, False)):
-                with self.subTest(links=count):
-                    self.assertIs(
-                        self.guard.is_below(str(self.layout.chain(count)), self.area),
-                        expected,
-                    )
-
-    def test_ac6_the_walk_alone_refuses_a_loop(self):
-        with mock.patch.object(self.guard, "resolves_to_directory", return_value=True):
-            for path in (str(self.layout.ping), str(self.layout.selfish)):
-                with self.subTest(path=path):
-                    self.assertIs(self.guard.is_below(path, self.area), False)
-
-    def test_ac6_an_error_while_a_stage_is_probed_makes_the_check_false(self):
+    def test_ac6_an_error_while_a_path_component_is_probed_makes_the_check_false(self):
         target = str(self.layout.under_work)
         self.assertIs(self.guard.is_below(target, self.area), True)
         real_lstat = os.lstat
@@ -1584,24 +1483,6 @@ class TestLinkBoundAndProbeErrors(unittest.TestCase):
             with self.subTest(error=type(error).__name__):
                 with mock.patch.object(os, "lstat", new=probe):
                     self.assertIs(self.guard.is_below(target, self.area), False)
-
-    def test_ac6_an_error_while_a_link_target_is_read_makes_the_check_false(self):
-        path = str(self.layout.chain(3))
-        self.assertIs(self.guard.is_below(path, self.area), True)
-        for error in (OSError("simulated"), ValueError("simulated")):
-            with self.subTest(error=type(error).__name__):
-                with mock.patch.object(os, "readlink", side_effect=error):
-                    self.assertIs(self.guard.is_below(path, self.area), False)
-
-    def test_ac6_a_missing_stage_or_a_non_directory_stage_is_not_an_error(self):
-        # The two endings that are not failures: the existing rule decides.
-        with mock.patch.object(self.guard, "resolves_to_directory", return_value=True):
-            for label, path in (
-                ("missing stage then ..", str(FIX.inside) + "/does-not-exist/../sub"),
-                ("regular file then ..", str(FIX.file) + "/../task0001"),
-            ):
-                with self.subTest(label=label):
-                    self.assertIs(self.guard.is_below(path, self.area), True)
 
 
 class TestProcessDependentPathContract(unittest.TestCase):
@@ -1658,47 +1539,17 @@ class TestProcessDependentPathContract(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Feature cd-prefix-relative-link-target, task0001: a link whose target is
-# relative is no longer refused because its target text reads like /proc or
-# /dev/fd. It is joined to the directory that holds the link and judged only
-# at the resolution stages. An absolute target keeps the lexical refusal.
+# Feature cd-prefix-relative-link-target, task0001, as it stands now (feature
+# cd-prefix-canonical-path-only): a link is not below the area whatever its
+# target text is, relative or absolute, and whether or not the text reads like
+# /proc or /dev/fd.
 # ---------------------------------------------------------------------------
 
 
-def _is_proc_or_dev_fd_location(path):
-    """True when path, normalized, is /proc or /dev/fd or lies below one of
-    them. Written apart from the hook's own predicate, so the recording checks
-    below do not rely on the code they observe."""
-    normal = os.path.normpath(os.path.abspath(os.fspath(path)))
-    return any(
-        normal == root or normal.startswith(root + "/") for root in ("/proc", "/dev/fd")
-    )
-
-
-@contextlib.contextmanager
-def _recorded_probes():
-    """Record the path of every os.lstat / os.stat probe ("probes") and every
-    os.readlink call ("reads") made while active. The calls go through."""
-    record = {"probes": [], "reads": []}
-    real = {name: getattr(os, name) for name in ("lstat", "stat", "readlink")}
-
-    def recording(kind, name):
-        def call(path, *args, **kwargs):
-            record[kind].append(os.fspath(path))
-            return real[name](path, *args, **kwargs)
-
-        return call
-
-    with contextlib.ExitStack() as stack:
-        for kind, name in (("probes", "lstat"), ("probes", "stat"), ("reads", "readlink")):
-            stack.enter_context(mock.patch.object(os, name, new=recording(kind, name)))
-        yield record
-
-
 class TestRelativeLinkTarget(CdPrefixCase):
-    """AC-1 .. AC-5 (FR1, FR2, FR3, NFR2; TM-1, TM-2): a link with a relative
-    target is judged at the resolution stages only; a link with an absolute
-    target keeps the lexical refusal."""
+    """AC-1 .. AC-3 (FR1, FR2, FR3, NFR2; TM-1, TM-2), as they stand now: a link
+    with a relative target and a link with an absolute target are both not
+    below the area, at the module level and through the hook."""
 
     @classmethod
     def setUpClass(cls):
@@ -1726,28 +1577,36 @@ class TestRelativeLinkTarget(CdPrefixCase):
                 self.assertFalse(os.path.isabs(target))
                 self.assert_would_have_been_below(str(link))
 
-    def test_ac1_a_link_with_a_relative_target_naming_an_in_area_directory_is_below(self):
+    def test_ac1_a_link_with_a_relative_target_naming_an_in_area_directory_is_not_below(self):
         for target, link in self.layout.relative_name_links:
             with self.subTest(target=target):
-                self.assertIs(self.guard.is_below(str(link), self.area), True)
+                self.assertIs(self.guard.is_below(str(link), self.area), False)
 
-    def test_ac1_the_hook_allows_the_cd_prefix_form_for_each_relative_link(self):
+    def test_ac1_the_hook_is_silent_for_each_relative_link(self):
         for cwd in (FIX.repo, FIX.worktree):
             for target, link in self.layout.relative_name_links:
                 with self.subTest(cwd=cwd.name, target=target):
                     proc = FIX.run_hook(self.prefixed(str(link)), cwd)
                     decision, _ = decide(proc)
-                    self.assertEqual(decision, ALLOW)
+                    self.assertEqual(decision, SILENT)
 
     # -- AC-2 -------------------------------------------------------------
 
-    def test_ac2_a_link_with_an_absolute_target_naming_the_same_location_is_below(self):
+    def test_ac2_a_link_with_an_absolute_target_naming_the_same_location_is_not_below(self):
         for target, link in self.layout.absolute_name_links:
             with self.subTest(target=target):
                 self.assertEqual(os.readlink(str(link)), target)
                 self.assertTrue(os.path.isabs(target))
                 self.assert_would_have_been_below(str(link))
-                self.assertIs(self.guard.is_below(str(link), self.area), True)
+                self.assertIs(self.guard.is_below(str(link), self.area), False)
+
+    def test_ac2_the_hook_is_silent_for_each_absolute_link(self):
+        for cwd in (FIX.repo, FIX.worktree):
+            for target, link in self.layout.absolute_name_links:
+                with self.subTest(cwd=cwd.name, target=target):
+                    proc = FIX.run_hook(self.prefixed(str(link)), cwd)
+                    decision, _ = decide(proc)
+                    self.assertEqual(decision, SILENT)
 
     # -- AC-3 -------------------------------------------------------------
 
@@ -1776,35 +1635,6 @@ class TestRelativeLinkTarget(CdPrefixCase):
                 decision, _ = decide(proc)
                 self.assertEqual(decision, SILENT)
 
-    # -- AC-4 -------------------------------------------------------------
-
-    @needs_proc
-    def test_ac4_the_recording_sees_a_probe_and_a_link_read_under_proc(self):
-        # Guards the recording the next test relies on.
-        with _recorded_probes() as record:
-            os.lstat("/proc/self")
-            os.readlink("/proc/self")
-        self.assertEqual(record["probes"], ["/proc/self"])
-        self.assertEqual(record["reads"], ["/proc/self"])
-        self.assertTrue(_is_proc_or_dev_fd_location("/proc/self"))
-        self.assertTrue(_is_proc_or_dev_fd_location("/dev/fd/3"))
-        self.assertFalse(_is_proc_or_dev_fd_location(str(self.layout.names / "proc")))
-
-    @needs_proc
-    def test_ac4_no_probe_and_no_link_read_is_made_under_proc_or_dev_fd(self):
-        written = str(self.layout.climb_link) + "/" + SHARED
-        with _working_directory(self.layout.work):
-            self.assert_would_have_been_below(written)  # outside the recording
-            with _recorded_probes() as record:
-                result = self.guard.is_below(written, self.area)
-        self.assertIs(result, False)
-        # The walk did read the climbing link, so the recording is not empty.
-        self.assertIn(str(self.layout.climb_link), record["reads"])
-        for kind in ("probes", "reads"):
-            for path in record[kind]:
-                with self.subTest(kind=kind, path=path):
-                    self.assertFalse(_is_proc_or_dev_fd_location(path))
-
 
 def _verbatim_execution_rule(text):
     """Body of the protocol's "Verbatim execution rule" section."""
@@ -1822,286 +1652,11 @@ def _verbatim_execution_rule(text):
     return " ".join(" ".join(lines[start:end]).split())
 
 
-def _states_single_realpath_condition(text):
-    """True when the text states that the realpath alone must be an existing
-    directory below the area (the condition this change replaces)."""
-    flat = " ".join(text.split())
-    return bool(
-        re.search(r"realpath of <path> is an existing directory", flat)
-        or re.search(r"path's realpath is an existing directory", flat)
-    )
-
-
-def _states_new_path_condition(text):
-    """True when the text carries the two-sided rule: the logical path, the
-    physical path, both strictly below the area when the logical path is an
-    existing directory, otherwise the physical path alone."""
-    flat = " ".join(text.split()).lower()
-    return all(
-        needle in flat
-        for needle in (
-            "logical path",
-            "physical path",
-            "strictly below",
-            "existing directory",
-            "otherwise",
-            "both",
-        )
-    )
-
-
-class TestPathConditionWording(unittest.TestCase):
-    """AC-7 (FR7): the hook docstring and the protocol's Verbatim execution
-    rule state the same two-sided path condition."""
-
-    @classmethod
-    def setUpClass(cls):
-        cls.docstring = _load_guard_module().__doc__
-        cls.rule = _verbatim_execution_rule(PROTOCOL_PATH.read_text(encoding="utf-8"))
-
-    def test_ac7_matchers_fire_on_forged_text(self):
-        self.assertTrue(
-            _states_single_realpath_condition(
-                "the realpath of <path> is an existing directory strictly below X"
-            )
-        )
-        self.assertTrue(
-            _states_single_realpath_condition(
-                "the path's realpath is an existing directory deeper than X"
-            )
-        )
-        self.assertFalse(_states_new_path_condition("the realpath of <path> only"))
-
-    def test_ac7_the_hook_docstring_states_the_new_condition(self):
-        self.assertTrue(_states_new_path_condition(self.docstring))
-
-    def test_ac7_the_hook_docstring_no_longer_states_the_single_realpath_condition(self):
-        self.assertFalse(_states_single_realpath_condition(self.docstring))
-
-    def test_ac7_the_protocol_rule_states_the_new_condition(self):
-        self.assertIsNotNone(self.rule, "section 'Verbatim execution rule' not found")
-        self.assertTrue(_states_new_path_condition(self.rule))
-
-    def test_ac7_the_protocol_rule_no_longer_states_the_single_realpath_condition(self):
-        self.assertIsNotNone(self.rule, "section 'Verbatim execution rule' not found")
-        self.assertFalse(_states_single_realpath_condition(self.rule))
-
-    def test_ac7_both_places_define_the_two_terms(self):
-        self.assertIsNotNone(self.rule, "section 'Verbatim execution rule' not found")
-        for name, text in (("docstring", self.docstring), ("protocol", self.rule)):
-            flat = " ".join(text.split())
-            with self.subTest(place=name):
-                self.assertRegex(flat, r"logical path \([^)]*\.\.[^)]*\)")
-                self.assertRegex(flat, r"physical path \([^)]*as written[^)]*\)")
-
-
-# Needles that carry the statement about /proc and /dev/fd. `/proc` keeps its
-# slash: the docstring already says "child process", so a bare `proc` would
-# match before the statement exists.
-PROCESS_DEPENDENT_PATH_NEEDLES = (
-    "/proc",
-    "/dev/fd",
-    "fails the path check",
-    "first component is `proc`",
-    "`dev` and `fd`",
-    "judged on the path as written",
-    "each stage reached while resolving the logical path and the physical path",
-    "the target of each link followed",
-    "final realpath alone",
-)
-
-
-def _states_process_dependent_path_rule(text):
-    """True when the text states that a path under /proc or /dev/fd fails the
-    path check, judged on the path as written, on each stage of the resolution
-    of both the logical path and the physical path, and on the target of each
-    link followed."""
-    flat = " ".join(text.split()).lower()
-    return all(needle in flat for needle in PROCESS_DEPENDENT_PATH_NEEDLES)
-
-
-def _docstring_path_item(docstring):
-    """The `path:` item of the `cd prefix:` paragraph, whitespace flattened."""
-    match = re.search(r"^  - path:(.*?)^  - approval:", docstring, re.DOTALL | re.MULTILINE)
-    return " ".join(match.group(1).split()) if match else None
-
-
-def _rule_path_item(rule):
-    """The path item of the Verbatim execution rule (already flattened)."""
-    start = rule.find("the path reaches an existing directory")
-    end = rule.find("everything after the first `&&` matches")
-    if start < 0 or end < start:
-        return None
-    return rule[start:end]
-
-
-class TestProcessDependentPathWording(unittest.TestCase):
-    """AC-1 to AC-4 (FR5, NFR6): the hook docstring and the protocol's Verbatim
-    execution rule both state that a path under /proc or /dev/fd fails the
-    path check, and how that is judged."""
-
-    @classmethod
-    def setUpClass(cls):
-        cls.docstring = _load_guard_module().__doc__
-        cls.rule = _verbatim_execution_rule(PROTOCOL_PATH.read_text(encoding="utf-8"))
-
-    def test_ac4_the_matcher_fires_on_forged_text_with_one_needle_removed(self):
-        self.assertIsNotNone(self.rule, "section 'Verbatim execution rule' not found")
-        for name, text in (("docstring", self.docstring), ("protocol", self.rule)):
-            flat = " ".join(text.split()).lower()
-            self.assertTrue(
-                _states_process_dependent_path_rule(flat),
-                f"the {name} does not carry the statement the forgeries start from",
-            )
-            for needle in PROCESS_DEPENDENT_PATH_NEEDLES:
-                with self.subTest(place=name, needle=needle):
-                    forged = flat.replace(needle, "")
-                    self.assertNotIn(needle, forged)
-                    self.assertFalse(_states_process_dependent_path_rule(forged))
-
-    def test_ac4_the_matcher_does_not_fire_on_unrelated_text(self):
-        self.assertFalse(_states_process_dependent_path_rule(""))
-        self.assertFalse(_states_process_dependent_path_rule("the realpath of <path> only"))
-        self.assertFalse(_states_process_dependent_path_rule("never used as a child process"))
-
-    def test_ac1_the_hook_docstring_states_the_rule(self):
-        self.assertTrue(_states_process_dependent_path_rule(self.docstring))
-
-    def test_ac1_the_statement_sits_in_the_path_item_of_the_docstring(self):
-        item = _docstring_path_item(self.docstring)
-        self.assertIsNotNone(item, "path item of the 'cd prefix:' paragraph not found")
-        self.assertTrue(_states_process_dependent_path_rule(item))
-
-    def test_ac2_the_protocol_rule_states_the_rule(self):
-        self.assertIsNotNone(self.rule, "section 'Verbatim execution rule' not found")
-        self.assertTrue(_states_process_dependent_path_rule(self.rule))
-
-    def test_ac2_the_statement_sits_in_the_path_item_of_the_protocol_rule(self):
-        self.assertIsNotNone(self.rule, "section 'Verbatim execution rule' not found")
-        item = _rule_path_item(self.rule)
-        self.assertIsNotNone(item, "path item of the Verbatim execution rule not found")
-        self.assertTrue(_states_process_dependent_path_rule(item))
-
-    def test_ac3_neither_place_describes_the_proc_self_root_prefix_as_allowed(self):
-        self.assertIsNotNone(self.rule, "section 'Verbatim execution rule' not found")
-        for name, text in (("docstring", self.docstring), ("protocol", self.rule)):
-            with self.subTest(place=name):
-                self.assertNotIn("/proc/self/root", " ".join(text.split()))
-
-
-# The two halves of the link-target rule. Each is one contiguous phrase after
-# whitespace is flattened and the text lower-cased, and the same pair stands in
-# every place that describes the rule.
-LINK_TARGET_RULE_NEEDLES = (
-    "the lexical check of a link's target text applies only to an absolute target",
-    "a relative target is joined to the directory that holds the link"
-    " and judged at the resolution stages",
-)
-
-# The unqualified clause the stage-walk docstring carried before the rule was
-# narrowed to absolute targets.
-UNQUALIFIED_LINK_TARGET_CLAUSE = "follows a link whose target text is under one"
-
-
-def _states_link_target_rule(text):
-    """True when the text states both halves: the lexical check of a link's
-    target text applies only to an absolute target, and a relative target is
-    joined to the directory that holds the link and judged at the resolution
-    stages."""
-    flat = " ".join(text.split()).lower()
-    return all(needle in flat for needle in LINK_TARGET_RULE_NEEDLES)
-
-
-def _paragraph_containing(docstring, marker):
-    """The first blank-line separated paragraph of the docstring that holds
-    marker, or None."""
-    for paragraph in re.split(r"\n[ \t]*\n", docstring):
-        if marker in paragraph:
-            return paragraph
-    return None
-
-
-class TestLinkTargetWording(unittest.TestCase):
-    """AC-7 (FR5): the four places that describe the link-target check state
-    both halves of the rule."""
-
-    @classmethod
-    def setUpClass(cls):
-        guard = _load_guard_module()
-        cls.rule = _verbatim_execution_rule(PROTOCOL_PATH.read_text(encoding="utf-8"))
-        cls.places = {
-            "stage walk docstring": guard._stage_walk_refuses.__doc__,
-            "module docstring, path item": _docstring_path_item(guard.__doc__),
-            "protocol, path item": _rule_path_item(cls.rule) if cls.rule else None,
-            "is_below docstring, /proc and /dev/fd paragraph": _paragraph_containing(
-                guard.is_below.__doc__, "/dev/fd"
-            ),
-        }
-
-    def test_ac7_the_matcher_fires_on_the_statement_and_stops_when_one_half_is_removed(self):
-        statement = " ".join(LINK_TARGET_RULE_NEEDLES)
-        self.assertTrue(_states_link_target_rule(statement))
-        self.assertTrue(_states_link_target_rule("Intro.  " + statement.upper() + "\n tail"))
-        for needle in LINK_TARGET_RULE_NEEDLES:
-            with self.subTest(needle=needle):
-                forged = statement.replace(needle, "")
-                self.assertNotIn(needle, forged)
-                self.assertFalse(_states_link_target_rule(forged))
-
-    def test_ac7_the_matcher_does_not_fire_on_unrelated_or_the_old_text(self):
-        self.assertFalse(_states_link_target_rule(""))
-        self.assertFalse(_states_link_target_rule("the realpath of <path> only"))
-        self.assertFalse(
-            _states_link_target_rule("or follows a link whose target text is under one")
-        )
-
-    def test_ac7_all_four_places_are_found(self):
-        for name, text in self.places.items():
-            with self.subTest(place=name):
-                self.assertIsNotNone(text, f"{name} not found")
-
-    def test_ac7_each_place_states_both_halves(self):
-        for name, text in self.places.items():
-            with self.subTest(place=name):
-                self.assertIsNotNone(text, f"{name} not found")
-                self.assertTrue(_states_link_target_rule(text))
-
-    def test_ac7_forging_one_half_in_each_place_stops_the_matcher(self):
-        for name, text in self.places.items():
-            self.assertIsNotNone(text, f"{name} not found")
-            flat = " ".join(text.split()).lower()
-            self.assertTrue(
-                _states_link_target_rule(flat),
-                f"the {name} does not carry the statement the forgeries start from",
-            )
-            for needle in LINK_TARGET_RULE_NEEDLES:
-                with self.subTest(place=name, needle=needle):
-                    forged = flat.replace(needle, "")
-                    self.assertNotIn(needle, forged)
-                    self.assertFalse(_states_link_target_rule(forged))
-
-    def test_ac7_the_stage_walk_docstring_no_longer_carries_the_unqualified_clause(self):
-        flat = " ".join(self.places["stage walk docstring"].split())
-        self.assertNotIn(UNQUALIFIED_LINK_TARGET_CLAUSE, flat)
-
-    def test_ac7_the_two_path_items_say_the_same_thing(self):
-        # The sentence pair is the same text in the module docstring and in the
-        # protocol; neither carries more or less of it.
-        pair = {}
-        for name in ("module docstring, path item", "protocol, path item"):
-            flat = " ".join(self.places[name].split()).lower()
-            first = flat.index(LINK_TARGET_RULE_NEEDLES[0])
-            second = flat.index(LINK_TARGET_RULE_NEEDLES[1])
-            self.assertLess(first, second, name)
-            pair[name] = flat[first : second + len(LINK_TARGET_RULE_NEEDLES[1])]
-        self.assertEqual(len(set(pair.values())), 1)
-
-
 # ---------------------------------------------------------------------------
-# Feature is-below-stalled-walk-proc-read, task0001: the stage walk continues
-# past an absent or non-directory stage under the lenient realpath rule, so
-# the realpath calls that follow never probe or read anything under /proc or
-# /dev/fd.
+# Feature is-below-stalled-walk-proc-read, task0001, as it stands now (feature
+# cd-prefix-canonical-path-only): a form that stalls at an absent or
+# non-directory component and then climbs to /proc or /dev/fd holds a link or a
+# `..` component, so it is not a canonical path and is not below the area.
 # ---------------------------------------------------------------------------
 
 PROC_TAIL = ["proc", "self", "cwd"]
@@ -2194,53 +1749,15 @@ class StalledLayout:
         ]
 
 
-def _proc_or_dev_fd_paths(record):
-    """The recorded probe and read paths that lie under /proc or /dev/fd."""
-    return [
-        (kind, path)
-        for kind in ("probes", "reads")
-        for path in record[kind]
-        if _is_proc_or_dev_fd_location(path)
-    ]
-
-
-@contextlib.contextmanager
-def _failing_only_at(name, failing_path, error):
-    """os.<name> raises error for failing_path only; every other call goes
-    through to the real function. Yields the list of the failures raised, so
-    a test can tell that the walk did reach the path."""
-    real = getattr(os, name)
-    raised = []
-
-    def call(path, *args, **kwargs):
-        if os.fspath(path) == failing_path:
-            raised.append(failing_path)
-            raise error
-        return real(path, *args, **kwargs)
-
-    with mock.patch.object(os, name, new=call):
-        yield raised
-
-
 class TestStalledWalkNeverReachesProc(unittest.TestCase):
-    """AC-1, AC-3 (FR1, FR2, FR7, FR8, NFR2): a link form that stalls and then
-    climbs to /proc or /dev/fd is not below the area, and nothing under /proc
-    or /dev/fd is probed or read while it is judged."""
+    """AC-1 (FR1, FR2, FR7, FR8, NFR2), as it stands now: a link form that
+    stalls and then climbs to /proc or /dev/fd is not below the area."""
 
     @classmethod
     def setUpClass(cls):
         cls.guard = _load_guard_module()
         cls.area = str(FIX.region)
         cls.layout = StalledLayout()
-
-    def assert_judged_without_touching_proc(self, written, link):
-        with _working_directory(self.layout.base.work):
-            with _recorded_probes() as record:
-                result = self.guard.is_below(written, self.area)
-        self.assertIs(result, False)
-        # The walk did read the link, so the recording is not empty.
-        self.assertIn(link, record["reads"])
-        self.assertEqual(_proc_or_dev_fd_paths(record), [])
 
     # -- AC-1 -------------------------------------------------------------
 
@@ -2269,7 +1786,7 @@ class TestStalledWalkNeverReachesProc(unittest.TestCase):
     def test_ac1_the_fixture_lenient_realpath_lands_below_the_area(self):
         # Guards the fixture: with the process in work, the lenient realpath of
         # each /proc form lands on an existing directory strictly below the
-        # area, so the path check has no other reason to refuse it.
+        # area, so the form would have been below the area but for the link.
         with _working_directory(self.layout.base.work):
             for label, written, _link in self.layout.proc_forms()[:4]:
                 with self.subTest(form=label):
@@ -2279,50 +1796,30 @@ class TestStalledWalkNeverReachesProc(unittest.TestCase):
                     self.assertTrue(self.guard.strictly_below(landed, self.area))
 
     @needs_proc
-    def test_ac1_a_stalled_form_that_climbs_to_proc_is_false_and_nothing_under_proc_is_touched(self):
-        for label, written, link in self.layout.proc_forms():
-            with self.subTest(form=label):
-                self.assert_judged_without_touching_proc(written, link)
+    def test_ac1_a_stalled_form_that_climbs_to_proc_is_false(self):
+        with _working_directory(self.layout.base.work):
+            for label, written, _link in self.layout.proc_forms():
+                with self.subTest(form=label):
+                    self.assertIs(self.guard.is_below(written, self.area), False)
 
     @needs_dev_fd
-    def test_ac1_a_stalled_form_that_climbs_to_dev_fd_is_false_and_nothing_under_dev_fd_is_touched(self):
+    def test_ac1_a_stalled_form_that_climbs_to_dev_fd_is_false(self):
         fd = os.open(str(self.layout.base.under_work), os.O_RDONLY | os.O_DIRECTORY)
         self.addCleanup(os.close, fd)
         link = self.layout.dev_fd_link(fd)
         with _working_directory(self.layout.base.work):
             landed = os.path.realpath(str(link))
-        self.assertEqual(landed, str(self.layout.base.under_work))
-        self.assertTrue(self.guard.strictly_below(landed, self.area))
-        self.assert_judged_without_touching_proc(str(link), str(link))
-
-    def test_ac1_a_refusal_of_either_walk_returns_false_before_any_realpath_call(self):
-        with mock.patch.object(
-            os.path, "realpath", side_effect=AssertionError("realpath called after a refusal")
-        ):
-            for label, written, _link in self.layout.proc_forms():
-                with self.subTest(form=label):
-                    self.assertIs(self.guard.is_below(written, self.area), False)
-
-    # -- AC-3 -------------------------------------------------------------
-
-    @needs_proc
-    def test_ac3_the_recorder_sees_the_lenient_realpath_reach_proc_on_a_stalled_form(self):
-        # The recorder guard test: a direct call to the lenient realpath on a
-        # stalled form records a probe or a read under /proc, so the recording
-        # of AC-1 and AC-2 cannot pass because it sees nothing.
-        for label, link in (("(a)", self.layout.form_a), ("(b)", self.layout.form_b)):
-            with self.subTest(form=label):
-                with _recorded_probes() as record:
-                    os.path.realpath(str(link))
-                self.assertTrue(_proc_or_dev_fd_paths(record), record)
+            self.assertEqual(landed, str(self.layout.base.under_work))
+            self.assertTrue(self.guard.strictly_below(landed, self.area))
+            self.assertIs(self.guard.is_below(str(link), self.area), False)
 
 
 class TestStalledLogicalCorner(CdPrefixCase):
     """AC-2 (FR1, FR2, FR7, NFR1, NFR2): written as <hop>/../<name>, the
     physical resolution lands on an existing directory below the area, while
     the logical collapse lands on a stalling link that climbs to
-    proc/self/cwd/shared. The old rule judged the form below the area when the
-    process cwd was procdep/work."""
+    proc/self/cwd/shared. The form holds a `..` component, so it is not a
+    canonical path."""
 
     @classmethod
     def setUpClass(cls):
@@ -2335,12 +1832,11 @@ class TestStalledLogicalCorner(CdPrefixCase):
         return 'cd "' + written + '" && ' + PLAIN_COMMAND
 
     @needs_proc
-    def test_ac2_the_fixture_makes_the_old_rule_judge_the_form_below_the_area(self):
+    def test_ac2_the_fixture_resolves_below_the_area_in_both_ways(self):
         # Guards the fixture, outside any recording. With the process in work,
         # the logical and the physical realpath are existing directories
-        # strictly below the area, and the as-written resolution is a
-        # directory. With the stage walk set not to refuse, which is what the
-        # old walk did for this form, the rest of the rule says True.
+        # strictly below the area, so the form has no other reason to be
+        # refused than its `..` component.
         with _working_directory(self.layout.base.work):
             logical = os.path.realpath(os.path.normpath(self.written))
             physical = os.path.realpath(self.written)
@@ -2349,30 +1845,13 @@ class TestStalledLogicalCorner(CdPrefixCase):
             for resolved in (logical, physical):
                 self.assertTrue(os.path.isdir(resolved))
                 self.assertTrue(self.guard.strictly_below(resolved, self.area))
-            self.assertTrue(self.guard.resolves_to_directory(self.written))
-            with mock.patch.object(self.guard, "_stage_walk_refuses", return_value=False):
-                self.assertIs(self.guard.is_below(self.written, self.area), True)
 
     @needs_proc
-    def test_ac2_is_below_is_false_and_nothing_under_proc_is_touched(self):
+    def test_ac2_is_below_is_false(self):
         with _working_directory(self.layout.base.work):
-            with _recorded_probes() as record:
-                result = self.guard.is_below(self.written, self.area)
-        self.assertIs(result, False)
-        self.assertIn(str(self.layout.corner_name), record["reads"])
-        self.assertEqual(_proc_or_dev_fd_paths(record), [])
+            self.assertIs(self.guard.is_below(self.written, self.area), False)
 
-    def test_ac2_the_logical_walk_refuses_and_the_physical_walk_does_not(self):
-        self.assertIs(self.guard._stage_walk_refuses(os.path.normpath(self.written)), True)
-        self.assertIs(self.guard._stage_walk_refuses(self.written), False)
-
-    @needs_proc
-    def test_ac2_the_form_is_false_even_when_the_as_written_query_agrees(self):
-        with _working_directory(self.layout.base.work):
-            with mock.patch.object(self.guard, "resolves_to_directory", return_value=True):
-                self.assertIs(self.guard.is_below(self.written, self.area), False)
-
-    def test_ac2_the_logical_refusal_returns_false_before_any_realpath_call(self):
+    def test_ac2_non_canonical_text_returns_false_before_any_realpath_call(self):
         with mock.patch.object(
             os.path, "realpath", side_effect=AssertionError("realpath called after a refusal")
         ):
@@ -2389,312 +1868,15 @@ class TestStalledLogicalCorner(CdPrefixCase):
                 self.assertEqual(decision, SILENT)
 
 
-class TestStalledWalkLeavesOtherStallsAlone(unittest.TestCase):
-    """AC-4 (FR3, NFR1): a stall that reaches neither /proc nor /dev/fd is not
-    refused by either walk, and nothing under them is probed or read."""
-
-    @classmethod
-    def setUpClass(cls):
-        cls.guard = _load_guard_module()
-        cls.area = str(FIX.region)
-
-    def forms(self):
-        return [
-            ("missing stage, .., sub", str(FIX.inside) + "/does-not-exist/../sub"),
-            ("regular file, .., task0001", str(FIX.file) + "/../task0001"),
-            ("dangling link, .., task0001", str(FIX.dangling) + "/../task0001"),
-        ]
-
-    def test_ac4_neither_walk_refuses_a_stall_that_reaches_no_proc_or_dev_fd(self):
-        for label, written in self.forms():
-            for walk_name, text in (
-                ("logical-path walk", os.path.normpath(written)),
-                ("physical-path walk", written),
-            ):
-                with self.subTest(form=label, walk=walk_name):
-                    self.assertIs(self.guard._stage_walk_refuses(text), False)
-
-    def test_ac4_the_walks_probe_and_read_nothing_under_proc_or_dev_fd(self):
-        with _recorded_probes() as record:
-            for _label, written in self.forms():
-                self.guard._stage_walk_refuses(os.path.normpath(written))
-                self.guard._stage_walk_refuses(written)
-        self.assertEqual(_proc_or_dev_fd_paths(record), [])
-        self.assertTrue(record["probes"])
-
-    def test_ac4_surplus_dotdot_after_a_stall_stay_at_the_root_and_do_not_refuse(self):
-        written = str(FIX.inside) + "/does-not-exist" + "/.." * 40 + "/no-such-top-level-name"
-        self.assertIs(self.guard._stage_walk_refuses(written), False)
-
-
-class TestStalledWalkLinkBoundAndErrors(unittest.TestCase):
-    """AC-5 (FR4, TM-2, TM-3): the links followed after the stall count toward
-    the same bound as the links before it, and an operating-system error after
-    the stall is an ordinary name while the same error before it refuses."""
-
-    @classmethod
-    def setUpClass(cls):
-        cls.guard = _load_guard_module()
-        cls.area = str(FIX.region)
-        cls.layout = Layout()
-
-    # -- the link bound ---------------------------------------------------
-
-    def total_links_form(self, chain_count):
-        """One link before the stall (the dangling link, whose target is
-        absent), then `..`, then a chain that follows chain_count links."""
-        self.layout.chain(chain_count)
-        return str(FIX.dangling) + "/../procdep/chain%d/l0" % chain_count
-
-    def test_ac5_the_walk_refuses_when_the_total_is_41_and_not_when_it_is_40(self):
-        for chain_count, total, expected in ((39, 40, False), (40, 41, True)):
-            written = self.total_links_form(chain_count)
-            with self.subTest(total=total):
-                self.assertIs(self.guard._stage_walk_refuses(written), expected)
-
-    def test_ac5_the_logical_walk_never_stalls_so_the_physical_walk_alone_decides(self):
-        for chain_count in (39, 40):
-            written = self.total_links_form(chain_count)
-            with self.subTest(chain=chain_count):
-                self.assertIs(
-                    self.guard._stage_walk_refuses(os.path.normpath(written)), False
-                )
-
-    def test_ac5_is_below_is_false_for_the_41_link_form_even_when_the_as_written_query_agrees(self):
-        with mock.patch.object(self.guard, "resolves_to_directory", return_value=True):
-            self.assertIs(self.guard.is_below(self.total_links_form(40), self.area), False)
-            # Control: with 40 links in total the same rule says True, so the
-            # refusal above is the link count and nothing else.
-            self.assertIs(self.guard.is_below(self.total_links_form(39), self.area), True)
-
-    # -- errors after and before the stall ----------------------------------
-
-    def stall_between_stages(self):
-        """<inside>/sub is probed before the stall, <inside>/sub/missing-x is
-        the stall, and <inside>/sub/deeper is probed after it."""
-        return str(FIX.inside) + "/sub/missing-x/../deeper"
-
-    def test_ac5_the_form_without_an_injected_error_is_not_refused(self):
-        self.assertIs(self.guard._stage_walk_refuses(self.stall_between_stages()), False)
-
-    def test_ac5_an_error_at_one_stage_probed_after_the_stall_does_not_refuse(self):
-        for error in (OSError("simulated"), PermissionError(13, "simulated")):
-            with self.subTest(error=type(error).__name__):
-                with _failing_only_at("lstat", str(FIX.deep), error) as raised:
-                    self.assertIs(
-                        self.guard._stage_walk_refuses(self.stall_between_stages()), False
-                    )
-                # The walk did probe the stage, so the error was really met.
-                self.assertEqual(raised, [str(FIX.deep)])
-
-    def test_ac5_the_same_error_at_a_stage_before_the_stall_still_refuses(self):
-        for error in (OSError("simulated"), PermissionError(13, "simulated")):
-            with self.subTest(error=type(error).__name__):
-                with _failing_only_at("lstat", str(FIX.inside / "sub"), error) as raised:
-                    self.assertIs(
-                        self.guard._stage_walk_refuses(self.stall_between_stages()), True
-                    )
-                self.assertEqual(raised, [str(FIX.inside / "sub")])
-
-    def test_ac5_a_value_error_after_the_stall_still_refuses(self):
-        with _failing_only_at("lstat", str(FIX.deep), ValueError("simulated")) as raised:
-            self.assertIs(self.guard._stage_walk_refuses(self.stall_between_stages()), True)
-        self.assertEqual(raised, [str(FIX.deep)])
-        # A real embedded NUL in a stage probed after the stall.
-        self.assertIs(
-            self.guard._stage_walk_refuses(str(FIX.inside) + "/missing-x/../sub\x00"), True
-        )
-
-    def link_after_the_stall(self):
-        """The first link of chain3 is read after the stall at missing-x."""
-        self.layout.chain(3)
-        return str(FIX.inside) + "/missing-x/../../procdep/chain3/l0"
-
-    def link_before_the_stall(self):
-        """The first link of chain3 is read before the stall, which is below
-        the directory the chain ends in."""
-        self.layout.chain(3)
-        return str(self.layout.top / "chain3" / "l0") + "/missing-x"
-
-    def test_ac5_the_link_forms_without_an_injected_error_are_not_refused(self):
-        self.assertIs(self.guard._stage_walk_refuses(self.link_after_the_stall()), False)
-        self.assertIs(self.guard._stage_walk_refuses(self.link_before_the_stall()), False)
-
-    def test_ac5_an_error_at_one_link_read_after_the_stall_does_not_refuse(self):
-        failing = str(self.layout.top / "chain3" / "l0")
-        for error in (OSError("simulated"), PermissionError(13, "simulated")):
-            with self.subTest(error=type(error).__name__):
-                with _failing_only_at("readlink", failing, error) as raised:
-                    self.assertIs(
-                        self.guard._stage_walk_refuses(self.link_after_the_stall()), False
-                    )
-                self.assertEqual(raised, [failing])
-
-    def test_ac5_the_same_error_at_a_link_read_before_the_stall_still_refuses(self):
-        failing = str(self.layout.top / "chain3" / "l0")
-        for error in (OSError("simulated"), PermissionError(13, "simulated")):
-            with self.subTest(error=type(error).__name__):
-                with _failing_only_at("readlink", failing, error) as raised:
-                    self.assertIs(
-                        self.guard._stage_walk_refuses(self.link_before_the_stall()), True
-                    )
-                self.assertEqual(raised, [failing])
-
-    def test_ac5_a_value_error_at_a_link_read_after_the_stall_still_refuses(self):
-        failing = str(self.layout.top / "chain3" / "l0")
-        with _failing_only_at("readlink", failing, ValueError("simulated")) as raised:
-            self.assertIs(self.guard._stage_walk_refuses(self.link_after_the_stall()), True)
-        self.assertEqual(raised, [failing])
-
-    def test_ac5_a_name_whose_probe_failed_after_the_stall_is_an_ordinary_name(self):
-        # After the error the walk goes on: a later stage under /proc is still
-        # refused, and a later `..` removes the name again.
-        climbing = [".."] * (len(FIX.deep.parts) + 1)
-        proc_after = self.stall_between_stages() + "/" + "/".join(climbing + PROC_TAIL)
-        with _failing_only_at("lstat", str(FIX.deep), OSError("simulated")) as raised:
-            self.assertIs(self.guard._stage_walk_refuses(self.stall_between_stages()), False)
-            self.assertIs(self.guard._stage_walk_refuses(proc_after), True)
-        self.assertEqual(raised, [str(FIX.deep)] * 2)
-
-
-# The statement the four places carry, as one phrase after whitespace is
-# flattened and the text lower-cased.
-STALL_CONTINUATION_NEEDLE = (
-    "the stage check continues past an absent or non-directory stage"
-    " the way the lenient realpath does"
-)
-
-# The sentence the stage-walk docstring carried before the walk continued.
-STALL_ENDING_PHRASE = "ends the walk without refusal"
-
-
-def _states_stall_continuation(text):
-    """True when the text states that the stage check continues past an absent
-    or non-directory stage the way the lenient realpath does."""
-    flat = " ".join(text.split()).lower()
-    return STALL_CONTINUATION_NEEDLE in flat
-
-
-def _stall_continuation_statement(text):
-    """The statement, from the needle to the end of its clause (the next
-    period or semicolon), or None."""
-    flat = " ".join(text.split()).lower()
-    match = re.search(re.escape(STALL_CONTINUATION_NEEDLE) + r"[^.;]*", flat)
-    return match.group(0) if match else None
-
-
-class TestStalledWalkWording(unittest.TestCase):
-    """AC-6 (FR5): the four places that describe the stage check state that it
-    continues past an absent or non-directory stage the way the lenient
-    realpath does; the two path items say it in identical wording."""
-
-    @classmethod
-    def setUpClass(cls):
-        guard = _load_guard_module()
-        cls.rule = _verbatim_execution_rule(PROTOCOL_PATH.read_text(encoding="utf-8"))
-        cls.places = {
-            "stage walk docstring": guard._stage_walk_refuses.__doc__,
-            "module docstring, path item": _docstring_path_item(guard.__doc__),
-            "protocol, path item": _rule_path_item(cls.rule) if cls.rule else None,
-            "is_below docstring, /proc and /dev/fd paragraph": _paragraph_containing(
-                guard.is_below.__doc__, "/dev/fd"
-            ),
-        }
-
-    def test_ac6_the_matcher_fires_on_the_statement_and_stops_when_it_is_removed(self):
-        statement = "Intro. " + STALL_CONTINUATION_NEEDLE.upper() + ", tail."
-        self.assertTrue(_states_stall_continuation(statement))
-        self.assertTrue(_states_stall_continuation("a\n  " + STALL_CONTINUATION_NEEDLE))
-        forged = statement.lower().replace(STALL_CONTINUATION_NEEDLE, "")
-        self.assertNotIn(STALL_CONTINUATION_NEEDLE, forged)
-        self.assertFalse(_states_stall_continuation(forged))
-        self.assertFalse(_states_stall_continuation(""))
-        self.assertFalse(
-            _states_stall_continuation("A stage that does not exist ends the walk without refusal.")
-        )
-
-    def test_ac6_the_statement_extractor_stops_at_the_end_of_the_clause(self):
-        text = "x. " + STALL_CONTINUATION_NEEDLE + ", so that y; z."
-        self.assertEqual(
-            _stall_continuation_statement(text), STALL_CONTINUATION_NEEDLE + ", so that y"
-        )
-        self.assertIsNone(_stall_continuation_statement("nothing here"))
-
-    def test_ac6_all_four_places_are_found(self):
-        for name, text in self.places.items():
-            with self.subTest(place=name):
-                self.assertIsNotNone(text, f"{name} not found")
-
-    def test_ac6_the_stage_walk_docstring_no_longer_says_the_walk_ends_without_refusal(self):
-        flat = " ".join(self.places["stage walk docstring"].split()).lower()
-        self.assertNotIn(STALL_ENDING_PHRASE, flat)
-
-    def test_ac6_each_place_states_the_continuation(self):
-        for name, text in self.places.items():
-            with self.subTest(place=name):
-                self.assertIsNotNone(text, f"{name} not found")
-                self.assertTrue(_states_stall_continuation(text))
-
-    def test_ac6_the_two_path_items_carry_the_same_continuation_statement(self):
-        statements = {}
-        for name in ("module docstring, path item", "protocol, path item"):
-            self.assertIsNotNone(self.places[name], f"{name} not found")
-            statement = _stall_continuation_statement(self.places[name])
-            self.assertIsNotNone(statement, name)
-            statements[name] = statement
-        self.assertEqual(len(set(statements.values())), 1, statements)
-
-    def test_ac6_the_statement_sits_inside_the_one_is_below_paragraph_that_names_dev_fd(self):
-        docstring = _load_guard_module().is_below.__doc__
-        holder = _paragraph_containing(docstring, "/dev/fd")
-        self.assertIsNotNone(holder)
-        self.assertTrue(_states_stall_continuation(holder))
-
-    def test_ac6_no_place_describes_the_proc_self_root_prefix_or_the_single_realpath_rule(self):
-        for name, text in self.places.items():
-            with self.subTest(place=name):
-                self.assertIsNotNone(text, f"{name} not found")
-                self.assertNotIn("/proc/self/root", " ".join(text.split()))
-                self.assertFalse(_states_single_realpath_condition(text))
-
-
 class TestStalledWalkContract(unittest.TestCase):
-    """AC-7 (FR6, NFR3, NFR4): what the change leaves as it was."""
+    """AC-7 (FR6, NFR3, NFR4): the path check starts no child process, whatever
+    the form."""
 
     @classmethod
     def setUpClass(cls):
         cls.guard = _load_guard_module()
         cls.area = str(FIX.region)
         cls.layout = StalledLayout()
-
-    def test_ac7_the_signatures_and_the_link_bound_are_unchanged(self):
-        self.assertEqual(list(inspect.signature(self.guard.is_below).parameters), ["path", "area"])
-        self.assertEqual(
-            list(inspect.signature(self.guard._stage_walk_refuses).parameters), ["path"]
-        )
-        self.assertEqual(self.guard.FOLLOWED_LINK_LIMIT, 40)
-
-    def test_ac7_the_first_as_written_query_comes_after_both_realpath_calls(self):
-        events = []
-        real_realpath = os.path.realpath
-        real_query = self.guard.resolves_to_directory
-
-        def realpath(path, **kwargs):
-            events.append("realpath")
-            return real_realpath(path, **kwargs)
-
-        def query(path):
-            events.append("resolves_to_directory")
-            return real_query(path)
-
-        with mock.patch.object(os.path, "realpath", new=realpath):
-            with mock.patch.object(self.guard, "resolves_to_directory", new=query):
-                self.assertIs(self.guard.is_below(str(FIX.inside), self.area), True)
-        self.assertEqual(events.count("realpath"), 2, events)
-        self.assertIn("resolves_to_directory", events)
-        self.assertGreater(
-            events.index("resolves_to_directory"), len(events) - 1 - events[::-1].index("realpath")
-        )
 
     @needs_proc
     def test_ac7_the_path_check_starts_no_child_process_for_the_added_forms(self):
@@ -2710,6 +1892,796 @@ class TestStalledWalkContract(unittest.TestCase):
         with _working_directory(self.layout.base.work), _no_child_process():
             for path in paths:
                 self.guard.is_below(path, self.area)
+
+
+# ---------------------------------------------------------------------------
+# Feature cd-prefix-canonical-path-only, task0001: the path check allows only a
+# canonical absolute path strictly below an area that lies inside the main
+# worktree, and refuses an over-long path before any file-system access.
+# ---------------------------------------------------------------------------
+
+# The file-system entry points the path check could reach. A recording wraps
+# each one and lets the call through.
+FILE_SYSTEM_ENTRY_POINTS = (
+    (os, ("stat", "lstat", "readlink", "scandir", "listdir", "access")),
+    (os.path, ("realpath", "isdir", "isfile", "exists", "lexists", "islink")),
+)
+
+
+@contextlib.contextmanager
+def _recorded_file_system():
+    """Record the name of every file-system entry point called while active.
+    The calls go through. Yields the list of names."""
+    calls = []
+
+    def recording(name, real):
+        def call(*args, **kwargs):
+            calls.append(name)
+            return real(*args, **kwargs)
+
+        return call
+
+    with contextlib.ExitStack() as stack:
+        for owner, names in FILE_SYSTEM_ENTRY_POINTS:
+            for name in names:
+                stack.enter_context(
+                    mock.patch.object(owner, name, new=recording(name, getattr(owner, name)))
+                )
+        yield calls
+
+
+def _run_hook_in_process(guard, command, cwd, store):
+    """(exit code, stdout, stderr) of guard.hook_main() for a PreToolUse payload,
+    run in this process so that a double can be placed inside the path check."""
+    payload = json.dumps({"tool_name": "Bash", "tool_input": {"command": command}, "cwd": str(cwd)})
+    out, err = io.StringIO(), io.StringIO()
+    with mock.patch.dict(os.environ, FIX.env(store), clear=True):
+        with mock.patch.object(sys, "stdin", io.StringIO(payload)):
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                code = guard.hook_main()
+    return code, out.getvalue(), err.getvalue()
+
+
+@contextlib.contextmanager
+def _failing_for(owner, name, failing_path, error):
+    """owner.<name> raises error when its first argument is failing_path (or,
+    for the bound source, on every call); any other call goes through. Yields
+    the list of the failures raised."""
+    real = getattr(owner, name)
+    raised = []
+
+    def call(*args, **kwargs):
+        if name == "pathconf" or (args and os.fspath(args[0]) == failing_path):
+            raised.append(failing_path)
+            raise error
+        return real(*args, **kwargs)
+
+    with mock.patch.object(owner, name, new=call):
+        yield raised
+
+
+def _refused_forms():
+    """(label, written path) for every form the path check refuses: non-canonical
+    text, links, and other paths (feature cd-prefix-canonical-path-only, TS2,
+    TS3, TS4)."""
+    layout = Layout()
+    inside, region = str(FIX.inside), str(FIX.region)
+    forms = [
+        # Non-canonical text.
+        ("trailing slash", inside + "/"),
+        ("doubled slash in the middle", region + "//task0001"),
+        ("doubled leading slash", "/" + inside),
+        ("dot component at the end", inside + "/."),
+        ("dot component in the middle", region + "/./task0001"),
+        ("dotdot component at the end", inside + "/.."),
+        ("dotdot component between names", inside + "/sub/../sub"),
+        # Links.
+        ("link inside the area to a directory inside the area", str(FIX.hop_in)),
+        ("link to a directory outside the area", str(FIX.link_out)),
+        ("broken link", str(FIX.dangling)),
+        ("link to a file", str(FIX.link_to_file)),
+    ]
+    forms += [
+        ("former fallback form: " + label, FIX.expand(template))
+        for label, template in FORMER_FALLBACK_FORMS
+    ]
+    forms += [
+        ("link with the relative target " + target, str(link))
+        for target, link in layout.relative_name_links
+    ]
+    forms += [
+        ("link with the absolute target " + target, str(link))
+        for target, link in layout.absolute_name_links
+    ]
+    # Other paths.
+    forms += [
+        ("root", "/"),
+        ("the area itself", region),
+        ("sibling sharing the name prefix", str(FIX.sibling)),
+        ("another repository's area", str(FIX.other_inside)),
+        ("nonexistent path", str(FIX.missing)),
+        ("regular file", str(FIX.file)),
+    ]
+    if os.path.isdir(PROC_ROOT):
+        forms += [
+            ("proc self root, then the inside directory", PROC_ROOT + inside),
+            ("proc self root, .., then the inside directory", PROC_ROOT + "/.." + inside),
+        ]
+    if os.path.isdir(DEV_FD):
+        forms.append(("dev fd", DEV_FD))
+    return forms
+
+
+CANONICAL_FORMS = (
+    ("directly below the area", lambda: str(FIX.inside)),
+    ("any depth below the area", lambda: str(FIX.deep)),
+    ("name with a space", lambda: str(FIX.spaced)),
+    ("name with &&", lambda: str(FIX.ampersand)),
+    ("git worktree below the area", lambda: str(FIX.worktree)),
+)
+
+
+class TestCanonicalPathOnly(CdPrefixCase):
+    """AC-2 (FR1, FR4, FR9; TS2, TS3, TS4; TM-1): every non-canonical, link and
+    other form is silent through the hook and False for a direct call, so no
+    form is accepted after normalization."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.guard = _load_guard_module()
+        cls.area = str(FIX.region)
+        cls.forms = _refused_forms()
+
+    def test_ac2_the_canonical_directories_are_below_the_area(self):
+        for label, make in CANONICAL_FORMS:
+            with self.subTest(label=label):
+                path = make()
+                self.assertIs(self.guard.is_below(path, self.area), True)
+
+    def test_ac2_the_form_list_holds_every_group_of_the_criterion(self):
+        labels = [label for label, _path in self.forms]
+        for needle in (
+            "trailing slash",
+            "doubled slash in the middle",
+            "doubled leading slash",
+            "dot component at the end",
+            "dot component in the middle",
+            "dotdot component at the end",
+            "dotdot component between names",
+            "link inside the area to a directory inside the area",
+            "link to a directory outside the area",
+            "broken link",
+            "link to a file",
+            "former fallback form: ",
+            "link with the relative target ",
+            "link with the absolute target ",
+            "root",
+            "the area itself",
+            "sibling sharing the name prefix",
+            "another repository's area",
+            "nonexistent path",
+            "regular file",
+        ):
+            with self.subTest(needle=needle):
+                self.assertTrue(any(label.startswith(needle) for label in labels))
+
+    def test_ac2_is_below_is_false_for_each_refused_form(self):
+        for label, path in self.forms:
+            with self.subTest(label=label):
+                self.assertIs(self.guard.is_below(path, self.area), False)
+
+    def test_ac2_each_refused_form_is_silent_through_the_hook_from_both_cwds(self):
+        for cwd in (FIX.repo, FIX.worktree):
+            for label, path in self.forms:
+                with self.subTest(cwd=cwd.name, label=label):
+                    command = 'cd "' + path + '" && ' + PLAIN_COMMAND
+                    decision, _ = decide(FIX.run_hook(command, cwd))
+                    self.assertEqual(decision, SILENT)
+
+    def test_ac2_the_path_is_never_normalized_before_the_check(self):
+        # The canonical equivalent of each non-canonical text is judged on its
+        # own (below the area, except for the area itself); the text as written
+        # is refused.
+        inside, region = str(FIX.inside), str(FIX.region)
+        for label, written, canonical in (
+            ("trailing slash", inside + "/", inside),
+            ("doubled slash in the middle", region + "//task0001", inside),
+            ("doubled leading slash", "/" + inside, inside),
+            ("dot component at the end", inside + "/.", inside),
+            ("dot component in the middle", region + "/./task0001", inside),
+            ("dotdot component at the end", inside + "/..", region),
+            ("dotdot component between names", inside + "/sub/../sub", inside + "/sub"),
+        ):
+            with self.subTest(label=label):
+                self.assertIs(self.guard.is_below(canonical, self.area), canonical != region)
+                self.assertIs(self.guard.is_below(written, self.area), False)
+
+    def test_ac2_a_link_inside_the_area_to_an_in_area_directory_is_a_real_link(self):
+        # Guards the fixture: the link names a directory inside the area, so
+        # only the link itself can be the reason for the refusal.
+        target = os.path.realpath(str(FIX.hop_in))
+        self.assertTrue(os.path.islink(str(FIX.hop_in)))
+        self.assertTrue(os.path.isdir(target))
+        self.assertTrue(self.guard.strictly_below(target, self.area))
+
+
+class TestLengthBound(unittest.TestCase):
+    """AC-3 (FR2, NFR4; TS5, TS6, TS13; TM-2): the length bound is checked first,
+    in the candidate decision and in `is_below`, before `worktree_area()` and any
+    file-system access."""
+
+    TAIL = "/x" * 32000
+
+    @classmethod
+    def setUpClass(cls):
+        cls.guard = _load_guard_module()
+        cls.area = str(FIX.region)
+        cls.common_dir = str(FIX.repo / ".git")
+
+    def command(self, path):
+        return 'cd "' + path + '" && ' + PLAIN_COMMAND
+
+    def over_bound_paths(self):
+        return (
+            ("a path outside the area", "/dev/null" + self.TAIL),
+            ("a path below the area", self.area + self.TAIL),
+        )
+
+    # -- AC-3, first bullet -------------------------------------------------
+
+    def test_ac3_over_bound_paths_are_false_in_the_candidate_decision(self):
+        for label, path in self.over_bound_paths():
+            with self.subTest(label=label):
+                with mock.patch.object(
+                    self.guard, "worktree_area", wraps=self.guard.worktree_area
+                ) as area_double, _recorded_file_system() as calls:
+                    result = self.guard.is_cd_prefixed_approved(
+                        self.command(path), {PLAIN_COMMAND}, self.common_dir
+                    )
+                self.assertIs(result, False)
+                area_double.assert_not_called()
+                self.assertEqual(sorted(set(calls)), [])
+
+    def test_ac3_over_bound_paths_are_false_in_is_below(self):
+        for label, path in self.over_bound_paths():
+            with self.subTest(label=label):
+                with _recorded_file_system() as calls:
+                    result = self.guard.is_below(path, self.area)
+                self.assertIs(result, False)
+                self.assertEqual(sorted(set(calls)), [])
+
+    def test_ac3_over_bound_paths_are_silent_through_the_hook(self):
+        for cwd in (FIX.repo, FIX.worktree):
+            for label, path in self.over_bound_paths():
+                with self.subTest(cwd=cwd.name, label=label):
+                    decision, _ = decide(FIX.run_hook(self.command(path), cwd))
+                    self.assertEqual(decision, SILENT)
+
+    def test_ac3_the_recording_sees_a_call_when_the_length_is_within_the_bound(self):
+        # Guards the recording the tests above rely on.
+        with mock.patch.object(
+            self.guard, "worktree_area", wraps=self.guard.worktree_area
+        ) as area_double, _recorded_file_system() as calls:
+            result = self.guard.is_cd_prefixed_approved(
+                self.command(str(FIX.inside)), {PLAIN_COMMAND}, self.common_dir
+            )
+        self.assertIs(result, True)
+        area_double.assert_called_once()
+        self.assertTrue(calls)
+
+    # -- AC-3, second and third bullets --------------------------------------
+
+    def test_ac3_the_bound_is_the_limit_the_system_reports_for_the_root_directory(self):
+        with mock.patch.object(os, "pathconf", wraps=os.pathconf) as source:
+            self.guard.is_below(str(FIX.inside), self.area)
+        source.assert_called_with("/", "PC_PATH_MAX")
+
+    def test_ac3_a_bound_that_cannot_be_obtained_or_is_not_positive_refuses(self):
+        path = str(FIX.inside)
+        self.assertIs(self.guard.is_below(path, self.area), True)
+        for label, double in (
+            ("OSError", {"side_effect": OSError("simulated")}),
+            ("ValueError", {"side_effect": ValueError("simulated")}),
+            ("zero", {"return_value": 0}),
+            ("negative", {"return_value": -1}),
+        ):
+            with self.subTest(label=label):
+                with mock.patch.object(os, "pathconf", **double):
+                    with _recorded_file_system() as calls:
+                        self.assertIs(self.guard.is_below(path, self.area), False)
+                    self.assertEqual(sorted(set(calls)), [])
+                    self.assertIs(
+                        self.guard.is_cd_prefixed_approved(
+                            self.command(path), {PLAIN_COMMAND}, self.common_dir
+                        ),
+                        False,
+                    )
+
+    def test_ac3_a_length_equal_to_the_bound_is_refused_before_any_file_system_call(self):
+        path = str(FIX.inside)
+        size = len(os.fsencode(path))
+        with mock.patch.object(os, "pathconf", return_value=size):
+            with _recorded_file_system() as calls:
+                self.assertIs(self.guard.is_below(path, self.area), False)
+            self.assertEqual(sorted(set(calls)), [])
+
+    def test_ac3_a_length_one_byte_shorter_passes_the_length_check(self):
+        path = str(FIX.inside)
+        size = len(os.fsencode(path))
+        with mock.patch.object(os, "pathconf", return_value=size + 1):
+            with _recorded_file_system() as calls:
+                self.assertIs(self.guard.is_below(path, self.area), True)
+            self.assertTrue(calls)
+        # Decided by the remaining conditions: a nonexistent path one byte
+        # shorter than the bound is False, after the file system was consulted.
+        missing = str(FIX.missing)
+        size = len(os.fsencode(missing))
+        with mock.patch.object(os, "pathconf", return_value=size + 1):
+            with _recorded_file_system() as calls:
+                self.assertIs(self.guard.is_below(missing, self.area), False)
+            self.assertTrue(calls)
+
+    def test_ac3_the_length_is_counted_in_bytes_of_the_file_system_encoding(self):
+        path = str(FIX.inside) + "/\u00e9"
+        try:
+            encoded = os.fsencode(path)
+        except ValueError:
+            self.skipTest("the file-system encoding cannot encode the test character")
+        if len(encoded) <= len(path):
+            self.skipTest("the test character is not multi-byte in the file-system encoding")
+        with mock.patch.object(os, "pathconf", return_value=len(path) + 1):
+            with _recorded_file_system() as calls:
+                self.assertIs(self.guard.is_below(path, self.area), False)
+            self.assertEqual(sorted(set(calls)), [])
+
+    # -- AC-3, fourth bullet ------------------------------------------------
+
+    def chain(self, depth):
+        directory = FIX.region / "lengths" / ("chain%d" % depth)
+        for _ in range(depth):
+            directory = directory / "n"
+        directory.mkdir(parents=True, exist_ok=True)
+        return str(directory)
+
+    def counted_calls(self, path):
+        with _recorded_file_system() as calls:
+            self.assertIs(self.guard.is_below(path, self.area), True)
+        return len(calls)
+
+    def test_ac3_the_file_system_call_count_grows_no_faster_than_linearly(self):
+        short, long_ = self.chain(8), self.chain(32)
+        short_parts, long_parts = len(Path(short).parts), len(Path(long_).parts)
+        short_calls, long_calls = self.counted_calls(short), self.counted_calls(long_)
+        self.assertGreater(long_calls, short_calls)
+        # A count proportional to the number of components keeps this ratio
+        # constant; a count that grows with its square does not.
+        self.assertLessEqual(long_calls * short_parts, short_calls * long_parts)
+
+
+class TestAreaContainment(CdPrefixCase):
+    """AC-4 (FR5; TS7; TM-4): the resolved area is used only when it lies
+    strictly below the realpath of the main worktree."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.guard = _load_guard_module()
+
+    def prefixed(self, path):
+        return 'cd "' + str(path) + '" && ' + PLAIN_COMMAND
+
+    def decide_in(self, layout, path):
+        proc = FIX.run_hook(self.prefixed(path), layout.repo, FIX.store_layouts)
+        return decide(proc)[0]
+
+    def area_of(self, layout):
+        return os.path.realpath(
+            os.path.join(str(layout.repo), ".claude", "worktrees", "em-workflow")
+        )
+
+    def test_ac4_the_fixture_layouts_have_the_claimed_shape(self):
+        for name, layout, inside in (
+            ("area-out", FIX.layout_area_out, False),
+            ("claude-out", FIX.layout_claude_out, False),
+            ("area-in", FIX.layout_area_in, True),
+        ):
+            with self.subTest(layout=name):
+                area = self.area_of(layout)
+                self.assertIs(self.guard.strictly_below(area, str(layout.repo)), inside)
+                # The canonical task directory is below the resolved area, and
+                # the path through the link is not canonical.
+                self.assertEqual(os.path.realpath(str(layout.resolved)), str(layout.resolved))
+                self.assertTrue(self.guard.strictly_below(str(layout.resolved), area))
+                self.assertTrue(os.path.isdir(str(layout.through)))
+                self.assertNotEqual(os.path.realpath(str(layout.through)), str(layout.through))
+
+    def test_ac4_worktree_area_is_none_when_the_area_resolves_outside(self):
+        for name, layout in (
+            ("area-out", FIX.layout_area_out),
+            ("claude-out", FIX.layout_claude_out),
+        ):
+            with self.subTest(layout=name):
+                self.assertIsNone(self.guard.worktree_area(str(layout.repo / ".git")))
+
+    def test_ac4_worktree_area_is_the_resolved_area_when_it_resolves_inside(self):
+        layout = FIX.layout_area_in
+        self.assertEqual(
+            self.guard.worktree_area(str(layout.repo / ".git")), self.area_of(layout)
+        )
+
+    def test_ac4_an_ordinary_area_is_still_returned(self):
+        self.assertEqual(
+            self.guard.worktree_area(str(FIX.repo / ".git")), str(FIX.region)
+        )
+
+    def test_ac4_nothing_is_allowed_when_the_area_resolves_outside(self):
+        for name, layout in (
+            ("area-out", FIX.layout_area_out),
+            ("claude-out", FIX.layout_claude_out),
+        ):
+            for label, path in (
+                ("canonical directory beyond the link", layout.resolved),
+                ("path through the link", layout.through),
+            ):
+                with self.subTest(layout=name, label=label):
+                    self.assertEqual(self.decide_in(layout, path), SILENT)
+
+    def test_ac4_the_candidate_decision_is_false_when_the_area_resolves_outside(self):
+        for layout in (FIX.layout_area_out, FIX.layout_claude_out):
+            with self.subTest(repo=layout.repo.name):
+                self.assertIs(
+                    self.guard.is_cd_prefixed_approved(
+                        self.prefixed(layout.resolved),
+                        {PLAIN_COMMAND},
+                        str(layout.repo / ".git"),
+                    ),
+                    False,
+                )
+
+    def test_ac4_the_resolved_canonical_path_is_allowed_when_the_area_resolves_inside(self):
+        layout = FIX.layout_area_in
+        self.assertEqual(self.decide_in(layout, layout.resolved), ALLOW)
+
+    def test_ac4_the_path_through_the_link_is_silent_when_the_area_resolves_inside(self):
+        layout = FIX.layout_area_in
+        self.assertEqual(self.decide_in(layout, layout.through), SILENT)
+
+
+class TestFailClosed(CdPrefixCase):
+    """AC-5 (FR3, NFR2, NFR3, NFR5; TS8, TS15; TM-3): input on which the check
+    cannot decide is not allowed, never raises, and never reaches the output."""
+
+    UNENCODABLE = "\ud800"
+
+    @classmethod
+    def setUpClass(cls):
+        cls.guard = _load_guard_module()
+        cls.area = str(FIX.region)
+        cls.common_dir = str(FIX.repo / ".git")
+
+    def prefixed(self, path):
+        return 'cd "' + path + '" && ' + PLAIN_COMMAND
+
+    def undecidable_paths(self):
+        inside = str(FIX.inside)
+        return (
+            ("NUL after an existing directory", inside + "\x00"),
+            ("NUL inside a component", inside + "/su\x00b"),
+            ("a character the file-system encoding cannot encode", inside + "/" + self.UNENCODABLE),
+            ("an unencodable character right after the root", "/" + self.UNENCODABLE),
+        )
+
+    def test_ac5_the_fixture_character_cannot_be_encoded(self):
+        with self.assertRaises(ValueError):
+            os.fsencode(self.UNENCODABLE)
+
+    def test_ac5_the_path_check_is_false_without_raising(self):
+        for label, path in self.undecidable_paths():
+            with self.subTest(label=label):
+                self.assertIs(self.guard.is_below(path, self.area), False)
+
+    def test_ac5_the_candidate_decision_contains_the_encoding_error_itself(self):
+        # The length check of the candidate decision runs before is_below's own
+        # guard, and before worktree_area().
+        for label, path in self.undecidable_paths():
+            with self.subTest(label=label):
+                with mock.patch.object(
+                    self.guard, "worktree_area", wraps=self.guard.worktree_area
+                ) as area_double:
+                    self.assertIs(
+                        self.guard.is_cd_prefixed_approved(
+                            self.prefixed(path), {PLAIN_COMMAND}, self.common_dir
+                        ),
+                        False,
+                    )
+                if self.UNENCODABLE in path:
+                    area_double.assert_not_called()
+
+    def test_ac5_an_injected_resolution_error_makes_the_path_check_false(self):
+        path = str(FIX.inside)
+        self.assertIs(self.guard.is_below(path, self.area), True)
+        for error in (OSError("simulated"), ValueError("simulated")):
+            for owner, name in ((os.path, "realpath"), (os, "lstat"), (os.path, "isdir")):
+                with self.subTest(error=type(error).__name__, entry_point=name):
+                    with mock.patch.object(owner, name, side_effect=error):
+                        self.assertIs(self.guard.is_below(path, self.area), False)
+
+    def test_ac5_an_error_while_the_bound_is_obtained_makes_the_path_check_false(self):
+        path = str(FIX.inside)
+        for error in (OSError("simulated"), ValueError("simulated")):
+            with self.subTest(error=type(error).__name__):
+                with mock.patch.object(os, "pathconf", side_effect=error):
+                    self.assertIs(self.guard.is_below(path, self.area), False)
+
+    def test_ac5_a_resolution_error_while_the_area_is_resolved_is_not_allowed(self):
+        for error in (OSError("simulated"), ValueError("simulated")):
+            with self.subTest(error=type(error).__name__):
+                with mock.patch.object(os.path, "realpath", side_effect=error):
+                    self.assertIsNone(self.guard.worktree_area(self.common_dir))
+
+    def test_ac5_through_the_hook_an_undecidable_path_exits_zero_silently_without_allow(self):
+        for cwd in (FIX.repo, FIX.worktree):
+            for label, path in self.undecidable_paths():
+                with self.subTest(cwd=cwd.name, label=label):
+                    proc = FIX.run_hook(self.prefixed(path), cwd)
+                    self.assertEqual(proc.returncode, 0)
+                    self.assertEqual(proc.stderr, "")
+                    decision, _ = decide(proc)
+                    self.assertNotEqual(decision, ALLOW)
+
+    def test_ac5_through_the_hook_an_injected_error_exits_zero_silently_without_allow(self):
+        target = str(FIX.inside)
+        command = self.prefixed(target)
+        code, out, err = _run_hook_in_process(self.guard, command, FIX.repo, FIX.store)
+        self.assertEqual((code, err), (0, ""))
+        self.assertEqual(json.loads(out)["hookSpecificOutput"]["permissionDecision"], ALLOW)
+        for error in (OSError("simulated"), ValueError("simulated")):
+            for owner, name in (
+                (os.path, "realpath"),
+                (os, "lstat"),
+                (os.path, "isdir"),
+                (os, "pathconf"),
+            ):
+                with self.subTest(error=type(error).__name__, entry_point=name):
+                    with _failing_for(owner, name, target, error) as raised:
+                        code, out, err = _run_hook_in_process(
+                            self.guard, command, FIX.repo, FIX.store
+                        )
+                    self.assertTrue(raised, "the injected error was never reached")
+                    self.assertEqual((code, out, err), (0, "", ""))
+
+    def test_ac5_the_path_check_starts_no_child_process_and_passes_no_path_to_one(self):
+        paths = [path for _label, path in self.undecidable_paths()]
+        paths += [path for _label, path in _refused_forms()]
+        paths += [make() for _label, make in CANONICAL_FORMS]
+        paths += ["/dev/null" + "/x" * 32000]
+        with _no_child_process():
+            for path in paths:
+                self.guard.is_below(path, self.area)
+                self.guard.is_cd_prefixed_approved(
+                    self.prefixed(path), {PLAIN_COMMAND}, self.common_dir
+                )
+
+
+# The statements the three places that describe the path condition carry. Each
+# is one contiguous phrase after whitespace is flattened and the text lower-cased.
+PATH_CONDITION_NEEDLES = (
+    "canonical absolute path",
+    "no empty, `.` or `..` component other than the root",
+    "strictly below the area",
+    "equals its own realpath",
+    "an existing directory",
+    "never normalized and then accepted",
+    "path-length limit that the operating system reports for the root directory",
+    "greater than or equal to",
+    "strictly below the realpath of the main worktree",
+    "at any depth",
+    "a resolution error counts as not below",
+    "never used as the directory or argument of a child process",
+)
+
+# Terms of the checks this feature removed. None may appear in the three places.
+OLD_CHECK_TERMS = ("logical path", "physical path", "/proc", "/dev/fd", "stage")
+
+REMOVED_SYMBOLS = (
+    "_stage_walk_refuses",
+    "_under_proc_or_dev_fd",
+    "FOLLOWED_LINK_LIMIT",
+    "resolves_to_directory",
+)
+
+
+def _missing_path_condition_statements(text):
+    """The needles the text does not carry."""
+    flat = " ".join(text.split()).lower()
+    return [needle for needle in PATH_CONDITION_NEEDLES if needle not in flat]
+
+
+def _old_check_terms_in(text):
+    """The terms of the removed checks the text carries, compared
+    case-insensitively with whitespace flattened."""
+    flat = " ".join(text.split()).lower()
+    return [term for term in OLD_CHECK_TERMS if term in flat]
+
+
+def _docstring_path_item(docstring):
+    """The `path:` item of the `cd prefix:` paragraph, whitespace flattened."""
+    match = re.search(r"^  - path:(.*?)^  - approval:", docstring, re.DOTALL | re.MULTILINE)
+    return " ".join(match.group(1).split()) if match else None
+
+
+def _rule_path_item(rule):
+    """The path item of the Verbatim execution rule (already flattened)."""
+    start = rule.find("the path is a canonical absolute path")
+    end = rule.find("everything after the first `&&` matches")
+    if start < 0 or end < start:
+        return None
+    return rule[start:end]
+
+
+class TestRemovedSymbols(unittest.TestCase):
+    """AC-6 (FR4; TS9): the module defines none of the removed symbols."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.guard = _load_guard_module()
+
+    def test_ac6_the_module_defines_none_of_the_removed_symbols(self):
+        for name in REMOVED_SYMBOLS:
+            with self.subTest(name=name):
+                self.assertFalse(hasattr(self.guard, name))
+
+    def test_ac6_no_definition_or_name_of_the_removed_symbols_is_in_the_source(self):
+        tree = ast.parse(GUARD_PATH.read_text(encoding="utf-8"))
+        identifiers = set()
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                identifiers.add(node.name)
+            elif isinstance(node, ast.Name):
+                identifiers.add(node.id)
+            elif isinstance(node, ast.Attribute):
+                identifiers.add(node.attr)
+        self.assertEqual(identifiers & set(REMOVED_SYMBOLS), set())
+
+    def test_ac6_the_logical_and_physical_checks_are_gone_from_the_code(self):
+        # The dual check compared the realpath of the normalized path with the
+        # realpath of the path as written; no call to normpath is left on a
+        # cd prefix path.
+        source = inspect.getsource(self.guard.is_below)
+        self.assertNotIn("normpath", source)
+
+
+class TestPathConditionWording(unittest.TestCase):
+    """AC-6 (FR7; TS9): the module docstring's path item, the `is_below`
+    docstring and the protocol's path item state the new condition and none of
+    the old one."""
+
+    @classmethod
+    def setUpClass(cls):
+        guard = _load_guard_module()
+        cls.rule = _verbatim_execution_rule(PROTOCOL_PATH.read_text(encoding="utf-8"))
+        cls.places = {
+            "module docstring, path item": _docstring_path_item(guard.__doc__),
+            "is_below docstring": guard.is_below.__doc__,
+            "protocol, path item": _rule_path_item(cls.rule) if cls.rule else None,
+        }
+
+    def test_ac6_all_three_places_are_found(self):
+        self.assertIsNotNone(self.rule, "section 'Verbatim execution rule' not found")
+        for name, text in self.places.items():
+            with self.subTest(place=name):
+                self.assertIsNotNone(text, f"{name} not found")
+                self.assertTrue(text.strip())
+
+    def test_ac6_each_place_states_the_new_condition(self):
+        for name, text in self.places.items():
+            with self.subTest(place=name):
+                self.assertIsNotNone(text, f"{name} not found")
+                self.assertEqual(_missing_path_condition_statements(text), [])
+
+    def test_ac6_the_statement_matcher_fires_on_forged_text(self):
+        for name, text in self.places.items():
+            self.assertIsNotNone(text, f"{name} not found")
+            flat = " ".join(text.split()).lower()
+            self.assertEqual(
+                _missing_path_condition_statements(flat),
+                [],
+                f"the {name} does not carry the statement the forgeries start from",
+            )
+            for needle in PATH_CONDITION_NEEDLES:
+                with self.subTest(place=name, needle=needle):
+                    forged = flat.replace(needle, "")
+                    self.assertNotIn(needle, forged)
+                    self.assertIn(needle, _missing_path_condition_statements(forged))
+
+    def test_ac6_the_statement_matcher_does_not_pass_unrelated_text(self):
+        self.assertEqual(
+            _missing_path_condition_statements(""), list(PATH_CONDITION_NEEDLES)
+        )
+        self.assertNotEqual(
+            _missing_path_condition_statements("the realpath of <path> only"), []
+        )
+
+    def test_ac6_no_place_holds_a_term_of_the_removed_checks(self):
+        for name, text in self.places.items():
+            with self.subTest(place=name):
+                self.assertIsNotNone(text, f"{name} not found")
+                self.assertEqual(_old_check_terms_in(text), [])
+
+    def test_ac6_the_absence_matcher_fires_on_forged_text(self):
+        for name, text in self.places.items():
+            self.assertIsNotNone(text, f"{name} not found")
+            for term in OLD_CHECK_TERMS:
+                with self.subTest(place=name, term=term):
+                    # Upper case and a line break inside the term, appended to
+                    # the real text, must still be found.
+                    broken = term.upper().replace(" ", "\n  ")
+                    forged = text + " and then the " + broken + " rule"
+                    self.assertIn(term, _old_check_terms_in(forged))
+
+    def test_ac6_the_absence_matcher_stays_silent_on_clean_text(self):
+        self.assertEqual(_old_check_terms_in(""), [])
+        self.assertEqual(_old_check_terms_in("a canonical absolute path below the area"), [])
+
+    def test_ac6_the_two_path_items_carry_the_same_statements_in_the_same_order(self):
+        positions = {}
+        for name in ("module docstring, path item", "protocol, path item"):
+            flat = " ".join(self.places[name].split()).lower()
+            positions[name] = sorted(
+                PATH_CONDITION_NEEDLES, key=lambda needle: flat.find(needle)
+            )
+        self.assertEqual(
+            positions["module docstring, path item"], positions["protocol, path item"]
+        )
+
+
+class TestRemovedSymbolsAreNotNamed(unittest.TestCase):
+    """AC-7 (FR9; TS11): no test calls, patches or names a removed symbol."""
+
+    @staticmethod
+    def named_symbols(source):
+        """Removed symbols the source calls, reads, or names as the target of a
+        patch or a getattr, found in identifiers and in the string arguments of
+        calls. A bare tuple of names, as in this module, is not a use."""
+        tree = ast.parse(source)
+        found = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Name) and node.id in REMOVED_SYMBOLS:
+                found.add(node.id)
+            elif isinstance(node, ast.Attribute) and node.attr in REMOVED_SYMBOLS:
+                found.add(node.attr)
+            elif isinstance(node, ast.Call):
+                arguments = list(node.args) + [keyword.value for keyword in node.keywords]
+                for argument in arguments:
+                    if (
+                        isinstance(argument, ast.Constant)
+                        and isinstance(argument.value, str)
+                        and argument.value in REMOVED_SYMBOLS
+                    ):
+                        found.add(argument.value)
+        return found
+
+    def test_ac7_the_detector_fires_on_forged_source(self):
+        for name in REMOVED_SYMBOLS:
+            with self.subTest(name=name):
+                for forged in (
+                    "guard." + name + "('x')",
+                    "mock.patch.object(guard, '" + name + "', return_value=True)",
+                    "getattr(guard, '" + name + "')",
+                    name + " = 1",
+                ):
+                    self.assertEqual(self.named_symbols(forged), {name})
+        self.assertEqual(self.named_symbols("guard.is_below('x', 'y')"), set())
+
+    def test_ac7_no_test_module_names_a_removed_symbol(self):
+        offenders = {}
+        for path in sorted(Path(__file__).resolve().parent.glob("test_*.py")):
+            source = path.read_text(encoding="utf-8")
+            if not any(symbol in source for symbol in REMOVED_SYMBOLS):
+                continue
+            found = self.named_symbols(source)
+            if found:
+                offenders[path.name] = sorted(found)
+        self.assertEqual(offenders, {})
 
 
 def _imported_top_level_modules(source):
