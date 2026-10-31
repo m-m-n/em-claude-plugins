@@ -104,7 +104,8 @@ workflow:
   result: pass
   failed_items: []
 - id: retrospect
-  status: pending
+  status: completed
+  completed_at_commit: ecca9db492f1b66a9e5e476bf4e1636c1a1d51a3
 tasks:
   task0001:
     title: Terminal state for the control-character stop, with regression tests
