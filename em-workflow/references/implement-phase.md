@@ -842,9 +842,10 @@ Triggered whenever a launched implementer's `Task()` call returns.
      `--worktree-present yes|no`, `--branch-present yes|no`,
      `--task-worktree` set to the task's expected worktree path
      (`$WT_ROOT/{T}`), supplied whether or not that path exists and
-     compared by the identity-binding step as a plain string against the
-     Agent index entry's recorded worktree (SC-2), `--stop-target <the
-     agent identity the stop call was made against>`, `--launch-termination
+     compared by the identity-binding step with the Agent index entry's
+     recorded worktree after resolving links on both sides (SC-2),
+     `--stop-target <the agent identity the stop call was made
+     against>`, `--launch-termination
      terminated|running|launch-accepted|error|output-idle` (only
      `terminated` proves the step; `running` yields agent-still-live;
      `launch-accepted`, `error`, `output-idle`, any unrecognized token and

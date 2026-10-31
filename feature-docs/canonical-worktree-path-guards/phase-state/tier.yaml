@@ -1,0 +1,64 @@
+schema_version: 2
+feature: canonical-worktree-path-guards
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.51
+    confidence: 0.51
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.49
+      '2': 0.51
+      '3': 0.0
+  observed_at: '2026-10-31T13:59:57+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.97
+    confidence: 0.97
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.03
+      '2': 0.97
+      '3': 0.0
+  observed_at: '2026-10-31T14:01:55+09:00'
+pre_survey_estimate:
+  files_expected: 6
+  changed_lines_approx: 180
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules:
+  - em-workflow/scripts/recover-orphaned-task.py
+  - em-workflow/references/implement-phase.md
+  - tests/test_queue_launch_guard.py
+  - tests/test_stale_launched_recovery_chain.py
+  - tests/test_stale_launched_missing_artifacts_doc_contract.py
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 8
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  caller_and_dependency_count: 4
+  changes_external_contract: true
+  changes_behavior: true
+decided_at: '2026-10-31T14:02:10+09:00'

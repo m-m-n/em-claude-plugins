@@ -1,0 +1,101 @@
+schema_version: 1
+feature: canonical-worktree-path-guards
+phase: create-spec
+status: completed
+generation: 1
+base_revision: e322614ac4d9b617c7e531e2ca88d2fdcc6b1e46
+last_input_digest: sha256:843a7d0270a7dc074dc06749f22958438166a77bb91d3c7512b23d62b94689bd
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-31T14:08:00+09:00'
+    questions:
+    - question_id: requirement.scope.align-decision
+      status: answered
+    - question_id: requirement.launch-guard.project-root-derivation
+      status: answered
+    - question_id: requirement.stale-launched.comparison-side
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+answers:
+  requirement.scope.align-decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-31T14:12:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - align_both
+    freeform: null
+    normalized_answer: align_both
+    resolution_note: 'gate create-spec.requirement-clarification; batch policy codex_consultation;
+      Codex (codex entry, 1 turn) recommended this option; orchestrator mapped it
+      onto the declared option_id. Rationale: fixing only one side leaves either the
+      silent launch-guard skip or the false residual; documenting alone leaves both.'
+  requirement.launch-guard.project-root-derivation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-31T14:12:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - segment_then_git_common_dir
+    freeform: null
+    normalized_answer: segment_then_git_common_dir
+    resolution_note: 'gate create-spec.requirement-clarification; batch policy codex_consultation;
+      Codex (codex entry, 1 turn) recommended this option; orchestrator mapped it
+      onto the declared option_id. Rationale: keeps the existing segment rule and
+      the pinned outside-layout fail-open; matches bash_guard''s main-worktree derivation
+      from the git common dir; git runs only when the segment is absent.'
+  requirement.stale-launched.comparison-side:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-31T14:12:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - script_resolves_both
+    freeform: null
+    normalized_answer: script_resolves_both
+    resolution_note: 'gate create-spec.requirement-clarification; batch policy codex_consultation;
+      Codex (codex entry, 1 turn) recommended this option; orchestrator mapped it
+      onto the declared option_id. Rationale: one place handles both legacy and canonical
+      records; non-strict realpath keeps a missing worktree bindable. Codex concerns:
+      validate both sides as non-empty absolute strings before realpath, resolution
+      error -> agent-identity-unproven, keep session_id out of the function, update
+      implement-phase.md and R4_NEW_STATEMENT.'
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-31T14:12:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: decide_autonomously
+    resolution_note: gate create-spec.design-step; batch-policies.yaml option decide_autonomously
+      (accept skip recommendation).
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:ba8ddf4d5b3fe6e02a5ec0a41e752fd8a03a1351e0ae5dccc1acedc1f5b969d1
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:ba8ddf4d5b3fe6e02a5ec0a41e752fd8a03a1351e0ae5dccc1acedc1f5b969d1
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:843a7d0270a7dc074dc06749f22958438166a77bb91d3c7512b23d62b94689bd
+  self_write_set:
+  - feature-docs/canonical-worktree-path-guards/REQUIREMENTS.md
+  - feature-docs/canonical-worktree-path-guards/SPEC.md
+artifacts:
+- path: feature-docs/canonical-worktree-path-guards/REQUIREMENTS.md
+  sha256: sha256:b4f30d07d88ec4fd27623c0160de68290ab44b2f7e8c4fbea6063150723aafd0
+  produced_by: create-spec-run-0003
+- path: feature-docs/canonical-worktree-path-guards/SPEC.md
+  sha256: sha256:128c98d7e9887dabfe6cb8d17d3360652434dc3b00fb4064f157b4b4ea87cd43
+  produced_by: create-spec-run-0003
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

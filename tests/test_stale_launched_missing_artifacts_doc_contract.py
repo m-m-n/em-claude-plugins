@@ -59,6 +59,21 @@ Covers task0003 Acceptance Criteria
   constants each read by a positive test and its negative proof; it
   modifies no existing test module.
 
+Also covers canonical-worktree-path-guards task0003 Acceptance Criteria
+(feature-docs/canonical-worktree-path-guards/tasks/task0003.md):
+
+- AC-1 (FR5, TS10): the `--task-worktree` clause of the Same-session
+  extension invocation contract (`R4_NEW_STATEMENT`) states that the
+  identity-binding step compares the value with the Agent index entry's
+  recorded worktree after resolving links on both sides
+  (TestTaskWorktreeComparisonResolvesLinks).
+- AC-2 (FR5, TS10): "as a plain string" is absent from I.2.b, with a
+  negative proof against a verbatim pre-change excerpt of the clause
+  (TestTaskWorktreeComparisonResolvesLinks).
+- AC-3 (TS10): every pre-existing test of this module is kept unchanged.
+- AC-4 (NFR1, TS14): the standard-library import check
+  (TestModuleImportsStdlibOnly) covers the whole module.
+
 Follows the established convention (standard library only, document text
 read from the repository root computed from this module's own path,
 module-level constants for each literal read once by a positive test and
@@ -417,8 +432,8 @@ FORBIDDEN_R4_OBSERVED_PATH = "<observed task worktree path>"
 R4_NEW_STATEMENT = (
     "`--task-worktree` set to the task's expected worktree path "
     "(`$WT_ROOT/{T}`), supplied whether or not that path exists and "
-    "compared by the identity-binding step as a plain string against the "
-    "Agent index entry's recorded worktree (SC-2)"
+    "compared by the identity-binding step with the Agent index entry's "
+    "recorded worktree after resolving links on both sides (SC-2)"
 )
 
 EXTENDED_CHAIN_CODES_IN_ORDER = (
@@ -493,6 +508,94 @@ class TestR2R3R4OldWordingRemovedAndNewStatementsPresent(unittest.TestCase):
             forged.index(f"`{code}`") for code in EXTENDED_CHAIN_CODES_IN_ORDER
         ]
         self.assertNotEqual(positions, sorted(positions))
+
+
+# --- canonical-worktree-path-guards task0003: --task-worktree comparison --
+#
+# The `--task-worktree` clause of the Same-session extension invocation
+# contract states that the identity-binding step compares the value with the
+# Agent index entry's recorded worktree after resolving links on both sides
+# (FR5, TS10). `R4_NEW_STATEMENT` above is the full new clause; the pieces
+# below prove that the old plain-string comparison wording is gone.
+
+# Verbatim excerpt of the clause from I.2.b of
+# em-workflow/references/implement-phase.md as it read at the base revision
+# of canonical-worktree-path-guards task0003, before the clause was
+# reworded. Taken verbatim; never reconstructed.
+PRE_CHANGE_TASK_WORKTREE_CLAUSE_SAMPLE = (
+    "     `--task-worktree` set to the task's expected worktree path\n"
+    "     (`$WT_ROOT/{T}`), supplied whether or not that path exists and\n"
+    "     compared by the identity-binding step as a plain string against the\n"
+    "     Agent index entry's recorded worktree (SC-2), `--stop-target <the\n"
+)
+FORBIDDEN_TASK_WORKTREE_PLAIN_STRING = "as a plain string"
+TASK_WORKTREE_CLAUSE_RETAINED_ANCHOR = (
+    "`--task-worktree` set to the task's expected worktree path "
+    "(`$WT_ROOT/{T}`), supplied whether or not that path exists"
+)
+TASK_WORKTREE_CLAUSE_REQUIRED_PARTS = (
+    "`$WT_ROOT/{T}`",
+    "supplied whether or not that path exists",
+    "compared by the identity-binding step with the Agent index entry's "
+    "recorded worktree",
+    "after resolving links on both sides",
+)
+
+
+class TestTaskWorktreeComparisonResolvesLinks(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.i2b = _normalize_ws(_i2b_section(_read_implement_phase()))
+        cls.sample = _normalize_ws(PRE_CHANGE_TASK_WORKTREE_CLAUSE_SAMPLE)
+
+    def test_ac1_new_clause_present_in_live_i2b(self):
+        self.assertIn(_normalize_ws(R4_NEW_STATEMENT), self.i2b)
+
+    def test_ac1_constant_states_every_required_part_of_the_clause(self):
+        statement = _normalize_ws(R4_NEW_STATEMENT)
+        for part in TASK_WORKTREE_CLAUSE_REQUIRED_PARTS:
+            with self.subTest(part=part):
+                self.assertIn(_normalize_ws(part), statement)
+
+    def test_ac1_negative_proof_clause_without_link_resolution_is_detected(self):
+        part = TASK_WORKTREE_CLAUSE_REQUIRED_PARTS[-1]
+        self.assertIn(_normalize_ws(R4_NEW_STATEMENT), self.i2b)
+        forged_statement = _normalize_ws(R4_NEW_STATEMENT).replace(
+            _normalize_ws(part), ""
+        )
+        self.assertNotIn(_normalize_ws(part), forged_statement)
+        forged_i2b = self.i2b.replace(
+            _normalize_ws(R4_NEW_STATEMENT), forged_statement
+        )
+        self.assertNotIn(_normalize_ws(R4_NEW_STATEMENT), forged_i2b)
+
+    def test_ac2_plain_string_wording_absent_from_live_i2b(self):
+        self.assertNotIn(
+            _normalize_ws(FORBIDDEN_TASK_WORKTREE_PLAIN_STRING), self.i2b
+        )
+
+    def test_ac2_retained_anchor_present_in_live_i2b(self):
+        self.assertIn(_normalize_ws(TASK_WORKTREE_CLAUSE_RETAINED_ANCHOR), self.i2b)
+
+    def test_ac2_negative_proof_pre_change_excerpt_holds_phrase_and_anchor(self):
+        # The absence search above is not vacuous: the verbatim pre-change
+        # excerpt -- which also carries the retained anchor, so the excerpt
+        # itself is correctly targeted -- DOES contain the forbidden phrase.
+        self.assertIn(
+            _normalize_ws(TASK_WORKTREE_CLAUSE_RETAINED_ANCHOR), self.sample
+        )
+        self.assertIn(
+            _normalize_ws(FORBIDDEN_TASK_WORKTREE_PLAIN_STRING), self.sample
+        )
+
+    def test_ac2_negative_proof_old_clause_in_i2b_is_detected(self):
+        self.assertIn(_normalize_ws(R4_NEW_STATEMENT), self.i2b)
+        forged_i2b = self.i2b.replace(
+            _normalize_ws(R4_NEW_STATEMENT), self.sample
+        )
+        self.assertIn(
+            _normalize_ws(FORBIDDEN_TASK_WORKTREE_PLAIN_STRING), forged_i2b
+        )
 
 
 # --- AC-5: FR3 pin (bc57aa350bb027c7) + loop-2 negative proof -------------

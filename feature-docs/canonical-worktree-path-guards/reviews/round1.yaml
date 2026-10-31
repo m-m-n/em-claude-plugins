@@ -1,0 +1,73 @@
+round: 1
+executed_at: "2026-10-31T15:02:10+09:00"
+scope:
+  review_mode: diff
+  base_commit: 9ae5490aaedba578344f9b9cf875cf0b7d648f35
+  head_commit: 27f0af22dac0e5b6401ad6379ce3e562f88da11f
+  changed_files:
+  - em-workflow/hooks/queue_launch_guard.py
+  - em-workflow/references/implement-phase.md
+  - em-workflow/scripts/recover-orphaned-task.py
+  - test-docs/canonical-worktree-path-guards/task0001.tests.yaml
+  - test-docs/canonical-worktree-path-guards/task0002.tests.yaml
+  - test-docs/canonical-worktree-path-guards/task0003.tests.yaml
+  - tests/test_merge_unverified_exit_doc_contract.py
+  - tests/test_queue_launch_guard_linked_layout.py
+  - tests/test_stale_launched_missing_artifacts_doc_contract.py
+  - tests/test_stale_launched_recovery_chain.py
+plan:
+  floor: [comprehensive, security, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+- {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+- {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+- stable_id: a3fe8ddbe09570f2
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/queue_launch_guard.py
+  line: 151
+  title: "Git の共通管理ディレクトリの親を無条件にプロジェクトのルートとみなし、正しい場所からの起動を拒否する"
+  description: "git_common_dir_root は `git rev-parse --path-format=absolute --git-common-dir` の出力の親ディレクトリを無条件に返している（151 行目）。cwd_outside_project_root はその値と cwd の git toplevel を realpath で比べ、違えば拒否する。SPEC a3 の前提（共通管理ディレクトリ = 主作業場所直下の `.git`）が崩れる構成では、正しい場所からの起動も拒否される。(1) サブモジュール: 作業場所が /super/sub なら共通管理ディレクトリは /super/.git/modules/sub で、ルートは /super/.git/modules になる。(2) `--separate-git-dir`: 共通管理ディレクトリが /store/proj.git なら、ルートは /store になる。(3) プロジェクトのルート自体が linked worktree の場合: `--git-common-dir` は主リポジトリの `.git` を返すので、ルートは主作業場所になる。どの構成も、変更前は区切りが無いと確認を省いていた（fail-open）。区切りの無い linked layout と重なると、実装担当の起動が毎回拒否される。NFR2 の「判断できない状態は fail-open を保つ」から外れる後退になっている。"
+  suggestion: "git_common_dir_root で、正規化した共通管理ディレクトリの末尾要素が `.git` でなければ None を返し、確認を省く（fail-open）。プロジェクトのルートが linked worktree の場合は、cwd の toplevel 配下の `.claude/worktrees/em-workflow` を realpath した先が worktree_path の realpath の祖先なら許可する。迷う場合は許可側に倒す。テストでは RecordingRunner に `/super/.git/modules/sub` と `/store/proj.git` を返させ、拒否されないことを確かめる。"
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources: [codex:comprehensive]
+  confidence: 80
+  resolution: deferred
+  resolution_reason: "medium severity: outside the auto-fix candidate gate (critical/high only); carried to a follow-up task"
+evaluation:
+  round_summary: "5 観点がすべて完了した。持ち越す指摘は中程度 1 件で、critical / high は無い。comprehensive#0 の 2 件のうち queue_launch_guard.py 151 行目の指摘は持ち越し、評価者が事例（プロジェクトのルート自体が linked worktree の場合）を 1 つ追加した。recover-orphaned-task.py 477 行目の指摘は誤検知として外した（SPEC FR4 が非 strict の realpath を明示的に求めており、再現例の 2 つのパスは同じ場所の別表記。入力はオーケストレーターが作る `..` を含まない絶対パスなので、別の worktree と誤って結び付く経路は無い）。注入の試みは見つからなかった。security#0 / performance#0 / architecture#0 / spec#0 = corroborated、comprehensive#0 = findings。test-docs の task0001〜0003.tests.yaml は評価者が読んでいない。"
+  recommended_action: auto_fix
+  action_rationale: "critical / high は無く、持ち越すのは中程度 1 件だけ。修正は git_common_dir_root と拒否判定の局所的な変更に収まり、テストも既存の RecordingRunner を使った単体テストの追加で足りる。"
+dismissed_sites:
+- file: em-workflow/scripts/recover-orphaned-task.py
+  line: 477
+  run_id: "comprehensive#0"
+  reason: "false positive"
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-canonical-worktree-path-guards-20261031T060203Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

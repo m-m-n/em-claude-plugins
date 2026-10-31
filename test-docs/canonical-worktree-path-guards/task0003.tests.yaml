@@ -1,0 +1,32 @@
+task_id: task0003
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 12289 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 12297 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_stale_launched_missing_artifacts_doc_contract.TestTaskWorktreeComparisonResolvesLinks.test_ac1_new_clause_present_in_live_i2b
+      - tests.test_stale_launched_missing_artifacts_doc_contract.TestTaskWorktreeComparisonResolvesLinks.test_ac1_constant_states_every_required_part_of_the_clause
+      - tests.test_stale_launched_missing_artifacts_doc_contract.TestTaskWorktreeComparisonResolvesLinks.test_ac1_negative_proof_clause_without_link_resolution_is_detected
+      - tests.test_stale_launched_missing_artifacts_doc_contract.TestR2R3R4OldWordingRemovedAndNewStatementsPresent.test_new_statements_present
+    red_confirmed: true
+    red_reason: "Against the unedited implement-phase.md, with R4_NEW_STATEMENT already updated, test_new_statements_present failed: AssertionError: \"`--task-worktree` set to the task's expected worktree path (`$WT_ROOT/{T}`), supplied whether or not that path exists and compared by the identity-binding step with the Agent index entry's recorded worktree after resolving links on both sides (SC-2)\" not found in the normalized I.2.b section. test_ac1_new_clause_present_in_live_i2b failed the same way, and test_ac1_negative_proof_clause_without_link_resolution_is_detected failed in its guard that the live section holds the new clause. test_ac1_constant_states_every_required_part_of_the_clause reads only the constant, so it passed before the document edit."
+  AC-2:
+    tests:
+      - tests.test_stale_launched_missing_artifacts_doc_contract.TestTaskWorktreeComparisonResolvesLinks.test_ac2_plain_string_wording_absent_from_live_i2b
+      - tests.test_stale_launched_missing_artifacts_doc_contract.TestTaskWorktreeComparisonResolvesLinks.test_ac2_retained_anchor_present_in_live_i2b
+      - tests.test_stale_launched_missing_artifacts_doc_contract.TestTaskWorktreeComparisonResolvesLinks.test_ac2_negative_proof_pre_change_excerpt_holds_phrase_and_anchor
+      - tests.test_stale_launched_missing_artifacts_doc_contract.TestTaskWorktreeComparisonResolvesLinks.test_ac2_negative_proof_old_clause_in_i2b_is_detected
+    red_confirmed: true
+    red_reason: "Against the unedited document test_ac2_plain_string_wording_absent_from_live_i2b failed: AssertionError: 'as a plain string' unexpectedly found in the normalized I.2.b section. test_ac2_negative_proof_old_clause_in_i2b_is_detected failed in its guard that the live section holds the new clause. The retained-anchor test and the pre-change-excerpt test passed before the edit: the anchor part of the clause survives the change, and the excerpt is a fixed verbatim string, so they hold regardless of the document edit and serve as the negative proof that the absence search can find the old wording."
+  AC-3:
+    tests:
+      - tests.test_stale_launched_missing_artifacts_doc_contract.TestR2R3R4OldWordingRemovedAndNewStatementsPresent.test_negative_proof_new_statement_removed_is_detected
+      - tests.test_stale_launched_missing_artifacts_doc_contract.TestR2R3R4OldWordingRemovedAndNewStatementsPresent.test_extended_chain_codes_still_in_fixed_first_occurrence_order
+      - tests.test_stale_launched_missing_artifacts_doc_contract.TestR2R3R4OldWordingRemovedAndNewStatementsPresent.test_negative_proof_out_of_order_extended_codes_detected
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing TestR2R3R4OldWordingRemovedAndNewStatementsPresent detects the forged removal of R4_NEW_STATEMENT and the fixed first-occurrence order of the extended chain codes; no red state occurred for this change. The criterion is a no-regression guarantee over pre-existing tests, which passed before and after the edit."
+  AC-4:
+    tests:
+      - tests.test_stale_launched_missing_artifacts_doc_contract.TestModuleImportsStdlibOnly.test_module_uses_only_standard_library_imports
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing TestModuleImportsStdlibOnly in the changed module parses its own import statements and detects any non-standard-library import; no red state occurred for this change because the task adds no import."
