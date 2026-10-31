@@ -1,18 +1,18 @@
 schema_version: 1
 feature: unattended-merge
 phase: create-plan
-status: dispatching
+status: applying_patch
 generation: 1
-base_revision: bb8e2720d988fbde686f47bb89408c46ae93a0a2
+base_revision: 8c887a57504d4130c68c1d14ec518da660bcf66c
 last_input_digest: sha256:be14f9ba2cd6b793cd8c6aa71bab86868315737bb8996a9f28f0b61b952a8151
 active_request_id: create-plan-run-0001
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:be14f9ba2cd6b793cd8c6aa71bab86868315737bb8996a9f28f0b61b952a8151
-  output_digest: null
+  output_digest: sha256:5d7f56bf6b1e2b53ba3681f267391df4aef9429af22cf999fcb8f9616c192653
   dispatch_digest_inputs:
     em-workflow/references/contracts/planner-contract.md: sha256:6476cc99ea8a1d2d4f376d1702bd636b1ab9898655397ec80ab1d6fb47cbe9e8
     em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
@@ -25,8 +25,61 @@ worker_runs:
     feature-docs/unattended-merge/REQUIREMENTS.md: sha256:1596a566202985d0a80e6b4edb73c1928b96043421dd822ed9b11d0adda49dfb
     feature-docs/unattended-merge/SPEC.md: sha256:f12079f29254d1a8afc8d4202d8cb8e0ee2d18728bc0e3e37b3cdce392b22bb4
     feature-docs/unattended-merge/workflow.yaml: sha256:cfd7558b31b4dcf0b9986dd5cd083fa33960f28d004e50a421d4f19f4cb32310
-artifacts: []
-patches: []
+  self_write_set:
+  - feature-docs/unattended-merge/IMPLEMENTATION.md
+  - feature-docs/unattended-merge/THREAT-MODEL.md
+  - feature-docs/unattended-merge/VERIFICATION.md
+  - feature-docs/unattended-merge/tasks/task0001.md
+  - feature-docs/unattended-merge/tasks/task0002.md
+  - feature-docs/unattended-merge/tasks/task0003.md
+  - feature-docs/unattended-merge/tasks/task0004.md
+  - feature-docs/unattended-merge/tasks/task0005.md
+  - feature-docs/unattended-merge/tasks/task0006.md
+  - feature-docs/unattended-merge/tasks/task0007.md
+  - feature-docs/unattended-merge/tasks/task0008.md
+  - feature-docs/unattended-merge/tasks/task0009.md
+artifacts:
+- path: feature-docs/unattended-merge/IMPLEMENTATION.md
+  sha256: sha256:6698d5256f044972f6014c3a8e80b92bdfc883e8615c30e5db54defc60ee77ee
+  produced_by: create-plan-run-0001
+- path: feature-docs/unattended-merge/VERIFICATION.md
+  sha256: sha256:4b180ef48ff25208497efdb3d8ba18f1ae3c5d61faab54020017ca0e472b6c55
+  produced_by: create-plan-run-0001
+- path: feature-docs/unattended-merge/THREAT-MODEL.md
+  sha256: sha256:f0beeb300866fa135cfe28759e556fa939853576eee8c4f24845c366f706e9c6
+  produced_by: create-plan-run-0001
+- path: feature-docs/unattended-merge/tasks/task0001.md
+  sha256: sha256:e6eee169298dec5461b4ccccf2c403194096c9908f5a1b88ce9f8b3654eaaeb4
+  produced_by: create-plan-run-0001
+- path: feature-docs/unattended-merge/tasks/task0002.md
+  sha256: sha256:ddae06eafee2d2f9e450e1e3a891f6ed3b146b3876210a354657c1dcb9699c1d
+  produced_by: create-plan-run-0001
+- path: feature-docs/unattended-merge/tasks/task0003.md
+  sha256: sha256:fe56452a05cc974c9c5f2bf4d845a573623739fe195843c6c929a445679989f5
+  produced_by: create-plan-run-0001
+- path: feature-docs/unattended-merge/tasks/task0004.md
+  sha256: sha256:cb7342ffbf9089acb6991dfa31a2c99ed5b8651cca85c50ee36381851fd3867b
+  produced_by: create-plan-run-0001
+- path: feature-docs/unattended-merge/tasks/task0005.md
+  sha256: sha256:3ab588133a9ab6c43869472890dca310b4e63d8541b7e57969342cb83699e668
+  produced_by: create-plan-run-0001
+- path: feature-docs/unattended-merge/tasks/task0006.md
+  sha256: sha256:285a71117843b9c101cc1d9fe61c097fb9b2df9c7fb3bd5a50755f5c70e4c346
+  produced_by: create-plan-run-0001
+- path: feature-docs/unattended-merge/tasks/task0007.md
+  sha256: sha256:bdcfc10da80d0d074134b3bad3d20492ff12d25163eac8993a3adfb1f5959612
+  produced_by: create-plan-run-0001
+- path: feature-docs/unattended-merge/tasks/task0008.md
+  sha256: sha256:88e65c30c711ec853b99c578e5de29182e205625e699b2158cc04724ceff467d
+  produced_by: create-plan-run-0001
+- path: feature-docs/unattended-merge/tasks/task0009.md
+  sha256: sha256:ef6046530767d21cc254ecb3395b2f69b5abaddad871fbc37f62d7ce92450436
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: create-plan-p0001
+  status: validated
+  base_input_digest: sha256:be14f9ba2cd6b793cd8c6aa71bab86868315737bb8996a9f28f0b61b952a8151
+  base_workflow_blob: 010323ba9643dff709dbd88134380e9a520cdb71
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
