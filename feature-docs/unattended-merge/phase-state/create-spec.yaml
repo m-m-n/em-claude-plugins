@@ -1,7 +1,7 @@
 schema_version: 1
 feature: unattended-merge
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: f3660bc92c4e4b9c61c6f99e1c6dd9b2ce0bad8d
 last_input_digest: sha256:1218355823e343c56a2e5e89a0980868a6015fb56a5ce1a9a8c4958b1508f63a
@@ -46,6 +46,16 @@ packets:
     - question_id: requirement.implementation-form
       status: answered
     - question_id: design.step.recommendation
+      status: answered
+  create-spec-q0002:
+    status: answered
+    issued_at: '2026-10-31T18:27:25+09:00'
+    questions:
+    - question_id: requirement.pr-merge-guard
+      status: answered
+    - question_id: requirement.deferred-findings
+      status: answered
+    - question_id: requirement.remote-selection
       status: answered
 answers:
   requirement.skill-name:
@@ -228,6 +238,36 @@ answers:
     freeform: null
     normalized_answer: 推奨（design step を skip）をそのまま採用する
     resolution_note: 'gate: create-spec.design-step; batch-policies.yaml option decide_autonomously'
+  requirement.pr-merge-guard:
+    packet_id: create-spec-q0002
+    answered_at: '2026-10-31T18:27:25+09:00'
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids:
+    - guard-exception
+    freeform: null
+    normalized_answer: 'ガードに限定許可を追加: destructive-guard.py に、決まった形の `gh pr merge` だけを allow する規則を足す。条件は、PR 番号・`--merge`・`--match-head-commit <40桁SHA>` がそろい、`--admin` / `--auto` / `--squash` / `--rebase` / `--delete-branch` が無く、cwd が `.claude/worktrees/em-workflow/<feature>/integration` 配下であること。destructive-guard-cases.json に allow と ask のケースを追加し、既存の ask ケースは残す。テストした head とマージする head の一致は GitHub 側で保証される。'
+    resolution_note: 'gate: create-spec.requirement-clarification (security); codex_consulted: true (harness entry: codex, 1 turn); options: guard-exception, push-base, stop-ready; chosen: guard-exception; not chosen: push-base, stop-ready; key points: 現行では gh pr merge が ask となり、無人時は deny に変わるため、限定許可を明文化する方法がガードを通した無人マージを成立させられる（em-workflow/hooks/destructive-guard.py:384、:8704） Codex notes: keep checking subsequent dangerous segments after the exception, keep existing deny/ask cases, and make the test runner able to pass cwd with the unattended flag. opus_escalation: not run'
+  requirement.deferred-findings:
+    packet_id: create-spec-q0002
+    answered_at: '2026-10-31T18:27:25+09:00'
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids:
+    - block-critical-high
+    freeform: null
+    normalized_answer: 'critical/high があれば止める: 最新の review ラウンドの記録（feature-docs/{feature}/reviews/round{N}.yaml）に、resolution が fixed でない critical/high の finding が 1 件でもあれば、マージせずに返す。理由には stable_id を含める。（resolution: declined の finding は誤検知として除外し、deferred など未解決のものだけで止める）'
+    resolution_note: 'gate: create-spec.requirement-clarification (functional-requirement); codex_consulted: true (harness entry: codex, 1 turn); options: block-critical-high, allow; chosen: block-critical-high; not chosen: allow; key points: 修正回数の上限で critical/high を deferred にして completed にするため、review の完了だけでは未修正の重大な指摘を排除できない。最新記録を確認し、停止理由に stable_id を含めるのが安全（em-workflow/references/review-phase.md:991、:1199、em-workflow/references/batch-mode.md:71） Orchestrator mapping note: Codex pointed out that ''not fixed'' would also catch declined (false-positive) findings; the normalized answer excludes declined. opus_escalation: not run'
+  requirement.remote-selection:
+    packet_id: create-spec-q0002
+    answered_at: '2026-10-31T18:27:25+09:00'
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids:
+    - upstream-or-single
+    freeform: null
+    normalized_answer: 'base の upstream: base_branch の upstream remote（branch.<base>.remote）を使う。upstream が無く、remote が 1 つだけならその remote を使う。それ以外で決まらなければマージせずに返す。gh がその remote の GitHub リポジトリを解決できない（GitHub 以外の）場合もマージせずに返す。ローカル手順には切り替えない。'
+    resolution_note: 'gate: create-spec.requirement-clarification (edge-case); codex_consulted: true (harness entry: codex, 1 turn); options: upstream-or-single, origin-only, non-github-local; chosen: upstream-or-single; not chosen: origin-only, non-github-local; key points: base_branch は記録され、既存の PR 作成は gh を使うため、base の upstream を優先するのが整合的。origin を推測せず、対象が決まらない場合や非 GitHub では停止する方が誤った送信先への変更を防げる（em-workflow/references/workflow-schema.md:30、em-workflow/skills/develop/SKILL.md:1013） opus_escalation: not run'
 worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
@@ -259,7 +299,7 @@ worker_runs:
   output_digest: sha256:216d3a45f1db8817c132fe589b59a4d765327b495057f7645e2c70a2a3e19206
   self_write_set: []
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:1218355823e343c56a2e5e89a0980868a6015fb56a5ce1a9a8c4958b1508f63a
   dispatch_digest_inputs:
     .claude-plugin/marketplace.json: sha256:d158a0570d33f889fe3c1fe9382f805b0ae450fee2beb41e5376eb8f5690ba85
@@ -291,6 +331,8 @@ worker_runs:
     em-workflow/skills/review/SKILL.md: sha256:8e197fa5f58ae2da9454476135b92ad530079c428bedd2e00cb4e6fb711380bc
     test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
     tests/test_check_plugin_invariants.py: sha256:35b31e481577a6260e9b08cf4c18e58b7c83d1993f708326ce6e5a4e4fbb941a
+  output_digest: sha256:edbe2c91e4534b605c2190418cc3a2574e4a9c211d6047afaafac74ffef681d2
+  self_write_set: []
 artifacts: []
 patches: []
 progress_fingerprint: null
