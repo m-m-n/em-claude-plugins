@@ -1,11 +1,11 @@
 schema_version: 1
 feature: unattended-merge-medium-fixes
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: 81eca035a5666d20a94040e3cc56ecfb3e881bd7
-last_input_digest: sha256:8e8d7fc75fff81ee0e01d4d87a9e63a69e271d97f267235f9820bd700fd62aa8
-active_request_id: create-spec-run-0001
+last_input_digest: sha256:ee02661c5915d52260e5cacf12fc9b2361cd0209a938132e1c540bf1bf4dd255
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     status: answered
@@ -107,6 +107,32 @@ worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
   input_digest: sha256:8e8d7fc75fff81ee0e01d4d87a9e63a69e271d97f267235f9820bd700fd62aa8
+  dispatch_digest_inputs:
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    em-workflow/hooks/bash_guard.py: sha256:2e389895b2c0268d9efabba57d49a8ea0867836b3abbc6bdc08559c6f171fdb7
+    em-workflow/hooks/merge_pr_allow.py: sha256:02c6ca295b75d0c0844ee1d2aef95483fa53623717069c2e2004500265a02367
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
+    em-workflow/scripts/merge-ci-wait.py: sha256:96ff8d9f0835c265502e24223d3d43c94765eab1e00488d3dfb884ea4fbccf29
+    em-workflow/scripts/merge-git.py: sha256:48c4e839f4426c724e7716ec8b6a031eeba64111323235bbcb0f39d06a648778
+    em-workflow/scripts/merge-lock.py: sha256:1d8ca47c1bf5249c5ec8898cb022df0d730534773f36dbeff2accb8b285bbc1d
+    em-workflow/scripts/merge-pr.py: sha256:a98d06307bf0aca905c10d94c75c707281ef8976505442ef6789e2113e4f37f0
+    em-workflow/scripts/merge-preflight.py: sha256:e6fc4a7346ba79b895352b2e84fbfc2b54845287df22341bb14f4524ebd57afe
+    em-workflow/skills/merge/SKILL.md: sha256:d76cc1eed5a410764f9d2eca4b4bf87e686678c4ba9003d2d00422a8e38ffd20
+    feature-docs/unattended-merge/SPEC.md: sha256:f12079f29254d1a8afc8d4202d8cb8e0ee2d18728bc0e3e37b3cdce392b22bb4
+    feature-docs/unattended-merge/THREAT-MODEL.md: sha256:f0beeb300866fa135cfe28759e556fa939853576eee8c4f24845c366f706e9c6
+    feature-docs/unattended-merge/reviews/round2.yaml: sha256:0d1a6e0d33b3304c240caf58ef8de990688225eb35def2a559ff7ac0d0601f6e
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+    tests/test_destructive_guard_merge_allow.py: sha256:1ac243748e9bce21e660c50a62b45969a16e2644fedfe74a5c364a2d814f5b89
+    tests/test_merge_ci_wait.py: sha256:bb69cb920d70426fed021a497c63361ecfe59b02337708c844fbed1e76bf28af
+    tests/test_merge_git.py: sha256:dea1e3d18515bd134986982101a216bcc9598dbc91de4c2806c5ab12309d96c9
+    tests/test_merge_local_route.py: sha256:c00432959f7865d4c2dfa834247108be2367013b579e844461422ffe181facb8
+    tests/test_merge_lock.py: sha256:09030f3ac9ac12482d80b15017f674465ba7a2f17612a92fba6563c236f196dd
+    tests/test_merge_pr.py: sha256:ee719f79c2bb814259033c0b5116cce396a9169024c7321b380147e5dbcca01d
+    tests/test_merge_preflight.py: sha256:84b835c8471445b7afba215f4116dee63511d3ec8c88cffcd99608cde4190256
+    tests/test_merge_skill_doc.py: sha256:f2a421addf8377d3f6646171a70417e8bb99890e1992d8a13d1b748173f4f036
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:ee02661c5915d52260e5cacf12fc9b2361cd0209a938132e1c540bf1bf4dd255
   dispatch_digest_inputs:
     CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
     em-workflow/hooks/bash_guard.py: sha256:2e389895b2c0268d9efabba57d49a8ea0867836b3abbc6bdc08559c6f171fdb7
