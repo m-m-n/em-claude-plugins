@@ -312,9 +312,9 @@ tasks:
     complexity: low
     requirements:
     - FR23
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/unattended-merge/task0009
 review:
   status: pending
   rounds_completed: 0
