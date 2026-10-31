@@ -21,3 +21,13 @@ records:
   freeform: null
   normalized_answer: 'ガードに限定許可を追加: destructive-guard.py に、決まった形の `gh pr merge` だけを allow する規則を足す。条件は、PR 番号・`--merge`・`--match-head-commit <40桁SHA>` がそろい、`--admin` / `--auto` / `--squash` / `--rebase` / `--delete-branch` が無く、cwd が `.claude/worktrees/em-workflow/<feature>/integration` 配下であること。destructive-guard-cases.json に allow と ask のケースを追加し、既存の ask ケースは残す。テストした head とマージする head の一致は GitHub 側で保証される。'
   resolution_note: 'gate: create-spec.requirement-clarification (security); codex_consulted: true (harness entry: codex, 1 turn); options: guard-exception, push-base, stop-ready; chosen: guard-exception; not chosen: push-base, stop-ready; key points: 現行では gh pr merge が ask となり、無人時は deny に変わるため、限定許可を明文化する方法がガードを通した無人マージを成立させられる（em-workflow/hooks/destructive-guard.py:384、:8704） Codex notes: keep checking subsequent dangerous segments after the exception, keep existing deny/ask cases, and make the test runner able to pass cwd with the unattended flag. opus_escalation: not run'
+- question_id: implement.deviation-auto-addition
+  packet_id: null
+  answered_at: '2026-10-31T19:52:00+09:00'
+  source: orchestrator-deviation-rule
+  answer_mode: select
+  selected_option_ids:
+  - decline
+  freeform: null
+  normalized_answer: 'task0009: 5 件の deviation を declared change set に自動追加しない'
+  resolution_note: 'task_id: task0009; declined paths: tests/test_batch_structured_result_output_version_bump.py, tests/test_muse_consent_version_bump.py, tests/test_threat_model_review_phase.py, tests/test_threat_model_reviewer_inputs.py, tests/test_threat_model_planner_contract.py; failed check: identifier part missing (報告が AC-n / 要件 ID を名指ししていない。内容は既存テストの plugin.json / marketplace.json の SHA-256 固定値の更新); path shape check and control-path check: passed. admitted: tests/test_unattended_merge_manifest_version_bump.py (AC-1, AC-1 の red-first テストを書く場所が無い)'

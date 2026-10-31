@@ -306,13 +306,14 @@ tasks:
     files:
     - em-workflow/.claude-plugin/plugin.json
     - .claude-plugin/marketplace.json
+    - tests/test_unattended_merge_manifest_version_bump.py
     skills: []
     domains:
     - config-infra
     complexity: low
     requirements:
     - FR23
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/unattended-merge/task0009
 review:
