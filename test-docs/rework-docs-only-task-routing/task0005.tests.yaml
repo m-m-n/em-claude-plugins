@@ -1,8 +1,14 @@
 task_id: task0005
 baseline_failures: []          # `python3 -m unittest discover -s tests` before any
                                 # edit: Ran 13058 tests, OK (skipped=1).
-final_failures: []             # same command re-executed after the implementation
-                                # and this record: Ran 13101 tests, OK (skipped=1).
+final_failures: []             # same command re-executed after the implementation,
+                                # this record and the review-phase.md hash refresh
+                                # in tests/test_tier_record_schema_v2.py:
+                                # Ran 13102 tests, OK (skipped=1). An earlier full
+                                # run before that refresh failed only
+                                # test_tier_record_schema_v2.TestReviewDocumentsUntouched
+                                # .test_review_phase_md_unchanged (pinned sha256 of
+                                # review-phase.md), fixed by the refresh.
 acceptance_tests:
   AC-1:
     tests:
