@@ -1,0 +1,239 @@
+schema_version: 1
+feature: rework-docs-only-task-routing
+created: '2026-11-01'
+base_branch: main
+goal: |
+  # em-workflow の verify rework で rework-planner が feature-docs/** だけを対象とするタスクを合成し、implementer が実装できずに implement が停止する
+
+  種別: バグ
+
+  ## 現象
+  verify の失敗から rework-planner が合成したタスクの `files` が `feature-docs/**` だけで構成され、implementer がそのタスクを実装できずに implement が `failed`（`failed_kind: decision`）で停止する。implementer の定義には「Never modify `feature-docs/**`」の制約があるため、再試行しても同じ理由で失敗する。
+
+  発生例: 別プロジェクトの feature `auto-dispatch-not-started`（em-workflow 0.3.98 で実行）
+  - verify round 1 が `src/verification-scenario-ids.test.ts` の失敗（VERIFICATION.md のシナリオ ID が `TS<N>` で、正規形 `TS-<N>` でない）で fail
+  - 差し戻し経路の選択で文言修正経路（Wording-correction route）は「requirements の tests 参照値が変わる」ため対象外と判断され、通常の verify rework が選ばれた
+  - rework-planner が task0004「Canonical TS-<N> scenario IDs in the feature's verification documents」を合成。`files` は `feature-docs/auto-dispatch-not-started/VERIFICATION.md`・`tasks/task0001.md`・`tasks/task0003.md` の 3 つだけ
+  - implementer が 2 回とも feature-docs/** の制約で失敗し、implement が `failed` で停止
+
+  ## 再現手順
+  1. VERIFICATION.md や tasks/*.md など feature-docs 配下の文書だけを直せば解消する verify 失敗を起こす（例: シナリオ ID の形式違反をガードテストが検出する）
+  2. その修正が文言修正経路の適用条件を満たさない状態にする（例: requirements の tests 参照値が変わる）
+  3. develop を実行して verify rework に進める
+
+  ## 期待する挙動
+  feature-docs/** だけを対象とする修正は、implementer に渡るタスクとして合成されず、feature-docs を書き換えられる経路（オーケストレーターまたは planner の文書更新など）で処理されて、develop が停止せずに進む。
+
+  ## 完了の定義
+  - 再現手順で現象が起きない
+  - 再発を検出するテストがある
+
+  ## 該当箇所
+  - `em-workflow/agents/rework-planner.md`
+  - `em-workflow/references/rework-task-synthesis.md`（Wording-correction route の適用条件）
+  - `em-workflow/agents/implementer.md` の Hard constraints（`feature-docs/**` の変更禁止）
+
+  ## 実害・発生条件
+  無人実行（--batch）が implement で止まり、人が feature-docs を手で直すまで再開できない。
+parent_branch: em-workflow/rework-docs-only-task-routing/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.94
+      '2': 0.06
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.47
+      '2': 0.51
+      '3': 0.02
+  at: '2026-11-01T01:22:20+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: bccec7729b9a61c76b68fc1398131a3ec863a6ec
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI が無く、変更はエージェント定義・references・検証スクリプト・テストだけ（batch-policies の create-spec.design-step → decide_autonomously）
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: b1694fa9c1a164357ce522a54798a66d0f9aaa73
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: 文書のみ修正経路を rework-task-synthesis.md 第 9 節に追加
+    status: assumed
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-8
+  FR2:
+    title: rework-planner が既存の feature-docs 文書を直接修正
+    status: assumed
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-9
+  FR3:
+    title: 合成タスクの files に feature-docs/** を含めない
+    status: assumed
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-9
+  FR4:
+    title: 要件の tests 参照を期待値付きで置き換える操作
+    status: assumed
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-6
+  FR5:
+    title: 文書のみの回は発生元の step だけを pending に戻す
+    status: assumed
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-5
+    - TS-8
+  FR6:
+    title: コード修正と文書修正が混在する回の分割
+    status: assumed
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-7
+  FR7:
+    title: 文書修正の宣言と、改名したシナリオ ID のカバレッジ判定
+    status: assumed
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-7
+  FR8:
+    title: develop の verify 失敗分岐と --once の再開先を更新
+    status: assumed
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-10
+  FR9:
+    title: 再発検出テスト
+    status: assumed
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
+    - TS-6
+    - TS-7
+    - TS-10
+  NFR1:
+    title: 4 経路の同一性
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 固定済み構造の維持
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-8
+  NFR3:
+    title: implementer の制約は不変
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: SSOT の参照規律
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: テスト依存
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR6:
+    title: version
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

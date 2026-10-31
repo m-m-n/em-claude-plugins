@@ -1,7 +1,7 @@
 schema_version: 1
 feature: rework-docs-only-task-routing
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 9e55d1e9935d55d19970816e6db5193b256a4a27
 last_input_digest: sha256:3a34e6ccaa67eeaad4c33b644c062c2b661abe29f8a29b6887557c0ef7a813b3
