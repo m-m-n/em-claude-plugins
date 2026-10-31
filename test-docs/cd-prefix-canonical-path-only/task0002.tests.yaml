@@ -1,0 +1,54 @@
+task_id: task0002
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 12262 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 12302 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_canonical_worktree_path_docs.TestAC1ProducerCanonicalizes.test_ac1_live_document_states_the_canonicalization_step
+      - tests.test_canonical_worktree_path_docs.TestAC1ProducerCanonicalizes.test_ac1_forged_copy_without_the_step_fails
+      - tests.test_canonical_worktree_path_docs.TestAC1ProducerCanonicalizes.test_ac1_forged_copy_without_the_strict_realpath_fails
+      - tests.test_canonical_worktree_path_docs.TestAC1ProducerCanonicalizes.test_ac1_forged_copy_that_covers_only_a_new_worktree_fails
+      - tests.test_canonical_worktree_path_docs.TestAC1ProducerCanonicalizes.test_ac1_forged_copy_without_the_value_hand_over_fails
+      - tests.test_canonical_worktree_path_docs.TestAC1ProducerCanonicalizes.test_ac1_forged_copy_without_the_no_fallback_sentence_fails
+      - tests.test_canonical_worktree_path_docs.TestAC1ProducerCanonicalizes.test_ac1_forged_copy_with_the_step_after_the_approval_gate_fails
+    red_confirmed: true
+    red_reason: "Against the unchanged implement-phase.md the live-document test failed: AssertionError: Lists differ: ['expected exactly one sentence that resolves `$WT_ROOT/{T}` with a strict realpath once the worktree exists, found 0'] != []. The forged-copy tests that derive their forged text from the live step (without the step, without strict realpath, only a new worktree, step after the approval gate) failed in the derivation guard because the step did not exist yet. The two forged tests that remove the value hand-over sentence and the no-fallback sentence passed before the change, since the unchanged document already lacked those sentences; after the change they detect the removal."
+  AC-2:
+    tests:
+      - tests.test_canonical_worktree_path_docs.TestAC2PayloadPlaceholders.test_ac2_live_payload_names_the_canonical_value
+      - tests.test_canonical_worktree_path_docs.TestAC2PayloadPlaceholders.test_ac2_live_tests_yaml_path_paragraph_derives_from_the_canonical_path
+      - tests.test_canonical_worktree_path_docs.TestAC2PayloadPlaceholders.test_ac2_pre_change_placeholders_fail
+      - tests.test_canonical_worktree_path_docs.TestAC2PayloadPlaceholders.test_ac2_pre_change_worktree_path_placeholder_alone_fails
+      - tests.test_canonical_worktree_path_docs.TestAC2PayloadPlaceholders.test_ac2_pre_change_tests_yaml_path_placeholder_alone_fails
+      - tests.test_canonical_worktree_path_docs.TestAC2PayloadPlaceholders.test_ac2_pre_change_paragraph_sentence_fails
+      - tests.test_canonical_worktree_path_docs.TestAC2PayloadPlaceholders.test_ac2_paragraph_that_builds_from_wt_root_fails
+    red_confirmed: true
+    red_reason: "Against the unchanged document the live payload test failed: AssertionError: Lists differ: [\"the worktree_path placeholder does not name the canonical value: '{absolute path to $WT_ROOT/{T}}'\", ...] != [], and the live paragraph test failed with 'expected exactly one sentence that derives the record path from the canonical `worktree_path`, found 0'. The pre-change-placeholder cases that replace one placeholder at a time failed there because the unchanged payload already carried both pre-change placeholders (two problems, one expected), and the pre-change paragraph sentence case failed in its guard that the live paragraph holds the derivation sentence. The case that replaces both placeholders and the synthetic wt-root paragraph case passed before the change."
+  AC-3:
+    tests:
+      - tests.test_canonical_worktree_path_docs.TestAC3ConsumerProcedures.test_ac3_inputs_section_states_the_assumption
+      - tests.test_canonical_worktree_path_docs.TestAC3ConsumerProcedures.test_ac3_inputs_forged_copy_without_the_statement_fails
+      - tests.test_canonical_worktree_path_docs.TestAC3ConsumerProcedures.test_ac3_inputs_forged_copy_that_asks_for_resolution_fails
+      - tests.test_canonical_worktree_path_docs.TestAC3ConsumerProcedures.test_ac3_step3_states_the_cd_target_and_the_assumption
+      - tests.test_canonical_worktree_path_docs.TestAC3ConsumerProcedures.test_ac3_step3_forged_copy_without_the_statement_fails
+      - tests.test_canonical_worktree_path_docs.TestAC3ConsumerProcedures.test_ac3_step3_forged_copy_without_the_assumption_fails
+      - tests.test_canonical_worktree_path_docs.TestAC3ConsumerProcedures.test_ac3_step3_forged_copy_that_asks_for_resolution_fails
+      - tests.test_canonical_worktree_path_docs.TestAC3ConsumerProcedures.test_ac3_gate_states_the_cd_target_and_the_assumption
+      - tests.test_canonical_worktree_path_docs.TestAC3ConsumerProcedures.test_ac3_gate_forged_copy_without_the_statement_fails
+      - tests.test_canonical_worktree_path_docs.TestAC3ConsumerProcedures.test_ac3_gate_forged_copy_without_the_assumption_fails
+      - tests.test_canonical_worktree_path_docs.TestAC3ConsumerProcedures.test_ac3_gate_forged_copy_that_asks_for_resolution_fails
+    red_confirmed: true
+    red_reason: "Against the unchanged documents the three live-section tests failed: AssertionError: Lists differ: ['expected exactly one sentence that says worktree_path is assumed to be a canonical absolute path and used exactly as supplied, found 0'] != [] for the Inputs section, and the two-problem list ('... the cd target is `worktree_path` exactly as supplied ... found 0', '... assumes worktree_path is a canonical absolute path, found 0') for Step 3 and for the command execution gate. The two forged cases that drop only the assumption sentence failed there because the unchanged sections already lacked both sentences (two problems, one expected). The other forged cases passed before the change and detect the removal after it."
+  AC-4:
+    tests:
+      - tests.test_canonical_worktree_path_docs.TestAC4CitesTheRuleAndDoesNotRestateIt.test_ac4_producer_step_cites_the_rule
+      - tests.test_canonical_worktree_path_docs.TestAC4CitesTheRuleAndDoesNotRestateIt.test_ac4_step3_cites_the_rule
+      - tests.test_canonical_worktree_path_docs.TestAC4CitesTheRuleAndDoesNotRestateIt.test_ac4_gate_cites_the_rule
+      - tests.test_canonical_worktree_path_docs.TestAC4CitesTheRuleAndDoesNotRestateIt.test_ac4_citation_check_flags_a_block_without_the_citation
+      - tests.test_canonical_worktree_path_docs.TestAC4CitesTheRuleAndDoesNotRestateIt.test_ac4_no_changed_section_restates_the_path_conditions
+      - tests.test_canonical_worktree_path_docs.TestAC4CitesTheRuleAndDoesNotRestateIt.test_ac4_restatement_check_flags_forged_restatements
+      - tests.test_canonical_worktree_path_docs.TestAC4CitesTheRuleAndDoesNotRestateIt.test_ac4_restatement_check_flags_a_restatement_added_to_a_live_section
+      - tests.test_canonical_worktree_path_docs.TestAC4CitesTheRuleAndDoesNotRestateIt.test_ac4_restatement_check_accepts_a_citing_sentence
+      - tests.test_canonical_worktree_path_docs.TestAC4CitesTheRuleAndDoesNotRestateIt.test_ac4_this_module_imports_only_the_standard_library
+    red_confirmed: true
+    red_reason: "The three citation tests failed against the unchanged documents: AssertionError: Lists differ: ['no block holds the statement together with a citation of the Verbatim execution rule of references/command-execution-protocol.md'] != [] for the producer step, Step 3 and the command execution gate. The absence checks (no restatement of the path conditions), their forged-text cases and the standard-library import check passed before the change: the unchanged documents never restated the conditions and the module is new, so no red state occurred for those parts; the forged cases show the matchers fire. The unchanged-existing-tests and full-suite parts of this criterion are the suite run itself (python3 -m unittest discover -s tests, including tests.test_assignment_payload_untrusted_section, tests.test_prelaunch_inprogress_launch_order, tests.test_prelaunch_failed_launch_state, tests.test_exit4_tip_argument_consistency, tests.test_stale_launched_missing_artifacts_doc_contract and tests.test_implementer_cd_chain_docs, which were not modified)."

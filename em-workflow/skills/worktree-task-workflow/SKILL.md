@@ -124,6 +124,10 @@ approval rule below exactly as stated there. Your obligations:
   prefix allowed is `cd "{worktree_path}" &&` in the same Bash call, because
   the cwd does not persist between Bash calls. Never prefix environment
   assignments. A mutated string no longer matches its approval.
+- The cd target is the `worktree_path` of your launch prompt exactly as
+  supplied: do not rewrite, normalize or resolve it. Assume `worktree_path` is
+  a canonical absolute path, the form that the Verbatim execution rule of
+  `references/command-execution-protocol.md` describes.
 - An approved string with a lone `&`, a `;`, a `||` or a line break at its top
   level is not covered by the cd prefix form, so it is not run, and you report
   it in `notes`. The full list of conditions is in the Verbatim execution rule
