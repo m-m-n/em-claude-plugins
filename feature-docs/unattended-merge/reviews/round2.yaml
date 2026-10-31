@@ -1,0 +1,218 @@
+round: 2
+executed_at: '2026-10-31T22:26:26+09:00'
+scope:
+  review_mode: diff
+  base_commit: 8136b9a04c221e1f36832b037bcad5c7edcb0dbd
+  head_commit: 3c52a6295344ce4b8ecb3d9acc1b3ccd9859eba7
+  changed_files:
+  - .claude-plugin/marketplace.json
+  - .claude/rules/hook-tests.md
+  - em-workflow/.claude-plugin/plugin.json
+  - em-workflow/README.md
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/merge_pr_allow.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - em-workflow/hooks/tests/run-destructive-guard.py
+  - em-workflow/references/merge-result.md
+  - em-workflow/scripts/merge-ci-wait.py
+  - em-workflow/scripts/merge-git.py
+  - em-workflow/scripts/merge-lock.py
+  - em-workflow/scripts/merge-pr.py
+  - em-workflow/scripts/merge-preflight.py
+  - em-workflow/scripts/merge-result.py
+  - em-workflow/skills/merge/SKILL.md
+  - test-docs/unattended-merge/task0001.tests.yaml
+  - test-docs/unattended-merge/task0002.tests.yaml
+  - test-docs/unattended-merge/task0003.tests.yaml
+  - test-docs/unattended-merge/task0004.tests.yaml
+  - test-docs/unattended-merge/task0005.tests.yaml
+  - test-docs/unattended-merge/task0006.tests.yaml
+  - test-docs/unattended-merge/task0007.tests.yaml
+  - test-docs/unattended-merge/task0008.tests.yaml
+  - test-docs/unattended-merge/task0009.tests.yaml
+  - test-docs/unattended-merge/task0010.tests.yaml
+  - test-docs/unattended-merge/task0011.tests.yaml
+  - test-docs/unattended-merge/task0012.tests.yaml
+  - tests/test_batch_structured_result_output_version_bump.py
+  - tests/test_destructive_guard_command_substitution.py
+  - tests/test_destructive_guard_extglob_units.py
+  - tests/test_destructive_guard_lexer_agreement.py
+  - tests/test_destructive_guard_merge_allow.py
+  - tests/test_merge_ci_wait.py
+  - tests/test_merge_conflict_pathspec.py
+  - tests/test_merge_git.py
+  - tests/test_merge_local_route.py
+  - tests/test_merge_lock.py
+  - tests/test_merge_pr.py
+  - tests/test_merge_preflight.py
+  - tests/test_merge_result.py
+  - tests/test_merge_skill_doc.py
+  - tests/test_muse_consent_version_bump.py
+  - tests/test_threat_model_planner_contract.py
+  - tests/test_threat_model_review_phase.py
+  - tests/test_threat_model_reviewer_inputs.py
+  - tests/test_unattended_merge_manifest_version_bump.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: review_data_too_large
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: review_data_too_large
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 1eef55acf9af50c3
+  severity: medium
+  category: comprehensive
+  file: em-workflow/skills/merge/SKILL.md
+  line: 487
+  title: ローカルルートのマージ対象が検証済みの head_sha に束縛されていない
+  description: 手順 10 で worktree の HEAD が head_sha と一致することを確かめた後、手順 12 の base-check、13.1 のロック確認、13.3 の main-tree 確認を経てから、手順 13.3 は `git merge --no-ff --no-edit em-workflow/<feature>/integration` をブランチ名で実行し、ブランチを解決し直す。その間に
+    integration ブランチへコミットが入ると、検証していないコミットが base に入る。merge-lock.py はマージ走行同士を直列化するだけで（非ブロッキングの flock と holder record）、他の書き込みは防がない。マージ後にも HEAD の第 2 親と head_sha を照合していない。PR ルートは `--match-head-commit <head_sha>`
+    で束縛しているので、2 つのルートで保証が揃っていない。high から medium に下げた理由は 2 つある。SPEC FR18 がブランチ名の形を明示していること、そして発生には、develop が完了した後に走行外から integration ブランチへの並行書き込みが要ることである。
+  suggestion: FR18 の形を保つ場合は、`git merge` の直前に `git rev-parse refs/heads/em-workflow/<feature>/integration` が head_sha と一致することを確かめる。一致しなければ verification_failed で終端する。マージ後は HEAD の第 2 親が head_sha であることを確かめ、不一致なら
+    detail に記す。SHA を直接マージする形にする場合は、先に SPEC FR18 を改める。どちらの場合も、検証後にブランチが進むケースの回帰テストを足す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 70
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix 対象外（critical/high のみ）。残件として起票'
+- stable_id: 7eab3d538629cc4f
+  severity: medium
+  category: comprehensive
+  file: em-workflow/skills/merge/SKILL.md
+  line: 355
+  title: commands が空のとき、検証後の HEAD 確認が worktree の外で走る
+  description: 手順 10 で worktree へ cd するのは commands の各要素の前だけである。commands が空だと（SPEC FR13 は空のコマンドを飛ばすことを認めている）cd が一度も起きない。それでも次の箇条は、作業ディレクトリが worktree のままである前提で `git status --porcelain --untracked-files=no`
+    と `git rev-parse HEAD` を求めている。プロジェクトルートから始めた走行では（手順 5.3 の cd の後、またはコンフリクトも merge_in_progress も無い通常の経路）、メイン作業ツリーの base の HEAD を読む。その値は head_sha と異なるため、検証コマンドの無い feature が毎回 verification_failed で止まる。文面上、空の場合にこの確認を飛ばすとも読めるため、どちらに読まれても不具合になる。
+  suggestion: commands の有無にかかわらず、HEAD の確認の直前に単独の `cd "<worktree_path>"` を置く。commands が空でもこの確認を行うと明記する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 80
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix 対象外（critical/high のみ）。残件として起票'
+- stable_id: 2d0a436389ac8c32
+  severity: medium
+  category: comprehensive
+  file: em-workflow/skills/merge/SKILL.md
+  line: 199
+  title: ロック取得後に、マージ済みかどうかを判定し直していない
+  description: マージ済みの判定（手順 4 の merged、手順 5.2 の resolve）はロック取得より前に行う。merge-lock.py の hold は非ブロッキングの flock なので、後発の走行が判定してから hold するまでの間に先行がマージとロック解放を終えると、後発は held を得て先へ進む。merge-git.py integrate は `--no-ff`
+    で、base_tip が old_tip の祖先かどうかだけを見る。base が integration の先端を含んでいても冗長なマージコミットを作る。PR ルートでは、その先端を push した後、マージ済み PR の head は動かないため、CI 待ちか state で pr_head_moved（not_merged）になる。再実行すると、integration_tip が進んでいるので
+    resolve は旧 PR を無視し、新しい PR を作ろうとする。ローカルルートでは、空のマージコミットが base に 2 つ入り、結果は already_merged ではなく merged になる。NFR3 の収束と AC6 に反するが、同じ feature の走行が並行するときの狭い窓に限られるので medium とする。
+  suggestion: 手順 6 で held を得た後、手順 8 の前に、ローカルルートでは merge-git.py merged を、PR ルートでは merge-pr.py resolve を、同じ integration_tip で呼び直す。マージ済みなら、ロックを止めてからマージ済みの経路へ進む。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 70
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix 対象外（critical/high のみ）。残件として起票'
+- stable_id: 9696fea33b723122
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/merge-preflight.py
+  line: 449
+  title: 承認の照合で、bash_guard.py と同じ前後空白の除去をしていない
+  description: check_approval は、yaml.safe_load で読んだ workflow.yaml の文字列をそのまま `command in approved` で比べる。bash_guard.py の `--list` が返すのは approved_for() が strip した値である。bash_guard.py は宣言の読み込み、実行判定、承認の記録でも strip
+    する。そのため、引用符付きで前後に空白を持つ test_command（例 `"make test "`）は、develop の承認ゲートでは承認済みとして通るのに、preflight では常に commands_unapproved になる。承認ストアは strip した値しか持たないので、再承認しても直らない。fail-closed ではあるが、無人実行が恒久的に止まる。
+  suggestion: 照合には strip した値を使い、出力の command は元の文字列のまま保つ。前後に空白を持つコマンドで、bash_guard.py と preflight の判定が一致することをテストする。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix 対象外（critical/high のみ）。残件として起票'
+- stable_id: c442ee13154b13c7
+  severity: medium
+  category: security
+  file: em-workflow/scripts/merge-pr.py
+  line: 349
+  title: 'TM-11: ホストが異なっても同名のリポジトリを同一と判定する'
+  description: 'cmd_repo は、remote の URL を解決した nameWithOwner と、gh の既定リポジトリの nameWithOwner を、ホストを含めず小文字化して比べるだけである（350 行目）。remote が ghe.example/acme/service で、gh の既定（GH_REPO 等）が github.com/acme/service でも一致と判定し、`{outcome:
+    github, repo: acme/service}` を返す。以後の resolve / state / merge-ci-wait は、ホストを含まない `--repo acme/service` を gh の既定ホストで解決する。`gh pr create` と `gh pr merge` は gh の既定リポジトリに向く。そのため、git push の宛先と PR 操作の宛先が別のホストに分かれうる。`--match-head-commit`
+    があるので、マージされるのは検証済みの SHA に限られる。それでも、別のリポジトリでの PR 作成やマージ、誤った merged 報告の経路が残る。発生には環境側のホストの食い違いが要るため medium とする。'
+  suggestion: remote の URL と gh の既定リポジトリの両方からホストと owner/name を取り出して比べ、不一致なら remote_unresolved で止める。後続の gh 呼び出しには、ホストを含む `HOST/OWNER/NAME` を渡す。
+  reproduction: ファイルを書き換えず、merge-pr.py を読み込んで cmd_repo の外部応答を差し替える。git remote get-url の応答を https://ghe.example/acme/service.git、明示 URL と既定先 github.com の gh repo view 応答をそれぞれ {"nameWithOwner":"acme/service"}
+    にする。cmd_repo は remote_unresolved ではなく {"outcome":"github","repo":"acme/service"} を返すことを確認した。ホストの相違が比較にも出力にも保持されない。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix 対象外（critical/high のみ）。残件として起票'
+evaluation:
+  round_summary: 'ラウンド 2（diff、cross_validation=true）。reviewer の指摘 5 件をすべてコードで裏付けた。high だった comprehensive#0 の SKILL.md:487 は SPEC FR18 がブランチ名の形を指定していることと発生条件を踏まえて medium に下げた。security#0 の reproduction は
+    merge-pr.py の cmd_repo を読んで reproduced と判定した。注入の試みは無し。merge-pr.py:349 はラウンド 1 の未解決 merge-pr.py:342 と、SKILL.md:199 は未解決 SKILL.md:128 と重なる可能性がある。architecture#0 と spec#0 は review_data_too_large で skipped（非
+    retryable のため fallback 対象外で unreviewed_perspectives にも載らない）。観点ごとの網羅: security=corroborated、comprehensive=corroborated、performance=corroborated、architecture=not verified — read budget exhausted、spec=not
+    verified — read budget exhausted。'
+  recommended_action: auto_fix
+  action_rationale: 下げた後の critical/high は 0 件。medium 5 件は SKILL.md の手順の明確化か、スクリプト内の局所的な比較・照合の修正で済む。architecture と spec は review_data_too_large で走っておらず網羅されていないため、分割した再レビューで埋める必要がある。
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-unattended-merge-20261031T132535Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
