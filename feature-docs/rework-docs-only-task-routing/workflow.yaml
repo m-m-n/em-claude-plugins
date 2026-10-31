@@ -183,6 +183,7 @@ tasks:
     - em-workflow/references/fixtures/worker-result/rework-planner/valid-docs-only-round/digest-source.json
     - em-workflow/references/fixtures/worker-result/rework-planner/valid-docs-only-round/DRY_RUN_APPLY
     - tests/test_requirements_tests_replace.py
+    - tests/test_gate_option_vocabulary.py
     skills:
     - backend-impl
     domains:
@@ -197,7 +198,7 @@ tasks:
     - FR9
     - NFR4
     - NFR5
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/rework-docs-only-task-routing/task0003
   task0004:
