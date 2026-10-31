@@ -109,6 +109,53 @@ CONTROL_CHECK_REPORT_PHRASE = "report the IDs of the offending tasks"
 CONTROL_CHECK_NO_PROMPT_PHRASE = "build no implementer launch prompt for any selected task"
 CONTROL_CHECK_NO_SANITIZE_PHRASE = "Never strip, escape or replace the characters"
 CONTROL_CHECK_NO_FALLBACK_PHRASE = "never fall back to the unresolved path string"
+
+# Terminal handling of the control-character stop (control-char-abort-terminal-
+# state, task0001). The stop takes the terminal handling of Step I.2.c's abort
+# phase: one committed write that sets the `implement` step to `failed` with
+# `failed_kind` valued `decision`. The four elements below are each absent from
+# the paragraph's text before this feature, so a passing check is never vacuous.
+CONTROL_CHECK_TERMINAL_START_PHRASE = "After the rejection, the phase takes"
+CONTROL_CHECK_TERMINAL_SOURCE_PHRASE = "Step I.2.c's abort phase"
+CONTROL_CHECK_TERMINAL_STATUS_PHRASE = "the `implement` step's `status` to `failed`"
+CONTROL_CHECK_TERMINAL_KIND_PHRASE = "`failed_kind` valued `decision`"
+CONTROL_CHECK_TERMINAL_COMMIT_PHRASE = "`commit-docs.sh`"
+CONTROL_CHECK_TERMINAL_ELEMENTS = (
+    ("the abort phase as the source", CONTROL_CHECK_TERMINAL_SOURCE_PHRASE),
+    ("the implement step set to failed", CONTROL_CHECK_TERMINAL_STATUS_PHRASE),
+    ("failed_kind paired with decision", CONTROL_CHECK_TERMINAL_KIND_PHRASE),
+    ("the commit-docs.sh commit", CONTROL_CHECK_TERMINAL_COMMIT_PHRASE),
+)
+CONTROL_CHECK_KIND_UNCONDITIONAL_PHRASE = "`failed_kind` is `decision` unconditionally"
+CONTROL_CHECK_NO_EXTRA_WRITES_PHRASE = (
+    "no `create-plan` `needs_update`, no task status or notes write and no "
+    "worktree or branch cleanup"
+)
+CONTROL_CHECK_NO_WAIT_PHRASE = (
+    "without waiting for the tasks launched by an earlier refill"
+)
+CONTROL_CHECK_STOP_CONDITION_PHRASE = "develop's stop condition 3"
+
+# The paragraph's text before this feature, kept verbatim: the added text is
+# appended after it and no existing sentence is reworded.
+PRE_CHANGE_CONTROL_CHECK_PARAGRAPH = """\
+**Control-character check**: once every task selected in this entry into
+Step I.2.a has its canonical `worktree_path` (the value the Canonical
+worktree path paragraph above yields, for a worktree just created and for one
+reused under the Resume guard alike), check the value of each of those tasks,
+not only the first or the current one. The check is a test over the
+characters of the resolved value itself, not over how the value looks when
+printed, because most of the characters below are invisible or render as a
+line break. A value is rejected when it contains any character of Unicode
+general category Cc (U+0000–U+001F, U+007F, U+0080–U+009F), U+2028 or U+2029.
+When the value of one or more selected tasks contains such a character, ABORT
+the implement phase, report the IDs of the offending tasks, build no
+implementer launch prompt for any selected task (clean ones included) and
+launch no implementer. Never strip, escape or replace the characters and
+continue, and never fall back to the unresolved path string. The stop follows
+the same fail-closed discipline as Step I.0's identifier validation gate
+(never sanitize, never proceed), and it happens before the approval-gate
+paragraph below asks about any command."""
 RESUME_GUARD_PARAGRAPH_OPENING = "**Resume guard**"
 
 _HEADING = re.compile(r"^(#{1,6})\s+(.*?)\s*$")
@@ -612,6 +659,25 @@ def check_control_char_placement(section):
     return problems
 
 
+def check_control_char_terminal_handling(section):
+    """The check paragraph takes the terminal handling of Step I.2.c's abort
+    phase: it names the abort phase as the source, sets the `implement`
+    step's `status` to `failed`, pairs `failed_kind` with the `decision`
+    value and commits with `commit-docs.sh`. One problem per missing
+    element."""
+    paragraphs = _control_check_blocks(section)
+    if len(paragraphs) != 1:
+        return [
+            "expected exactly one control-character check paragraph, found "
+            f"{len(paragraphs)}"
+        ]
+    return [
+        f"the control-character check paragraph lacks {label}: {phrase}"
+        for label, phrase in CONTROL_CHECK_TERMINAL_ELEMENTS
+        if phrase not in paragraphs[0]
+    ]
+
+
 # --- Forged texts ---------------------------------------------------------------
 
 
@@ -660,7 +726,24 @@ def _all_control_char_problems(section):
         + check_control_char_rejected_set(section)
         + check_control_char_stop(section)
         + check_control_char_placement(section)
+        + check_control_char_terminal_handling(section)
     )
+
+
+def _terminal_handling_text(section):
+    """The raw text of the check paragraph from the start of the terminal
+    handling to the end of the paragraph. Fails loudly when the paragraph or
+    the start of the terminal handling is absent."""
+    hits = [
+        p for p in raw_paragraphs(section) if CONTROL_CHECK_LOCATOR in _normalize_ws(p)
+    ]
+    assert len(hits) == 1, f"expected one check paragraph, found {len(hits)}"
+    pattern = r"\s+".join(
+        re.escape(word) for word in CONTROL_CHECK_TERMINAL_START_PHRASE.split()
+    )
+    match = re.search(pattern, hits[0])
+    assert match, f"no terminal handling text starting with {CONTROL_CHECK_TERMINAL_START_PHRASE!r}"
+    return hits[0][match.start() :].strip()
 
 
 # --- Tests -------------------------------------------------------------------------
@@ -1089,6 +1172,150 @@ class TestControlCharStopForgedCopies(unittest.TestCase):
     def test_ac4_replace_phrase_fails_loudly_when_nothing_matches(self):
         with self.assertRaises(AssertionError):
             _replace_phrase("some text", "absent phrase", "x")
+
+
+def _keeps_pre_change_paragraph(section):
+    """True when the one control-character check paragraph of `section` still
+    begins with the paragraph's pre-change text, sentence for sentence."""
+    paragraphs = _control_check_blocks(section)
+    return len(paragraphs) == 1 and paragraphs[0].startswith(
+        _normalize_ws(PRE_CHANGE_CONTROL_CHECK_PARAGRAPH)
+    )
+
+
+class TestControlCharTerminalHandlingLiveDocument(unittest.TestCase):
+    """AC-1 to AC-4 (control-char-abort-terminal-state task0001): the
+    control-character check paragraph of Step I.2.a ends the implement phase
+    in the terminal state taken from Step I.2.c's abort phase."""
+
+    def _paragraph(self):
+        paragraphs = _control_check_blocks(i2a_section())
+        self.assertEqual(len(paragraphs), 1)
+        return paragraphs[0]
+
+    def test_ac1_live_check_finds_the_abort_phase_write_and_commit(self):
+        self.assertEqual(check_control_char_terminal_handling(i2a_section()), [])
+
+    def test_ac1_every_checked_element_is_absent_from_the_pre_change_paragraph(self):
+        pre_change = _normalize_ws(PRE_CHANGE_CONTROL_CHECK_PARAGRAPH)
+        for label, phrase in CONTROL_CHECK_TERMINAL_ELEMENTS:
+            with self.subTest(element=label):
+                self.assertNotIn(phrase, pre_change)
+        for phrase in (
+            CONTROL_CHECK_TERMINAL_START_PHRASE,
+            CONTROL_CHECK_KIND_UNCONDITIONAL_PHRASE,
+            CONTROL_CHECK_NO_EXTRA_WRITES_PHRASE,
+            CONTROL_CHECK_NO_WAIT_PHRASE,
+            CONTROL_CHECK_STOP_CONDITION_PHRASE,
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, pre_change)
+
+    def test_ac1_added_text_cites_the_abort_phase_and_does_not_restate_it(self):
+        added = _terminal_handling_text(i2a_section())
+        for restated in ("reset --hard", "rev-parse", "$", "ABORT_TIP", "TERMINAL_TIP"):
+            with self.subTest(restated=restated):
+                self.assertNotIn(restated, added)
+
+    def test_ac2_live_paragraph_states_no_needs_update_status_write_or_cleanup(self):
+        self.assertIn(CONTROL_CHECK_NO_EXTRA_WRITES_PHRASE, self._paragraph())
+
+    def test_ac2_live_paragraph_does_not_wait_for_tasks_of_an_earlier_refill(self):
+        self.assertIn(CONTROL_CHECK_NO_WAIT_PHRASE, self._paragraph())
+
+    def test_ac2_live_paragraph_returns_control_through_stop_condition_3(self):
+        self.assertIn(CONTROL_CHECK_STOP_CONDITION_PHRASE, self._paragraph())
+
+    def test_ac3_live_paragraph_gives_decision_unconditionally(self):
+        self.assertIn(CONTROL_CHECK_KIND_UNCONDITIONAL_PHRASE, self._paragraph())
+
+    def test_ac3_live_paragraph_names_no_other_failed_kind_value(self):
+        self.assertNotIn("`infra`", self._paragraph())
+
+    def test_ac4_existing_stop_check_still_passes(self):
+        self.assertEqual(check_control_char_stop(i2a_section()), [])
+
+    def test_ac4_added_text_never_uses_the_abort_sentence_phrase(self):
+        added = _normalize_ws(_terminal_handling_text(i2a_section()))
+        self.assertNotIn(CONTROL_CHECK_ABORT_PHRASE, added)
+
+    def test_ac4_added_text_stays_inside_the_one_paragraph_block(self):
+        added = _terminal_handling_text(i2a_section())
+        self.assertIsNone(re.search(r"\n[ \t]*\n", added))
+        for line in added.splitlines():
+            with self.subTest(line=line):
+                self.assertIsNone(_BULLET_START.match(line))
+        self.assertTrue(self._paragraph().endswith(_normalize_ws(added)))
+
+    def test_ac4_existing_sentences_of_the_paragraph_are_unchanged(self):
+        self.assertTrue(_keeps_pre_change_paragraph(i2a_section()))
+
+    def test_ac4_pre_change_paragraph_text_is_the_paragraph_without_the_added_text(self):
+        section = i2a_section()
+        forged = _replace_phrase(section, _terminal_handling_text(section), "")
+        self.assertEqual(
+            _control_check_blocks(forged),
+            [_normalize_ws(PRE_CHANGE_CONTROL_CHECK_PARAGRAPH)],
+        )
+
+
+class TestControlCharTerminalHandlingForgedCopies(unittest.TestCase):
+    """AC-1, AC-3, AC-4 (control-char-abort-terminal-state task0001): each
+    forged copy is built from the live section, differs from it, and yields at
+    least one problem."""
+
+    def test_ac1_forged_copy_without_the_terminal_handling_text_fails(self):
+        section = i2a_section()
+        forged = _replace_phrase(section, _terminal_handling_text(section), "")
+        self.assertNotEqual(forged, section)
+        problems = check_control_char_terminal_handling(forged)
+        self.assertEqual(len(problems), len(CONTROL_CHECK_TERMINAL_ELEMENTS), problems)
+        self.assertNotEqual(_all_control_char_problems(forged), [])
+
+    def test_ac1_forged_copy_without_the_terminal_handling_keeps_the_stop_check_green(self):
+        section = i2a_section()
+        forged = _replace_phrase(section, _terminal_handling_text(section), "")
+        self.assertNotEqual(forged, section)
+        self.assertEqual(check_control_char_stop(forged), [])
+        self.assertEqual(check_control_char_scope(forged), [])
+        self.assertEqual(check_control_char_rejected_set(forged), [])
+        self.assertEqual(check_control_char_placement(forged), [])
+
+    def test_ac1_forged_copy_that_drops_one_element_names_that_element(self):
+        for label, phrase in CONTROL_CHECK_TERMINAL_ELEMENTS:
+            with self.subTest(element=label):
+                section = i2a_section()
+                forged = _replace_phrase(section, phrase, "an unrelated phrase")
+                self.assertNotEqual(forged, section)
+                problems = check_control_char_terminal_handling(forged)
+                self.assertEqual(len(problems), 1, problems)
+                self.assertIn(label, problems[0])
+
+    def test_ac1_forged_copy_without_the_check_paragraph_fails(self):
+        section = i2a_section()
+        forged = _remove_paragraph_with(section, CONTROL_CHECK_LOCATOR)
+        self.assertNotEqual(forged, section)
+        self.assertNotEqual(check_control_char_terminal_handling(forged), [])
+
+    def test_ac3_forged_copy_with_another_value_in_place_of_decision_fails(self):
+        section = i2a_section()
+        forged = _replace_phrase(
+            section,
+            CONTROL_CHECK_TERMINAL_KIND_PHRASE,
+            "`failed_kind` valued `infra`",
+        )
+        self.assertNotEqual(forged, section)
+        self.assertNotEqual(check_control_char_terminal_handling(forged), [])
+
+    def test_ac4_forged_copy_with_a_reworded_existing_sentence_fails_the_pin(self):
+        section = i2a_section()
+        forged = _replace_phrase(
+            section,
+            CONTROL_CHECK_NO_FALLBACK_PHRASE,
+            "fall back to the unresolved path string",
+        )
+        self.assertNotEqual(forged, section)
+        self.assertFalse(_keeps_pre_change_paragraph(forged))
 
 
 if __name__ == "__main__":

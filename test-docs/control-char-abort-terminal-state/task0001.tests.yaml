@@ -1,0 +1,108 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests before any edit: Ran 13058 tests, OK (skipped=1)
+final_failures: []             # full suite re-executed after the implementation and this record; no failure
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_canonical_worktree_path_docs.TestControlCharTerminalHandlingLiveDocument.test_ac1_live_check_finds_the_abort_phase_write_and_commit
+      - tests.test_canonical_worktree_path_docs.TestControlCharTerminalHandlingLiveDocument.test_ac1_added_text_cites_the_abort_phase_and_does_not_restate_it
+      - tests.test_canonical_worktree_path_docs.TestControlCharTerminalHandlingForgedCopies.test_ac1_forged_copy_without_the_terminal_handling_text_fails
+      - tests.test_canonical_worktree_path_docs.TestControlCharTerminalHandlingForgedCopies.test_ac1_forged_copy_that_drops_one_element_names_that_element
+      - tests.test_canonical_worktree_path_docs.TestControlCharStopLiveDocument.test_ac3_live_section_yields_no_problem
+    red_confirmed: true
+    red_reason: >-
+      Run against the unedited implement-phase.md, the live check failed with
+      "the control-character check paragraph lacks the abort phase as the
+      source: Step I.2.c's abort phase" (and the three other elements: the
+      implement step set to failed, failed_kind paired with decision, the
+      commit-docs.sh commit); the aggregate live test failed the same way, and
+      the forged-copy tests failed with "no terminal handling text starting
+      with 'After the rejection, the phase takes'" / "no text matching ... to
+      replace". 17 tests of the module were red before the document edit.
+  AC-2:
+    tests:
+      - tests.test_canonical_worktree_path_docs.TestControlCharTerminalHandlingLiveDocument.test_ac2_live_paragraph_states_no_needs_update_status_write_or_cleanup
+      - tests.test_canonical_worktree_path_docs.TestControlCharTerminalHandlingLiveDocument.test_ac2_live_paragraph_does_not_wait_for_tasks_of_an_earlier_refill
+      - tests.test_canonical_worktree_path_docs.TestControlCharTerminalHandlingLiveDocument.test_ac2_live_paragraph_returns_control_through_stop_condition_3
+    red_confirmed: true
+    red_reason: >-
+      Run against the unedited implement-phase.md, each of the three failed
+      with an assertIn error: "no `create-plan` `needs_update`, no task status
+      or notes write and no worktree or branch cleanup" not found,
+      "without waiting for the tasks launched by an earlier refill" not
+      found, "develop's stop condition 3" not found in the control-character
+      check paragraph.
+  AC-3:
+    tests:
+      - tests.test_canonical_worktree_path_docs.TestControlCharTerminalHandlingLiveDocument.test_ac3_live_paragraph_gives_decision_unconditionally
+      - tests.test_canonical_worktree_path_docs.TestControlCharTerminalHandlingForgedCopies.test_ac3_forged_copy_with_another_value_in_place_of_decision_fails
+      - tests.test_canonical_worktree_path_docs.TestControlCharTerminalHandlingLiveDocument.test_ac3_live_paragraph_names_no_other_failed_kind_value
+    red_confirmed: true
+    red_reason: >-
+      Run against the unedited implement-phase.md, the live test failed with
+      "'`failed_kind` is `decision` unconditionally' not found" and the
+      forged copy (another value in place of decision) failed with "no text
+      matching '`failed_kind` valued `decision`' to replace". The third test
+      (no other failed_kind value named in the paragraph) is a guard that
+      held before and after the edit; it has no red state.
+  AC-4:
+    tests:
+      - tests.test_canonical_worktree_path_docs.TestControlCharTerminalHandlingLiveDocument.test_ac4_added_text_never_uses_the_abort_sentence_phrase
+      - tests.test_canonical_worktree_path_docs.TestControlCharTerminalHandlingLiveDocument.test_ac4_added_text_stays_inside_the_one_paragraph_block
+      - tests.test_canonical_worktree_path_docs.TestControlCharTerminalHandlingLiveDocument.test_ac4_pre_change_paragraph_text_is_the_paragraph_without_the_added_text
+      - tests.test_canonical_worktree_path_docs.TestControlCharTerminalHandlingLiveDocument.test_ac4_existing_sentences_of_the_paragraph_are_unchanged
+      - tests.test_canonical_worktree_path_docs.TestControlCharTerminalHandlingLiveDocument.test_ac4_existing_stop_check_still_passes
+      - tests.test_canonical_worktree_path_docs.TestControlCharTerminalHandlingForgedCopies.test_ac4_forged_copy_with_a_reworded_existing_sentence_fails_the_pin
+      - tests.test_canonical_worktree_path_docs.TestControlCharStopLiveDocument
+    red_confirmed: true
+    red_reason: >-
+      The tests about the added text were red before the document edit: the
+      first three failed with "no terminal handling text starting with
+      'After the rejection, the phase takes'". The retention tests (existing
+      sentences unchanged, check_control_char_stop and the pre-existing
+      TestControlCharStopLiveDocument tests, the reworded-sentence forged
+      copy) assert that existing text stays as it was, so they passed before
+      the edit by design and have no red state.
+  AC-5:
+    tests:
+      - tests.test_canonical_worktree_path_docs.TestControlCharTerminalHandlingForgedCopies.test_ac1_forged_copy_without_the_terminal_handling_text_fails
+      - tests.test_canonical_worktree_path_docs.TestControlCharTerminalHandlingForgedCopies.test_ac3_forged_copy_with_another_value_in_place_of_decision_fails
+      - tests.test_canonical_worktree_path_docs.TestAC4CitesTheRuleAndDoesNotRestateIt.test_ac4_this_module_imports_only_the_standard_library
+    red_confirmed: true
+    red_reason: >-
+      Run against the unedited implement-phase.md, both forged-copy tests
+      failed ("no terminal handling text starting with ..." and "no text
+      matching '`failed_kind` valued `decision`' to replace"), so neither
+      passes vacuously. The standard-library import guard is an existing test
+      that held before and after; it has no red state.
+  AC-6:
+    tests:
+      - tests.test_workflow_schema_journal_readers_doc_contract.TestFailedKindSectionByteIdentical.test_failed_kind_section_unchanged
+      - tests.test_failed_kind_schema.TestFailedKindRequiredness.test_cites_implement_phase_as_write_path_owner
+      - tests.test_failed_kind_schema.TestFailedKindRequiredness.test_does_not_restate_which_value_each_path_writes
+    red_confirmed: true
+    red_reason: >-
+      With the capture updated to the post-edit text and workflow-schema.md
+      restored to its unedited state, the byte-identical test failed:
+      AssertionError "... Three write paths make such a\nwrite ..." !=
+      "... Four write paths make such a\nwrite ...". The two
+      test_failed_kind_schema tests are existing guards that held before and
+      after; they have no red state.
+  AC-7:
+    tests:
+      - tests.test_canonical_worktree_path_docs
+      - tests.test_workflow_schema_journal_readers_doc_contract
+      - tests.test_tip_capture_idiom_uniformity
+      - tests.test_exit4_tip_argument_consistency
+      - tests.test_failed_kind_write_paths
+      - tests.test_failed_kind_schema
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing modules named
+      here detect the behaviors this criterion claims (the full suite staying
+      green with the new paragraph text and the changed schema count, read by
+      these modules through implement-phase.md and workflow-schema.md); no red
+      state occurred for this change. The baseline suite was green (13058
+      tests, OK), so the aggregate has nothing to fail before the change. The
+      diff-scope half (only the four Scope files change) has no executable
+      check and was verified with git diff --stat.
