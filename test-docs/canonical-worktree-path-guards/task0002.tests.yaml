@@ -1,0 +1,118 @@
+task_id: task0002
+baseline_failures: []          # before any edit: python3 -m unittest discover -s tests -> Ran 12289 tests, OK (skipped=1); no failing test
+final_failures: []             # re-executed after the implementation and after writing this record: python3 -m unittest discover -s tests -> Ran 12326 tests, OK (skipped=1); no failing test
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_stale_launched_recovery_chain.TestLinkedLayoutBinding.test_ac1_canonical_recorded_path_binds_to_link_spelled_argument_via_decide
+      - tests.test_stale_launched_recovery_chain.TestLinkedLayoutBinding.test_ac1_canonical_recorded_path_binds_to_link_spelled_argument_via_cli
+      - tests.test_stale_launched_recovery_chain.TestLinkedLayoutBinding.test_ac1_linked_fixture_has_differing_spellings_of_one_worktree
+    red_confirmed: true
+    red_reason: >-
+      Before the implementation the decide() case and the command-line case
+      both failed with "{'outcome': 'residual', 'reason':
+      'agent-identity-unproven'} != {'outcome': 'recovered'}": the plain
+      string comparison rejected the canonical recorded path against the
+      link-spelled argument. The fixture-shape test (the two spellings differ
+      and name one directory) passed before the change by design.
+  AC-2:
+    tests:
+      - tests.test_stale_launched_recovery_chain.TestLinkedLayoutBinding.test_ac2_removed_task_worktree_still_binds_through_the_link
+    red_confirmed: true
+    red_reason: >-
+      Before the implementation the removed-worktree case failed with
+      residual / agent-identity-unproven instead of recovered.
+  AC-3:
+    tests:
+      - tests.test_stale_launched_recovery_chain.TestWorktreeBindingMalformedPaths.test_ac3_equal_malformed_values_on_both_sides_never_bind
+      - tests.test_stale_launched_recovery_chain.TestWorktreeBindingMalformedPaths.test_ac3_malformed_value_on_the_entry_side_is_unproven
+      - tests.test_stale_launched_recovery_chain.TestWorktreeBindingMalformedPaths.test_ac3_malformed_value_on_the_argument_side_is_unproven
+      - tests.test_stale_launched_recovery_chain.TestWorktreeBindingMalformedPaths.test_ac3_unmutated_fixture_still_recovers
+    red_confirmed: true
+    red_reason: >-
+      Before the implementation the equal-malformed-values case failed for
+      both the empty string and the relative path (the plain equality bound
+      them: recovered instead of residual). The one-sided cases already
+      passed before the change because a plain string mismatch was already a
+      binding failure, so only the both-sides case was observed red.
+  AC-4:
+    tests:
+      - tests.test_stale_launched_recovery_chain.TestWorktreeBindingNeverRaises.test_ac4_non_string_recorded_value_never_binds_to_an_equal_argument
+      - tests.test_stale_launched_recovery_chain.TestWorktreeBindingNeverRaises.test_ac4_equal_nul_values_on_both_sides_never_bind
+      - tests.test_stale_launched_recovery_chain.TestWorktreeBindingNeverRaises.test_ac4_resolution_raising_an_error_is_unproven
+      - tests.test_stale_launched_recovery_chain.TestWorktreeBindingNeverRaises.test_ac4_pass_through_stand_in_does_not_by_itself_break_the_binding
+      - tests.test_stale_launched_recovery_chain.TestWorktreeBindingNeverRaises.test_ac4_non_string_recorded_value_is_unproven
+      - tests.test_stale_launched_recovery_chain.TestWorktreeBindingNeverRaises.test_ac4_non_string_argument_is_unproven
+      - tests.test_stale_launched_recovery_chain.TestWorktreeBindingNeverRaises.test_ac4_nul_on_the_entry_side_is_unproven
+      - tests.test_stale_launched_recovery_chain.TestWorktreeBindingNeverRaises.test_ac4_nul_on_the_argument_side_is_unproven
+    red_confirmed: true
+    red_reason: >-
+      Before the implementation the equal non-string values (number, list,
+      object, null, field absent) and the equal NUL values on both sides
+      bound (recovered instead of residual), the forced OSError /
+      PermissionError / ValueError resolution cases ended recovered because
+      no link resolution was attempted, and the pass-through stand-in
+      control failed its "stand-in was called" assertion. The one-sided
+      non-string and NUL cases already passed before the change (a plain
+      mismatch) and were not observed red.
+  AC-5:
+    tests:
+      - tests.test_stale_launched_recovery_chain.TestWorktreeBindingOtherWorktree.test_ac5_canonical_path_of_a_different_existing_worktree_is_unproven
+      - tests.test_stale_launched_recovery_chain.TestWorktreeBindingOtherWorktree.test_ac5_link_spelled_path_of_a_different_existing_worktree_is_unproven
+      - tests.test_stale_launched_recovery_chain.TestWorktreeBindingOtherWorktree.test_ac5_control_matching_worktree_through_the_link_binds
+    red_confirmed: false
+    red_reason: >-
+      The behavior pre-existed: before the change a different worktree's
+      path was already a plain string mismatch, so both different-worktree
+      cases passed without any implementation and no red state occurred for
+      this criterion. Only the control case (the matching worktree through
+      the link binds) was observed red, which is the AC-1 behavior.
+  AC-6:
+    tests:
+      - tests.test_stale_launched_recovery_chain.TestWorktreeBindingKeepsOtherRules.test_ac6_worktree_resolution_helper_source_never_mentions_session_id
+      - tests.test_stale_launched_recovery_chain.TestWorktreeBindingKeepsOtherRules.test_ac6_ambiguous_candidates_stay_unproven_when_the_worktree_binds_through_a_link
+      - tests.test_stale_launched_recovery_chain.TestWorktreeBindingKeepsOtherRules.test_ac6_session_id_is_still_no_candidate_when_the_worktree_binds_through_a_link
+      - tests.test_stale_launched_recovery_chain.TestWorktreeBindingKeepsOtherRules.test_ac6_stop_target_mismatch_stays_unproven_when_the_worktree_binds_through_a_link
+      - tests.test_stale_launched_recovery_chain.TestChainAgentIdentitySecurityPin.test_source_level_resolve_bound_stop_target_never_reads_session_id
+      - tests.test_stale_launched_recovery_chain.TestChainAgentIdentitySecurityPin.test_behaviour_level_coincidental_identity_equality_never_proves_binding
+      - tests.test_stale_launched_recovery_chain.TestChainOrderedUnmetConditions.test_ambiguous_candidates_reports_agent_identity_unproven
+      - tests.test_stale_launched_recovery_chain.TestChainOrderedUnmetConditions.test_stop_target_mismatch_reports_agent_identity_unproven
+      - tests.test_stale_launched_recovery_chain.TestChainOrderedUnmetConditions.test_task_worktree_mismatch_reports_agent_identity_unproven
+      - tests.test_stale_launched_recovery_chain
+      - tests.test_recover_orphaned_task
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing
+      TestChainAgentIdentitySecurityPin and the TestChainOrderedUnmetConditions
+      cases detect the unchanged single-candidate, agent_ids-only and
+      stop-target rules, and the two module IDs run every pre-existing test
+      unmodified; no red state occurred for this change. The new linked-layout
+      rule cases passed before the change for the wrong reason (the worktree
+      did not bind, so the same residual appeared) and prove the rules only
+      against the implementation; the only red observed is the missing
+      worktree-resolution helper (AttributeError) on the helper source pin.
+  AC-7:
+    tests:
+      - tests.test_stale_launched_recovery_chain.TestBindingDocstringContract.test_live_binding_docstring_states_the_link_resolving_comparison
+      - tests.test_stale_launched_recovery_chain.TestBindingDocstringContract.test_live_binding_docstring_no_longer_states_plain_equality
+      - tests.test_stale_launched_recovery_chain.TestBindingDocstringContract.test_live_existence_docstring_has_no_plain_string
+      - tests.test_stale_launched_recovery_chain.TestBindingDocstringContract.test_live_existence_docstring_states_the_resolved_comparison
+      - tests.test_stale_launched_recovery_chain.TestBindingDocstringContract.test_pre_change_binding_docstring_is_rejected_by_the_predicate
+      - tests.test_stale_launched_recovery_chain.TestBindingDocstringContract.test_forged_binding_docstring_is_accepted_by_the_predicate
+      - tests.test_stale_launched_recovery_chain.TestBindingDocstringContract.test_binding_docstring_retains_the_single_candidate_anchor
+      - tests.test_stale_launched_recovery_chain.TestBindingDocstringContract.test_pre_change_existence_docstring_is_rejected_by_the_predicate
+      - tests.test_stale_launched_recovery_chain.TestBindingDocstringContract.test_forged_existence_docstring_is_accepted_by_the_predicate
+      - tests.test_stale_launched_recovery_chain.TestBindingDocstringContract.test_existence_docstring_retains_the_nonexistent_path_anchor
+      - tests.test_stale_launched_recovery_chain.TestStandardLibraryOnlyImports.test_import_check_flags_a_forged_third_party_import
+      - tests.test_stale_launched_recovery_chain.TestStandardLibraryOnlyImports.test_script_imports_only_the_standard_library
+      - tests.test_stale_launched_recovery_chain.TestStandardLibraryOnlyImports.test_this_module_imports_only_the_standard_library
+    red_confirmed: true
+    red_reason: >-
+      Before the docstring edits the four live-docstring assertions failed:
+      the binding docstring lacked the link-resolving statement and still
+      carried the plain-equality phrase, and the existence docstring still
+      contained "plain string" and lacked the resolved comparison. The
+      negative-proof controls (pre-change excerpts rejected, forged
+      statements accepted, retained anchors) and the import checks (the
+      script and this module were already standard-library only) passed
+      before the change by design.
