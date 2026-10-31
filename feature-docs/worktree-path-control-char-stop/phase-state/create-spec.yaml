@@ -1,7 +1,7 @@
 schema_version: 1
 feature: worktree-path-control-char-stop
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: 755a2242e8f8571f2e5fd967eb8de8268c55c236
 last_input_digest: sha256:f37babb03fd16970a4176d32d15150aa4f53f9264abd71ae39f3ed1de4abeeee

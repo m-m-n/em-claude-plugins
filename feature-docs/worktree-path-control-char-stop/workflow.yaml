@@ -1,0 +1,177 @@
+schema_version: 1
+feature: worktree-path-control-char-stop
+created: '2026-10-31'
+base_branch: main
+goal: '# em-workflow の implement フェーズで、正規化した worktree_path に改行が入ると起動プロンプトの信頼済み欄へ行が混入する
+
+
+  種別: セキュリティ / severity: medium
+
+
+  ## 脆弱性の概要
+
+  em-workflow の implement フェーズで、strict realpath で正規化した `worktree_path` に改行などの制御文字が入ると、implementer 起動プロンプトの信頼済み欄へ行が混入する。
+
+
+  ## 攻撃シナリオ
+
+  `em-workflow/references/implement-phase.md` の Canonical worktree path 段落は `$WT_ROOT/{T}` を strict realpath
+  で解決し、その値を起動プロンプトの `worktree_path:` 行にそのまま展開する。リポジトリ側が `.claude/worktrees/em-workflow` やその下にリンクを置き、リンク先のディレクトリ名に改行と指示文を含めると、その行が「##
+  Untrusted data」見出しより前の信頼済み欄に独立した行として入る。
+
+
+  変更前は未解決の `$WT_ROOT/{T}` を渡していたため、リンク先名は入らなかった。feature cd-prefix-canonical-path-only の正規化で新たにできた経路。
+
+
+  ## 影響範囲
+
+  - implementer サブエージェントが、攻撃者の文字列を信頼済みの指示として読む
+
+  - `bash_guard.py` の cd 前置形の構文はパス内の改行を拒否するが、起動プロンプトへの混入は防がない
+
+  - `queue_launch_guard.py` の `worktree_path` 抽出式は 1 行目しか取らないので、起動フックでも検出されない
+
+
+  ## 完了の定義
+
+  - [ ] 攻撃シナリオが成立しない（正規化した `worktree_path` に改行などの制御文字があれば、起動プロンプトを作らずに停止して報告する）
+
+  - [ ] その手順を確かめる文書テストが `tests/test_canonical_worktree_path_docs.py` にある
+
+  - [ ] 修正版に追随している（修正版が無い場合は暫定緩和策の欄に対応を記載）
+
+
+  ## 該当箇所
+
+  - `em-workflow/references/implement-phase.md` の Canonical worktree path 段落（382-389 行付近）と起動プロンプトの `worktree_path:`
+  行（420 行付近）
+
+  - feature cd-prefix-canonical-path-only の review round 1、stable_id e193cc2c91fead25
+
+  '
+parent_branch: em-workflow/worktree-path-control-char-stop/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.86
+      '2': 0.14
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.95
+      '2': 0.05
+      '3': 0.0
+  at: '2026-10-31T13:51:30+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: b17839815ca691155c96fc09ec3c7d90dfcd17e2
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'UI を持たない変更（手順文書と文書テストのみ）、design-system 候補 0 件（create-spec.design-step: decide_autonomously
+    -> skipped）。tier reduced でも design step は削減対象'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: Check the canonical worktree_path of every selected task before the launch loop
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: Rejected character set
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: Abort the phase before any launch prompt is built
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: Document test
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: Existing document tests keep passing
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: Standard library only
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: Full suite
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
