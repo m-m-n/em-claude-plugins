@@ -462,15 +462,41 @@ def agent_entry_is_bound(entry_at, last_launched_at):
 # ---------------------------------------------------------------------------
 
 
+def _resolved_worktree_path(value):
+    """One side of the worktree comparison in `resolve_bound_stop_target`:
+    the given value resolved through links, or None when it cannot be
+    compared. `value` must be a non-empty absolute path string without an
+    embedded NUL. Every existing link is resolved and the path itself is not
+    required to exist (non-strict resolution). An OS-level or invalid-value
+    error raised while resolving is None as well -- this never raises."""
+    if not isinstance(value, str) or value == "" or "\x00" in value:
+        return None
+    if not os.path.isabs(value):
+        return None
+    try:
+        return os.path.realpath(value)
+    except (OSError, ValueError):
+        return None
+
+
 def resolve_bound_stop_target(entry, task_worktree, stop_target):
     """The stop target's identity is uniquely bound when ALL hold against
     the given (already D7-bound) agent index entry: its candidate list
     (`agent_ids`) names exactly one distinct value; its recorded
-    `worktree_path` equals `task_worktree`; and `stop_target` equals that
-    one candidate. Returns the bound identity string on success, else None
-    (-> agent-identity-unproven) -- no candidate, two or more distinct
-    candidates, a worktree mismatch, a stop-target mismatch, and an absent
-    or non-string `stop_target` are all a binding failure.
+    `worktree_path` and `task_worktree` name the same worktree; and
+    `stop_target` equals that one candidate. Returns the bound identity
+    string on success, else None (-> agent-identity-unproven) -- no
+    candidate, two or more distinct candidates, a worktree mismatch, a
+    stop-target mismatch, and an absent or non-string `stop_target` are all
+    a binding failure.
+
+    The worktree condition (SC-2): both values must be non-empty absolute
+    path strings; both are resolved through links, every existing link
+    resolved and the path itself not required to exist, so a canonical
+    recorded path binds to the same worktree spelled through a link, also
+    once that worktree is gone; and the resolved values must be equal. A
+    resolution error (an OS-level error, or an invalid value such as an
+    embedded NUL) on either side is a binding failure, never an exception.
 
     Only `agent_ids` is ever read as a candidate source: no OTHER entry
     field is consulted as a fallback identity, even when it happens to be
@@ -482,7 +508,8 @@ def resolve_bound_stop_target(entry, task_worktree, stop_target):
     if len(distinct) != 1:
         return None
     (only_candidate,) = distinct
-    if entry.get("worktree_path") != task_worktree:
+    recorded_worktree = _resolved_worktree_path(entry.get("worktree_path"))
+    if recorded_worktree is None or recorded_worktree != _resolved_worktree_path(task_worktree):
         return None
     if not isinstance(stop_target, str) or stop_target != only_candidate:
         return None
