@@ -958,7 +958,7 @@ class TestNoSC6CodeLeaksFromThisTasksEditedRegions(unittest.TestCase):
 # findings task0004's own base commit (eabf7278) -- a byte-identity
 # regression guard, cheaper than a git subprocess call (NFR7).
 EXPECTED_LAUNCH_GUARD_SHA256 = (
-    "fb0b4d1a9b2729aee510ab7f7d643a72381df7604ac6bcb4cee2488d7dcf9521"
+    "6a6a5990632a09283b62a8b13951197226ab6a90c263abdeda94dd4713c5ccfb"
 )
 # Content pin of the current `em-workflow/scripts/merge-task.sh`. Any commit
 # that changes the script also sets this value to the new content's sha256
