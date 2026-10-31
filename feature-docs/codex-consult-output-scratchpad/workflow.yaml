@@ -120,7 +120,8 @@ workflow:
   base_commit: f0cc5d36e78e2a86539efd8836ae7d262e97b963
   completed_at_commit: 2c077c889f977755a846ebf6791d313954c6e72c
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: c16df5a55647c5645b64fd419ec7865d8a100685
 - id: verify
   status: pending
 - id: retrospect
@@ -164,6 +165,15 @@ review:
     - performance
     discretionary: []
     cross_validation: false
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - spec
+  - performance
+  residual_critical_high: 0
+  needs_rework: false
+  status: completed
 requirements:
   FR1:
     title: Scratchpad placement of saved wrapper output
