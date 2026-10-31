@@ -583,8 +583,11 @@ def hook_verdict(command, batch=False, timeout=GUARD_TIMEOUT_SECONDS):
 
 
 def case_commands():
+    # A case may carry a fourth element (working directory / CLAUDE_BATCH).
+    # This module judges every command in the default setting, so it reads
+    # the three-element cases only; the others belong to the runner.
     with open(CASES_JSON, encoding="utf-8") as f:
-        return [(want, label, cmd) for want, label, cmd in json.load(f)]
+        return [(c[0], c[1], c[2]) for c in json.load(f) if len(c) == 3]
 
 
 def heredoc_body(text, op):

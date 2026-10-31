@@ -38,6 +38,9 @@ Decision tiers:
           (demoted to deny in an unattended run, same as kill-guard)
   allow — everything else, when ALLOW_NON_DESTRUCTIVE is on
 
+One narrow exception sits in the ask tier: the canonical `gh pr merge` run
+from an em-workflow integration worktree is allowed (see MERGE_PR_NUMBER).
+
 Process termination (kill / pkill / killall) is NOT handled here — that is
 kill-guard.py's job, and it runs as a separate PreToolUse hook. The same
 withholding applies to `git worktree remove`, a non-force `git branch`
@@ -8694,14 +8697,115 @@ def check_self_modification(word, args, redirects, segment, lexed):
             )
 
 
-def check_external(word, args, segment):
+# The one `gh pr merge` shape that is allowed (em-workflow's unattended merge
+# skill, IMPLEMENTATION.md C9): exactly these seven tokens, in this order,
+# run from an integration worktree.
+#
+#     gh pr merge <PR number> --merge --match-head-commit <40-hex SHA>
+#
+# The head-commit pin makes GitHub refuse the merge if the PR moved after it
+# was verified. Every other `gh pr merge` keeps the `ask` in check_external()
+# (`deny` in an unattended run), including the same words with one more
+# token, an environment prefix, or from any other directory.
+MERGE_PR_NUMBER = re.compile(r"[1-9][0-9]*")
+MERGE_HEAD_SHA = re.compile(r"[0-9a-f]{40}")
+MERGE_FEATURE = re.compile(r"[a-z0-9][a-z0-9-]*")
+MERGE_WORKTREE_PREFIX = (".claude", "worktrees", "em-workflow")
+
+# Statements that change what a later `gh` in the same command would act on:
+# the directory it runs in (cd, pushd, popd) or the environment it reads
+# (GH_REPO, GH_HOST, ...). The canonical merge is only allowed without them
+# in the same command, since the cwd check and the no-prefix rule would
+# otherwise be sidestepped by writing the same thing as a separate statement.
+CONTEXT_COMMANDS = frozenset(
+    {"cd", "pushd", "popd", "export", "declare", "typeset", "readonly", "unset",
+     "alias", "source", "."}
+)
+
+
+def is_canonical_merge(toks, lexed):
+    """Whether one statement is exactly the canonical merge command and
+    nothing else: TOKS is the statement's whole token list, so a redirect, an
+    environment prefix, a wrapper, a grouping token or any extra word makes
+    it differ. A token built from a command substitution (its text is not
+    the value bash passes), or carrying a trailing carriage return, never
+    matches. A statement of a chunk that would not lex (LEXED false) has no
+    token provenance and is not matched."""
+    if not lexed or len(toks) != 7:
+        return False
+    if any(
+        getattr(t, "is_operator", False)
+        or getattr(t, "unresolved", False)
+        or getattr(t, "substitution_only", False)
+        or getattr(t, "trailing_cr", "")
+        for t in toks
+    ):
+        return False
+    gh, pr, merge, number, merge_flag, pin, sha = toks
+    return (
+        (gh, pr, merge, merge_flag, pin)
+        == ("gh", "pr", "merge", "--merge", "--match-head-commit")
+        and MERGE_PR_NUMBER.fullmatch(number) is not None
+        and MERGE_HEAD_SHA.fullmatch(sha) is not None
+    )
+
+
+def is_integration_worktree_cwd(cwd):
+    """Whether CWD is an em-workflow integration worktree or somewhere below
+    it: an absolute path holding `.claude/worktrees/em-workflow/<feature>/
+    integration` (<feature> a valid feature name, the next segment exactly
+    `integration`) with nothing after it that climbs out again.
+
+    `.` segments are dropped. A `..` before the end of the shape means the
+    path only reaches it by way of the climb, and one after it that leaves
+    the worktree means the directory is somewhere else: neither counts. A
+    `..` after the shape that stays inside the worktree does. Only the path
+    string is read; nothing is looked up on disk.
+    """
+    if not isinstance(cwd, str) or not cwd.startswith("/"):
+        return False
+    segs = [s for s in cwd.split("/") if s not in ("", ".")]
+    for i in range(len(segs) - 4):
+        if tuple(segs[i : i + 3]) != MERGE_WORKTREE_PREFIX:
+            continue
+        if MERGE_FEATURE.fullmatch(segs[i + 3]) is None or segs[i + 4] != "integration":
+            continue
+        if ".." in segs[:i]:
+            continue
+        depth = 0
+        for seg in segs[i + 5 :]:
+            depth += -1 if seg == ".." else 1
+            if depth < 0:
+                break
+        else:
+            return True
+    return False
+
+
+def changes_context(word, toks, words):
+    """Whether one statement changes the directory or the environment that a
+    later command of the same command string would run in: a CONTEXT_COMMANDS
+    word, a statement made only of VAR=value assignments, or the definition
+    of a shell function (one named `gh` would stand in for the command).
+    WORDS is TOKS without its redirects."""
+    if _defines_function(words, len(words)):
+        return True
+    if word is None:
+        return any(
+            ASSIGNMENT_PREFIX.match(t) and not getattr(t, "is_operator", False)
+            for t in toks
+        )
+    return word in CONTEXT_COMMANDS
+
+
+def check_external(word, args, segment, merge_allowed=False):
     if word == "gh":
         sub = " ".join(a for a in args if not a.startswith("-"))[:40]
         if re.match(r"^(repo|release|secret|ssh-key|gpg-key)\s+delete", sub):
             decide("deny", "gh-delete", f"`gh {sub}` はリモート側で不可逆。")
         if re.match(r"^secret\s+set", sub):
             decide("deny", "gh-secret-set", "リポジトリ secret の書き換え。")
-        if re.match(r"^pr\s+merge", sub):
+        if re.match(r"^pr\s+merge", sub) and not merge_allowed:
             decide("ask", "gh-pr-merge", "PR のマージは他者から見える不可逆な操作。")
     if word in ("npm", "pnpm", "yarn") and "publish" in args:
         decide("deny", "package-publish", "パッケージの公開は取り消せない。")
@@ -9029,6 +9133,16 @@ def main(payload):
     # a subscript's `]` (statements() leaves them out and reports them here).
     unsettled = []
 
+    # The canonical `gh pr merge` (see MERGE_PR_NUMBER) is judged per
+    # statement: one found in an integration worktree is not asked about, and
+    # the rest of the command is judged as usual, so a dangerous statement
+    # beside it still decides. `context_changed` notes a statement that
+    # changes the directory or environment the merge would run in; with one
+    # present the merge falls back to its `ask` after the loop.
+    in_integration_worktree = is_integration_worktree_cwd(cwd)
+    merge_allowed_seen = False
+    context_changed = False
+
     for (
         segment, toks, lexed, shaped_words, shaped_redirects, origin
     ) in statements(command, unsettled):
@@ -9100,6 +9214,8 @@ def main(payload):
         if matches_target_shape(gword, gargs, cwd):
             defer_to_new_guard = True
 
+        context_changed = context_changed or changes_context(word, toks, words)
+
         if word is None:
             continue
 
@@ -9111,8 +9227,10 @@ def main(payload):
                 rm_invocations.append(rm_anchor)
                 rm_records.extend(check_rm(args, rm_anchor))
         else:
+            merge_allowed = in_integration_worktree and is_canonical_merge(toks, lexed)
+            merge_allowed_seen = merge_allowed_seen or merge_allowed
             check_file_destruction(word, args, segment)
-            check_external(word, args, segment)
+            check_external(word, args, segment, merge_allowed)
             check_permissions(word, args)
 
     # Emission happens once, after every segment's rm targets have been
@@ -9124,6 +9242,14 @@ def main(payload):
         # A chunk was left unread: the verdict is the `ask` of an unsettled
         # text, unless what was read earns a `deny`.
         raise unsettled[0]
+    if merge_allowed_seen and context_changed and (top is None or top[0] != "deny"):
+        decide(
+            "ask",
+            "gh-pr-merge",
+            "PR のマージは他者から見える不可逆な操作。"
+            "同じコマンドの中に作業ディレクトリか環境変数を変える文があるので、"
+            "正規形でも許可しない。",
+        )
     if top is not None:
         tier, rule, message = top
         decide(tier, rule, message)

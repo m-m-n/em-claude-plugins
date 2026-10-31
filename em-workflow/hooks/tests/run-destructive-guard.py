@@ -14,10 +14,21 @@ unattended run, and each one here is a shape that actually did — a `rm -rf`
 written inside a quoted string, a here-doc body holding shell examples, a
 redirect to /dev/null read as another path to delete.
 
-CLAUDE_BATCH is cleared for every run. The hook demotes `ask` to `deny` when
-it sees that variable (nobody is there to answer), which would fail every
-`ask` case if the suite happened to run inside a batch session. The demotion
-itself is covered by the last case, which sets the variable back.
+Each case is `[decision, label, command]`. A case may carry a fourth element,
+an object that sets the situation the hook is judged in:
+
+    {"cwd": "<absolute path>", "batch": true}
+
+`cwd` is sent as the payload's working directory (the hook only reads the path
+string, so it need not exist). `batch` sets CLAUDE_BATCH for that case. Both
+keys are optional; a three-element case sends no working directory and runs
+with CLAUDE_BATCH cleared.
+
+CLAUDE_BATCH is cleared for every run unless a case asks for it. The hook
+demotes `ask` to `deny` when it sees that variable (nobody is there to
+answer), which would fail every `ask` case if the suite happened to run inside
+a batch session. The demotion itself is covered by the last check, which sets
+the variable back.
 
 Every evaluation is bounded at GUARD_TIMEOUT_SECONDS. A case that runs past
 the limit is stopped, counted as a FAIL marked as a timeout, and the run goes
@@ -43,16 +54,41 @@ GUARD_TIMEOUT_SECONDS = 10
 TIMED_OUT = "(timeout)"
 
 
-def verdict(command, batch=False):
-    """Run the guard over one command and return (decision, reason)."""
+def case_options(case):
+    """The (cwd, batch) a case asks for: its optional fourth element, or the
+    defaults (no working directory, CLAUDE_BATCH cleared). A fourth element
+    that is not an object holding only `cwd` (a string) and `batch` (a
+    boolean) ends the run: a case the runner cannot honour must not pass by
+    being judged in some other situation."""
+    if len(case) == 3:
+        return None, False
+    options = case[3] if len(case) == 4 else None
+    ok = (
+        isinstance(options, dict)
+        and set(options) <= {"cwd", "batch"}
+        and isinstance(options.get("cwd", ""), str)
+        and isinstance(options.get("batch", False), bool)
+    )
+    if not ok:
+        sys.exit("malformed case (want [decision, label, command] or a fourth "
+                 "element {\"cwd\": str, \"batch\": bool}): %r" % (case,))
+    return options.get("cwd"), options.get("batch", False)
+
+
+def verdict(command, batch=False, cwd=None):
+    """Run the guard over one command and return (decision, reason). CWD, when
+    given, is the payload's working directory."""
     env = dict(os.environ)
     env.pop("CLAUDE_BATCH", None)
     if batch:
         env["CLAUDE_BATCH"] = "1"
+    payload = {"tool_name": "Bash", "tool_input": {"command": command}}
+    if cwd is not None:
+        payload["cwd"] = cwd
     try:
         proc = subprocess.run(
             [sys.executable, GUARD],
-            input=json.dumps({"tool_name": "Bash", "tool_input": {"command": command}}),
+            input=json.dumps(payload),
             capture_output=True,
             text=True,
             env=env,
@@ -77,11 +113,14 @@ def timeout_marker(got):
 
 
 def main():
-    cases = json.load(open(CASES, encoding="utf-8"))
+    with open(CASES, encoding="utf-8") as f:
+        cases = json.load(f)
     failed = []
 
-    for want, label, command in cases:
-        got, reason = verdict(command)
+    for case in cases:
+        want, label, command = case[:3]
+        cwd, batch = case_options(case)
+        got, reason = verdict(command, batch=batch, cwd=cwd)
         if got != want:
             failed.append((label, want, got, reason))
         print(f"{'ok  ' if got == want else 'FAIL'} {want:5} {label}{timeout_marker(got)}")

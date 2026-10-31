@@ -47,8 +47,11 @@ CASES_JSON = os.path.join(
     ROOT, "em-workflow", "hooks", "tests", "destructive-guard-cases.json"
 )
 
+# A case may carry a fourth element (working directory / CLAUDE_BATCH). This
+# module judges every command in the default setting, so it reads the
+# three-element cases only; the others belong to the runner.
 with open(CASES_JSON, encoding="utf-8") as _f:
-    CASES = json.load(_f)
+    CASES = [c for c in json.load(_f) if len(c) == 3]
 
 # TS5: an outer and an inner eval both carrying the prefix `x=(@`, extglob
 # switched between them (f34ee27bc8c323b1).
