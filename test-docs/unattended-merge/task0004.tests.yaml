@@ -46,7 +46,7 @@ acceptance_tests:
       - tests.test_merge_pr.TestState.test_ac4_unknown_mergeability_counts_as_not_conflicting
       - tests.test_merge_pr.TestState.test_ac4_closed_pr_stops_pr_closed
       - tests.test_merge_pr.TestState.test_ac4_merged_pr_returns_merged_with_url_and_merge_commit
-      - tests.test_merge_pr.TestState.test_ac4_merged_wins_even_when_the_head_differs
+      - tests.test_merge_pr.TestState.test_ac4_merged_pr_with_another_head_is_not_merged_it_stops_pr_head_moved
       - tests.test_merge_pr.TestState.test_ac4_draft_pr_stops_pr_draft
       - tests.test_merge_pr.TestState.test_ac4_conflicting_pr_stops_pr_conflicting
       - tests.test_merge_pr.TestState.test_ac4_head_different_from_the_expected_one_stops_pr_head_moved

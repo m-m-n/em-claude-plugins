@@ -8,6 +8,10 @@ wraps git in a logging shim that delegates to the real git.  Nothing touches
 the network or the real ~/.claude.  The script is run as a child process, so
 no bytecode cache is written under em-workflow/.
 
+task0010 (TestTask0010Bindings) binds the PR decisions to the current base and
+integration tip: `state` takes a mandatory --base and reports `merged` only at
+--head, `resolve` takes a mandatory --integration-tip.
+
 Every test is also an AC-6 test: after each test the gh invocation log, the
 git invocation log and the repository's refs are checked against the
 operation boundary (read-only gh, explicit repository, no git ref change).
@@ -131,6 +135,7 @@ def view_entry(
     head_sha=SHA_HEAD,
     merge_commit=None,
     url=None,
+    base_ref=BASE,
 ):
     """The document `gh pr view --json ...` prints."""
     if state == "MERGED" and merge_commit is None:
@@ -142,6 +147,7 @@ def view_entry(
         "isDraft": draft,
         "mergeable": mergeable,
         "headRefOid": head_sha,
+        "baseRefName": base_ref,
         "mergeCommit": {"oid": merge_commit} if merge_commit else None,
     }
 
@@ -309,16 +315,16 @@ class MergePrTestCase(unittest.TestCase):
     def repo_cmd(self, remote="origin"):
         return ("repo", "--project-root", self.root, "--remote", remote)
 
-    def resolve_cmd(self, feature=FEATURE, base=BASE, repo=REPO):
+    def resolve_cmd(self, feature=FEATURE, base=BASE, repo=REPO, tip=SHA_HEAD):
         return (
             "resolve", "--project-root", self.root, "--repo", repo,
-            "--feature", feature, "--base", base,
+            "--feature", feature, "--base", base, "--integration-tip", tip,
         )
 
-    def state_cmd(self, pr=12, head=SHA_HEAD, repo=REPO):
+    def state_cmd(self, pr=12, head=SHA_HEAD, repo=REPO, base=BASE):
         return (
             "state", "--project-root", self.root, "--repo", repo,
-            "--pr", pr, "--head", head,
+            "--pr", pr, "--head", head, "--base", base,
         )
 
     # -- AC-6, applied after every test ---------------------------------------------
@@ -538,9 +544,10 @@ class TestState(MergePrTestCase):
         self.assertEqual(doc["pr_url"], "https://github.com/%s/pull/12" % REPO)
         self.assertEqual(doc["merge_commit"], SHA_MERGE)
 
-    def test_ac4_merged_wins_even_when_the_head_differs(self):
+    def test_ac4_merged_pr_with_another_head_is_not_merged_it_stops_pr_head_moved(self):
+        # task0010 changed this behavior (FR9): merged counts only at --head.
         self.view(state="MERGED", head_sha=SHA_OTHER, mergeable="CONFLICTING")
-        self.assertEqual(self.decide(*self.state_cmd())["outcome"], "merged")
+        self.assert_stop(self.decide(*self.state_cmd()), "pr_head_moved")
 
     def test_ac4_draft_pr_stops_pr_draft(self):
         self.view(draft=True)
@@ -657,6 +664,8 @@ class TestMalformedOutput(MergePrTestCase):
                 ("unknown state", bad(state="open")),
                 ("unknown mergeability", bad(mergeable="MAYBE")),
                 ("missing mergeability", bad(mergeable=None)),
+                ("missing base branch", bad(baseRefName=None)),
+                ("non-string base branch", bad(baseRefName=7)),
                 ("string draft flag", bad(isDraft=0)),
                 ("short merge commit", bad(state="MERGED", mergeCommit={"oid": "cafe"})),
                 ("merged without merge commit", bad(state="MERGED", mergeCommit=None)),
@@ -740,6 +749,13 @@ class TestArguments(MergePrTestCase):
         self.assert_usage_error("repo", "--project-root", self.root)
         self.assert_usage_error("resolve", "--project-root", self.root, "--repo", REPO)
         self.assert_usage_error("state", "--project-root", self.root, "--repo", REPO, "--pr", 1)
+        self.assert_usage_error(
+            "state", "--project-root", self.root, "--repo", REPO, "--pr", 1, "--head", SHA_HEAD
+        )
+        self.assert_usage_error(
+            "resolve", "--project-root", self.root, "--repo", REPO,
+            "--feature", FEATURE, "--base", BASE,
+        )
 
     def test_malformed_values_are_usage_errors(self):
         good = self.resolve_cmd()
@@ -760,6 +776,10 @@ class TestArguments(MergePrTestCase):
             ("pr fractional", self.state_cmd(pr="1.5")),
             ("head short", self.state_cmd(head="abc1234")),
             ("head uppercase", self.state_cmd(head="A" * 40)),
+            ("state base leading dash", self.state_cmd(base="-x")),
+            ("state base with space", self.state_cmd(base="a b")),
+            ("integration tip short", self.resolve_cmd(tip="abc1234")),
+            ("integration tip uppercase", self.resolve_cmd(tip="A" * 40)),
             ("remote leading dash", self.repo_cmd(remote="-o")),
             ("remote with space", self.repo_cmd(remote="a b")),
             ("project root missing", ("repo", "--project-root", self.tmp / "nope", "--remote", "origin")),
@@ -767,6 +787,225 @@ class TestArguments(MergePrTestCase):
             with self.subTest(label):
                 self.assert_usage_error(*command)
         self.assertEqual(good[0], "resolve")
+
+
+# ---------------------------------------------------------------------------------
+# task0010 (feature-docs/unattended-merge): PR decisions bound to the current
+# base and the current integration tip (FR7, FR8, FR9)
+# ---------------------------------------------------------------------------------
+
+
+class TestTask0010Bindings(MergePrTestCase):
+    def view(self, **kwargs):
+        self.set_fixture("pr-view", stdout=view_entry(**kwargs))
+
+    def listing(self, *entries):
+        self.set_fixture("pr-list", stdout=list(entries))
+
+    def assert_usage_error(self, *args, stderr_has):
+        """Exit 2 from argument parsing, for the reason `stderr_has` names."""
+        rc, out, err = self.run_script(*args)
+        self.assertEqual(rc, 2, args)
+        self.assertIn("usage: merge-pr.py", err, "exit 2 must come from argument parsing")
+        self.assertIn(stderr_has, err)
+        self.assertEqual(out, "")
+        self.assertEqual(self.gh_log(), [])
+
+    def state_args_without(self, option):
+        command = list(self.state_cmd())
+        index = command.index(option)
+        del command[index:index + 2]
+        return command
+
+    def resolve_args_without(self, option):
+        command = list(self.resolve_cmd())
+        index = command.index(option)
+        del command[index:index + 2]
+        return command
+
+    # -- AC-1: state needs --base ------------------------------------------------------
+
+    def test_task0010_ac1_state_without_base_exits_2_and_prints_nothing(self):
+        # The finding's reproduction: without --base a PR into `release` was ready.
+        self.view(base_ref="release")
+        self.assert_usage_error(
+            *self.state_args_without("--base"),
+            stderr_has="the following arguments are required: --base",
+        )
+
+    # -- AC-2: state stops when the PR's base is not --base -------------------------
+
+    def test_task0010_ac2_a_pr_into_another_base_stops_pr_head_moved_naming_both(self):
+        self.view(base_ref="release")
+        doc = self.decide(*self.state_cmd(base="main"))
+        self.assert_stop(doc, "pr_head_moved")
+        self.assertIn("release", doc["detail"])
+        self.assertIn("main", doc["detail"])
+
+    def test_task0010_ac2_the_same_pr_into_the_expected_base_is_ready(self):
+        self.view(base_ref="main")
+        doc = self.decide(*self.state_cmd(base="main"))
+        self.assertEqual(doc["outcome"], "ready")
+        self.assertEqual(doc["head"], SHA_HEAD)
+
+    def test_task0010_ac2_the_base_comparison_is_exact(self):
+        for label, actual in (
+            ("case differs", "Main"),
+            ("prefix only", "main2"),
+            ("suffix of a path", "release/main"),
+        ):
+            with self.subTest(label):
+                self.view(base_ref=actual)
+                self.assert_stop(self.decide(*self.state_cmd(base="main")), "pr_head_moved")
+
+    def test_task0010_ac2_closed_draft_and_conflict_are_still_decided_before_the_base(self):
+        for label, kwargs, reason in (
+            ("closed", {"state": "CLOSED"}, "pr_closed"),
+            ("draft", {"draft": True}, "pr_draft"),
+            ("conflicting", {"mergeable": "CONFLICTING"}, "pr_conflicting"),
+        ):
+            with self.subTest(label):
+                self.view(base_ref="release", **kwargs)
+                self.assert_stop(self.decide(*self.state_cmd(base="main")), reason)
+
+    def test_task0010_ac2_a_moved_head_and_a_wrong_base_both_stop_pr_head_moved(self):
+        self.view(base_ref="release", head_sha=SHA_OTHER)
+        doc = self.decide(*self.state_cmd(base="main", head=SHA_HEAD))
+        self.assert_stop(doc, "pr_head_moved")
+
+    def test_task0010_ac2_a_merged_pr_into_another_base_is_not_reported_merged(self):
+        self.view(state="MERGED", base_ref="release")
+        self.assert_stop(self.decide(*self.state_cmd(base="main")), "pr_head_moved")
+
+    def test_task0010_ac2_a_missing_or_non_string_base_in_the_answer_is_an_internal_failure(self):
+        for label, value in (("null", None), ("number", 5), ("object", {"name": "main"})):
+            with self.subTest(label):
+                doc = view_entry()
+                doc["baseRefName"] = value
+                self.set_fixture("pr-view", stdout=doc)
+                self.assert_internal_failure(*self.state_cmd(base="main"))
+        doc = view_entry()
+        del doc["baseRefName"]
+        self.set_fixture("pr-view", stdout=doc)
+        self.assert_internal_failure(*self.state_cmd(base="main"))
+
+    # -- AC-3: state reports merged only for the expected head --------------------
+
+    def test_task0010_ac3_a_merged_pr_with_another_head_stops_pr_head_moved(self):
+        self.view(state="MERGED", head_sha=SHA_OTHER, merge_commit=SHA_MERGE)
+        doc = self.decide(*self.state_cmd(head=SHA_HEAD))
+        self.assert_stop(doc, "pr_head_moved")
+        self.assertIn(SHA_OTHER, doc["detail"])
+        self.assertIn(SHA_HEAD, doc["detail"])
+        self.assertNotIn("merge_commit", doc)
+
+    def test_task0010_ac3_a_merged_pr_with_the_expected_head_returns_merged(self):
+        self.view(state="MERGED", head_sha=SHA_HEAD, merge_commit=SHA_MERGE)
+        doc = self.decide(*self.state_cmd(head=SHA_HEAD))
+        self.assertEqual(doc["outcome"], "merged")
+        self.assertIsNone(doc["reason"])
+        self.assertEqual(doc["pr_url"], "https://github.com/%s/pull/12" % REPO)
+        self.assertEqual(doc["merge_commit"], SHA_MERGE)
+
+    def test_task0010_ac3_the_head_check_of_a_merged_pr_precedes_its_mergeability(self):
+        self.view(state="MERGED", head_sha=SHA_OTHER, mergeable="CONFLICTING")
+        self.assert_stop(self.decide(*self.state_cmd()), "pr_head_moved")
+
+    # -- AC-4: resolve counts a MERGED PR only at the integration tip ---------------
+
+    def test_task0010_ac4_a_merged_pr_with_another_head_alone_gives_none(self):
+        self.listing(pr_entry(number=7, state="MERGED", head_sha=SHA_OTHER))
+        doc = self.decide(*self.resolve_cmd(tip=SHA_HEAD))
+        self.assertEqual(doc["outcome"], "none")
+        self.assertIsNone(doc["reason"])
+        self.assertEqual(doc["create_head"], BRANCH)
+        self.assertEqual(doc["create_base"], BASE)
+        self.assertNotIn("pr_number", doc)
+
+    def test_task0010_ac4_with_an_open_pr_as_well_the_open_pr_is_returned(self):
+        self.listing(
+            pr_entry(number=7, state="MERGED", head_sha=SHA_OTHER),
+            pr_entry(number=9, head_sha=SHA_HEAD),
+        )
+        doc = self.decide(*self.resolve_cmd(tip=SHA_HEAD))
+        self.assertEqual(doc["outcome"], "open")
+        self.assertEqual(doc["pr_number"], 9)
+        self.assertEqual(doc["head"], SHA_HEAD)
+
+    def test_task0010_ac4_a_merged_pr_at_the_integration_tip_returns_merged(self):
+        self.listing(pr_entry(number=7, state="MERGED", head_sha=SHA_HEAD, merge_commit=SHA_MERGE))
+        doc = self.decide(*self.resolve_cmd(tip=SHA_HEAD))
+        self.assertEqual(doc["outcome"], "merged")
+        self.assertEqual(doc["pr_number"], 7)
+        self.assertEqual(doc["merge_commit"], SHA_MERGE)
+
+    def test_task0010_ac4_the_tip_decides_not_the_pr_head_of_the_open_pr(self):
+        self.listing(
+            pr_entry(number=7, state="MERGED", head_sha=SHA_HEAD),
+            pr_entry(number=9, head_sha=SHA_OTHER),
+        )
+        self.assertEqual(self.decide(*self.resolve_cmd(tip=SHA_HEAD))["outcome"], "merged")
+        self.assertEqual(self.decide(*self.resolve_cmd(tip=SHA_OTHER))["outcome"], "open")
+
+    def test_task0010_ac4_an_ignored_merged_pr_leaves_the_draft_and_closed_classes_intact(self):
+        self.listing(
+            pr_entry(number=7, state="MERGED", head_sha=SHA_OTHER),
+            pr_entry(number=8, draft=True),
+        )
+        self.assert_stop(self.decide(*self.resolve_cmd(tip=SHA_HEAD)), "pr_draft")
+        self.listing(
+            pr_entry(number=7, state="MERGED", head_sha=SHA_OTHER),
+            pr_entry(number=8, state="CLOSED"),
+        )
+        self.assert_stop(self.decide(*self.resolve_cmd(tip=SHA_HEAD)), "pr_closed")
+
+    def test_task0010_ac4_a_merged_pr_with_another_head_is_never_a_closed_pr(self):
+        self.listing(pr_entry(number=7, state="MERGED", head_sha=SHA_OTHER))
+        self.assertEqual(self.decide(*self.resolve_cmd(tip=SHA_HEAD))["outcome"], "none")
+
+    def test_task0010_ac4_the_highest_numbered_matching_merged_pr_is_used(self):
+        self.listing(
+            pr_entry(number=3, state="MERGED", head_sha=SHA_HEAD, merge_commit="1" * 40),
+            pr_entry(number=5, state="MERGED", head_sha=SHA_HEAD, merge_commit="2" * 40),
+            pr_entry(number=8, state="MERGED", head_sha=SHA_OTHER, merge_commit="3" * 40),
+        )
+        doc = self.decide(*self.resolve_cmd(tip=SHA_HEAD))
+        self.assertEqual((doc["outcome"], doc["pr_number"]), ("merged", 5))
+        self.assertEqual(doc["merge_commit"], "2" * 40)
+
+    def test_task0010_ac4_a_merged_pr_of_another_branch_or_a_fork_does_not_match_the_tip(self):
+        self.listing(
+            pr_entry(number=3, state="MERGED", head_sha=SHA_HEAD, base_ref="develop"),
+            pr_entry(number=4, state="MERGED", head_sha=SHA_HEAD, cross=True),
+        )
+        self.assertEqual(self.decide(*self.resolve_cmd(tip=SHA_HEAD))["outcome"], "none")
+
+    # -- AC-5: resolve needs a valid --integration-tip -------------------------------
+
+    def test_task0010_ac5_resolve_without_integration_tip_exits_2_and_prints_nothing(self):
+        self.listing()
+        self.assert_usage_error(
+            *self.resolve_args_without("--integration-tip"),
+            stderr_has="the following arguments are required: --integration-tip",
+        )
+
+    def test_task0010_ac5_a_value_that_is_not_40_lowercase_hex_exits_2(self):
+        self.listing()
+        for label, value in (
+            ("empty", ""),
+            ("short", "abc1234"),
+            ("39 characters", "a" * 39),
+            ("41 characters", "a" * 41),
+            ("uppercase", "A" * 40),
+            ("not hex", "g" * 40),
+            ("a branch name", "main"),
+            ("trailing newline", "a" * 40 + "\n"),
+        ):
+            with self.subTest(label):
+                self.assert_usage_error(
+                    *self.resolve_cmd(tip=value),
+                    stderr_has="not a 40-character lowercase hex SHA",
+                )
 
 
 # ---------------------------------------------------------------------------------

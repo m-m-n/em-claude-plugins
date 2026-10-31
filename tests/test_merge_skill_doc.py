@@ -26,6 +26,12 @@ Covers task0008 Acceptance Criteria
   as the whole final message.
 - AC-7 (NFR3, NFR7): resumption, fixed-shape texts, no state file.
 
+Covers task0010 Acceptance Criterion AC-6
+(feature-docs/unattended-merge/tasks/task0010.md; TestPrDecisionBindings): every
+`merge-pr.py state` form passes `--base <base_branch>`, the `merge-pr.py
+resolve` forms of steps 5.2 and 5.3 pass `--integration-tip <integration_tip>`
+and the post-merge form of step 13.2 passes `--integration-tip <head_sha>`.
+
 Method: whitespace-preserving text slices, presence assertions on stable
 tokens (reason codes, script names, command forms) and a few short phrases.
 Every absence assertion is paired with a forged-text case proving its matcher
@@ -1065,6 +1071,112 @@ class TestResumptionAndText(SkillCase):
         body = self.section("16. ")
         self.assertRegex(body, r"状態ファイルではない")
         self.assertRegex(body, r"次の走行は読まない")
+
+
+# ---------------------------------------------------------------------------
+# task0010 AC-6 (feature-docs/unattended-merge, FR7, FR8, FR9): the PR
+# decisions are bound to the current base and the current integration tip
+# ---------------------------------------------------------------------------
+
+MERGE_PR_FORM_RE = re.compile(
+    r"^python3 \$\{CLAUDE_PLUGIN_ROOT\}/scripts/merge-pr\.py (repo|resolve|state)(?:\s|$)"
+)
+
+
+def merge_pr_forms(text, subcommand):
+    """Every command form of `text` that calls `merge-pr.py <subcommand>`."""
+    found = []
+    for form in command_forms(text):
+        match = MERGE_PR_FORM_RE.match(form)
+        if match and match.group(1) == subcommand:
+            found.append(form)
+    return found
+
+
+def has_option(form, option, value):
+    """True when `form` carries `option` immediately followed by `value`."""
+    tokens = form.split()
+    return any(
+        tokens[i] == option and tokens[i + 1] == value for i in range(len(tokens) - 1)
+    )
+
+
+class TestPrDecisionBindings(SkillCase):
+    def test_ac6_every_state_form_passes_the_base_branch(self):
+        forms = merge_pr_forms(self.text, "state")
+        self.assertTrue(forms, "no merge-pr.py state form")
+        for form in forms:
+            self.assertTrue(has_option(form, "--base", "<base_branch>"), form)
+
+    def test_ac6_step_5_2_resolve_passes_the_integration_tip_from_preflight(self):
+        body = self.section("5. ")
+        forms = merge_pr_forms(body, "resolve")
+        self.assertEqual(len(forms), 1, forms)
+        self.assertTrue(has_option(forms[0], "--integration-tip", "<integration_tip>"), forms[0])
+
+    def test_ac6_step_5_3_re_resolve_passes_the_integration_tip_from_preflight(self):
+        body = self.section("5. ")
+        marker = "3. `none` のときの PR 作成"
+        start = body.find(marker)
+        self.assertGreaterEqual(start, 0, "step 5.3 not found")
+        step_5_3 = body[start:]
+        self.assertIn("`resolve`", step_5_3)
+        self.assertIn("--integration-tip <integration_tip>", step_5_3)
+
+    def test_ac6_step_13_2_post_merge_re_resolve_passes_the_merged_head(self):
+        body = self.section("13. ")
+        forms = merge_pr_forms(body, "resolve")
+        self.assertEqual(len(forms), 1, forms)
+        self.assertTrue(has_option(forms[0], "--integration-tip", "<head_sha>"), forms[0])
+        for option, value in (
+            ("--repo", "<repo>"),
+            ("--feature", "<feature>"),
+            ("--base", "<base_branch>"),
+        ):
+            self.assertTrue(has_option(forms[0], option, value), forms[0])
+        merge = line_index_of(body, "gh pr merge <pr_number>")
+        resolve = line_index_of(body, forms[0])
+        self.assertIsNotNone(merge)
+        self.assertIsNotNone(resolve)
+        self.assertLess(merge, resolve, "the re-resolve must come after gh pr merge")
+
+    def test_ac6_step_13_2_no_longer_calls_the_re_resolve_the_same_as_step_5_2(self):
+        body = self.section("13. ")
+        self.assertNotIn("手順 5.2 と同じ呼び出し", body)
+
+    def test_ac6_every_resolve_form_in_the_skill_passes_an_integration_tip(self):
+        forms = merge_pr_forms(self.text, "resolve")
+        self.assertEqual(len(forms), 2, forms)
+        for form in forms:
+            self.assertRegex(
+                form,
+                r"--integration-tip <(integration_tip|head_sha)>(\s|$)",
+            )
+
+    def test_ac6_the_new_option_values_stay_literal_identifiers(self):
+        for subcommand in ("resolve", "state"):
+            for form in merge_pr_forms(self.text, subcommand):
+                tail = form.split("merge-pr.py", 1)[1]
+                self.assertFalse(re.search(r"[$`\\;&|(){}*?\[\]]", tail), form)
+
+    def test_ac6_the_matchers_fire_on_forged_forms(self):
+        good_state = (
+            'python3 ${CLAUDE_PLUGIN_ROOT}/scripts/merge-pr.py state --project-root "<project_root>" '
+            "--repo <repo> --pr <pr_number> --head <head_sha> --base <base_branch>"
+        )
+        forged_state = good_state.replace(" --base <base_branch>", "")
+        self.assertTrue(has_option(good_state, "--base", "<base_branch>"))
+        self.assertFalse(has_option(forged_state, "--base", "<base_branch>"))
+        wrong_value = good_state.replace("--base <base_branch>", "--base main")
+        self.assertFalse(has_option(wrong_value, "--base", "<base_branch>"))
+        text = "```bash\n%s\n```\n" % forged_state
+        self.assertEqual(merge_pr_forms(text, "state"), [forged_state])
+        self.assertEqual(merge_pr_forms(text, "resolve"), [])
+        resolve_without_tip = (
+            'python3 ${CLAUDE_PLUGIN_ROOT}/scripts/merge-pr.py resolve --project-root "<project_root>" '
+            "--repo <repo> --feature <feature> --base <base_branch>"
+        )
+        self.assertFalse(has_option(resolve_without_tip, "--integration-tip", "<integration_tip>"))
 
 
 if __name__ == "__main__":

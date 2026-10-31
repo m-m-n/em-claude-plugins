@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """GitHub repository and pull-request decisions for the unattended merge
-(em-workflow plugin, task0004 of feature-docs/unattended-merge; FR6, FR7,
-FR8, FR9, FR22, NFR3, NFR4, NFR5).
+(em-workflow plugin, task0004 and task0010 of feature-docs/unattended-merge;
+FR6, FR7, FR8, FR9, FR22, NFR3, NFR4, NFR5).
 
 Three read-only subcommands; each prints exactly ONE JSON object on ONE
 stdout line.  Common keys: `outcome`, `reason` (a reason code when `outcome`
@@ -17,10 +17,14 @@ add).  Diagnostics go to stderr only.
                                 repository cannot be determined or differs
                                 (both names in `detail` when known)
 
-  resolve  --project-root P --repo O/N --feature F --base B
+  resolve  --project-root P --repo O/N --feature F --base B --integration-tip SHA
       List the PRs (every state) whose head is `em-workflow/F/integration`
       and whose base is B, ignoring cross-repository (fork) PRs.
-      outcome `merged` (+ `pr_number`, `pr_url`, `merge_commit`)   any merged PR
+      SHA is the integration branch's commit this run is about to merge, or
+      has just merged.  A MERGED PR whose head commit is not SHA is ignored:
+      it takes no part in the decision, which continues with the other
+      classes.
+      outcome `merged` (+ `pr_number`, `pr_url`, `merge_commit`)   merged, head is SHA
       outcome `open`   (+ `pr_number`, `pr_url`, `head`)           open, non-draft
       outcome `none`   (+ `create_head`, `create_base`)            no PR at all
       stop `pr_draft`   only open draft PRs
@@ -29,15 +33,17 @@ add).  Diagnostics go to stderr only.
       several PRs share a class, the highest PR number is used.  `head` is
       the PR's head commit SHA.
 
-  state    --project-root P --repo O/N --pr N --head SHA [--base B]
-      When --base is given, a PR whose base branch differs from B is a
-      `pr_head_moved` stop.  Read the PR's state right before the merge.
+  state    --project-root P --repo O/N --pr N --head SHA --base B
+      Read the PR's state right before the merge.
       outcome `merged` (+ `pr_url`, `merge_commit`)
       outcome `ready`  (+ `pr_url`, `head`)
       stop `pr_closed` / `pr_draft` / `pr_conflicting` / `pr_head_moved`
-      Checked in that order, after `merged`.  Mergeability MERGEABLE or
-      UNKNOWN counts as not conflicting.  `pr_head_moved`: the PR's head SHA
-      differs from --head.
+      A MERGED PR is `merged` only when its head SHA equals --head and its
+      base branch equals B; otherwise it is a `pr_head_moved` stop.  For any
+      other PR: closed, draft, conflicting, then `pr_head_moved` when its
+      head SHA differs from --head or its base branch differs from B (the
+      detail names both).  Mergeability MERGEABLE or UNKNOWN counts as not
+      conflicting.
 
 Exit codes: 0 when a decision was produced (stop outcomes included); 2 for
 missing or malformed arguments; 1 for an internal failure (gh output that is
@@ -174,13 +180,14 @@ def build_parser():
     p.add_argument("--repo", required=True, type=arg_repo)
     p.add_argument("--feature", required=True, type=arg_feature)
     p.add_argument("--base", required=True, type=arg_branch)
+    p.add_argument("--integration-tip", required=True, type=arg_sha)
 
     p = sub.add_parser("state", allow_abbrev=False)
     p.add_argument("--project-root", required=True, type=arg_dir)
     p.add_argument("--repo", required=True, type=arg_repo)
     p.add_argument("--pr", required=True, type=arg_pr)
     p.add_argument("--head", required=True, type=arg_sha)
-    p.add_argument("--base", required=False, default=None, type=arg_branch)
+    p.add_argument("--base", required=True, type=arg_branch)
     return parser
 
 
@@ -382,9 +389,9 @@ def parse_pr(raw, with_branches):
     pr["merge_commit"] = parse_merge_commit(
         raw.get("mergeCommit"), required=pr["state"] == "MERGED"
     )
+    pr["base_ref"] = need("baseRefName", lambda v: isinstance(v, str), "string")
     if with_branches:
         pr["head_ref"] = need("headRefName", lambda v: isinstance(v, str), "string")
-        pr["base_ref"] = need("baseRefName", lambda v: isinstance(v, str), "string")
         pr["cross_repo"] = need(
             "isCrossRepository", lambda v: isinstance(v, bool), "boolean"
         )
@@ -429,6 +436,12 @@ def cmd_resolve(args):
     prs = [
         p for p in prs
         if p["head_ref"] == branch and p["base_ref"] == args.base and not p["cross_repo"]
+    ]
+    # A MERGED PR counts only when it merged the commit this run is about to
+    # merge (or has just merged); an earlier one hides commits added after it.
+    prs = [
+        p for p in prs
+        if p["state"] != "MERGED" or p["head_sha"] == args.integration_tip
     ]
 
     def newest(state, draft=None):
@@ -476,6 +489,11 @@ def cmd_resolve(args):
 # --- state -------------------------------------------------------------------
 
 
+def shown(branch):
+    """A branch name taken from gh output, bounded for the free-text `detail`."""
+    return branch if len(branch) <= 255 else branch[:255] + "..."
+
+
 def cmd_state(args):
     doc = gh_json(
         [
@@ -488,12 +506,25 @@ def cmd_state(args):
     if doc is None:
         raise InternalFailure("gh pr view failed")
     pr = parse_pr(doc, with_branches=False)
-    base_ref = doc.get("baseRefName") if isinstance(doc, dict) else None
     if pr["number"] != args.pr:
         raise InternalFailure("gh returned a different PR than requested")
 
     num, url = pr["number"], pr["url"]
     if pr["state"] == "MERGED":
+        if pr["head_sha"] != args.head:
+            return stop(
+                "pr_head_moved",
+                "PR #%d is merged with head %s, expected %s"
+                % (num, pr["head_sha"], args.head),
+                pr_url=url,
+            )
+        if pr["base_ref"] != args.base:
+            return stop(
+                "pr_head_moved",
+                "PR #%d was merged into %s, expected %s"
+                % (num, shown(pr["base_ref"]), args.base),
+                pr_url=url,
+            )
         return result("merged", pr_url=url, merge_commit=pr["merge_commit"])
     if pr["state"] != "OPEN":
         return stop("pr_closed", "PR #%d is not open" % num, pr_url=url)
@@ -507,10 +538,10 @@ def cmd_state(args):
             "PR #%d head is %s, expected %s" % (num, pr["head_sha"], args.head),
             pr_url=url,
         )
-    if args.base is not None and base_ref != args.base:
+    if pr["base_ref"] != args.base:
         return stop(
             "pr_head_moved",
-            "PR #%d base is %s, expected %s" % (num, base_ref, args.base),
+            "PR #%d base is %s, expected %s" % (num, shown(pr["base_ref"]), args.base),
             pr_url=url,
         )
     return result("ready", pr_url=url, head=pr["head_sha"])
