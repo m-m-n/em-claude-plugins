@@ -1,11 +1,11 @@
 schema_version: 1
 feature: cd-prefix-canonical-path-only
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: e9499d39b9762f4e95df029526a3ce199a1b36b8
-last_input_digest: sha256:5559110c7c20161ffa84179f108bad97a4b593cb5782964e0faff057e2388e5c
-active_request_id: create-spec-run-0001
+last_input_digest: sha256:4dbc2a44193a9b50bf0fb11210e2c8e1887e07bae89c79c9e35f89142189c7a1
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     status: answered
@@ -111,6 +111,45 @@ worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
   input_digest: sha256:5559110c7c20161ffa84179f108bad97a4b593cb5782964e0faff057e2388e5c
+  output_digest: null
+  dispatch_digest_inputs:
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    em-workflow/agents/implementer.md: sha256:71bff90604d60bc450632939c05b34ed218d7a6bdfb6b55643147d5a194d6a9d
+    em-workflow/hooks/bash_guard.py: sha256:84a47fc81ccde0300b73c210b882b5977740ed56160b14db136fb411a60c9459
+    em-workflow/hooks/cross-repo-write-guard.py: sha256:0b59a1e610ca276aa47b4b9e1a6f2e271e7d1c0dc89014bb431dee11ef747bf4
+    em-workflow/references/command-execution-protocol.md: sha256:bffd4d2e800a3b34ab97e87f9996624eb97dbbdfdd260208a747dcf0c37148d6
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
+    em-workflow/references/implement-phase.md: sha256:3cc151b20a6c5ceff0c1e3c4e245ed41c1a2c91091010ea3d5d7a8d1547759c6
+    em-workflow/skills/worktree-task-workflow/SKILL.md: sha256:1fccf29c2fc99c06dab47aad170681e1639c9477a2e9b82adbf35688d2632f77
+    feature-docs/cd-prefix-process-dependent-paths/SPEC.md: sha256:299452aa47bd1f5bf6456310751c30226516445f57367a3917332b83885c4ab5
+    feature-docs/cd-prefix-relative-link-target/SPEC.md: sha256:7ce86c03a8ac93dcea5614aacfd37fd6f9eac7447eef8a8ad1e67c54787e3666
+    feature-docs/implementer-cd-verbatim-conflict/SPEC.md: sha256:2f22ad1ae6ffc2dcf80f07c55e5c64274d2c3ab0da65db65a3e7b1fd1f7766ea
+    feature-docs/is-below-physical-fallback/SPEC.md: sha256:fef39b7e7636863b43c794e30272e6c853153f492ca05ceb6dd639fc51033b04
+    feature-docs/is-below-stalled-walk-proc-read/SPEC.md: sha256:20ed761687341b91f5c4e5eff4621f9a9e2843a41e43740744183bae5bc5874c
+    test-docs/cd-prefix-excluded-build-format-tests/task0001.tests.yaml: sha256:98bcd3086bedc0e25ff9f347105a21c023bec7b8b6583ece94a7f4f4dfd76c65
+    test-docs/cd-prefix-non-directory-dotdot/task0001.tests.yaml: sha256:8d1b904a35dc1def2c2bcbf86bb480f51bed18b6b4ef6a46919d1be6a20ef095
+    test-docs/cd-prefix-process-dependent-paths/task0001.tests.yaml: sha256:c13de2dafe9366ee97c8f1bbad8b952d53d96eae9e4ae112239dacf536fc39c8
+    test-docs/cd-prefix-process-dependent-paths/task0002.tests.yaml: sha256:1e6d5f4bf7340043ecd90f48097ddd5ae6e08ab4988496ac47ffbf262271fba0
+    test-docs/cd-prefix-relative-link-target/task0001.tests.yaml: sha256:85467e0c2323d35cc1aaaee9ff3c7f9bf800ca18affc534e9d753616b2fc843d
+    test-docs/cd-prefix-toplevel-operators/task0001.tests.yaml: sha256:0d6fa45faf10c11c66a1f2f4d91c2f7fe4a86238e6b97c58423da4d16f90fa17
+    test-docs/cd-prefix-toplevel-operators/task0002.tests.yaml: sha256:a232004fa200adf379df4186863f0b2879140147d7c45cb0d8cb28fe9e03d28b
+    test-docs/cd-prefix-toplevel-operators/task0003.tests.yaml: sha256:30cd7f86e316f7df245e41a6f6762c5d50571b4bae4906fd629de53ce398fea4
+    test-docs/implementer-cd-verbatim-conflict/task0001.tests.yaml: sha256:dd94d0c1402fbb27a351e4180f0cb27a244949e7faa1dee8a115daddb12d02c1
+    test-docs/implementer-cd-verbatim-conflict/task0002.tests.yaml: sha256:082aba51effb92baee368db260c5994a4ac87157905c8fd916e9885c6deb40b9
+    test-docs/implementer-cd-verbatim-conflict/task0003.tests.yaml: sha256:c5c775510ff24eeec160f762f06813d1ee8c1db9f522b8f4d062858521a35ae0
+    test-docs/is-below-physical-fallback/task0001.tests.yaml: sha256:bfbe272c664a7dbe2c3cdc46d6d1b69ded86d903af527abd2786f72a7c44d1dd
+    test-docs/is-below-stalled-walk-proc-read/task0001.tests.yaml: sha256:f47f5374499212fc1b1ca260de8110162e79fa449b7d4372eaa2e253fc52ab3c
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+    tests/test_bash_guard_cd_prefix.py: sha256:4d51713c77fcc8ba2d2f7e6f65b8ccc345c650801d0d96d30758aed8442a9186
+    tests/test_bash_guard_cd_prefix_operators.py: sha256:3def7791ec5219dac6571c2272e80b6cd068400338a52470b727663f5d84150b
+    tests/test_cd_prefix_operator_exclusion_docs.py: sha256:c599b5e75af0fa04dd08a638f86ede927d9444d279f8f53ab95b907cb3474b95
+    tests/test_cross_repo_write_guard.py: sha256:737e979528e1a8c12f70a23125a29cab2a4b6f13c8d2eb9e0f9301c378893802
+    tests/test_implementer_cd_prefix_build_format_docs.py: sha256:c9d81ad7ae911de41c9a44174c574d9a15b6f8b83f70730a9dba6116229c89d0
+    tests/test_implementer_cd_prefix_exclusion_docs.py: sha256:055f2f254d7eb525a7fdc8becd13d41198ad1ba929610135a89fc0ea6869a337
+    tests/test_tests_yaml_id_resolution.py: sha256:0a3efad228d09365da06eb47b32f25247b98156e8aaa61fdf396475d3656713f
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:4dbc2a44193a9b50bf0fb11210e2c8e1887e07bae89c79c9e35f89142189c7a1
   output_digest: null
   dispatch_digest_inputs:
     CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
