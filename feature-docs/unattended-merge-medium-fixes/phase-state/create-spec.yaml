@@ -1,16 +1,111 @@
 schema_version: 1
 feature: unattended-merge-medium-fixes
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: 81eca035a5666d20a94040e3cc56ecfb3e881bd7
 last_input_digest: sha256:8e8d7fc75fff81ee0e01d4d87a9e63a69e271d97f267235f9820bd700fd62aa8
 active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-11-01T00:13:31+09:00'
+    questions:
+    - question_id: requirement.fr5.gh-write-repo-scope
+      status: answered
+    - question_id: requirement.fr1.post-merge-parent-mismatch
+      status: answered
+    - question_id: requirement.fr4.trailing-newline
+      status: answered
+    - question_id: requirement.prior-feature-docs
+      status: answered
+    - question_id: requirement.review-split-target
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+answers:
+  requirement.fr5.gh-write-repo-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-01T00:13:31+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - script_reads_only
+    freeform: null
+    normalized_answer: スクリプトの --repo（merge-pr.py resolve/state、merge-ci-wait.py）にだけ
+      HOST/OWNER/NAME を渡す。gh pr create / gh pr merge は既定リポジトリのまま（ホストまで一致を確認済み）
+    resolution_note: 'gate create-spec.requirement-clarification; policy action codex_consultation;
+      codex(1 turn) suggested script_reads_only: merge_pr_allow.py:72 の正規形に --repo
+      を足すと許可条件の変更になる。merge-pr.py:340 の比較をホスト込みにすれば書き込み側の宛先も担保される; orchestrator mapped
+      to script_reads_only (agrees with worker recommendation); opus escalation not
+      run'
+  requirement.fr1.post-merge-parent-mismatch:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-01T00:13:31+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - merged_with_detail
+    freeform: null
+    normalized_answer: 第 2 親が head_sha と一致しない・読めないときも merged のまま detail に不一致を記す
+    resolution_note: 'gate create-spec.requirement-clarification; policy action codex_consultation;
+      codex(1 turn) suggested merged_with_detail: マージ済みの実状態を保つ。merge-result.md:60
+      で not_merged は未マージを意味する。merge-result.py:267 は任意の detail を受け付ける; orchestrator
+      mapped to merged_with_detail (agrees with worker recommendation); opus escalation
+      not run'
+  requirement.fr4.trailing-newline:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-01T00:13:31+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - keep_newline_rejection
+    freeform: null
+    normalized_answer: 改行・CR の判定は生の値のまま行い、末尾改行を含むコマンドは未承認のまま
+    resolution_note: 'gate create-spec.requirement-clarification; policy action codex_consultation;
+      codex(1 turn) suggested keep_newline_rejection: merge-preflight.py:407 は改行を明示的に拒否し、tests/test_merge_preflight.py:1060
+      がそれを固定している; orchestrator mapped to keep_newline_rejection (agrees with worker
+      recommendation); opus escalation not run'
+  requirement.prior-feature-docs:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-01T00:13:31+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - leave_prior_docs
+    freeform: null
+    normalized_answer: feature-docs/unattended-merge/ の文書は改めず、この feature の文書にだけ記録する
+    resolution_note: 'gate create-spec.requirement-clarification; policy action codex_consultation;
+      codex(1 turn) suggested leave_prior_docs: SPEC.md:69/74 と THREAT-MODEL.md:85
+      は維持される方向の修正なので、追加条件は今回の文書に記録する; orchestrator mapped to leave_prior_docs (agrees
+      with worker recommendation); opus escalation not run'
+  requirement.review-split-target:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-01T00:13:31+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - unattended_merge_and_this
+    freeform: null
+    normalized_answer: unattended-merge の round2 scope.changed_files とこの feature の差分を、分割して
+      architecture / spec 観点でレビューする
+    resolution_note: 'gate create-spec.requirement-clarification; policy action codex_consultation;
+      codex(1 turn) suggested unattended_merge_and_this: round2.yaml:82,197 は分割した再レビューで網羅性を補うよう求めている;
+      orchestrator mapped to unattended_merge_and_this (agrees with worker recommendation);
+      opus escalation not run'
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-01T00:13:31+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 'design_step_recommendation (skip: UI 変更なし) を採用'
+    resolution_note: batch-policies.yaml create-spec.design-step -> decide_autonomously
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:8e8d7fc75fff81ee0e01d4d87a9e63a69e271d97f267235f9820bd700fd62aa8
   dispatch_digest_inputs:
     CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
