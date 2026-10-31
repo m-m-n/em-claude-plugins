@@ -39,7 +39,9 @@ Decision tiers:
   allow — everything else, when ALLOW_NON_DESTRUCTIVE is on
 
 One narrow exception sits in the ask tier: the canonical `gh pr merge` run
-from an em-workflow integration worktree is allowed (see MERGE_PR_NUMBER).
+from an em-workflow integration worktree is allowed. Its rule lives in the
+sibling module merge_pr_allow.py, which this hook loads (see
+load_merge_exception()); without that module there is no exception.
 
 Process termination (kill / pkill / killall) is NOT handled here — that is
 kill-guard.py's job, and it runs as a separate PreToolUse hook. The same
@@ -52,6 +54,7 @@ Output: a PreToolUse permission decision on stdout; exit 0 either way.
 
 import bisect
 import collections
+import importlib.util
 import json
 import os
 import re
@@ -8697,138 +8700,83 @@ def check_self_modification(word, args, redirects, segment, lexed):
             )
 
 
-# The one `gh pr merge` shape that is allowed (em-workflow's unattended merge
-# skill, IMPLEMENTATION.md C9): exactly these seven tokens, in this order,
-# run from an integration worktree.
-#
-#     gh pr merge <PR number> --merge --match-head-commit <40-hex SHA>
-#
-# The head-commit pin makes GitHub refuse the merge if the PR moved after it
-# was verified. Every other `gh pr merge` keeps the `ask` in check_external()
-# (`deny` in an unattended run), including the same words with one more
-# token, an environment prefix, or from any other directory.
-MERGE_PR_NUMBER = re.compile(r"[1-9][0-9]*")
-MERGE_HEAD_SHA = re.compile(r"[0-9a-f]{40}")
-MERGE_FEATURE = re.compile(r"[a-z0-9][a-z0-9-]*")
-MERGE_WORKTREE_PREFIX = (".claude", "worktrees", "em-workflow")
-
-# Statements that change what a later `gh` in the same command would act on:
-# the directory it runs in (cd, pushd, popd) or the environment it reads
-# (GH_REPO, GH_HOST, ...). The canonical merge is only allowed without them
-# in the same command, since the cwd check and the no-prefix rule would
-# otherwise be sidestepped by writing the same thing as a separate statement.
+# Statements that change what a later command in the same command string would
+# act on: the directory it runs in (cd, pushd, popd) or the environment it
+# reads (GH_REPO, GH_HOST, ...). A statement that is allowed because of its own
+# tokens and the working directory would otherwise be sidestepped by writing
+# the same thing as a separate statement; changes_context() reports the fact to
+# the exception module (see MERGE_EXCEPTION_MODULE), which ends the exception
+# when it holds.
 CONTEXT_COMMANDS = frozenset(
     {"cd", "pushd", "popd", "export", "declare", "typeset", "readonly", "unset",
      "alias", "source", "."}
 )
 
+# The one exception to the ask on a PR merge (em-workflow's unattended merge
+# skill, IMPLEMENTATION.md C9) is decided by the module named here, which sits
+# next to this file: the command form it recognises, the working directory it
+# requires and its policy on other statements all live there. This file passes
+# it what it already computes (a statement's tokens, the payload's working
+# directory, the statement count and the context-change fact) and holds none of
+# that rule itself.
+MERGE_EXCEPTION_MODULE = "merge_pr_allow.py"
+MERGE_EXCEPTION_FUNCTIONS = ("allows_statement", "keeps_exception")
 
-def is_canonical_merge(toks, lexed):
-    """Whether one statement is exactly the canonical merge command and
-    nothing else: TOKS is the statement's whole token list, so a redirect, an
-    environment prefix, a wrapper, a grouping token or any extra word makes
-    it differ. A token built from a command substitution (its text is not
-    the value bash passes), or carrying a trailing carriage return, never
-    matches. A statement of a chunk that would not lex (LEXED false) has no
-    token provenance and is not matched."""
-    if not lexed or len(toks) != 7:
-        return False
-    if any(
-        getattr(t, "is_operator", False)
-        or getattr(t, "unresolved", False)
-        or getattr(t, "substitution_only", False)
-        or getattr(t, "trailing_cr", "")
-        for t in toks
-    ):
-        return False
-    gh, pr, merge, number, merge_flag, pin, sha = toks
-    return (
-        (gh, pr, merge, merge_flag, pin)
-        == ("gh", "pr", "merge", "--merge", "--match-head-commit")
-        and MERGE_PR_NUMBER.fullmatch(number) is not None
-        and MERGE_HEAD_SHA.fullmatch(sha) is not None
-    )
+# The loaded module, or None when it could not be loaded. An empty list means
+# it has not been tried yet.
+_merge_exception_cache = []
 
 
-def is_integration_worktree_cwd(cwd):
-    """Whether CWD is an em-workflow integration worktree or somewhere below
-    it: an absolute path holding `.claude/worktrees/em-workflow/<feature>/
-    integration` (<feature> a valid feature name, the next segment exactly
-    `integration`) with nothing after it that climbs out again.
+def load_merge_exception():
+    """The module named by MERGE_EXCEPTION_MODULE that sits next to the
+    destructive-guard.py file actually running, or None.
 
-    `.` segments are dropped. A `..` before the end of the shape means the
-    path only reaches it by way of the climb, and one after it that leaves
-    the worktree means the directory is somewhere else: neither counts. A
-    `..` after the shape that stays inside the worktree does. Only the path
-    string is read; nothing is looked up on disk.
-    """
-    if not isinstance(cwd, str) or not cwd.startswith("/"):
-        return False
-    segs = [s for s in cwd.split("/") if s not in ("", ".")]
-    for i in range(len(segs) - 4):
-        if tuple(segs[i : i + 3]) != MERGE_WORKTREE_PREFIX:
-            continue
-        if MERGE_FEATURE.fullmatch(segs[i + 3]) is None or segs[i + 4] != "integration":
-            continue
-        if ".." in segs[:i]:
-            continue
-        depth = 0
-        for seg in segs[i + 5 :]:
-            depth += -1 if seg == ".." else 1
-            if depth < 0:
-                break
-        else:
-            root = "/" + "/".join(segs[: i + 5])
-            project = "/" + "/".join(segs[:i])
-            # Below the root, any directory with its own `.git` (nested clone,
-            # submodule) or any symlink is a different repository: no exception.
-            rest = []
-            for seg in segs[i + 5 :]:
-                if seg == "..":
-                    rest.pop()
-                else:
-                    rest.append(seg)
-            cur = root
-            try:
-                for seg in rest:
-                    cur = os.path.join(cur, seg)
-                    if os.path.islink(cur) or os.path.lexists(os.path.join(cur, ".git")):
-                        return False
-            except Exception:
-                return False
-            return _is_registered_integration_worktree(root, project, segs[i + 3])
-    return False
-
-
-def _is_registered_integration_worktree(root, project, feature):
-    """On-disk check behind is_integration_worktree_cwd(): ROOT's `.git` is a
-    regular file (not a symlink) whose `gitdir:` resolves to a direct child of
-    PROJECT's `.git/worktrees/`, and that gitdir's HEAD is the feature's
-    integration branch. Any failure or exception means False (ask)."""
+    A copy of this file checked elsewhere uses its own sibling. The module is
+    loaded straight from its path (it is not put on sys.path or in
+    sys.modules) and no bytecode cache is written for it. A module that is
+    missing, raises while loading (SystemExit included) or lacks the functions
+    named in MERGE_EXCEPTION_FUNCTIONS gives None, and then no statement has
+    the exception: every PR merge keeps its ask. No other verdict depends on
+    the module, and the hook does not fail."""
+    if _merge_exception_cache:
+        return _merge_exception_cache[0]
+    module = None
+    saved = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
     try:
-        git_file = os.path.join(root, ".git")
-        if os.path.islink(git_file) or not os.path.isfile(git_file):
-            return False
-        with open(git_file, "r", encoding="utf-8") as f:
-            content = f.read(4096)
-        line = content.strip()
-        if "\n" in line or not line.startswith("gitdir:"):
-            return False
-        gitdir = line[len("gitdir:"):].strip()
-        if not gitdir:
-            return False
-        if not os.path.isabs(gitdir):
-            gitdir = os.path.join(root, gitdir)
-        gitdir = os.path.realpath(gitdir)
-        worktrees = os.path.realpath(os.path.join(project, ".git", "worktrees"))
-        if os.path.dirname(gitdir) != worktrees or not os.path.isdir(gitdir):
-            return False
-        head_path = os.path.join(gitdir, "HEAD")
-        if os.path.islink(head_path) or not os.path.isfile(head_path):
-            return False
-        with open(head_path, "r", encoding="utf-8") as f:
-            head = f.read(4096).strip()
-        return head == f"ref: refs/heads/em-workflow/{feature}/integration"
+        path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), MERGE_EXCEPTION_MODULE
+        )
+        spec = importlib.util.spec_from_file_location("merge_pr_allow", path)
+        candidate = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(candidate)
+        if all(callable(getattr(candidate, n, None)) for n in MERGE_EXCEPTION_FUNCTIONS):
+            module = candidate
+    except (Exception, SystemExit):
+        module = None
+    finally:
+        sys.dont_write_bytecode = saved
+    _merge_exception_cache.append(module)
+    return module
+
+
+def exception_allows(exception, toks, lexed, cwd):
+    """Whether EXCEPTION (the loaded module, or None) lets one statement
+    through. A module that fails while judging gives False."""
+    if exception is None:
+        return False
+    try:
+        return bool(exception.allows_statement(toks, lexed, cwd))
+    except Exception:
+        return False
+
+
+def exception_stands(exception, statement_count, context_changed):
+    """Whether the exception stands for the command as a whole, after one of
+    its statements got it. A module that fails while judging gives False (the
+    command asks)."""
+    try:
+        return bool(exception.keeps_exception(statement_count, context_changed))
     except Exception:
         return False
 
@@ -9196,13 +9144,15 @@ def main(payload):
     # a subscript's `]` (statements() leaves them out and reports them here).
     unsettled = []
 
-    # The canonical `gh pr merge` (see MERGE_PR_NUMBER) is judged per
-    # statement: one found in an integration worktree is not asked about, and
-    # the rest of the command is judged as usual, so a dangerous statement
-    # beside it still decides. `context_changed` notes a statement that
-    # changes the directory or environment the merge would run in; with one
-    # present the merge falls back to its `ask` after the loop.
-    in_integration_worktree = is_integration_worktree_cwd(cwd)
+    # The exception to the PR merge ask (see MERGE_EXCEPTION_MODULE) is
+    # judged per statement: one the module lets through is not asked about,
+    # and the rest of the command is judged as usual, so a dangerous statement
+    # beside it still decides. After the loop the module says whether the
+    # exception stands for the command as a whole, given the statement count
+    # and `context_changed` (a statement changed the directory or environment
+    # a later one would run in); when it does not, the merge falls back to its
+    # `ask`. Without the module there is no exception.
+    merge_exception = load_merge_exception()
     merge_allowed_seen = False
     context_changed = False
     statement_count = 0
@@ -9292,7 +9242,7 @@ def main(payload):
                 rm_invocations.append(rm_anchor)
                 rm_records.extend(check_rm(args, rm_anchor))
         else:
-            merge_allowed = in_integration_worktree and is_canonical_merge(toks, lexed)
+            merge_allowed = exception_allows(merge_exception, toks, lexed, cwd)
             merge_allowed_seen = merge_allowed_seen or merge_allowed
             check_file_destruction(word, args, segment)
             check_external(word, args, segment, merge_allowed)
@@ -9309,7 +9259,7 @@ def main(payload):
         raise unsettled[0]
     if (
         merge_allowed_seen
-        and (context_changed or statement_count >= 2)
+        and not exception_stands(merge_exception, statement_count, context_changed)
         and (top is None or top[0] != "deny")
     ):
         decide(

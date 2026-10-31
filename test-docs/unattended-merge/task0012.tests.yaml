@@ -1,0 +1,140 @@
+task_id: task0012
+baseline_failures:             # 4a: python3 -m unittest discover -s tests, 12973 tests, failures=10 (8 test methods), skipped=1
+  - test_destructive_guard_merge_allow.TestAC1CanonicalFormIsAllowed.test_ac1_allowed_from_a_subdirectory_of_the_worktree
+  - test_destructive_guard_merge_allow.TestAC1CanonicalFormIsAllowed.test_ac1_allowed_from_the_integration_worktree
+  - test_destructive_guard_merge_allow.TestAC3LaterSegmentsAreStillJudged.test_ac3_a_harmless_segment_does_not_change_the_allow
+  - test_destructive_guard_merge_allow.TestAC3LaterSegmentsAreStillJudged.test_ac3_force_push_after_the_merge_is_denied
+  - test_destructive_guard_merge_allow.TestAC3LaterSegmentsAreStillJudged.test_ac3_recursive_delete_after_the_merge_is_denied
+  - test_destructive_guard_merge_allow.TestAC4WorkingDirectoryShape.test_ac4_a_climb_that_stays_inside_the_worktree_is_normalized
+  - test_destructive_guard_command_substitution.TestSourceHygieneAndDeterminism.test_no_new_filesystem_or_subprocess_calls
+  - test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+final_failures: []             # re-run after the implementation and this record: python3 -m unittest discover -s tests, 13011 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_merge_allow.TestTask0012AC1ModuleSeparation.test_ac1_the_guard_holds_no_merge_specific_string
+      - tests.test_destructive_guard_merge_allow.TestTask0012AC1ModuleSeparation.test_ac1_the_guard_defines_none_of_the_moved_functions
+      - tests.test_destructive_guard_merge_allow.TestTask0012AC1ModuleSeparation.test_ac1_the_guard_consults_the_module
+      - tests.test_destructive_guard_merge_allow.TestTask0012AC1ModuleSeparation.test_ac1_the_module_holds_the_canonical_form_and_the_registration_check
+      - tests.test_destructive_guard_merge_allow.TestTask0012AC1ModuleSeparation.test_ac1_the_module_is_not_registered_as_a_hook
+      - tests.test_destructive_guard_merge_allow.TestTask0012ModuleInterface
+    red_confirmed: true
+    red_reason: >-
+      Before the implementation destructive-guard.py still held the merge
+      rule and merge_pr_allow.py did not exist: the string tests failed with
+      "'--match-head-commit' unexpectedly found in" the guard source (and the
+      same for 'refs/heads/em-workflow/'), the function-definition test failed
+      for the three moved names, the module test failed because the module
+      file was absent, and the module-interface class errored in setUpClass
+      with FileNotFoundError for merge_pr_allow.py. Two mutants of the new
+      module (the registration check always true, the sole-statement policy
+      always true) each made this module's tests fail.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_merge_allow.TestTask0012AC2RunnerFixture.test_ac2_the_placeholder_is_replaced_by_a_registered_worktree_made_once
+      - tests.test_destructive_guard_merge_allow.TestTask0012AC2RunnerFixture.test_ac2_two_runs_do_not_share_a_fixture
+      - tests.test_destructive_guard_merge_allow.TestTask0012AC2RunnerFixture.test_ac2_a_run_without_the_placeholder_builds_no_fixture
+      - tests.test_destructive_guard_merge_allow.TestTask0012AC2RunnerFixture.test_ac2_every_integration_path_working_directory_uses_the_placeholder
+      - tests.test_destructive_guard_merge_allow.TestTask0012AC2RunnerFixture.test_ac2_the_allow_cases_use_the_placeholder_for_root_and_subdirectory
+      - tests.test_destructive_guard_merge_allow.TestTask0012AC2RunnerFixture.test_ac2_the_allow_cases_pass_through_the_runner_against_the_real_guard
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >-
+      Before the change python3 em-workflow/hooks/tests/run-destructive-guard.py
+      exited 1 with 15 FAIL lines (the merge cases named a fixed fake
+      directory that no longer passes the registration check); the baseline
+      run of test_runner_reports_every_case_passing failed for that reason.
+      Against the unchanged runner the placeholder tests failed with
+      "'{merge_fixture}' unexpectedly found in
+      '{merge_fixture}/.claude/worktrees/em-workflow/demo/integration'", and
+      against the unchanged cases file the placeholder-usage test failed once
+      per merge case that still named the fixed path (179 subtests).
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_merge_allow.TestTask0012AC3UnregisteredDirectory.test_ac3_a_plain_directory_of_the_same_shape_asks
+      - tests.test_destructive_guard_merge_allow.TestTask0012AC3UnregisteredDirectory.test_ac3_a_worktree_on_another_branch_asks
+      - tests.test_destructive_guard_merge_allow.TestTask0012AC3UnregisteredDirectory.test_ac3_a_directory_that_does_not_exist_asks
+      - tests.test_destructive_guard_merge_allow.TestTask0012AC3UnregisteredDirectory.test_ac3_a_nested_repository_below_the_worktree_asks
+      - tests.test_destructive_guard_merge_allow.TestTask0012AC3UnregisteredDirectory.test_ac3_a_symlinked_directory_below_the_worktree_asks
+      - tests.test_destructive_guard_merge_allow.TestTask0012AC3UnregisteredDirectory.test_ac3_the_registered_worktree_still_allows
+    red_confirmed: false
+    red_reason: >-
+      The behavior pre-existed: the unchanged guard already ran the on-disk
+      registration check and asked about a canonical merge from an
+      unregistered directory, so these tests passed against it and no red
+      state occurred for the criterion. They pin the behavior across the move
+      into merge_pr_allow.py; a mutant of the new module whose registration
+      check always returns true made test_ac3_a_worktree_on_another_branch_asks
+      fail. Existing hook cases for the shape (the runner table) are the other
+      detector; the new unregistered-directory cases there passed before the
+      change as well.
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_merge_allow.TestTask0012AC4SoleStatement.test_ac4_a_harmless_statement_after_the_merge_asks
+      - tests.test_destructive_guard_merge_allow.TestTask0012AC4SoleStatement.test_ac4_a_harmless_statement_before_the_merge_asks
+      - tests.test_destructive_guard_merge_allow.TestTask0012AC4SoleStatement.test_ac4_a_force_push_after_the_merge_gets_its_own_decision
+      - tests.test_destructive_guard_merge_allow.TestTask0012AC4SoleStatement.test_ac4_a_recursive_delete_after_the_merge_gets_its_own_decision
+      - tests.test_destructive_guard_merge_allow.TestTask0012AC4SoleStatement.test_ac4_the_merge_alone_is_still_allowed
+      - tests.test_destructive_guard_merge_allow.TestAC3LaterSegmentsAreStillJudged.test_ac3_a_harmless_segment_makes_the_merge_ask
+    red_confirmed: false
+    red_reason: >-
+      The behavior pre-existed: the unchanged guard already fell back to ask
+      for a canonical merge that shares its command with another statement
+      (statement count of two or more) and let a force push or a recursive
+      delete decide for itself, so the new tests passed against it. What
+      failed before the change was the stale expectation of the old test
+      test_ac3_a_harmless_segment_does_not_change_the_allow (and its hook
+      case), which asserted allow; they now assert ask. A mutant of the new
+      module whose sole-statement policy always keeps the exception made the
+      harmless-statement tests (before and after the merge) fail.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_merge_allow.TestTask0012AC5ModuleLoadFailure.test_ac5_the_intact_copy_allows_the_merge
+      - tests.test_destructive_guard_merge_allow.TestTask0012AC5ModuleLoadFailure.test_ac5_the_merge_asks_and_is_denied_in_a_batch
+      - tests.test_destructive_guard_merge_allow.TestTask0012AC5ModuleLoadFailure.test_ac5_other_verdicts_are_unchanged
+      - tests.test_destructive_guard_merge_allow.TestTask0012AC5ModuleLoadFailure.test_ac5_a_copy_uses_its_own_sibling_module
+    red_confirmed: true
+    red_reason: >-
+      Against the unchanged guard (the merge rule inside it, no sibling
+      module) a copy with merge_pr_allow.py removed, or replaced by a file
+      that raises, exits, has a syntax error or lacks the functions, still
+      allowed the canonical merge from the registered worktree:
+      test_ac5_the_merge_asks_and_is_denied_in_a_batch failed for all five
+      variants with "AssertionError: 'allow' != 'ask'", and
+      test_ac5_a_copy_uses_its_own_sibling_module failed the same way. The
+      intact-copy test errored because the module file did not exist yet.
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_merge_allow.TestTask0012AC6NoBytecodeCache.test_ac6_the_hook_loads_the_module_without_writing_a_cache
+      - tests.test_destructive_guard_merge_allow.TestTask0012AC6NoBytecodeCache.test_ac6_no_cache_of_the_module_exists_in_the_repository
+    red_confirmed: true
+    red_reason: >-
+      Before the implementation the first test errored (FileNotFoundError:
+      the module to copy next to the guard did not exist), so the check could
+      not pass. The second test, a read of the repository for any cache of the
+      module, passed before the change because no module existed. After the
+      change the hook loaded from a temporary copy without
+      PYTHONDONTWRITEBYTECODE leaves no __pycache__ there, and after the runner
+      and this test module have run alone no __pycache__ exists under
+      em-workflow/hooks/. A full-suite run leaves
+      em-workflow/hooks/__pycache__/destructive-guard*.pyc written by other,
+      unrelated test modules that import the guard; the repository-wide test
+      therefore looks only for the merge module's cache.
+  AC-7:
+    tests:
+      - tests.test_destructive_guard_merge_allow.TestTask0012AC7Docs.test_ac7_the_rule_describes_the_placeholder_and_the_fixture
+      - tests.test_destructive_guard_merge_allow.TestTask0012AC7Docs.test_ac7_the_runner_documents_the_placeholder
+      - tests.test_destructive_guard_merge_allow.TestAC6ExistingCasesAndDocs.test_ac6_every_pre_existing_case_is_present_and_unchanged
+      - tests.test_destructive_guard_merge_allow.TestAC6ExistingCasesAndDocs.test_ac6_case_format_rule_describes_the_optional_element
+      - tests.test_destructive_guard_command_substitution.TestSourceHygieneAndDeterminism.test_no_new_filesystem_or_subprocess_calls
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >-
+      Before the change the full suite had 10 failing lines (8 test methods,
+      listed under baseline_failures), among them
+      test_no_new_filesystem_or_subprocess_calls (the guard source held
+      os.path.realpath() in the moved registration check) and
+      test_runner_reports_every_case_passing. The two document tests failed
+      with "'{merge_fixture}' not found in" the rule text, and the runner
+      docstring test failed for the same reason. The pre-existing-cases digest
+      test passed before and after (the 942 earlier cases are untouched).
