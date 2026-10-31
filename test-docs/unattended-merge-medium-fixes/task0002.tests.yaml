@@ -1,0 +1,57 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_merge_preflight.TestCommandApproval.test_fr4_ac1_leading_or_trailing_blanks_are_approved_by_a_trimmed_entry
+      - tests.test_merge_preflight.TestCommandApproval.test_fr4_ac1_the_emitted_command_is_the_untrimmed_original_in_every_field
+      - tests.test_merge_preflight.TestCommandApproval.test_fr4_ac1_a_trimmed_command_is_not_approved_by_an_unrelated_entry
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-change script, the trailing blank, leading blank,
+      leading and trailing blanks, trailing tab, leading tab and
+      leading and trailing tabs cases each failed with "AssertionError: 'stop'
+      != 'proceed'" (reason commands_unapproved, detail naming
+      main.test_command), and the every-field test failed the same way naming
+      main.build_command, main.test_command and main.e2e_test_command. The
+      unrelated-entry test is a negative guard that passed before the change.
+  AC-2:
+    tests:
+      - tests.test_merge_preflight.TestCommandApproval.test_fr4_ac2_a_line_break_or_cr_still_stops_even_when_the_trimmed_value_is_approved
+      - tests.test_merge_preflight.TestCommandApproval.test_fr4_ac2_inner_whitespace_is_still_an_exact_match
+      - tests.test_merge_preflight.TestCommandApproval.test_fr4_ac2_the_stop_names_only_the_unapproved_field
+      - tests.test_merge_preflight.TestCommandApproval.test_fr4_ac2_a_stored_entry_with_blanks_is_matched_by_its_trimmed_form
+    red_confirmed: false
+    red_reason: >-
+      The line-break, CR and inner-whitespace stops are behavior the
+      pre-change script already had, so the first two tests passed before the
+      change and no red state occurred for them; they guard the change against
+      loosening those stops. A mutation run (trimming before the line-break
+      check and normalizing inner whitespace) made both fail, and the original
+      script was restored afterwards. The other two tests did fail against the
+      pre-change script ("AssertionError: 'stop' != 'proceed'" on the
+      fields whose only difference was a leading or trailing blank).
+  AC-3:
+    tests:
+      - tests.test_merge_preflight.TestCommandApproval.test_fr4_ac3_preflight_agrees_with_bash_guards_own_approval_decision
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-change script the test failed for every case that had a
+      leading or trailing blank and a trimmed-approved value (for example
+      'make test ', ' make test', '  go test ./...  ', '\tmake test\t'):
+      bash_guard.py allowed the command while preflight stopped
+      commands_unapproved ("preflight and bash_guard.py disagree on ...").
+  AC-4:
+    tests:
+      - tests.test_merge_preflight.TestCommandApproval.test_fr4_ac1_leading_or_trailing_blanks_are_approved_by_a_trimmed_entry
+      - tests.test_merge_preflight.TestCommandApproval.test_fr4_ac3_preflight_agrees_with_bash_guards_own_approval_decision
+      - tests.test_merge_preflight
+    red_confirmed: true
+    red_reason: >-
+      The test that asserted a leading or trailing blank is not approved by a
+      stripped entry was replaced by the AC-1 expectation. Against the
+      pre-change script the AC-1 and AC-3 tests failed (see AC-1 and AC-3);
+      the rest of the module, which holds the exact inner match, multi-line,
+      non-string, invalid component, approval-checked-last, store-not-written
+      and list-call-failure tests, passed unchanged both before and after.

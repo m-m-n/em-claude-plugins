@@ -1,0 +1,12 @@
+schema_version: 1
+feature: unattended-merge-medium-fixes
+records:
+  - question_id: review.split-targets
+    packet_id: null
+    answered_at: "2026-11-01T01:40:00+09:00"
+    source: codex
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "FR7 の分割レビューを、対象ごとの別ラウンドとして実行する"
+    normalized_answer: "round 1 はこの feature の差分に floor 全観点。round 2-7 は unattended-merge の変更（round2.yaml scope.changed_files）を現 HEAD との差分（base 8136b9a04）で 6 分割し、architecture / spec を対象ごとに 1 ラウンドずつ走らせる。spec 観点の spec_path は unattended-merge の SPEC.md とし、この feature の SPEC.md を追補として示す。SKILL.md と merge-*.py と merge-result.md は同じ対象にまとめる"
+    resolution_note: "gate: none (FR7 の実行方法の不明点); codex_consulted: true; 相談した点と結論: Q1 差分範囲 = 現 HEAD（今回の修正を含む状態を評価できる）/ Q2 spec_path = 元の SPEC + 今回の SPEC を追補 / Q3 1 観点 1 primary の規則との両立 = 対象ごとに別ラウンド（各ラウンドで通常の run_id と evaluator 1 回を使える。同一ラウンドに追加行を足す案と別ラウンド記録案を比べて Codex がこちらを選んだ）/ Q4 分割 = SKILL.md・スクリプト・merge-result.md を 1 対象（約 155K 文字、呼び出し契約をまとめて確認できる）; opus_escalation: false"

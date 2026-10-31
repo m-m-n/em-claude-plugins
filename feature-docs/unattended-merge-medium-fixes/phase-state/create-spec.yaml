@@ -1,0 +1,205 @@
+schema_version: 1
+feature: unattended-merge-medium-fixes
+phase: create-spec
+status: completed
+generation: 1
+base_revision: 81eca035a5666d20a94040e3cc56ecfb3e881bd7
+last_input_digest: sha256:8b8ba78d53d60d9a8cb69a5c5d7c306b5f77e9eefa9e709be11a536abf192212
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-11-01T00:13:31+09:00'
+    questions:
+    - question_id: requirement.fr5.gh-write-repo-scope
+      status: answered
+    - question_id: requirement.fr1.post-merge-parent-mismatch
+      status: answered
+    - question_id: requirement.fr4.trailing-newline
+      status: answered
+    - question_id: requirement.prior-feature-docs
+      status: answered
+    - question_id: requirement.review-split-target
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+answers:
+  requirement.fr5.gh-write-repo-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-01T00:13:31+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - script_reads_only
+    freeform: null
+    normalized_answer: スクリプトの --repo（merge-pr.py resolve/state、merge-ci-wait.py）にだけ
+      HOST/OWNER/NAME を渡す。gh pr create / gh pr merge は既定リポジトリのまま（ホストまで一致を確認済み）
+    resolution_note: 'gate create-spec.requirement-clarification; policy action codex_consultation;
+      codex(1 turn) suggested script_reads_only: merge_pr_allow.py:72 の正規形に --repo
+      を足すと許可条件の変更になる。merge-pr.py:340 の比較をホスト込みにすれば書き込み側の宛先も担保される; orchestrator mapped
+      to script_reads_only (agrees with worker recommendation); opus escalation not
+      run'
+  requirement.fr1.post-merge-parent-mismatch:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-01T00:13:31+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - merged_with_detail
+    freeform: null
+    normalized_answer: 第 2 親が head_sha と一致しない・読めないときも merged のまま detail に不一致を記す
+    resolution_note: 'gate create-spec.requirement-clarification; policy action codex_consultation;
+      codex(1 turn) suggested merged_with_detail: マージ済みの実状態を保つ。merge-result.md:60
+      で not_merged は未マージを意味する。merge-result.py:267 は任意の detail を受け付ける; orchestrator
+      mapped to merged_with_detail (agrees with worker recommendation); opus escalation
+      not run'
+  requirement.fr4.trailing-newline:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-01T00:13:31+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - keep_newline_rejection
+    freeform: null
+    normalized_answer: 改行・CR の判定は生の値のまま行い、末尾改行を含むコマンドは未承認のまま
+    resolution_note: 'gate create-spec.requirement-clarification; policy action codex_consultation;
+      codex(1 turn) suggested keep_newline_rejection: merge-preflight.py:407 は改行を明示的に拒否し、tests/test_merge_preflight.py:1060
+      がそれを固定している; orchestrator mapped to keep_newline_rejection (agrees with worker
+      recommendation); opus escalation not run'
+  requirement.prior-feature-docs:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-01T00:13:31+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - leave_prior_docs
+    freeform: null
+    normalized_answer: feature-docs/unattended-merge/ の文書は改めず、この feature の文書にだけ記録する
+    resolution_note: 'gate create-spec.requirement-clarification; policy action codex_consultation;
+      codex(1 turn) suggested leave_prior_docs: SPEC.md:69/74 と THREAT-MODEL.md:85
+      は維持される方向の修正なので、追加条件は今回の文書に記録する; orchestrator mapped to leave_prior_docs (agrees
+      with worker recommendation); opus escalation not run'
+  requirement.review-split-target:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-01T00:13:31+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - unattended_merge_and_this
+    freeform: null
+    normalized_answer: unattended-merge の round2 scope.changed_files とこの feature の差分を、分割して
+      architecture / spec 観点でレビューする
+    resolution_note: 'gate create-spec.requirement-clarification; policy action codex_consultation;
+      codex(1 turn) suggested unattended_merge_and_this: round2.yaml:82,197 は分割した再レビューで網羅性を補うよう求めている;
+      orchestrator mapped to unattended_merge_and_this (agrees with worker recommendation);
+      opus escalation not run'
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-01T00:13:31+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 'design_step_recommendation (skip: UI 変更なし) を採用'
+    resolution_note: batch-policies.yaml create-spec.design-step -> decide_autonomously
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:8e8d7fc75fff81ee0e01d4d87a9e63a69e271d97f267235f9820bd700fd62aa8
+  dispatch_digest_inputs:
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    em-workflow/hooks/bash_guard.py: sha256:2e389895b2c0268d9efabba57d49a8ea0867836b3abbc6bdc08559c6f171fdb7
+    em-workflow/hooks/merge_pr_allow.py: sha256:02c6ca295b75d0c0844ee1d2aef95483fa53623717069c2e2004500265a02367
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
+    em-workflow/scripts/merge-ci-wait.py: sha256:96ff8d9f0835c265502e24223d3d43c94765eab1e00488d3dfb884ea4fbccf29
+    em-workflow/scripts/merge-git.py: sha256:48c4e839f4426c724e7716ec8b6a031eeba64111323235bbcb0f39d06a648778
+    em-workflow/scripts/merge-lock.py: sha256:1d8ca47c1bf5249c5ec8898cb022df0d730534773f36dbeff2accb8b285bbc1d
+    em-workflow/scripts/merge-pr.py: sha256:a98d06307bf0aca905c10d94c75c707281ef8976505442ef6789e2113e4f37f0
+    em-workflow/scripts/merge-preflight.py: sha256:e6fc4a7346ba79b895352b2e84fbfc2b54845287df22341bb14f4524ebd57afe
+    em-workflow/skills/merge/SKILL.md: sha256:d76cc1eed5a410764f9d2eca4b4bf87e686678c4ba9003d2d00422a8e38ffd20
+    feature-docs/unattended-merge/SPEC.md: sha256:f12079f29254d1a8afc8d4202d8cb8e0ee2d18728bc0e3e37b3cdce392b22bb4
+    feature-docs/unattended-merge/THREAT-MODEL.md: sha256:f0beeb300866fa135cfe28759e556fa939853576eee8c4f24845c366f706e9c6
+    feature-docs/unattended-merge/reviews/round2.yaml: sha256:0d1a6e0d33b3304c240caf58ef8de990688225eb35def2a559ff7ac0d0601f6e
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+    tests/test_destructive_guard_merge_allow.py: sha256:1ac243748e9bce21e660c50a62b45969a16e2644fedfe74a5c364a2d814f5b89
+    tests/test_merge_ci_wait.py: sha256:bb69cb920d70426fed021a497c63361ecfe59b02337708c844fbed1e76bf28af
+    tests/test_merge_git.py: sha256:dea1e3d18515bd134986982101a216bcc9598dbc91de4c2806c5ab12309d96c9
+    tests/test_merge_local_route.py: sha256:c00432959f7865d4c2dfa834247108be2367013b579e844461422ffe181facb8
+    tests/test_merge_lock.py: sha256:09030f3ac9ac12482d80b15017f674465ba7a2f17612a92fba6563c236f196dd
+    tests/test_merge_pr.py: sha256:ee719f79c2bb814259033c0b5116cce396a9169024c7321b380147e5dbcca01d
+    tests/test_merge_preflight.py: sha256:84b835c8471445b7afba215f4116dee63511d3ec8c88cffcd99608cde4190256
+    tests/test_merge_skill_doc.py: sha256:f2a421addf8377d3f6646171a70417e8bb99890e1992d8a13d1b748173f4f036
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:ee02661c5915d52260e5cacf12fc9b2361cd0209a938132e1c540bf1bf4dd255
+  dispatch_digest_inputs:
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    em-workflow/hooks/bash_guard.py: sha256:2e389895b2c0268d9efabba57d49a8ea0867836b3abbc6bdc08559c6f171fdb7
+    em-workflow/hooks/merge_pr_allow.py: sha256:02c6ca295b75d0c0844ee1d2aef95483fa53623717069c2e2004500265a02367
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
+    em-workflow/scripts/merge-ci-wait.py: sha256:96ff8d9f0835c265502e24223d3d43c94765eab1e00488d3dfb884ea4fbccf29
+    em-workflow/scripts/merge-git.py: sha256:48c4e839f4426c724e7716ec8b6a031eeba64111323235bbcb0f39d06a648778
+    em-workflow/scripts/merge-lock.py: sha256:1d8ca47c1bf5249c5ec8898cb022df0d730534773f36dbeff2accb8b285bbc1d
+    em-workflow/scripts/merge-pr.py: sha256:a98d06307bf0aca905c10d94c75c707281ef8976505442ef6789e2113e4f37f0
+    em-workflow/scripts/merge-preflight.py: sha256:e6fc4a7346ba79b895352b2e84fbfc2b54845287df22341bb14f4524ebd57afe
+    em-workflow/skills/merge/SKILL.md: sha256:d76cc1eed5a410764f9d2eca4b4bf87e686678c4ba9003d2d00422a8e38ffd20
+    feature-docs/unattended-merge/SPEC.md: sha256:f12079f29254d1a8afc8d4202d8cb8e0ee2d18728bc0e3e37b3cdce392b22bb4
+    feature-docs/unattended-merge/THREAT-MODEL.md: sha256:f0beeb300866fa135cfe28759e556fa939853576eee8c4f24845c366f706e9c6
+    feature-docs/unattended-merge/reviews/round2.yaml: sha256:0d1a6e0d33b3304c240caf58ef8de990688225eb35def2a559ff7ac0d0601f6e
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+    tests/test_destructive_guard_merge_allow.py: sha256:1ac243748e9bce21e660c50a62b45969a16e2644fedfe74a5c364a2d814f5b89
+    tests/test_merge_ci_wait.py: sha256:bb69cb920d70426fed021a497c63361ecfe59b02337708c844fbed1e76bf28af
+    tests/test_merge_git.py: sha256:dea1e3d18515bd134986982101a216bcc9598dbc91de4c2806c5ab12309d96c9
+    tests/test_merge_local_route.py: sha256:c00432959f7865d4c2dfa834247108be2367013b579e844461422ffe181facb8
+    tests/test_merge_lock.py: sha256:09030f3ac9ac12482d80b15017f674465ba7a2f17612a92fba6563c236f196dd
+    tests/test_merge_pr.py: sha256:ee719f79c2bb814259033c0b5116cce396a9169024c7321b380147e5dbcca01d
+    tests/test_merge_preflight.py: sha256:84b835c8471445b7afba215f4116dee63511d3ec8c88cffcd99608cde4190256
+    tests/test_merge_skill_doc.py: sha256:f2a421addf8377d3f6646171a70417e8bb99890e1992d8a13d1b748173f4f036
+  output_digest: sha256:5b9fea4d12fd6ddb16654a00f143539b7fd94faf3767cffe51bc693497520b12
+  self_write_set: []
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:8b8ba78d53d60d9a8cb69a5c5d7c306b5f77e9eefa9e709be11a536abf192212
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/spec-writer-contract.md: sha256:9032c6287d75f4a88e556bd3962c32ab8b4905cf3b6ececa895206788bcd0b63
+    em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
+    em-workflow/references/templates/spec-document.md: sha256:203dfcddbe507886ce861694fccd20ae25e5af0bd1b0efa5e935991add950cbd
+  self_write_set:
+  - feature-docs/unattended-merge-medium-fixes/REQUIREMENTS.md
+  - feature-docs/unattended-merge-medium-fixes/SPEC.md
+artifacts:
+- path: feature-docs/unattended-merge-medium-fixes/REQUIREMENTS.md
+  sha256: sha256:6a4603e211d4280ba50d8218ec230f8459a9890557a4adf6934e2fd44d9c64c7
+  produced_by: create-spec-run-0003
+- path: feature-docs/unattended-merge-medium-fixes/SPEC.md
+  sha256: sha256:ef09a28562f06c7117ea0a1cd47cf9b06143c52028f7400baa1bc9ac80fc9597
+  produced_by: create-spec-run-0003
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache:
+  reference_scan_targets:
+    resolved_at_generation: 1
+    paths:
+    - em-workflow/skills/merge/SKILL.md
+    - em-workflow/scripts/merge-preflight.py
+    - em-workflow/scripts/merge-pr.py
+    - em-workflow/scripts/merge-git.py
+    - em-workflow/scripts/merge-ci-wait.py
+    - em-workflow/scripts/merge-lock.py
+    - em-workflow/hooks/merge_pr_allow.py
+    - em-workflow/hooks/bash_guard.py
+    - tests/test_merge_preflight.py
+    - tests/test_merge_pr.py
+    - tests/test_merge_git.py
+    - tests/test_merge_ci_wait.py
+    - tests/test_merge_local_route.py
+    - tests/test_merge_skill_doc.py
+    - tests/test_merge_lock.py
+    - tests/test_destructive_guard_merge_allow.py
+    - feature-docs/unattended-merge/reviews/round2.yaml
+    - feature-docs/unattended-merge/SPEC.md
+    - feature-docs/unattended-merge/THREAT-MODEL.md
+    truncated: false
+last_error: null

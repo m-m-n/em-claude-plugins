@@ -1,0 +1,82 @@
+schema_version: 2
+feature: unattended-merge-medium-fixes
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.89
+    confidence: 0.89
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.11
+      '2': 0.89
+      '3': 0.0
+  observed_at: '2026-11-01T00:00:16+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 2.02
+    confidence: 0.96
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.01
+      '2': 0.96
+      '3': 0.03
+  observed_at: '2026-11-01T00:04:33+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/skills/merge/SKILL.md
+  - em-workflow/scripts/merge-preflight.py
+  - em-workflow/scripts/merge-pr.py
+  - em-workflow/scripts/merge-git.py
+  - em-workflow/scripts/merge-ci-wait.py
+  - em-workflow/hooks/merge_pr_allow.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - tests/test_merge_preflight.py
+  - tests/test_merge_pr.py
+  - tests/test_merge_git.py
+  - tests/test_merge_ci_wait.py
+  - tests/test_merge_local_route.py
+  - tests/test_merge_skill_doc.py
+  - tests/test_destructive_guard_merge_allow.py
+  - feature-docs/unattended-merge/SPEC.md
+  - feature-docs/unattended-merge/IMPLEMENTATION.md
+  changed_lines_approx: 450
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: []
+  covering_tests_exist: true
+  spillover_modules:
+  - em-workflow/scripts/merge-git.py
+  - em-workflow/scripts/merge-ci-wait.py
+  - em-workflow/hooks/merge_pr_allow.py
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 16
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  caller_and_dependency_count: 10
+  changes_external_contract: true
+  changes_behavior: true
+  evidence: 5件とも残存する。em-workflow/skills/merge/SKILL.md:199 はロック取得後に再判定せず、同ファイル:355
+    は空commandsで移動せず、同ファイル:487 はブランチ名でマージする。em-workflow/scripts/merge-preflight.py:450
+    は空白を除去せず照合し、em-workflow/scripts/merge-pr.py:350 は名前だけを比較する。後者2件はメモリ内で再現した。関連テストは存在するが、tests/test_merge_preflight.py:1053
+    は空白付きコマンドの拒否を期待する。ホスト付き識別子はem-workflow/scripts/merge-ci-wait.py:137とem-workflow/hooks/merge_pr_allow.py:72でも拒否される。merge-git.py:356は先端を再解決する。呼出・依存の集計対象はスキル1、スクリプト6、ガード3ファイルとした。feature-docs/unattended-merge/reviews/round2.yaml:82でarchitecture/specの省略を確認した。ファイル変更は行っていない
+decided_at: '2026-11-01T00:04:36+09:00'

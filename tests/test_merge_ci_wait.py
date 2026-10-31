@@ -22,6 +22,12 @@ C1, C2, C8 and decision D7):
 TestArguments pins the C1 argument conventions (exit 2 for malformed
 arguments) and TestOutputShape the one-JSON-object-on-one-line output.
 
+TestRepoIdentifier covers task0004 of unattended-merge-medium-fixes (FR5,
+IMPLEMENTATION.md C1, accepting side): `--repo` takes `OWNER/NAME` or
+`HOST/OWNER/NAME`, the accepted value reaches every gh call verbatim, and every
+other value is a usage error (exit 2, empty stdout, no gh call). Its tests are
+named `test_fr5_ac<n>_...` after that task's Acceptance Criteria.
+
 gh is replaced by a Python stub prepended to PATH; the stub answers from a
 per-test script of responses keyed by the call count of each gh subcommand and
 logs every invocation. No real network is used.
@@ -846,7 +852,9 @@ class TestArguments(CiWaitTestCase):
             "repo without owner": dict(repo="widgets"),
             "repo option injection": dict(repo="--web/x"),
             "repo with spaces": dict(repo="octo/wid gets"),
-            "repo with extra segment": dict(repo="a/b/c"),
+            # a/b/c is a valid HOST/OWNER/NAME since the host form was added
+            # (TestRepoIdentifier); four segments stay malformed.
+            "repo with extra segment": dict(repo="a/b/c/d"),
         }
         for label, override in cases.items():
             with self.subTest(label):
@@ -896,6 +904,176 @@ class TestArguments(CiWaitTestCase):
         )
         self.assertEqual(completed.returncode, 0, msg=completed.stderr)
         self.assertEqual(json.loads(completed.stdout)["outcome"], "passed")
+
+
+HOST_REPO = "ghe.example/acme/service"
+
+
+class TestRepoIdentifier(CiWaitTestCase):
+    """task0004 (FR5, C1): --repo is OWNER/NAME or HOST/OWNER/NAME, verbatim to gh."""
+
+    @staticmethod
+    def read_shapes(repo):
+        return [
+            ["pr", "view", PR, "--repo", repo, "--json", "headRefOid"],
+            ["pr", "checks", PR, "--repo", repo, "--json", "name,bucket"],
+        ]
+
+    def assertUsageError(self, result, label=""):
+        self.assertEqual(result.returncode, 2, msg=label + result.stdout + result.stderr)
+        self.assertEqual(result.stdout.strip(), "", msg=label)
+        self.assertEqual(self.stub.calls(), [], msg=label)
+        # The interpreter exits 2 for a missing script file too; that is not
+        # the script rejecting its arguments.
+        self.assertTrue(os.path.exists(SCRIPT))
+        self.assertNotIn("can't open file", result.stderr, msg=label)
+        self.assertIn("usage", result.stderr.lower(), msg=label)
+
+    def assertAccepted(self, repo):
+        """A run that passes at once; each gh read names `repo` verbatim."""
+        self.stub.set_script(head=[head_ok()], checks=[checks_ok(("ci", "pass"))])
+        self.stub.reset_counters()
+        result = self.run_cli("--deadline-in", "100", *FAST, repo=repo)
+        self.assertDecision(result, "passed")
+        self.assertEqual([c["argv"] for c in self.stub.calls()], self.read_shapes(repo))
+        return result
+
+    def assertMalformed(self, repo):
+        self.stub.reset_counters()
+        result = self.run_cli("--deadline-in", "100", *FAST, repo=repo)
+        self.assertUsageError(result, label="%r: " % (repo,))
+        return result
+
+    # --- AC-1: the host-qualified form is accepted and passed verbatim ------
+
+    def test_fr5_ac1_host_qualified_repo_reaches_every_gh_call_verbatim(self):
+        self.stub.set_script(
+            head=[head_ok()],
+            checks=[checks_ok(("ci", "pending")), checks_ok(("ci", "pass"))],
+        )
+        result = self.run_cli("--deadline-in", "100", *FAST, repo=HOST_REPO)
+        self.assertDecision(result, "passed")
+        calls = self.stub.calls()
+        view, checks = self.read_shapes(HOST_REPO)
+        self.assertEqual([c["argv"] for c in calls], [view, checks, view, checks])
+        for call in calls:
+            self.assertEqual(call["argv"][3:5], ["--repo", "ghe.example/acme/service"])
+
+    def test_fr5_ac1_every_final_outcome_is_reachable_with_a_host_qualified_repo(self):
+        scenarios = {
+            ("passed", None): ([head_ok()], [checks_ok(("ci", "pass"))]),
+            ("no_checks", None): ([head_ok()], [NO_CHECKS_JSON]),
+            ("stop", "ci_failed"): ([head_ok()], [checks_ok(("ci", "fail"))]),
+            ("stop", "pr_head_moved"): ([head_ok(OTHER_HEAD)], [checks_ok(("ci", "pass"))]),
+        }
+        for (outcome, reason), (heads, checks) in scenarios.items():
+            with self.subTest("%s %s" % (outcome, reason)):
+                self.stub.set_script(head=heads, checks=checks)
+                self.stub.reset_counters()
+                result = self.run_cli("--deadline-in", "100", *FAST, repo=HOST_REPO)
+                self.assertDecision(result, outcome, reason)
+                calls = self.stub.calls()
+                self.assertTrue(calls)
+                for call in calls:
+                    self.assertIn(call["argv"], self.read_shapes(HOST_REPO))
+
+    def test_fr5_ac1_host_characters_and_case_are_passed_through_unchanged(self):
+        for host in ("github.com", "GHE.Example.COM", "ghe-1.corp.example", "10.0.0.5",
+                     "0host", "h", "a.b-c.d"):
+            with self.subTest(host):
+                self.assertAccepted(host + "/acme/service")
+
+    def test_fr5_ac1_a_host_of_253_characters_is_accepted(self):
+        self.assertAccepted("a" * 253 + "/acme/service")
+
+    def test_fr5_ac1_the_owner_and_name_rules_of_this_script_apply_in_the_host_form(self):
+        for repo in ("ghe.example/octo-org/my.repo_2", "ghe.example/9acme/.github"):
+            with self.subTest(repo):
+                self.assertAccepted(repo)
+
+    # --- AC-2: the legacy two-segment form is unchanged ---------------------
+
+    def test_fr5_ac2_legacy_two_segment_repo_keeps_its_gh_arguments(self):
+        for repo in (REPO, "other-org/other.repo", "octo/.github", "o/_", "9x/y"):
+            with self.subTest(repo):
+                self.assertAccepted(repo)
+
+    # --- AC-3: everything else is a usage error -----------------------------
+
+    # (label, malformed value, the nearest valid value). Each malformed value is
+    # paired with a valid control so that a blanket rejection cannot pass.
+    MALFORMED = (
+        ("one segment", "widgets", "octo/widgets"),
+        ("one segment, host-looking", "ghe.example", HOST_REPO),
+        ("four segments", "ghe.example/acme/service/extra", HOST_REPO),
+        ("four short segments", "a/b/c/d", "a/b/c"),
+        ("scheme prefix", "https://ghe.example/acme/service", HOST_REPO),
+        ("empty value", "", HOST_REPO),
+        ("empty host segment", "/acme/service", HOST_REPO),
+        ("empty owner segment", "ghe.example//service", HOST_REPO),
+        ("empty name segment", "ghe.example/acme/", HOST_REPO),
+        ("only separators", "//", HOST_REPO),
+        ("host with a port", "ghe.example:8443/acme/service", HOST_REPO),
+        ("host with an underscore", "ghe_example/acme/service", HOST_REPO),
+        ("host with userinfo", "user@ghe.example/acme/service", HOST_REPO),
+        ("host starting with a dot", ".ghe.example/acme/service", HOST_REPO),
+        ("host starting with a hyphen", "-ghe.example/acme/service", HOST_REPO),
+        ("option-shaped host", "--web/acme/service", HOST_REPO),
+        ("non-ascii host", "ghé.example/acme/service", HOST_REPO),
+        ("host over 253 characters", "a" * 254 + "/acme/service",
+         "a" * 253 + "/acme/service"),
+        ("owner starting with a hyphen", "ghe.example/-acme/service", HOST_REPO),
+        ("owner with a space", "ghe.example/ac me/service", HOST_REPO),
+        ("name of dot", "ghe.example/acme/.", HOST_REPO),
+        ("name of dot dot", "ghe.example/acme/..", HOST_REPO),
+        ("name with a colon", "ghe.example/acme/ser:vice", HOST_REPO),
+        ("trailing newline", HOST_REPO + "\n", HOST_REPO),
+        ("legacy name of dot dot", "octo/..", "octo/widgets"),
+    )
+
+    def test_fr5_ac3_three_segments_are_valid_and_four_segments_are_a_usage_error(self):
+        self.assertAccepted("ghe.example/acme/service")
+        self.assertMalformed("ghe.example/acme/service/extra")
+
+    def test_fr5_ac3_each_malformed_repo_is_a_usage_error_next_to_its_valid_control(self):
+        for label, malformed, control in self.MALFORMED:
+            with self.subTest(label):
+                self.assertAccepted(control)
+                self.assertMalformed(malformed)
+
+    def test_fr5_ac3_a_malformed_repo_is_rejected_whatever_else_is_valid(self):
+        # Rejected at argument parsing: even a deadline that is already past
+        # (which would otherwise be a ci_timeout decision) yields no decision.
+        self.stub.reset_counters()
+        past = str(int(time.time()) - 10)
+        result = self.run_cli("--deadline", past, *FAST, repo="ghe.example:8443/acme/service")
+        self.assertUsageError(result)
+
+    # --- AC-4: the help, the error message and the docstring name both forms
+
+    def test_fr5_ac4_help_names_both_forms(self):
+        result = self.run_cli("--help", base=False)
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        help_text = " ".join(result.stdout.split())
+        self.assertIn("HOST/OWNER/NAME", help_text)
+        self.assertRegex(help_text, r"(?<!HOST/)OWNER/NAME")
+
+    def test_fr5_ac4_the_error_message_names_both_forms(self):
+        result = self.assertMalformed("ghe.example/acme/service/extra")
+        message = " ".join(result.stderr.split())
+        self.assertIn("HOST/OWNER/NAME", message)
+        self.assertRegex(message, r"(?<!HOST/)OWNER/NAME")
+
+    def test_fr5_ac4_the_module_docstring_lists_both_forms_for_repo(self):
+        lines = load_module().__doc__.splitlines()
+        start = next(i for i, line in enumerate(lines) if line.startswith("  --repo"))
+        end = next(
+            (i for i in range(start + 1, len(lines)) if lines[i].startswith("  --")),
+            len(lines),
+        )
+        entry = " ".join(" ".join(lines[start:end]).split())
+        self.assertIn("HOST/OWNER/NAME", entry)
+        self.assertRegex(entry, r"(?<!HOST/)OWNER/NAME")
 
 
 class TestOutputShape(CiWaitTestCase):

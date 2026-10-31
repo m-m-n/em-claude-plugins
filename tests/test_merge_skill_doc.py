@@ -32,6 +32,21 @@ Covers task0010 Acceptance Criterion AC-6
 resolve` forms of steps 5.2 and 5.3 pass `--integration-tip <integration_tip>`
 and the post-merge form of step 13.2 passes `--integration-tip <head_sha>`.
 
+Covers unattended-merge-medium-fixes task0001 Acceptance Criteria
+(feature-docs/unattended-merge-medium-fixes/tasks/task0001.md; the classes
+TestLocalMergeBoundToHeadSha, TestStep10HeadCheckRunsInTheWorktree,
+TestPostLockMergedRedecision and TestHostQualifiedRepository, plus the two
+assertions adjusted in TestDirectCommandForms and TestPrDecisionBindings):
+
+- AC-1, AC-2 (FR1, TM-5): the local merge only lands the verified head_sha
+  (integration-tip read before the merge), and a second parent that differs
+  from it or cannot be read keeps the result `merged` with a one-line detail.
+- AC-3 (FR2): the step-10 HEAD check is preceded by its own worktree cd.
+- AC-4, AC-5 (FR3, TM-6): the merged decision is repeated once the lock is
+  held, and the already-merged path accepts that entry.
+- AC-6 (FR5): `repo` is the host-qualified `HOST/OWNER/NAME` and every later
+  `--repo` receives it as is.
+
 Method: whitespace-preserving text slices, presence assertions on stable
 tokens (reason codes, script names, command forms) and a few short phrases.
 Every absence assertion is paired with a forged-text case proving its matcher
@@ -522,9 +537,21 @@ class TestDirectCommandForms(SkillCase):
             self.assertEqual(prohibited_hits(form), [], form)
 
     def test_ac2_local_merge_runs_in_the_main_tree_with_no_ff_no_edit(self):
-        self.assert_form_right_after_cd(
-            "git merge --no-ff --no-edit em-workflow/<feature>/integration",
-            'cd "<project_root>"',
+        # unattended-merge-medium-fixes task0001 AC-1: the integration-tip read
+        # now sits between the project-root cd and the merge, so the guarantee
+        # about the merge's working directory is the nearest previous cd.
+        blocks, found = self.locate("git merge --no-ff --no-edit em-workflow/<feature>/integration")
+        self.assertEqual(len(found), 1, "expected exactly one local merge form")
+        cd = nearest_previous_cd(blocks, found[0])
+        self.assertIsNotNone(cd, "no cd before the local merge")
+        self.assertEqual(cd.body, ['cd "<project_root>"'])
+        self.assertGreater(found[0], 0)
+        before = blocks[found[0] - 1].body
+        self.assertEqual(len(before), 1)
+        self.assertRegex(
+            before[0],
+            r"^git rev-parse\b.* refs/heads/em-workflow/<feature>/integration$",
+            "the block right before the merge is not the integration-tip read",
         )
 
     def test_ac2_guard_sensitive_forms_carry_literals_only(self):
@@ -1145,8 +1172,10 @@ class TestPrDecisionBindings(SkillCase):
         self.assertNotIn("手順 5.2 と同じ呼び出し", body)
 
     def test_ac6_every_resolve_form_in_the_skill_passes_an_integration_tip(self):
+        # Three forms since unattended-merge-medium-fixes task0001 AC-4: step
+        # 5.2, the re-decision after the lock (step 6) and step 13.2.
         forms = merge_pr_forms(self.text, "resolve")
-        self.assertEqual(len(forms), 2, forms)
+        self.assertEqual(len(forms), 3, forms)
         for form in forms:
             self.assertRegex(
                 form,
@@ -1177,6 +1206,480 @@ class TestPrDecisionBindings(SkillCase):
             "--repo <repo> --feature <feature> --base <base_branch>"
         )
         self.assertFalse(has_option(resolve_without_tip, "--integration-tip", "<integration_tip>"))
+
+
+# ---------------------------------------------------------------------------
+# task0001 (feature-docs/unattended-merge-medium-fixes): the local merge is
+# bound to head_sha (FR1), the step-10 HEAD check runs in the worktree (FR2),
+# the merged decision is repeated after the lock (FR3) and the host-qualified
+# repository identifier reaches every later `--repo` (FR5)
+# ---------------------------------------------------------------------------
+
+MERGE_FORM = "git merge --no-ff --no-edit em-workflow/<feature>/integration"
+TIP_REF = "refs/heads/em-workflow/<feature>/integration"
+TIP_READ_RE = re.compile(r"^git rev-parse\b.*\s" + re.escape(TIP_REF) + r"$")
+PARENTS_READ_RE = re.compile(r"^git log -n 1 --format=%P HEAD$")
+STATUS_FORM = "git status --porcelain --untracked-files=no"
+GH_PR_CREATE_FORM = (
+    'gh pr create --head <create_head> --base <create_base> --title "<feature>" '
+    '--body "Unattended merge of feature <feature>: '
+    'em-workflow/<feature>/integration into <base_branch>."'
+)
+GH_PR_MERGE_FORM = "gh pr merge <pr_number> --merge --match-head-commit <head_sha>"
+REPO_OPTION_RE = re.compile(r"(^|\s)--repo <repo>(\s|$)")
+
+
+def shell_unsafe(line):
+    """True when a command line carries a character that is not a plain
+    literal for every common interactive shell: anything `not_literal` rejects
+    plus the `^` and `~` revision suffixes, which some configurations glob."""
+    return not_literal(line) or re.search(r"[\^~]", line) is not None
+
+
+def block_lines(blocks, predicate):
+    """Indices of the single-line blocks whose line satisfies `predicate`."""
+    return [i for i, b in enumerate(blocks) if len(b.body) == 1 and predicate(b.body[0])]
+
+
+def local_route_text(text):
+    """Step 13.3 (the local route) up to the end of step 13. None when absent."""
+    body = section(text, "13. ")
+    if body is None:
+        return None
+    start = body.find("3. ローカルルート")
+    return body[start:] if start >= 0 else None
+
+
+def head_check_follows_worktree_cd(text):
+    """True when, in step 10, the Bash block right before the
+    `git status --porcelain` block is exactly the standalone worktree cd."""
+    body = section(text, "10. ")
+    if body is None:
+        return False
+    blocks = bash_blocks(body)
+    found = block_lines(blocks, lambda line: line == STATUS_FORM)
+    if len(found) != 1 or found[0] == 0:
+        return False
+    return blocks[found[0] - 1].body == ['cd "<worktree_path>"']
+
+
+def redecision_text(text):
+    """Item 4 of step 6 (the merged decision repeated after the lock): from its
+    numbered line up to the paragraph that follows the list. None when absent."""
+    body = section(text, "6. ")
+    if body is None:
+        return None
+    lines = body.split("\n")
+    start = next((i for i, line in enumerate(lines) if re.match(r"^4\. ", line)), None)
+    if start is None:
+        return None
+    end = next(
+        (i for i in range(start + 1, len(lines)) if lines[i].startswith("ここから先")),
+        len(lines),
+    )
+    return "\n".join(lines[start:end])
+
+
+def outcome_lines(text):
+    """Map each backticked outcome that opens a bullet line to the whole line."""
+    found = {}
+    for line in text.split("\n"):
+        match = re.match(r"^\s*-\s+`([a-z_]+)`", line)
+        if match:
+            found[match.group(1)] = line.strip()
+    return found
+
+
+def table_cells(text, code):
+    """Cells of the result-value table row whose first cell is `code`."""
+    body = section(text, "結果の値")
+    if body is None:
+        return None
+    for line in body.split("\n"):
+        if re.match(r"^\|\s*`%s`\s*\|" % re.escape(code), line):
+            return [cell.strip() for cell in line.strip().strip("|").split("|")]
+    return None
+
+
+class TestLocalMergeBoundToHeadSha(SkillCase):
+    """AC-1 and AC-2 of task0001 (FR1, TM-5, TS1)."""
+
+    def local(self):
+        local = local_route_text(self.text)
+        self.assertIsNotNone(local, "step 13.3 not found")
+        return local
+
+    def test_ac1_integration_tip_is_read_after_the_main_tree_check_and_before_the_merge(self):
+        local = self.local()
+        blocks = bash_blocks(local)
+        tip = block_lines(blocks, TIP_READ_RE.match)
+        merge = block_lines(blocks, lambda line: line == MERGE_FORM)
+        self.assertEqual(len(tip), 1, "no single read of %s" % TIP_REF)
+        self.assertEqual(len(merge), 1)
+        main_tree = line_index_of(local, "`main-tree`")
+        self.assertIsNotNone(main_tree)
+        self.assertLess(main_tree, blocks[tip[0]].open_index)
+        self.assertLess(tip[0], merge[0])
+
+    def test_ac1_a_tip_other_than_head_sha_ends_verification_failed_without_merging(self):
+        local = self.local()
+        blocks = bash_blocks(local)
+        tip = block_lines(blocks, TIP_READ_RE.match)
+        merge = block_lines(blocks, lambda line: line == MERGE_FORM)
+        self.assertEqual(len(tip), 1)
+        self.assertEqual(len(merge), 1)
+        lines = local.split("\n")
+        between = "\n".join(lines[blocks[tip[0]].open_index : blocks[merge[0]].open_index])
+        for needle in ("`head_sha`", "`verification_failed`", "マージせず", "`git_failed`"):
+            self.assertIn(needle, between)
+        self.assertIn("integration branch moved after verification", between)
+
+    def test_ac1_the_merge_runs_right_after_the_tip_read_with_the_project_root_cd_before_both(self):
+        blocks = bash_blocks(self.local())
+        merge = block_lines(blocks, lambda line: line == MERGE_FORM)
+        self.assertEqual(len(merge), 1)
+        cd = nearest_previous_cd(blocks, merge[0])
+        self.assertIsNotNone(cd)
+        self.assertEqual(cd.body, ['cd "<project_root>"'])
+        between = [b.body for b in blocks[blocks.index(cd) + 1 : merge[0]]]
+        self.assertEqual(len(between), 1, between)
+        self.assertRegex(between[0][0], TIP_READ_RE)
+
+    def test_ac1_the_tip_read_is_a_shell_safe_read_only_form(self):
+        blocks = bash_blocks(self.local())
+        tip = block_lines(blocks, TIP_READ_RE.match)
+        self.assertEqual(len(tip), 1)
+        line = blocks[tip[0]].body[0]
+        self.assertTrue(line.startswith("git rev-parse "), line)
+        self.assertFalse(shell_unsafe(line), line)
+
+    def test_ac1_a_failing_merge_still_aborts_before_merge_failed(self):
+        local = self.local()
+        blocks = bash_blocks(local)
+        merge = block_lines(blocks, lambda line: line == MERGE_FORM)
+        abort = block_lines(blocks, lambda line: line == "git merge --abort")
+        self.assertEqual(len(merge), 1)
+        self.assertEqual(len(abort), 1)
+        self.assertLess(merge[0], abort[0])
+        before_abort = "\n".join(
+            local.split("\n")[blocks[merge[0]].open_index : blocks[abort[0]].open_index]
+        )
+        self.assertIn("`merge_failed`", before_abort)
+
+    def test_ac2_the_second_parent_is_read_after_the_merge_success_branch(self):
+        blocks = bash_blocks(self.local())
+        merge = block_lines(blocks, lambda line: line == MERGE_FORM)
+        abort = block_lines(blocks, lambda line: line == "git merge --abort")
+        head = block_lines(blocks, lambda line: line == "git rev-parse HEAD")
+        parents = block_lines(blocks, PARENTS_READ_RE.match)
+        for found in (merge, abort, head, parents):
+            self.assertEqual(len(found), 1, found)
+        self.assertTrue(merge[0] < abort[0] < head[0] < parents[0], (merge, abort, head, parents))
+        line = blocks[parents[0]].body[0]
+        self.assertFalse(shell_unsafe(line), line)
+
+    def test_ac2_a_mismatch_or_an_unreadable_parent_keeps_merged_with_a_one_line_detail(self):
+        local = self.local()
+        blocks = bash_blocks(local)
+        parents = block_lines(blocks, PARENTS_READ_RE.match)
+        self.assertEqual(len(parents), 1)
+        after = "\n".join(local.split("\n")[blocks[parents[0]].open_index :])
+        for needle in (
+            "第 2 親",
+            "`merged` のまま",
+            "`head_sha`",
+            "1 行",
+            "固定文",
+            "40 桁の小文字 16 進",
+            "second parent could not be read",
+            "differs from verified head_sha",
+        ):
+            self.assertIn(needle, after)
+        for forbidden in ("`verification_failed`", "`merge_failed`"):
+            self.assertNotIn(forbidden, after)
+
+    def test_ac2_cleanup_runs_after_the_second_parent_check_as_for_any_merged_result(self):
+        local = self.local()
+        blocks = bash_blocks(local)
+        parents = block_lines(blocks, PARENTS_READ_RE.match)
+        self.assertEqual(len(parents), 1)
+        after = "\n".join(local.split("\n")[blocks[parents[0]].open_index :])
+        self.assertIn("手順 14", after)
+        self.assertIn("手順 15", after)
+
+    def test_ac2_the_detail_fixed_text_rule_names_this_case_as_its_only_exception(self):
+        body = self.section("結果の値")
+        rule = [line for line in body.split("\n") if line.startswith("`detail` の固定文")]
+        self.assertEqual(len(rule), 1)
+        self.assertRegex(rule[0], r"例外は.*手順 13\.3.*第 2 親")
+
+    def test_ac2_the_verification_failed_row_lists_step_13_and_the_moved_branch_detail(self):
+        cells = table_cells(self.text, "verification_failed")
+        self.assertIsNotNone(cells, "no verification_failed row")
+        steps = {step.strip() for step in cells[2].split(",")}
+        self.assertEqual(steps, {"10", "13"})
+        self.assertIn("integration branch moved after verification", cells[3])
+
+    def test_ac1_the_shell_safe_matcher_fires_on_forged_forms(self):
+        for forged in (
+            "git rev-parse --verify HEAD^2",
+            "git rev-parse --verify HEAD~1",
+            "git rev-parse --verify HEAD^{commit}",
+            "git rev-parse --verify $(echo HEAD)",
+            "git log -n 1 --format=%P HEAD; git merge x",
+        ):
+            self.assertTrue(shell_unsafe(forged), forged)
+        for good in (
+            "git rev-parse --verify refs/heads/em-workflow/<feature>/integration",
+            "git log -n 1 --format=%P HEAD",
+            "git rev-parse HEAD",
+        ):
+            self.assertFalse(shell_unsafe(good), good)
+
+    def test_ac1_no_command_form_in_the_skill_carries_a_revision_suffix(self):
+        for form in command_forms(self.text):
+            self.assertIsNone(re.search(r"[\^~]", form), form)
+
+    def test_ac1_the_ordering_matchers_fire_on_forged_text(self):
+        forged = (
+            "### 13. マージ\n\n"
+            "3. ローカルルート。\n\n"
+            "   ```bash\n   cd \"<project_root>\"\n   ```\n\n"
+            "   ```bash\n   %s\n   ```\n" % MERGE_FORM
+        )
+        blocks = bash_blocks(local_route_text(forged))
+        self.assertEqual(block_lines(blocks, TIP_READ_RE.match), [])
+        self.assertEqual(len(block_lines(blocks, lambda line: line == MERGE_FORM)), 1)
+        self.assertIsNone(TIP_READ_RE.match("git rev-parse --verify HEAD"))
+        self.assertIsNone(PARENTS_READ_RE.match("git log -n 1 --format=%P HEAD^"))
+
+
+class TestStep10HeadCheckRunsInTheWorktree(SkillCase):
+    """AC-3 of task0001 (FR2, TS2)."""
+
+    def test_ac3_the_block_right_before_git_status_is_a_standalone_worktree_cd(self):
+        self.assertTrue(head_check_follows_worktree_cd(self.text))
+
+    def test_ac3_the_head_check_pair_follows_that_cd_after_the_command_block(self):
+        blocks = bash_blocks(self.section("10. "))
+        status = block_lines(blocks, lambda line: line == STATUS_FORM)
+        command = block_lines(blocks, lambda line: line == "<command>")
+        self.assertEqual(len(status), 1)
+        self.assertEqual(len(command), 1)
+        self.assertLess(command[0], status[0] - 1)
+        self.assertEqual(blocks[status[0] + 1].body, ["git rev-parse HEAD"])
+
+    def test_ac3_the_first_worktree_cd_is_still_followed_by_the_command(self):
+        blocks = bash_blocks(self.section("10. "))
+        cds = [i for i, b in enumerate(blocks) if b.body == ['cd "<worktree_path>"']]
+        self.assertEqual(len(cds), 2, "one cd for the commands, one for the HEAD check")
+        self.assertEqual(blocks[cds[0] + 1].body, ["<command>"])
+
+    def test_ac3_the_check_also_runs_when_commands_is_empty(self):
+        body = self.section("10. ")
+        lines = [line for line in body.split("\n") if "`commands` が空" in line]
+        self.assertTrue(lines, "no statement about an empty commands list")
+        joined = "\n".join(lines)
+        self.assertIn("実行しない", joined)
+        self.assertRegex(joined, r"`commands` が空でも必ず行う")
+        self.assertNotIn("何も実行しない", body)
+
+    def test_ac3_the_matcher_fires_on_a_forged_step_without_the_cd(self):
+        forged = (
+            "### 10. 検証コマンド\n\n"
+            "```bash\ncd \"<worktree_path>\"\n```\n\n"
+            "```bash\n<command>\n```\n\n"
+            "```bash\n%s\n```\n\n"
+            "```bash\ngit rev-parse HEAD\n```\n" % STATUS_FORM
+        )
+        self.assertFalse(head_check_follows_worktree_cd(forged))
+        fixed = forged.replace(
+            "```bash\n%s\n```" % STATUS_FORM,
+            "```bash\ncd \"<worktree_path>\"\n```\n\n```bash\n%s\n```" % STATUS_FORM,
+        )
+        self.assertTrue(head_check_follows_worktree_cd(fixed))
+
+
+class TestPostLockMergedRedecision(SkillCase):
+    """AC-4 and AC-5 of task0001 (FR3, TM-6, TS3)."""
+
+    def step6_forms(self):
+        """Bash blocks of step 6 in document order, with whole-document indices."""
+        start = heading_line_index(self.text, "6. ")
+        end = heading_line_index(self.text, "7. ")
+        self.assertTrue(start is not None and end is not None and start < end)
+        return [b for b in bash_blocks(self.text) if start < b.open_index < end]
+
+    def test_ac4_held_leads_to_the_redecision_not_straight_to_step_7(self):
+        body = self.section("6. ")
+        held = [line for line in body.split("\n") if line.strip().startswith("- `held`")]
+        self.assertEqual(len(held), 1)
+        self.assertNotIn("手順 7", held[0])
+        self.assertIsNotNone(redecision_text(self.text), "no re-decision item in step 6")
+
+    def test_ac4_the_redecision_forms_follow_the_wait_and_precede_step_7(self):
+        blocks = self.step6_forms()
+        wait = [
+            i
+            for i, b in enumerate(blocks)
+            if b.body and "merge-lock.py verify " in b.body[0] and "--wait" in b.body[0]
+        ]
+        merged = [i for i, b in enumerate(blocks) if b.body and "merge-git.py merged " in b.body[0]]
+        resolve = [i for i, b in enumerate(blocks) if b.body and "merge-pr.py resolve " in b.body[0]]
+        self.assertEqual((len(wait), len(merged), len(resolve)), (1, 1, 1))
+        self.assertTrue(wait[0] < merged[0] < resolve[0], (wait, merged, resolve))
+        step7 = heading_line_index(self.text, "7. ")
+        for index in (merged[0], resolve[0]):
+            self.assertLess(blocks[index].open_index, step7)
+
+    def redecision_forms(self):
+        """(merged block, resolve block) of step 6; fails when either is absent."""
+        blocks = self.step6_forms()
+        merged = [b for b in blocks if b.body and "merge-git.py merged " in b.body[0]]
+        resolve = [b for b in blocks if b.body and "merge-pr.py resolve " in b.body[0]]
+        self.assertEqual(len(merged), 1, "no merge-git.py merged form in step 6")
+        self.assertEqual(len(resolve), 1, "no merge-pr.py resolve form in step 6")
+        return merged[0], resolve[0]
+
+    def test_ac4_each_redecision_form_has_its_own_timeout_line(self):
+        merged, resolve = self.redecision_forms()
+        for block in (merged, resolve):
+            match = TIMEOUT_RE.search(block.prev)
+            self.assertIsNotNone(match, block.body)
+            self.assertTrue(0 < int(match.group(1)) <= 600000, block.body)
+        lines = self.text.split("\n")
+        between = "\n".join(lines[merged.open_index + 3 : resolve.open_index])
+        self.assertIn("timeout:", between, "the two forms share one timeout line")
+
+    def test_ac4_the_redecision_forms_pass_the_options_of_steps_4_and_5_2(self):
+        merged, resolve = self.redecision_forms()
+        step4 = [f for f in command_forms(self.section("4. ")) if "merge-git.py merged " in f]
+        self.assertEqual(len(step4), 1)
+        self.assertEqual(merged.body[0], step4[0])
+        step5 = merge_pr_forms(self.section("5. "), "resolve")
+        self.assertEqual(len(step5), 1)
+        self.assertEqual(resolve.body[0], step5[0])
+        for option, value in (
+            ("--repo", "<repo>"),
+            ("--feature", "<feature>"),
+            ("--base", "<base_branch>"),
+            ("--integration-tip", "<integration_tip>"),
+        ):
+            self.assertTrue(has_option(resolve.body[0], option, value), resolve.body[0])
+
+    def test_ac4_each_outcome_is_handled_as_the_decision_table_says(self):
+        text = redecision_text(self.text)
+        self.assertIsNotNone(text, "no re-decision item in step 6")
+        outcomes = outcome_lines(text)
+        self.assertEqual(
+            set(outcomes), {"merged", "not_merged", "open", "stop", "none"}, sorted(outcomes)
+        )
+        for needle in ("マージ済みの経路", "`already_merged`", "`pr_url`", "`merge_commit`"):
+            self.assertIn(needle, outcomes["merged"])
+        self.assertIn("手順 7", outcomes["not_merged"])
+        for needle in ("`pr_number`", "`pr_url`", "手順 7"):
+            self.assertIn(needle, outcomes["open"])
+        for needle in ("`reason`", "`detail`"):
+            self.assertIn(needle, outcomes["stop"])
+        self.assertIn("`internal_error`", outcomes["none"])
+
+    def test_ac4_the_hold_task_is_stopped_before_every_terminal_the_redecision_reaches(self):
+        text = redecision_text(self.text)
+        self.assertIsNotNone(text, "no re-decision item in step 6")
+        outcomes = outcome_lines(text)
+        for outcome in ("merged", "stop", "none"):
+            self.assertIn("手順 14", outcomes.get(outcome, ""), outcome)
+        failure = [line for line in text.split("\n") if "スクリプトの失敗" in line]
+        self.assertEqual(len(failure), 1, failure)
+        self.assertIn("手順 14", failure[0])
+        self.assertIn("`internal_error`", failure[0])
+
+    def test_ac5_the_already_merged_entry_list_names_the_step_6_redecision(self):
+        body = self.section("マージ済みの経路")
+        entry = body.split("\n\n", 2)[1].split("。")[0]
+        for needle in ("手順 4", "手順 5.2", "手順 13.2", "手順 6", "再判定"):
+            self.assertIn(needle, entry)
+
+    def test_ac5_item_1_stops_the_hold_task_first_for_the_step_6_entry(self):
+        body = self.section("マージ済みの経路")
+        item = [line for line in body.split("\n") if re.match(r"^1\. ", line)]
+        self.assertEqual(len(item), 1)
+        for needle in ("手順 6", "手順 13.2", "手順 14"):
+            self.assertIn(needle, item[0])
+
+    def test_ac5_the_skipped_steps_and_the_cleanup_are_still_named(self):
+        body = self.section("マージ済みの経路")
+        for needle in ("`already_merged`", "手順 6〜13", "手順 7〜13", "手順 15"):
+            self.assertIn(needle, body)
+
+    def test_ac4_the_outcome_matcher_fires_on_forged_text(self):
+        forged = (
+            "4. 判定し直す。\n\n"
+            "   - `merged`（ローカル / PR）: 「マージ済みの経路」へ進む。\n"
+            "   - `stop`（ローカル / PR）: その `reason` で終端する。\n"
+            "ここから先は続く。\n"
+        )
+        forged_section = "### 6. ロック\n\n" + forged
+        text = redecision_text(forged_section)
+        self.assertIsNotNone(text)
+        outcomes = outcome_lines(text)
+        self.assertEqual(set(outcomes), {"merged", "stop"})
+        self.assertNotIn("手順 14", outcomes["merged"])
+        self.assertNotIn("手順 14", outcomes["stop"])
+        self.assertIsNone(redecision_text("### 6. ロック\n\n3. 確かめる。\n"))
+
+
+class TestHostQualifiedRepository(SkillCase):
+    """AC-6 of task0001 (FR5, D1)."""
+
+    def step_5_1(self):
+        body = self.section("5. ")
+        start = body.find("1. GitHub リポジトリの解決")
+        end = body.find("2. PR の解決")
+        self.assertTrue(0 <= start < end)
+        return body[start:end]
+
+    def test_ac6_step_5_1_states_repo_is_host_owner_name_passed_verbatim(self):
+        text = self.step_5_1()
+        self.assertIn("`HOST/OWNER/NAME`", text)
+        self.assertRegex(text, r"`--repo <repo>` には、この値をそのまま渡す")
+
+    def test_ac6_repo_is_no_longer_described_as_owner_name(self):
+        self.assertNotIn("（owner/name）", self.text)
+        self.assertNotIn("owner/name", self.step_5_1())
+
+    def test_ac6_the_held_values_list_describes_repo_the_same_way(self):
+        body = self.section("保持する値")
+        self.assertIn("`HOST/OWNER/NAME`", body)
+        self.assertNotIn("owner/name", body)
+
+    def test_ac6_every_repo_option_in_a_command_form_is_the_repo_value(self):
+        forms = [f for f in command_forms(self.text) if "--repo" in f]
+        self.assertGreaterEqual(len(forms), 5, forms)
+        for form in forms:
+            self.assertRegex(form, REPO_OPTION_RE)
+            self.assertEqual(form.count("--repo"), 1, form)
+
+    def test_ac6_gh_pr_create_and_merge_forms_are_unchanged_and_carry_no_repo(self):
+        blocks = bash_blocks(self.text)
+        create = block_lines(blocks, lambda line: line.startswith("gh pr create"))
+        merge = block_lines(blocks, lambda line: line.startswith("gh pr merge"))
+        self.assertEqual(len(create), 1)
+        self.assertEqual(len(merge), 1)
+        self.assertEqual(blocks[create[0]].body, [GH_PR_CREATE_FORM])
+        self.assertEqual(blocks[merge[0]].body, [GH_PR_MERGE_FORM])
+        for form in (GH_PR_CREATE_FORM, GH_PR_MERGE_FORM):
+            self.assertNotIn("--repo", form)
+
+    def test_ac6_the_repo_matcher_fires_on_forged_forms(self):
+        good = "python3 x.py resolve --repo <repo> --feature <feature>"
+        self.assertRegex(good, REPO_OPTION_RE)
+        for forged in (
+            "python3 x.py resolve --repo owner/name --feature <feature>",
+            "python3 x.py resolve --repo <repo>/x --feature <feature>",
+            "python3 x.py resolve --repo-name <repo>",
+        ):
+            self.assertIsNone(REPO_OPTION_RE.search(forged), forged)
 
 
 if __name__ == "__main__":
