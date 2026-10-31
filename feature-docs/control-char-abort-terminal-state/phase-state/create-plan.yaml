@@ -1,7 +1,7 @@
 schema_version: 1
 feature: control-char-abort-terminal-state
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: ec0b81658ec360dad7d255655b12a502f34c4a17
 last_input_digest: sha256:d3a96b3f5cfe5818a7fdd5d695597ff8f1cf76ad90cf7eae7bd042c69da1f8ae
