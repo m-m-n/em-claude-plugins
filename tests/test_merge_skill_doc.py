@@ -548,6 +548,7 @@ class TestDirectCommandForms(SkillCase):
         ):
             self.assertTrue(not_literal(forged), forged)
         self.assertFalse(not_literal('git add -- "src/a b.py"'))
+        self.assertFalse(not_literal('git --literal-pathspecs add -- "src/a b.py"'))
         self.assertFalse(not_literal('git commit -m "Merge x into y (resolve conflicts)"'))
 
     def test_ac2_script_calls_are_the_closed_set_and_none_performs_a_guarded_operation(self):
@@ -758,7 +759,12 @@ class TestConflictResolution(SkillCase):
     def test_ac5_permitted_actions_are_limited_without_hook_bypass(self):
         body = self.section("9. ")
         self.assertRegex(body, r"このステップで許すのは次だけ")
-        for needle in ("git add -- ", "git commit -m ", "`git merge --abort`"):
+        for needle in (
+            "git --literal-pathspecs add -- ",
+            "git --literal-pathspecs rm -- ",
+            "git commit -m ",
+            "`git merge --abort`",
+        ):
             self.assertIn(needle, body)
         self.assertRegex(body, r"hook は迂回しない")
         self.assertRegex(body, r"ステージ")
