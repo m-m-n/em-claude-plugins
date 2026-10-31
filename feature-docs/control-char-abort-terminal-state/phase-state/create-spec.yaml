@@ -5,12 +5,42 @@ status: dispatching
 generation: 1
 base_revision: 966ce074c5f00a91c0c49e13479c3ae52562d696
 last_input_digest: sha256:7e960d2501b20f2a3d3a7082a00f7967b337e9879eb667ccbba77f8ebb4fd667
-active_request_id: create-spec-run-0001
+active_request_id: null
 packets: {}
-answers: {}
+answers:
+  create-spec.feature-identity:
+    packet_id: null
+    answered_at: '2026-11-01T00:09:00+09:00'
+    source: batch-decision-table
+    answer_mode: select
+    selected_option_ids:
+    - derive_from_task_description
+    freeform: null
+    normalized_answer: 'feature name derived from the task description: control-char-abort-terminal-state'
+  create-spec.design-step:
+    packet_id: null
+    answered_at: '2026-11-01T00:12:22+09:00'
+    source: batch-decision-table
+    answer_mode: select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design_step_recommendation (skipped) を採用する
+    resolution_note: gate create-spec.design-step; batch-policies option_id decide_autonomously
+  create-spec.design-system:
+    packet_id: null
+    answered_at: '2026-11-01T00:12:22+09:00'
+    source: batch-decision-table
+    answer_mode: select
+    selected_option_ids:
+    - top_candidate_or_none
+    freeform: null
+    normalized_answer: 'design-system 候補 0 件のため kind: none'
+    resolution_note: gate create-spec.design-system; batch-policies option_id top_candidate_or_none;
+      zero candidates -> none
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:7e960d2501b20f2a3d3a7082a00f7967b337e9879eb667ccbba77f8ebb4fd667
   dispatch_digest_inputs:
     CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
@@ -22,9 +52,11 @@ worker_runs:
     test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
     tests/test_canonical_worktree_path_docs.py: sha256:581d4bdfad7315acb7eebc1e6ed8718b61527629a1f7d9d90e10c9adfb1b2a4c
     tests/test_queue_stop_guard.py: sha256:a70c5932ce673fe603ba2277fb1f2ca1dbf6387929936407536e24887c7ea70b
+  output_digest: sha256:9e1cf3ba71522dcf4a8a0993fc67121bfa95fc2c9b2463860157b07d9da54c26
+  self_write_set: []
 artifacts: []
 patches: []
-progress_fingerprint: null
+progress_fingerprint: sha256:84ca09fd6b6d922436b3c201953fd2bc9a2d59e546938916f92b2e8d7fb9d9de
 stale_redispatch_count: 0
 resolved_input_cache: {}
 last_error: null
