@@ -3,9 +3,9 @@ feature: unattended-merge
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: 24ae633fad4c2046ee6dfc6aa9264684b9da102b
-last_input_digest: sha256:27e9ac8b4b88e8aff0512083882ffc2341280e7a8ee76c78b2b6f010488a3c82
-active_request_id: create-spec-run-0003
+base_revision: f95fe85f2e0725fb56cf069a02661e1469d15d4f
+last_input_digest: sha256:eb9fa8022e5a1033cec39b79b1e900b9839c70df804e929359710822cf3c772f
+active_request_id: create-spec-run-0004
 packets:
   create-spec-q0001:
     status: answered
@@ -334,7 +334,7 @@ worker_runs:
   output_digest: sha256:edbe2c91e4534b605c2190418cc3a2574e4a9c211d6047afaafac74ffef681d2
   self_write_set: []
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:27e9ac8b4b88e8aff0512083882ffc2341280e7a8ee76c78b2b6f010488a3c82
   dispatch_digest_inputs:
     .claude-plugin/marketplace.json: sha256:d158a0570d33f889fe3c1fe9382f805b0ae450fee2beb41e5376eb8f5690ba85
@@ -369,6 +369,15 @@ worker_runs:
     em-workflow/skills/review/SKILL.md: sha256:8e197fa5f58ae2da9454476135b92ad530079c428bedd2e00cb4e6fb711380bc
     test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
     tests/test_check_plugin_invariants.py: sha256:35b31e481577a6260e9b08cf4c18e58b7c83d1993f708326ce6e5a4e4fbb941a
+  output_digest: sha256:40de8d55d9ad76c2aa0f59a8501f25005e9a6a2b34ca0f83ccdd16e4528c8030
+  self_write_set: []
+- request_id: create-spec-run-0004
+  status: dispatched
+  input_digest: sha256:eb9fa8022e5a1033cec39b79b1e900b9839c70df804e929359710822cf3c772f
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/spec-writer-contract.md: sha256:9032c6287d75f4a88e556bd3962c32ab8b4905cf3b6ececa895206788bcd0b63
+    em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
+    em-workflow/references/templates/spec-document.md: sha256:203dfcddbe507886ce861694fccd20ae25e5af0bd1b0efa5e935991add950cbd
 artifacts: []
 patches: []
 progress_fingerprint: null
