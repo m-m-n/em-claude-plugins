@@ -1,0 +1,48 @@
+feature: cd-prefix-canonical-path-only
+collected_at: "2026-10-31T13:20:00+09:00"
+session_ids:
+  - 01a1901b-69c1-74b2-9c8e-7e03b811b9b9
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の最終読みは score 2.01（バケット 2 が 0.99）で、閾値表により full を採用した"
+    bases:
+      - basis: description_only
+        score:
+          type: score
+          score: 1.93
+          confidence: 0.93
+          probabilities: {"0": 0.0, "1": 0.07, "2": 0.93, "3": 0.0}
+        observed_at: "2026-10-31T11:06:27+09:00"
+      - basis: description_plus_code
+        score:
+          type: score
+          score: 2.01
+          confidence: 0.99
+          probabilities: {"0": 0.0, "1": 0.0, "2": 0.99, "3": 0.01}
+        observed_at: "2026-10-31T11:25:27+09:00"
+    pre_survey_estimate:
+      files_expected: 13
+      changed_lines_approx: 2000
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: true
+      work_still_required: true
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 10
+      body_change_kind: new_logic
+      change_containment: multiple_modules
+      caller_and_dependency_count: 8
+      changes_external_contract: true
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 の medium 2 件（e193cc2c91fead25: リンク解決後のパスから信頼済み指示欄へ改行を混入できる / be78d6e245a087dd: 作業先の正規化で起動フックが推定する根と実行記録の場所が変わる）は unresolved のまま残った。triage filing は report 分岐で起票 0 件"
+  - "be78d6e245a087dd は起動フック（queue_launch_guard.py）が worktree_path から根と実行記録を逆算している前提と、生成側の正規化がずれる指摘。宣言済み変更範囲の外にあるため follow-up が要る"
