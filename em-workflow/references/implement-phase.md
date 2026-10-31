@@ -388,6 +388,24 @@ canonical absolute path that the Verbatim execution rule of
 the `worktree_path` passed to the implementer in the payload below. The
 unresolved `$WT_ROOT/{T}` string is never passed in its place.
 
+**Control-character check**: once every task selected in this entry into
+Step I.2.a has its canonical `worktree_path` (the value the Canonical
+worktree path paragraph above yields, for a worktree just created and for one
+reused under the Resume guard alike), check the value of each of those tasks,
+not only the first or the current one. The check is a test over the
+characters of the resolved value itself, not over how the value looks when
+printed, because most of the characters below are invisible or render as a
+line break. A value is rejected when it contains any character of Unicode
+general category Cc (U+0000–U+001F, U+007F, U+0080–U+009F), U+2028 or U+2029.
+When the value of one or more selected tasks contains such a character, ABORT
+the implement phase, report the IDs of the offending tasks, build no
+implementer launch prompt for any selected task (clean ones included) and
+launch no implementer. Never strip, escape or replace the characters and
+continue, and never fall back to the unresolved path string. The stop follows
+the same fail-closed discipline as Step I.0's identifier validation gate
+(never sanitize, never proceed), and it happens before the approval-gate
+paragraph below asks about any command.
+
 Before launching, verify every `project_commands` string (build/test/format)
 used by the selected tasks is in the approval store (`bash_guard.py
 --list`; command-execution-protocol.md). Anything unapproved: run the

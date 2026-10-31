@@ -1,0 +1,105 @@
+task_id: task0001
+baseline_failures: []          # before any edit: python3 -m unittest discover -s tests -> Ran 12289 tests, OK (skipped=1); no failing test
+final_failures: []             # re-executed after the implementation and after writing this record: python3 -m unittest discover -s tests -> Ran 12310 tests, OK (skipped=1); no failing test
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_canonical_worktree_path_docs.TestControlCharStopLiveDocument.test_ac3_live_check_applies_to_every_selected_task
+      - tests.test_canonical_worktree_path_docs.TestControlCharStopLiveDocument.test_ac3_live_check_names_the_full_rejected_set
+      - tests.test_canonical_worktree_path_docs.TestControlCharStopLiveDocument.test_ac3_live_check_stops_before_any_launch_prompt
+      - tests.test_canonical_worktree_path_docs.TestControlCharStopLiveDocument.test_ac3_the_check_paragraph_is_one_block
+      - tests.test_canonical_worktree_path_docs.TestControlCharStopLiveDocument.test_ac3_live_section_yields_no_problem
+    red_confirmed: true
+    red_reason: >-
+      Against the unchanged implement-phase.md the live-document tests failed:
+      AssertionError: Lists differ: ['expected exactly one control-character
+      check paragraph, found 0'] != [] for the scope, rejected-set and stop
+      checks, and AssertionError: 0 != 1 for the one-block test.
+  AC-2:
+    tests:
+      - tests.test_canonical_worktree_path_docs.TestControlCharStopLiveDocument.test_ac2_live_check_sits_between_the_canonicalization_and_the_launch
+      - tests.test_canonical_worktree_path_docs.TestControlCharStopForgedCopies.test_ac4_forged_copy_with_the_check_after_the_launch_loop_fails
+      - tests.test_canonical_worktree_path_docs.TestControlCharStopForgedCopies.test_ac4_forged_copy_with_the_check_before_the_canonicalization_fails
+      - tests.test_canonical_worktree_path_docs.TestControlCharStopForgedCopies.test_ac4_forged_copy_with_the_check_after_the_approval_gate_fails
+    red_confirmed: true
+    red_reason: >-
+      Against the unchanged document the live placement test failed:
+      AssertionError: Lists differ: ['cannot locate exactly one
+      control-character check block, found 0'] != []. The three moved-copy
+      tests failed in their derivation guard because the document had no check
+      paragraph to move.
+  AC-3:
+    tests:
+      - tests.test_canonical_worktree_path_docs.TestControlCharStopLiveDocument.test_ac3_live_check_applies_to_every_selected_task
+      - tests.test_canonical_worktree_path_docs.TestControlCharStopLiveDocument.test_ac3_live_check_names_the_full_rejected_set
+      - tests.test_canonical_worktree_path_docs.TestControlCharStopLiveDocument.test_ac3_live_check_stops_before_any_launch_prompt
+      - tests.test_canonical_worktree_path_docs.TestControlCharStopLiveDocument.test_ac2_live_check_sits_between_the_canonicalization_and_the_launch
+      - tests.test_canonical_worktree_path_docs.TestControlCharStopLiveDocument.test_ac3_live_section_yields_no_problem
+    red_confirmed: true
+    red_reason: >-
+      Against the unchanged document the four live checks (every selected
+      task, rejected set, stop before any launch prompt, placement) and the
+      combined live test failed: AssertionError: Lists differ: ['expected
+      exactly one control-character check paragraph, found 0'] != [] (and the
+      placement variant 'cannot locate exactly one control-character check
+      block, found 0').
+  AC-4:
+    tests:
+      - tests.test_canonical_worktree_path_docs.TestControlCharStopForgedCopies.test_ac4_forged_copy_without_the_check_paragraph_fails
+      - tests.test_canonical_worktree_path_docs.TestControlCharStopForgedCopies.test_ac4_forged_copy_with_the_rejected_set_reduced_to_the_line_feed_fails
+      - tests.test_canonical_worktree_path_docs.TestControlCharStopForgedCopies.test_ac4_forged_copy_that_names_one_range_less_fails
+      - tests.test_canonical_worktree_path_docs.TestControlCharStopForgedCopies.test_ac4_forged_copy_that_escapes_the_characters_and_continues_fails
+      - tests.test_canonical_worktree_path_docs.TestControlCharStopForgedCopies.test_ac4_forged_copy_with_the_check_after_the_launch_loop_fails
+      - tests.test_canonical_worktree_path_docs.TestControlCharStopForgedCopies.test_ac4_forged_copy_with_the_scope_narrowed_to_one_task_fails
+      - tests.test_canonical_worktree_path_docs.TestControlCharStopForgedCopies.test_ac4_forged_copy_with_the_scope_narrowed_to_the_current_task_fails
+      - tests.test_canonical_worktree_path_docs.TestControlCharStopForgedCopies.test_ac4_forged_copy_without_the_report_of_the_offending_ids_fails
+      - tests.test_canonical_worktree_path_docs.TestControlCharStopForgedCopies.test_ac4_forged_copy_that_still_builds_a_launch_prompt_fails
+      - tests.test_canonical_worktree_path_docs.TestControlCharStopForgedCopies.test_ac4_forged_copy_that_allows_stripping_fails
+      - tests.test_canonical_worktree_path_docs.TestControlCharStopForgedCopies.test_ac4_forged_copy_that_falls_back_to_the_unresolved_path_fails
+      - tests.test_canonical_worktree_path_docs.TestControlCharStopForgedCopies.test_ac4_replace_phrase_fails_loudly_when_nothing_matches
+    red_confirmed: true
+    red_reason: >-
+      Against the unchanged document every forged-copy test failed in its
+      derivation guard, because the forgeries are built from the live check
+      paragraph and the unchanged document has none (AssertionError: no
+      paragraph with ('Unicode general category Cc',) to remove; AssertionError:
+      no text matching 'every task selected in this entry into Step I.2.a' to
+      replace). Only the helper test
+      test_ac4_replace_phrase_fails_loudly_when_nothing_matches passed before
+      the change, since it exercises the replacement helper on a synthetic
+      string; every forged-copy test asserts the forgery differs from the live
+      section before its problems are checked.
+  AC-5:
+    tests:
+      - tests.test_canonical_worktree_path_docs.TestSectionLocation
+      - tests.test_canonical_worktree_path_docs.TestAC1ProducerCanonicalizes
+      - tests.test_canonical_worktree_path_docs.TestAC2PayloadPlaceholders
+      - tests.test_canonical_worktree_path_docs.TestAC3ConsumerProcedures
+      - tests.test_canonical_worktree_path_docs.TestAC4CitesTheRuleAndDoesNotRestateIt
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing test classes of
+      tests/test_canonical_worktree_path_docs.py (which slice Step I.2.a of
+      em-workflow/references/implement-phase.md into sentences, blocks and
+      paragraphs and require several of them to be unique) detect any new
+      paragraph that duplicates the canonicalization, hand-over or no-fallback
+      sentence, opens with an anchored opening or restates the path
+      conditions; no red state occurred for this change, since they were green
+      before the paragraph was added and stayed green after it. No existing
+      test method, check function or constant was modified or removed (the
+      diff of the module is additions only).
+  AC-6:
+    tests:
+      - tests.test_canonical_worktree_path_docs.TestAC4CitesTheRuleAndDoesNotRestateIt.test_ac4_this_module_imports_only_the_standard_library
+      - tests.test_canonical_worktree_path_docs.TestAC4CitesTheRuleAndDoesNotRestateIt.test_ac4_no_changed_section_restates_the_path_conditions
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing
+      test_ac4_this_module_imports_only_the_standard_library detects any
+      non-standard-library import in the module and
+      test_ac4_no_changed_section_restates_the_path_conditions detects a
+      path-condition restatement in Step I.2.a; no red state occurred for this
+      change, since the new code adds no import and the new paragraph states no
+      path condition. The new checks locate text by heading slice and stable
+      phrases and use no line number (by construction). The full-suite part of
+      the criterion is the run of python3 -m unittest discover -s tests itself.
