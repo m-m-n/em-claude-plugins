@@ -1,0 +1,68 @@
+schema_version: 2
+feature: worktree-path-control-char-stop
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.14
+    confidence: 0.86
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files
+        together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the
+        architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.86
+      '2': 0.14
+      '3': 0.0
+  observed_at: '2026-10-31T13:48:47+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.04
+    confidence: 0.95
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files
+        together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the
+        architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.95
+      '2': 0.05
+      '3': 0.0
+  observed_at: '2026-10-31T13:51:15+09:00'
+pre_survey_estimate:
+  files_expected: 2
+  changed_lines_approx: 40
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 4
+  body_change_kind: wording_or_rule_addition
+  change_containment: single_module
+  caller_and_dependency_count: 6
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: ローカル main（eba340d94fcc4c50c475ea03885559c33db90c50）と作業ツリーに差分はない。em-workflow/references/implement-phase.md:382
+    は strict realpath の解決結果を worktree_path として渡す手順を定めているが、制御文字の検査・停止・報告は記載していない。同ファイル:420 と :426 は正規化した値をプロンプトへ展開し、:427
+    の Untrusted data 見出しより前に配置する。:446 の制御文字のエスケープ指定は Untrusted data 内の値が対象である。em-workflow/skills/worktree-task-workflow/SKILL.md:168
+    は見出しより前の欄を指示源として扱う。したがって、現在の main に記述上の防止手順はなく、対応は必要である。em-workflow/hooks/queue_launch_guard.py:62
+    と :88 は行単位の正規表現で worktree_path を抽出し、:108 の検証には制御文字の拒否がない。:281 は検証失敗時も起動拒否を返さない。em-workflow/hooks/bash_guard.py:208
+    の改行除外は Bash の cd 前置形に対するものである。tests/test_canonical_worktree_path_docs.py:261 は正規化・値の引き渡し・未解決値への代替禁止・配置を検査し、:339
+    はプロンプトの差し込み値を検査するが、正規化後の制御文字による作成前停止と報告は検査していない。既存の検査対象は同ファイル:15、:21、:25、:30 に列挙されている。feature-docs/cd-prefix-canonical-path-only/reviews/round1.yaml:42
+    は implement-phase.md への手順追加と既存テストファイルへの検査追加を挙げ、:48 は該当指摘を unresolved と記録している。feature-docs/cd-prefix-canonical-path-only/retrospect.yaml:47
+    にも未解決と記録され、修正版・暫定緩和策の適用はこれらの記録では確認できない。変更先2ファイル、約40行、追加約4例は、この既存段落と検査を拡張する場合の概数であり、実際の差分ではない。新規の製品関数・ファイル・依存関係を要する箇所は確認できない。既存の検査関数と補助関数は
+    tests/test_canonical_worktree_path_docs.py:261、:302、:488 にあり、標準ライブラリのみという検査は :772 にある。製品側の変更対象は手順文書1ファイルで、起動の停止条件が変わる。既存のプロンプト形式は
+    em-workflow/references/implement-phase.md:417 にあり、形式変更は修正提案に含まれない。直接関係する呼び出し元・参照先として6ファイルを確認した：em-workflow/skills/develop/SKILL.md:715、em-workflow/agents/implementer.md:35、em-workflow/skills/worktree-task-workflow/SKILL.md:168、em-workflow/references/command-execution-protocol.md:116、em-workflow/hooks/queue_launch_guard.py:76、em-workflow/hooks/bash_guard.py:208。ファイルの作成・変更・削除およびテスト実行は行っていない
+decided_at: '2026-10-31T13:51:30+09:00'
