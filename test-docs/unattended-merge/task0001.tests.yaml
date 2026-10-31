@@ -1,0 +1,104 @@
+task_id: task0001
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 12456 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 12533 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_merge_result.TestAc1ReasonCodesRender.test_every_reason_code_renders_not_merged_with_the_eight_keys_in_order
+      - tests.test_merge_result.TestAc1ReasonCodesRender.test_every_route_renders_with_not_merged
+      - tests.test_merge_result.TestAc1ReasonCodesRender.test_merged_and_already_merged_render_with_an_empty_reason
+      - tests.test_merge_result.TestAc1ReasonCodesRender.test_exact_text_of_a_not_merged_result
+      - tests.test_merge_result.TestAc1ReasonCodesRender.test_worktree_removed_renders_as_the_quoted_words_true_and_false
+      - tests.test_merge_result.TestAc1ReasonCodesRender.test_an_empty_feature_pr_url_and_merge_commit_are_written_as_empty_quotes
+      - tests.test_merge_result.TestAc1ReasonCodesRender.test_unknown_input_keys_are_never_rendered
+    red_confirmed: true
+    red_reason: "Before em-workflow/scripts/merge-result.py existed, the class errored in setUpClass with FileNotFoundError on the renderer source, so no test of the class could run."
+  AC-2:
+    tests:
+      - tests.test_merge_result.TestAc2InvalidInput.test_each_invalid_input_renders_internal_error_naming_the_field
+      - tests.test_merge_result.TestAc2InvalidInput.test_every_missing_key_renders_internal_error_naming_the_field
+      - tests.test_merge_result.TestAc2InvalidInput.test_a_value_that_is_valid_on_its_own_survives_into_the_internal_error
+      - tests.test_merge_result.TestAc2InvalidInput.test_an_invalid_value_is_replaced_by_the_default_in_the_internal_error
+      - tests.test_merge_result.TestAc2InvalidInput.test_the_first_offending_field_in_key_order_is_named
+      - tests.test_merge_result.TestAc2InvalidInput.test_an_input_that_is_not_a_mapping_renders_internal_error
+      - tests.test_merge_result.TestAc2InvalidInput.test_every_internal_error_uses_a_reason_from_the_vocabulary
+    red_confirmed: true
+    red_reason: "Before the renderer existed, the class errored in setUpClass with FileNotFoundError on the renderer source. With a temporarily weakened renderer (the cross-field reason check disabled) the not_merged-with-empty-reason and merged-with-reason cases failed, and the renderer was restored afterwards."
+  AC-3:
+    tests:
+      - tests.test_merge_result.TestAc3EscapingAndInjection.test_line_breaks_quotes_backslashes_and_controls_render_as_one_escaped_line
+      - tests.test_merge_result.TestAc3EscapingAndInjection.test_the_written_text_holds_no_literal_control_character
+      - tests.test_merge_result.TestAc3EscapingAndInjection.test_a_detail_cannot_inject_another_key_or_a_second_result
+      - tests.test_merge_result.TestAc3EscapingAndInjection.test_a_field_other_than_detail_cannot_carry_a_line_break_into_the_result
+      - tests.test_merge_result.TestAc3EscapingAndInjection.test_input_keys_with_hostile_names_never_reach_the_output
+      - tests.test_merge_result.TestAc3EscapingAndInjection.test_runs_of_spaces_collapse_and_the_ends_are_trimmed
+      - tests.test_merge_result.TestAc3EscapingAndInjection.test_a_detail_of_only_whitespace_and_controls_renders_empty
+      - tests.test_merge_result.TestAc3EscapingAndInjection.test_characters_outside_the_control_set_are_kept_unchanged
+      - tests.test_merge_result.TestAc3EscapingAndInjection.test_an_unpaired_surrogate_cannot_break_the_output
+      - tests.test_merge_result.TestAc3EscapingAndInjection.test_a_detail_at_the_cap_is_kept_whole
+      - tests.test_merge_result.TestAc3EscapingAndInjection.test_a_detail_over_the_cap_is_cut_to_exactly_the_cap_and_marked
+      - tests.test_merge_result.TestAc3EscapingAndInjection.test_the_cap_is_applied_after_redaction
+    red_confirmed: true
+    red_reason: "Before the renderer existed, the class errored in setUpClass with FileNotFoundError on the renderer source. With a temporarily weakened renderer, the line-break and quote test failed when double-quote escaping was removed, and the two cap tests failed when the length cap was disabled; the renderer was restored afterwards."
+  AC-4:
+    tests:
+      - tests.test_merge_result.TestAc4Redaction.test_a_path_under_the_project_root_renders_repository_relative
+      - tests.test_merge_result.TestAc4Redaction.test_the_project_root_itself_renders_as_a_dot
+      - tests.test_merge_result.TestAc4Redaction.test_the_project_root_with_a_trailing_slash_in_the_input_still_matches
+      - tests.test_merge_result.TestAc4Redaction.test_any_other_path_under_the_home_directory_renders_as_tilde
+      - tests.test_merge_result.TestAc4Redaction.test_a_path_under_the_home_directory_renders_as_tilde_without_a_project_root
+      - tests.test_merge_result.TestAc4Redaction.test_the_project_root_wins_over_the_home_directory
+      - tests.test_merge_result.TestAc4Redaction.test_a_project_root_outside_the_home_directory_is_made_relative
+      - tests.test_merge_result.TestAc4Redaction.test_the_project_root_is_never_printed
+      - tests.test_merge_result.TestAc4Redaction.test_a_path_outside_the_home_directory_and_the_project_root_is_left_alone
+      - tests.test_merge_result.TestAc4Redaction.test_a_directory_that_only_shares_a_prefix_with_the_home_is_left_alone
+      - tests.test_merge_result.TestAc4Redaction.test_a_path_that_only_ends_in_the_home_path_is_left_alone
+      - tests.test_merge_result.TestAc4Redaction.test_a_url_whose_path_contains_the_home_path_is_left_alone
+      - tests.test_merge_result.TestAc4Redaction.test_a_pr_url_is_not_altered
+      - tests.test_merge_result.TestAc4Redaction.test_paths_next_to_punctuation_are_replaced
+      - tests.test_merge_result.TestAc4Redaction.test_every_notion_url_form_renders_as_the_placeholder
+      - tests.test_merge_result.TestAc4Redaction.test_a_notion_url_in_quotes_or_brackets_keeps_the_surrounding_text
+      - tests.test_merge_result.TestAc4Redaction.test_a_url_on_another_host_is_left_alone
+      - tests.test_merge_result.TestAc4Redaction.test_a_notion_url_and_a_path_in_the_same_detail_are_both_replaced
+      - tests.test_merge_result.TestAc4Redaction.test_a_notion_url_in_any_other_value_never_reaches_the_output
+      - tests.test_merge_result.TestAc4Redaction.test_a_home_path_in_any_other_value_never_reaches_the_output
+      - tests.test_merge_result.TestAc4Redaction.test_a_home_directory_too_shallow_to_name_a_user_replaces_nothing
+      - tests.test_merge_result.TestAc4Redaction.test_an_unusable_project_root_is_ignored
+      - tests.test_merge_result.TestAc4Redaction.test_the_command_line_reads_the_home_directory_from_the_environment
+    red_confirmed: true
+    red_reason: "Before the renderer existed, the class errored in setUpClass with FileNotFoundError on the renderer source. With a temporarily weakened renderer (Notion replacement removed, or the path-boundary lookbehind removed) eleven and two tests failed respectively, and the renderer was restored afterwards."
+  AC-5:
+    tests:
+      - tests.test_merge_result.TestAc5CommandLine.test_a_valid_document_prints_exactly_the_rendered_result
+      - tests.test_merge_result.TestAc5CommandLine.test_a_missing_document_yields_a_conformant_internal_error_with_exit_zero
+      - tests.test_merge_result.TestAc5CommandLine.test_a_directory_in_place_of_the_document_yields_internal_error
+      - tests.test_merge_result.TestAc5CommandLine.test_a_document_that_is_not_json_yields_internal_error
+      - tests.test_merge_result.TestAc5CommandLine.test_a_document_with_invalid_utf8_yields_internal_error
+      - tests.test_merge_result.TestAc5CommandLine.test_a_document_that_is_not_a_json_object_yields_internal_error
+      - tests.test_merge_result.TestAc5CommandLine.test_a_deeply_nested_document_yields_internal_error
+      - tests.test_merge_result.TestAc5CommandLine.test_a_json_object_that_breaks_the_contract_yields_internal_error_naming_the_field
+      - tests.test_merge_result.TestAc5CommandLine.test_a_wrong_number_of_arguments_still_prints_a_result_with_exit_zero
+      - tests.test_merge_result.TestAc5CommandLine.test_an_unexpected_failure_while_rendering_prints_the_fixed_fallback
+      - tests.test_merge_result.TestAc5CommandLine.test_the_exit_code_is_non_zero_only_when_nothing_could_be_printed
+    red_confirmed: true
+    red_reason: "Before the renderer existed, the subprocess tests failed with AssertionError: 2 != 0 (the interpreter could not open the script file), and the in-process main() tests errored with FileNotFoundError on the renderer source."
+  AC-6:
+    tests:
+      - tests.test_merge_result.TestAc6ContractDocument.test_the_contract_document_exists
+      - tests.test_merge_result.TestAc6ContractDocument.test_the_document_contains_no_gate_identifier
+      - tests.test_merge_result.TestAc6ContractDocument.test_the_document_example_lists_the_eight_keys_in_order
+      - tests.test_merge_result.TestAc6ContractDocument.test_the_document_example_is_a_fixed_point_of_the_renderer
+      - tests.test_merge_result.TestAc6ContractDocument.test_the_renderer_keys_and_vocabularies_match_the_contract_values
+      - tests.test_merge_result.TestAc6ContractDocument.test_the_document_result_and_route_vocabularies_equal_the_renderer_values
+      - tests.test_merge_result.TestAc6ContractDocument.test_the_reason_code_table_equals_the_renderer_vocabulary_and_the_shared_28_codes
+      - tests.test_merge_result.TestAc6ContractDocument.test_every_reason_code_row_names_a_condition_and_an_emitter
+      - tests.test_merge_result.TestAc6ContractDocument.test_the_fallback_block_equals_the_renderer_fallback_and_is_a_conformant_internal_error
+      - tests.test_merge_result.TestAc6ContractDocument.test_the_fallback_result_passes_through_the_renderer_unchanged_in_shape
+      - tests.test_merge_result.TestAc6ContractDocument.test_the_document_cites_the_terminal_line_format_sections_instead_of_restating_them
+      - tests.test_merge_result.TestAc6ContractDocument.test_the_document_cites_the_redaction_document
+      - tests.test_merge_result.TestAc6ContractDocument.test_the_detail_cap_stated_in_the_document_equals_the_renderer_cap
+      - tests.test_merge_result.TestAc6ContractDocument.test_the_document_names_no_home_path_and_no_notion_url
+      - tests.test_merge_result.TestAc6ContractDocument.test_the_script_imports_only_what_the_output_layer_needs
+      - tests.test_merge_result.TestAc6ContractDocument.test_the_script_starts_with_a_python3_shebang
+    red_confirmed: true
+    red_reason: "Before the renderer existed, the class errored in setUpClass with FileNotFoundError on the renderer source; with the renderer present and merge-result.md still absent, setUpClass errored with FileNotFoundError on the contract document."
