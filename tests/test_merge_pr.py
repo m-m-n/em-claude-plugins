@@ -15,6 +15,11 @@ integration tip: `state` takes a mandatory --base and reports `merged` only at
 Every test is also an AC-6 test: after each test the gh invocation log, the
 git invocation log and the repository's refs are checked against the
 operation boundary (read-only gh, explicit repository, no git ref change).
+
+task0003 of feature-docs/unattended-merge-medium-fixes (TestTask0003*) makes the
+repository identifier host-qualified: `repo` compares the host as well as
+owner/name and reports HOST/OWNER/NAME, and `resolve` / `state` accept that form
+(or the legacy OWNER/NAME) and pass it to gh verbatim.
 """
 
 import json
@@ -35,6 +40,7 @@ FEATURE = "feat"
 BASE = "main"
 BRANCH = "em-workflow/%s/integration" % FEATURE
 REPO = "acme/widgets"
+REPO_ID = "github.com/acme/widgets"
 GITHUB_URL = "https://github.com/acme/widgets.git"
 NON_GITHUB_URL = "https://git.example.invalid/acme/widgets.git"
 
@@ -70,15 +76,15 @@ def emit(fixture):
 
 if args[:2] == ["repo", "view"]:
     rest = args[2:]
-    if rest == ["--json", "nameWithOwner"]:
+    if rest == ["--json", "nameWithOwner,url"]:
         emit(load("fixture-repo-view-default.json"))
-    if len(rest) == 3 and rest[1:] == ["--json", "nameWithOwner"]:
+    if len(rest) == 3 and rest[1:] == ["--json", "nameWithOwner,url"]:
         raw = load("fixture-repo-view-url.json")
         if raw is not None:
             emit(raw)
         mapping = load("urls.json") or {}
         if rest[0] in mapping:
-            emit({"stdout": json.dumps({"nameWithOwner": mapping[rest[0]]})})
+            emit({"stdout": json.dumps(mapping[rest[0]])})
         sys.stderr.write("stub gh: could not resolve to a GitHub repository\\n")
         sys.exit(1)
 elif args[:2] == ["pr", "list"]:
@@ -98,6 +104,15 @@ os.execv(%(real_git)r, [%(real_git)r] + sys.argv[1:])
 """
 
 GH_OPTIONS_ALLOWED = {"--repo", "--head", "--base", "--state", "--limit", "--json"}
+REPO_VIEW_FIELDS = "nameWithOwner,url"
+
+
+def repo_doc(name_with_owner=REPO, host="github.com"):
+    """What `gh repo view --json nameWithOwner,url` prints."""
+    return {
+        "nameWithOwner": name_with_owner,
+        "url": "https://%s/%s" % (host, name_with_owner),
+    }
 
 
 def pr_entry(
@@ -156,9 +171,9 @@ def assert_gh_call_is_read_only(testcase, args):
     """AC-6: the only gh shapes the script may use."""
     if args[:2] == ["repo", "view"]:
         rest = args[2:]
-        ok = rest == ["--json", "nameWithOwner"] or (
+        ok = rest == ["--json", REPO_VIEW_FIELDS] or (
             len(rest) == 3
-            and rest[1:] == ["--json", "nameWithOwner"]
+            and rest[1:] == ["--json", REPO_VIEW_FIELDS]
             and not rest[0].startswith("-")
         )
         testcase.assertTrue(ok, "unexpected gh repo view shape: %r" % (args,))
@@ -169,7 +184,7 @@ def assert_gh_call_is_read_only(testcase, args):
         testcase.assertIn(option, GH_OPTIONS_ALLOWED, "gh option in %r" % (args,))
     testcase.assertIn("--repo", args, "gh call without explicit repository: %r" % (args,))
     value = args[args.index("--repo") + 1]
-    testcase.assertRegex(value, r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
+    testcase.assertRegex(value, r"^[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+){1,2}$")
 
 
 def assert_git_call_is_read_only(testcase, args):
@@ -223,8 +238,8 @@ class MergePrTestCase(unittest.TestCase):
         self.git("config", "commit.gpgsign", "false")
         self.git("commit", "-q", "--allow-empty", "-m", "initial")
         self.git("remote", "add", "origin", GITHUB_URL)
-        self.set_url_mapping({GITHUB_URL: REPO})
-        self.set_fixture("repo-view-default", stdout={"nameWithOwner": REPO})
+        self.set_url_mapping({GITHUB_URL: repo_doc()})
+        self.set_fixture("repo-view-default", stdout=repo_doc())
         # Taken right before the first script run, after the test has set up
         # its remotes, so that only the script's own effects are compared.
         self.before = None
@@ -347,26 +362,26 @@ class TestRepo(MergePrTestCase):
     def test_ac1_github_remote_returns_github_with_the_name_gh_reports(self):
         doc = self.decide(*self.repo_cmd())
         self.assertEqual(doc["outcome"], "github")
-        self.assertEqual(doc["repo"], REPO)
+        self.assertEqual(doc["repo"], REPO_ID)
         self.assertIsNone(doc["reason"])
         self.assertEqual(doc["detail"], "")
 
     def test_ac1_the_remotes_url_is_what_gh_is_asked_to_resolve(self):
         self.decide(*self.repo_cmd())
-        self.assertIn(["repo", "view", GITHUB_URL, "--json", "nameWithOwner"], self.gh_log())
+        self.assertIn(["repo", "view", GITHUB_URL, "--json", REPO_VIEW_FIELDS], self.gh_log())
 
     def test_ac1_repo_name_comes_from_gh_not_from_the_url(self):
         old = "https://github.com/old-owner/old-name.git"
         self.git("remote", "set-url", "origin", old)
-        self.set_url_mapping({old: REPO})
-        self.assertEqual(self.decide(*self.repo_cmd())["repo"], REPO)
+        self.set_url_mapping({old: repo_doc()})
+        self.assertEqual(self.decide(*self.repo_cmd())["repo"], REPO_ID)
 
     def test_ac1_ssh_style_remote_is_resolved(self):
         url = "git@github.com:acme/widgets.git"
         self.git("remote", "set-url", "origin", url)
-        self.set_url_mapping({url: REPO})
+        self.set_url_mapping({url: repo_doc()})
         doc = self.decide(*self.repo_cmd())
-        self.assertEqual((doc["outcome"], doc["repo"]), ("github", REPO))
+        self.assertEqual((doc["outcome"], doc["repo"]), ("github", REPO_ID))
 
     def test_ac1_non_github_remote_stops_remote_not_github(self):
         self.add_remote("elsewhere", NON_GITHUB_URL)
@@ -398,7 +413,7 @@ class TestRepo(MergePrTestCase):
         self.assertEqual(self.gh_log(), [])
 
     def test_ac2_default_repository_that_differs_stops_remote_unresolved_naming_both(self):
-        self.set_fixture("repo-view-default", stdout={"nameWithOwner": "fork-owner/widgets"})
+        self.set_fixture("repo-view-default", stdout=repo_doc("fork-owner/widgets"))
         doc = self.decide(*self.repo_cmd())
         self.assert_stop(doc, "remote_unresolved")
         self.assertIn("fork-owner/widgets", doc["detail"])
@@ -416,17 +431,17 @@ class TestRepo(MergePrTestCase):
         self.assert_stop(self.decide(*self.repo_cmd()), "remote_unresolved")
 
     def test_ac2_default_repository_comparison_ignores_letter_case(self):
-        self.set_fixture("repo-view-default", stdout={"nameWithOwner": "Acme/Widgets"})
+        self.set_fixture("repo-view-default", stdout=repo_doc("Acme/Widgets"))
         doc = self.decide(*self.repo_cmd())
-        self.assertEqual((doc["outcome"], doc["repo"]), ("github", REPO))
+        self.assertEqual((doc["outcome"], doc["repo"]), ("github", REPO_ID))
 
     def test_ac2_default_repository_query_names_no_repository(self):
         self.decide(*self.repo_cmd())
-        self.assertEqual(self.gh_log().count(["repo", "view", "--json", "nameWithOwner"]), 1)
+        self.assertEqual(self.gh_log().count(["repo", "view", "--json", REPO_VIEW_FIELDS]), 1)
 
     def test_ac2_remote_that_gh_cannot_resolve_is_decided_before_the_default_is_compared(self):
         self.add_remote("elsewhere", NON_GITHUB_URL)
-        self.set_fixture("repo-view-default", stdout={"nameWithOwner": "fork-owner/widgets"})
+        self.set_fixture("repo-view-default", stdout=repo_doc("fork-owner/widgets"))
         self.assert_stop(self.decide(*self.repo_cmd("elsewhere")), "remote_not_github")
 
 
@@ -718,7 +733,7 @@ class TestMalformedOutput(MergePrTestCase):
 
     def test_ac5_the_time_limit_covers_the_state_and_repo_calls_too(self):
         self.set_fixture("pr-view", stdout=view_entry(), sleep=60)
-        self.set_fixture("repo-view-default", stdout={"nameWithOwner": REPO}, sleep=60)
+        self.set_fixture("repo-view-default", stdout=repo_doc(), sleep=60)
         env = {"EM_WORKFLOW_MERGE_PR_GH_TIMEOUT": "1"}
         for command in (self.state_cmd(), self.repo_cmd()):
             started = time.monotonic()
@@ -1009,6 +1024,304 @@ class TestTask0010Bindings(MergePrTestCase):
 
 
 # ---------------------------------------------------------------------------------
+# task0003 (feature-docs/unattended-merge-medium-fixes): the repository identifier
+# is host-qualified (FR5; C1, C2 and C3 of that feature's IMPLEMENTATION.md)
+# ---------------------------------------------------------------------------------
+
+REMOTE_GHE_URL = "https://ghe.example/acme/service.git"
+GHE_SERVICE_DOC = {"nameWithOwner": "acme/service", "url": "https://ghe.example/acme/service"}
+GITHUB_SERVICE_DOC = {"nameWithOwner": "acme/service", "url": "https://github.com/acme/service"}
+HOST_FORM = "ghe.example/acme/service"
+LEGACY_FORM = "acme/service"
+
+
+def host_of_length(length):
+    """A host of exactly `length` characters that passes the character rule."""
+    host = "a" * (length - len(".example")) + ".example"
+    assert len(host) == length
+    return host
+
+
+class TestTask0003RepoHost(MergePrTestCase):
+    """`repo` compares host and owner/name, and reports HOST/OWNER/NAME."""
+
+    def point_origin_at(self, url, remote_doc):
+        self.git("remote", "set-url", "origin", url)
+        self.set_url_mapping({url: remote_doc})
+
+    def answer_urls(self, remote_url, default_url):
+        """Both sides name acme/widgets; each answers with its own repository URL."""
+        self.point_origin_at(GITHUB_URL, {"nameWithOwner": REPO, "url": remote_url})
+        self.set_fixture(
+            "repo-view-default", stdout={"nameWithOwner": REPO, "url": default_url}
+        )
+
+    # -- AC-1: a host mismatch is a stop ----------------------------------------------
+
+    def test_task0003_ac1_a_default_on_another_host_stops_remote_unresolved_naming_both(self):
+        # The reproduction: same owner/name, different host.
+        self.point_origin_at(REMOTE_GHE_URL, GHE_SERVICE_DOC)
+        self.set_fixture("repo-view-default", stdout=GITHUB_SERVICE_DOC)
+        doc = self.decide(*self.repo_cmd())
+        self.assert_stop(doc, "remote_unresolved")
+        self.assertIn("ghe.example/acme/service", doc["detail"])
+        self.assertIn("github.com/acme/service", doc["detail"])
+        self.assertNotIn("repo", doc)
+
+    def test_task0003_ac1_the_same_stop_when_the_default_is_the_one_on_the_other_host(self):
+        self.point_origin_at("https://github.com/acme/service.git", GITHUB_SERVICE_DOC)
+        self.set_fixture("repo-view-default", stdout=GHE_SERVICE_DOC)
+        doc = self.decide(*self.repo_cmd())
+        self.assert_stop(doc, "remote_unresolved")
+        self.assertIn("ghe.example/acme/service", doc["detail"])
+        self.assertIn("github.com/acme/service", doc["detail"])
+
+    def test_task0003_ac1_both_queries_ask_for_the_repository_url_with_owner_and_name(self):
+        self.decide(*self.repo_cmd())
+        self.assertEqual(
+            self.gh_log(),
+            [
+                ["repo", "view", GITHUB_URL, "--json", "nameWithOwner,url"],
+                ["repo", "view", "--json", "nameWithOwner,url"],
+            ],
+        )
+
+    # -- AC-2: a full match is github, with the three-segment repo ---------------------
+
+    def test_task0003_ac2_matching_host_and_name_return_the_three_segment_repo(self):
+        self.point_origin_at(REMOTE_GHE_URL, GHE_SERVICE_DOC)
+        self.set_fixture("repo-view-default", stdout=GHE_SERVICE_DOC)
+        doc = self.decide(*self.repo_cmd())
+        self.assertEqual(doc["outcome"], "github")
+        self.assertEqual(doc["repo"], HOST_FORM)
+        self.assertIsNone(doc["reason"])
+        self.assertEqual(doc["detail"], "")
+
+    def test_task0003_ac2_letter_case_differences_in_each_part_still_match(self):
+        self.point_origin_at(GITHUB_URL, GITHUB_SERVICE_DOC)
+        self.set_fixture(
+            "repo-view-default",
+            stdout={"nameWithOwner": "ACME/Service", "url": "https://GitHub.COM/ACME/Service"},
+        )
+        doc = self.decide(*self.repo_cmd())
+        self.assertEqual((doc["outcome"], doc["repo"]), ("github", "github.com/acme/service"))
+
+    def test_task0003_ac2_repo_is_the_remote_sides_identifier_as_gh_reported_it(self):
+        self.point_origin_at(
+            REMOTE_GHE_URL,
+            {"nameWithOwner": "Acme/Service", "url": "https://GHE.Example/Acme/Service"},
+        )
+        self.set_fixture("repo-view-default", stdout=GHE_SERVICE_DOC)
+        self.assertEqual(self.decide(*self.repo_cmd())["repo"], "GHE.Example/Acme/Service")
+
+    def test_task0003_ac2_a_name_mismatch_on_the_same_host_still_stops_remote_unresolved(self):
+        self.point_origin_at(REMOTE_GHE_URL, GHE_SERVICE_DOC)
+        self.set_fixture(
+            "repo-view-default",
+            stdout={
+                "nameWithOwner": "fork-owner/service",
+                "url": "https://ghe.example/fork-owner/service",
+            },
+        )
+        doc = self.decide(*self.repo_cmd())
+        self.assert_stop(doc, "remote_unresolved")
+        self.assertIn("ghe.example/fork-owner/service", doc["detail"])
+        self.assertIn("ghe.example/acme/service", doc["detail"])
+
+    def test_task0003_ac2_an_ssh_config_alias_is_not_taken_as_the_host(self):
+        self.point_origin_at("git@gh-alias:acme/widgets.git", repo_doc())
+        doc = self.decide(*self.repo_cmd())
+        self.assertEqual((doc["outcome"], doc["repo"]), ("github", REPO_ID))
+
+    def test_task0003_ac2_ssh_github_com_is_not_taken_as_the_host(self):
+        # gh is asked about the URL without its userinfo.
+        self.git("remote", "set-url", "origin", "ssh://git@ssh.github.com:443/acme/widgets.git")
+        self.set_url_mapping({"ssh://ssh.github.com:443/acme/widgets.git": repo_doc()})
+        doc = self.decide(*self.repo_cmd())
+        self.assertEqual((doc["outcome"], doc["repo"]), ("github", REPO_ID))
+
+    def test_task0003_ac2_a_host_of_253_characters_is_accepted(self):
+        host = host_of_length(253)
+        url = "https://%s/acme/widgets" % host
+        self.answer_urls(url, url)
+        doc = self.decide(*self.repo_cmd())
+        self.assertEqual((doc["outcome"], doc["repo"]), ("github", host + "/acme/widgets"))
+
+    # -- AC-3: a malformed host is a stop, a malformed answer is an internal failure ---
+
+    MALFORMED_HOSTS = (
+        ("a port", "github.com:8443"),
+        ("userinfo", "user@github.com"),
+        ("an underscore", "git_hub.com"),
+        ("a leading hyphen", "-github.com"),
+        ("a leading dot", ".github.com"),
+        ("an empty host", ""),
+        ("a space", "git hub.com"),
+        ("254 characters", host_of_length(254)),
+    )
+
+    def test_task0003_ac3_a_malformed_remote_side_host_stops_remote_unresolved(self):
+        for label, host in self.MALFORMED_HOSTS:
+            with self.subTest(label):
+                self.answer_urls("https://%s/acme/widgets" % host, "https://github.com/acme/widgets")
+                doc = self.decide(*self.repo_cmd())
+                self.assert_stop(doc, "remote_unresolved")
+                self.assertNotIn("repo", doc)
+                self.assertIn("remote", doc["detail"])
+                self.assertNotIn("default", doc["detail"])
+                if host:
+                    self.assertNotIn(host, doc["detail"])
+
+    def test_task0003_ac3_a_malformed_default_side_host_stops_remote_unresolved(self):
+        for label, host in self.MALFORMED_HOSTS:
+            with self.subTest(label):
+                self.answer_urls("https://github.com/acme/widgets", "https://%s/acme/widgets" % host)
+                doc = self.decide(*self.repo_cmd())
+                self.assert_stop(doc, "remote_unresolved")
+                self.assertNotIn("repo", doc)
+                self.assertIn("default", doc["detail"])
+                self.assertNotIn("remote", doc["detail"])
+                if host:
+                    self.assertNotIn(host, doc["detail"])
+
+    def test_task0003_ac3_a_url_without_a_scheme_has_no_host_and_stops_remote_unresolved(self):
+        schemeless = "gh-enterprise.example/acme/widgets"
+        good = "https://github.com/acme/widgets"
+        for side, remote_url, default_url in (
+            ("remote", schemeless, good),
+            ("default", good, schemeless),
+        ):
+            with self.subTest(side):
+                self.answer_urls(remote_url, default_url)
+                doc = self.decide(*self.repo_cmd())
+                self.assert_stop(doc, "remote_unresolved")
+                self.assertNotIn("gh-enterprise.example", doc["detail"])
+
+    def test_task0003_ac3_the_same_malformed_host_on_both_sides_is_still_a_stop(self):
+        url = "https://git_hub.com/acme/widgets"
+        self.answer_urls(url, url)
+        self.assert_stop(self.decide(*self.repo_cmd()), "remote_unresolved")
+
+    def test_task0003_ac3_a_missing_or_non_string_url_field_is_an_internal_failure(self):
+        missing = object()
+        for label, value in (
+            ("missing", missing),
+            ("null", None),
+            ("number", 5),
+            ("list", ["https://github.com/acme/widgets"]),
+            ("object", {}),
+        ):
+            bad = {"nameWithOwner": REPO}
+            if value is not missing:
+                bad["url"] = value
+            with self.subTest("remote side, url " + label):
+                self.point_origin_at(GITHUB_URL, bad)
+                self.set_fixture("repo-view-default", stdout=repo_doc())
+                self.assert_internal_failure(*self.repo_cmd())
+            with self.subTest("default side, url " + label):
+                self.point_origin_at(GITHUB_URL, repo_doc())
+                self.set_fixture("repo-view-default", stdout=bad)
+                self.assert_internal_failure(*self.repo_cmd())
+
+
+class TestTask0003RepoArgument(MergePrTestCase):
+    """`resolve` / `state` accept HOST/OWNER/NAME or OWNER/NAME and nothing else."""
+
+    ACCEPTED_FORMS = (
+        ("host-qualified", HOST_FORM),
+        ("legacy", LEGACY_FORM),
+        ("host-qualified, 253-character host", host_of_length(253) + "/acme/service"),
+    )
+
+    MALFORMED_VALUES = (
+        ("one segment", "service"),
+        ("four segments", "ghe.example/acme/service/extra"),
+        ("an empty value", ""),
+        ("an empty host segment", "/acme/service"),
+        ("an empty owner segment", "ghe.example//service"),
+        ("an empty name segment", "ghe.example/acme/"),
+        ("an empty owner segment, legacy form", "/service"),
+        ("an empty name segment, legacy form", "acme/"),
+        ("a host with a port", "ghe.example:8443/acme/service"),
+        ("a host with an underscore", "ghe_example/acme/service"),
+        ("a host with userinfo", "user@ghe.example/acme/service"),
+        ("a host starting with a dot", ".ghe.example/acme/service"),
+        ("a host starting with a hyphen", "-ghe.example/acme/service"),
+        ("a host of 254 characters", host_of_length(254) + "/acme/service"),
+        ("a scheme", "https://ghe.example/acme/service"),
+        ("a space in the host", "ghe example/acme/service"),
+        ("a trailing newline", HOST_FORM + "\n"),
+        ("an owner with a dot", "ghe.example/ac.me/service"),
+    )
+
+    def assert_usage_error(self, *args):
+        rc, out, err = self.run_script(*args)
+        self.assertEqual(rc, 2, args)
+        self.assertIn("usage: merge-pr.py", err, "exit 2 must come from argument parsing")
+        self.assertEqual(out, "")
+        self.assertEqual(self.gh_log(), [])
+
+    def repo_values_since(self, start):
+        """The value after --repo of every gh call made after the first `start`."""
+        calls = self.gh_log()[start:]
+        self.assertTrue(calls, "the subcommand made no gh call")
+        return [call[call.index("--repo") + 1] for call in calls]
+
+    # -- AC-4: both forms are accepted and passed to gh verbatim -------------------------
+
+    RESOLVE_DECISIONS = (
+        ("open", [pr_entry(number=12)], ("open", None)),
+        ("merged", [pr_entry(number=7, state="MERGED", head_sha=SHA_HEAD)], ("merged", None)),
+        ("none", [], ("none", None)),
+        ("draft", [pr_entry(number=4, draft=True)], ("stop", "pr_draft")),
+        ("closed", [pr_entry(number=3, state="CLOSED")], ("stop", "pr_closed")),
+    )
+
+    STATE_DECISIONS = (
+        ("ready", {}, ("ready", None)),
+        ("merged", {"state": "MERGED"}, ("merged", None)),
+        ("closed", {"state": "CLOSED"}, ("stop", "pr_closed")),
+        ("draft", {"draft": True}, ("stop", "pr_draft")),
+        ("conflicting", {"mergeable": "CONFLICTING"}, ("stop", "pr_conflicting")),
+        ("head moved", {"head_sha": SHA_OTHER}, ("stop", "pr_head_moved")),
+    )
+
+    def test_task0003_ac4_resolve_decides_as_before_and_passes_the_repo_verbatim(self):
+        for form, repo in self.ACCEPTED_FORMS:
+            for label, entries, (outcome, reason) in self.RESOLVE_DECISIONS:
+                with self.subTest("%s, %s" % (form, label)):
+                    self.set_fixture("pr-list", stdout=entries)
+                    start = len(self.gh_log())
+                    doc = self.decide(*self.resolve_cmd(repo=repo))
+                    self.assertEqual((doc["outcome"], doc["reason"]), (outcome, reason))
+                    self.assertEqual(self.repo_values_since(start), [repo])
+
+    def test_task0003_ac4_state_decides_as_before_and_passes_the_repo_verbatim(self):
+        for form, repo in self.ACCEPTED_FORMS:
+            for label, kwargs, (outcome, reason) in self.STATE_DECISIONS:
+                with self.subTest("%s, %s" % (form, label)):
+                    self.set_fixture("pr-view", stdout=view_entry(**kwargs))
+                    start = len(self.gh_log())
+                    doc = self.decide(*self.state_cmd(repo=repo))
+                    self.assertEqual((doc["outcome"], doc["reason"]), (outcome, reason))
+                    self.assertEqual(self.repo_values_since(start), [repo])
+
+    # -- AC-5: anything else is a usage error before any gh call ---------------------------
+
+    def test_task0003_ac5_resolve_rejects_each_malformed_repo_before_any_gh_call(self):
+        self.set_fixture("pr-list", stdout=[])
+        for label, value in self.MALFORMED_VALUES:
+            with self.subTest(label):
+                self.assert_usage_error(*self.resolve_cmd(repo=value))
+
+    def test_task0003_ac5_state_rejects_each_malformed_repo_before_any_gh_call(self):
+        self.set_fixture("pr-view", stdout=view_entry())
+        for label, value in self.MALFORMED_VALUES:
+            with self.subTest(label):
+                self.assert_usage_error(*self.state_cmd(repo=value))
+
+
+# ---------------------------------------------------------------------------------
 # AC-6: operation boundary
 # ---------------------------------------------------------------------------------
 
@@ -1032,7 +1345,7 @@ class TestOperationBoundary(MergePrTestCase):
         for call in explicit:
             self.assertEqual(call[call.index("--repo") + 1], REPO)
         # Only the default-repository query names no repository at all.
-        self.assertEqual(sum(1 for c in log if c == ["repo", "view", "--json", "nameWithOwner"]), 1)
+        self.assertEqual(sum(1 for c in log if c == ["repo", "view", "--json", REPO_VIEW_FIELDS]), 1)
 
     def test_ac6_git_is_used_only_to_read_the_remote_url(self):
         self.decide(*self.repo_cmd())
@@ -1056,7 +1369,10 @@ class TestOperationBoundary(MergePrTestCase):
             ["pr", "view", "12", "--repo", REPO, "--method", "POST"],
             ["api", "-X", "POST", "repos/acme/widgets/pulls"],
             ["repo", "view", "--web"],
+            ["repo", "view", "--json", "nameWithOwner"],
+            ["repo", "view", "--json", "nameWithOwner,url,isPrivate"],
             ["repo", "edit", "--repo", REPO],
+            ["pr", "view", "12", "--repo", "ghe.example/acme/service/extra", "--json", "number"],
         ):
             with self.subTest(args), self.assertRaises(AssertionError):
                 assert_gh_call_is_read_only(self, args)
