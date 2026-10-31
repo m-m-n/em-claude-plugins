@@ -1,0 +1,280 @@
+schema_version: 1
+feature: codex-consult-output-scratchpad
+created: '2026-10-31'
+base_branch: main
+goal: '# em-workflow の Codex 相談で、run_codex_exec.sh の出力がプロジェクトルートに consult1.out / consult1.err
+  として残る
+
+
+  種別: バグ
+
+
+  ## 現象
+
+  develop の質問解決ステップで Codex に相談したとき、オーケストレーターが `run_codex_exec.sh` の出力を相対パスでリダイレクトし、プロジェクトルートに
+  `consult1.out` / `consult1.err` が残った。
+
+
+  実行されたコマンド:
+
+  ```
+
+  S=<scratchpad>; P=''...''
+
+  <em-workflow>/scripts/run_codex_exec.sh readonly -C <対象プロジェクトのルート> "$P" > consult1.out
+  2>consult1.err
+
+  ```
+
+  `S` に scratchpad を設定しているが、リダイレクト先が `$S/` ではなくカレント（プロジェクトルート）になっている。別セッションでは `$S/consult1.txt`
+  と正しく scratchpad に書いており、毎回ではない。
+
+
+  ## 再現手順
+
+  1. 未確定の質問が出るタスクで `/em-workflow:develop` を実行する
+
+  2. 質問解決ステップで Codex 相談が走る
+
+  3. オーケストレーターが出力をファイルにリダイレクトした場合、置き場所がプロジェクトルートになることがある
+
+
+  ## 期待する挙動
+
+  Codex 相談の出力をファイルに残す場合、scratchpad に置かれ、プロジェクトルートに未追跡ファイルが残らない。
+
+
+  ## 完了の定義
+
+  - [ ] 再現手順で現象が起きない
+
+  - [ ] 再発を検出するテストがある
+
+
+  ## 該当箇所
+
+  `em-workflow/references/question-resolution.md:466-476`（手順 2. Wrapper invocation）
+
+  呼び出し形のみ規定しており、出力をファイルに保存するか・どこに置くかが書かれていない。手順 2 に「出力をファイルに残すときは scratchpad に置く。プロジェクトルートに書かない」旨を追記する。
+
+
+  ## 実害・発生条件
+
+  対象プロジェクトの作業ツリーに未追跡ファイルが残り、`git status` が汚れる。誤ってコミットされる可能性がある。
+
+  '
+parent_branch: em-workflow/codex-consult-output-scratchpad/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.08
+      '1': 0.92
+      '2': 0.0
+      '3': 0.0
+    description_plus_code:
+      '0': 0.01
+      '1': 0.99
+      '2': 0.0
+      '3': 0.0
+  at: '2026-10-31T15:11:02+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: 4abc5469d48f171381c88868ec908f1a1463db40
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'UI を持たない変更（手順文書と文書テストのみ）、design-system 候補 0 件（create-spec.design-step:
+    decide_autonomously -> skipped）。tier reduced でも design step は削減対象'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: completed
+  completed_at_commit: fe4038c2aa41a1880eb14702ddf0239454ca5ada
+- id: implement
+  status: completed
+  base_commit: f0cc5d36e78e2a86539efd8836ae7d262e97b963
+  completed_at_commit: 2c077c889f977755a846ebf6791d313954c6e72c
+- id: review
+  status: completed
+  completed_at_commit: c16df5a55647c5645b64fd419ec7865d8a100685
+- id: verify
+  status: completed
+  completed_at_commit: db764f87e34c9ab798788b7f59e94864bdedb92b
+  result: pass
+  failed_items: []
+  summary: 'python3 -m unittest discover -s tests: 12376 tests OK (skipped=1). TS-1..TS-6 pass via the unit suite. TS-7 inspection pass: question-resolution.md (+8/-0) and SKILL.md (+3/-0) added lines only; no Notion URL or home-directory path in added lines (matches are only forbidden-token fixtures inside tests); no plugin.json or marketplace.json changed; step 2 addition English, step 3 addition Japanese. Manual read-through items both pass. Build/format/E2E: not configured.'
+- id: retrospect
+  status: completed
+  completed_at_commit: 7c300580b8a6903f1c4a2b96084d9137694d4ea9
+tasks:
+  task0001:
+    title: Scratchpad rule for saved Codex wrapper output, cited from the tier pre-survey
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/references/question-resolution.md
+    - em-workflow/skills/develop/SKILL.md
+    - tests/test_question_resolution_doc.py
+    - tests/test_develop_tier_staged_procedure.py
+    - test-docs/codex-consult-output-scratchpad/task0001.tests.yaml
+    skills: []
+    domains:
+    - external-io
+    complexity: medium
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    - NFR6
+    status: merged
+    branch: em-workflow/codex-consult-output-scratchpad/task0001
+    notes: null
+review:
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - spec
+    - performance
+    discretionary: []
+    cross_validation: false
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - spec
+  - performance
+  residual_critical_high: 0
+  needs_rework: false
+  status: completed
+requirements:
+  FR1:
+    title: Scratchpad placement of saved wrapper output
+    status: resolved
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+  FR2:
+    title: Project-root prohibition
+    status: resolved
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+  FR3:
+    title: Invocation form unchanged
+    status: resolved
+    tasks:
+    - task0001
+    tests:
+    - TS-5
+    - TS-7
+  FR4:
+    title: Citation from the develop tier pre-survey
+    status: resolved
+    tasks:
+    - task0001
+    tests:
+    - TS-3
+    - TS-4
+  FR5:
+    title: Regression test for question-resolution.md
+    status: resolved
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+  FR6:
+    title: Regression test for the SKILL.md citation
+    status: resolved
+    tasks:
+    - task0001
+    tests:
+    - TS-3
+    - TS-4
+  NFR1:
+    title: No undefined shell variables
+    status: resolved
+    tasks:
+    - task0001
+    tests:
+    - TS-6
+  NFR2:
+    title: question-resolution.md test retention
+    status: resolved
+    tasks:
+    - task0001
+    tests:
+    - TS-5
+  NFR3:
+    title: SKILL.md test retention
+    status: resolved
+    tasks:
+    - task0001
+    tests:
+    - TS-5
+  NFR4:
+    title: Doc redaction
+    status: resolved
+    tasks:
+    - task0001
+    tests:
+    - TS-7
+  NFR5:
+    title: Plugin version untouched
+    status: resolved
+    tasks:
+    - task0001
+    tests:
+    - TS-7
+  NFR6:
+    title: Document language
+    status: resolved
+    tasks:
+    - task0001
+    tests:
+    - TS-7
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

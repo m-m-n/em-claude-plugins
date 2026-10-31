@@ -1,0 +1,32 @@
+feature: codex-consult-output-scratchpad
+collected_at: "2026-10-31T16:05:37+09:00"
+session_ids: [01a190c6-a2ce-7199-9a0f-441835a82d1a]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: "Final read (description_plus_code) scored bucket 1 with confidence 0.99: a rule addition with a small test addition in a single module."
+    bases:
+      - basis: description_only
+        score: {type: score, score: 0.92, confidence: 0.92}
+        observed_at: "2026-10-31T15:08:57+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.0, confidence: 0.99}
+        observed_at: "2026-10-31T15:10:46+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/references/question-resolution.md
+        - tests/test_question_resolution_doc.py
+      changed_lines_approx: 20
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      body_change_kind: wording_or_rule_addition
+      change_containment: single_module
+follow_up_drafts: []
+lessons_candidates:
+  - "Pre-survey expected 2 files; the merged change touched 5 (SKILL.md and tests/test_develop_tier_staged_procedure.py for the tier pre-survey citation, plus test-docs). The tier stayed appropriate."

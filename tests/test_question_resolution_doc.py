@@ -104,6 +104,218 @@ SCHEMA_DOC_PATH = os.path.join(
 )
 
 
+# ---------------------------------------------------------------------------
+# codex-consult-output-scratchpad (task0001): the saved-output placement rule
+# in step 2 ("Wrapper invocation") of the Codex consultation procedure.
+#
+# The matchers below are plain predicates over a text argument, so the real
+# assertion and its negative twin (the pre-fix step 2 text) run the identical
+# check. Every phrase match runs on the whitespace-collapsed rendering of the
+# region, so Markdown line-wrapping never affects the result.
+# ---------------------------------------------------------------------------
+
+STEP2_START_MARKER = "2. **Wrapper invocation.**"
+STEP2_END_MARKER = "3. **One turn per call.**"
+
+# The phrases the rule is pinned by (compared on collapsed whitespace).
+SAVED_OUTPUT_CONDITION_PHRASE = (
+    "When the output of a `run_codex_exec.sh` call (stdout or stderr) is "
+    "saved to a file"
+)
+SCRATCHPAD_PLACEMENT_PHRASE = (
+    "that file is placed in the session scratchpad directory"
+)
+PROJECT_ROOT_PROHIBITION_PHRASE = "never written under `{project_root}`"
+CWD_RELATIVE_PROHIBITION_PHRASE = (
+    "the redirect target is never a path relative to the current directory"
+)
+BOTH_HARNESS_ENTRIES_PHRASE = (
+    "on either harness entry, including the turns after a "
+    "mid-consultation move from `codex` to `litellm`"
+)
+TIMEOUT_SENTENCE = (
+    "Run this Bash tool call with a timeout of 600000 milliseconds."
+)
+
+# The step 2 invocation line and its `--litellm` values, which the rule must
+# never disturb (retention pin).
+INVOCATION_LINE = (
+    '`"${CLAUDE_PLUGIN_ROOT}/scripts/run_codex_exec.sh" readonly '
+    '-C "{project_root}" "$PROMPT"`'
+)
+LITELLM_CONTRIBUTOR_VALUE = "`--litellm muse-spark-contributor`"
+LITELLM_PLAIN_VALUE = "`--litellm muse-spark`"
+
+# Pre-fix step 2 text, copied from the base revision (the revision before the
+# saved-output rule existed), including the head of step 3 so the region
+# extractor sees both markers. This literal is the negative twin's input; it
+# is deliberately NOT read from the edited document, so that the twin keeps
+# representing the bug after the fix.
+PRE_FIX_STEP2_TEXT = """\
+2. **Wrapper invocation.** Each turn calls the wrapper directly — never a
+   Task-dispatched agent — in read-only mode with the project root, on the
+   entry step 1 selected:
+   `"${CLAUDE_PLUGIN_ROOT}/scripts/run_codex_exec.sh" readonly -C "{project_root}" "$PROMPT"`,
+   and for the `litellm` entry the same call with a `--litellm` flag
+   inserted before `-C`, chosen by the `contributor_consented` value step 1
+   fixed for this consultation: `--litellm muse-spark-contributor` when it
+   is true, which the wrapper expands to
+   `-p litellm -m muse-spark-contributor`, and `--litellm muse-spark` when
+   it is false, which the wrapper expands to `-p litellm -m muse-spark`.
+   Run this Bash tool call with a timeout of 600000 milliseconds.
+   A turn whose wrapper call exits non-zero — including the wrapper's own
+   exit 124 (`CODEX_TIMEOUT`) — moves the consultation to the NEXT
+   available entry of the chain and continues it there. That advance is
+   decided on the exit code alone: the reply is never inspected to
+   classify why the launch failed, matching the wrapper's own contract
+   that nothing about a launch's output shapes what happens next. Turns
+   already spent still count against the ceiling below. A non-zero exit on
+   the last available entry ends the consultation, and whatever is still
+   unmapped goes to the Opus escalation exactly as the ceiling case does.
+3. **One turn per call.** The wrapper holds no conversation state across
+   invocations — each call is a single request/response.
+"""
+
+
+def _collapse_ws(text):
+    return re.sub(r"\s+", " ", text)
+
+
+def _wrapper_invocation_region(text):
+    """The step 2 region -- the text between the "2. **Wrapper invocation.**"
+    and "3. **One turn per call.**" markers -- whitespace-collapsed. Fails
+    (an AssertionError, never a silent empty string) when either marker is
+    missing or ambiguous, when the markers are out of order, or when the
+    region between them is empty."""
+    norm = _collapse_ws(text)
+    for marker in (STEP2_START_MARKER, STEP2_END_MARKER):
+        count = norm.count(marker)
+        if count != 1:
+            raise AssertionError(
+                f"expected marker exactly once, found {count}x: {marker!r}"
+            )
+    start = norm.index(STEP2_START_MARKER)
+    end = norm.index(STEP2_END_MARKER)
+    if end < start:
+        raise AssertionError(
+            "step 2 markers are out of order: "
+            f"{STEP2_END_MARKER!r} precedes {STEP2_START_MARKER!r}"
+        )
+    region = norm[start + len(STEP2_START_MARKER) : end]
+    if not region.strip():
+        raise AssertionError("step 2 region is empty")
+    return region
+
+
+def _states_scratchpad_placement(region):
+    """AC-1 matcher: the rule is conditional on a `run_codex_exec.sh` call's
+    output being saved to a file, names both streams, and places that file in
+    the session scratchpad directory."""
+    return (
+        SAVED_OUTPUT_CONDITION_PHRASE in region
+        and "stdout" in region
+        and "stderr" in region
+        and SCRATCHPAD_PLACEMENT_PHRASE in region
+    )
+
+
+def _states_project_root_and_cwd_prohibitions(region):
+    """AC-2 matcher: the saved file is never written under `{project_root}`
+    and the redirect target is never a current-directory-relative path."""
+    return (
+        PROJECT_ROOT_PROHIBITION_PHRASE in region
+        and CWD_RELATIVE_PROHIBITION_PHRASE in region
+    )
+
+
+def _rule_governs_both_harness_entries(region):
+    """The rule sits outside the `litellm`-only sentence: it is stated after
+    the timeout sentence and says it holds on either harness entry."""
+    timeout_end = region.find(TIMEOUT_SENTENCE)
+    rule_start = region.find(SAVED_OUTPUT_CONDITION_PHRASE)
+    return (
+        timeout_end != -1
+        and rule_start > timeout_end
+        and BOTH_HARNESS_ENTRIES_PHRASE in region
+    )
+
+
+def _retains_invocation_form(region):
+    """AC-7 (b) matcher: the invocation line, both `--litellm` values and the
+    600000-millisecond timeout sentence are still present verbatim."""
+    return all(
+        piece in region
+        for piece in (
+            INVOCATION_LINE,
+            LITELLM_CONTRIBUTOR_VALUE,
+            LITELLM_PLAIN_VALUE,
+            TIMEOUT_SENTENCE,
+        )
+    )
+
+
+_FORBIDDEN_PROVIDER_NAMES = (
+    "gemini",
+    "openrouter",
+    "openai",
+    "gpt-4",
+    "gpt-5",
+    "grok",
+    "mistral",
+    "llama",
+    "deepseek",
+    "qwen",
+)
+
+
+def _forbidden_tokens_in(region):
+    """AC-7 matcher (NFR2, NFR4): tokens the step 2 region must never carry."""
+    found = []
+    lowered = region.lower()
+    for token in ("rate limit", "rate-limit", "notion.so", "/home/", "/users/"):
+        if token in lowered:
+            found.append(token)
+    if "429" in region:
+        found.append("429")
+    for name in _FORBIDDEN_PROVIDER_NAMES:
+        if name in lowered:
+            found.append(name)
+    if re.search(r"task\d{4}", region):
+        found.append("taskNNNN")
+    if re.search(r"`gate_id`\s+is\s+`", region) or re.search(
+        r"`gate_id:\s*[\w.\-]+`", region
+    ):
+        found.append("gate_id literal")
+    return found
+
+
+_BRACED_VARIABLE_RE = re.compile(r"\$\{[^}]*\}")
+_BARE_VARIABLE_RE = re.compile(r"\$[A-Za-z_][A-Za-z0-9_]*")
+_GUARDED_VARIABLE_RE = re.compile(r"\$\{[A-Za-z_][A-Za-z0-9_]*:-[^}]*\}")
+
+
+def _shell_variable_tokens(text):
+    """Every shell-variable token in `text`, braced (`${NAME...}`) and bare
+    (`$NAME`) alike. Braced tokens are taken first and blanked out, so a
+    variable nested in a braced default is not counted twice."""
+    tokens = _BRACED_VARIABLE_RE.findall(text)
+    remainder = _BRACED_VARIABLE_RE.sub(" ", text)
+    tokens += _BARE_VARIABLE_RE.findall(remainder)
+    return tokens
+
+
+def _unguarded_new_variables(region, pre_fix_region):
+    """NFR1 check (AC-6): every shell-variable token in `region` is either
+    already present in the pre-fix region or in the guarded default form
+    `${VAR:-default}`. Returns the offending tokens."""
+    allowed = set(_shell_variable_tokens(pre_fix_region))
+    return [
+        token
+        for token in _shell_variable_tokens(region)
+        if token not in allowed and not _GUARDED_VARIABLE_RE.fullmatch(token)
+    ]
+
+
 class TestQuestionResolutionDoc(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -1379,6 +1591,84 @@ class TestQuestionResolutionDoc(unittest.TestCase):
         self.assertIn("resolution_note", self.text)
         self.assertIn("run report", self.text)
 
+    # --- codex-consult-output-scratchpad task0001: saved wrapper output ----
+    # --- goes into the session scratchpad (step 2, Wrapper invocation) -----
+
+    def test_wrapper_invocation_region_lies_inside_codex_procedure(self):
+        # The region is located inside "### Codex consultation procedure",
+        # after its heading and before the next level-3 heading.
+        heading = self.text.index("### Codex consultation procedure")
+        next_heading = self.text.index("### Opus escalation")
+        start = self.text.index(STEP2_START_MARKER)
+        end = self.text.index(STEP2_END_MARKER)
+        self.assertLess(heading, start)
+        self.assertLess(start, end)
+        self.assertLess(end, next_heading)
+
+    def test_ac1_saved_output_goes_to_session_scratchpad(self):
+        region = _wrapper_invocation_region(self.text)
+        self.assertIn(SAVED_OUTPUT_CONDITION_PHRASE, region)
+        self.assertIn(SCRATCHPAD_PLACEMENT_PHRASE, region)
+        self.assertTrue(_states_scratchpad_placement(region))
+
+    def test_ac1_scratchpad_is_named_in_prose_as_the_harness_directory(self):
+        region = _wrapper_invocation_region(self.text)
+        self.assertIn(
+            "the per-session scratchpad directory the harness provides", region
+        )
+
+    def test_ac1_saving_stays_optional(self):
+        region = _wrapper_invocation_region(self.text)
+        self.assertIn("Saving the output stays optional", region)
+        self.assertIn("when nothing is saved, this rule imposes nothing", region)
+
+    def test_ac1_rule_governs_every_turn_on_either_harness_entry(self):
+        region = _wrapper_invocation_region(self.text)
+        self.assertTrue(_rule_governs_both_harness_entries(region))
+
+    def test_ac2_project_root_and_cwd_relative_paths_are_prohibited(self):
+        region = _wrapper_invocation_region(self.text)
+        self.assertIn(PROJECT_ROOT_PROHIBITION_PHRASE, region)
+        self.assertIn(CWD_RELATIVE_PROHIBITION_PHRASE, region)
+        self.assertTrue(_states_project_root_and_cwd_prohibitions(region))
+
+    def test_ac6_step2_introduces_no_unguarded_shell_variable(self):
+        region = _wrapper_invocation_region(self.text)
+        pre_fix_region = _wrapper_invocation_region(PRE_FIX_STEP2_TEXT)
+        self.assertEqual(_unguarded_new_variables(region, pre_fix_region), [])
+
+    def test_ac6_step2_variable_tokens_are_the_pre_fix_ones(self):
+        # Non-vacuity of the check above: the region does carry shell
+        # variables (the invocation line), and none beyond the pre-fix set
+        # was added, since the rule names the scratchpad in prose.
+        region = _wrapper_invocation_region(self.text)
+        pre_fix_region = _wrapper_invocation_region(PRE_FIX_STEP2_TEXT)
+        self.assertEqual(
+            sorted(_shell_variable_tokens(pre_fix_region)),
+            ["$PROMPT", "${CLAUDE_PLUGIN_ROOT}"],
+        )
+        self.assertEqual(
+            sorted(_shell_variable_tokens(region)),
+            sorted(_shell_variable_tokens(pre_fix_region)),
+        )
+
+    def test_ac7_step2_retains_invocation_line_litellm_values_and_timeout(self):
+        region = _wrapper_invocation_region(self.text)
+        self.assertIn(INVOCATION_LINE, region)
+        self.assertIn(LITELLM_CONTRIBUTOR_VALUE, region)
+        self.assertIn(LITELLM_PLAIN_VALUE, region)
+        self.assertIn(TIMEOUT_SENTENCE, region)
+        self.assertTrue(_retains_invocation_form(region))
+
+    def test_ac7_step2_carries_no_forbidden_token(self):
+        region = _wrapper_invocation_region(self.text)
+        self.assertEqual(_forbidden_tokens_in(region), [])
+
+    def test_ac7_rule_is_defined_only_in_this_document(self):
+        # "This is the only place the rule is defined": the placement phrase
+        # occurs exactly once in this document.
+        self.assertEqual(_collapse_ws(self.text).count(SCRATCHPAD_PLACEMENT_PHRASE), 1)
+
 
 class TestClassificationTrustBoundaryFix(unittest.TestCase):
     """task0019 AC-1 through AC-4, AC-9 (round2 findings 87ae09bcfe6410c0,
@@ -1650,6 +1940,208 @@ class TestQuestionPacketSchemaCategoryBlockingConstraint(unittest.TestCase):
             "feature-docs task identifier that does not exist in the "
             "distributed plugin (round2.yaml bs8)",
         )
+
+
+class TestWrapperOutputPlacementMatchers(unittest.TestCase):
+    """codex-consult-output-scratchpad task0001 (AC-3, AC-6, AC-7): the
+    step 2 region extractor fails loudly, and every matcher is run against
+    the pre-fix step 2 text (the negative twin) to show it can fail. The
+    twin goes through the same extractor and the identical predicate the
+    real-document assertions use."""
+
+    def setUp(self):
+        self.pre_fix_region = _wrapper_invocation_region(PRE_FIX_STEP2_TEXT)
+
+    # --- region extractor: fails loudly, never a silent empty string -------
+
+    def test_extractor_returns_whitespace_collapsed_region(self):
+        region = _wrapper_invocation_region(PRE_FIX_STEP2_TEXT)
+        self.assertNotIn("\n", region)
+        self.assertNotIn("  ", region)
+        self.assertIn("Each turn calls the wrapper directly", region)
+        self.assertNotIn("One turn per call", region)
+
+    def test_extractor_fails_when_start_marker_missing(self):
+        forged = PRE_FIX_STEP2_TEXT.replace(STEP2_START_MARKER, "2. Invocation.")
+        with self.assertRaises(AssertionError):
+            _wrapper_invocation_region(forged)
+
+    def test_extractor_fails_when_end_marker_missing(self):
+        forged = PRE_FIX_STEP2_TEXT.replace(STEP2_END_MARKER, "3. Next turn.")
+        with self.assertRaises(AssertionError):
+            _wrapper_invocation_region(forged)
+
+    def test_extractor_fails_when_markers_are_out_of_order(self):
+        start = PRE_FIX_STEP2_TEXT.index(STEP2_START_MARKER)
+        end = PRE_FIX_STEP2_TEXT.index(STEP2_END_MARKER)
+        forged = PRE_FIX_STEP2_TEXT[end:] + PRE_FIX_STEP2_TEXT[start:end]
+        with self.assertRaises(AssertionError):
+            _wrapper_invocation_region(forged)
+
+    def test_extractor_fails_when_a_marker_occurs_twice(self):
+        forged = PRE_FIX_STEP2_TEXT + PRE_FIX_STEP2_TEXT
+        with self.assertRaises(AssertionError):
+            _wrapper_invocation_region(forged)
+
+    def test_extractor_fails_when_region_is_empty(self):
+        forged = STEP2_START_MARKER + "\n" + STEP2_END_MARKER + " text\n"
+        with self.assertRaises(AssertionError):
+            _wrapper_invocation_region(forged)
+
+    def test_pre_fix_literal_is_non_trivial(self):
+        # Guards the twin against becoming vacuous (e.g. truncated).
+        self.assertGreater(len(self.pre_fix_region), 1000)
+        self.assertTrue(_retains_invocation_form(self.pre_fix_region))
+
+    # --- AC-3: the AC-1 and AC-2 matchers do not match the pre-fix text ----
+
+    def test_ac3_placement_matcher_does_not_match_pre_fix_step2(self):
+        self.assertFalse(_states_scratchpad_placement(self.pre_fix_region))
+
+    def test_ac3_prohibition_matcher_does_not_match_pre_fix_step2(self):
+        self.assertFalse(
+            _states_project_root_and_cwd_prohibitions(self.pre_fix_region)
+        )
+
+    def test_ac3_harness_entry_matcher_does_not_match_pre_fix_step2(self):
+        self.assertFalse(_rule_governs_both_harness_entries(self.pre_fix_region))
+
+    def test_ac3_each_phrase_is_absent_from_pre_fix_step2(self):
+        for phrase in (
+            SAVED_OUTPUT_CONDITION_PHRASE,
+            SCRATCHPAD_PLACEMENT_PHRASE,
+            PROJECT_ROOT_PROHIBITION_PHRASE,
+            CWD_RELATIVE_PROHIBITION_PHRASE,
+            BOTH_HARNESS_ENTRIES_PHRASE,
+        ):
+            self.assertNotIn(phrase, self.pre_fix_region)
+
+    def test_ac3_matchers_pass_on_a_region_that_carries_the_rule(self):
+        # Non-vacuity: the matchers are not constant-False. A region with the
+        # rule sentences appended after the timeout sentence satisfies them.
+        rule = (
+            "When the output of a `run_codex_exec.sh` call (stdout or stderr) "
+            "is saved to a file, that file is placed in the session scratchpad "
+            "directory. This holds on every turn, on either harness entry, "
+            "including the turns after a mid-consultation move from `codex` to "
+            "`litellm`. The file is never written under `{project_root}`, and "
+            "the redirect target is never a path relative to the current "
+            "directory."
+        )
+        forged = PRE_FIX_STEP2_TEXT.replace(
+            "   A turn whose wrapper call exits non-zero",
+            "   " + rule + "\n   A turn whose wrapper call exits non-zero",
+        )
+        region = _wrapper_invocation_region(forged)
+        self.assertTrue(_states_scratchpad_placement(region))
+        self.assertTrue(_states_project_root_and_cwd_prohibitions(region))
+        self.assertTrue(_rule_governs_both_harness_entries(region))
+
+    def test_ac3_placement_matcher_needs_both_stream_names(self):
+        rule = (
+            "When the output of a `run_codex_exec.sh` call (stdout or stderr) "
+            "is saved to a file, that file is placed in the session scratchpad "
+            "directory."
+        )
+        self.assertTrue(_states_scratchpad_placement(rule))
+        self.assertFalse(
+            _states_scratchpad_placement(rule.replace("stderr", "output"))
+        )
+        self.assertFalse(
+            _states_scratchpad_placement(rule.replace("stdout", "output"))
+        )
+
+    def test_ac3_prohibition_matcher_needs_both_prohibitions(self):
+        both = (
+            "The file is never written under `{project_root}`, and the "
+            "redirect target is never a path relative to the current "
+            "directory."
+        )
+        self.assertTrue(_states_project_root_and_cwd_prohibitions(both))
+        self.assertFalse(
+            _states_project_root_and_cwd_prohibitions(
+                both.replace("never written under", "written under")
+            )
+        )
+        self.assertFalse(
+            _states_project_root_and_cwd_prohibitions(
+                both.replace("never a path relative", "a path relative")
+            )
+        )
+
+    # --- AC-7: retention and forbidden-token matchers can fail -------------
+
+    def test_ac7_retention_matcher_fails_when_timeout_sentence_changes(self):
+        forged = self.pre_fix_region.replace("600000", "300000")
+        self.assertFalse(_retains_invocation_form(forged))
+
+    def test_ac7_retention_matcher_fails_when_a_litellm_value_is_dropped(self):
+        forged = self.pre_fix_region.replace(
+            "`--litellm muse-spark-contributor`", "`--litellm other`"
+        )
+        self.assertFalse(_retains_invocation_form(forged))
+
+    def test_ac7_retention_matcher_fails_when_invocation_line_changes(self):
+        forged = self.pre_fix_region.replace('-C "{project_root}"', "-C .")
+        self.assertFalse(_retains_invocation_form(forged))
+
+    def test_ac7_forbidden_token_matcher_is_clean_on_pre_fix_step2(self):
+        self.assertEqual(_forbidden_tokens_in(self.pre_fix_region), [])
+
+    def test_ac7_forbidden_token_matcher_detects_each_forbidden_token(self):
+        for sample, expected in (
+            ("hit a rate limit", "rate limit"),
+            ("on a rate-limit", "rate-limit"),
+            ("status 429", "429"),
+            ("via OpenRouter", "openrouter"),
+            ("see task0042", "taskNNNN"),
+            ("`gate_id` is `x.y`", "gate_id literal"),
+            ("`gate_id: x.y`", "gate_id literal"),
+            ("https://www.notion.so/abc", "notion.so"),
+            ("under /home/someone/work", "/home/"),
+        ):
+            with self.subTest(sample=sample):
+                self.assertIn(
+                    expected,
+                    _forbidden_tokens_in(self.pre_fix_region + " " + sample),
+                )
+
+    # --- AC-6 (NFR1): the unguarded-variable check can fail ---------------
+
+    def test_ac6_pre_fix_region_passes_the_variable_check(self):
+        self.assertEqual(
+            _unguarded_new_variables(self.pre_fix_region, self.pre_fix_region),
+            [],
+        )
+
+    def test_ac6_bare_redirect_through_undefined_variable_fails_the_check(self):
+        # The incident's form: the orchestrator-local `$S` used as the
+        # redirect directory.
+        forged = (
+            self.pre_fix_region
+            + " Redirect with `> $S/consult1.out 2> $S/consult1.err`."
+        )
+        self.assertEqual(
+            _unguarded_new_variables(forged, self.pre_fix_region),
+            ["$S", "$S"],
+        )
+
+    def test_ac6_braced_variable_without_default_fails_the_check(self):
+        forged = self.pre_fix_region + " Redirect with `> ${S}/consult1.out`."
+        self.assertEqual(
+            _unguarded_new_variables(forged, self.pre_fix_region), ["${S}"]
+        )
+
+    def test_ac6_guarded_default_form_is_accepted(self):
+        forged = (
+            self.pre_fix_region
+            + " Redirect with `> ${SCRATCH_DIR:-/tmp}/consult1.out`."
+        )
+        self.assertEqual(_unguarded_new_variables(forged, self.pre_fix_region), [])
+
+    def test_ac6_variable_nested_in_a_guarded_default_is_not_double_counted(self):
+        tokens = _shell_variable_tokens("${CODEX_HOME:-$HOME/.codex} and $PROMPT")
+        self.assertEqual(tokens, ["${CODEX_HOME:-$HOME/.codex}", "$PROMPT"])
 
 
 if __name__ == "__main__":
