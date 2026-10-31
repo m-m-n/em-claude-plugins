@@ -341,7 +341,7 @@ required-ness and its permitted values; every other document cites this
 section by repository-relative path instead of restating it.
 
 **Required-ness.** The field is REQUIRED on every write that sets the
-`implement` step's `status` to `failed`. Three write paths make such a
+`implement` step's `status` to `failed`. Four write paths make such a
 write; they are owned by `references/implement-phase.md`, which this
 section cites without restating which value each path writes.
 
