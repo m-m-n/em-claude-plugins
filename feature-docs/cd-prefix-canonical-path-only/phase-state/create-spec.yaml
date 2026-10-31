@@ -1,0 +1,25 @@
+schema_version: 1
+feature: cd-prefix-canonical-path-only
+phase: create-spec
+status: initialized
+generation: 1
+base_revision: e9499d39b9762f4e95df029526a3ce199a1b36b8
+last_input_digest: null
+active_request_id: null
+packets: {}
+answers:
+  create-spec.feature-identity:
+    packet_id: null
+    answered_at: "2026-10-31T11:27:31+09:00"
+    source: batch-decision-table
+    answer_mode: select
+    selected_option_ids: [derive_from_task_description]
+    freeform: null
+    normalized_answer: "feature name derived from the task description: cd-prefix-canonical-path-only"
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
