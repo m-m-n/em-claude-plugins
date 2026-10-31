@@ -2,39 +2,63 @@ schema_version: 1
 feature: rework-docs-only-task-routing
 created: '2026-11-01'
 base_branch: main
-goal: |
-  # em-workflow の verify rework で rework-planner が feature-docs/** だけを対象とするタスクを合成し、implementer が実装できずに implement が停止する
+goal: '# em-workflow の verify rework で rework-planner が feature-docs/** だけを対象とするタスクを合成し、implementer が実装できずに implement が停止する
+
 
   種別: バグ
 
+
   ## 現象
+
   verify の失敗から rework-planner が合成したタスクの `files` が `feature-docs/**` だけで構成され、implementer がそのタスクを実装できずに implement が `failed`（`failed_kind: decision`）で停止する。implementer の定義には「Never modify `feature-docs/**`」の制約があるため、再試行しても同じ理由で失敗する。
 
+
   発生例: 別プロジェクトの feature `auto-dispatch-not-started`（em-workflow 0.3.98 で実行）
+
   - verify round 1 が `src/verification-scenario-ids.test.ts` の失敗（VERIFICATION.md のシナリオ ID が `TS<N>` で、正規形 `TS-<N>` でない）で fail
+
   - 差し戻し経路の選択で文言修正経路（Wording-correction route）は「requirements の tests 参照値が変わる」ため対象外と判断され、通常の verify rework が選ばれた
-  - rework-planner が task0004「Canonical TS-<N> scenario IDs in the feature's verification documents」を合成。`files` は `feature-docs/auto-dispatch-not-started/VERIFICATION.md`・`tasks/task0001.md`・`tasks/task0003.md` の 3 つだけ
+
+  - rework-planner が task0004「Canonical TS-<N> scenario IDs in the feature''s verification documents」を合成。`files` は `feature-docs/auto-dispatch-not-started/VERIFICATION.md`・`tasks/task0001.md`・`tasks/task0003.md` の 3 つだけ
+
   - implementer が 2 回とも feature-docs/** の制約で失敗し、implement が `failed` で停止
 
+
   ## 再現手順
+
   1. VERIFICATION.md や tasks/*.md など feature-docs 配下の文書だけを直せば解消する verify 失敗を起こす（例: シナリオ ID の形式違反をガードテストが検出する）
+
   2. その修正が文言修正経路の適用条件を満たさない状態にする（例: requirements の tests 参照値が変わる）
+
   3. develop を実行して verify rework に進める
 
+
   ## 期待する挙動
+
   feature-docs/** だけを対象とする修正は、implementer に渡るタスクとして合成されず、feature-docs を書き換えられる経路（オーケストレーターまたは planner の文書更新など）で処理されて、develop が停止せずに進む。
 
+
   ## 完了の定義
+
   - 再現手順で現象が起きない
+
   - 再発を検出するテストがある
 
+
   ## 該当箇所
+
   - `em-workflow/agents/rework-planner.md`
+
   - `em-workflow/references/rework-task-synthesis.md`（Wording-correction route の適用条件）
+
   - `em-workflow/agents/implementer.md` の Hard constraints（`feature-docs/**` の変更禁止）
 
+
   ## 実害・発生条件
+
   無人実行（--batch）が implement で止まり、人が feature-docs を手で直すまで再開できない。
+
+  '
 parent_branch: em-workflow/rework-docs-only-task-routing/integration
 tier: full
 tier_decision:
@@ -94,7 +118,141 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Docs-only correction route in rework-task-synthesis.md
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/references/rework-task-synthesis.md
+    - tests/test_rework_docs_only_route_doc.py
+    skills: []
+    domains:
+    - api-contract
+    complexity: medium
+    requirements:
+    - FR1
+    - FR3
+    - FR5
+    - FR6
+    - FR7
+    - FR9
+    - NFR1
+    - NFR2
+    - NFR4
+    - NFR5
+    status: pending
+    notes: null
+    branch: null
+  task0002:
+    title: 'rework-planner documents: docs-only scope, write_policy, files rule, doc_corrections'
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/agents/rework-planner.md
+    - em-workflow/references/contracts/rework-planner-contract.md
+    - tests/test_rework_planner_docs_only_doc.py
+    skills: []
+    domains:
+    - api-contract
+    complexity: high
+    requirements:
+    - FR2
+    - FR3
+    - FR6
+    - FR7
+    - FR9
+    - NFR3
+    - NFR4
+    - NFR5
+    status: pending
+    notes: null
+    branch: null
+  task0003:
+    title: Requirement tests replacement in requirements_patch, and the docs-only round fixture
+    plan: tasks/task0003.md
+    files:
+    - em-workflow/references/workflow-patch.md
+    - em-workflow/scripts/validate-worker-output.py
+    - em-workflow/references/fixtures/workflow-patch/append_rework/invalid-tests-replace-expected-mismatch/input.json
+    - em-workflow/references/fixtures/workflow-patch/append_rework/invalid-tests-replace-expected-mismatch/workflow.json
+    - em-workflow/references/fixtures/workflow-patch/append_rework/invalid-tests-replace-expected-mismatch/digest-source.json
+    - em-workflow/references/fixtures/workflow-patch/append_rework/invalid-tests-replace-expected-mismatch/DRY_RUN_APPLY
+    - em-workflow/references/fixtures/worker-result/rework-planner/valid-docs-only-round/input.json
+    - em-workflow/references/fixtures/worker-result/rework-planner/valid-docs-only-round/envelope.json
+    - em-workflow/references/fixtures/worker-result/rework-planner/valid-docs-only-round/workflow.json
+    - em-workflow/references/fixtures/worker-result/rework-planner/valid-docs-only-round/digest-source.json
+    - em-workflow/references/fixtures/worker-result/rework-planner/valid-docs-only-round/DRY_RUN_APPLY
+    - tests/test_requirements_tests_replace.py
+    skills:
+    - backend-impl
+    domains:
+    - api-contract
+    - input-handling
+    complexity: high
+    requirements:
+    - FR2
+    - FR4
+    - FR5
+    - FR7
+    - FR9
+    - NFR4
+    - NFR5
+    status: pending
+    notes: null
+    branch: null
+  task0004:
+    title: 'Validator rejections: feature-docs task files, implement reset on a docs-only round, rename-aware coverage'
+    plan: tasks/task0004.md
+    files:
+    - em-workflow/scripts/validate-worker-output.py
+    - em-workflow/references/fixtures/worker-result/rework-planner/invalid-task-files-feature-docs-only/input.json
+    - em-workflow/references/fixtures/worker-result/rework-planner/invalid-task-files-feature-docs-only/envelope.json
+    - em-workflow/references/fixtures/worker-result/rework-planner/invalid-task-files-code-and-feature-docs/input.json
+    - em-workflow/references/fixtures/worker-result/rework-planner/invalid-task-files-code-and-feature-docs/envelope.json
+    - em-workflow/references/fixtures/worker-result/rework-planner/valid-task-files-code-only/input.json
+    - em-workflow/references/fixtures/worker-result/rework-planner/valid-task-files-code-only/envelope.json
+    - em-workflow/references/fixtures/worker-result/rework-planner/invalid-docs-only-round-resets-implement/input.json
+    - em-workflow/references/fixtures/worker-result/rework-planner/invalid-docs-only-round-resets-implement/envelope.json
+    - em-workflow/references/fixtures/worker-result/rework-planner/valid-mixed-round-renamed-scenario-declared/input.json
+    - em-workflow/references/fixtures/worker-result/rework-planner/valid-mixed-round-renamed-scenario-declared/envelope.json
+    - em-workflow/references/fixtures/worker-result/rework-planner/invalid-mixed-round-renamed-scenario-undeclared/input.json
+    - em-workflow/references/fixtures/worker-result/rework-planner/invalid-mixed-round-renamed-scenario-undeclared/envelope.json
+    - tests/test_rework_docs_only_validator_rules.py
+    skills:
+    - backend-impl
+    domains:
+    - api-contract
+    - input-handling
+    complexity: high
+    requirements:
+    - FR3
+    - FR5
+    - FR6
+    - FR7
+    - FR9
+    - NFR5
+    status: pending
+    notes: null
+    branch: null
+  task0005:
+    title: develop verify-failure branches, --once note, and review-phase rework pointer
+    plan: tasks/task0005.md
+    files:
+    - em-workflow/skills/develop/SKILL.md
+    - em-workflow/references/review-phase.md
+    - tests/test_develop_docs_only_rework_doc.py
+    skills: []
+    domains:
+    - api-contract
+    complexity: medium
+    requirements:
+    - FR8
+    - FR9
+    - NFR1
+    - NFR4
+    - NFR5
+    status: pending
+    notes: null
+    branch: null
 review:
   status: pending
   rounds_completed: 0
@@ -104,7 +262,8 @@ requirements:
     status: assumed
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-8
@@ -113,7 +272,9 @@ requirements:
     status: assumed
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0002
+    - task0003
     tests:
     - TS-1
     - TS-9
@@ -122,7 +283,10 @@ requirements:
     status: assumed
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
+    - task0004
     tests:
     - TS-2
     - TS-3
@@ -133,7 +297,8 @@ requirements:
     status: assumed
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0003
     tests:
     - TS-1
     - TS-6
@@ -142,7 +307,10 @@ requirements:
     status: assumed
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0003
+    - task0004
     tests:
     - TS-1
     - TS-5
@@ -152,23 +320,35 @@ requirements:
     status: assumed
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
+    - task0004
     tests:
     - TS-7
+    - TS-8
+    - TS-9
   FR7:
     title: 文書修正の宣言と、改名したシナリオ ID のカバレッジ判定
     status: assumed
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
     tests:
     - TS-7
+    - TS-8
+    - TS-9
   FR8:
     title: develop の verify 失敗分岐と --once の再開先を更新
     status: assumed
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0005
     tests:
     - TS-10
   FR9:
@@ -176,7 +356,12 @@ requirements:
     status: assumed
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
     tests:
     - TS-1
     - TS-2
@@ -186,19 +371,26 @@ requirements:
     - TS-6
     - TS-7
     - TS-10
+    - TS-8
+    - TS-9
   NFR1:
     title: 4 経路の同一性
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0005
+    tests:
+    - TS-10
+    - TS-11
   NFR2:
     title: 固定済み構造の維持
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-8
   NFR3:
@@ -206,29 +398,43 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS-12
   NFR4:
     title: SSOT の参照規律
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0005
+    tests:
+    - TS-13
   NFR5:
     title: テスト依存
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    tests:
+    - TS-14
   NFR6:
     title: version
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: []
-    tests: []
+    tests:
+    - TS-15
 batch:
   review_rework_count: 0
   verify_rework:
