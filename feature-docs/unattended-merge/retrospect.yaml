@@ -1,0 +1,132 @@
+feature: unattended-merge
+collected_at: '2026-10-31T22:47:14+09:00'
+session_ids:
+- 01a19235-5aee-701a-ba13-34dfaaba51ba
+signals:
+  review_critical_high:
+  - stable_id: 76b5331fec1ac5e4
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 正規形 gh pr merge の allow が、builtin / trap DEBUG / set -a などで書いた cwd・環境変数の変更を見逃す
+    resolution: fixed
+  - stable_id: 1859de80d39c2434
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: ディレクトリ名を偽装するだけでマージの許可を取得できる
+    resolution: fixed
+  - stable_id: 6076ba4a5e8a2987
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 'TM-8: 先頭の --repo 指定でマージ制限を迂回できる'
+    resolution: fixed
+  - stable_id: 391a11021eceabb2
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 配下の別リポジトリにも無人マージの許可が適用される
+    resolution: fixed
+  - stable_id: e98952e1c6974608
+    category: security
+    file: em-workflow/scripts/merge-pr.py
+    title: PR のマージ先変更を直前の検証で検出できない
+    resolution: fixed
+  - stable_id: aef7d769aa20408b
+    category: comprehensive
+    file: em-workflow/skills/merge/SKILL.md
+    title: マージ待ちへの登録をマージ完了として報告する
+    resolution: fixed
+  - stable_id: b68e0757b10b188a
+    category: comprehensive
+    file: em-workflow/skills/merge/SKILL.md
+    title: 検証コマンドが変更した作業内容をマージ対象と照合していない
+    resolution: fixed
+  - stable_id: 5fc2a892ec0d93af
+    category: security
+    file: em-workflow/skills/merge/SKILL.md
+    title: PR の取り込み先確認に --base が渡されていない
+    resolution: unresolved in round 1; fixed by rework task0010
+  - stable_id: 6f9a43271bbe4635
+    category: comprehensive
+    file: em-workflow/skills/merge/SKILL.md
+    title: PR の取り込み先を照合する引数が渡されていない
+    resolution: unresolved in round 1; fixed by rework task0010
+  - stable_id: 52da02f8e39e1128
+    category: security
+    file: em-workflow/skills/merge/SKILL.md
+    title: 'TM-6: ファイル名によって解消対象外のファイルもステージされる'
+    resolution: unresolved in round 1; fixed by rework task0011
+  - stable_id: 806f8dab0fccee0c
+    category: comprehensive
+    file: em-workflow/scripts/merge-pr.py
+    title: 過去のマージ済み PR が現在の未取り込み変更を隠す
+    resolution: unresolved in round 1; fixed by rework task0010
+  - stable_id: f07552e97bab2b10
+    category: architecture
+    file: em-workflow/hooks/destructive-guard.py
+    title: Security guard layer depends on workflow merge specifics
+    resolution: unresolved in round 1; fixed by rework task0012
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: description_plus_code の最終読みで bucket 3（新規ファイル・新規モジュールを伴う横断変更）の確率 0.69 が最大となり full を採用
+    bases:
+    - basis: description_only
+      score:
+        type: score
+        score: 2.64
+        confidence: 0.65
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.0
+          '2': 0.35
+          '3': 0.65
+      observed_at: '2026-10-31T18:06:04+09:00'
+    - basis: description_plus_code
+      score:
+        type: score
+        score: 2.68
+        confidence: 0.69
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.0
+          '2': 0.31
+          '3': 0.69
+      observed_at: '2026-10-31T18:08:12+09:00'
+    pre_survey_estimate:
+      files_expected:
+      - em-workflow/skills/merge/SKILL.md
+      - em-workflow/README.md
+      - tests/test_merge_skill.py
+      changed_lines_approx: 350
+      new_functions_needed: 0
+      new_files_needed: 2
+      new_dependencies_needed: []
+      covering_tests_exist: false
+      spillover_modules: []
+      work_still_required: true
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 12
+      body_change_kind: new_logic
+      change_containment: single_module
+      caller_and_dependency_count: 7
+      changes_external_contract: true
+      changes_behavior: true
+      evidence: skills/ に完成済み feature の無人マージ用スキルはない。scripts/merge-task.sh は task→integration 専用で、早送りを許容し、競合時は終了する。develop/SKILL.md:988-1015 は batch でマージせず、--pr でも PR 作成まで。workflow-schema.md:30-71 に base_branch、parent_branch、テストコマンドがある。既存テストは task マージと develop の結果形式を対象とし、今回の PR 更新・仕様に基づく競合解消・CI 待機・再開を網羅しない。loop-develop 本体は本リポジトリに見当たらない。依存箇所は外部起動元、Git、gh、workflow.yaml、仕様書、Codex 呼び出し、コマンド承認処理の7つとして数えた。追加パスと件数はスキル定義内に手順と結果形式を記述する案の概算。ファイル変更とテスト実行はしていない
+follow_up_drafts: []
+lessons_candidates:
+- implement の journal.jsonl には launched / merged しか残らず、implementer 報告の conflict_retries / deviations を retrospect 時に再取得できなかった（conflict_reworks / file_prediction_misses は空で記録）
+- round 1 で destructive-guard への merge 許可の追加が security high を 5 件連鎖させた。guard への特例追加は別モジュール分離（task0012）を最初の計画段階で選ぶべきだった
+- pre_survey_estimate は 3 ファイル・約 350 行の single_module を見込んだが、実際は 12 タスク・スクリプト 6 本 + hook 改修の横断変更になった
