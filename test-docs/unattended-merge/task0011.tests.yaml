@@ -1,0 +1,89 @@
+task_id: task0011
+baseline_failures:             # `python3 -m unittest discover -s tests` from the repository root
+                                # before any file was touched: 12973 tests, 10 failures, 1 skipped.
+                                # Eight distinct tests (one of them fails for three subtests); all
+                                # sit in the destructive-guard test modules, which this task does
+                                # not touch.
+  - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+  - tests.test_destructive_guard_command_substitution.TestSourceHygieneAndDeterminism.test_no_new_filesystem_or_subprocess_calls
+  - tests.test_destructive_guard_merge_allow.TestAC1CanonicalFormIsAllowed.test_ac1_allowed_from_a_subdirectory_of_the_worktree
+  - tests.test_destructive_guard_merge_allow.TestAC1CanonicalFormIsAllowed.test_ac1_allowed_from_the_integration_worktree
+  - tests.test_destructive_guard_merge_allow.TestAC3LaterSegmentsAreStillJudged.test_ac3_a_harmless_segment_does_not_change_the_allow
+  - tests.test_destructive_guard_merge_allow.TestAC3LaterSegmentsAreStillJudged.test_ac3_force_push_after_the_merge_is_denied
+  - tests.test_destructive_guard_merge_allow.TestAC3LaterSegmentsAreStillJudged.test_ac3_recursive_delete_after_the_merge_is_denied
+  - tests.test_destructive_guard_merge_allow.TestAC4WorkingDirectoryShape.test_ac4_a_climb_that_stays_inside_the_worktree_is_normalized
+final_failures:                # same command re-run after the implementation and after this record
+                                # was written; the same eight tests fail, nothing else does.
+  - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+  - tests.test_destructive_guard_command_substitution.TestSourceHygieneAndDeterminism.test_no_new_filesystem_or_subprocess_calls
+  - tests.test_destructive_guard_merge_allow.TestAC1CanonicalFormIsAllowed.test_ac1_allowed_from_a_subdirectory_of_the_worktree
+  - tests.test_destructive_guard_merge_allow.TestAC1CanonicalFormIsAllowed.test_ac1_allowed_from_the_integration_worktree
+  - tests.test_destructive_guard_merge_allow.TestAC3LaterSegmentsAreStillJudged.test_ac3_a_harmless_segment_does_not_change_the_allow
+  - tests.test_destructive_guard_merge_allow.TestAC3LaterSegmentsAreStillJudged.test_ac3_force_push_after_the_merge_is_denied
+  - tests.test_destructive_guard_merge_allow.TestAC3LaterSegmentsAreStillJudged.test_ac3_recursive_delete_after_the_merge_is_denied
+  - tests.test_destructive_guard_merge_allow.TestAC4WorkingDirectoryShape.test_ac4_a_climb_that_stays_inside_the_worktree_is_normalized
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_merge_conflict_pathspec.TestStagingForm.test_ac1_staging_a_conflicted_top_named_file_stages_only_it
+    red_confirmed: true
+    red_reason: >-
+      Watched it fail against the plain `git add --` form that SKILL.md step 9 carried:
+      AssertionError, Lists differ: [':(top)', 'README.md'] != [':(top)'] (the unrelated
+      modified README.md was staged too). Its control, test_ac1_control_the_plain_form_stages_the_unrelated_file,
+      stays green and shows the fixture can detect the damage.
+  AC-2:
+    tests:
+      - tests.test_merge_conflict_pathspec.TestStagingForm.test_ac2_staging_a_conflicted_top_glob_named_file_stages_only_it
+    red_confirmed: true
+    red_reason: >-
+      Watched it fail against the plain form: AssertionError, Lists differ:
+      [':(top,glob)*.md', 'README.md'] != [':(top,glob)*.md'].
+  AC-3:
+    tests:
+      - tests.test_merge_conflict_pathspec.TestDeletionForm.test_ac3_a_deletion_resolution_removes_only_the_conflicted_file
+    red_confirmed: true
+    red_reason: >-
+      Watched it fail against the plain `git rm --` form (SKILL.md carried no deletion form with
+      the option, so the plain form ran): AssertionError, 128 != 0 with git's
+      "fatal: not removing ':(top)' recursively without -r", leaving the conflicted file in the index.
+  AC-4:
+    tests:
+      - tests.test_merge_conflict_pathspec.TestAttributionForm.test_ac4_attribution_lists_only_base_commits_that_touched_the_path
+    red_confirmed: true
+    red_reason: >-
+      Watched it fail against the plain `git log` form: AssertionError, Lists differ with two
+      commit ids where one was expected (the base-side commit that touched only another file was
+      listed too).
+  AC-5:
+    tests:
+      - tests.test_merge_conflict_pathspec.TestStaticForms.test_ac5_every_form_over_the_conflicted_path_has_the_option_right_after_git
+      - tests.test_merge_conflict_pathspec.TestStaticForms.test_ac5_the_permitted_actions_name_the_literal_forms
+    red_confirmed: true
+    red_reason: >-
+      Watched both fail before SKILL.md changed: AssertionError, Lists differ: ['git', 'log'] !=
+      ['git', '--literal-pathspecs'] for the attribution form, and 'git --literal-pathspecs add'
+      not found in the permitted-actions sentence. The module's matcher self-checks
+      (test_ac5_the_matcher_fires_on_forged_forms_without_the_option,
+      test_ac5_step9_has_an_add_an_rm_and_a_log_form_over_the_conflicted_path) were green from the
+      start by design: they exercise forged text and the presence of the three forms.
+  AC-6:
+    tests:
+      - tests.test_merge_conflict_pathspec.TestGuardUnderBatch.test_ac6_the_three_literal_forms_are_neither_asked_nor_denied
+    red_confirmed: true
+    red_reason: >-
+      Watched it fail at its precondition that the three forms taken from SKILL.md carry the
+      option: AssertionError, Lists differ: ['git', 'add'] != ['git', '--literal-pathspecs'].
+      The guard's decision for these command shapes (allow under CLAUDE_BATCH) already held before
+      the change; no red state occurred for that part. The control
+      test_ac6_control_the_guard_judges_a_destructive_command_under_batch shows the hook run
+      judges commands at all.
+  AC-7:
+    tests:
+      - tests.test_merge_skill_doc.TestConflictResolution.test_ac5_permitted_actions_are_limited_without_hook_bypass
+    red_confirmed: true
+    red_reason: >-
+      The updated step 9 assertion (literal add and rm forms) was run against the pre-change
+      SKILL.md text and failed: AssertionError, 'git --literal-pathspecs add -- ' not found in
+      the step 9 body. The full-suite outcome itself is the project's test command, recorded in
+      final_failures.
