@@ -1,7 +1,7 @@
 schema_version: 1
 feature: rework-docs-only-task-routing
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 96eb84664ffdca17b92e2580baf1ff31500130a4
 last_input_digest: sha256:090aa9dfaca689380374f0c54d8408376e8615d3c7cdd6b4b430f0cdbbdc962e
