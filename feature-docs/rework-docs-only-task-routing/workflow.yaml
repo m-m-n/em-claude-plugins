@@ -113,7 +113,7 @@ workflow:
   base_commit: b1694fa9c1a164357ce522a54798a66d0f9aaa73
   completed_at_commit: 99f8b9f048ea8f75c191f926f27ccae39e4184ec
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -259,8 +259,16 @@ tasks:
     notes: null
     branch: em-workflow/rework-docs-only-task-routing/task0005
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
 requirements:
   FR1:
     title: 文書のみ修正経路を rework-task-synthesis.md 第 9 節に追加
