@@ -114,9 +114,9 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/cd-prefix-canonical-path-only/task0001
   task0002:
     title: Canonicalize worktree_path at the producer and state the assumption in
       the implementer procedures
@@ -134,9 +134,9 @@ tasks:
     - FR7
     - FR8
     - NFR1
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/cd-prefix-canonical-path-only/task0002
 review:
   status: pending
   rounds_completed: 0
