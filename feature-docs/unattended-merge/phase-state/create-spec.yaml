@@ -1,11 +1,11 @@
 schema_version: 1
 feature: unattended-merge
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
-base_revision: 943968d70080a623dd5db1af00fa58410ff75684
-last_input_digest: sha256:ffef0b5a7a9ba044bf05cb149663a4f19fcd1b282c92f5a7000c8563f15bbe69
-active_request_id: create-spec-run-0001
+base_revision: f3660bc92c4e4b9c61c6f99e1c6dd9b2ce0bad8d
+last_input_digest: sha256:1218355823e343c56a2e5e89a0980868a6015fb56a5ce1a9a8c4958b1508f63a
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     status: answered
@@ -258,6 +258,39 @@ worker_runs:
     tests/test_check_plugin_invariants.py: sha256:35b31e481577a6260e9b08cf4c18e58b7c83d1993f708326ce6e5a4e4fbb941a
   output_digest: sha256:216d3a45f1db8817c132fe589b59a4d765327b495057f7645e2c70a2a3e19206
   self_write_set: []
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:1218355823e343c56a2e5e89a0980868a6015fb56a5ce1a9a8c4958b1508f63a
+  dispatch_digest_inputs:
+    .claude-plugin/marketplace.json: sha256:d158a0570d33f889fe3c1fe9382f805b0ae450fee2beb41e5376eb8f5690ba85
+    .claude/rules/core-plugin-structure.md: sha256:62e2ad8531369d37f83ad5458d3f5077b4ca3edf7584ecba83b4be044909fd56
+    .claude/rules/core-plugin-version-bump.md: sha256:2d4c25eb5b7e70a44df068780fce08b4736cd52ff14e13b60ac711beb3b96745
+    .claude/rules/slash-commands-as-skills.md: sha256:ec59ec17e7d8cfd25c29c874de0d60b16066d8ad58cc0a6b2b4ff3f74075fd86
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    README.md: sha256:4553704d6e57f20ba4b5a72862c378c3c26ca9dd6e6349708f6f6393c32ca2ea
+    em-workflow/.claude-plugin/plugin.json: sha256:1d21f71442ac119f09bd39aff832b4c9646c254d76ba05f696bb439dc64e83f3
+    em-workflow/README.md: sha256:09d08bd86fa469dafdf7eca0f293ef3078e64f0ca129e7369184cf7ed116ded1
+    em-workflow/hooks/bash_guard.py: sha256:2e389895b2c0268d9efabba57d49a8ea0867836b3abbc6bdc08559c6f171fdb7
+    em-workflow/hooks/destructive-guard.py: sha256:805ce5e2be55d037e301d3775e81a929b8ca5714f31bf64dab2fd268e7945286
+    em-workflow/hooks/hooks.json: sha256:f9cb781c13f4ea79bb8dcbc44da225f2fada57c8824ea211c6711d1d05e6c0dc
+    em-workflow/hooks/loop-command-guard.py: sha256:09107866ed496b79555a4a6a9001b1df0c79e29de99922573a3af302877c8702
+    em-workflow/references/batch-mode.md: sha256:f585a0f99584494dd483e22b3564f8fe3d36e399245a6d3091d5aa14e26c41f5
+    em-workflow/references/batch-policies.yaml: sha256:3db7e9f495465e180d69fe43baf60f1f41f631ea90f49fc68d33966cadb63ba9
+    em-workflow/references/batch-terminal-line.md: sha256:133c9d9a3c6f410b0f2c719a72dd061fc618afbf740ad0ac371c1bc3448caf12
+    em-workflow/references/command-execution-protocol.md: sha256:e27010e037283e7125c91b8c35154e87e9687d6324e28bdd66150911fb3e8705
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
+    em-workflow/references/doc-redaction.md: sha256:0ad6394ab2435eb3596bd514c643e1afd143da97db934a2a68695621f36d5927
+    em-workflow/references/question-resolution.md: sha256:73cc9a0072babfcc86899cf648e21685f38b85ba71b7c6236f321b2526f35b29
+    em-workflow/references/review-phase.md: sha256:310a61d8927edf4deedbd859738c7e460ca44b3b937425df25e796c346060618
+    em-workflow/references/workflow-schema.md: sha256:7d6fcf022e4409981ec5b23e0b77865d2aad25813afc615d2a42f462a5fa690a
+    em-workflow/scripts/check-plugin-invariants.py: sha256:6f520911bc098d1bb8150be4ce97539feb3250cf279bd5c394b5015abbd50241
+    em-workflow/scripts/merge-task.sh: sha256:277239fed7353be3c5c1e1b755788b8acb31dbfe43142e4e115bcf71fd97e754
+    em-workflow/scripts/run_codex_exec.sh: sha256:54bd1de072d5e821e9d2b181e1b2e17e3fa81eaca5e18d9f331963eca05910f9
+    em-workflow/skills/develop/SKILL.md: sha256:a7d836a519af2b437271f974f4f07d5bd29e483e7ece94ee856088727e7574dd
+    em-workflow/skills/git-setup/SKILL.md: sha256:892661c7ac6fe376d869c992821b79811a36b2a8c0dd7ff465eb8a0ca7980344
+    em-workflow/skills/review/SKILL.md: sha256:8e197fa5f58ae2da9454476135b92ad530079c428bedd2e00cb4e6fb711380bc
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+    tests/test_check_plugin_invariants.py: sha256:35b31e481577a6260e9b08cf4c18e58b7c83d1993f708326ce6e5a4e4fbb941a
 artifacts: []
 patches: []
 progress_fingerprint: null
