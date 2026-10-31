@@ -94,7 +94,7 @@ workflow:
   base_commit: 8136b9a04c221e1f36832b037bcad5c7edcb0dbd
   completed_at_commit: 9255cef202377b2fbf5a68e1cbd050424438419b
 - id: review
-  status: in_progress
+  status: pending
 - id: verify
   status: pending
   result: null
@@ -320,7 +320,15 @@ tasks:
     branch: em-workflow/unattended-merge/task0009
 review:
   status: pending
-  rounds_completed: 0
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  residual_critical_high: 5
+  needs_rework: true
   plan:
     floor:
     - comprehensive

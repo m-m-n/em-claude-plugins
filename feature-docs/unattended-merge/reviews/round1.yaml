@@ -1,0 +1,592 @@
+round: 1
+executed_at: '2026-10-31T21:15:39+09:00'
+scope:
+  review_mode: diff
+  base_commit: 8136b9a04c221e1f36832b037bcad5c7edcb0dbd
+  head_commit: f0574cc54252927da75a992027251c10c135f3ee
+  changed_files:
+  - .claude-plugin/marketplace.json
+  - .claude/rules/hook-tests.md
+  - em-workflow/.claude-plugin/plugin.json
+  - em-workflow/README.md
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - em-workflow/hooks/tests/run-destructive-guard.py
+  - em-workflow/references/merge-result.md
+  - em-workflow/scripts/merge-ci-wait.py
+  - em-workflow/scripts/merge-git.py
+  - em-workflow/scripts/merge-lock.py
+  - em-workflow/scripts/merge-pr.py
+  - em-workflow/scripts/merge-preflight.py
+  - em-workflow/scripts/merge-result.py
+  - em-workflow/skills/merge/SKILL.md
+  - test-docs/unattended-merge/task0001.tests.yaml
+  - test-docs/unattended-merge/task0002.tests.yaml
+  - test-docs/unattended-merge/task0003.tests.yaml
+  - test-docs/unattended-merge/task0004.tests.yaml
+  - test-docs/unattended-merge/task0005.tests.yaml
+  - test-docs/unattended-merge/task0006.tests.yaml
+  - test-docs/unattended-merge/task0007.tests.yaml
+  - test-docs/unattended-merge/task0008.tests.yaml
+  - test-docs/unattended-merge/task0009.tests.yaml
+  - tests/test_batch_structured_result_output_version_bump.py
+  - tests/test_destructive_guard_command_substitution.py
+  - tests/test_destructive_guard_extglob_units.py
+  - tests/test_destructive_guard_lexer_agreement.py
+  - tests/test_destructive_guard_merge_allow.py
+  - tests/test_merge_ci_wait.py
+  - tests/test_merge_git.py
+  - tests/test_merge_local_route.py
+  - tests/test_merge_lock.py
+  - tests/test_merge_pr.py
+  - tests/test_merge_preflight.py
+  - tests/test_merge_result.py
+  - tests/test_merge_skill_doc.py
+  - tests/test_muse_consent_version_bump.py
+  - tests/test_threat_model_planner_contract.py
+  - tests/test_threat_model_review_phase.py
+  - tests/test_threat_model_reviewer_inputs.py
+  - tests/test_unattended_merge_manifest_version_bump.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: failed
+- run_id: security#fallback
+  perspective: security
+  role: fallback
+  source: claude
+  status: completed
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: failed
+- run_id: comprehensive#fallback
+  perspective: comprehensive
+  role: fallback
+  source: claude
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: review_data_too_large
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: review_data_too_large
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+- run_id: security#loop1
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: comprehensive#loop1
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: performance#loop1
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: architecture#loop1
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#loop1
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: security#loop2
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: comprehensive#loop2
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: performance#loop2
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: architecture#loop2
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: review_data_too_large
+- run_id: spec#loop2
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: review_data_too_large
+- run_id: security#loop3
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: comprehensive#loop3
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: performance#loop3
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: review_data_too_large
+- run_id: architecture#loop3
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: review_data_too_large
+- run_id: spec#loop3
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: review_data_too_large
+findings:
+- stable_id: 76b5331fec1ac5e4
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8720
+  title: 正規形 gh pr merge の allow が、builtin / trap DEBUG / set -a などで書いた cwd・環境変数の変更を見逃す
+  description: context_changed が CONTEXT_COMMANDS の先頭語照合だけで、builtin / trap / set -a / gh repo set-default などを見逃し、CLAUDE_BATCH 下でも別リポジトリへの正規形マージが allow になる。
+  suggestion: 正規形マージはコマンドが唯一の文のときだけ allow する。
+  reproduction: CLAUDE_BATCH=1 で builtin export GH_REPO=o/r の後に正規形マージを続けた文を integration worktree 形の cwd で判定すると allow になる。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - claude:security
+  confidence: 90
+  resolution: fixed
+  resolution_reason: auto-applied loop 1 (statement_count >= 2 で ask)
+- stable_id: d8d891fbaa392bb3
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8753
+  title: マージの allow が、本物の integration worktree にもプロジェクトのリポジトリにも結び付いていない
+  description: is_integration_worktree_cwd() がパス文字列の形しか見ない。
+  suggestion: ディスク上で .git / gitdir / HEAD を確かめる。
+  reproduction: 存在しない /tmp/clone/.claude/worktrees/em-workflow/a/integration を cwd にした正規形マージが allow になる。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - claude:security
+  confidence: 75
+  resolution: fixed
+  resolution_reason: superseded by the 8767 fix (loop 2)
+- stable_id: 1859de80d39c2434
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8767
+  title: ディレクトリ名を偽装するだけでマージの許可を取得できる
+  description: パス文字列だけで許可し、登録済み worktree か integration ブランチかを確認していない。
+  suggestion: 実パス・worktree 登録・HEAD を照合する。
+  reproduction: CLAUDE_BATCH=1 で cwd=/tmp/repo/.claude/worktrees/em-workflow/demo/integration の正規形マージが allow になる。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2 (_is_registered_integration_worktree)
+- stable_id: 6076ba4a5e8a2987
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8803
+  title: 'TM-8: 先頭の --repo 指定でマージ制限を迂回できる'
+  description: gh のグローバルオプションの値を残すため、--repo を前置した非正規形マージ（--admin 付き）が allow になる。
+  suggestion: 値を取るグローバルオプションを値ごと読み飛ばしてから pr merge を判定する。
+  reproduction: CLAUDE_BATCH=1, cwd=/tmp/ordinary-repo で --repo x/y を前置した --admin 付きマージが allow。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2 (orchestrator が再現し、修正後は deny を確認)
+- stable_id: 391a11021eceabb2
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8781
+  title: 配下の別リポジトリにも無人マージの許可が適用される
+  description: integration ルートより深い cwd が別リポジトリ（入れ子・サブモジュール）でも許可される。
+  suggestion: cwd から integration ルートまでの祖先に .git があれば例外を適用しない。
+  reproduction: 登録済み integration worktree 配下の別リポジトリ cwd で正規形マージが allow。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 3
+- stable_id: e98952e1c6974608
+  severity: high
+  category: security
+  file: em-workflow/scripts/merge-pr.py
+  line: 499
+  title: PR のマージ先変更を直前の検証で検出できない
+  description: state が head SHA だけを照合し baseRefName を照合しない。
+  suggestion: state に期待する base を渡して照合する。
+  reproduction: resolve 後に PR の base を変更しても同じ head なら ready。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  - codex:comprehensive
+  confidence: 75
+  resolution: fixed
+  resolution_reason: auto-applied loop 3 (optional --base; 呼び出し側は未対応のため SKILL.md:443 の finding として残る)
+- stable_id: aef7d769aa20408b
+  severity: high
+  category: comprehensive
+  file: em-workflow/skills/merge/SKILL.md
+  line: 449
+  title: マージ待ちへの登録をマージ完了として報告する
+  description: マージキュー必須ブランチではマージがキュー登録でも成功扱いになり、手順 13.2 が merged のまま後片付けへ進む。
+  suggestion: resolve が MERGED を確認したときだけ merged とする。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+- stable_id: b68e0757b10b188a
+  severity: high
+  category: comprehensive
+  file: em-workflow/skills/merge/SKILL.md
+  line: 350
+  title: 検証コマンドが変更した作業内容をマージ対象と照合していない
+  description: 検証後に未コミット変更と HEAD を照合しない。
+  suggestion: 検証後に status 空と HEAD==head_sha を確認する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+- stable_id: 5fc2a892ec0d93af
+  severity: high
+  category: security
+  file: em-workflow/skills/merge/SKILL.md
+  line: 443
+  title: PR の取り込み先確認に --base が渡されていない
+  description: merge-pr.py state の base 照合は --base 指定時だけ動くが、手順 13.1 の呼び出しは省略している。
+  suggestion: --base <base_branch> を渡し、state の必須引数にする。回帰テストを追加する。
+  reproduction: --base なしの cmd_state に baseRefName=release の応答を渡すと ready。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: 'loop-cap: residual'
+- stable_id: 6f9a43271bbe4635
+  severity: high
+  category: comprehensive
+  file: em-workflow/skills/merge/SKILL.md
+  line: 443
+  title: PR の取り込み先を照合する引数が渡されていない
+  description: 手順 13.1 が --base を渡さないため base 変更後も ready になる。
+  suggestion: --base <base_branch> を渡す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: 'loop-cap: residual'
+- stable_id: 52da02f8e39e1128
+  severity: high
+  category: security
+  file: em-workflow/skills/merge/SKILL.md
+  line: 295
+  title: 'TM-6: ファイル名によって解消対象外のファイルもステージされる'
+  description: 引用符と -- は pathspec magic を無効にしない。:(top) などの衝突ファイル名で git add / git rm がリポジトリ全体を対象にする。
+  suggestion: git --literal-pathspecs add/rm/log を使う。
+  reproduction: valid_repo_path(':(top)') が True、git ls-files -- ':(top)' が全ファイルに一致（orchestrator も :(top,glob)*.md の git add が batch で allow になることを確認）。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'loop-cap: residual'
+- stable_id: 806f8dab0fccee0c
+  severity: high
+  category: comprehensive
+  file: em-workflow/scripts/merge-pr.py
+  line: 441
+  title: 過去のマージ済み PR が現在の未取り込み変更を隠す
+  description: 同じ head/base の過去の MERGED PR を、現在の integration 先端と照合せず優先して merged を返す。
+  suggestion: 現在の先端が取り込み済みであることを確認してから merged を返す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'loop-cap: residual'
+- stable_id: f07552e97bab2b10
+  severity: high
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8700
+  title: Security guard layer depends on workflow merge specifics
+  description: 汎用の破壊的操作ガードに unattended-merge 固有の正規形・パス形・状態追跡が埋め込まれている。
+  suggestion: 専用の狭い hook か宣言的 allow 設定へ移す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - litellm:muse-spark-contributor:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: auto-fix aborted (single-file editor cannot move logic to a new hook)
+- stable_id: 72e4e88f167ba42b
+  severity: medium
+  category: architecture
+  file: em-workflow/scripts/merge-git.py
+  line: 54
+  title: Duplicated worktree-path contract across guard and merge scripts
+  description: worktree パス・feature・SHA のパターンが guard と各スクリプトに重複し、正規化も異なる。
+  suggestion: 共通 SSOT にまとめる。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - litellm:muse-spark-contributor:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: medium; not an auto-fix candidate
+- stable_id: adfb2dfb69de05d4
+  severity: medium
+  category: comprehensive
+  file: em-workflow/skills/merge/SKILL.md
+  line: 334
+  title: cd が反映されたかを確かめずに、検証コマンド・gh pr merge・ローカルの git merge を実行している
+  description: 起動ディレクトリ外への cd は持ち越されない。
+  suggestion: start_dir と project_root の一致確認、または cd 後の pwd 確認。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - claude:comprehensive
+  confidence: 65
+  resolution: unresolved
+  resolution_reason: medium
+- stable_id: 6a80e6e96bc70dab
+  severity: medium
+  category: comprehensive
+  file: em-workflow/skills/merge/SKILL.md
+  line: 128
+  title: PR ルートは base が integration の先端を含むかを確かめないため、マージ済みの feature が pr_create_failed / pr_closed になる
+  description: PR ルートは包含関係を見ない。
+  suggestion: remote base で is-ancestor を確認する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - claude:comprehensive
+  confidence: 70
+  resolution: unresolved
+  resolution_reason: medium
+- stable_id: c24067a66cec8c1e
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/merge-pr.py
+  line: 316
+  title: SSH のホスト別名を使う remote は GitHub と判定されず remote_not_github になる
+  description: remote URL をそのまま gh repo view に渡す。
+  suggestion: owner/name だけを比べる。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - claude:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: medium
+- stable_id: 20cc81d2632ee9c7
+  severity: medium
+  category: security
+  file: em-workflow/scripts/merge-pr.py
+  line: 342
+  title: 'TM-11: ホストが異なる同名リポジトリを同一と判定する'
+  description: nameWithOwner にホストが含まれない。
+  suggestion: url も取得してホストを含めて比較する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: medium
+- stable_id: 9c37b13532675415
+  severity: medium
+  category: comprehensive
+  file: em-workflow/skills/merge/SKILL.md
+  line: 351
+  title: 検証コマンドが空だと別の作業ツリーの HEAD を照合する
+  description: commands が空だと worktree へ cd しないまま HEAD を照合する。
+  suggestion: 照合の直前に必ず worktree へ cd する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: medium
+- stable_id: 27ed7c934caf569b
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/merge-pr.py
+  line: 311
+  title: 確認したリポジトリと実際の push 先が一致する保証がない
+  description: pushurl を確認していない。
+  suggestion: push URL も解決して一致を確認する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: medium
+- stable_id: 0a6cd305deeaab0f
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 9310
+  title: 無害な後続コマンドまでマージの拒否条件になる
+  description: statement_count >= 2 で && echo done も ask / deny になり、既存テストと食い違う。
+  suggestion: 影響する変更だけを判定する（loop 1 で Codex 相談のうえ厳しい側を採用した経緯あり）。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: medium; テスト契約の更新が必要
+- stable_id: 22c33fa123759e46
+  severity: medium
+  category: comprehensive
+  file: tests/test_destructive_guard_merge_allow.py
+  line: 82
+  title: 許可を確認するテストに実在する worktree が用意されていない
+  description: ガードがディスク上の登録を確認するようになり、存在しない固定パスの allow テスト（ケース表含む）が失敗する。
+  suggestion: 一時リポジトリと登録済み worktree を用意する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: medium; hook ケース表 15 件失敗中
+- stable_id: 60f386ce3a3553b8
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 9249
+  title: 無害な後続区間付きの正規形マージが allow にならない
+  description: SPEC FR20/AC13 の allow 境界と食い違う。
+  suggestion: statement_count >= 2 の選言を外す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - litellm:muse-spark-contributor:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: spec category; not an auto-fix candidate
+evaluation:
+  round_summary: 'ラウンド 1。security / comprehensive の codex primary は非 JSON 出力で失敗し claude fallback が完了。performance は完了（指摘なし）。architecture / spec は review_data_too_large で skip（非 retryable）。評価者は security high
+    1 件を再現して carry し、comprehensive 6 件中 3 件を low に下げた（low は R3b で除外）。spec は not verified — read budget exhausted。注記: loop 1 の再レビュー出力の一部は finding 単位に余分な source キーを含む非厳密 JSON だったが、orchestrator が中身を採用した（スキーマ逸脱として記録）。'
+  recommended_action: auto_fix
+  action_rationale: reproduced の high は局所修正で閉じられる。architecture と spec は分割してレビューすることを勧める。
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 3
+  applied_total: 7
+  termination: loop-cap
+residual_critical_high: 5
+rework_required: true
+unreviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-unattended-merge-20261031T121254Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
