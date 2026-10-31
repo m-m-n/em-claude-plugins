@@ -297,7 +297,7 @@ tasks:
     - NFR4
     - NFR7
     - NFR8
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/unattended-merge/task0008
   task0009:
