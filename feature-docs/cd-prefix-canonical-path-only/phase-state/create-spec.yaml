@@ -1,11 +1,11 @@
 schema_version: 1
 feature: cd-prefix-canonical-path-only
 phase: create-spec
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: e9499d39b9762f4e95df029526a3ce199a1b36b8
 last_input_digest: sha256:9027e443b39e2a06075561cd0dda7b43cc02ad8f3f0218504e92c72ff3378473
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -188,16 +188,55 @@ worker_runs:
     tests/test_tests_yaml_id_resolution.py: sha256:0a3efad228d09365da06eb47b32f25247b98156e8aaa61fdf396475d3656713f
   self_write_set: []
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:9027e443b39e2a06075561cd0dda7b43cc02ad8f3f0218504e92c72ff3378473
   output_digest: null
   dispatch_digest_inputs:
     em-workflow/references/contracts/spec-writer-contract.md: sha256:9032c6287d75f4a88e556bd3962c32ab8b4905cf3b6ececa895206788bcd0b63
     em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
     em-workflow/references/templates/spec-document.md: sha256:203dfcddbe507886ce861694fccd20ae25e5af0bd1b0efa5e935991add950cbd
-artifacts: []
+  self_write_set:
+  - feature-docs/cd-prefix-canonical-path-only/REQUIREMENTS.md
+  - feature-docs/cd-prefix-canonical-path-only/SPEC.md
+artifacts:
+- path: feature-docs/cd-prefix-canonical-path-only/REQUIREMENTS.md
+  sha256: sha256:6da05578964259188fa85d3b8b4be2b9156b2dcfaab83682c875290071fdac4e
+  produced_by: create-spec-run-0003
+- path: feature-docs/cd-prefix-canonical-path-only/SPEC.md
+  sha256: sha256:1ed8505892912139a083ff6e27098232c6cc7d24a78ee7f6f838ddd68f910188
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
-resolved_input_cache: {}
+resolved_input_cache:
+  reference_scan_targets:
+    resolved_at_generation: 1
+    paths:
+    - em-workflow/hooks/bash_guard.py
+    - tests/test_bash_guard_cd_prefix.py
+    - tests/test_bash_guard_cd_prefix_operators.py
+    - tests/test_cd_prefix_operator_exclusion_docs.py
+    - tests/test_implementer_cd_prefix_build_format_docs.py
+    - tests/test_implementer_cd_prefix_exclusion_docs.py
+    - tests/test_tests_yaml_id_resolution.py
+    - em-workflow/references/command-execution-protocol.md
+    - em-workflow/references/implement-phase.md
+    - em-workflow/agents/implementer.md
+    - em-workflow/skills/worktree-task-workflow/SKILL.md
+    - em-workflow/hooks/cross-repo-write-guard.py
+    - tests/test_cross_repo_write_guard.py
+    - test-docs/cd-prefix-non-directory-dotdot
+    - test-docs/cd-prefix-process-dependent-paths
+    - test-docs/cd-prefix-relative-link-target
+    - test-docs/cd-prefix-toplevel-operators
+    - test-docs/implementer-cd-verbatim-conflict
+    - test-docs/is-below-physical-fallback
+    - test-docs/is-below-stalled-walk-proc-read
+    - test-docs/cd-prefix-excluded-build-format-tests
+    - feature-docs/implementer-cd-verbatim-conflict/SPEC.md
+    - feature-docs/is-below-physical-fallback/SPEC.md
+    - feature-docs/is-below-stalled-walk-proc-read/SPEC.md
+    - feature-docs/cd-prefix-relative-link-target/SPEC.md
+    - feature-docs/cd-prefix-process-dependent-paths/SPEC.md
+    truncated: false
 last_error: null
