@@ -1129,8 +1129,15 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # (`references/contracts/worker-envelope.md`). Rule numbering, the "All
     # eighteen rules" count and every other rule are unchanged. Same
     # rationale: refresh, don't remove.
+    #
+    # Refreshed again by rework-docs-only-task-routing/task0003 (FR2, FR4):
+    # the `requirements_patch` section gains the `tests_replace` set key and
+    # the `tests_contains` expected key (a "Tests replacement" subsection),
+    # and the sentence listing the operations permitted under `set` names
+    # the replacement. The numbered application rules stay eighteen. Same
+    # rationale: refresh, don't remove.
     WORKFLOW_PATCH_SHA256 = (
-        "b2ba75c7e26851169c44b84013a26f3cedc0bda5ec4efa439436fefe2b04b373"
+        "799f418ebe67c03f36506a4daed6b8e0d5e51f2f8d58ad7f4a9eac5384a1e4bd"
     )
     # Updated by goal-vs-spec-divergence/task0016 (review round1 rework),
     # which the user's SPEC.md/REQUIREMENTS.md Declared Change Set extension
@@ -1285,8 +1292,17 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # `payload.doc_corrections[].scenario_renames` pair. PINNED_VALIDATOR_
     # TEST_LINE below is unaffected and still asserted. Same rationale:
     # refresh, don't remove.
+    #
+    # Refreshed again by rework-docs-only-task-routing/task0003 (FR2, FR4):
+    # `REQUIREMENTS_PATCH_SET_KEYS` gains `tests_replace`, the new
+    # `_validate_tests_replace_entry` structural check runs per requirement
+    # entry, `_validate_dry_run_apply` checks `expected.tests_contains`
+    # against the requirement's current `tests` (`expected-mismatch`), and
+    # `apply_patch` applies `tests_replace` before `tests_append` through
+    # `_apply_tests_replace`. PINNED_VALIDATOR_TEST_LINE below is unaffected
+    # and still asserted. Same rationale: refresh, don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "f1ae60cbf3af9568949af13b21be8aa06c1ef8be68609dc2cd1248baf29c154a"
+        "1a3a10798f73463c9f47314fc95faee9060f5130219a853de2227616ffa964f9"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-

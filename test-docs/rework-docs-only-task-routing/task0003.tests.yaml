@@ -1,0 +1,100 @@
+task_id: task0003
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 13058 tests, OK (skipped=1). After the parent-side adoption the suite run at the adoption commit was terminated by the environment before it finished, so this is not refreshed from it; the post-adoption final run below is fully green
+final_failures: []             # re-executed after parent-side adoption and re-implementation (merged validator and the byte-identity pin refresh in tests/test_gate_option_vocabulary.py): python3 -m unittest discover -s tests -> Ran 13270 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_requirements_tests_replace.TestWorkflowPatchDocumentsTestsReplace.test_document_describes_the_tests_replacement_and_keeps_eighteen_rules
+      - tests.test_requirements_tests_replace.TestWorkflowPatchDocumentsTestsReplace.test_detector_fires_on_a_copy_without_the_replacement
+      - tests.test_requirements_tests_replace.TestWorkflowPatchDocumentsTestsReplace.test_detector_fires_on_a_copy_with_a_nineteenth_rule
+      - tests.test_requirements_tests_replace.TestWorkflowPatchDocumentsTestsReplace.test_permitted_operations_sentence_keeps_the_append_forms_and_assignments
+    red_confirmed: true
+    red_reason: "Before workflow-patch.md was edited, test_document_describes_the_tests_replacement_and_keeps_eighteen_rules failed with a list of missing items (the requirements_patch section did not mention tests_replace, tests_contains or expected-mismatch)."
+  AC-2:
+    tests:
+      - tests.test_requirements_tests_replace.TestStructuralCheckOfTestsReplace.test_a_well_formed_replacement_is_accepted
+      - tests.test_requirements_tests_replace.TestStructuralCheckOfTestsReplace.test_several_pairs_each_listed_in_the_expectation_are_accepted
+      - tests.test_requirements_tests_replace.TestStructuralCheckOfTestsReplace.test_replacement_together_with_the_existing_keys_is_accepted
+      - tests.test_requirements_tests_replace.TestStructuralCheckOfTestsReplace.test_an_expectation_without_a_replacement_is_accepted
+      - tests.test_requirements_tests_replace.TestStructuralCheckOfTestsReplace.test_the_existing_append_forms_are_still_accepted
+      - tests.test_requirements_tests_replace.TestStructuralCheckOfTestsReplace.test_other_keys_remain_disallowed
+      - tests.test_requirements_tests_replace.TestStructuralCheckOfTestsReplace.test_a_value_that_is_not_a_list_is_rejected
+      - tests.test_requirements_tests_replace.TestStructuralCheckOfTestsReplace.test_an_empty_list_is_rejected
+      - tests.test_requirements_tests_replace.TestStructuralCheckOfTestsReplace.test_a_pair_that_is_not_a_mapping_is_rejected
+      - tests.test_requirements_tests_replace.TestStructuralCheckOfTestsReplace.test_a_pair_missing_from_or_to_is_rejected
+      - tests.test_requirements_tests_replace.TestStructuralCheckOfTestsReplace.test_a_pair_with_an_empty_or_non_string_id_is_rejected
+      - tests.test_requirements_tests_replace.TestStructuralCheckOfTestsReplace.test_a_pair_whose_from_equals_its_to_is_rejected
+      - tests.test_requirements_tests_replace.TestStructuralCheckOfTestsReplace.test_a_from_repeated_within_one_entry_is_rejected
+      - tests.test_requirements_tests_replace.TestStructuralCheckOfTestsReplace.test_a_from_absent_from_the_expectation_is_rejected
+      - tests.test_requirements_tests_replace.TestStructuralCheckOfTestsReplace.test_a_replacement_without_any_expectation_is_rejected
+      - tests.test_requirements_tests_replace.TestStructuralCheckOfTestsReplace.test_a_replacement_whose_expectation_is_not_a_list_is_rejected
+      - tests.test_requirements_tests_replace.TestStructuralCheckOfTestsReplace.test_an_expectation_that_is_not_a_list_of_strings_is_rejected
+      - tests.test_requirements_tests_replace.TestStructuralCheckOfTestsReplace.test_malformed_entries_never_raise
+    red_confirmed: true
+    red_reason: "Before the validator change the accepted-case tests failed (tests_replace was a disallowed set key). After adding only the set-key vocabulary, 31 rejection sub-cases still failed (no code reported the malformed value, the repeated from, or the from missing from tests_contains), so each rejection test depends on its structural check."
+  AC-3:
+    tests:
+      - tests.test_requirements_tests_replace.TestDryRunExpectationCheck.test_fixture_is_rejected_with_expected_mismatch_and_nothing_else
+      - tests.test_requirements_tests_replace.TestDryRunExpectationCheck.test_fixture_exits_1_through_the_cli_with_only_expected_mismatch
+      - tests.test_requirements_tests_replace.TestDryRunExpectationCheck.test_fixture_is_discoverable_by_the_data_driven_runner
+      - tests.test_requirements_tests_replace.TestDryRunExpectationCheck.test_the_same_patch_passes_when_every_expected_id_is_present
+      - tests.test_requirements_tests_replace.TestDryRunExpectationCheck.test_a_single_absent_id_among_present_ones_is_rejected
+      - tests.test_requirements_tests_replace.TestDryRunExpectationCheck.test_an_empty_expectation_list_is_satisfied
+      - tests.test_requirements_tests_replace.TestDryRunExpectationCheck.test_the_tasks_contains_expectation_is_unchanged
+      - tests.test_requirements_tests_replace.TestDryRunExpectationCheck.test_a_workflow_requirement_without_tests_does_not_raise
+      - tests.test_requirements_tests_replace.TestDryRunExpectationCheck.test_a_malformed_workflow_tests_value_does_not_raise
+    red_confirmed: true
+    red_reason: "With the vocabulary and structural check in place but no dry-run check, test_fixture_exits_1_through_the_cli_with_only_expected_mismatch failed with '0 != 1' (the TS-6 fixture exited 0) and test_fixture_is_rejected_with_expected_mismatch_and_nothing_else failed because no expected-mismatch code was returned. The TS-6 fixture itself, run before any validator change, exited 1 only for the disallowed key tests_replace."
+  AC-4:
+    tests:
+      - tests.test_requirements_tests_replace.TestInMemoryApplication.test_from_is_replaced_by_to_at_the_same_position
+      - tests.test_requirements_tests_replace.TestInMemoryApplication.test_several_pairs_replace_each_in_place
+      - tests.test_requirements_tests_replace.TestInMemoryApplication.test_from_is_removed_without_duplicating_an_existing_to
+      - tests.test_requirements_tests_replace.TestInMemoryApplication.test_tests_replace_is_applied_before_tests_append_whatever_the_key_order
+      - tests.test_requirements_tests_replace.TestInMemoryApplication.test_an_absent_from_leaves_tests_unchanged
+      - tests.test_requirements_tests_replace.TestInMemoryApplication.test_the_tests_replace_key_is_not_stored_on_the_requirement
+      - tests.test_requirements_tests_replace.TestInMemoryApplication.test_the_input_workflow_is_not_mutated
+      - tests.test_requirements_tests_replace.TestInMemoryApplication.test_a_requirement_with_only_tests_append_behaves_as_before
+      - tests.test_requirements_tests_replace.TestInMemoryApplication.test_tasks_and_direct_assignments_are_unchanged
+      - tests.test_requirements_tests_replace.TestInMemoryApplication.test_other_requirements_are_untouched
+      - tests.test_requirements_tests_replace.TestInMemoryApplication.test_malformed_pairs_do_not_raise
+    red_confirmed: true
+    red_reason: "Before apply_patch handled tests_replace, test_from_is_replaced_by_to_at_the_same_position, test_several_pairs_replace_each_in_place, test_from_is_removed_without_duplicating_an_existing_to and test_tests_replace_is_applied_before_tests_append_whatever_the_key_order failed (the key was assigned onto the requirement as a plain field and tests was left unchanged)."
+  AC-5:
+    tests:
+      - tests.test_requirements_tests_replace.TestDocsOnlyRoundFixture.test_fixture_exits_0_with_dry_run_apply_through_the_cli
+      - tests.test_requirements_tests_replace.TestDocsOnlyRoundFixture.test_validator_reports_no_error
+      - tests.test_requirements_tests_replace.TestDocsOnlyRoundFixture.test_fixture_is_discoverable_by_the_data_driven_runner
+      - tests.test_requirements_tests_replace.TestDocsOnlyRoundFixture.test_the_result_is_a_completed_rework_planner_result
+      - tests.test_requirements_tests_replace.TestDocsOnlyRoundFixture.test_the_patch_is_an_append_with_empty_task_entries
+      - tests.test_requirements_tests_replace.TestDocsOnlyRoundFixture.test_the_only_step_patch_returns_verify_to_pending
+      - tests.test_requirements_tests_replace.TestDocsOnlyRoundFixture.test_the_implement_base_commit_is_preserved
+      - tests.test_requirements_tests_replace.TestDocsOnlyRoundFixture.test_every_tests_replace_pair_is_bound_to_its_expectation
+      - tests.test_requirements_tests_replace.TestDocsOnlyRoundFixture.test_the_workflow_is_at_the_failed_verify_with_three_merged_tasks
+      - tests.test_requirements_tests_replace.TestDocsOnlyRoundFixture.test_the_base_fields_match_the_digest_source
+      - tests.test_requirements_tests_replace.TestDocsOnlyRoundFixture.test_every_written_artifact_is_covered_by_a_replace_own_target
+      - tests.test_requirements_tests_replace.TestDocsOnlyRoundFixture.test_the_envelope_indexes_the_pre_rename_ids
+      - tests.test_requirements_tests_replace.TestDocsOnlyRoundFixture.test_the_payload_declares_the_document_corrections
+      - tests.test_requirements_tests_replace.TestDocsOnlyRoundFixture.test_a_stale_base_input_digest_is_still_caught
+      - tests.test_requirements_tests_replace.TestDocsOnlyRoundFixture.test_an_expectation_that_misses_a_replaced_id_is_still_caught
+      - tests.test_requirements_tests_replace.TestDocsOnlyRoundFixture.test_an_uncovered_written_artifact_is_still_caught
+    red_confirmed: true
+    red_reason: "The fixture, run through the CLI with --dry-run-apply before any validator change, exited 1 with: requirements_patch.entries[FR1].set has disallowed key 'tests_replace' (and the same for FR2); test_fixture_exits_0_with_dry_run_apply_through_the_cli and test_validator_reports_no_error failed with that error."
+  AC-6:
+    tests:
+      - tests.test_requirements_tests_replace.TestDocsOnlyRoundApplied.test_no_task_is_added
+      - tests.test_requirements_tests_replace.TestDocsOnlyRoundApplied.test_implement_stays_completed_and_review_is_unchanged
+      - tests.test_requirements_tests_replace.TestDocsOnlyRoundApplied.test_verify_is_pending
+      - tests.test_requirements_tests_replace.TestDocsOnlyRoundApplied.test_every_replaced_id_is_gone_and_its_replacement_present
+      - tests.test_requirements_tests_replace.TestDocsOnlyRoundApplied.test_replaced_ids_keep_their_positions
+      - tests.test_requirements_tests_replace.TestDocsOnlyRoundApplied.test_the_preserved_base_commit_is_unchanged
+      - tests.test_requirements_tests_replace.TestDocsOnlyRoundApplied.test_the_input_workflow_is_not_mutated
+    red_confirmed: true
+    red_reason: "Before apply_patch handled tests_replace, test_every_replaced_id_is_gone_and_its_replacement_present failed for FR1 TS1, FR1 TS2 and FR2 TS3 (the old IDs were still in tests) and test_replaced_ids_keep_their_positions failed."
+  AC-7:
+    tests:
+      - tests.test_requirements_tests_replace.TestOwnModuleStdlibOnly.test_this_module_imports_only_the_standard_library
+      - tests.test_requirements_tests_replace.TestOwnModuleStdlibOnly.test_the_detector_would_flag_a_third_party_import
+      - tests.test_validate_worker_output.TestFixtureCorpusDataDriven.test_every_fixture_matches_its_declared_exit_code
+    red_confirmed: false
+    red_reason: "The stdlib-imports test passed on its first run because the module was written with standard-library imports only; the negative sample test shows the detector fires on a third-party import. The 'every existing fixture and test passes unchanged' half is verified by the whole-suite run (and the existing data-driven fixture sweep, which discovers both new fixtures without edits), not by a check that can be made to fail first; no red state occurred for it."

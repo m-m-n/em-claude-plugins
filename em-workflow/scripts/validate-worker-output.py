@@ -200,6 +200,7 @@ ROUTEBACK_RECORD_FIELD = "routeback_failed_journal_line"
 REQUIREMENTS_PATCH_SET_KEYS = {
     "tasks_append",
     "tests_append",
+    "tests_replace",
     "status",
     "tbd_reason",
     "excluded_reason",
@@ -1334,6 +1335,61 @@ def validate_task_entry(task_id, entry, mode, registries, workflow):
     return errors
 
 
+def _validate_tests_replace_entry(fr_id, rpatch):
+    """rework-docs-only-task-routing/task0003 (FR2, FR4): the structural
+    half of the `requirements_patch` tests replacement
+    (references/workflow-patch.md, `requirements_patch` section, owns the
+    operation; IMPLEMENTATION.md D3 owns the binding). For one requirement
+    entry: `set.tests_replace`, when present, is a non-empty list of
+    mappings with non-empty string `from` and `to`, `from` different from
+    `to`, no `from` repeated, and every `from` listed in the entry's
+    `expected.tests_contains`; `expected.tests_contains`, when present, is
+    a list of strings (also without any replacement beside it). Every
+    finding carries the code `requirements_patch`. Malformed input is a
+    finding, never an exception: nothing here is hashed or indexed before
+    it is known to be a string, and a non-mapping `set` / `expected` is
+    left to the checks that already report it."""
+    errors = []
+    p = f"requirements_patch.entries[{fr_id}]"
+    expected = rpatch.get("expected")
+    if not isinstance(expected, dict):
+        expected = {}
+    listed = []
+    contains_malformed = False
+    if "tests_contains" in expected:
+        value = expected["tests_contains"]
+        if isinstance(value, list) and all(isinstance(i, str) for i in value):
+            listed = value
+        else:
+            contains_malformed = True
+            errors.append(err("requirements_patch", f"{p}.expected.tests_contains must be a list of strings"))
+    set_block = rpatch.get("set")
+    if not isinstance(set_block, dict) or "tests_replace" not in set_block:
+        return errors
+    pairs = set_block["tests_replace"]
+    if not isinstance(pairs, list) or not pairs:
+        errors.append(err("requirements_patch", f"{p}.set.tests_replace must be a non-empty list of from/to pairs"))
+        return errors
+    seen_from = set()
+    for i, pair in enumerate(pairs):
+        q = f"{p}.set.tests_replace[{i}]"
+        if not isinstance(pair, dict):
+            errors.append(err("requirements_patch", f"{q} must be a mapping with 'from' and 'to'"))
+            continue
+        old, new = pair.get("from"), pair.get("to")
+        if not (isinstance(old, str) and old and isinstance(new, str) and new):
+            errors.append(err("requirements_patch", f"{q} 'from' and 'to' must be non-empty strings"))
+            continue
+        if old == new:
+            errors.append(err("requirements_patch", f"{q} 'from' and 'to' must differ ({old!r})"))
+        if old in seen_from:
+            errors.append(err("requirements_patch", f"{q} repeats 'from' {old!r} within one entry"))
+        seen_from.add(old)
+        if not contains_malformed and old not in listed:
+            errors.append(err("requirements_patch", f"{q} 'from' {old!r} must be listed in {p}.expected.tests_contains"))
+    return errors
+
+
 def validate_workflow_patch(
     data,
     *,
@@ -1427,6 +1483,7 @@ def validate_workflow_patch(
             for k in set_block:
                 if k not in REQUIREMENTS_PATCH_SET_KEYS:
                     errors.append(err("requirements_patch", f"requirements_patch.entries[{fr_id}].set has disallowed key {k!r}"))
+            errors.extend(_validate_tests_replace_entry(fr_id, rpatch))
 
     step_patches = data.get("step_patches")
     if step_patches is None:
@@ -1539,6 +1596,21 @@ def _validate_dry_run_apply(data, *, workflow, digest_source, phase_state, featu
             current_tasks = (workflow.get("requirements", {}).get(fr_id) or {}).get("tasks") or []
             if not set(tasks_contains).issubset(current_tasks):
                 errors.append(err("expected-mismatch", f"requirements_patch.entries[{fr_id}].expected.tasks_contains not satisfied by current workflow.yaml"))
+        # rework-docs-only-task-routing/task0003 (FR4): the tests
+        # replacement's expectation (workflow-patch.md, `requirements_patch`
+        # section) -- every listed ID must be in the requirement's current
+        # `tests`. A malformed `tests_contains` is reported by the
+        # structural layer; it contributes nothing here.
+        tests_contains = expected.get("tests_contains")
+        if isinstance(tests_contains, list):
+            current_reqs = workflow.get("requirements")
+            current_req = current_reqs.get(fr_id) if isinstance(current_reqs, dict) else None
+            current_tests = current_req.get("tests") if isinstance(current_req, dict) else None
+            if not isinstance(current_tests, list):
+                current_tests = []
+            absent = [i for i in tests_contains if i not in current_tests]
+            if absent:
+                errors.append(err("expected-mismatch", f"requirements_patch.entries[{fr_id}].expected.tests_contains {absent!r} not satisfied by current workflow.yaml"))
 
     # Rule 5 / 5.5.1: replace_all permission conditions. Two permitted
     # paths (workflow-patch.md "replace_all permission conditions"):
@@ -1697,6 +1769,30 @@ def _validate_dry_run_apply(data, *, workflow, digest_source, phase_state, featu
     return errors
 
 
+def _apply_tests_replace(tests, pairs):
+    """rework-docs-only-task-routing/task0003 (FR4): the in-memory
+    application of a requirement entry's `set.tests_replace`
+    (workflow-patch.md, `requirements_patch` section). Pairs are applied in
+    their listed order. Each `from` found in `tests` is replaced by its `to`
+    at the same position; when `to` is already present, `from` is removed
+    and `to` is not duplicated; a `from` that is absent leaves `tests`
+    unchanged. Returns a new list. A malformed `tests` or pair is skipped,
+    never raised on (the structural layer reports it)."""
+    current = list(tests) if isinstance(tests, list) else []
+    for pair in pairs if isinstance(pairs, list) else []:
+        if not isinstance(pair, dict):
+            continue
+        old, new = pair.get("from"), pair.get("to")
+        if not (isinstance(old, str) and isinstance(new, str)) or old == new or old not in current:
+            continue
+        if new in current:
+            current = [t for t in current if t != old]
+        else:
+            position = current.index(old)
+            current = current[:position] + [new] + [t for t in current[position + 1:] if t != old]
+    return current
+
+
 def apply_patch(workflow, patch):
     """A minimal, in-memory simulation of 5.5.5's application rules, used
     only to check post-application structure and preserve invariance under
@@ -1739,7 +1835,14 @@ def apply_patch(workflow, patch):
     for fr_id, rpatch in (requirements_patch.get("entries") or {}).items():
         req = requirements.setdefault(fr_id, {})
         set_block = rpatch.get("set") or {}
+        # tests_replace is applied before tests_append within one entry
+        # (workflow-patch.md, `requirements_patch` section), whatever the
+        # order of the keys in the entry.
+        if "tests_replace" in set_block:
+            req["tests"] = _apply_tests_replace(req.get("tests"), set_block["tests_replace"])
         for key, value in set_block.items():
+            if key == "tests_replace":
+                continue
             if key == "tasks_append":
                 req["tasks"] = list(req.get("tasks") or []) + list(value)
             elif key == "tests_append":
