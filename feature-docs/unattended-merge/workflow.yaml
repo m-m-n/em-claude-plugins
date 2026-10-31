@@ -214,7 +214,7 @@ tasks:
     - FR10
     - FR22
     - NFR5
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/unattended-merge/task0005
   task0006:
