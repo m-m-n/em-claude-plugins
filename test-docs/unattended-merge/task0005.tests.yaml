@@ -1,0 +1,89 @@
+task_id: task0005
+baseline_failures: []          # before any edit: python3 -m unittest discover -s tests -> Ran 12456 tests, OK (skipped=1); no failing test
+final_failures: []             # re-executed after the implementation and this record: python3 -m unittest discover -s tests -> Ran 12508 tests, OK (skipped=1); no failing test
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_merge_lock.TestToken.test_ac1_token_is_32_lowercase_hex
+      - tests.test_merge_lock.TestToken.test_ac1_two_calls_return_different_tokens
+      - tests.test_merge_lock.TestToken.test_ac1_token_needs_no_repository
+    red_confirmed: true
+    red_reason: >-
+      Run with em-workflow/scripts/merge-lock.py absent (the new test module alone in a
+      scratch tree): all 51 tests of the module failed, these three with
+      "AssertionError: 2 != 0 : python3: can't open file 'em-workflow/scripts/merge-lock.py':
+      [Errno 2] No such file or directory".
+  AC-2:
+    tests:
+      - tests.test_merge_lock.TestHoldAcquire.test_ac2_hold_from_linked_worktree_writes_the_record
+      - tests.test_merge_lock.TestHoldAcquire.test_ac2_lock_and_record_live_in_the_common_dir_not_the_worktree
+      - tests.test_merge_lock.TestHoldAcquire.test_ac2_main_tree_and_linked_worktree_share_one_lock
+      - tests.test_merge_lock.TestHoldAcquire.test_ac2_merge_task_lock_is_never_created
+      - tests.test_merge_lock.TestHoldAcquire.test_ac2_merge_task_lock_is_never_locked
+      - tests.test_merge_lock.TestHoldAcquire.test_ac2_hold_does_not_truncate_the_lock_file
+      - tests.test_merge_lock.TestHoldAcquire.test_ac2_hold_leaves_no_temporary_file_behind
+      - tests.test_merge_lock.TestHoldAcquire.test_ac2_hold_prints_exactly_one_line_while_holding
+      - tests.test_merge_lock.TestHoldAcquire.test_ac2_hold_uses_project_root_not_the_working_directory
+    red_confirmed: true
+    red_reason: >-
+      Run with em-workflow/scripts/merge-lock.py absent: every test listed ended in FAIL
+      (the holder child exited 2 with "can't open file ... merge-lock.py: No such file or
+      directory" before printing its first line, so no acquired line, lock file or record
+      existed).
+  AC-3:
+    tests:
+      - tests.test_merge_lock.TestBusyLock.test_ac3_other_feature_hold_is_busy_and_record_is_unchanged
+      - tests.test_merge_lock.TestBusyLock.test_ac3_other_feature_verify_is_busy
+      - tests.test_merge_lock.TestBusyLock.test_ac3_busy_hold_with_unreadable_record_reports_empty_feature
+      - tests.test_merge_lock.TestBusyLock.test_ac3_busy_hold_with_no_record_reports_empty_feature
+    red_confirmed: true
+    red_reason: >-
+      Run with em-workflow/scripts/merge-lock.py absent: every test listed ended in FAIL
+      (no holder could be started; "child closed stdout early" / exit 2 instead of the
+      expected JSON stop lock_busy).
+  AC-4:
+    tests:
+      - tests.test_merge_lock.TestHolderLiveness.test_ac4_live_holder_token_is_held
+      - tests.test_merge_lock.TestHolderLiveness.test_ac4_terminated_holder_is_lock_lost
+      - tests.test_merge_lock.TestHolderLiveness.test_ac4_record_left_by_dead_holder_is_lost_for_any_token
+      - tests.test_merge_lock.TestHolderLiveness.test_ac4_new_hold_succeeds_after_a_stale_record
+      - tests.test_merge_lock.TestHolderLiveness.test_ac4_killed_holder_releases_the_lock_too
+      - tests.test_merge_lock.TestHolderLiveness.test_ac4_forged_record_of_a_dead_pid_is_lost
+      - tests.test_merge_lock.TestHolderLiveness.test_ac4_busy_hold_ignores_the_feature_of_a_dead_record
+      - tests.test_merge_lock.TestHolderLiveness.test_ac4_forged_record_of_a_live_pid_is_held_for_its_token_only
+      - tests.test_merge_lock.TestHolderLiveness.test_ac4_unreaped_holder_is_lost
+      - tests.test_merge_lock.TestHolderLiveness.test_ac4_recorded_start_time_must_match_the_process
+      - tests.test_merge_lock.TestHolderLiveness.test_ac4_hold_records_its_own_start_time
+      - tests.test_merge_lock.TestHolderLiveness.test_ac4_verify_never_creates_or_blocks_on_the_lock
+      - tests.test_merge_lock.TestHolderLiveness.test_ac4_record_with_invalid_fields_is_not_a_holder
+    red_confirmed: true
+    red_reason: >-
+      Run with em-workflow/scripts/merge-lock.py absent: every test listed ended in FAIL
+      (verify and hold exited 2 with "can't open file ... merge-lock.py", so no JSON
+      outcome held / lock_lost existed to compare).
+  AC-5:
+    tests:
+      - tests.test_merge_lock.TestBusyLock.test_ac5_second_run_of_same_feature_gets_lock_busy_from_hold
+      - tests.test_merge_lock.TestBusyLock.test_ac5_second_token_verify_is_busy_never_held
+      - tests.test_merge_lock.TestBusyLock.test_ac5_first_run_still_verifies_held_after_the_rejected_attempt
+    red_confirmed: true
+    red_reason: >-
+      Run with em-workflow/scripts/merge-lock.py absent: every test listed ended in FAIL
+      (no holder could be started, exit 2 "can't open file ... merge-lock.py").
+  AC-6:
+    tests:
+      - tests.test_merge_lock.TestVerifyWait.test_ac6_wait_returns_held_when_the_holder_starts_slightly_later
+      - tests.test_merge_lock.TestVerifyWait.test_ac6_wait_without_a_holder_is_lock_lost_within_the_bound
+      - tests.test_merge_lock.TestVerifyWait.test_ac6_default_wait_is_zero
+      - tests.test_merge_lock.TestVerifyWait.test_ac6_busy_does_not_wait
+      - tests.test_merge_lock.TestVerifyWait.test_ac6_unreadable_record_counts_as_not_yet_while_waiting
+      - tests.test_merge_lock.TestVerifyWait.test_ac6_unreadable_record_without_wait_is_lock_lost
+      - tests.test_merge_lock.TestVerifyWait.test_ac6_dead_record_stays_lost_for_the_whole_wait
+      - tests.test_merge_lock.TestHolderIdle.test_ac6_holder_does_not_spin
+      - tests.test_merge_lock.TestOperationBoundary.test_ac6_all_subcommands_only_locate_the_common_git_directory
+      - tests.test_merge_lock.TestOperationBoundary.test_ac6_repository_state_is_untouched
+    red_confirmed: true
+    red_reason: >-
+      Run with em-workflow/scripts/merge-lock.py absent: every test listed ended in FAIL
+      (exit 2 "can't open file ... merge-lock.py"; the boundary tests found no shimmed git
+      call where at least five were expected, and no holder could start).
