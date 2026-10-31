@@ -134,7 +134,7 @@ tasks:
     - FR7
     - FR8
     - NFR1
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/cd-prefix-canonical-path-only/task0002
 review:
