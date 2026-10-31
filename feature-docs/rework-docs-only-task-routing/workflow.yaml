@@ -218,6 +218,7 @@ tasks:
     - em-workflow/references/fixtures/worker-result/rework-planner/invalid-mixed-round-renamed-scenario-undeclared/input.json
     - em-workflow/references/fixtures/worker-result/rework-planner/invalid-mixed-round-renamed-scenario-undeclared/envelope.json
     - tests/test_rework_docs_only_validator_rules.py
+    - tests/test_gate_option_vocabulary.py
     skills:
     - backend-impl
     domains:
@@ -231,7 +232,7 @@ tasks:
     - FR7
     - FR9
     - NFR5
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/rework-docs-only-task-routing/task0004
   task0005:
