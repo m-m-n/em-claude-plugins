@@ -1,11 +1,11 @@
 schema_version: 1
 feature: unattended-merge-medium-fixes
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: a35bfb6b27bb0da50fe8befcb7dbddf017598dc4
 last_input_digest: sha256:31c35cf12046c80c63c5fef0d399b860b0f0e05724527f4e9a98f8e5f8916a89
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -57,7 +57,7 @@ artifacts:
   produced_by: create-plan-run-0001
 patches:
 - patch_id: unattended-merge-medium-fixes-p0001
-  status: validated
+  status: applied
   base_input_digest: sha256:31c35cf12046c80c63c5fef0d399b860b0f0e05724527f4e9a98f8e5f8916a89
   base_workflow_blob: 314d98f3ef87039d9f9216d1152705ea5b26e3d2
 progress_fingerprint: null
