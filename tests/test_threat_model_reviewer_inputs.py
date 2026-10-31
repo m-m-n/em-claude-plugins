@@ -559,11 +559,14 @@ def _assert_only_version_field_changed(data, expected_hash, label):
 # Captured from em-workflow/.claude-plugin/plugin.json and the em-workflow
 # entry of .claude-plugin/marketplace.json as they read before this task's
 # edit (this task never touches either file's non-version fields).
+# Re-baselined by unattended-merge task0009 (FR23): the em-workflow
+# descriptions now mention /em-workflow:merge; the digests below cover the
+# non-version content as it reads after that edit.
 PLUGIN_JSON_NON_VERSION_SHA256 = (
-    "b7eab4f96f60120211004e28ce4417aee8830cb8dfead12db1e18fa83b084be4"
+    "2f2b06ff4d45819f7156531a39f50f4276e9bd86759bb4dd2f4fc67b05c20398"
 )
 MARKETPLACE_ENTRY_NON_VERSION_SHA256 = (
-    "bfd8e111dd39c3dfc1b621bcae65dea2419da9d2930ecccd09a785b53a52f4f0"
+    "6ddabeb8f13e0ebc20ead998a3267b8e3fdf2b566a03cc55c4f10513229e50c7"
 )
 
 

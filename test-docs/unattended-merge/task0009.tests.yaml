@@ -1,0 +1,27 @@
+task_id: task0009
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 12649 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 12669 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_unattended_merge_manifest_version_bump.TestPluginManifest.test_description_mentions_the_merge_skill
+      - tests.test_unattended_merge_manifest_version_bump.TestMarketplaceEntry.test_description_mentions_the_merge_skill
+      - tests.test_unattended_merge_manifest_version_bump.TestPluginManifest.test_manifest_name_is_em_workflow
+      - tests.test_unattended_merge_manifest_version_bump.TestMarketplaceEntry.test_entry_lookup_is_non_vacuous
+    red_confirmed: true
+    red_reason: "Before the manifest edit both description tests failed: AssertionError '/em-workflow:merge' not found in the em-workflow description (plugin.json and the marketplace entry). The two parse/lookup tests were already green and only guard that the files parse and the entry is found by name."
+  AC-2:
+    tests:
+      - tests.test_unattended_merge_manifest_version_bump.TestPluginManifest.test_version_minor_is_past_baseline
+      - tests.test_unattended_merge_manifest_version_bump.TestMarketplaceEntry.test_version_minor_is_past_baseline
+      - tests.test_unattended_merge_manifest_version_bump.TestMarketplaceEntry.test_version_matches_plugin_manifest
+    red_confirmed: true
+    red_reason: "Before the version edit both minor tests failed: AssertionError (0, 3) not greater than (0, 3). The agreement test was already green (both files read the same version). The exact relation to the integration base commit (minor one greater, patch zero, major unchanged) depends on that commit and is checked in the verify phase (TS26), not by a permanent unit test."
+  AC-3:
+    tests:
+      - tests.test_batch_policy_option_id_version_bump.TestOtherMarketplaceEntriesUnchanged.test_other_entries_match_expected_identity_and_version_shape
+      - tests.test_unattended_merge_manifest_version_bump.TestMarketplaceEntry.test_other_plugin_entries_still_present
+      - tests.test_plugin_version_parity.TestMarketplaceEntryVersion.test_em_workflow_entry_version_matches_plugin_manifest
+      - tests.test_check_plugin_invariants
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing tests.test_batch_policy_option_id_version_bump.TestOtherMarketplaceEntriesUnchanged detects a changed identity field or description anchor of the em-review and plugin-dev entries, and tests.test_plugin_version_parity detects version disagreement; no red state occurred for this change because only the em-workflow entry was edited (confirmed by the diff of .claude-plugin/marketplace.json). The digest-pinning modules tests.test_batch_structured_result_output_version_bump, tests.test_muse_consent_version_bump, tests.test_threat_model_review_phase, tests.test_threat_model_reviewer_inputs and tests.test_threat_model_planner_contract failed after the description edit and were re-baselined in this task."
