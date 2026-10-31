@@ -337,8 +337,9 @@ tasks:
     - FR7
     - FR8
     - FR9
-    status: pending
+    status: in_progress
     notes: null
+    branch: em-workflow/unattended-merge/task0010
     provenance:
       source: review
       source_ids:
@@ -361,8 +362,9 @@ tasks:
     requirements:
     - FR12
     - NFR4
-    status: pending
+    status: in_progress
     notes: null
+    branch: em-workflow/unattended-merge/task0011
     provenance:
       source: review
       source_ids:
@@ -388,8 +390,9 @@ tasks:
     requirements:
     - FR20
     - NFR6
-    status: pending
+    status: in_progress
     notes: null
+    branch: em-workflow/unattended-merge/task0012
     provenance:
       source: review
       source_ids:
