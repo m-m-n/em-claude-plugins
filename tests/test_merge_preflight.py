@@ -1050,11 +1050,182 @@ class TestCommandApproval(PreflightBase):
         self.write_store(["make test", "make test -v", "Make  test", "make  test;"])
         self.assert_stop(self.decide("spaces"), "commands_unapproved")
 
-    def test_ac6_leading_or_trailing_blanks_are_not_approved_by_a_stripped_entry(self):
-        doc = make_doc(project={"components": make_components(test="make test ")})
-        self.add_feature("trailing", workflow=doc)
-        self.write_store(["make test"])
-        self.assert_stop(self.decide("trailing"), "commands_unapproved")
+    # -- FR4: the comparison trims leading and trailing blanks ---------------
+    # (feature-docs/unattended-merge-medium-fixes/tasks/task0002.md, AC-1..AC-4)
+
+    def test_fr4_ac1_leading_or_trailing_blanks_are_approved_by_a_trimmed_entry(self):
+        cases = {
+            "trailing blank": "make test ",
+            "leading blank": " make test",
+            "leading and trailing blanks": "  make test  ",
+            "trailing tab": "make test\t",
+            "leading tab": "\tmake test",
+            "leading and trailing tabs": "\t make test \t",
+        }
+        for i, (label, command) in enumerate(cases.items()):
+            with self.subTest(label):
+                doc = make_doc(project={"components": make_components(test=command)})
+                self.add_feature(f"fr4blank{i}", workflow=doc)
+                self.write_store(["make test"])
+                result = self.decide(f"fr4blank{i}")
+                self.assert_proceed(result)
+                self.assertEqual(
+                    result["commands"],
+                    [{"component": "main", "field": "test_command", "command": command}],
+                )
+
+    def test_fr4_ac1_the_emitted_command_is_the_untrimmed_original_in_every_field(self):
+        commands = {"build": " make build", "test": "make test ", "e2e": "\tmake e2e\t"}
+        doc = make_doc(project={"components": make_components(**commands)})
+        self.add_feature("fr4fields", workflow=doc)
+        self.write_store(["make build", "make test", "make e2e"])
+        result = self.decide("fr4fields")
+        self.assert_proceed(result)
+        self.assertEqual(
+            [(c["field"], c["command"]) for c in result["commands"]],
+            [
+                ("build_command", " make build"),
+                ("test_command", "make test "),
+                ("e2e_test_command", "\tmake e2e\t"),
+            ],
+        )
+
+    def test_fr4_ac1_a_trimmed_command_is_not_approved_by_an_unrelated_entry(self):
+        doc = make_doc(project={"components": make_components(test=" make test ")})
+        self.add_feature("fr4other", workflow=doc)
+        self.write_store(["make", "make tests", "make test -v"])
+        result = self.decide("fr4other")
+        self.assert_stop(result, "commands_unapproved")
+        self.assertIn("main.test_command", result["detail"])
+
+    def test_fr4_ac2_a_line_break_or_cr_still_stops_even_when_the_trimmed_value_is_approved(self):
+        cases = {
+            "trailing line break": "make a\n",
+            "leading line break": "\nmake a",
+            "trailing CR": "make a\r",
+            "leading CR": "\rmake a",
+            "CR LF after": "make a\r\n",
+            "CR in the middle": "make a\rmake b",
+            "line break in the middle": "make a\nmake b",
+            "blank then trailing line break": "make a \n",
+        }
+        for i, (label, command) in enumerate(cases.items()):
+            with self.subTest(label):
+                doc = make_doc(project={"components": make_components(test=command)})
+                self.add_feature(f"fr4lb{i}", workflow=doc)
+                self.write_store(["make a", "make b"])
+                result = self.decide(f"fr4lb{i}")
+                self.assert_stop(result, "commands_unapproved")
+                self.assertIn("main.test_command", result["detail"])
+
+    def test_fr4_ac2_inner_whitespace_is_still_an_exact_match(self):
+        cases = {
+            "two inner blanks": "make  test",
+            "inner tab": "make\ttest",
+            "two inner blanks and outer blanks": "  make  test  ",
+        }
+        for i, (label, command) in enumerate(cases.items()):
+            with self.subTest(label):
+                doc = make_doc(project={"components": make_components(test=command)})
+                self.add_feature(f"fr4inner{i}", workflow=doc)
+                self.write_store(["make test"])
+                result = self.decide(f"fr4inner{i}")
+                self.assert_stop(result, "commands_unapproved")
+                self.assertIn("main.test_command", result["detail"])
+
+    def test_fr4_ac2_the_stop_names_only_the_unapproved_field(self):
+        commands = {"build": "make build ", "test": "make  test", "e2e": " make e2e"}
+        doc = make_doc(project={"components": make_components(**commands)})
+        self.add_feature("fr4named", workflow=doc)
+        self.write_store(["make build", "make test", "make e2e"])
+        result = self.decide("fr4named")
+        self.assert_stop(result, "commands_unapproved")
+        self.assertIn("main.test_command", result["detail"])
+        self.assertNotIn("main.build_command", result["detail"])
+        self.assertNotIn("main.e2e_test_command", result["detail"])
+
+    def test_fr4_ac2_a_stored_entry_with_blanks_is_matched_by_its_trimmed_form(self):
+        # bash_guard.py trims stored entries too, so the stored form never has blanks.
+        doc = make_doc(project={"components": make_components(test="make test\t")})
+        self.add_feature("fr4stored", workflow=doc)
+        self.write_store([" make test "])
+        self.assert_proceed(self.decide("fr4stored"))
+
+    # -- FR4 / AC-3: agreement with bash_guard.py's own decision ---------------
+
+    BASH_GUARD = REPO_ROOT / "em-workflow" / "hooks" / "bash_guard.py"
+
+    def bash_guard_allows(self, command):
+        """True when the plugin's own hook allows `command` under the current store.
+
+        The decision is bash_guard.py's, obtained by running the hook on a
+        Bash payload in the fixture repository. The repository declares no
+        command in a working-tree workflow.yaml, so an unapproved command
+        produces no decision at all; only an explicit allow counts as approved.
+        """
+        env = dict(self.git_env)
+        env.pop("CLAUDE_PROJECT_DIR", None)
+        env["EM_WORKFLOW_APPROVALS"] = str(self.store)
+        payload = {
+            "tool_name": "Bash",
+            "tool_input": {"command": command},
+            "cwd": str(self.repo),
+        }
+        proc = subprocess.run(
+            [sys.executable, "-B", str(self.BASH_GUARD)],
+            input=json.dumps(payload),
+            cwd=str(self.tmp),
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        if not proc.stdout.strip():
+            return False
+        decision = json.loads(proc.stdout)["hookSpecificOutput"]["permissionDecision"]
+        return decision == "allow"
+
+    def test_fr4_ac3_preflight_agrees_with_bash_guards_own_approval_decision(self):
+        stored = ["make test", "go test ./...", "  make lint ", "make\tfmt"]
+        commands = [
+            ("trailing blank, approved", "make test "),
+            ("leading blank, approved", " make test"),
+            ("both sides, approved", "  go test ./...  "),
+            ("tabs, approved", "\tmake test\t"),
+            ("stored entry had blanks, approved", "make lint"),
+            ("stored entry had blanks, blanks added, approved", "\tmake lint  "),
+            ("inner tab kept, approved", " make\tfmt "),
+            ("form feed and vertical tab, approved", "\x0cmake test\x0b"),
+            ("no-break space, approved", " make test "),
+            ("trailing blank, wrong command", "make test -v "),
+            ("leading blank, wrong command", " make tests"),
+            ("two inner blanks", "make  test "),
+            ("inner tab instead of a blank", " make\ttest "),
+            ("different case", " Make test "),
+            ("prefix of an entry", "make "),
+            ("unrelated", "  make other  "),
+        ]
+        approved_seen = set()
+        for i, (label, command) in enumerate(commands):
+            with self.subTest(label, command=command):
+                self.write_store(stored)
+                feature = f"fr4agree{i}"
+                doc = make_doc(project={"components": make_components(test=command)})
+                self.add_feature(feature, workflow=doc)
+                guard_allows = self.bash_guard_allows(command)
+                result = self.decide(feature)
+                if result["outcome"] == "proceed":
+                    self.assertEqual(result["commands"][0]["command"], command)
+                else:
+                    self.assert_stop(result, "commands_unapproved")
+                self.assertEqual(
+                    result["outcome"] == "proceed",
+                    guard_allows,
+                    f"preflight and bash_guard.py disagree on {command!r}: {result}",
+                )
+                approved_seen.add(guard_allows)
+        # The set must exercise both verdicts, or the agreement would be vacuous.
+        self.assertEqual(approved_seen, {True, False})
 
     def test_ac6_multi_line_commands_are_unapproved(self):
         for i, command in enumerate(["make a\nmake b", "make a\r\nmake b", "make a\n"]):

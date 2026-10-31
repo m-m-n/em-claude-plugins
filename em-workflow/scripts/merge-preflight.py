@@ -42,6 +42,16 @@ value that reaches the output is validated first. The script writes nothing
 (not the repository, not the approval store), runs git only for read
 operations (rev-parse, cat-file, ls-tree) and never runs gh. Approval is read
 through `hooks/bash_guard.py --list` of the plugin this script belongs to.
+
+Approval rule (check 7): a verification command is approved when it is
+approvable and its `str.strip()` value is a member of the set read through
+`bash_guard.py --list`. That is the same trim bash_guard.py applies to stored
+and incoming commands, so leading and trailing blanks never decide the verdict
+differently from the hook. A command is approvable only when it is a string
+with a valid component name and its raw value holds no line break and no CR;
+the raw value is judged, so the trim cannot turn a multi line command into an
+approved one. Inner whitespace is compared as is. The `command` carried in the
+proceed output is the original, untrimmed string.
 """
 
 import json
@@ -447,7 +457,12 @@ def check_approval(root, doc):
         )
     unapproved = []
     for label, field, command, approvable in entries:
-        if approvable and command in approved:
+        # Compare the trimmed value, as bash_guard.py does for stored and
+        # incoming commands. `approvable` already excludes every non string
+        # and every raw value with a line break or CR, so the trim never
+        # turns such a value into an approved one. Inner whitespace is not
+        # normalized, and the emitted command below stays untrimmed.
+        if approvable and command.strip() in approved:
             continue
         name = f"{label}.{field}"
         if name not in unapproved:
