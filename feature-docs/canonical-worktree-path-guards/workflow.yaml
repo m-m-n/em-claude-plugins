@@ -97,7 +97,8 @@ workflow:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: 186349eff86835170494130c352d6bd603746242
 - id: implement
   status: pending
 - id: review
@@ -106,7 +107,67 @@ workflow:
   status: pending
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: 'Launch guard: git-common-dir project-root fallback'
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/hooks/queue_launch_guard.py
+    - tests/test_queue_launch_guard_linked_layout.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    - external-io
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR6
+    - NFR1
+    - NFR2
+    - NFR4
+    - NFR5
+    status: pending
+    notes: null
+  task0002:
+    title: 'Stale-launched: link-tolerant worktree binding'
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/scripts/recover-orphaned-task.py
+    - tests/test_stale_launched_recovery_chain.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    - auth
+    complexity: high
+    requirements:
+    - FR1
+    - FR4
+    - FR5
+    - FR7
+    - NFR1
+    - NFR3
+    - NFR5
+    status: pending
+    notes: null
+  task0003:
+    title: 'Invocation contract: link-resolving --task-worktree comparison'
+    plan: tasks/task0003.md
+    files:
+    - em-workflow/references/implement-phase.md
+    - tests/test_stale_launched_missing_artifacts_doc_contract.py
+    skills: []
+    domains:
+    - api-contract
+    complexity: medium
+    requirements:
+    - FR5
+    - NFR1
+    status: pending
+    notes: null
 review:
   status: pending
 requirements:
@@ -115,85 +176,139 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS1
+    - TS2
+    - TS3
+    - TS6
   FR2:
     title: 'Launch guard: project root fallback'
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS1
+    - TS2
+    - TS3
+    - TS4
+    - TS12
   FR3:
     title: 'Launch guard: docstring'
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS5
   FR4:
     title: 'Stale-launched: link-tolerant worktree binding'
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS6
+    - TS7
+    - TS8
+    - TS9
   FR5:
     title: 'Stale-launched: documents and pinned wording'
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    - task0003
+    tests:
+    - TS10
+    - TS13
   FR6:
     title: 'Tests: launch guard in linked layouts'
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS1
+    - TS2
+    - TS3
   FR7:
     title: 'Tests: stale-launched binding in linked layout'
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS6
+    - TS7
+    - TS8
   NFR1:
     title: Standard library only
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    tests:
+    - TS11
+    - TS14
   NFR2:
     title: Hook output discipline
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS1
+    - TS2
+    - TS3
+    - TS4
+    - TS12
   NFR3:
     title: Fail safe in the evidence chain
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS8
   NFR4:
     title: Read-only git call
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS12
   NFR5:
     title: Deterministic tests
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS1
+    - TS2
+    - TS3
+    - TS6
+    - TS7
+    - TS11
 batch:
   review_rework_count: 0
   verify_rework:

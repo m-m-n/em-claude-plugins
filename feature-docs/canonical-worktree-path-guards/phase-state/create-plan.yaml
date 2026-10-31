@@ -1,11 +1,11 @@
 schema_version: 1
 feature: canonical-worktree-path-guards
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 97df29ae037f1096d3c7fe16a8fcea5104ce89ca
 last_input_digest: sha256:6792d714dc39ef5d681188d3d92413efcf12ce6abbfd335718f589fe85ed99aa
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -53,7 +53,7 @@ artifacts:
   produced_by: create-plan-run-0001
 patches:
 - patch_id: create-plan-run-0001-p0001
-  status: validated
+  status: applied
   base_input_digest: sha256:6792d714dc39ef5d681188d3d92413efcf12ce6abbfd335718f589fe85ed99aa
   base_workflow_blob: 8cb9ad8a79b37684005e7736904dad3ba4944e63
 progress_fingerprint: null
