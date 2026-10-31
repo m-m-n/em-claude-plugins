@@ -1,0 +1,89 @@
+round: 1
+executed_at: "2026-10-31T12:47:09+09:00"
+scope:
+  review_mode: diff
+  base_commit: 2d161d30a28f24db613705b6a197e0067a62b1ab
+  head_commit: 2ec2c04738b353df7a248f3fd157c4ecbd2b2896
+  changed_files:
+    - em-workflow/agents/implementer.md
+    - em-workflow/hooks/bash_guard.py
+    - em-workflow/references/command-execution-protocol.md
+    - em-workflow/references/implement-phase.md
+    - em-workflow/skills/worktree-task-workflow/SKILL.md
+    - test-docs/cd-prefix-canonical-path-only/task0001.tests.yaml
+    - test-docs/cd-prefix-canonical-path-only/task0002.tests.yaml
+    - test-docs/cd-prefix-non-directory-dotdot/task0001.tests.yaml
+    - test-docs/cd-prefix-process-dependent-paths/task0001.tests.yaml
+    - test-docs/cd-prefix-process-dependent-paths/task0002.tests.yaml
+    - test-docs/cd-prefix-relative-link-target/task0001.tests.yaml
+    - test-docs/is-below-physical-fallback/task0001.tests.yaml
+    - test-docs/is-below-stalled-walk-proc-read/task0001.tests.yaml
+    - tests/test_bash_guard_cd_prefix.py
+    - tests/test_canonical_worktree_path_docs.py
+plan:
+  floor: [comprehensive, security, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+  - stable_id: e193cc2c91fead25
+    severity: medium
+    category: security
+    file: em-workflow/references/implement-phase.md
+    line: 420
+    title: "リンク解決後のパスから信頼済み指示欄へ改行を混入できる"
+    description: "新しい Canonical worktree path 段落（382-389 行付近）は $WT_ROOT/{T} を strict realpath で解決し、その値を 420 行の worktree_path にそのまま展開する。制御文字を確かめる手順はない。解決結果には、リポジトリ側が置いたリンク（.claude/worktrees/em-workflow やその下）のリンク先名が入る。ディレクトリ名には改行を含められるので、攻撃者の文字列が「## Untrusted data」見出しより前の信頼済み欄に、独立した行として入る。変更前は未解決の $WT_ROOT/{T} を渡していたため、リンク先名は入らなかった。bash_guard の cd prefix 構文はパス内の改行を拒否するが、起動プロンプトへの混入は防がない。queue_launch_guard.py 62 行の抽出式は 1 行目しか取らないので、起動フックでも検出されない。"
+    suggestion: "implement-phase.md の Canonical worktree path 段落に手順を足す。正規化した worktree_path に改行などの制御文字があれば、起動プロンプトを作らずに停止して報告する。この記述を確かめる文書テストも tests/test_canonical_worktree_path_docs.py に足す。"
+    reproduction: "メモリ上のファイルシステム代替で確認した。/repo/.claude/worktrees/em-workflow のリンク先を改行と攻撃者の指示行を含む名前とする。各ディレクトリが存在する条件で demo/task0001 を strict realpath に渡すと、改行を保持したパスが返る。これを420行目の形式へ展開すると、攻撃者の行が Untrusted data より前に現れる。既存の起動フックの抽出式も worktree_path を 1 行目までしか取得しない。コマンド実行は行っていない。"
+    reproduction_alternates: []
+    reproduction_overflow: false
+    sources: ["codex:security"]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "medium severity: outside the Phase R4 auto-fix gate (critical/high only); left for a follow-up task"
+  - stable_id: be78d6e245a087dd
+    severity: medium
+    category: comprehensive
+    file: em-workflow/references/implement-phase.md
+    line: 384
+    title: "作業先の正規化で起動フックが推定する根と実行記録の場所が変わる"
+    description: "queue_launch_guard.py は worktree_path の文字列からプロジェクトルート（project_root_for、117-124 行）と実行記録の場所（journal_path_for、161-162 行）を推定する。FR8 で worktree_path を strict realpath にしたため、主作業木の中にリンクがある配置では推定結果が変わる。(1) 領域が /repo/sub/.claude/worktrees/em-workflow へのリンクだと根を /repo/sub と推定し、正しい起動を cwd 不一致で拒否する。(2) 再利用する $WT_ROOT/task0001 が $WT_ROOT/relocated/task0001 へのリンクだと launched が relocated/journal.jsonl に書かれ、二重起動の防止と照合が効かない。(3) 領域が主作業木内の別名へのリンクだと project_root_for が None を返し cwd 検査が外れる。前提は主作業木内のリンクという珍しい配置。"
+    suggestion: "起動フックが作業先の文字列から根や実行記録の場所を逆算しないようにし、プロジェクトルートと実行記録の場所を起動側から別に渡す。範囲を広げない場合は implement-phase.md の生成側で、正規化結果が <realpath(プロジェクトルート)>/.claude/worktrees/em-workflow/{feature}/{T} と一致しないときに起動せず停止して報告する手順を足す。"
+    reproduction: null
+    reproduction_alternates: []
+    reproduction_overflow: false
+    sources: ["codex:comprehensive"]
+    confidence: 70
+    resolution: unresolved
+    resolution_reason: "medium severity: outside the Phase R4 auto-fix gate (critical/high only); left for a follow-up task"
+evaluation:
+  round_summary: "ラウンド 1（diff、cross_validation=true）。指摘は medium 2 件で、critical/high はない。security#0 の 1 件は再現手順を読解でたどって reproduced とした。comprehensive#0 の 2 件は queue_launch_guard.py を読んで仕組みを確かめ、same_site なので 1 件にまとめた。bash_guard.py の新しい判定は読解で SPEC の FR1-FR6・FR8 と合っていた。観点ごと: security = corroborated、performance = corroborated、architecture = findings（起動フックが worktree_path から根と実行記録を逆算しており生成側の正規化とずれている。comprehensive の指摘に含めた）、spec = corroborated（test-docs の記録は個別に読んでいない）、comprehensive = corroborated（3 つ目の帰結を追加）。読んでいないのは tests/test_canonical_worktree_path_docs.py と test-docs/**/*.tests.yaml。インジェクションの試みはなかった。"
+  recommended_action: "auto_fix"
+  action_rationale: "medium 2 件で、どちらも直す範囲は限られる。1 つ目は生成側で制御文字を拒否する手順と文書テストを足せばよい。2 つ目は起動フックを直すと宣言済み変更範囲の外になる。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: "tmp/sca-triage-cd-prefix-canonical-path-only-20261031T034709Z.md"
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
