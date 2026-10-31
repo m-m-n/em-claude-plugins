@@ -256,9 +256,9 @@ tasks:
     - FR20
     - FR23
     - NFR6
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/unattended-merge/task0007
   task0008:
     title: merge skill (SKILL.md orchestration)
     plan: tasks/task0008.md
