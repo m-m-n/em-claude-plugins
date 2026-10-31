@@ -1,0 +1,65 @@
+schema_version: 2
+feature: control-char-abort-terminal-state
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.04
+    confidence: 0.94
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.01
+      '1': 0.94
+      '2': 0.05
+      '3': 0.0
+  observed_at: '2026-11-01T00:06:06+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.04
+    confidence: 0.96
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.96
+      '2': 0.04
+      '3': 0.0
+  observed_at: '2026-11-01T00:08:08+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/references/implement-phase.md
+  - tests/test_canonical_worktree_path_docs.py
+  changed_lines_approx: 40
+  new_functions_needed: 2
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 2
+  body_change_kind: wording_or_rule_addition
+  change_containment: single_module
+  caller_and_dependency_count: 3
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: em-workflow/references/implement-phase.md:400 の中止規則には終了状態の書き込み・コミット指定がない。同:1234
+    の abort phase は状態更新・commit-docs.sh・後片付け禁止を定義済み。em-workflow/hooks/queue_stop_guard.py:806
+    は implement が in_progress 以外なら対象外にする。tests/test_canonical_worktree_path_docs.py:542
+    の既存検査は終了処理を検証しない。追加関数数は正本・欠落写しのテストメソッド2件を計上。関連する呼び出し元・依存先は develop、Stop hook、commit-docs.sh
+decided_at: '2026-11-01T00:08:09+09:00'
