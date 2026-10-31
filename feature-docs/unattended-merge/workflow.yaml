@@ -233,7 +233,7 @@ tasks:
     - FR22
     - NFR1
     - NFR5
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/unattended-merge/task0006
   task0007:
