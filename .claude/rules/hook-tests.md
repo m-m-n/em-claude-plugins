@@ -20,9 +20,24 @@ python3 em-workflow/hooks/tests/run-destructive-guard.py \
   `[期待する判定, ラベル, コマンド]` の 3 要素で並べる。
 - 作業ディレクトリや `CLAUDE_BATCH` で判定が変わるケースだけ、4 要素目に
   `{"cwd": "<絶対パス>", "batch": true}` を足す。どちらのキーも省略できる。
-  `cwd` はペイロードの作業ディレクトリ（フックは文字列しか見ないので、実在しなくてよい）、
+  `cwd` はペイロードの作業ディレクトリ、
   `batch` はそのケースだけ `CLAUDE_BATCH` を立てる。4 要素目が無いケースは作業ディレクトリを
   渡さず、`CLAUDE_BATCH` を外して判定する。
+- 作業ディレクトリがディスク上の実体を要るケース（`gh pr merge` の正規形の許可は、
+  integration worktree の登録をディスクで確かめる）は、`cwd` に `{merge_fixture}` を書く。
+  ランナーが実行ごとに 1 回、一時ディレクトリに git リポジトリを作り、`{merge_fixture}` を
+  そのルートに置き換えてからフックに渡す（実行が終わると一時ディレクトリは消える）。
+  リポジトリの中身は次の 3 つ。
+    - `{merge_fixture}/.claude/worktrees/em-workflow/demo/integration` —
+      `git worktree add` で登録済みの worktree（ブランチ `em-workflow/demo/integration`）
+    - `{merge_fixture}/.claude/worktrees/em-workflow/2fa-login-v2/integration` —
+      同じく登録済みの worktree（ブランチ `em-workflow/2fa-login-v2/integration`）
+    - `{merge_fixture}/.claude/worktrees/em-workflow/unregistered/integration` —
+      同じ形だが worktree として登録されていない通常のディレクトリ
+- `{merge_fixture}` を使わない `cwd` はそのまま渡す。実在しなくてよい。
+  ケースにマシン固有のパスやホームディレクトリのパスを書かない。
+- `em-workflow/hooks/merge_pr_allow.py`（`gh pr merge` の正規形の許可を決める、
+  `destructive-guard.py` の隣のモジュール）を変更したときも、同じテストを走らせる。
 - 誤爆（本来 allow なのに ask / deny になった）を見つけたら、直す前にケースを足す。
   見逃し（deny すべきものが allow になった）も同じ。
 - 既存の deny / ask ケースは消さない。誤爆を潰す修正が検知力を削っていないことを

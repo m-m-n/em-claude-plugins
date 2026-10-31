@@ -38,7 +38,7 @@ acceptance_tests:
       - tests.test_destructive_guard_merge_allow.TestAC3LaterSegmentsAreStillJudged.test_ac3_recursive_delete_after_the_merge_is_denied
       - tests.test_destructive_guard_merge_allow.TestAC3LaterSegmentsAreStillJudged.test_ac3_an_ask_segment_after_the_merge_asks_and_is_denied_in_a_batch
       - tests.test_destructive_guard_merge_allow.TestAC3LaterSegmentsAreStillJudged.test_ac3_a_second_non_canonical_merge_asks
-      - tests.test_destructive_guard_merge_allow.TestAC3LaterSegmentsAreStillJudged.test_ac3_a_harmless_segment_does_not_change_the_allow
+      - tests.test_destructive_guard_merge_allow.TestAC3LaterSegmentsAreStillJudged.test_ac3_a_harmless_segment_makes_the_merge_ask
       - tests.test_destructive_guard_merge_allow.TestAC3LaterSegmentsAreStillJudged.test_ac3_a_statement_that_changes_directory_or_environment_asks
     red_confirmed: true
     red_reason: >-

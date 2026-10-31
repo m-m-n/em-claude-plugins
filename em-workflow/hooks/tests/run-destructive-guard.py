@@ -19,10 +19,26 @@ an object that sets the situation the hook is judged in:
 
     {"cwd": "<absolute path>", "batch": true}
 
-`cwd` is sent as the payload's working directory (the hook only reads the path
-string, so it need not exist). `batch` sets CLAUDE_BATCH for that case. Both
-keys are optional; a three-element case sends no working directory and runs
-with CLAUDE_BATCH cleared.
+`cwd` is sent as the payload's working directory. `batch` sets CLAUDE_BATCH for
+that case. Both keys are optional; a three-element case sends no working
+directory and runs with CLAUDE_BATCH cleared.
+
+A `cwd` may contain the placeholder {merge_fixture}. Once per run the runner
+builds a temporary directory holding a git repository with one commit, and
+replaces the placeholder with that repository's root before it sends the
+payload (the directory is removed when the run ends). The repository holds:
+
+    .claude/worktrees/em-workflow/demo/integration            a registered worktree
+                                                              on em-workflow/demo/integration
+    .claude/worktrees/em-workflow/2fa-login-v2/integration    a registered worktree
+                                                              on em-workflow/2fa-login-v2/integration
+    .claude/worktrees/em-workflow/unregistered/integration    a plain directory of the
+                                                              same shape, not a worktree
+
+The hook's allow for the canonical PR merge reads the disk for the
+registration, so the cases that judge it name these paths. Any other `cwd` is
+sent unchanged and need not exist. No repository is built when no case uses
+the placeholder.
 
 CLAUDE_BATCH is cleared for every run unless a case asks for it. The hook
 demotes `ask` to `deny` when it sees that variable (nobody is there to
@@ -40,6 +56,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CASES = os.path.join(HERE, "destructive-guard-cases.json")
@@ -52,6 +69,18 @@ GUARD_TIMEOUT_SECONDS = 10
 
 # The decision verdict() reports for an evaluation that ran past the limit.
 TIMED_OUT = "(timeout)"
+
+# A case's `cwd` may contain this; judge() replaces it with the root of the
+# repository build_merge_fixture() makes.
+MERGE_FIXTURE_PLACEHOLDER = "{merge_fixture}"
+
+# Features whose integration worktree the fixture registers with
+# `git worktree add`, and features that get a plain directory of the same shape.
+MERGE_FIXTURE_REGISTERED = ("demo", "2fa-login-v2")
+MERGE_FIXTURE_UNREGISTERED = ("unregistered",)
+
+# Limit for one git command while the fixture is built, in seconds.
+GIT_TIMEOUT_SECONDS = 60
 
 
 def case_options(case):
@@ -75,11 +104,84 @@ def case_options(case):
     return options.get("cwd"), options.get("batch", False)
 
 
+def uses_placeholder(case):
+    """Whether a case's `cwd` contains the {merge_fixture} placeholder. A case
+    that is not well formed has none (case_options() ends the run on it)."""
+    options = case[3] if len(case) == 4 else None
+    cwd = options.get("cwd") if isinstance(options, dict) else None
+    return isinstance(cwd, str) and MERGE_FIXTURE_PLACEHOLDER in cwd
+
+
+def build_merge_fixture():
+    """A temporary git repository with one commit whose integration worktrees
+    are registered (MERGE_FIXTURE_REGISTERED), plus plain directories of the
+    same shape (MERGE_FIXTURE_UNREGISTERED). Returns (temporary directory,
+    repository root); the caller removes the directory.
+
+    git runs with a scrubbed environment, so the developer's global git
+    configuration and hooks cannot change the result. A repository that cannot
+    be built ends the run: the cases that name it would otherwise be judged
+    against paths that do not exist."""
+    tmp = tempfile.TemporaryDirectory(prefix="destructive-guard-merge-")
+    base = os.path.realpath(tmp.name)
+    home = os.path.join(base, "home")
+    root = os.path.join(base, "repo")
+    env = {
+        "PATH": os.environ.get("PATH", ""),
+        "HOME": home,
+        "GIT_CONFIG_GLOBAL": os.devnull,
+        "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_TERMINAL_PROMPT": "0",
+        "LC_ALL": "C",
+    }
+
+    def git(*args):
+        subprocess.run(
+            [
+                "git",
+                "-c", "user.name=fixture",
+                "-c", "user.email=fixture@example.invalid",
+                "-c", "commit.gpgsign=false",
+                "-c", "core.hooksPath=" + os.devnull,
+                *args,
+            ],
+            cwd=root,
+            env=env,
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=GIT_TIMEOUT_SECONDS,
+        )
+
+    try:
+        os.makedirs(home)
+        os.makedirs(root)
+        git("init", "-q")
+        git("commit", "-q", "--allow-empty", "-m", "fixture")
+        for feature in MERGE_FIXTURE_REGISTERED:
+            git(
+                "worktree", "add", "-q",
+                "-b", "em-workflow/%s/integration" % feature,
+                ".claude/worktrees/em-workflow/%s/integration" % feature,
+            )
+        for feature in MERGE_FIXTURE_UNREGISTERED:
+            os.makedirs(
+                os.path.join(root, ".claude", "worktrees", "em-workflow", feature, "integration")
+            )
+    except (OSError, subprocess.SubprocessError) as exc:
+        tmp.cleanup()
+        detail = (getattr(exc, "stderr", None) or "").strip() or str(exc)
+        sys.exit("cannot build the %s repository: %s" % (MERGE_FIXTURE_PLACEHOLDER, detail))
+    return tmp, root
+
+
 def verdict(command, batch=False, cwd=None):
     """Run the guard over one command and return (decision, reason). CWD, when
     given, is the payload's working directory."""
     env = dict(os.environ)
     env.pop("CLAUDE_BATCH", None)
+    # The guard loads a sibling module; no run of it leaves bytecode behind.
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
     if batch:
         env["CLAUDE_BATCH"] = "1"
     payload = {"tool_name": "Bash", "tool_input": {"command": command}}
@@ -115,11 +217,28 @@ def timeout_marker(got):
 def main():
     with open(CASES, encoding="utf-8") as f:
         cases = json.load(f)
+
+    fixture, root = None, None
+    if any(uses_placeholder(case) for case in cases):
+        fixture, root = build_merge_fixture()
+    try:
+        return judge(cases, root)
+    finally:
+        if fixture is not None:
+            fixture.cleanup()
+
+
+def judge(cases, root):
+    """Run every case and the unattended-demotion check; return the exit
+    status. ROOT is the fixture repository's root, or None when no case uses
+    the placeholder."""
     failed = []
 
     for case in cases:
         want, label, command = case[:3]
         cwd, batch = case_options(case)
+        if cwd is not None and root is not None:
+            cwd = cwd.replace(MERGE_FIXTURE_PLACEHOLDER, root)
         got, reason = verdict(command, batch=batch, cwd=cwd)
         if got != want:
             failed.append((label, want, got, reason))
