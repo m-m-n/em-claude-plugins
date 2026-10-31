@@ -96,7 +96,8 @@ workflow:
   completed_at_commit: 03336cd0ed94865a6337ecb4ab544072e95736ad
   base_commit: b1694fa9c1a164357ce522a54798a66d0f9aaa73
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 3da2c35ba94cb063b81e0ce1cae73d42c1c58758
 - id: verify
   status: pending
   result: null
@@ -130,8 +131,11 @@ tasks:
     status: merged
     branch: em-workflow/control-char-abort-terminal-state/task0001
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
+  perspectives: [comprehensive, security, performance, architecture, spec]
+  residual_critical_high: 0
+  needs_rework: false
   plan:
     floor: [comprehensive, security, performance, architecture, spec]
     discretionary: []

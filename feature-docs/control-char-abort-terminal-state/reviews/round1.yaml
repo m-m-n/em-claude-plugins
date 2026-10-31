@@ -1,0 +1,64 @@
+round: 1
+executed_at: "2026-11-01T01:20:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: b1694fa9c1a164357ce522a54798a66d0f9aaa73
+  head_commit: 3da2c35ba94cb063b81e0ce1cae73d42c1c58758
+  changed_files:
+    - em-workflow/references/implement-phase.md
+    - em-workflow/references/workflow-schema.md
+    - test-docs/control-char-abort-terminal-state/task0001.tests.yaml
+    - tests/test_canonical_worktree_path_docs.py
+    - tests/test_workflow_schema_journal_readers_doc_contract.py
+plan:
+  floor: [comprehensive, security, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+  - stable_id: f6cac47d5859854b
+    severity: medium
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    line: 423
+    title: "batch の終了行で、制御文字による停止の理由コードが 1 つに決まらない"
+    description: "追記した段落では、制御文字による停止は今回の実行の中で implement: failed / failed_kind: decision を書き、develop の停止条件 3 を通って戻るとしている。一方、em-workflow/references/batch-terminal-line.md の Precedence rule（217-223 行）は stop-condition-3 行の範囲を『今回の実行のどの経路も書いていない failed / needs_update を Step B が読んだ停止』に絞っている。今回の実行で implement を failed にする経路のうち専用の行があるのは implement-second-failure だけで、新しい経路には行が無い。文面どおりに読むとこの停止は Fallback rule で unmapped_stop になるが、理由コード表の step_needs_intervention の意味と SPEC の A2 は step_needs_intervention を指している。batch の外部利用者が受け取る reason が文書の読み方によって変わる。"
+    suggestion: "batch-terminal-line.md の Precedence rule の段落に、制御文字による停止（Step I.2.a）を stop-condition-3（step_needs_intervention）に結びつける記述を足す。『今回の実行が書いた failed は除外する』絞り込みは残す。結びつきを固定する文書テストを足す。宣言済みの変更対象の外のファイル。"
+    reproduction: null
+    reproduction_alternates: []
+    reproduction_overflow: false
+    sources: [claude:evaluator]
+    confidence: 55
+    resolution: deferred
+    resolution_reason: "medium は Phase R4 の自動修正候補外で、修正先 batch-terminal-line.md は宣言済みの変更対象の外。Codex に相談し、この feature では直さず別タスクとして起票する案を採用した"
+evaluation:
+  round_summary: "Round 1（diff）。5 本のレビュアー実行はすべて完了し、指摘は 0 件だった。critical / high の指摘も無いため dismissed_sites は空。プロンプトインジェクションの試みは見つからなかった。cross_validation が true なので評価者が自分でも読んだ（差分、SPEC.md、implement-phase.md の I.2.a / Branch & Worktree Model / I.2.c、develop SKILL.md の停止条件 3、batch-terminal-line.md、テストの補助関数、failed_kind 関連テスト）。implement を failed にする経路は 4 つになり workflow-schema.md の『Four』と合っている。観点ごと: comprehensive — 根拠の文の誤り（low、重大度の門で除外）。security / performance / spec — corroborated。architecture — batch-terminal-line.md の stop-condition-3 行の範囲と新経路の食い違い（medium）。"
+  recommended_action: "auto_fix"
+  action_rationale: "critical / high は無い。残るのは medium 1 件と low 1 件で、どちらも文書の小さな修正で直せる。2 件とも evaluator が自分で見つけた指摘で、medium の修正先は宣言済みの変更対象の外にある。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-control-char-abort-terminal-state-20261031T160125Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
