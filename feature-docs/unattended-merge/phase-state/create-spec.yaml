@@ -1,11 +1,11 @@
 schema_version: 1
 feature: unattended-merge
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: f95fe85f2e0725fb56cf069a02661e1469d15d4f
 last_input_digest: sha256:eb9fa8022e5a1033cec39b79b1e900b9839c70df804e929359710822cf3c772f
-active_request_id: create-spec-run-0004
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
