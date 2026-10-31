@@ -144,6 +144,7 @@ tasks:
     - em-workflow/scripts/merge-preflight.py
     - tests/test_merge_preflight.py
     - test-docs/unattended-merge-medium-fixes/task0002.tests.yaml
+    - test-docs/unattended-merge/task0002.tests.yaml
     skills:
     - backend-impl
     domains:
@@ -157,7 +158,7 @@ tasks:
     - NFR2
     - NFR5
     - NFR6
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/unattended-merge-medium-fixes/task0002
   task0003:
