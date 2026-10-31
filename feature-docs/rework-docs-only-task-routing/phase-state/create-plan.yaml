@@ -1,16 +1,16 @@
 schema_version: 1
 feature: rework-docs-only-task-routing
 phase: create-plan
-status: dispatched
+status: applying_patch
 generation: 1
 base_revision: 96eb84664ffdca17b92e2580baf1ff31500130a4
 last_input_digest: sha256:090aa9dfaca689380374f0c54d8408376e8615d3c7cdd6b4b430f0cdbbdc962e
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:090aa9dfaca689380374f0c54d8408376e8615d3c7cdd6b4b430f0cdbbdc962e
   dispatch_digest_inputs:
     em-workflow/references/contracts/planner-contract.md: sha256:6476cc99ea8a1d2d4f376d1702bd636b1ab9898655397ec80ab1d6fb47cbe9e8
@@ -24,8 +24,46 @@ worker_runs:
     feature-docs/rework-docs-only-task-routing/REQUIREMENTS.md: sha256:7da9dce308e31bd74d6525c903bf059ec9534dac8c0a1d99b6e1349df4e35c76
     feature-docs/rework-docs-only-task-routing/SPEC.md: sha256:3cee2d9153fd13f8fc60231cb5823820da7e296f7bf5affc10bde5fd7197bb07
     feature-docs/rework-docs-only-task-routing/workflow.yaml: sha256:9c76746930ab59c145d2ef22a6f6f82b15365b4a83d5671eeec330662381206b
-artifacts: []
-patches: []
+  output_digest: sha256:a7a720ec366e344b71b3f781b29d12f4efb12084e7e8885d4cbf4bec5fef5214
+  self_write_set:
+  - feature-docs/rework-docs-only-task-routing/IMPLEMENTATION.md
+  - feature-docs/rework-docs-only-task-routing/THREAT-MODEL.md
+  - feature-docs/rework-docs-only-task-routing/VERIFICATION.md
+  - feature-docs/rework-docs-only-task-routing/tasks/task0001.md
+  - feature-docs/rework-docs-only-task-routing/tasks/task0002.md
+  - feature-docs/rework-docs-only-task-routing/tasks/task0003.md
+  - feature-docs/rework-docs-only-task-routing/tasks/task0004.md
+  - feature-docs/rework-docs-only-task-routing/tasks/task0005.md
+artifacts:
+- path: feature-docs/rework-docs-only-task-routing/IMPLEMENTATION.md
+  sha256: sha256:b227e23329cea735b331158414eefcb32bbe90765df7e45946c722d16566fc86
+  produced_by: create-plan-run-0001
+- path: feature-docs/rework-docs-only-task-routing/VERIFICATION.md
+  sha256: sha256:784d84b7d82618a3deadc4117689711f2a259c5e3cfce9585be7f6e3ed8bb518
+  produced_by: create-plan-run-0001
+- path: feature-docs/rework-docs-only-task-routing/THREAT-MODEL.md
+  sha256: sha256:f82d271a448c607a6b0fb2920f4601758abe4b2248fac0db9de8b8af6203d2c9
+  produced_by: create-plan-run-0001
+- path: feature-docs/rework-docs-only-task-routing/tasks/task0001.md
+  sha256: sha256:f9e179ed9295c1c500a3c427f5013a1c1ce65e37ca2ef1a91bf7feefac9f4d15
+  produced_by: create-plan-run-0001
+- path: feature-docs/rework-docs-only-task-routing/tasks/task0002.md
+  sha256: sha256:ea50469d3db8bb29943822bef811f4b44073bf7055366256611600098f5bd48b
+  produced_by: create-plan-run-0001
+- path: feature-docs/rework-docs-only-task-routing/tasks/task0003.md
+  sha256: sha256:db2eadd0cfc341341ea5f52554b8589af65a784b9d7c9c76f96d21bc11b4cdf9
+  produced_by: create-plan-run-0001
+- path: feature-docs/rework-docs-only-task-routing/tasks/task0004.md
+  sha256: sha256:52d601d93a41d6a65328e09437a89834b04ebeca305380596800869aa44f91f3
+  produced_by: create-plan-run-0001
+- path: feature-docs/rework-docs-only-task-routing/tasks/task0005.md
+  sha256: sha256:5bbbbf535ae34fc9876c630f18a0200c44c769f4545d89dd2041060d9ba53b89
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: create-plan-p0001
+  status: pending
+  base_input_digest: sha256:090aa9dfaca689380374f0c54d8408376e8615d3c7cdd6b4b430f0cdbbdc962e
+  base_workflow_blob: c93d24918b95a6a39ea178b2849e5cf6189d134e
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
