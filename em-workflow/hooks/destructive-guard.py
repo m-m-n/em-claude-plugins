@@ -8778,8 +8778,43 @@ def is_integration_worktree_cwd(cwd):
             if depth < 0:
                 break
         else:
-            return True
+            root = "/" + "/".join(segs[: i + 5])
+            project = "/" + "/".join(segs[:i])
+            return _is_registered_integration_worktree(root, project, segs[i + 3])
     return False
+
+
+def _is_registered_integration_worktree(root, project, feature):
+    """On-disk check behind is_integration_worktree_cwd(): ROOT's `.git` is a
+    regular file (not a symlink) whose `gitdir:` resolves to a direct child of
+    PROJECT's `.git/worktrees/`, and that gitdir's HEAD is the feature's
+    integration branch. Any failure or exception means False (ask)."""
+    try:
+        git_file = os.path.join(root, ".git")
+        if os.path.islink(git_file) or not os.path.isfile(git_file):
+            return False
+        with open(git_file, "r", encoding="utf-8") as f:
+            content = f.read(4096)
+        line = content.strip()
+        if "\n" in line or not line.startswith("gitdir:"):
+            return False
+        gitdir = line[len("gitdir:"):].strip()
+        if not gitdir:
+            return False
+        if not os.path.isabs(gitdir):
+            gitdir = os.path.join(root, gitdir)
+        gitdir = os.path.realpath(gitdir)
+        worktrees = os.path.realpath(os.path.join(project, ".git", "worktrees"))
+        if os.path.dirname(gitdir) != worktrees or not os.path.isdir(gitdir):
+            return False
+        head_path = os.path.join(gitdir, "HEAD")
+        if os.path.islink(head_path) or not os.path.isfile(head_path):
+            return False
+        with open(head_path, "r", encoding="utf-8") as f:
+            head = f.read(4096).strip()
+        return head == f"ref: refs/heads/em-workflow/{feature}/integration"
+    except Exception:
+        return False
 
 
 def changes_context(word, toks, words):
@@ -8800,7 +8835,19 @@ def changes_context(word, toks, words):
 
 def check_external(word, args, segment, merge_allowed=False):
     if word == "gh":
-        sub = " ".join(a for a in args if not a.startswith("-"))[:40]
+        positional = []
+        skip_value = False
+        for a in args:
+            if skip_value:
+                skip_value = False
+                continue
+            if a in ("--repo", "-R", "--hostname"):
+                skip_value = True
+                continue
+            if a.startswith("-"):
+                continue
+            positional.append(a)
+        sub = " ".join(positional)[:40]
         if re.match(r"^(repo|release|secret|ssh-key|gpg-key)\s+delete", sub):
             decide("deny", "gh-delete", f"`gh {sub}` はリモート側で不可逆。")
         if re.match(r"^secret\s+set", sub):

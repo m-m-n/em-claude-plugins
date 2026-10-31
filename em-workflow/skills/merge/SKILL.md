@@ -349,6 +349,19 @@ Bash 呼び出し（timeout: 600000）:
 
 - 終了コードが 0 でない、または timeout で打ち切られたら、残りは実行せず `verification_failed`。`detail` には、その要素の `component.field` と、出力の要点（末尾の数行の趣旨を 1 行で）を書く。承認を記録しない。コマンドを直さない。別の形で再実行しない。
 - `commands` が空なら何も実行しない。
+- すべての要素が終了コード 0 で終わったら、作業ディレクトリが worktree のまま、検証した内容とマージ対象が一致することを確かめる。
+
+  Bash 呼び出し（timeout: 60000）:
+
+  ```bash
+  git status --porcelain --untracked-files=no
+  ```
+
+  ```bash
+  git rev-parse HEAD
+  ```
+
+  `git status` の出力が空でない（追跡対象ファイルに未コミットの変更がある）、または `HEAD` が `head_sha` と一致しないなら、マージせずに `verification_failed` で終端する。`detail` には、未コミットの変更がある、または HEAD が検証前の `head_sha` と異なる旨を書く。コミットしない。変更を戻さない。いずれかの git コマンドが失敗したら `git_failed`。
 - 実行を終えたら（`verification_failed` で終端へ進む前も含め）、作業ディレクトリをプロジェクトルートへ戻す。
 
 Bash 呼び出し（timeout: 60000）:
@@ -446,7 +459,9 @@ PR ルートでは、同じ呼び出しの末尾に `--remote <remote>` を付�
    gh pr merge <pr_number> --merge --match-head-commit <head_sha>
    ```
 
-   失敗したら `merge_failed`。成功したら、`merge-pr.py resolve`（手順 5.2 と同じ呼び出し）をもう一度呼び、`pr_url` と（`merged` が返ったときの）`merge_commit` を読む。`merged` が返らなくても、マージ自体は成功しているので結果は `merged` のまま、読めなかった値は空にする。
+   失敗したら `merge_failed`。成功したら、`merge-pr.py resolve`（手順 5.2 と同じ呼び出し）をもう一度呼ぶ。マージキューが必須のブランチでは、`gh pr merge` はキューへの登録でも成功するので、成功しただけでは `merged` にしない。
+   - `merged` が返った: `pr_url` と `merge_commit` を読み、結果を `merged` として手順 14・15 へ進む。
+   - `merged` 以外（open でキュー登録中の場合を含む）が返った、`resolve` 自体が失敗した、または出力を読めなかった: `merged` にしない。手順 14 でロックを解放し、worktree を残したまま（手順 15 は行わない）`merge_failed` で終端する。`detail` は `gh pr merge succeeded but the PR is not confirmed MERGED` と状態の要点。
 3. ローカルルート。まず、メイン作業ツリーの状態を確かめる（手順 4 の `main-tree` と同じ呼び出し）。`ready` でなければ `main_tree_not_ready` で終端。次に、作業ディレクトリをプロジェクトルートにする。
 
    Bash 呼び出し（timeout: 60000）:
