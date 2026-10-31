@@ -1,0 +1,107 @@
+task_id: task0001
+baseline_failures: []          # `python3 -m unittest discover -s tests` from the worktree root
+                                # before any file was touched: 13058 tests, all passing
+                                # (1 skipped).
+final_failures: []             # same command re-run after the SKILL.md and test changes and
+                                # after this record was written: no failure, so the set is empty
+                                # and a subset of the baseline.
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_merge_skill_doc.TestLocalMergeBoundToHeadSha.test_ac1_integration_tip_is_read_after_the_main_tree_check_and_before_the_merge
+      - tests.test_merge_skill_doc.TestLocalMergeBoundToHeadSha.test_ac1_a_tip_other_than_head_sha_ends_verification_failed_without_merging
+      - tests.test_merge_skill_doc.TestLocalMergeBoundToHeadSha.test_ac1_the_merge_runs_right_after_the_tip_read_with_the_project_root_cd_before_both
+      - tests.test_merge_skill_doc.TestLocalMergeBoundToHeadSha.test_ac1_the_tip_read_is_a_shell_safe_read_only_form
+      - tests.test_merge_skill_doc.TestDirectCommandForms.test_ac2_local_merge_runs_in_the_main_tree_with_no_ff_no_edit
+    red_confirmed: true
+    red_reason: >-
+      Watched all five fail against the SKILL.md as it was before the change. The
+      ordering test failed with "0 != 1 : no single read of
+      refs/heads/em-workflow/<feature>/integration"; the adjusted local-merge test failed
+      with the block right before the merge being the project-root cd instead of the
+      integration-tip read. Passing before the change by design (preserved behaviour and
+      proof that the matchers fire on forged text, not counted as red):
+      test_ac1_a_failing_merge_still_aborts_before_merge_failed,
+      test_ac1_the_shell_safe_matcher_fires_on_forged_forms,
+      test_ac1_no_command_form_in_the_skill_carries_a_revision_suffix and
+      test_ac1_the_ordering_matchers_fire_on_forged_text.
+  AC-2:
+    tests:
+      - tests.test_merge_skill_doc.TestLocalMergeBoundToHeadSha.test_ac2_the_second_parent_is_read_after_the_merge_success_branch
+      - tests.test_merge_skill_doc.TestLocalMergeBoundToHeadSha.test_ac2_a_mismatch_or_an_unreadable_parent_keeps_merged_with_a_one_line_detail
+      - tests.test_merge_skill_doc.TestLocalMergeBoundToHeadSha.test_ac2_cleanup_runs_after_the_second_parent_check_as_for_any_merged_result
+      - tests.test_merge_skill_doc.TestLocalMergeBoundToHeadSha.test_ac2_the_detail_fixed_text_rule_names_this_case_as_its_only_exception
+      - tests.test_merge_skill_doc.TestLocalMergeBoundToHeadSha.test_ac2_the_verification_failed_row_lists_step_13_and_the_moved_branch_detail
+    red_confirmed: true
+    red_reason: >-
+      Watched all five fail against the SKILL.md as it was before the change: no
+      second-parent read form existed ("0 != 1"), the detail fixed-text rule had no
+      exception ("Regex didn't match: 例外は.*手順 13\.3.*第 2 親") and the
+      verification_failed row listed only step 10.
+  AC-3:
+    tests:
+      - tests.test_merge_skill_doc.TestStep10HeadCheckRunsInTheWorktree.test_ac3_the_block_right_before_git_status_is_a_standalone_worktree_cd
+      - tests.test_merge_skill_doc.TestStep10HeadCheckRunsInTheWorktree.test_ac3_the_head_check_pair_follows_that_cd_after_the_command_block
+      - tests.test_merge_skill_doc.TestStep10HeadCheckRunsInTheWorktree.test_ac3_the_first_worktree_cd_is_still_followed_by_the_command
+      - tests.test_merge_skill_doc.TestStep10HeadCheckRunsInTheWorktree.test_ac3_the_check_also_runs_when_commands_is_empty
+    red_confirmed: true
+    red_reason: >-
+      Watched all four fail against the SKILL.md as it was before the change: the block
+      right before the git status block was the command block ("False is not true"),
+      step 10 held one worktree cd instead of two ("1 != 2") and the empty-commands
+      line read only "`commands` が空なら何も実行しない。". The existing
+      test_ac2_verification_commands_run_after_a_standalone_cd_exactly_as_given keeps
+      guarding that the first worktree cd is followed by the command; it passed before
+      and after.
+  AC-4:
+    tests:
+      - tests.test_merge_skill_doc.TestPostLockMergedRedecision.test_ac4_held_leads_to_the_redecision_not_straight_to_step_7
+      - tests.test_merge_skill_doc.TestPostLockMergedRedecision.test_ac4_the_redecision_forms_follow_the_wait_and_precede_step_7
+      - tests.test_merge_skill_doc.TestPostLockMergedRedecision.test_ac4_each_redecision_form_has_its_own_timeout_line
+      - tests.test_merge_skill_doc.TestPostLockMergedRedecision.test_ac4_the_redecision_forms_pass_the_options_of_steps_4_and_5_2
+      - tests.test_merge_skill_doc.TestPostLockMergedRedecision.test_ac4_each_outcome_is_handled_as_the_decision_table_says
+      - tests.test_merge_skill_doc.TestPostLockMergedRedecision.test_ac4_the_hold_task_is_stopped_before_every_terminal_the_redecision_reaches
+      - tests.test_merge_skill_doc.TestPrDecisionBindings.test_ac6_every_resolve_form_in_the_skill_passes_an_integration_tip
+    red_confirmed: true
+    red_reason: >-
+      Watched all seven fail against the SKILL.md as it was before the change: the held
+      line still read "手順 7 へ。", step 6 held no merge-git.py merged or merge-pr.py
+      resolve form ("Tuples differ: (1, 0, 0) != (1, 1, 1)"), and the adjusted
+      whole-skill resolve-form count was "2 != 3". The outcome-handling tests failed
+      with "no re-decision item in step 6". The matcher test
+      test_ac4_the_outcome_matcher_fires_on_forged_text passes before and after by
+      design.
+  AC-5:
+    tests:
+      - tests.test_merge_skill_doc.TestPostLockMergedRedecision.test_ac5_the_already_merged_entry_list_names_the_step_6_redecision
+      - tests.test_merge_skill_doc.TestPostLockMergedRedecision.test_ac5_item_1_stops_the_hold_task_first_for_the_step_6_entry
+      - tests.test_merge_skill_doc.TestPostLockMergedRedecision.test_ac5_the_skipped_steps_and_the_cleanup_are_still_named
+    red_confirmed: true
+    red_reason: >-
+      Watched all three fail against the SKILL.md as it was before the change: the entry
+      list named only steps 4, 5.2 and 13.2 ("'手順 6' not found"), item 1 named only
+      step 13.2, and the note that steps 7 to 13 are skipped from step 6 was absent.
+  AC-6:
+    tests:
+      - tests.test_merge_skill_doc.TestHostQualifiedRepository.test_ac6_step_5_1_states_repo_is_host_owner_name_passed_verbatim
+      - tests.test_merge_skill_doc.TestHostQualifiedRepository.test_ac6_repo_is_no_longer_described_as_owner_name
+      - tests.test_merge_skill_doc.TestHostQualifiedRepository.test_ac6_the_held_values_list_describes_repo_the_same_way
+    red_confirmed: true
+    red_reason: >-
+      Watched all three fail against the SKILL.md as it was before the change: step 5.1
+      and the held-values list lacked HOST/OWNER/NAME and step 5.1 still described
+      repo as owner/name. Passing before the change by design (preserved behaviour and
+      proof that the matcher fires on forged text, not counted as red):
+      test_ac6_every_repo_option_in_a_command_form_is_the_repo_value,
+      test_ac6_gh_pr_create_and_merge_forms_are_unchanged_and_carry_no_repo and
+      test_ac6_the_repo_matcher_fires_on_forged_forms.
+  AC-7:
+    tests:
+      - tests.test_merge_skill_doc
+    red_confirmed: true
+    red_reason: >-
+      Ran the module against the SKILL.md as it was before the change: 27 of its 100
+      tests failed (the AC-1 to AC-6 tests above, including the two adjusted
+      assertions) and none errored. After the change the whole module passes, which
+      includes the existing literal, timeout, command-head, script-set,
+      prohibited-form, reason-table and no-state-file tests over the new forms.
