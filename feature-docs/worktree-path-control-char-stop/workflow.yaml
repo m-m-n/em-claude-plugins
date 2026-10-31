@@ -106,7 +106,8 @@ workflow:
   base_commit: 2e8231f213d6b1213a219f37724f948e52a1714e
   completed_at_commit: 92d938d68e7633e6fec8a35aff09d6889e1197e8
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: ee53b5b703924fd787dd224663331eb6c88fd652
 - id: verify
   status: pending
   result: null
@@ -135,7 +136,7 @@ tasks:
     status: merged
     branch: em-workflow/worktree-path-control-char-stop/task0001
 review:
-  status: in_progress
+  status: completed
   plan:
     floor:
     - comprehensive
@@ -144,8 +145,12 @@ review:
     - spec
     discretionary: []
     cross_validation: true
-  rounds_completed: 0
-  perspectives: {}
+  rounds_completed: 1
+  perspectives:
+    comprehensive: completed
+    security: completed
+    architecture: completed
+    spec: completed
   residual_critical_high: 0
   needs_rework: false
 requirements:
