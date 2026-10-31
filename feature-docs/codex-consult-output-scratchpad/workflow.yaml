@@ -2,7 +2,8 @@ schema_version: 1
 feature: codex-consult-output-scratchpad
 created: '2026-10-31'
 base_branch: main
-goal: '# em-workflow の Codex 相談で、run_codex_exec.sh の出力がプロジェクトルートに consult1.out / consult1.err として残る
+goal: '# em-workflow の Codex 相談で、run_codex_exec.sh の出力がプロジェクトルートに consult1.out / consult1.err
+  として残る
 
 
   種別: バグ
@@ -10,7 +11,8 @@ goal: '# em-workflow の Codex 相談で、run_codex_exec.sh の出力がプロ�
 
   ## 現象
 
-  develop の質問解決ステップで Codex に相談したとき、オーケストレーターが `run_codex_exec.sh` の出力を相対パスでリダイレクトし、プロジェクトルートに `consult1.out` / `consult1.err` が残った。
+  develop の質問解決ステップで Codex に相談したとき、オーケストレーターが `run_codex_exec.sh` の出力を相対パスでリダイレクトし、プロジェクトルートに
+  `consult1.out` / `consult1.err` が残った。
 
 
   実行されたコマンド:
@@ -19,11 +21,13 @@ goal: '# em-workflow の Codex 相談で、run_codex_exec.sh の出力がプロ�
 
   S=<scratchpad>; P=''...''
 
-  <em-workflow>/scripts/run_codex_exec.sh readonly -C <対象プロジェクトのルート> "$P" > consult1.out 2>consult1.err
+  <em-workflow>/scripts/run_codex_exec.sh readonly -C <対象プロジェクトのルート> "$P" > consult1.out
+  2>consult1.err
 
   ```
 
-  `S` に scratchpad を設定しているが、リダイレクト先が `$S/` ではなくカレント（プロジェクトルート）になっている。別セッションでは `$S/consult1.txt` と正しく scratchpad に書いており、毎回ではない。
+  `S` に scratchpad を設定しているが、リダイレクト先が `$S/` ではなくカレント（プロジェクトルート）になっている。別セッションでは `$S/consult1.txt`
+  と正しく scratchpad に書いており、毎回ではない。
 
 
   ## 再現手順
@@ -101,14 +105,16 @@ workflow:
   - DESIGN.md
   - design/
   status: skipped
-  skipped_reason: 'UI を持たない変更（手順文書と文書テストのみ）、design-system 候補 0 件（create-spec.design-step: decide_autonomously -> skipped）。tier reduced でも design step は削減対象'
+  skipped_reason: 'UI を持たない変更（手順文書と文書テストのみ）、design-system 候補 0 件（create-spec.design-step:
+    decide_autonomously -> skipped）。tier reduced でも design step は削減対象'
 - id: create-plan
   artifacts:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - THREAT-MODEL.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: fe4038c2aa41a1880eb14702ddf0239454ca5ada
 - id: implement
   status: pending
 - id: review
@@ -117,69 +123,127 @@ workflow:
   status: pending
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Scratchpad rule for saved Codex wrapper output, cited from the tier pre-survey
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/references/question-resolution.md
+    - em-workflow/skills/develop/SKILL.md
+    - tests/test_question_resolution_doc.py
+    - tests/test_develop_tier_staged_procedure.py
+    - test-docs/codex-consult-output-scratchpad/task0001.tests.yaml
+    skills: []
+    domains:
+    - external-io
+    complexity: medium
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    - NFR6
+    status: pending
+    notes: null
 review: {}
 requirements:
   FR1:
     title: Scratchpad placement of saved wrapper output
     status: resolved
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
   FR2:
     title: Project-root prohibition
     status: resolved
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
   FR3:
     title: Invocation form unchanged
     status: resolved
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-5
+    - TS-7
   FR4:
     title: Citation from the develop tier pre-survey
     status: resolved
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-3
+    - TS-4
   FR5:
     title: Regression test for question-resolution.md
     status: resolved
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
   FR6:
     title: Regression test for the SKILL.md citation
     status: resolved
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-3
+    - TS-4
   NFR1:
     title: No undefined shell variables
     status: resolved
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-6
   NFR2:
     title: question-resolution.md test retention
     status: resolved
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-5
   NFR3:
     title: SKILL.md test retention
     status: resolved
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-5
   NFR4:
     title: Doc redaction
     status: resolved
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-7
   NFR5:
     title: Plugin version untouched
     status: resolved
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-7
   NFR6:
     title: Document language
     status: resolved
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-7
 batch:
   review_rework_count: 0
   verify_rework:
