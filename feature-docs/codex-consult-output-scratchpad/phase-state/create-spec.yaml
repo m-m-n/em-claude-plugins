@@ -4,8 +4,8 @@ phase: create-spec
 status: dispatching
 generation: 1
 base_revision: 16583f9c6f4f9a8e186d5b8c334bd6c7e6daff07
-last_input_digest: sha256:ff4ca9d28b5faad7f17d7a2078d6d01448712cc172b6b49b54ede6ce8f05caac
-active_request_id: create-spec-run-0002
+last_input_digest: sha256:547413e1a1d51daed93ec8a368fb07d03b280e66ca82d7fa355fc525b4bce286
+active_request_id: create-spec-run-0003
 packets: {}
 answers:
   create-spec.scope-orchestrator-wrapper-sites:
@@ -60,7 +60,7 @@ worker_runs:
     tests/test_codex_reviewer_temp_file_isolation.py: sha256:1a68a76e6206d38dd61be6146056919e1f27ad0846647ef6d2888216d898da94
     tests/test_question_resolution_doc.py: sha256:d4c19bcde091007fecff9041e48e44a7e55cb2e936f80f9799dd9d8035251f85
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:ff4ca9d28b5faad7f17d7a2078d6d01448712cc172b6b49b54ede6ce8f05caac
   dispatch_digest_inputs:
     CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
@@ -74,6 +74,12 @@ worker_runs:
     test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
     tests/test_codex_reviewer_temp_file_isolation.py: sha256:1a68a76e6206d38dd61be6146056919e1f27ad0846647ef6d2888216d898da94
     tests/test_question_resolution_doc.py: sha256:d4c19bcde091007fecff9041e48e44a7e55cb2e936f80f9799dd9d8035251f85
+- request_id: create-spec-run-0003
+  status: dispatched
+  input_digest: sha256:547413e1a1d51daed93ec8a368fb07d03b280e66ca82d7fa355fc525b4bce286
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/spec-writer-contract.md: sha256:9032c6287d75f4a88e556bd3962c32ab8b4905cf3b6ececa895206788bcd0b63
+    em-workflow/references/templates/spec-document.md: sha256:203dfcddbe507886ce861694fccd20ae25e5af0bd1b0efa5e935991add950cbd
 artifacts: []
 patches: []
 progress_fingerprint: null
