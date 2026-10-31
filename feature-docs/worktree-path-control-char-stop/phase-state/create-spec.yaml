@@ -6,7 +6,17 @@ generation: 1
 base_revision: 755a2242e8f8571f2e5fd967eb8de8268c55c236
 last_input_digest: sha256:885fdd2eeed5a1ffb2cadb547933cde5fd09c197893b7180d023a81eb57800fe
 active_request_id: create-spec-run-0001
-packets: {}
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-10-31T14:05:00+09:00'
+    questions:
+    - question_id: requirement.control-char-set
+      status: answered
+    - question_id: requirement.stop-scope
+      status: answered
+    - question_id: design.step.recommendation
+      status: answered
 answers:
   create-spec.feature-identity:
     packet_id: null
@@ -17,9 +27,49 @@ answers:
     - derive_from_task_description
     freeform: null
     normalized_answer: 'feature name derived from the task description: worktree-path-control-char-stop'
+  requirement.control-char-set:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-31T14:05:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - cc_and_line_separators
+    freeform: null
+    normalized_answer: 拒否する文字は Unicode 一般カテゴリ Cc（U+0000-U+001F、U+007F、U+0080-U+009F）と U+2028 / U+2029
+      とする。
+    resolution_note: 'gate create-spec.requirement-clarification; batch-policies action codex_consultation
+      (record_as_assumption). Codex consulted 1 turn (harness: codex), both questions batched in one consultation.
+      Codex chose cc_and_line_separators (LF/CR 以外の行区切り VT・FF・NEL・LS・PS も信頼済み欄で行を分けうる。起動フックには制御文字検査が無い).
+      Orchestrator judged the mapping: matches the option and the worker''s recommendation. Opus escalation:
+      not run. Recorded as assumption.'
+  requirement.stop-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-31T14:05:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - abort_phase_before_any_launch
+    freeform: null
+    normalized_answer: Step I.2.a で選んだ全タスクの正規化パスを起動ループの前に検査し、1 つでも該当すれば起動プロンプトを 1 つも作らずにフェーズを ABORT し、該当タスクを報告する。
+    resolution_note: 'gate create-spec.requirement-clarification; batch-policies action codex_consultation
+      (record_as_assumption). Codex consulted 1 turn (harness: codex), both questions batched in one consultation.
+      Codex chose abort_phase_before_any_launch (部分起動を避け、Step I.0 の識別子検査と同じフェーズ中止方針に揃う。注記: 中止しても journal
+      に記録の無いタスクで queue_stop_guard が同一状態で最大 3 回ターン終了を止めうるが、安全検査を緩めて起動すべきではない). Orchestrator judged the
+      mapping: matches the option and the worker''s recommendation. Opus escalation: not run. Recorded
+      as assumption.'
+  design.step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-10-31T14:05:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design_step_recommendation (skip) を採用する
+    resolution_note: gate create-spec.design-step; batch-policies option_id decide_autonomously
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:885fdd2eeed5a1ffb2cadb547933cde5fd09c197893b7180d023a81eb57800fe
   output_digest: null
   dispatch_digest_inputs:
@@ -36,6 +86,7 @@ worker_runs:
     test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
     tests/test_canonical_worktree_path_docs.py: sha256:d5fb8cbf4b710676c90602b5581de3d7c218d4bb8833b0cf63f376721ec948d0
     tests/test_queue_launch_guard.py: sha256:fe198902e809a08995b7e01d7166430c734deb02a3bdaf40482e40bf88350d11
+  self_write_set: []
 artifacts: []
 patches: []
 progress_fingerprint: null
