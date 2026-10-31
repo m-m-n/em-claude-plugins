@@ -2,43 +2,7 @@ schema_version: 1
 feature: unattended-merge
 created: '2026-10-31'
 base_branch: main
-goal: |
-  # develop で完成した feature を無人でマージするスキルを追加する
-
-  ## やりたいこと
-
-  develop で完成した feature を、無人でマージまで進めるスキルを em-workflow に追加する。
-
-  ## 背景・なぜ
-
-  今は develop が作った PR やブランチを人がマージしている。これを自動化したい。
-
-  ## 受け入れ条件 / 完了の定義
-
-  - `--batch` で無人実行できるマージ用のスキルがある
-  - リモートがあるリポジトリでは、PR を対象にする
-    - PR が開いていてマージできる状態か確かめる
-    - base ブランチの最新を PR のブランチに取り込む
-    - コンフリクトしたら解消する。両方の変更の意図を、それぞれの feature の仕様書から読み取って判断する
-    - テストを実行する（workflow.yaml に記録されたコマンド）
-    - push して CI の完了を待つ
-    - PR をマージコミットでマージする
-  - リモートが無いリポジトリでは、同じ手順をローカルで行い、integration ブランチを base ブランチにマージコミットでマージする
-  - 途中で止まっても、やり直せば続きから進む
-    - すでにマージ済みなら何もせず成功を返す
-  - 結果（マージした / できなかった理由）を構造化して返す
-
-  ## スコープ外
-
-  - Notion のステータス更新（loop-develop 側で行う）
-
-  ## 制約・前提
-
-  - loop-develop のディスパッチャーから claude-batch 経由で起動される
-
-  ## 追加指示（起動時）
-
-  - 不明点は Codex に相談し、相対的に良いと判断した選択肢を採用する
+goal: "# develop で完成した feature を無人でマージするスキルを追加する\n\n## やりたいこと\n\ndevelop で完成した feature を、無人でマージまで進めるスキルを em-workflow に追加する。\n\n## 背景・なぜ\n\n今は develop が作った PR やブランチを人がマージしている。これを自動化したい。\n\n## 受け入れ条件 / 完了の定義\n\n- `--batch` で無人実行できるマージ用のスキルがある\n- リモートがあるリポジトリでは、PR を対象にする\n  - PR が開いていてマージできる状態か確かめる\n  - base ブランチの最新を PR のブランチに取り込む\n  - コンフリクトしたら解消する。両方の変更の意図を、それぞれの feature の仕様書から読み取って判断する\n  - テストを実行する（workflow.yaml に記録されたコマンド）\n  - push して CI の完了を待つ\n  - PR をマージコミットでマージする\n- リモートが無いリポジトリでは、同じ手順をローカルで行い、integration ブランチを base ブランチにマージコミットでマージする\n- 途中で止まっても、やり直せば続きから進む\n  - すでにマージ済みなら何もせず成功を返す\n- 結果（マージした / できなかった理由）を構造化して返す\n\n## スコープ外\n\n- Notion のステータス更新（loop-develop 側で行う）\n\n## 制約・前提\n\n- loop-develop のディスパッチャーから claude-batch 経由で起動される\n\n## 追加指示（起動時）\n\n- 不明点は Codex に相談し、相対的に良いと判断した選択肢を採用する\n"
 parent_branch: em-workflow/unattended-merge/integration
 tier: full
 tier_decision:
@@ -98,7 +62,221 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Merge result contract and renderer
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/references/merge-result.md
+    - em-workflow/scripts/merge-result.py
+    - tests/test_merge_result.py
+    skills:
+    - backend-impl
+    domains:
+    - api-contract
+    - input-handling
+    complexity: high
+    requirements:
+    - FR21
+    - NFR5
+    - NFR7
+    - NFR8
+    status: pending
+    notes: null
+    branch: null
+  task0002:
+    title: 'Preflight: target resolution, precondition, review findings, command approval'
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/scripts/merge-preflight.py
+    - tests/test_merge_preflight.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    - external-io
+    complexity: high
+    requirements:
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR13
+    - FR22
+    - NFR4
+    - NFR5
+    status: pending
+    notes: null
+    branch: null
+  task0003:
+    title: Local git decisions and base integration
+    plan: tasks/task0003.md
+    files:
+    - em-workflow/scripts/merge-git.py
+    - tests/test_merge_git.py
+    - tests/test_merge_local_route.py
+    skills:
+    - backend-impl
+    domains:
+    - external-io
+    - concurrency
+    complexity: high
+    requirements:
+    - FR3
+    - FR6
+    - FR7
+    - FR11
+    - FR16
+    - FR18
+    - FR19
+    - FR22
+    - NFR2
+    - NFR3
+    - NFR5
+    status: pending
+    notes: null
+    branch: null
+  task0004:
+    title: GitHub repository and PR decisions
+    plan: tasks/task0004.md
+    files:
+    - em-workflow/scripts/merge-pr.py
+    - tests/test_merge_pr.py
+    skills:
+    - backend-impl
+    domains:
+    - external-io
+    - input-handling
+    complexity: high
+    requirements:
+    - FR6
+    - FR7
+    - FR8
+    - FR9
+    - FR22
+    - NFR3
+    - NFR4
+    - NFR5
+    status: pending
+    notes: null
+    branch: null
+  task0005:
+    title: Repository-wide merge lock
+    plan: tasks/task0005.md
+    files:
+    - em-workflow/scripts/merge-lock.py
+    - tests/test_merge_lock.py
+    skills:
+    - backend-impl
+    domains:
+    - concurrency
+    - external-io
+    complexity: high
+    requirements:
+    - FR10
+    - FR22
+    - NFR5
+    status: pending
+    notes: null
+    branch: null
+  task0006:
+    title: Bounded CI wait
+    plan: tasks/task0006.md
+    files:
+    - em-workflow/scripts/merge-ci-wait.py
+    - tests/test_merge_ci_wait.py
+    skills:
+    - backend-impl
+    domains:
+    - external-io
+    complexity: high
+    requirements:
+    - FR15
+    - FR22
+    - NFR1
+    - NFR5
+    status: pending
+    notes: null
+    branch: null
+  task0007:
+    title: destructive-guard limited allow for the canonical gh pr merge
+    plan: tasks/task0007.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - em-workflow/hooks/tests/run-destructive-guard.py
+    - em-workflow/README.md
+    - .claude/rules/hook-tests.md
+    skills:
+    - backend-impl
+    domains:
+    - auth
+    - input-handling
+    - config-infra
+    complexity: high
+    requirements:
+    - FR20
+    - FR23
+    - NFR6
+    status: pending
+    notes: null
+    branch: null
+  task0008:
+    title: merge skill (SKILL.md orchestration)
+    plan: tasks/task0008.md
+    files:
+    - em-workflow/skills/merge/SKILL.md
+    - tests/test_merge_skill_doc.py
+    - em-workflow/README.md
+    skills: []
+    domains:
+    - input-handling
+    - external-io
+    - concurrency
+    - api-contract
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR7
+    - FR8
+    - FR10
+    - FR12
+    - FR13
+    - FR14
+    - FR15
+    - FR16
+    - FR17
+    - FR18
+    - FR19
+    - FR21
+    - FR22
+    - FR23
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR7
+    - NFR8
+    status: pending
+    notes: null
+    branch: null
+  task0009:
+    title: Plugin manifest descriptions and minor version
+    plan: tasks/task0009.md
+    files:
+    - em-workflow/.claude-plugin/plugin.json
+    - .claude-plugin/marketplace.json
+    skills: []
+    domains:
+    - config-infra
+    complexity: low
+    requirements:
+    - FR23
+    status: pending
+    notes: null
+    branch: null
 review:
   status: pending
   rounds_completed: 0
@@ -108,28 +286,40 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0008
+    tests:
+    - TS15
   FR2:
     title: 引数と batch 専用
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    - task0008
+    tests:
+    - TS15
+    - TS16
   FR3:
     title: 対象の解決
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    - task0003
+    - task0008
+    tests:
+    - TS16
+    - TS19
   FR4:
     title: 事前条件
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0002
     tests:
     - TS3
   FR5:
@@ -137,7 +327,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0002
     tests:
     - TS4
   FR6:
@@ -145,17 +336,23 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0003
+    - task0004
     tests:
     - TS1
     - TS5
     - TS14
+    - TS24
   FR7:
     title: マージ済みなら何もせず成功
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0003
+    - task0004
+    - task0008
     tests:
     - TS2
   FR8:
@@ -163,67 +360,91 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0004
+    - task0008
     tests:
     - TS13
+    - TS15
+    - TS24
   FR9:
     title: PR の状態確認
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0004
+    tests:
+    - TS17
   FR10:
     title: リポジトリ単位の排他ロック
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0005
+    - task0008
     tests:
     - TS8
+    - TS23
   FR11:
     title: base の取り込み
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0003
+    tests:
+    - TS18
   FR12:
     title: コンフリクトの解消
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0008
+    tests:
+    - TS15
+    - TS19
   FR13:
     title: 取り込み後の検証コマンド
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0002
+    - task0008
     tests:
     - TS11
+    - TS15
   FR14:
     title: push
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0008
+    tests:
+    - TS15
   FR15:
     title: CI 待ち
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0006
+    - task0008
     tests:
     - TS6
+    - TS25
   FR16:
     title: base が動いた場合のやり直し
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0003
+    - task0008
     tests:
     - TS7
   FR17:
@@ -231,14 +452,19 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0008
+    tests:
+    - TS9
+    - TS15
   FR18:
     title: ローカルルートのマージ
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0003
+    - task0008
     tests:
     - TS1
     - TS14
@@ -247,100 +473,154 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0003
+    - task0008
     tests:
     - TS1
     - TS14
+    - TS15
   FR20:
     title: destructive-guard の限定許可
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0007
     tests:
     - TS9
     - TS10
+    - TS22
   FR21:
     title: 構造化結果の契約
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0008
     tests:
     - TS12
+    - TS15
   FR22:
     title: スクリプトとスキル本文の分担
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    - task0006
+    - task0008
+    tests:
+    - TS15
+    - TS20
   FR23:
     title: ドキュメントと version
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0007
+    - task0008
+    - task0009
+    tests:
+    - TS26
   NFR1:
     title: 無人実行で止まらない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0006
+    - task0008
+    tests:
+    - TS15
+    - TS25
   NFR2:
     title: 破壊的操作をしない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0003
+    - task0008
+    tests:
+    - TS15
+    - TS18
+    - TS20
   NFR3:
     title: 状態ファイルを持たない再開
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0003
+    - task0004
+    - task0008
     tests:
     - TS2
+    - TS19
   NFR4:
     title: 信頼できない入力
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    - task0004
+    - task0008
+    tests:
+    - TS15
+    - TS16
   NFR5:
     title: テストの規約
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    - task0006
+    tests:
+    - TS27
   NFR6:
     title: hook テストの維持
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0007
     tests:
     - TS9
     - TS10
+    - TS22
   NFR7:
     title: 記録の秘匿
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0008
+    tests:
+    - TS15
+    - TS21
   NFR8:
     title: gate_id を持ち込まない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0008
+    tests:
+    - TS15
 batch:
   review_rework_count: 0
   verify_rework:
