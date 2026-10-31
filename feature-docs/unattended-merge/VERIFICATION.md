@@ -48,6 +48,9 @@
 | TS25 | CI head and call budget: PR head different from the pushed SHA, hanging gh stub, pending past the budget then continued with the returned deadline | `pr_head_moved`; returns within budget; `pending` with the same deadline, then a later outcome | Unit |
 | TS26 | Docs and version: README skill table row and destructive-guard hook row; em-workflow descriptions in plugin.json and marketplace.json; em-workflow version compared with `workflow.implement.base_commit` | Merge skill and the limited allow described; version equal in both files, minor one greater, patch zero, major unchanged; other plugins unchanged | Integration (verify-phase inspection with git diff against the base commit) |
 | TS27 | Test isolation review: new test modules | Standard-library unittest only; per-test temporary repositories; gh only through PATH stubs; approvals through `EM_WORKFLOW_APPROVALS`; no real network or real `~/.claude`; no bytecode written under `em-workflow/` | Manual (review) |
+| TS28 | PR decisions bound to the current state: `merge-pr.py state` without `--base`; state with a PR whose base differs from `--base`; state on a MERGED PR whose head differs from `--head`; resolve with a MERGED PR whose head differs from `--integration-tip` (alone, and beside an open PR); SKILL.md command forms of resolve and state | Exit 2 with nothing on stdout; `pr_head_moved`; `pr_head_moved`; `none` (alone) or `open` (beside an open PR), never `merged`; every state form passes `--base <base_branch>`, resolve forms pass `--integration-tip` | Unit |
+| TS29 | Conflicted paths shaped like pathspec magic: conflicted files named `:(top)` and `:(top,glob)*.md` beside unrelated modified files, staged, deleted and attributed with the SKILL.md step 9 forms | Only the conflicted path is staged / removed / attributed; every step 9 `git add` / `git rm` / `git log` form over `<conflicted_path>` uses `--literal-pathspecs`; destructive-guard does not ask or deny those forms under CLAUDE_BATCH | Unit |
+| TS30 | destructive-guard merge exception boundary: merge-specific logic outside the guard body; runner fixture with a registered integration worktree; same-shaped unregistered directory; canonical form followed by a harmless statement; exception module missing or failing to load | Guard source holds no merge-specific pattern; all hook cases pass; unregistered directory and harmless trailing statement ask without CLAUDE_BATCH and deny with it; with the module unavailable the canonical merge asks / denies and other verdicts are unchanged; no bytecode under `em-workflow/hooks/` | Unit (hook cases) |
 
 ## Code Quality Verification
 
@@ -65,14 +68,14 @@
 | AC3 | Deferred high stops with its stable_id; declined-only does not | TS4 |
 | AC4 | Local route: `--no-ff` merge commit, worktree removed, branches kept | TS1, TS14 |
 | AC5 | Several remotes without upstream, or non-GitHub remote, stop | TS5, TS24 |
-| AC6 | Already merged: no integration, push or merge; success | TS2, TS19 |
+| AC6 | Already merged: no integration, push or merge; success | TS2, TS19, TS28 |
 | AC7 | No PR: push and `gh pr create`, then PR route; pr_url in the result | TS13, TS15; manual check 3 |
-| AC8 | Unattributable conflict: worktree clean, not merged | TS15, TS19; manual check 2 |
+| AC8 | Unattributable conflict: worktree clean, not merged | TS15, TS19, TS29; manual check 2 |
 | AC9 | Unapproved command: nothing run, store unchanged | TS11 |
 | AC10 | test_command failure: no push, failed command in the result | TS15; manual check 2 |
 | AC11 | No checks → merge; failed or 60-minute timeout → no merge | TS6, TS25 |
 | AC12 | Base moved: redo, stop when a 4th redo would be needed | TS7 |
-| AC13 | Canonical gh pr merge allowed only from the integration worktree; other shapes ask / deny | TS9, TS10, TS22 |
+| AC13 | Canonical gh pr merge allowed only from the integration worktree; other shapes ask / deny | TS9, TS10, TS22, TS30 |
 | AC14 | Every terminal ends with only the contract-conformant result | TS12, TS15 |
 | AC15 | Another feature's lock blocks integration and merge | TS8, TS23 |
 | AC16 | Both test commands pass | Test Verification commands |
@@ -87,12 +90,12 @@
 | FR4 | task0002 | TS3 |
 | FR5 | task0002 | TS4 |
 | FR6 | task0003, task0004 | TS1, TS5, TS14, TS24 |
-| FR7 | task0003, task0004, task0008 | TS2 |
-| FR8 | task0004, task0008 | TS13, TS15, TS24 |
-| FR9 | task0004 | TS17 |
+| FR7 | task0003, task0004, task0008, task0010 | TS2, TS28 |
+| FR8 | task0004, task0008, task0010 | TS13, TS15, TS24, TS28 |
+| FR9 | task0004, task0010 | TS17, TS28 |
 | FR10 | task0005, task0008 | TS8, TS23 |
 | FR11 | task0003 | TS18 |
-| FR12 | task0008 | TS15, TS19 |
+| FR12 | task0008, task0011 | TS15, TS19, TS29 |
 | FR13 | task0002, task0008 | TS11, TS15 |
 | FR14 | task0008 | TS15 |
 | FR15 | task0006, task0008 | TS6, TS25 |
@@ -100,16 +103,16 @@
 | FR17 | task0008 | TS9, TS15 |
 | FR18 | task0003, task0008 | TS1, TS14 |
 | FR19 | task0003, task0008 | TS1, TS14, TS15 |
-| FR20 | task0007 | TS9, TS10, TS22 |
+| FR20 | task0007, task0012 | TS9, TS10, TS22, TS30 |
 | FR21 | task0001, task0008 | TS12, TS15 |
 | FR22 | task0002, task0003, task0004, task0005, task0006, task0008 | TS15, TS20 |
 | FR23 | task0007, task0008, task0009 | TS26 |
 | NFR1 | task0006, task0008 | TS15, TS25 |
 | NFR2 | task0003, task0008 | TS15, TS18, TS20 |
 | NFR3 | task0003, task0004, task0008 | TS2, TS19 |
-| NFR4 | task0002, task0004, task0008 | TS15, TS16 |
+| NFR4 | task0002, task0004, task0008, task0011 | TS15, TS16, TS29 |
 | NFR5 | task0001, task0002, task0003, task0004, task0005, task0006 | TS27 |
-| NFR6 | task0007 | TS9, TS10, TS22 |
+| NFR6 | task0007, task0012 | TS9, TS10, TS22, TS30 |
 | NFR7 | task0001, task0008 | TS15, TS21 |
 | NFR8 | task0001, task0008 | TS15 |
 
@@ -131,13 +134,13 @@
 - TM-3: workflow.yaml read with safe loading only — TS16
 - TM-4: fail-closed precondition and latest-round finding gate — TS3, TS4
 - TM-5: approval checked before any verification command, approved strings run verbatim — TS11, TS15
-- TM-6: spec / commit / conflicted text treated as data; conflict-step actions limited and followed by verification — TS15; manual check 2
+- TM-6: spec / commit / conflicted text treated as data; conflict-step actions limited and followed by verification; conflicted paths passed as literal pathspecs — TS15, TS29; manual check 2
 - TM-7: origin attribution requires a pattern-matching name with base-side feature-docs — TS15; manual check 2
-- TM-8: exact token allow-list for the canonical gh pr merge — TS9, TS10, TS22
-- TM-9: segments after an allowed merge segment are still judged — TS10
-- TM-10: working directory normalized; feature and integration segments exact — TS22
+- TM-8: exact token allow-list for the canonical gh pr merge, allowed only as the whole command — TS9, TS10, TS22, TS30
+- TM-9: segments after an allowed merge segment are still judged — TS10, TS30
+- TM-10: working directory normalized; feature and integration segments exact; the directory must be a registered integration worktree — TS22, TS30
 - TM-11: gh default repository must equal the chosen remote's repository — TS24
-- TM-12: PR head must equal the pushed / verified SHA; merge pinned with `--match-head-commit` — TS17, TS25, TS15
+- TM-12: PR head must equal the pushed / verified SHA, and its base must equal base_branch; merge pinned with `--match-head-commit`; a merged PR counts only when its head is the commit being merged — TS17, TS25, TS15, TS28
 - TM-13: per-call budget, time-limited gh calls, absolute deadline — TS6, TS25
 - TM-14: closed vocabularies, single-line escaped values, invalid input → `internal_error` — TS12
 - TM-15: redaction of home paths and Notion URLs in the result — TS21
@@ -148,7 +151,7 @@
 
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
-| Test scenarios (TS1-TS27) | 27 | 26 | 0 | 1 |
+| Test scenarios (TS1-TS30) | 30 | 29 | 0 | 1 |
 | Success criteria (AC1-AC16) | 16 | 16 | 0 | 4 (also covered manually) |
 | Security mitigations (TM-1-TM-17) | 17 | 17 | 0 | 2 (TM-6, TM-7 also manual) |
 | Performance (NFR1) | 1 | 1 | 0 | 0 |

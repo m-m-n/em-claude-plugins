@@ -1,18 +1,18 @@
 schema_version: 1
 feature: unattended-merge
 phase: rework
-status: dispatching
+status: completed
 generation: 1
 base_revision: a8f7ad8702a0b84611794fb1ef77529b6557decd
 last_input_digest: sha256:dd04ebc85c942730890ef9d2121406530a044046b01cf1834d86ed342c180a7b
-active_request_id: rework-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
 - request_id: rework-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:dd04ebc85c942730890ef9d2121406530a044046b01cf1834d86ed342c180a7b
-  output_digest: null
+  output_digest: sha256:4ae43c2ab1eb90b61d4d0b706d104bd853641a002ce1c5ce593b2b6642be359d
   dispatch_digest_inputs:
     em-workflow/references/contracts/rework-planner-contract.md: sha256:828186fb170bb2339ed6e585c4aab81c4add81abb531ed14154e2dead37474af
     em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
@@ -33,7 +33,32 @@ worker_runs:
     feature-docs/unattended-merge/tasks/task0008.md: sha256:88e65c30c711ec853b99c578e5de29182e205625e699b2158cc04724ceff467d
     feature-docs/unattended-merge/tasks/task0009.md: sha256:ef6046530767d21cc254ecb3395b2f69b5abaddad871fbc37f62d7ce92450436
     feature-docs/unattended-merge/workflow.yaml: sha256:031dd73040827420d87a36f23e858fa8f2a0db621d579588fa3ddc83775fed27
-artifacts: []
-patches: []
+  self_write_set:
+  - feature-docs/unattended-merge/IMPLEMENTATION.md
+  - feature-docs/unattended-merge/VERIFICATION.md
+  - feature-docs/unattended-merge/tasks/task0010.md
+  - feature-docs/unattended-merge/tasks/task0011.md
+  - feature-docs/unattended-merge/tasks/task0012.md
+artifacts:
+- path: feature-docs/unattended-merge/IMPLEMENTATION.md
+  sha256: sha256:22cbf04c40d9b477e8f2d24942b5b8ac4264647d4eb210a95c56e3e4a74cba21
+  produced_by: rework-run-0001
+- path: feature-docs/unattended-merge/VERIFICATION.md
+  sha256: sha256:b5dda1785fcd08945773e98159fed0e6e014ce271c00759f647b852cb364113a
+  produced_by: rework-run-0001
+- path: feature-docs/unattended-merge/tasks/task0010.md
+  sha256: sha256:99306cb683d4d11b1946a30c595a6a61fc24efc6686becc41e852ae2abdaa722
+  produced_by: rework-run-0001
+- path: feature-docs/unattended-merge/tasks/task0011.md
+  sha256: sha256:32e0bf40b90c18f72147a4653f372b6d3384a547bae884890a5e24ec726268b2
+  produced_by: rework-run-0001
+- path: feature-docs/unattended-merge/tasks/task0012.md
+  sha256: sha256:eeb34c0106665b4882c30e54a12363dd1d3d5fd40c3fecebffe7300a13a46e68
+  produced_by: rework-run-0001
+patches:
+- patch_id: unattended-merge-rework-r1-p0001
+  status: applied
+  base_input_digest: sha256:dd04ebc85c942730890ef9d2121406530a044046b01cf1834d86ed342c180a7b
+  base_workflow_blob: 8453611ee28b91881f38396ac3088b9b35865397
 stale_redispatch_count: 0
 last_error: null

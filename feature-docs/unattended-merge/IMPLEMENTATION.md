@@ -33,10 +33,10 @@ Dependency direction: Orchestration calls Decision scripts and Output; nothing c
 | C3 `merge-result.py` | Render the final result | One argument: path to a JSON input document; prints a conformant result | task0001, task0008 |
 | C4 `merge-preflight.py` | Target resolution, precondition, review findings, command approval | Fixed check order; proceed fields below | task0002, task0003 (TS1 full chain), task0008 |
 | C5 `merge-git.py` | Remote choice, local already-merged, worktree state, base integration, base-moved check, main-tree readiness | Subcommands below | task0003, task0008 |
-| C6 `merge-pr.py` | GitHub repository resolution, PR lookup, pre-merge PR state | Subcommands below | task0004, task0008 |
+| C6 `merge-pr.py` | GitHub repository resolution, PR lookup, pre-merge PR state | Subcommands below | task0004, task0008, task0010 |
 | C7 `merge-lock.py` | Repository-wide merge lock | token / hold / verify below | task0005, task0008 |
 | C8 `merge-ci-wait.py` | Bounded wait for PR checks | One bounded invocation per call; absolute deadline echoed | task0006, task0008 |
-| C9 Canonical `gh pr merge` form | The single shape destructive-guard allows and the skill emits | Shape below | task0007, task0008 |
+| C9 Canonical `gh pr merge` form | The single shape destructive-guard allows and the skill emits | Shape below | task0007, task0008, task0012 |
 
 ### C1 Script conventions
 
@@ -126,8 +126,14 @@ Dependency direction: Orchestration calls Decision scripts and Output; nothing c
 | Subcommand | Arguments | Outcomes (stop reasons) | Extra fields |
 |---|---|---|---|
 | `repo` | `--project-root`, `--remote` | `github` / stop (`remote_not_github`, `remote_unresolved`) | `repo` (owner/name) |
-| `resolve` | `--project-root`, `--repo`, `--feature`, `--base` | `merged` / `open` / `none` / stop (`pr_closed`, `pr_draft`) | `pr_number`, `pr_url`, `head`, `merge_commit`, `create_head`, `create_base` (those relevant to the outcome) |
-| `state` | `--project-root`, `--repo`, `--pr`, `--head` | `ready` / `merged` / stop (`pr_closed`, `pr_draft`, `pr_conflicting`, `pr_head_moved`) | `pr_url`, `merge_commit` (on `merged`) |
+| `resolve` | `--project-root`, `--repo`, `--feature`, `--base`, `--integration-tip` | `merged` / `open` / `none` / stop (`pr_closed`, `pr_draft`) | `pr_number`, `pr_url`, `head`, `merge_commit`, `create_head`, `create_base` (those relevant to the outcome) |
+| `state` | `--project-root`, `--repo`, `--pr`, `--head`, `--base` | `ready` / `merged` / stop (`pr_closed`, `pr_draft`, `pr_conflicting`, `pr_head_moved`) | `pr_url`, `merge_commit` (on `merged`) |
+
+- Every argument in the table is mandatory; a missing one is exit 2.
+- **`resolve` `merged`**: only a MERGED PR whose head commit equals `--integration-tip` (the integration commit the run is about to merge, or has just merged) counts. A MERGED PR with any other head is ignored, and the decision continues with the open / draft / closed / none classes.
+- **`state` `merged`**: only when the PR's head equals `--head`; a merged PR with another head stops `pr_head_moved`.
+- **`state` base**: a PR whose base branch differs from `--base` stops `pr_head_moved`.
+- **SKILL.md values**: `--integration-tip` is preflight's `integration_tip` before integration and the verified `head_sha` after the merge; `--base` is base_branch.
 
 ### C7 `merge-lock.py`
 
@@ -222,7 +228,7 @@ task0003 owns the local-route integration test. Its core case uses only `merge-g
 | A write guard denies the renderer input location under CLAUDE_BATCH | Medium | High (no final result) | task0008 picks a location outside every working tree that the plugin's write guards leave silent under CLAUDE_BATCH; the contract's fallback result covers renderer failure |
 | Checks not yet registered right after push read as "no checks" | Medium | High (merge without CI) | `--settle` window before concluding `no_checks` |
 | A verification command needs more than 600 s | Low | Medium | Bash timeout → `verification_failed` with the command named |
-| A MERGED PR is reported as already merged even if the integration branch advanced afterwards | Low | Medium | Follows FR7 literally; recorded as an open question |
+| An earlier MERGED PR hides integration commits added after it merged | Low | Medium | `resolve` counts a MERGED PR only when its head is the current integration tip (C6), matching FR7's local-route criterion that the tip is contained |
 | gh reports mergeable UNKNOWN right after push | Medium | Low | Treated as not conflicting; GitHub rejects a real conflict → `merge_failed` |
 | TS1's full-chain case silently skipped | Low | Medium | VERIFICATION.md requires both TS1 cases to report ok |
 | CLAUDE_BATCH ask→deny downgrade behaves differently for the new cases | Low | High | task0007 asserts both decisions per case through the runner |
@@ -230,4 +236,4 @@ task0003 owns the local-route integration test. Its core case uses only `merge-g
 ## Open Questions
 
 - [ ] The PR-route end-to-end flow (push, PR creation, CI wait, merge) needs a disposable GitHub repository; it is listed as a manual check.
-- [ ] FR7 counts any MERGED PR for the head/base pair as already merged, even if the integration branch gained commits after that merge.
+- [x] FR7 and a MERGED PR whose head is not the current integration tip: resolved in review round 1 rework. Such a PR does not count as already merged (C6).

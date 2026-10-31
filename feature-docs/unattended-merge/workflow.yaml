@@ -90,7 +90,7 @@ workflow:
   status: completed
   completed_at_commit: 2471c5c82fc5455c0755b0a69d238e48650ddc82
 - id: implement
-  status: completed
+  status: pending
   base_commit: 8136b9a04c221e1f36832b037bcad5c7edcb0dbd
   completed_at_commit: 9255cef202377b2fbf5a68e1cbd050424438419b
 - id: review
@@ -318,6 +318,83 @@ tasks:
     status: merged
     notes: null
     branch: em-workflow/unattended-merge/task0009
+  task0010:
+    title: Bind PR decisions to the current base and integration tip
+    plan: tasks/task0010.md
+    files:
+    - em-workflow/scripts/merge-pr.py
+    - tests/test_merge_pr.py
+    - em-workflow/skills/merge/SKILL.md
+    - tests/test_merge_skill_doc.py
+    skills:
+    - backend-impl
+    domains:
+    - external-io
+    - input-handling
+    - api-contract
+    complexity: high
+    requirements:
+    - FR7
+    - FR8
+    - FR9
+    status: pending
+    notes: null
+    provenance:
+      source: review
+      source_ids:
+      - 5fc2a892ec0d93af
+      - 6f9a43271bbe4635
+      - 806f8dab0fccee0c
+      review_round: 1
+  task0011:
+    title: Literal pathspecs for conflicted paths
+    plan: tasks/task0011.md
+    files:
+    - em-workflow/skills/merge/SKILL.md
+    - tests/test_merge_skill_doc.py
+    - tests/test_merge_conflict_pathspec.py
+    skills: []
+    domains:
+    - input-handling
+    - external-io
+    complexity: high
+    requirements:
+    - FR12
+    - NFR4
+    status: pending
+    notes: null
+    provenance:
+      source: review
+      source_ids:
+      - 52da02f8e39e1128
+      review_round: 1
+  task0012:
+    title: Move the merge allow rule out of destructive-guard's generic body; real worktree fixtures for its cases
+    plan: tasks/task0012.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/merge_pr_allow.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - em-workflow/hooks/tests/run-destructive-guard.py
+    - tests/test_destructive_guard_merge_allow.py
+    - .claude/rules/hook-tests.md
+    skills:
+    - backend-impl
+    domains:
+    - auth
+    - input-handling
+    - config-infra
+    complexity: high
+    requirements:
+    - FR20
+    - NFR6
+    status: pending
+    notes: null
+    provenance:
+      source: review
+      source_ids:
+      - f07552e97bab2b10
+      review_round: 1
 review:
   status: pending
   rounds_completed: 1
@@ -411,8 +488,10 @@ requirements:
     - task0003
     - task0004
     - task0008
+    - task0010
     tests:
     - TS2
+    - TS28
   FR8:
     title: PR の解決と作成
     status: ok
@@ -421,10 +500,12 @@ requirements:
     tasks:
     - task0004
     - task0008
+    - task0010
     tests:
     - TS13
     - TS15
     - TS24
+    - TS28
   FR9:
     title: PR の状態確認
     status: ok
@@ -432,8 +513,10 @@ requirements:
     excluded_reason: null
     tasks:
     - task0004
+    - task0010
     tests:
     - TS17
+    - TS28
   FR10:
     title: リポジトリ単位の排他ロック
     status: ok
@@ -461,9 +544,11 @@ requirements:
     excluded_reason: null
     tasks:
     - task0008
+    - task0011
     tests:
     - TS15
     - TS19
+    - TS29
   FR13:
     title: 取り込み後の検証コマンド
     status: ok
@@ -545,10 +630,12 @@ requirements:
     excluded_reason: null
     tasks:
     - task0007
+    - task0012
     tests:
     - TS9
     - TS10
     - TS22
+    - TS30
   FR21:
     title: 構造化結果の契約
     status: ok
@@ -630,9 +717,11 @@ requirements:
     - task0002
     - task0004
     - task0008
+    - task0011
     tests:
     - TS15
     - TS16
+    - TS29
   NFR5:
     title: テストの規約
     status: ok
@@ -654,10 +743,12 @@ requirements:
     excluded_reason: null
     tasks:
     - task0007
+    - task0012
     tests:
     - TS9
     - TS10
     - TS22
+    - TS30
   NFR7:
     title: 記録の秘匿
     status: ok
