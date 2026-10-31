@@ -130,7 +130,8 @@ tasks:
     - NFR2
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
+    branch: em-workflow/canonical-worktree-path-guards/task0001
     notes: null
   task0002:
     title: 'Stale-launched: link-tolerant worktree binding'
@@ -152,7 +153,8 @@ tasks:
     - NFR1
     - NFR3
     - NFR5
-    status: pending
+    status: in_progress
+    branch: em-workflow/canonical-worktree-path-guards/task0002
     notes: null
   task0003:
     title: 'Invocation contract: link-resolving --task-worktree comparison'
@@ -167,7 +169,8 @@ tasks:
     requirements:
     - FR5
     - NFR1
-    status: pending
+    status: in_progress
+    branch: em-workflow/canonical-worktree-path-guards/task0003
     notes: null
 review:
   status: pending
