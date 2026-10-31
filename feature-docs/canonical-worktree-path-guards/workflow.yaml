@@ -130,7 +130,7 @@ tasks:
     - NFR2
     - NFR4
     - NFR5
-    status: in_progress
+    status: merged
     branch: em-workflow/canonical-worktree-path-guards/task0001
     notes: null
   task0002:
