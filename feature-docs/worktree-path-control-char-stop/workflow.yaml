@@ -135,7 +135,15 @@ tasks:
     status: merged
     branch: em-workflow/worktree-path-control-char-stop/task0001
 review:
-  status: pending
+  status: in_progress
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
   rounds_completed: 0
   perspectives: {}
   residual_critical_high: 0
