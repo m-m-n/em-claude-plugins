@@ -114,7 +114,8 @@ workflow:
   failed_items: []
   completed_at_commit: 780b1f767d6d7d59a33e884cd39c2d7e89e745e1
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: 9db3b4ecef5e0c20eaeed241a69b96e9ef177854
 tasks:
   task0001:
     title: Stop the implement phase when a canonical worktree_path carries a control character
