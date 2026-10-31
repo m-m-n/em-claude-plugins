@@ -6,11 +6,113 @@ generation: 1
 base_revision: 9e55d1e9935d55d19970816e6db5193b256a4a27
 last_input_digest: sha256:499ab0171996fb87ee3971d172ada7509c7b5055139b58ca7776bad6d842a3aa
 active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-11-01T01:32:41+09:00'
+    questions:
+    - question_id: requirement.docs-only.channel
+      status: answered
+    - question_id: requirement.docs-only.step-rerun
+      status: answered
+    - question_id: requirement.docs-only.mixed-round
+      status: answered
+    - question_id: requirement.docs-only.recurrence-test
+      status: answered
+    - question_id: requirement.docs-only.wording-route-relation
+      status: answered
+    - question_id: design.step.recommendation
+      status: answered
+answers:
+  requirement.docs-only.channel:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-01T01:32:41+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - rework_planner_doc_update
+    freeform: null
+    normalized_answer: rework_planner_doc_update
+    record_as_assumption: true
+    resolution_note: 'batch: create-spec.requirement-clarification -> codex_consultation
+      (codex entry, 1 turn). Codex: implementer は feature-docs/** を変更できず、rework-planner
+      は既に文書更新と workflow patch 提案を担当しているため、その範囲を広げる案が適している（em-workflow/agents/implementer.md:311、em-workflow/agents/rework-planner.md:91、em-workflow/agents/rework-planner.md:122）。既存
+      tasks 文書の修正は現在の新規作成限定から明示的に拡張し、対象を write_policy.targets に列挙するとともに、replace_own
+      の同一工程・同一作成者という条件との整合を定義する必要がある（em-workflow/references/contracts/rework-planner-contract.md:124、em-workflow/references/contracts/spec-writer-contract.md:48、em-workflow/references/contracts/spec-writer-contract.md:72）。workflow.yaml
+      の要件の tests 参照は現在追加しか許されないため、旧IDを除去する期待値付き置換を契約・検証・適用処理へ追加する必要がある（em-workflow/references/workflow-patch.md:184、em-workflow/scripts/validate-worker-output.py:1486、em-workflow/scripts/validate-worker-output.py:1703）。'
+  requirement.docs-only.step-rerun:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-01T01:32:41+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - origin_step_only
+    freeform: null
+    normalized_answer: origin_step_only
+    record_as_assumption: true
+    resolution_note: 'batch: create-spec.requirement-clarification -> codex_consultation
+      (codex entry, 1 turn). Codex: 文書のみの修正では、verify 起点なら verify、review 起点なら review
+      だけを pending に戻すのがよい。implement へ戻すと、新規 pending タスクを要求する I.0 に反し、全タスクが merged
+      の場合は処理規約違反として停止する（em-workflow/references/implement-phase.md:164、em-workflow/references/implement-phase.md:178）。Invariant
+      1 は implement を pending に戻す場合の条件なので、文書経路では implement の completed を維持すると明記すれば、その条件自体を緩める必要はない（em-workflow/references/rework-task-synthesis.md:289）。develop
+      の対話・batch 分岐と --once の再開先は現在 implement 復帰を前提としているため、新経路に合わせて更新する必要がある（em-workflow/skills/develop/SKILL.md:865、em-workflow/skills/develop/SKILL.md:874、em-workflow/skills/develop/SKILL.md:1059）。'
+  requirement.docs-only.mixed-round:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-01T01:32:41+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - split_same_round
+    freeform: null
+    normalized_answer: split_same_round
+    record_as_assumption: true
+    resolution_note: 'batch: create-spec.requirement-clarification -> codex_consultation
+      (codex entry, 1 turn). Codex: 文書部分を文書経路で処理し、コード部分だけを現行の原因別グループ化規則でタスクにすれば、implementer
+      の禁止範囲を含まないタスクを同じラウンドで登録できる（em-workflow/references/rework-task-synthesis.md:65、em-workflow/agents/implementer.md:311）。コードタスクがある混在ラウンドでは通常の
+      implement 復帰を行い、起点工程だけを戻す規則は文書のみの場合に限定する（em-workflow/references/rework-task-synthesis.md:208）。docs_first
+      は追加の検証ラウンドを必要とするため、同じ失敗IDの再出現やラウンド数を制限する既存の cap と干渉しやすい（em-workflow/skills/develop/SKILL.md:887、em-workflow/skills/develop/SKILL.md:892）。シナリオIDの改名が混在する場合は、covered_by_existing
+      が入力 verification_index と照合される点も踏まえ、改名前後の参照を検証する規則を定義する必要がある（em-workflow/scripts/validate-worker-output.py:2187、em-workflow/scripts/validate-worker-output.py:2241）。'
+  requirement.docs-only.recurrence-test:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-01T01:32:41+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - validator_and_doc_tests
+    freeform: null
+    normalized_answer: validator_and_doc_tests
+    record_as_assumption: true
+    resolution_note: 'batch: create-spec.requirement-clarification -> codex_consultation
+      (codex entry, 1 turn). Codex: 現在の files 検証は安全な相対パスかを確認するだけで、feature-docs 配下を拒否していないため、文言を固定するテストだけでは今回の不正出力を防げない（em-workflow/scripts/validate-worker-output.py:1272）。append_rework
+      のタスクが feature-docs/** を一つでも含めば拒否し、文書のみ・コードとの混在の両方を失敗例、コードのみを成功例として検証するのがよい。既存の
+      fixture 実行基盤を使い、TS<N>→TS-<N> と既存 task0001/task0003 文書の修正について、新規タスクなし、旧 tests
+      参照の除去、implement 完了維持、起点工程の pending 復帰を成功例として確認する必要がある（tests/test_validate_worker_output.py:327、em-workflow/scripts/validate-worker-output.py:1660）。文書テストでは、両実行モードの新経路と、コードタスクがある場合の既存前提が維持されることを固定する（tests/test_develop_skill_rewiring.py:276、tests/test_develop_skill_rewiring.py:329）。'
+  requirement.docs-only.wording-route-relation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-01T01:32:41+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - keep_and_add
+    freeform: null
+    normalized_answer: keep_and_add
+    record_as_assumption: true
+    resolution_note: 'batch: create-spec.requirement-clarification -> codex_consultation
+      (codex entry, 1 turn). Codex: 既存の Wording-correction route は要件の task/test 対応が変わらないことを必須としているため、今回の参照値変更を別経路として扱うのが明確だよ（em-workflow/references/rework-task-synthesis.md:175）。この条件は既存テストでも固定されているため、適格条件と処理結果を維持し、第9節に文書のみの修正用の小節を追加するのがよい（tests/test_wording_correction_route.py:114、tests/test_wording_correction_route.py:126）。ただし、既存
+      Guard は条件不成立時の行き先をタスク合成か仕様変更としているので、その接続と新経路の判定順序は整合させる必要がある（em-workflow/references/rework-task-synthesis.md:187、em-workflow/references/rework-task-synthesis.md:194）。'
+  design.step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-01T01:32:41+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: decide_autonomously (design step skip as recommended)
+    resolution_note: batch-policies.yaml create-spec.design-step -> decide_autonomously
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:499ab0171996fb87ee3971d172ada7509c7b5055139b58ca7776bad6d842a3aa
   dispatch_digest_inputs:
     CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
