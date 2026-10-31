@@ -2,45 +2,22 @@ schema_version: 1
 feature: cd-prefix-canonical-path-only
 created: '2026-10-31'
 base_branch: main
-goal: |
-  # bash_guard.py の cd 前置形の判定を正規の絶対パスだけに絞る
-
-  ## やりたいこと (必須)
-
-  `em-workflow/hooks/bash_guard.py` の cd 前置形の判定を、正規の絶対パスだけを許可する形に絞る。段階検査（`_stage_walk_refuses`）、物理パスへのフォールバック、/proc・/dev/fd の特別扱いを取り除く。
-
-  ## 背景・なぜ (必須)
-
-  10/28〜10/31 に、cd 前置形の判定を直す feature が 7 件続いた（implementer-cd-verbatim-conflict、is-below-physical-fallback、cd-prefix-toplevel-operators、cd-prefix-non-directory-dotdot、cd-prefix-process-dependent-paths、cd-prefix-relative-link-target、is-below-stalled-walk-proc-read）。修正のたびに、その修正から次の指摘が出ている。最初の high を除き、指摘はすべて fail-closed 側の誤判定か、実運用では起きない経路だった。
-
-  `em-workflow/references/command-execution-protocol.md` は cd 先を `{worktree_path}` に限っているので、Bash のパス解決を再現する必要はない。
-
-  このタスクは「bash\_guard.py の段階検査の続行が要素数の二乗で遅くなる」（破棄）を吸収する。
-
-  ## 受け入れ条件 / 完了の定義 (必須)
-
-  - [ ] 次をすべて満たすパスだけを許可する
-    - 絶対パスで、ルート以外に空要素・`.`・`..` を含まない（正規化してから受け入れることはしない）
-    - 字句的に `strictly_below(path, area)` を満たす
-    - `os.path.realpath(path, strict=True) == path`
-    - `isdir(path)`
-  - [ ] パスの長さに上限を設け、上限を超えたら走査の前に不許可にする。上限は固定の PATH\_MAX ではなく、環境に合ったバイト数にする
-  - [ ] 既存の引用符などの構文の制限と、例外が出たら不許可にする動作を変えない
-  - [ ] `_stage_walk_refuses`、物理パスへのフォールバック、/proc・/dev/fd の特別扱いを取り除く
-  - [ ] 許可領域そのものがシンボリックリンクを含む場合の扱いを決めて SPEC に書く（`worktree_area()` の解決先を信頼するか、元の作業ツリーの配下に限るか）
-  - [ ] 許可する範囲を決めて SPEC に書く（許可領域の配下全体か、割り当てた `{worktree_path}` そのものか）
-  - [ ] `command-execution-protocol.md`、hook の docstring、implementer の手順書の cd 前置形の条件を、新しい判定に合わせる
-  - [ ] 末尾の `/`・重複した `/`・`.`・`..`・リンクを含むパスを不許可とするテストがある
-  - [ ] 長いパス（例: `'/dev/null' + '/x' * 32000`）で判定がすぐに返ることを確かめるテストがある
-  - [ ] 取り除いた判定のためのテストを整理し、残ったテストがすべて通る
-
-  ## スコープ外 (任意)
-
-  検査してから実行するまでの間に、ディレクトリや祖先がリンクに差し替えられる問題（事前のフックだけでは解消できない）
-
-  ## 制約・前提 (任意)
-
-  implementer が cd 先に渡す `{worktree_path}` が正規の絶対パスであることを確かめ、そうでなければ生成する側で正規のパスにそろえる。
+goal: "# bash_guard.py の cd 前置形の判定を正規の絶対パスだけに絞る\n\n## やりたいこと (必須)\n\n`em-workflow/hooks/bash_guard.py`\
+  \ の cd 前置形の判定を、正規の絶対パスだけを許可する形に絞る。段階検査（`_stage_walk_refuses`）、物理パスへのフォールバック、/proc・/dev/fd\
+  \ の特別扱いを取り除く。\n\n## 背景・なぜ (必須)\n\n10/28〜10/31 に、cd 前置形の判定を直す feature が 7 件続いた（implementer-cd-verbatim-conflict、is-below-physical-fallback、cd-prefix-toplevel-operators、cd-prefix-non-directory-dotdot、cd-prefix-process-dependent-paths、cd-prefix-relative-link-target、is-below-stalled-walk-proc-read）。修正のたびに、その修正から次の指摘が出ている。最初の\
+  \ high を除き、指摘はすべて fail-closed 側の誤判定か、実運用では起きない経路だった。\n\n`em-workflow/references/command-execution-protocol.md`\
+  \ は cd 先を `{worktree_path}` に限っているので、Bash のパス解決を再現する必要はない。\n\nこのタスクは「bash\\_guard.py\
+  \ の段階検査の続行が要素数の二乗で遅くなる」（破棄）を吸収する。\n\n## 受け入れ条件 / 完了の定義 (必須)\n\n- [ ] 次をすべて満たすパスだけを許可する\n\
+  \  - 絶対パスで、ルート以外に空要素・`.`・`..` を含まない（正規化してから受け入れることはしない）\n  - 字句的に `strictly_below(path,\
+  \ area)` を満たす\n  - `os.path.realpath(path, strict=True) == path`\n  - `isdir(path)`\n\
+  - [ ] パスの長さに上限を設け、上限を超えたら走査の前に不許可にする。上限は固定の PATH\\_MAX ではなく、環境に合ったバイト数にする\n- [ ]\
+  \ 既存の引用符などの構文の制限と、例外が出たら不許可にする動作を変えない\n- [ ] `_stage_walk_refuses`、物理パスへのフォールバック、/proc・/dev/fd\
+  \ の特別扱いを取り除く\n- [ ] 許可領域そのものがシンボリックリンクを含む場合の扱いを決めて SPEC に書く（`worktree_area()` の解決先を信頼するか、元の作業ツリーの配下に限るか）\n\
+  - [ ] 許可する範囲を決めて SPEC に書く（許可領域の配下全体か、割り当てた `{worktree_path}` そのものか）\n- [ ] `command-execution-protocol.md`、hook\
+  \ の docstring、implementer の手順書の cd 前置形の条件を、新しい判定に合わせる\n- [ ] 末尾の `/`・重複した `/`・`.`・`..`・リンクを含むパスを不許可とするテストがある\n\
+  - [ ] 長いパス（例: `'/dev/null' + '/x' * 32000`）で判定がすぐに返ることを確かめるテストがある\n- [ ] 取り除いた判定のためのテストを整理し、残ったテストがすべて通る\n\
+  \n## スコープ外 (任意)\n\n検査してから実行するまでの間に、ディレクトリや祖先がリンクに差し替えられる問題（事前のフックだけでは解消できない）\n\n\
+  ## 制約・前提 (任意)\n\nimplementer が cd 先に渡す `{worktree_path}` が正規の絶対パスであることを確かめ、そうでなければ生成する側で正規のパスにそろえる。\n"
 parent_branch: em-workflow/cd-prefix-canonical-path-only/integration
 tier: full
 tier_decision:
@@ -88,7 +65,8 @@ workflow:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: e46b514838edd32559db47616b686d53031bc60c
 - id: implement
   status: pending
 - id: review
@@ -97,7 +75,67 @@ workflow:
   status: pending
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Allow only canonical absolute paths in the cd prefix path check
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/hooks/bash_guard.py
+    - em-workflow/references/command-execution-protocol.md
+    - tests/test_bash_guard_cd_prefix.py
+    - test-docs/implementer-cd-verbatim-conflict/task0001.tests.yaml
+    - test-docs/is-below-physical-fallback/task0001.tests.yaml
+    - test-docs/cd-prefix-toplevel-operators/task0001.tests.yaml
+    - test-docs/cd-prefix-non-directory-dotdot/task0001.tests.yaml
+    - test-docs/cd-prefix-process-dependent-paths/task0001.tests.yaml
+    - test-docs/cd-prefix-process-dependent-paths/task0002.tests.yaml
+    - test-docs/cd-prefix-relative-link-target/task0001.tests.yaml
+    - test-docs/is-below-stalled-walk-proc-read/task0001.tests.yaml
+    skills:
+    - backend-impl
+    domains:
+    - auth
+    - input-handling
+    - external-io
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - FR9
+    - FR10
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    status: pending
+    notes: null
+    branch: null
+  task0002:
+    title: Canonicalize worktree_path at the producer and state the assumption in
+      the implementer procedures
+    plan: tasks/task0002.md
+    files:
+    - tests/test_canonical_worktree_path_docs.py
+    - em-workflow/references/implement-phase.md
+    - em-workflow/agents/implementer.md
+    - em-workflow/skills/worktree-task-workflow/SKILL.md
+    skills: []
+    domains:
+    - api-contract
+    complexity: medium
+    requirements:
+    - FR7
+    - FR8
+    - NFR1
+    status: pending
+    notes: null
+    branch: null
 review:
   status: pending
   rounds_completed: 0
@@ -110,106 +148,149 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS1
+    - TS2
+    - TS3
+    - TS4
   FR2:
     title: Length bound
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS5
+    - TS6
   FR3:
     title: Syntax, exclusion rules, decision table and exception handling are unchanged
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS8
   FR4:
     title: Remove the old checks
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS9
   FR5:
     title: Allowed area containing links
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS7
   FR6:
     title: Allowed scope
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS1
   FR7:
     title: Align documents with the new check
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS9
+    - TS12
   FR8:
     title: Canonicalize worktree_path at the producer
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS10
   FR9:
     title: Tests
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS2
+    - TS3
+    - TS5
+    - TS7
+    - TS11
   FR10:
     title: Test records of past features
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS11
   NFR1:
     title: Standard library only
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS14
   NFR2:
     title: No child processes
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS15
   NFR3:
     title: Hook output discipline
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS8
   NFR4:
     title: Decision time
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS5
+    - TS13
   NFR5:
     title: Fail closed
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS6
+    - TS8
 batch:
   review_rework_count: 0
   verify_rework:
