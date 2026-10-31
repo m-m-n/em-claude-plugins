@@ -18,6 +18,11 @@ python3 em-workflow/hooks/tests/run-destructive-guard.py \
 
 - ケースは `em-workflow/hooks/tests/destructive-guard-cases.json` に
   `[期待する判定, ラベル, コマンド]` の 3 要素で並べる。
+- 作業ディレクトリや `CLAUDE_BATCH` で判定が変わるケースだけ、4 要素目に
+  `{"cwd": "<絶対パス>", "batch": true}` を足す。どちらのキーも省略できる。
+  `cwd` はペイロードの作業ディレクトリ（フックは文字列しか見ないので、実在しなくてよい）、
+  `batch` はそのケースだけ `CLAUDE_BATCH` を立てる。4 要素目が無いケースは作業ディレクトリを
+  渡さず、`CLAUDE_BATCH` を外して判定する。
 - 誤爆（本来 allow なのに ask / deny になった）を見つけたら、直す前にケースを足す。
   見逃し（deny すべきものが allow になった）も同じ。
 - 既存の deny / ask ケースは消さない。誤爆を潰す修正が検知力を削っていないことを

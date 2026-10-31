@@ -1,0 +1,107 @@
+task_id: task0007
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests, 12508 tests, OK (skipped=1)
+final_failures: []             # re-run after the implementation and the record: 12541 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_merge_allow.TestAC1CanonicalFormIsAllowed.test_ac1_allowed_from_the_integration_worktree
+      - tests.test_destructive_guard_merge_allow.TestAC1CanonicalFormIsAllowed.test_ac1_allowed_from_a_subdirectory_of_the_worktree
+    red_confirmed: true
+    red_reason: >-
+      Against the unchanged guard (pre-change tree, new runner) both tests
+      failed with "AssertionError: 'ask' != 'allow'" for the canonical form
+      from the integration worktree. The runner showed the same for the
+      AC-1 table cases: "FAIL allow gh-pr-merge AC-1 ... got=ask
+      [destructive-guard/gh-pr-merge]", and got=deny for the CLAUDE_BATCH
+      variants.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_merge_allow.TestAC2OtherShapesKeepAsk.test_ac2_one_extra_flag_or_token
+      - tests.test_destructive_guard_merge_allow.TestAC2OtherShapesKeepAsk.test_ac2_equals_joined_option
+      - tests.test_destructive_guard_merge_allow.TestAC2OtherShapesKeepAsk.test_ac2_environment_assignment_prefix
+      - tests.test_destructive_guard_merge_allow.TestAC2OtherShapesKeepAsk.test_ac2_sha_missing_short_long_or_not_hex
+      - tests.test_destructive_guard_merge_allow.TestAC2OtherShapesKeepAsk.test_ac2_pr_number_missing_or_not_a_positive_number
+      - tests.test_destructive_guard_merge_allow.TestAC2OtherShapesKeepAsk.test_ac2_main_tree_or_another_path
+    red_confirmed: false
+    red_reason: >-
+      The behavior pre-existed: the unchanged guard already asks for every
+      gh pr merge (decide() demotes ask to deny under CLAUDE_BATCH), so these
+      tests passed against it and no red state occurred. They pin the
+      fallback against over-matching by the new allow rule. As a check of
+      their sensitivity, seven deliberately broken copies of the new guard
+      (cwd check always true, token count loosened, SHA length loosened,
+      feature pattern loosened, context hardening off, and others) each made
+      the module fail.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_merge_allow.TestAC3LaterSegmentsAreStillJudged.test_ac3_force_push_after_the_merge_is_denied
+      - tests.test_destructive_guard_merge_allow.TestAC3LaterSegmentsAreStillJudged.test_ac3_recursive_delete_after_the_merge_is_denied
+      - tests.test_destructive_guard_merge_allow.TestAC3LaterSegmentsAreStillJudged.test_ac3_an_ask_segment_after_the_merge_asks_and_is_denied_in_a_batch
+      - tests.test_destructive_guard_merge_allow.TestAC3LaterSegmentsAreStillJudged.test_ac3_a_second_non_canonical_merge_asks
+      - tests.test_destructive_guard_merge_allow.TestAC3LaterSegmentsAreStillJudged.test_ac3_a_harmless_segment_does_not_change_the_allow
+      - tests.test_destructive_guard_merge_allow.TestAC3LaterSegmentsAreStillJudged.test_ac3_a_statement_that_changes_directory_or_environment_asks
+    red_confirmed: true
+    red_reason: >-
+      Against the unchanged guard (new runner) the force-push tests failed
+      with "AssertionError: 'ask' != 'deny'" (the merge's ask ended
+      evaluation before the later segment was judged), the rm -rf test
+      failed the same way, and the harmless-segment test failed with
+      "'ask' != 'allow'". The ask-segment, second-merge and
+      context-statement tests passed against the unchanged guard because it
+      asks for every merge.
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_merge_allow.TestAC4WorkingDirectoryShape.test_ac4_reaching_the_shape_only_through_parent_segments
+      - tests.test_destructive_guard_merge_allow.TestAC4WorkingDirectoryShape.test_ac4_leaving_the_shape_through_parent_segments
+      - tests.test_destructive_guard_merge_allow.TestAC4WorkingDirectoryShape.test_ac4_a_climb_that_stays_inside_the_worktree_is_normalized
+      - tests.test_destructive_guard_merge_allow.TestAC4WorkingDirectoryShape.test_ac4_feature_segment_failing_the_pattern
+      - tests.test_destructive_guard_merge_allow.TestAC4WorkingDirectoryShape.test_ac4_segment_after_the_feature_is_not_exactly_integration
+      - tests.test_destructive_guard_merge_allow.TestAC4WorkingDirectoryShape.test_ac4_relative_or_empty_working_directory
+    red_confirmed: false
+    red_reason: >-
+      The ask / deny outcomes pre-existed: the unchanged guard asks for every
+      gh pr merge whatever the working directory, so these tests passed
+      against it and no red state occurred for the criterion itself. Only
+      test_ac4_a_climb_that_stays_inside_the_worktree_is_normalized, which
+      expects allow for a `..` that stays inside the worktree, failed against
+      the unchanged guard ("'ask' != 'allow'"). The cwd check always true
+      mutant and the `..`-before-the-shape mutant of the new guard each made
+      this module fail.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_merge_allow.TestAC5RunnerOptionalElement.test_ac5_verdict_sends_the_working_directory_and_batch_setting
+      - tests.test_destructive_guard_merge_allow.TestAC5RunnerOptionalElement.test_ac5_a_three_element_case_sends_no_cwd_and_clears_batch
+      - tests.test_destructive_guard_merge_allow.TestAC5RunnerOptionalElement.test_ac5_a_fourth_element_sets_cwd_and_batch_for_that_case_only
+      - tests.test_destructive_guard_merge_allow.TestAC5RunnerOptionalElement.test_ac5_a_mismatch_under_a_fourth_element_fails_the_run
+      - tests.test_destructive_guard_merge_allow.TestAC5RunnerOptionalElement.test_ac5_a_malformed_fourth_element_ends_the_run
+      - tests.test_destructive_guard_merge_allow.TestAC5RunnerOptionalElement.test_ac5_path_argument_mode_checks_the_given_guard_copy
+      - tests.test_destructive_guard_merge_allow.TestAC5RunnerOptionalElement.test_ac5_no_bytecode_cache_was_written_next_to_the_runner
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-change runner (git archive of the base commit) the
+      verdict, fourth-element, mismatch and malformed-element tests errored:
+      "TypeError: verdict() got an unexpected keyword argument 'cwd'" and
+      "ValueError: too many values to unpack (expected 3, got 4)". The
+      three-element, path-argument-mode and no-bytecode tests passed against
+      the pre-change runner (behavior that must stay), and the existing
+      tests.test_destructive_guard_command_substitution test listed under
+      AC-6 runs every pre-existing case through the runner unchanged.
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_merge_allow.TestAC6ExistingCasesAndDocs.test_ac6_every_pre_existing_case_is_present_and_unchanged
+      - tests.test_destructive_guard_merge_allow.TestAC6ExistingCasesAndDocs.test_ac6_new_cases_cover_both_settings_and_use_the_optional_element
+      - tests.test_destructive_guard_merge_allow.TestAC6ExistingCasesAndDocs.test_ac6_the_new_cases_use_a_neutral_root_not_a_home_directory
+      - tests.test_destructive_guard_merge_allow.TestAC6ExistingCasesAndDocs.test_ac6_readme_row_describes_the_limited_allow
+      - tests.test_destructive_guard_merge_allow.TestAC6ExistingCasesAndDocs.test_ac6_case_format_rule_describes_the_optional_element
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >-
+      Against the pre-change tree the README-row test failed (the
+      destructive-guard row names neither gh pr merge nor an integration
+      worktree), the case-format-rule test failed (hook-tests.md has no
+      "cwd" / "batch" element), and the new-cases test failed (the table held
+      only the 942 three-element cases). The unchanged-cases digest test
+      passes both before and after, as it must; the existing
+      test_runner_reports_every_case_passing runs
+      run-destructive-guard.py over the whole table and passes with the
+      new cases (1129 cases + the demotion check).

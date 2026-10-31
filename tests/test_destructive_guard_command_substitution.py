@@ -533,7 +533,11 @@ class TestCaseTableDiscipline(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.current = json.loads(CASES_PATH.read_text(encoding="utf-8"))
+        # A case may carry a fourth element (working directory / CLAUDE_BATCH);
+        # the tests below read the three-element cases only.
+        cls.current = [
+            c for c in json.loads(CASES_PATH.read_text(encoding="utf-8")) if len(c) == 3
+        ]
 
     def test_both_spellings_have_a_substitution_only_ask_entry(self):
         commands = {c for _, _, c in self.current}
