@@ -1,6 +1,6 @@
 task_id: task0003
-baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 13058 tests, OK (skipped=1)
-final_failures: []             # re-executed after implementation (and the byte-identity pin refresh in tests/test_gate_option_vocabulary.py): python3 -m unittest discover -s tests -> Ran 13126 tests, OK (skipped=1)
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 13058 tests, OK (skipped=1). After the parent-side adoption the suite run at the adoption commit was terminated by the environment before it finished, so this is not refreshed from it; the post-adoption final run below is fully green
+final_failures: []             # re-executed after parent-side adoption and re-implementation (merged validator and the byte-identity pin refresh in tests/test_gate_option_vocabulary.py): python3 -m unittest discover -s tests -> Ran 13270 tests, OK (skipped=1)
 acceptance_tests:
   AC-1:
     tests:
