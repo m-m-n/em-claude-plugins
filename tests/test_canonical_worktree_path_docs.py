@@ -91,6 +91,26 @@ CONDITION_MARKERS = (
 )
 RESTATEMENT_THRESHOLD = 3
 
+# Control-character check of Step I.2.a (worktree-path-control-char-stop,
+# task0001). The check paragraph is located by the category phrase; the
+# rejected set is pinned range by range; the stop is pinned by phrases.
+CONTROL_CHECK_LOCATOR = "Unicode general category Cc"
+CONTROL_CHECK_SCOPE_PHRASE = "every task selected in this entry into Step I.2.a"
+CONTROL_CHECK_ALL_TASKS_PHRASE = "each of those tasks, not only the first or the current one"
+CONTROL_CHECK_REJECTED_RANGES = (
+    "U+0000–U+001F",
+    "U+007F",
+    "U+0080–U+009F",
+    "U+2028",
+    "U+2029",
+)
+CONTROL_CHECK_ABORT_PHRASE = "ABORT the implement phase"
+CONTROL_CHECK_REPORT_PHRASE = "report the IDs of the offending tasks"
+CONTROL_CHECK_NO_PROMPT_PHRASE = "build no implementer launch prompt for any selected task"
+CONTROL_CHECK_NO_SANITIZE_PHRASE = "Never strip, escape or replace the characters"
+CONTROL_CHECK_NO_FALLBACK_PHRASE = "never fall back to the unresolved path string"
+RESUME_GUARD_PARAGRAPH_OPENING = "**Resume guard**"
+
 _HEADING = re.compile(r"^(#{1,6})\s+(.*?)\s*$")
 _BULLET_START = re.compile(r"^\s*(?:[-*]|\d+\.)\s")
 
@@ -472,6 +492,126 @@ def find_condition_restatements(text):
     ]
 
 
+def _control_check_blocks(section):
+    return blocks_with(section, CONTROL_CHECK_LOCATOR)
+
+
+def check_control_char_scope(section):
+    """The control-character check applies to every selected task."""
+    paragraphs = _control_check_blocks(section)
+    if len(paragraphs) != 1:
+        return [
+            "expected exactly one control-character check paragraph, found "
+            f"{len(paragraphs)}"
+        ]
+    scoped = [
+        s
+        for s in sentences_of_block(paragraphs[0])
+        if all(
+            t in s
+            for t in (
+                CONTROL_CHECK_SCOPE_PHRASE,
+                "canonical `worktree_path`",
+                CONTROL_CHECK_ALL_TASKS_PHRASE,
+            )
+        )
+    ]
+    if len(scoped) != 1:
+        return [
+            "expected exactly one sentence that applies the check to every "
+            f"selected task, found {len(scoped)}"
+        ]
+    return []
+
+
+def check_control_char_rejected_set(section):
+    """The check paragraph names Cc and each range of the rejected set."""
+    paragraphs = _control_check_blocks(section)
+    if len(paragraphs) != 1:
+        return [
+            "expected exactly one control-character check paragraph, found "
+            f"{len(paragraphs)}"
+        ]
+    problems = []
+    for code_range in CONTROL_CHECK_REJECTED_RANGES:
+        if code_range not in paragraphs[0]:
+            problems.append(f"the rejected set lacks: {code_range}")
+    return problems
+
+
+def check_control_char_stop(section):
+    """The check paragraph aborts the implement phase, reports the offending
+    task IDs and builds no launch prompt for any selected task, and never
+    sanitizes or falls back."""
+    paragraphs = _control_check_blocks(section)
+    if len(paragraphs) != 1:
+        return [
+            "expected exactly one control-character check paragraph, found "
+            f"{len(paragraphs)}"
+        ]
+    paragraph = paragraphs[0]
+    problems = []
+    stops = [
+        s for s in sentences_of_block(paragraph) if CONTROL_CHECK_ABORT_PHRASE in s
+    ]
+    if len(stops) != 1:
+        problems.append(
+            "expected exactly one sentence that ABORTs the implement phase, "
+            f"found {len(stops)}"
+        )
+    else:
+        if CONTROL_CHECK_REPORT_PHRASE not in stops[0]:
+            problems.append("the stop sentence does not report the offending task IDs")
+        if CONTROL_CHECK_NO_PROMPT_PHRASE not in stops[0]:
+            problems.append(
+                "the stop sentence does not build no launch prompt for any selected task"
+            )
+    if CONTROL_CHECK_NO_SANITIZE_PHRASE not in paragraph:
+        problems.append("the paragraph does not rule out stripping, escaping or replacing")
+    if CONTROL_CHECK_NO_FALLBACK_PHRASE not in paragraph:
+        problems.append("the paragraph does not rule out the unresolved path string")
+    return problems
+
+
+def check_control_char_placement(section):
+    """The check paragraph's block sits after the canonicalization block and
+    before the approval-gate paragraph and the launch-loop paragraph."""
+    all_blocks = blocks(section)
+
+    def index_of(opening):
+        hits = [i for i, b in enumerate(all_blocks) if b.startswith(opening)]
+        return hits[0] if len(hits) == 1 else None
+
+    checks = [i for i, b in enumerate(all_blocks) if CONTROL_CHECK_LOCATOR in b]
+    canonical = [
+        i
+        for i, b in enumerate(all_blocks)
+        if "strict realpath" in b and "`$WT_ROOT/{T}`" in b and "worktree exists" in b
+    ]
+    gate = index_of(GATE_PARAGRAPH_OPENING)
+    launch = index_of(LAUNCH_LOOP_OPENING)
+    problems = []
+    if len(checks) != 1:
+        problems.append(
+            f"cannot locate exactly one control-character check block, found {len(checks)}"
+        )
+    if len(canonical) != 1:
+        problems.append("cannot locate the paragraph of the canonicalization step")
+    if gate is None:
+        problems.append("cannot locate the approval-gate paragraph in Step I.2.a")
+    if launch is None:
+        problems.append("cannot locate the launch-loop paragraph in Step I.2.a")
+    if problems:
+        return problems
+    if not canonical[0] < checks[0]:
+        problems.append("the check paragraph does not come after the canonicalization step")
+    if not checks[0] < launch:
+        problems.append("the check paragraph does not come before the launch-loop paragraph")
+    if not checks[0] < gate:
+        problems.append("the check paragraph does not come before the approval-gate paragraph")
+    return problems
+
+
 # --- Forged texts ---------------------------------------------------------------
 
 
@@ -502,6 +642,25 @@ def _move_paragraph_before(section, move_terms, before_opening):
     # Insert after the paragraph that opens with `before_opening`.
     rest.insert(at[0] + 1, moving[0])
     return "\n\n".join(rest)
+
+
+def _replace_phrase(text, old, new):
+    """`text` with `old` replaced by `new`, whatever line wrap sits between
+    the words of `old`. Fails loudly when `old` is absent, so a replacement
+    that matches nothing cannot make a forged-copy test pass vacuously."""
+    pattern = r"\s+".join(re.escape(word) for word in old.split())
+    forged, count = re.subn(pattern, lambda _match: new, text)
+    assert count >= 1, f"no text matching {old!r} to replace"
+    return forged
+
+
+def _all_control_char_problems(section):
+    return (
+        check_control_char_scope(section)
+        + check_control_char_rejected_set(section)
+        + check_control_char_stop(section)
+        + check_control_char_placement(section)
+    )
 
 
 # --- Tests -------------------------------------------------------------------------
@@ -779,6 +938,157 @@ class TestAC4CitesTheRuleAndDoesNotRestateIt(unittest.TestCase):
                 imported.add((node.module or "").split(".")[0])
         self.assertTrue(imported)
         self.assertEqual(sorted(imported - set(sys.stdlib_module_names)), [])
+
+
+class TestControlCharStopLiveDocument(unittest.TestCase):
+    """AC-3 (worktree-path-control-char-stop task0001): Step I.2.a of
+    implement-phase.md stops the phase when a canonical worktree_path of a
+    selected task carries a control character."""
+
+    def test_ac3_live_check_applies_to_every_selected_task(self):
+        self.assertEqual(check_control_char_scope(i2a_section()), [])
+
+    def test_ac3_live_check_names_the_full_rejected_set(self):
+        self.assertEqual(check_control_char_rejected_set(i2a_section()), [])
+
+    def test_ac3_live_check_stops_before_any_launch_prompt(self):
+        self.assertEqual(check_control_char_stop(i2a_section()), [])
+
+    def test_ac2_live_check_sits_between_the_canonicalization_and_the_launch(self):
+        self.assertEqual(check_control_char_placement(i2a_section()), [])
+
+    def test_ac3_live_section_yields_no_problem(self):
+        self.assertEqual(_all_control_char_problems(i2a_section()), [])
+
+    def test_ac3_the_check_paragraph_is_one_block(self):
+        self.assertEqual(len(_control_check_blocks(i2a_section())), 1)
+
+
+class TestControlCharStopForgedCopies(unittest.TestCase):
+    """AC-4: each forged copy is built from the live section, differs from it,
+    and yields at least one problem."""
+
+    def test_ac4_forged_copy_without_the_check_paragraph_fails(self):
+        section = i2a_section()
+        forged = _remove_paragraph_with(section, CONTROL_CHECK_LOCATOR)
+        self.assertNotEqual(forged, section)
+        self.assertNotEqual(check_control_char_scope(forged), [])
+        self.assertNotEqual(check_control_char_rejected_set(forged), [])
+        self.assertNotEqual(check_control_char_stop(forged), [])
+        self.assertNotEqual(check_control_char_placement(forged), [])
+
+    def test_ac4_forged_copy_with_the_rejected_set_reduced_to_the_line_feed_fails(self):
+        section = i2a_section()
+        forged = section
+        for code_range in CONTROL_CHECK_REJECTED_RANGES:
+            forged = _replace_phrase(forged, code_range, "U+000A")
+        self.assertNotEqual(forged, section)
+        problems = check_control_char_rejected_set(forged)
+        self.assertEqual(len(problems), len(CONTROL_CHECK_REJECTED_RANGES), problems)
+
+    def test_ac4_forged_copy_that_names_one_range_less_fails(self):
+        for code_range in CONTROL_CHECK_REJECTED_RANGES:
+            with self.subTest(code_range=code_range):
+                section = i2a_section()
+                forged = _replace_phrase(section, code_range, "U+000A")
+                self.assertNotEqual(forged, section)
+                self.assertNotEqual(check_control_char_rejected_set(forged), [])
+
+    def test_ac4_forged_copy_that_escapes_the_characters_and_continues_fails(self):
+        section = i2a_section()
+        forged = _replace_phrase(
+            section,
+            CONTROL_CHECK_ABORT_PHRASE,
+            "escape the characters and continue with the implement phase",
+        )
+        self.assertNotEqual(forged, section)
+        self.assertNotEqual(check_control_char_stop(forged), [])
+
+    def test_ac4_forged_copy_with_the_check_after_the_launch_loop_fails(self):
+        section = i2a_section()
+        forged = _move_paragraph_before(
+            section, (CONTROL_CHECK_LOCATOR,), LAUNCH_LOOP_OPENING
+        )
+        self.assertNotEqual(forged, section)
+        self.assertNotEqual(check_control_char_placement(forged), [])
+
+    def test_ac4_forged_copy_with_the_check_before_the_canonicalization_fails(self):
+        section = i2a_section()
+        forged = _move_paragraph_before(
+            section, (CONTROL_CHECK_LOCATOR,), RESUME_GUARD_PARAGRAPH_OPENING
+        )
+        self.assertNotEqual(forged, section)
+        self.assertNotEqual(check_control_char_placement(forged), [])
+
+    def test_ac4_forged_copy_with_the_check_after_the_approval_gate_fails(self):
+        section = i2a_section()
+        forged = _move_paragraph_before(
+            section, (CONTROL_CHECK_LOCATOR,), GATE_PARAGRAPH_OPENING
+        )
+        self.assertNotEqual(forged, section)
+        self.assertNotEqual(check_control_char_placement(forged), [])
+
+    def test_ac4_forged_copy_with_the_scope_narrowed_to_one_task_fails(self):
+        section = i2a_section()
+        forged = _replace_phrase(
+            section, CONTROL_CHECK_SCOPE_PHRASE, "the task being launched"
+        )
+        forged = _replace_phrase(forged, CONTROL_CHECK_ALL_TASKS_PHRASE, "that task")
+        self.assertNotEqual(forged, section)
+        self.assertNotEqual(check_control_char_scope(forged), [])
+
+    def test_ac4_forged_copy_with_the_scope_narrowed_to_the_current_task_fails(self):
+        section = i2a_section()
+        forged = _replace_phrase(
+            section,
+            CONTROL_CHECK_ALL_TASKS_PHRASE,
+            "the current task only",
+        )
+        self.assertNotEqual(forged, section)
+        self.assertNotEqual(check_control_char_scope(forged), [])
+
+    def test_ac4_forged_copy_without_the_report_of_the_offending_ids_fails(self):
+        section = i2a_section()
+        forged = _replace_phrase(
+            section, CONTROL_CHECK_REPORT_PHRASE + ",", ""
+        )
+        self.assertNotEqual(forged, section)
+        self.assertNotIn(CONTROL_CHECK_REPORT_PHRASE, _normalize_ws(forged))
+        self.assertNotEqual(check_control_char_stop(forged), [])
+
+    def test_ac4_forged_copy_that_still_builds_a_launch_prompt_fails(self):
+        section = i2a_section()
+        forged = _replace_phrase(
+            section,
+            CONTROL_CHECK_NO_PROMPT_PHRASE,
+            "build the launch prompts of the clean tasks",
+        )
+        self.assertNotEqual(forged, section)
+        self.assertNotEqual(check_control_char_stop(forged), [])
+
+    def test_ac4_forged_copy_that_allows_stripping_fails(self):
+        section = i2a_section()
+        forged = _replace_phrase(
+            section,
+            CONTROL_CHECK_NO_SANITIZE_PHRASE,
+            "Strip the characters",
+        )
+        self.assertNotEqual(forged, section)
+        self.assertNotEqual(check_control_char_stop(forged), [])
+
+    def test_ac4_forged_copy_that_falls_back_to_the_unresolved_path_fails(self):
+        section = i2a_section()
+        forged = _replace_phrase(
+            section,
+            CONTROL_CHECK_NO_FALLBACK_PHRASE,
+            "fall back to the unresolved path string",
+        )
+        self.assertNotEqual(forged, section)
+        self.assertNotEqual(check_control_char_stop(forged), [])
+
+    def test_ac4_replace_phrase_fails_loudly_when_nothing_matches(self):
+        with self.assertRaises(AssertionError):
+            _replace_phrase("some text", "absent phrase", "x")
 
 
 if __name__ == "__main__":
