@@ -771,7 +771,7 @@ requirements:
     tests:
     - TS15
 batch:
-  review_rework_count: 0
+  review_rework_count: 1
   verify_rework:
     rounds: 0
     failed_id_counts: {}
