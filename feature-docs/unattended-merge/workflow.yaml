@@ -337,7 +337,7 @@ tasks:
     - FR7
     - FR8
     - FR9
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/unattended-merge/task0010
     provenance:

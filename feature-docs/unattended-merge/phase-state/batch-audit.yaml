@@ -51,3 +51,13 @@ records:
   freeform: null
   normalized_answer: 'task0012: 1 件の deviation を declared change set に自動追加しない'
   resolution_note: 'task_id: task0012; declined paths: test-docs/unattended-merge/task0007.tests.yaml; failed check: identifier part missing (報告が AC-n / 要件 ID を名指ししていない。内容は判定が ask に変わったテストの ID 名変更に伴う記録の追随); path shape check and control-path check: passed. admitted: none'
+- question_id: implement.deviation-auto-addition
+  packet_id: null
+  answered_at: '2026-10-31T22:20:00+09:00'
+  source: orchestrator-deviation-rule
+  answer_mode: select
+  selected_option_ids:
+  - decline
+  freeform: null
+  normalized_answer: 'task0010: 1 件の deviation を declared change set に自動追加しない'
+  resolution_note: 'task_id: task0010; declined paths: test-docs/unattended-merge/task0004.tests.yaml; failed check: identifier part missing (報告が task0010 の AC-n / 要件 ID を名指ししていない。内容は挙動が変わったテストの ID 名変更に伴う記録の追随); path shape check and control-path check: passed. admitted: none'
