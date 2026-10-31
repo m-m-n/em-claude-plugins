@@ -1,0 +1,56 @@
+task_id: task0003
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 13058 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 13078 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_merge_pr.TestTask0003RepoHost.test_task0003_ac1_a_default_on_another_host_stops_remote_unresolved_naming_both
+      - tests.test_merge_pr.TestTask0003RepoHost.test_task0003_ac1_the_same_stop_when_the_default_is_the_one_on_the_other_host
+      - tests.test_merge_pr.TestTask0003RepoHost.test_task0003_ac1_both_queries_ask_for_the_repository_url_with_owner_and_name
+    red_confirmed: true
+    red_reason: "Against the base revision of merge-pr.py (kept outside the worktree for this check), with a stub gh answering both the old and the new repository-view request shapes, the reproduction test failed with AssertionError: 'github' != 'stop' (the base script treated ghe.example/acme/service and github.com/acme/service as the same repository), and the request-shape test failed with Lists differ (nameWithOwner vs nameWithOwner,url). With only the updated stub, the base script's old request shape went unanswered and the test failed with 'remote_not_github' != 'remote_unresolved'."
+  AC-2:
+    tests:
+      - tests.test_merge_pr.TestTask0003RepoHost.test_task0003_ac2_matching_host_and_name_return_the_three_segment_repo
+      - tests.test_merge_pr.TestTask0003RepoHost.test_task0003_ac2_letter_case_differences_in_each_part_still_match
+      - tests.test_merge_pr.TestTask0003RepoHost.test_task0003_ac2_repo_is_the_remote_sides_identifier_as_gh_reported_it
+      - tests.test_merge_pr.TestTask0003RepoHost.test_task0003_ac2_a_name_mismatch_on_the_same_host_still_stops_remote_unresolved
+      - tests.test_merge_pr.TestTask0003RepoHost.test_task0003_ac2_an_ssh_config_alias_is_not_taken_as_the_host
+      - tests.test_merge_pr.TestTask0003RepoHost.test_task0003_ac2_ssh_github_com_is_not_taken_as_the_host
+      - tests.test_merge_pr.TestTask0003RepoHost.test_task0003_ac2_a_host_of_253_characters_is_accepted
+      - tests.test_merge_pr.TestRepo.test_ac1_github_remote_returns_github_with_the_name_gh_reports
+      - tests.test_merge_pr.TestRepo.test_ac1_repo_name_comes_from_gh_not_from_the_url
+      - tests.test_merge_pr.TestRepo.test_ac1_ssh_style_remote_is_resolved
+      - tests.test_merge_pr.TestRepo.test_ac2_default_repository_comparison_ignores_letter_case
+    red_confirmed: true
+    red_reason: "Against the base revision of merge-pr.py with a stub answering both request shapes, the matching-case test failed with AssertionError: 'acme/service' != 'ghe.example/acme/service' (the base script reports owner/name only), and the other new tests of this criterion failed as well. The updated existing TestRepo tests expect the three-segment repo and failed against the base script with the updated stub. After implementation, mutating the script to compare the host case-sensitively, to compare owner/name case-sensitively, to skip the host comparison, or to report owner/name without the host made these tests fail; the script was restored afterwards."
+  AC-3:
+    tests:
+      - tests.test_merge_pr.TestTask0003RepoHost.test_task0003_ac3_a_malformed_remote_side_host_stops_remote_unresolved
+      - tests.test_merge_pr.TestTask0003RepoHost.test_task0003_ac3_a_malformed_default_side_host_stops_remote_unresolved
+      - tests.test_merge_pr.TestTask0003RepoHost.test_task0003_ac3_a_url_without_a_scheme_has_no_host_and_stops_remote_unresolved
+      - tests.test_merge_pr.TestTask0003RepoHost.test_task0003_ac3_the_same_malformed_host_on_both_sides_is_still_a_stop
+      - tests.test_merge_pr.TestTask0003RepoHost.test_task0003_ac3_a_missing_or_non_string_url_field_is_an_internal_failure
+    red_confirmed: true
+    red_reason: "Against the base revision of merge-pr.py with a stub answering both request shapes, every malformed-host subtest failed with AssertionError: 'github' != 'stop' (the base script never looked at the host), and every missing or non-string url subtest failed with AssertionError: 0 unexpectedly found in (0, 2) (the base script exited 0). After implementation, mutating the script to echo the rejected host in detail, to allow an underscore or a 254-character host, or to skip the check on either side made these tests fail; the script was restored afterwards."
+  AC-4:
+    tests:
+      - tests.test_merge_pr.TestTask0003RepoArgument.test_task0003_ac4_resolve_decides_as_before_and_passes_the_repo_verbatim
+      - tests.test_merge_pr.TestTask0003RepoArgument.test_task0003_ac4_state_decides_as_before_and_passes_the_repo_verbatim
+    red_confirmed: true
+    red_reason: "Against the base revision of merge-pr.py, every subtest with a host-qualified --repo value failed in decide() with AssertionError: 2 != 0 : exit 2, stderr: ... argument --repo: not an owner/name repository. The legacy OWNER/NAME subtests of the same tests passed against the base script (they pin the unchanged behavior)."
+  AC-5:
+    tests:
+      - tests.test_merge_pr.TestTask0003RepoArgument.test_task0003_ac5_resolve_rejects_each_malformed_repo_before_any_gh_call
+      - tests.test_merge_pr.TestTask0003RepoArgument.test_task0003_ac5_state_rejects_each_malformed_repo_before_any_gh_call
+    red_confirmed: false
+    red_reason: "The base revision of merge-pr.py accepts only OWNER/NAME, so it already exits 2 with an empty stdout and no gh call for every malformed value; both tests passed when run against the base script, so no red state occurred. They pin that accepting the host-qualified form did not loosen the rejections; after implementation, mutating the script to accept four segments or to skip the host check made them fail, and the script was restored afterwards."
+  AC-6:
+    tests:
+      - tests.test_merge_pr.TestOperationBoundary.test_ac6_all_subcommands_use_only_read_operations_with_an_explicit_repository
+      - tests.test_merge_pr.TestOperationBoundary.test_ac6_git_is_used_only_to_read_the_remote_url
+      - tests.test_merge_pr.TestOperationBoundary.test_ac6_resolve_and_state_do_not_use_git_at_all
+      - tests.test_merge_pr.TestOperationBoundary.test_ac6_the_boundary_check_itself_rejects_write_shaped_calls
+      - tests.test_merge_pr.TestOperationBoundary.test_ac6_the_script_source_names_no_gh_write_verb
+    red_confirmed: true
+    red_reason: "The AC-1 to AC-4 tests failed against the base script as recorded under those criteria. Of the operation-boundary tests, test_ac6_all_subcommands_use_only_read_operations_with_an_explicit_repository failed against the base script with the updated stub (AssertionError: 'stop' != 'github', then the per-test boundary check: unexpected gh repo view shape), and test_ac6_git_is_used_only_to_read_the_remote_url failed on the same boundary check. The other three listed tests passed against the base script and keep passing; the forged-call test was extended with the retired request shape, a wider field list and a four-segment --repo value, and it still rejects every write-shaped call. The per-test boundary check runs after every test of tests/test_merge_pr.py, which passes as a whole."
