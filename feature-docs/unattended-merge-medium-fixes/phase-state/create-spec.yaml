@@ -1,7 +1,7 @@
 schema_version: 1
 feature: unattended-merge-medium-fixes
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 81eca035a5666d20a94040e3cc56ecfb3e881bd7
 last_input_digest: sha256:8b8ba78d53d60d9a8cb69a5c5d7c306b5f77e9eefa9e709be11a536abf192212
