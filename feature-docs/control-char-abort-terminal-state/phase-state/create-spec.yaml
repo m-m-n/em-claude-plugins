@@ -1,0 +1,74 @@
+schema_version: 1
+feature: control-char-abort-terminal-state
+phase: create-spec
+status: completed
+generation: 1
+base_revision: 966ce074c5f00a91c0c49e13479c3ae52562d696
+last_input_digest: sha256:50638b739073863af16c6fe45f6ea35897318129f5703056ef102f765ba2cca3
+active_request_id: null
+packets: {}
+answers:
+  create-spec.feature-identity:
+    packet_id: null
+    answered_at: '2026-11-01T00:09:00+09:00'
+    source: batch-decision-table
+    answer_mode: select
+    selected_option_ids:
+    - derive_from_task_description
+    freeform: null
+    normalized_answer: 'feature name derived from the task description: control-char-abort-terminal-state'
+  create-spec.design-step:
+    packet_id: null
+    answered_at: '2026-11-01T00:12:22+09:00'
+    source: batch-decision-table
+    answer_mode: select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design_step_recommendation (skipped) を採用する
+    resolution_note: gate create-spec.design-step; batch-policies option_id decide_autonomously
+  create-spec.design-system:
+    packet_id: null
+    answered_at: '2026-11-01T00:12:22+09:00'
+    source: batch-decision-table
+    answer_mode: select
+    selected_option_ids:
+    - top_candidate_or_none
+    freeform: null
+    normalized_answer: 'design-system 候補 0 件のため kind: none'
+    resolution_note: gate create-spec.design-system; batch-policies option_id top_candidate_or_none;
+      zero candidates -> none
+worker_runs:
+- request_id: create-spec-run-0001
+  status: completed
+  input_digest: sha256:7e960d2501b20f2a3d3a7082a00f7967b337e9879eb667ccbba77f8ebb4fd667
+  dispatch_digest_inputs:
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    em-workflow/hooks/queue_stop_guard.py: sha256:98a0f460aaaa362e767ae1780c0a23bc525f4db74380a7313dbd1583f0bfc4c8
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
+    em-workflow/references/implement-phase.md: sha256:20ad29b6f3121aeb424f22df44c35c1d7ddad562a2d52568cea0d7da3b37162a
+    em-workflow/references/workflow-schema.md: sha256:7d6fcf022e4409981ec5b23e0b77865d2aad25813afc615d2a42f462a5fa690a
+    em-workflow/skills/develop/SKILL.md: sha256:a7d836a519af2b437271f974f4f07d5bd29e483e7ece94ee856088727e7574dd
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+    tests/test_canonical_worktree_path_docs.py: sha256:581d4bdfad7315acb7eebc1e6ed8718b61527629a1f7d9d90e10c9adfb1b2a4c
+    tests/test_queue_stop_guard.py: sha256:a70c5932ce673fe603ba2277fb1f2ca1dbf6387929936407536e24887c7ea70b
+  output_digest: sha256:9e1cf3ba71522dcf4a8a0993fc67121bfa95fc2c9b2463860157b07d9da54c26
+  self_write_set: []
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:50638b739073863af16c6fe45f6ea35897318129f5703056ef102f765ba2cca3
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/spec-writer-contract.md: sha256:9032c6287d75f4a88e556bd3962c32ab8b4905cf3b6ececa895206788bcd0b63
+    em-workflow/references/templates/spec-document.md: sha256:203dfcddbe507886ce861694fccd20ae25e5af0bd1b0efa5e935991add950cbd
+  output_digest: sha256:310a264731b70d8e0c4e849af8404e3ebe5ec415ec5d460e095f8c0213a577cd
+  self_write_set:
+  - feature-docs/control-char-abort-terminal-state/SPEC.md
+artifacts:
+- path: feature-docs/control-char-abort-terminal-state/SPEC.md
+  sha256: sha256:c80999d18b9dd763b265a5e662016702602d4c377d481504ac2c62743cf32199
+  produced_by: create-spec-run-0002
+patches: []
+progress_fingerprint: sha256:84ca09fd6b6d922436b3c201953fd2bc9a2d59e546938916f92b2e8d7fb9d9de
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

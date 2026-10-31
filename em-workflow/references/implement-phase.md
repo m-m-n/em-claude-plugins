@@ -405,6 +405,22 @@ continue, and never fall back to the unresolved path string. The stop follows
 the same fail-closed discipline as Step I.0's identifier validation gate
 (never sanitize, never proceed), and it happens before the approval-gate
 paragraph below asks about any command.
+After the rejection, the phase takes the terminal handling of Step I.2.c's
+abort phase: capture the integration branch tip, refresh the integration
+worktree, make one write that sets the `implement` step's `status` to
+`failed` together with `failed_kind` valued `decision`, and commit exactly
+that write with `commit-docs.sh`, under the commit subject the abort phase
+gives (the invocation is cited from the abort phase, not restated here).
+`failed_kind` is `decision` unconditionally on this path: no journal `failed`
+event exists here, so the abort phase's rule keyed on such an event does not
+apply, and the field stays owned by the `failed_kind` section of
+`references/workflow-schema.md`. The write makes no `create-plan`
+`needs_update`, no task status or notes write and no worktree or branch
+cleanup; worktrees and branches created before the check stay, and a later
+re-entry reuses them under the Resume guard. The write happens at the check,
+without waiting for the tasks launched by an earlier refill, and those tasks
+are neither cancelled nor rolled back. Control then returns to the user
+through develop's stop condition 3.
 
 Before launching, verify every `project_commands` string (build/test/format)
 used by the selected tasks is in the approval store (`bash_guard.py

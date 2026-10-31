@@ -1,0 +1,32 @@
+feature: control-char-abort-terminal-state
+collected_at: "2026-11-01T01:30:00+09:00"
+session_ids: [01a192d6-befe-719f-8d3b-77ef55af7683]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: "2 回の判定がともにバケット 1（規則の追加とテストの追加）に高い確信度で集中したため reduced とした"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.04, confidence: 0.94}
+        observed_at: "2026-11-01T00:06:06+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.04, confidence: 0.96}
+        observed_at: "2026-11-01T00:08:08+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/references/implement-phase.md
+        - tests/test_canonical_worktree_path_docs.py
+      changed_lines_approx: 40
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      work_still_required: true
+      change_containment: single_module
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 の medium 1 件（f6cac47d5859854b: batch 終了行の理由コードが制御文字停止で 1 つに決まらない）は宣言済みファイル外のため deferred。予測ファイル 2 件に対し実際は 4 ファイルを宣言して計画した"

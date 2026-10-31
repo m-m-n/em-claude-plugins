@@ -1,0 +1,239 @@
+schema_version: 1
+feature: control-char-abort-terminal-state
+created: '2026-11-01'
+base_branch: main
+goal: |
+  # em-workflow の制御文字検査による implement フェーズの中止が終了状態を書かず、Stop hook が中止したタスクの起動を促す
+
+  種別: バグ
+
+  ## 現象 (必須)
+
+  em-workflow の implement フェーズ Step I.2.a に追加された Control-character check 段落は「ABORT the implement phase」と書いているが、中止時に workflow.yaml へ書く終了状態（implement の status と failed_kind、およびそのコミット）を定めていない。
+
+  この検査に来た時点で implement は Step I.1 により in_progress としてコミット済みで、選択されたタスクはまだ起動していないので journal にイベントが無い。そのため `queue_stop_guard.py` は「implement が in_progress、journal イベントの無いタスクがあり、空きスロットもある」と判定してターン終了を exit 2 で止め、中止したタスクそのものを起動対象（`launch=<task ids>`）として挙げる。FR3 で禁じている implementer の起動を hook がオーケストレーターに促すことになる。
+
+  develop の「ターンを終わらせていい唯一の条件」にも明確には当たらない（停止条件 3 は failed / needs_update を要し、停止条件 5 は in-flight の待機に限られる）。結果として同じ ABORT を繰り返し、停止条件 2（スタック）まで止まらない。
+
+  ## 再現手順 (必須)
+
+  1. `.claude/worktrees/em-workflow` 配下にリンクを置き、リンク先のディレクトリ名に改行を含める
+  2. `/em-workflow:develop` で implement フェーズに入る
+  3. Control-character check が ABORT した後、implement が in_progress のまま残り、Stop hook が中止したタスクの起動を促す
+
+  ## 期待する挙動 (必須)
+
+  制御文字検査による中止が、Step I.2.c の abort phase と同じ終了処理を取る（implement の status を failed、failed_kind を decision にする 1 回の書き込みと、commit-docs.sh によるそのコミット。worktree とブランチは片付けない）。これにより develop の停止条件 3 で止まり、`queue_stop_guard.py` もブロックしない。
+
+  ## 完了の定義 (必須)
+
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある（`tests/test_canonical_worktree_path_docs.py` に、終了処理の引用を確かめるテストと、それを欠いた偽の写しのテストを足す）
+
+  ## 該当箇所 (任意)
+
+  - `em-workflow/references/implement-phase.md` の Control-character check 段落（391-407 行付近）
+  - `em-workflow/references/implement-phase.md` Step I.2.c の abort phase（1233-1249 行付近）
+  - `em-workflow/hooks/queue_stop_guard.py`
+  - 既存の `check_control_char_stop` は「ABORT the implement phase」を含む文がちょうど 1 つであることを要求するので、足す文にはこの語句を入れない
+
+  ## 実害・発生条件 (任意)
+
+  正規化済み worktree_path に制御文字が入ったときだけ発生する。feature worktree-path-control-char-stop の review round 1 で evaluator が medium として報告した。
+parent_branch: em-workflow/control-char-abort-terminal-state/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.01
+      '1': 0.94
+      '2': 0.05
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.96
+      '2': 0.04
+      '3': 0.0
+  at: '2026-11-01T00:08:09+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: fe990d18e333b035370c276553d4b4ae881dd5ff
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'UI を持たない変更（手順文書と文書テストのみ）、design-system 候補 0 件（create-spec.design-step: decide_autonomously -> skipped）。tier reduced でも design step は削減対象'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: completed
+  completed_at_commit: 8665ecdf82955eb21fc10fb619dc2a9d47440d1a
+- id: implement
+  status: completed
+  completed_at_commit: 03336cd0ed94865a6337ecb4ab544072e95736ad
+  base_commit: b1694fa9c1a164357ce522a54798a66d0f9aaa73
+- id: review
+  status: completed
+  completed_at_commit: 3da2c35ba94cb063b81e0ce1cae73d42c1c58758
+- id: verify
+  status: completed
+  completed_at_commit: 5e81d60a04e32cd0ec60e7d1adc2e118cd9c0ae0
+  result: pass
+  failed_items: []
+- id: retrospect
+  status: completed
+  completed_at_commit: ecca9db492f1b66a9e5e476bf4e1636c1a1d51a3
+tasks:
+  task0001:
+    title: Terminal state for the control-character stop, with regression tests
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/references/implement-phase.md
+    - em-workflow/references/workflow-schema.md
+    - tests/test_canonical_worktree_path_docs.py
+    - tests/test_workflow_schema_journal_readers_doc_contract.py
+    skills: []
+    domains:
+    - input-handling
+    - concurrency
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: merged
+    branch: em-workflow/control-char-abort-terminal-state/task0001
+review:
+  status: completed
+  rounds_completed: 1
+  perspectives: [comprehensive, security, performance, architecture, spec]
+  residual_critical_high: 0
+  needs_rework: false
+  plan:
+    floor: [comprehensive, security, performance, architecture, spec]
+    discretionary: []
+    cross_validation: true
+requirements:
+  FR1:
+    title: Terminal write on the control-character stop
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+  FR2:
+    title: Cite the abort phase rather than restating it
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-3
+  FR3:
+    title: Keep the existing stop sentence unique
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-4
+  FR4:
+    title: Keep the failed_kind write-path count accurate
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-5
+  FR5:
+    title: Regression tests in tests/test_canonical_worktree_path_docs.py
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-5
+  NFR1:
+    title: Standard-library-only test module; locate text by headings and stable phrases
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-5
+  NFR2:
+    title: No change to queue_stop_guard.py
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-6
+  NFR3:
+    title: No plugin version change
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-6
+  NFR4:
+    title: Keep the existing control-character paragraph wording
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-4
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
