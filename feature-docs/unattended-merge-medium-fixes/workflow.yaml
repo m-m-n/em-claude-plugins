@@ -134,9 +134,9 @@ tasks:
     - NFR4
     - NFR5
     - NFR6
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/unattended-merge-medium-fixes/task0001
   task0002:
     title: merge-preflight approval comparison trims leading/trailing blanks
     plan: tasks/task0002.md
@@ -157,9 +157,9 @@ tasks:
     - NFR2
     - NFR5
     - NFR6
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/unattended-merge-medium-fixes/task0002
   task0003:
     title: merge-pr.py compares the host and accepts HOST/OWNER/NAME
     plan: tasks/task0003.md
@@ -182,9 +182,9 @@ tasks:
     - NFR4
     - NFR5
     - NFR6
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/unattended-merge-medium-fixes/task0003
   task0004:
     title: merge-ci-wait.py accepts HOST/OWNER/NAME
     plan: tasks/task0004.md
@@ -207,9 +207,9 @@ tasks:
     - NFR4
     - NFR5
     - NFR6
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/unattended-merge-medium-fixes/task0004
 review:
   status: pending
   rounds_completed: 0
