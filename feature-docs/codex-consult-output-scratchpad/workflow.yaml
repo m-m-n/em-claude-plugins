@@ -95,7 +95,7 @@ workflow:
   artifacts:
   - SPEC.md
   status: completed
-  completed_at_commit: dbf335d1b0e69f5c165d92b96c8ad391e274ea3d
+  completed_at_commit: 4abc5469d48f171381c88868ec908f1a1463db40
 - id: design
   artifacts:
   - DESIGN.md
