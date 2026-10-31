@@ -390,7 +390,7 @@ tasks:
     requirements:
     - FR20
     - NFR6
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/unattended-merge/task0012
     provenance:
