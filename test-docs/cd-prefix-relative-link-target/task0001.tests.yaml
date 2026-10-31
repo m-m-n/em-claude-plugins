@@ -4,8 +4,6 @@ final_failures: []             # re-executed after the implementation and after 
 acceptance_tests:
   AC-1:
     tests:
-      - tests.test_bash_guard_cd_prefix.TestRelativeLinkTarget.test_ac1_a_link_with_a_relative_target_naming_an_in_area_directory_is_below
-      - tests.test_bash_guard_cd_prefix.TestRelativeLinkTarget.test_ac1_the_hook_allows_the_cd_prefix_form_for_each_relative_link
       - tests.test_bash_guard_cd_prefix.TestRelativeLinkTarget.test_ac1_the_fixture_links_have_the_claimed_relative_targets
     red_confirmed: true
     red_reason: >-
@@ -21,8 +19,7 @@ acceptance_tests:
       claimed relative target and names an existing directory strictly below
       the area.
   AC-2:
-    tests:
-      - tests.test_bash_guard_cd_prefix.TestRelativeLinkTarget.test_ac2_a_link_with_an_absolute_target_naming_the_same_location_is_below
+    tests: []
     red_confirmed: false
     red_reason: >-
       Control case: the three links whose absolute targets are <names>/proc,
@@ -46,9 +43,7 @@ acceptance_tests:
       names an existing directory strictly below the area. No red state
       occurred.
   AC-4:
-    tests:
-      - tests.test_bash_guard_cd_prefix.TestRelativeLinkTarget.test_ac4_no_probe_and_no_link_read_is_made_under_proc_or_dev_fd
-      - tests.test_bash_guard_cd_prefix.TestRelativeLinkTarget.test_ac4_the_recording_sees_a_probe_and_a_link_read_under_proc
+    tests: []
     red_confirmed: false
     red_reason: >-
       The behavior pre-existed: the walk already checks each stage before it
@@ -86,18 +81,7 @@ acceptance_tests:
       existing test detects non-standard-library imports of the test module;
       it passed before and after, so no red state occurred.
   AC-7:
-    tests:
-      - tests.test_bash_guard_cd_prefix.TestLinkTargetWording.test_ac7_each_place_states_both_halves
-      - tests.test_bash_guard_cd_prefix.TestLinkTargetWording.test_ac7_the_stage_walk_docstring_no_longer_carries_the_unqualified_clause
-      - tests.test_bash_guard_cd_prefix.TestLinkTargetWording.test_ac7_the_two_path_items_say_the_same_thing
-      - tests.test_bash_guard_cd_prefix.TestLinkTargetWording.test_ac7_forging_one_half_in_each_place_stops_the_matcher
-      - tests.test_bash_guard_cd_prefix.TestLinkTargetWording.test_ac7_the_matcher_fires_on_the_statement_and_stops_when_one_half_is_removed
-      - tests.test_bash_guard_cd_prefix.TestLinkTargetWording.test_ac7_the_matcher_does_not_fire_on_unrelated_or_the_old_text
-      - tests.test_bash_guard_cd_prefix.TestLinkTargetWording.test_ac7_all_four_places_are_found
-      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathWording.test_ac4_the_matcher_fires_on_forged_text_with_one_needle_removed
-      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathWording.test_ac1_the_statement_sits_in_the_path_item_of_the_docstring
-      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathWording.test_ac2_the_statement_sits_in_the_path_item_of_the_protocol_rule
-      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathWording.test_ac3_neither_place_describes_the_proc_self_root_prefix_as_allowed
+    tests: []
     red_confirmed: true
     red_reason: >-
       Run before the four descriptions were changed,

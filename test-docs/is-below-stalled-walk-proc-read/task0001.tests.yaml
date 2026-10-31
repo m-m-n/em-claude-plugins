@@ -4,9 +4,8 @@ final_failures: []             # re-executed after the implementation and after 
 acceptance_tests:
   AC-1:
     tests:
-      - tests.test_bash_guard_cd_prefix.TestStalledWalkNeverReachesProc.test_ac1_a_stalled_form_that_climbs_to_proc_is_false_and_nothing_under_proc_is_touched
-      - tests.test_bash_guard_cd_prefix.TestStalledWalkNeverReachesProc.test_ac1_a_stalled_form_that_climbs_to_dev_fd_is_false_and_nothing_under_dev_fd_is_touched
-      - tests.test_bash_guard_cd_prefix.TestStalledWalkNeverReachesProc.test_ac1_a_refusal_of_either_walk_returns_false_before_any_realpath_call
+      - tests.test_bash_guard_cd_prefix.TestStalledWalkNeverReachesProc.test_ac1_a_stalled_form_that_climbs_to_proc_is_false
+      - tests.test_bash_guard_cd_prefix.TestStalledWalkNeverReachesProc.test_ac1_a_stalled_form_that_climbs_to_dev_fd_is_false
       - tests.test_bash_guard_cd_prefix.TestStalledWalkNeverReachesProc.test_ac1_the_fixture_links_stall_at_an_absent_stage_or_a_regular_file
       - tests.test_bash_guard_cd_prefix.TestStalledWalkNeverReachesProc.test_ac1_the_fixture_lenient_realpath_lands_below_the_area
     red_confirmed: true
@@ -28,12 +27,10 @@ acceptance_tests:
       procdep/work.
   AC-2:
     tests:
-      - tests.test_bash_guard_cd_prefix.TestStalledLogicalCorner.test_ac2_is_below_is_false_and_nothing_under_proc_is_touched
-      - tests.test_bash_guard_cd_prefix.TestStalledLogicalCorner.test_ac2_the_logical_walk_refuses_and_the_physical_walk_does_not
-      - tests.test_bash_guard_cd_prefix.TestStalledLogicalCorner.test_ac2_the_form_is_false_even_when_the_as_written_query_agrees
+      - tests.test_bash_guard_cd_prefix.TestStalledLogicalCorner.test_ac2_is_below_is_false
       - tests.test_bash_guard_cd_prefix.TestStalledLogicalCorner.test_ac2_the_hook_is_silent_from_the_main_worktree_and_from_a_git_worktree
-      - tests.test_bash_guard_cd_prefix.TestStalledLogicalCorner.test_ac2_the_logical_refusal_returns_false_before_any_realpath_call
-      - tests.test_bash_guard_cd_prefix.TestStalledLogicalCorner.test_ac2_the_fixture_makes_the_old_rule_judge_the_form_below_the_area
+      - tests.test_bash_guard_cd_prefix.TestStalledLogicalCorner.test_ac2_non_canonical_text_returns_false_before_any_realpath_call
+      - tests.test_bash_guard_cd_prefix.TestStalledLogicalCorner.test_ac2_the_fixture_resolves_below_the_area_in_both_ways
     red_confirmed: true
     red_reason: >-
       Run against the unchanged walk, the old rule judged the corner form
@@ -53,8 +50,7 @@ acceptance_tests:
       directory, and the rest of the rule says True once the stage walk is set
       not to refuse.
   AC-3:
-    tests:
-      - tests.test_bash_guard_cd_prefix.TestStalledWalkNeverReachesProc.test_ac3_the_recorder_sees_the_lenient_realpath_reach_proc_on_a_stalled_form
+    tests: []
     red_confirmed: false
     red_reason: >-
       The behavior pre-existed: this is the recorder guard test, which pins
@@ -65,12 +61,6 @@ acceptance_tests:
       occurred.
   AC-4:
     tests:
-      - tests.test_bash_guard_cd_prefix.TestStalledWalkLeavesOtherStallsAlone.test_ac4_neither_walk_refuses_a_stall_that_reaches_no_proc_or_dev_fd
-      - tests.test_bash_guard_cd_prefix.TestStalledWalkLeavesOtherStallsAlone.test_ac4_the_walks_probe_and_read_nothing_under_proc_or_dev_fd
-      - tests.test_bash_guard_cd_prefix.TestStalledWalkLeavesOtherStallsAlone.test_ac4_surplus_dotdot_after_a_stall_stay_at_the_root_and_do_not_refuse
-      - tests.test_bash_guard_cd_prefix.TestLinkBoundAndProbeErrors.test_ac6_a_missing_stage_or_a_non_directory_stage_is_not_an_error
-      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathCheck.test_ac2_the_logical_walk_refuses_a_form_only_the_collapsed_path_reaches
-      - tests.test_bash_guard_cd_prefix.TestNonDirectoryBeforeDotDot.test_ac4_the_decision_does_not_depend_on_strict_mode_realpath
       - tests.test_bash_guard_cd_prefix.TestRelativeLinkTarget
     red_confirmed: false
     red_reason: >-
@@ -84,19 +74,7 @@ acceptance_tests:
       nothing under /proc or /dev/fd is probed for them. All of them passed
       before the change and pass after it; no red state occurred.
   AC-5:
-    tests:
-      - tests.test_bash_guard_cd_prefix.TestStalledWalkLinkBoundAndErrors.test_ac5_the_walk_refuses_when_the_total_is_41_and_not_when_it_is_40
-      - tests.test_bash_guard_cd_prefix.TestStalledWalkLinkBoundAndErrors.test_ac5_the_logical_walk_never_stalls_so_the_physical_walk_alone_decides
-      - tests.test_bash_guard_cd_prefix.TestStalledWalkLinkBoundAndErrors.test_ac5_is_below_is_false_for_the_41_link_form_even_when_the_as_written_query_agrees
-      - tests.test_bash_guard_cd_prefix.TestStalledWalkLinkBoundAndErrors.test_ac5_an_error_at_one_stage_probed_after_the_stall_does_not_refuse
-      - tests.test_bash_guard_cd_prefix.TestStalledWalkLinkBoundAndErrors.test_ac5_an_error_at_one_link_read_after_the_stall_does_not_refuse
-      - tests.test_bash_guard_cd_prefix.TestStalledWalkLinkBoundAndErrors.test_ac5_the_same_error_at_a_stage_before_the_stall_still_refuses
-      - tests.test_bash_guard_cd_prefix.TestStalledWalkLinkBoundAndErrors.test_ac5_the_same_error_at_a_link_read_before_the_stall_still_refuses
-      - tests.test_bash_guard_cd_prefix.TestStalledWalkLinkBoundAndErrors.test_ac5_a_value_error_after_the_stall_still_refuses
-      - tests.test_bash_guard_cd_prefix.TestStalledWalkLinkBoundAndErrors.test_ac5_a_value_error_at_a_link_read_after_the_stall_still_refuses
-      - tests.test_bash_guard_cd_prefix.TestStalledWalkLinkBoundAndErrors.test_ac5_a_name_whose_probe_failed_after_the_stall_is_an_ordinary_name
-      - tests.test_bash_guard_cd_prefix.TestStalledWalkLinkBoundAndErrors.test_ac5_the_form_without_an_injected_error_is_not_refused
-      - tests.test_bash_guard_cd_prefix.TestStalledWalkLinkBoundAndErrors.test_ac5_the_link_forms_without_an_injected_error_are_not_refused
+    tests: []
     red_confirmed: true
     red_reason: >-
       Run against the unchanged walk,
@@ -115,17 +93,7 @@ acceptance_tests:
       design: they pin the behavior that must not change.
   AC-6:
     tests:
-      - tests.test_bash_guard_cd_prefix.TestStalledWalkWording.test_ac6_each_place_states_the_continuation
-      - tests.test_bash_guard_cd_prefix.TestStalledWalkWording.test_ac6_the_stage_walk_docstring_no_longer_says_the_walk_ends_without_refusal
-      - tests.test_bash_guard_cd_prefix.TestStalledWalkWording.test_ac6_the_two_path_items_carry_the_same_continuation_statement
-      - tests.test_bash_guard_cd_prefix.TestStalledWalkWording.test_ac6_the_statement_sits_inside_the_one_is_below_paragraph_that_names_dev_fd
-      - tests.test_bash_guard_cd_prefix.TestStalledWalkWording.test_ac6_all_four_places_are_found
-      - tests.test_bash_guard_cd_prefix.TestStalledWalkWording.test_ac6_the_matcher_fires_on_the_statement_and_stops_when_it_is_removed
-      - tests.test_bash_guard_cd_prefix.TestStalledWalkWording.test_ac6_the_statement_extractor_stops_at_the_end_of_the_clause
-      - tests.test_bash_guard_cd_prefix.TestStalledWalkWording.test_ac6_no_place_describes_the_proc_self_root_prefix_or_the_single_realpath_rule
       - tests.test_bash_guard_cd_prefix.TestPathConditionWording
-      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathWording
-      - tests.test_bash_guard_cd_prefix.TestLinkTargetWording
     red_confirmed: true
     red_reason: >-
       Run before the four statements were changed,
@@ -144,8 +112,6 @@ acceptance_tests:
       unmodified and passing before and after.
   AC-7:
     tests:
-      - tests.test_bash_guard_cd_prefix.TestStalledWalkContract.test_ac7_the_signatures_and_the_link_bound_are_unchanged
-      - tests.test_bash_guard_cd_prefix.TestStalledWalkContract.test_ac7_the_first_as_written_query_comes_after_both_realpath_calls
       - tests.test_bash_guard_cd_prefix.TestStalledWalkContract.test_ac7_the_path_check_starts_no_child_process_for_the_added_forms
       - tests.test_bash_guard_cd_prefix.TestProcessDependentPathContract
       - tests.test_bash_guard_cd_prefix.TestAc7StandardLibraryOnly

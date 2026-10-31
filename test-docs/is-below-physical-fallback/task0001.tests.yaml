@@ -14,10 +14,7 @@ acceptance_tests:
       skipped, not failed, when /proc/self/root is not a directory; it ran
       here.
   AC-2:
-    tests:
-      - tests.test_bash_guard_cd_prefix.TestPhysicalFallbackAllowed.test_ac2_link_dotdot_name_forms_are_allowed_from_the_main_worktree
-      - tests.test_bash_guard_cd_prefix.TestPhysicalFallbackAllowed.test_ac2_link_dotdot_name_forms_are_allowed_from_a_git_worktree
-      - tests.test_bash_guard_cd_prefix.TestPhysicalFallbackAllowed.test_ac2_the_allow_reason_is_the_cd_prefix_reason
+    tests: []
     red_confirmed: true
     red_reason: >-
       Run against the unchanged path check, each of the four forms (logical
@@ -91,11 +88,8 @@ acceptance_tests:
       new link and file under the temporary root).
   AC-7:
     tests:
-      - tests.test_bash_guard_cd_prefix.TestPathConditionWording.test_ac7_the_hook_docstring_states_the_new_condition
-      - tests.test_bash_guard_cd_prefix.TestPathConditionWording.test_ac7_the_hook_docstring_no_longer_states_the_single_realpath_condition
-      - tests.test_bash_guard_cd_prefix.TestPathConditionWording.test_ac7_the_protocol_rule_states_the_new_condition
-      - tests.test_bash_guard_cd_prefix.TestPathConditionWording.test_ac7_the_protocol_rule_no_longer_states_the_single_realpath_condition
-      - tests.test_bash_guard_cd_prefix.TestPathConditionWording.test_ac7_both_places_define_the_two_terms
+      - tests.test_bash_guard_cd_prefix.TestPathConditionWording.test_ac6_each_place_states_the_new_condition
+      - tests.test_bash_guard_cd_prefix.TestPathConditionWording.test_ac6_no_place_holds_a_term_of_the_removed_checks
       - tests.test_cd_prefix_exception_docs.TestVerbatimSection.test_ac1_states_hook_conditions_realpath_under_worktrees_dir
     red_confirmed: true
     red_reason: >-

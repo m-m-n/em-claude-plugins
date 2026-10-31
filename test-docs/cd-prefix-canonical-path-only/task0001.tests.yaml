@@ -1,0 +1,213 @@
+task_id: task0001
+baseline_failures: []          # before any edit: python3 -m unittest discover -s tests -> Ran 12262 tests, OK (skipped=1); no failing test
+final_failures: []             # re-executed after the implementation and after writing this record: python3 -m unittest discover -s tests -> Ran 12248 tests, OK (skipped=1); no failing test
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestAc1AllowedPrefixForm.test_ac1_allow_when_cwd_is_main_worktree
+      - tests.test_bash_guard_cd_prefix.TestAc1AllowedPrefixForm.test_ac1_allow_when_cwd_is_a_git_worktree
+      - tests.test_bash_guard_cd_prefix.TestAc1AllowedPrefixForm.test_ac1_allow_reason_differs_from_the_exact_match_reason
+      - tests.test_bash_guard_cd_prefix.TestAc1AllowedPrefixForm.test_ac1_no_child_process_uses_the_prefixed_path
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing
+      TestAc1AllowedPrefixForm (ALLOW_CASES: <area>/task0001, the deeper
+      directory, a name with a space, a name with &&, a git worktree below the
+      area, from the main worktree and from a git worktree) detects the allow
+      for every canonical existing directory below the area; no red state
+      occurred for this change. These directories were allowed before the
+      change and stay allowed; the tests passed against the unchanged hook
+      during the red run.
+  AC-2:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestCanonicalPathOnly.test_ac2_the_canonical_directories_are_below_the_area
+      - tests.test_bash_guard_cd_prefix.TestCanonicalPathOnly.test_ac2_the_form_list_holds_every_group_of_the_criterion
+      - tests.test_bash_guard_cd_prefix.TestCanonicalPathOnly.test_ac2_is_below_is_false_for_each_refused_form
+      - tests.test_bash_guard_cd_prefix.TestCanonicalPathOnly.test_ac2_each_refused_form_is_silent_through_the_hook_from_both_cwds
+      - tests.test_bash_guard_cd_prefix.TestCanonicalPathOnly.test_ac2_the_path_is_never_normalized_before_the_check
+      - tests.test_bash_guard_cd_prefix.TestCanonicalPathOnly.test_ac2_a_link_inside_the_area_to_an_in_area_directory_is_a_real_link
+      - tests.test_bash_guard_cd_prefix.TestAc3PathConditions.test_ac3_forms_breaking_a_path_condition_are_silent
+      - tests.test_bash_guard_cd_prefix.TestFormerFallbackForms.test_ac2_link_dotdot_name_forms_are_silent_from_the_main_worktree
+      - tests.test_bash_guard_cd_prefix.TestFormerFallbackForms.test_ac2_link_dotdot_name_forms_are_silent_from_a_git_worktree
+      - tests.test_bash_guard_cd_prefix.TestFormerFallbackForms.test_ac2_link_dotdot_name_forms_are_not_below_the_area
+      - tests.test_bash_guard_cd_prefix.TestRelativeLinkTarget.test_ac1_a_link_with_a_relative_target_naming_an_in_area_directory_is_not_below
+      - tests.test_bash_guard_cd_prefix.TestRelativeLinkTarget.test_ac1_the_hook_is_silent_for_each_relative_link
+      - tests.test_bash_guard_cd_prefix.TestRelativeLinkTarget.test_ac2_a_link_with_an_absolute_target_naming_the_same_location_is_not_below
+      - tests.test_bash_guard_cd_prefix.TestRelativeLinkTarget.test_ac2_the_hook_is_silent_for_each_absolute_link
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathNotAllowed.test_ac1_cwd_forms_are_silent_when_the_hook_process_runs_elsewhere
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathCheck.test_ac2_forms_that_name_the_process_cwd_are_false
+      - tests.test_bash_guard_cd_prefix.TestProcessDependentPathCheck.test_ac2_dev_fd_forms_are_false
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged hook (new tests written first),
+      test_ac2_each_refused_form_is_silent_through_the_hook_from_both_cwds
+      failed from both working directories with AssertionError: 'allow' !=
+      'silent' for the trailing slash, the doubled slash in the middle, the
+      doubled leading slash, the dot component at the end and in the middle,
+      the dotdot component between names, the link inside the area to a
+      directory inside the area, the four former fallback forms, the three
+      relative-target links and the three absolute-target links.
+      test_ac2_is_below_is_false_for_each_refused_form failed for the same
+      forms with AssertionError: True is not False, and
+      test_ac2_the_path_is_never_normalized_before_the_check failed for the six
+      forms whose text normalizes to a canonical directory. The converted
+      tests (the former fallback tests, the relative-link tests and
+      test_ac6_a_short_chain_of_links_is_silent) failed the same way. The
+      forms that were already refused before the change (<in>/.., a link to a
+      directory outside the area, a broken link, a link to a file, the root,
+      the area itself, a sibling sharing the name prefix, another repository's
+      area, a nonexistent path, a regular file, the /proc and /dev/fd forms)
+      passed before the change and pin that they stay refused.
+  AC-3:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestLengthBound.test_ac3_over_bound_paths_are_false_in_the_candidate_decision
+      - tests.test_bash_guard_cd_prefix.TestLengthBound.test_ac3_over_bound_paths_are_false_in_is_below
+      - tests.test_bash_guard_cd_prefix.TestLengthBound.test_ac3_over_bound_paths_are_silent_through_the_hook
+      - tests.test_bash_guard_cd_prefix.TestLengthBound.test_ac3_the_recording_sees_a_call_when_the_length_is_within_the_bound
+      - tests.test_bash_guard_cd_prefix.TestLengthBound.test_ac3_the_bound_is_the_limit_the_system_reports_for_the_root_directory
+      - tests.test_bash_guard_cd_prefix.TestLengthBound.test_ac3_a_bound_that_cannot_be_obtained_or_is_not_positive_refuses
+      - tests.test_bash_guard_cd_prefix.TestLengthBound.test_ac3_a_length_equal_to_the_bound_is_refused_before_any_file_system_call
+      - tests.test_bash_guard_cd_prefix.TestLengthBound.test_ac3_a_length_one_byte_shorter_passes_the_length_check
+      - tests.test_bash_guard_cd_prefix.TestLengthBound.test_ac3_the_length_is_counted_in_bytes_of_the_file_system_encoding
+      - tests.test_bash_guard_cd_prefix.TestLengthBound.test_ac3_the_file_system_call_count_grows_no_faster_than_linearly
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged hook, with the over-bound tail shortened to
+      2100 components (4200 bytes, over the Linux limit of 4096) so that the
+      old quadratic stage walk was not driven with 32000 components,
+      test_ac3_over_bound_paths_are_false_in_is_below failed for both paths
+      with AssertionError: Lists differ (thousands of lstat calls recorded
+      instead of none), and test_ac3_over_bound_paths_are_false_in_the_candidate_decision
+      failed for both paths because worktree_area() was called.
+      test_ac3_a_bound_that_cannot_be_obtained_or_is_not_positive_refuses
+      failed for the OSError, ValueError, zero and negative doubles with
+      AssertionError: True is not False (the bound was never consulted).
+      test_ac3_the_bound_is_the_limit_the_system_reports_for_the_root_directory,
+      test_ac3_a_length_equal_to_the_bound_is_refused_before_any_file_system_call
+      and test_ac3_the_length_is_counted_in_bytes_of_the_file_system_encoding
+      failed for the same reason. The through-the-hook test (a nonexistent
+      path was already silent), the recording guard, the one-byte-shorter test
+      and the linear-growth test (the old walk made a linear number of
+      file-system calls, 4 or so per component) passed before the change and
+      pin the contract.
+  AC-4:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestAreaContainment.test_ac4_the_fixture_layouts_have_the_claimed_shape
+      - tests.test_bash_guard_cd_prefix.TestAreaContainment.test_ac4_worktree_area_is_none_when_the_area_resolves_outside
+      - tests.test_bash_guard_cd_prefix.TestAreaContainment.test_ac4_worktree_area_is_the_resolved_area_when_it_resolves_inside
+      - tests.test_bash_guard_cd_prefix.TestAreaContainment.test_ac4_an_ordinary_area_is_still_returned
+      - tests.test_bash_guard_cd_prefix.TestAreaContainment.test_ac4_nothing_is_allowed_when_the_area_resolves_outside
+      - tests.test_bash_guard_cd_prefix.TestAreaContainment.test_ac4_the_candidate_decision_is_false_when_the_area_resolves_outside
+      - tests.test_bash_guard_cd_prefix.TestAreaContainment.test_ac4_the_resolved_canonical_path_is_allowed_when_the_area_resolves_inside
+      - tests.test_bash_guard_cd_prefix.TestAreaContainment.test_ac4_the_path_through_the_link_is_silent_when_the_area_resolves_inside
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged hook, test_ac4_nothing_is_allowed_when_the_area_resolves_outside
+      failed in all four subtests (the area linked outside and the ancestor
+      .claude linked outside, each for the canonical directory beyond the link
+      and for the path through it) with AssertionError: 'allow' != 'silent'.
+      test_ac4_worktree_area_is_none_when_the_area_resolves_outside and
+      test_ac4_the_candidate_decision_is_false_when_the_area_resolves_outside
+      failed for both outside layouts (the area was returned), and
+      test_ac4_the_path_through_the_link_is_silent_when_the_area_resolves_inside
+      failed with AssertionError: 'allow' != 'silent'. The fixture-shape
+      test, the ordinary-area test and the two tests that name the resolved
+      canonical path of the inside layout passed before the change by design:
+      the shape guard states the fixture, and the others pin results that must
+      not change.
+  AC-5:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestFailClosed.test_ac5_the_fixture_character_cannot_be_encoded
+      - tests.test_bash_guard_cd_prefix.TestFailClosed.test_ac5_the_path_check_is_false_without_raising
+      - tests.test_bash_guard_cd_prefix.TestFailClosed.test_ac5_the_candidate_decision_contains_the_encoding_error_itself
+      - tests.test_bash_guard_cd_prefix.TestFailClosed.test_ac5_an_injected_resolution_error_makes_the_path_check_false
+      - tests.test_bash_guard_cd_prefix.TestFailClosed.test_ac5_an_error_while_the_bound_is_obtained_makes_the_path_check_false
+      - tests.test_bash_guard_cd_prefix.TestFailClosed.test_ac5_a_resolution_error_while_the_area_is_resolved_is_not_allowed
+      - tests.test_bash_guard_cd_prefix.TestFailClosed.test_ac5_through_the_hook_an_undecidable_path_exits_zero_silently_without_allow
+      - tests.test_bash_guard_cd_prefix.TestFailClosed.test_ac5_through_the_hook_an_injected_error_exits_zero_silently_without_allow
+      - tests.test_bash_guard_cd_prefix.TestFailClosed.test_ac5_the_path_check_starts_no_child_process_and_passes_no_path_to_one
+      - tests.test_bash_guard_cd_prefix.TestNulInPath.test_ac5_the_path_check_returns_false_for_a_path_with_a_nul
+      - tests.test_bash_guard_cd_prefix.TestNulInPath.test_ac5_a_resolution_error_makes_the_path_check_false
+      - tests.test_bash_guard_cd_prefix.TestNulInPath.test_ac5_through_the_hook_a_nul_path_exits_zero_silently_without_allow
+      - tests.test_bash_guard_cd_prefix.TestAc4RefusalPatternStillDenies.test_ac4_refusal_pattern_in_the_remainder_denies
+      - tests.test_bash_guard_cd_prefix.TestAc2SyntaxConditions.test_ac2_forms_breaking_a_syntax_condition_are_silent
+      - tests.test_bash_guard_cd_prefix.TestAc1AllowedPrefixForm.test_ac1_no_child_process_uses_the_prefixed_path
+      - tests.test_bash_guard_cd_prefix.TestNonDirectoryBeforeDotDot.test_ac6_the_path_check_starts_no_child_process
+      - tests.test_bash_guard_cd_prefix_operators
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged hook, test_ac5_an_error_while_the_bound_is_obtained_makes_the_path_check_false
+      failed for the OSError and ValueError doubles with AssertionError: True is
+      not False (the bound was never consulted),
+      test_ac5_through_the_hook_an_injected_error_exits_zero_silently_without_allow
+      failed for the bound source with both errors (the hook still gave its
+      allow output), and test_ac5_the_candidate_decision_contains_the_encoding_error_itself
+      failed for the path with the unencodable character because
+      worktree_area() was called before any length check. The other tests of
+      this criterion passed before the change by design: the unchanged hook
+      already returned False without raising for a NUL, an unencodable
+      character and an injected resolution error, exited 0 with empty stderr,
+      denied a refusal pattern in the remainder, and started no child
+      process; they pin the contract that must not change. The existing
+      syntax, operator and safe-side tests passed unchanged.
+  AC-6:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestRemovedSymbols.test_ac6_the_module_defines_none_of_the_removed_symbols
+      - tests.test_bash_guard_cd_prefix.TestRemovedSymbols.test_ac6_no_definition_or_name_of_the_removed_symbols_is_in_the_source
+      - tests.test_bash_guard_cd_prefix.TestRemovedSymbols.test_ac6_the_logical_and_physical_checks_are_gone_from_the_code
+      - tests.test_bash_guard_cd_prefix.TestPathConditionWording.test_ac6_all_three_places_are_found
+      - tests.test_bash_guard_cd_prefix.TestPathConditionWording.test_ac6_each_place_states_the_new_condition
+      - tests.test_bash_guard_cd_prefix.TestPathConditionWording.test_ac6_the_statement_matcher_fires_on_forged_text
+      - tests.test_bash_guard_cd_prefix.TestPathConditionWording.test_ac6_the_statement_matcher_does_not_pass_unrelated_text
+      - tests.test_bash_guard_cd_prefix.TestPathConditionWording.test_ac6_no_place_holds_a_term_of_the_removed_checks
+      - tests.test_bash_guard_cd_prefix.TestPathConditionWording.test_ac6_the_absence_matcher_fires_on_forged_text
+      - tests.test_bash_guard_cd_prefix.TestPathConditionWording.test_ac6_the_absence_matcher_stays_silent_on_clean_text
+      - tests.test_bash_guard_cd_prefix.TestPathConditionWording.test_ac6_the_two_path_items_carry_the_same_statements_in_the_same_order
+      - tests.test_bash_guard_cd_prefix_operators.TestAc6DocstringStatesTheConditions
+      - tests.test_cd_prefix_exception_docs.TestVerbatimSection.test_ac1_states_hook_conditions_realpath_under_worktrees_dir
+      - tests.test_cd_prefix_operator_exclusion_docs
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged hook, protocol and docstrings, the four
+      subtests of test_ac6_the_module_defines_none_of_the_removed_symbols
+      failed with AssertionError: True is not false (every removed symbol was
+      still defined), test_ac6_no_definition_or_name_of_the_removed_symbols_is_in_the_source
+      and test_ac6_the_logical_and_physical_checks_are_gone_from_the_code
+      failed, test_ac6_each_place_states_the_new_condition failed for the
+      module docstring path item, the is_below docstring and the protocol path
+      item, test_ac6_no_place_holds_a_term_of_the_removed_checks failed for the
+      same three places (they still held "logical path", "physical path",
+      "/proc", "/dev/fd" and "stage"), test_ac6_all_three_places_are_found
+      failed for the protocol path item (its start phrase did not exist yet),
+      and the two forged-text and ordering tests failed or errored on the old
+      texts. The matcher self-tests that feed fixed text
+      (test_ac6_the_statement_matcher_does_not_pass_unrelated_text and
+      test_ac6_the_absence_matcher_stays_silent_on_clean_text) passed before
+      the change by design. The existing paragraph tests of
+      tests.test_bash_guard_cd_prefix_operators and the realpath checks of the
+      protocol tests stayed green and are kept as guards.
+  AC-7:
+    tests:
+      - tests.test_bash_guard_cd_prefix.TestRemovedSymbolsAreNotNamed.test_ac7_the_detector_fires_on_forged_source
+      - tests.test_bash_guard_cd_prefix.TestRemovedSymbolsAreNotNamed.test_ac7_no_test_module_names_a_removed_symbol
+      - tests.test_bash_guard_cd_prefix.TestAc7StandardLibraryOnly.test_ac7_hook_imports_only_standard_library_modules
+      - tests.test_bash_guard_cd_prefix.TestAc7StandardLibraryOnly.test_ac7_this_test_module_imports_only_standard_library_modules
+      - tests.test_bash_guard_cd_prefix.TestAc7StandardLibraryOnly.test_ac7_hook_executable_text_has_no_status_substring
+      - tests.test_hook_classification_pin.TestObserveHookSource.test_bash_guard_reads_workflow_yaml_but_not_task_status
+      - tests.test_tests_yaml_id_resolution
+    red_confirmed: true
+    red_reason: >-
+      The record check was observed failing with the new test module and the
+      unedited past records (a copy of the test directory next to the records
+      of the pre-change commit): tests.test_tests_yaml_id_resolution failed for
+      the six records, with 7, 12, 7, 16, 8 and 39 unresolvable IDs
+      (cd-prefix-non-directory-dotdot task0001, cd-prefix-process-dependent-paths
+      task0001 and task0002, cd-prefix-relative-link-target task0001,
+      is-below-physical-fallback task0001, is-below-stalled-walk-proc-read
+      task0001), which are exactly the deleted test IDs. The removed-symbol
+      detector of test_ac7_no_test_module_names_a_removed_symbol was run over
+      the text of the test module before this change and reported all four
+      symbols (_stage_walk_refuses, _under_proc_or_dev_fd, FOLLOWED_LINK_LIMIT,
+      resolves_to_directory). The standard-library-only tests and the
+      hook-classification pin passed before the change by design: they pin a
+      constraint that held before and is kept.
