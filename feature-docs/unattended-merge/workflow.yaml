@@ -362,7 +362,7 @@ tasks:
     requirements:
     - FR12
     - NFR4
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/unattended-merge/task0011
     provenance:
