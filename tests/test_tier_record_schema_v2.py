@@ -479,8 +479,11 @@ class TestRetrospectTierDecisionBlock(unittest.TestCase):
 # Refreshed by task0007 of security-review-repro-steps (FR6, FR12, FR13):
 # Phases R3b, R4 and R5 gained the `unresolved` / `unverified` record of an
 # unverifiable finding whose basis is not confirmed (never `declined`).
+# Refreshed by task0005 of rework-docs-only-task-routing (FR9): Phase R5's
+# interactive and batch rework paths gained the sentence on a review-sourced
+# docs-only round.
 REVIEW_PHASE_SHA256 = (
-    "310a61d8927edf4deedbd859738c7e460ca44b3b937425df25e796c346060618"
+    "cf10994b02a0028a57199a7be3bee103147edfbb4f2bda553da84600cf7da898"
 )
 REVIEW_RULES_SHA256 = (
     "56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931"

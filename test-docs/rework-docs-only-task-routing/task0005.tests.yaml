@@ -1,0 +1,131 @@
+task_id: task0005
+baseline_failures: []          # `python3 -m unittest discover -s tests` before any
+                                # edit: Ran 13058 tests, OK (skipped=1).
+final_failures: []             # same command re-executed after the implementation,
+                                # this record and the review-phase.md hash refresh
+                                # in tests/test_tier_record_schema_v2.py:
+                                # Ran 13102 tests, OK (skipped=1). An earlier full
+                                # run before that refresh failed only
+                                # test_tier_record_schema_v2.TestReviewDocumentsUntouched
+                                # .test_review_phase_md_unchanged (pinned sha256 of
+                                # review-phase.md), fixed by the refresh.
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_develop_docs_only_rework_doc.TestVerifyInteractiveSegmentDocsOnly.test_interactive_segment_has_docs_only_clause
+      - tests.test_develop_docs_only_rework_doc.TestVerifyInteractiveSegmentDocsOnly.test_clause_cites_the_route_by_path_and_heading
+      - tests.test_develop_docs_only_rework_doc.TestVerifyInteractiveSegmentDocsOnly.test_clause_returns_only_verify_and_keeps_implement_completed
+      - tests.test_develop_docs_only_rework_doc.TestVerifyInteractiveSegmentDocsOnly.test_clause_states_the_commit
+      - tests.test_develop_docs_only_rework_doc.TestVerifyInteractiveSegmentDocsOnly.test_clause_sits_before_the_batch_marker
+      - tests.test_develop_docs_only_rework_doc.TestVerifyInteractiveSegmentDocsOnly.test_clause_follows_the_invariant_1_sentence
+    red_confirmed: true
+    red_reason: >-
+      Run before the SKILL.md edit: test_interactive_segment_has_docs_only_clause
+      failed with "AssertionError: unexpectedly None : interactive segment must
+      carry a 文書のみの回 clause ending at the commit statement"; the other
+      tests of the class failed (missing fragments) or errored (substring
+      search for the absent term).
+  AC-2:
+    tests:
+      - tests.test_develop_docs_only_rework_doc.TestVerifyBatchSegmentDocsOnly.test_batch_segment_states_the_same_for_the_automatic_path
+      - tests.test_develop_docs_only_rework_doc.TestVerifyBatchSegmentDocsOnly.test_clause_is_inside_the_automatic_rework_text
+      - tests.test_develop_docs_only_rework_doc.TestVerifyCapParagraphUnchanged.test_cap_block_is_byte_identical_to_the_base_revision
+      - tests.test_develop_docs_only_rework_doc.TestVerifyCapParagraphUnchanged.test_cap_block_has_no_docs_only_counting_text
+    red_confirmed: true
+    red_reason: >-
+      Batch statement: before the SKILL.md edit,
+      test_batch_segment_states_the_same_for_the_automatic_path failed with
+      "AssertionError: Lists differ: ['references/rework-task-synthesis.md',
+      '#...ork'] != []" (every clause fragment missing) and
+      test_clause_is_inside_the_automatic_rework_text errored. The two
+      TestVerifyCapParagraphUnchanged tests pin text this task must leave
+      untouched, so they passed before the edit and guard against a change;
+      the existing tests/test_verify_rework_lineage_cap.py and
+      tests/test_verify_cap_run_continuation.py also read that paragraph and
+      no red state occurred for it.
+  AC-3:
+    tests:
+      - tests.test_develop_docs_only_rework_doc.TestVerifyExistingTextRetained.test_invariant_text_keeps_its_exact_line_break_and_indent
+      - tests.test_develop_docs_only_rework_doc.TestVerifyExistingTextRetained.test_rewiring_pinned_strings_remain_per_segment
+      - tests.test_develop_skill_rewiring.TestVerifyReworkBranchesReferenceSSOT.test_pending_rework_task_invariant_is_stated
+      - tests.test_develop_skill_rewiring.TestVerifyReworkBranchesReferenceSSOT.test_ssot_referenced_from_both_branches
+      - tests.test_develop_skill_rewiring.TestVerifyReworkBranchesReferenceSSOT.test_interactive_three_way_choice_is_retained
+      - tests.test_develop_skill_rewiring.TestVerifyReworkBranchesReferenceSSOT.test_batch_counter_cap_is_retained
+    red_confirmed: false
+    red_reason: >-
+      The criterion is a preservation criterion: the pinned text existed before
+      this task and the new sentences must not disturb it, so these tests passed
+      before the edit (no red state occurred). The existing
+      tests/test_develop_skill_rewiring.py detects the same text for the same
+      reason; the new TestVerifyExistingTextRetained class repeats the pins so
+      this module is self-contained. Their non-vacuity is shown by
+      test_invariant_pin_requires_the_exact_line_break (AC-6).
+  AC-4:
+    tests:
+      - tests.test_develop_docs_only_rework_doc.TestOnceNoteBelowBoundaryTable.test_note_below_table_states_the_docs_only_boundary
+      - tests.test_develop_docs_only_rework_doc.TestOnceNoteBelowBoundaryTable.test_note_names_the_resume_position_verify
+      - tests.test_develop_docs_only_rework_doc.TestOnceNoteBelowBoundaryTable.test_table_has_exactly_four_rows
+      - tests.test_develop_docs_only_rework_doc.TestOnceNoteBelowBoundaryTable.test_table_rows_keep_their_labels_in_order
+      - tests.test_develop_docs_only_rework_doc.TestOnceNoteBelowBoundaryTable.test_intro_sentence_naming_four_kinds_stays
+      - tests.test_develop_once_option.TestOnceSectionCoversAllFourPhaseBoundaryKinds.test_covers_all_four_phase_boundary_kinds
+    red_confirmed: true
+    red_reason: >-
+      Note part: before the SKILL.md edit,
+      test_note_below_table_states_the_docs_only_boundary failed with
+      "AssertionError: Lists differ: ['no note between the table and the
+      非境界 paragraph'] != []" and test_note_names_the_resume_position_verify
+      failed. The four-row, label and intro-sentence tests guard text that
+      pre-existed and passed before the edit; the existing
+      tests/test_develop_once_option.py detects the four-row table the same
+      way and no red state occurred for that part.
+  AC-5:
+    tests:
+      - tests.test_develop_docs_only_rework_doc.TestReviewPhaseR5DocsOnlyPointer.test_interactive_rework_path_has_the_docs_only_sentence
+      - tests.test_develop_docs_only_rework_doc.TestReviewPhaseR5DocsOnlyPointer.test_batch_rework_paragraph_has_the_docs_only_sentence
+      - tests.test_develop_docs_only_rework_doc.TestReviewPhaseR5DocsOnlyPointer.test_interactive_sentence_follows_the_completion_gate
+      - tests.test_develop_docs_only_rework_doc.TestReviewPhaseR5DocsOnlyPointer.test_existing_pinned_sentences_remain
+      - tests.test_develop_docs_only_rework_doc.TestReviewPhaseR5DocsOnlyPointer.test_needs_rework_write_still_precedes_the_dispatch
+      - tests.test_rework_synthesis_contract.TestReviewPhaseReworkReferences.test_documents_needs_rework_update_ordering
+    red_confirmed: true
+    red_reason: >-
+      Before the review-phase.md edit,
+      test_batch_rework_paragraph_has_the_docs_only_sentence failed with
+      "AssertionError: Lists differ: ['docs-only correction route of
+      `reference...ted'] != []" and the interactive counterpart failed the
+      same way. The pinned-sentence tests guard text that pre-existed and
+      passed before the edit; the existing tests/test_rework_synthesis_contract.py
+      detects those sentences and no red state occurred for that part.
+  AC-6:
+    tests:
+      - tests.test_develop_docs_only_rework_doc.TestDocsOnlyReworkAssertionsCanFail.test_verify_matcher_accepts_the_well_formed_sample
+      - tests.test_develop_docs_only_rework_doc.TestDocsOnlyReworkAssertionsCanFail.test_verify_matcher_rejects_a_segment_without_the_clause
+      - tests.test_develop_docs_only_rework_doc.TestDocsOnlyReworkAssertionsCanFail.test_verify_matcher_rejects_returning_both_steps
+      - tests.test_develop_docs_only_rework_doc.TestDocsOnlyReworkAssertionsCanFail.test_verify_matcher_rejects_a_missing_route_citation
+      - tests.test_develop_docs_only_rework_doc.TestDocsOnlyReworkAssertionsCanFail.test_verify_matcher_rejects_a_missing_commit_statement
+      - tests.test_develop_docs_only_rework_doc.TestDocsOnlyReworkAssertionsCanFail.test_verify_batch_matcher_rejects_a_clause_without_the_automatic_path
+      - tests.test_develop_docs_only_rework_doc.TestDocsOnlyReworkAssertionsCanFail.test_verify_matcher_ignores_commit_docs_text_outside_the_clause
+      - tests.test_develop_docs_only_rework_doc.TestDocsOnlyReworkAssertionsCanFail.test_cap_block_comparison_detects_an_added_counting_sentence
+      - tests.test_develop_docs_only_rework_doc.TestDocsOnlyReworkAssertionsCanFail.test_invariant_pin_requires_the_exact_line_break
+      - tests.test_develop_docs_only_rework_doc.TestDocsOnlyReworkAssertionsCanFail.test_once_matcher_accepts_the_well_formed_sample
+      - tests.test_develop_docs_only_rework_doc.TestDocsOnlyReworkAssertionsCanFail.test_once_matcher_rejects_a_missing_note
+      - tests.test_develop_docs_only_rework_doc.TestDocsOnlyReworkAssertionsCanFail.test_once_matcher_rejects_a_note_without_the_resume_position
+      - tests.test_develop_docs_only_rework_doc.TestDocsOnlyReworkAssertionsCanFail.test_once_matcher_rejects_a_note_that_is_a_fifth_table_row
+      - tests.test_develop_docs_only_rework_doc.TestDocsOnlyReworkAssertionsCanFail.test_once_matcher_rejects_a_note_that_is_not_directly_below_the_table
+      - tests.test_develop_docs_only_rework_doc.TestDocsOnlyReworkAssertionsCanFail.test_r5_matcher_accepts_the_well_formed_sample
+      - tests.test_develop_docs_only_rework_doc.TestDocsOnlyReworkAssertionsCanFail.test_r5_matcher_rejects_a_branch_without_the_sentence
+      - tests.test_develop_docs_only_rework_doc.TestDocsOnlyReworkAssertionsCanFail.test_r5_matcher_rejects_returning_implement_to_pending
+      - tests.test_develop_docs_only_rework_doc.TestDocsOnlyReworkAssertionsCanFail.test_r5_matcher_rejects_a_missing_route_citation
+      - tests.test_develop_docs_only_rework_doc.TestDocsOnlyReworkAssertionsCanFail.test_r5_batch_paragraph_split_excludes_later_paragraphs
+      - tests.test_develop_docs_only_rework_doc.TestOwnModuleStdlibOnly.test_own_imports_are_all_stdlib
+      - tests.test_develop_docs_only_rework_doc.TestOwnModuleStdlibOnly.test_stdlib_check_flags_a_third_party_import
+    red_confirmed: false
+    red_reason: >-
+      These tests check the module's own matchers on in-module samples and its
+      own imports, so they passed on first run and no red state occurred before
+      the matchers existed. Their non-vacuity was observed separately: with
+      the fragment checker and the note checker replaced by stubs that report
+      no problems (a one-off run, no file changed), 13 of the 19 negative-sample
+      tests failed. The criterion "whole suite passes with no existing test
+      modified" is verified by the full-suite run (final_failures) and by
+      `git diff --name-only` listing no file under tests/ other than the new
+      module.

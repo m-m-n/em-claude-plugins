@@ -1186,6 +1186,10 @@ registered at least one pending rework task
 grouping, task ID allocation, metadata derivation, verification coverage,
 and the rest of the invariants — is defined once in
 `references/rework-task-synthesis.md`; this document does not restate it.
+When rework-planner's validated result is a review-sourced docs-only round
+(the docs-only correction route of `references/rework-task-synthesis.md`,
+cited here and not restated), the applied patch returns only `review` to
+`pending` and leaves `implement` completed.
 
 Batch mode (develop-駆動 only): no offer — auto-rework with cap 1. When
 `batch.review_rework_count == 0` in workflow.yaml: follow the SAME ordering
@@ -1198,7 +1202,11 @@ carried inside that patch, exactly as in the interactive path — never a
 separate write here either), and increment the counter. When the counter is
 already ≥ 1: mark each residual finding `resolution: deferred` with
 `resolution_reason: "batch mode: rework cap reached"` and complete the step
-— the round record keeps them visible for the human evaluator.
+— the round record keeps them visible for the human evaluator. In the
+auto-rework above, a review-sourced docs-only round (the docs-only
+correction route of `references/rework-task-synthesis.md`) is handled as in
+the interactive path: the applied patch returns only `review` to `pending`
+and leaves `implement` completed.
 
 This batch auto-rework / defer-at-cap behaviour above, its counter and its
 round-record writes are unchanged by `references/batch-mode.md`'s
