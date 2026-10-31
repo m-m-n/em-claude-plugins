@@ -121,7 +121,8 @@ workflow:
   failed_items: []
   completed_at_commit: 2961694434cc3de664ddbf8f165cc23bd0e3fa72
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: d764f3f91bb491001b3b559e9c318021aae48122
 tasks:
   task0001:
     title: Docs-only correction route in rework-task-synthesis.md
