@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: e9499d39b9762f4e95df029526a3ce199a1b36b8
 last_input_digest: sha256:4dbc2a44193a9b50bf0fb11210e2c8e1887e07bae89c79c9e35f89142189c7a1
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -148,7 +148,7 @@ worker_runs:
     tests/test_implementer_cd_prefix_exclusion_docs.py: sha256:055f2f254d7eb525a7fdc8becd13d41198ad1ba929610135a89fc0ea6869a337
     tests/test_tests_yaml_id_resolution.py: sha256:0a3efad228d09365da06eb47b32f25247b98156e8aaa61fdf396475d3656713f
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:4dbc2a44193a9b50bf0fb11210e2c8e1887e07bae89c79c9e35f89142189c7a1
   output_digest: null
   dispatch_digest_inputs:
@@ -186,6 +186,7 @@ worker_runs:
     tests/test_implementer_cd_prefix_build_format_docs.py: sha256:c9d81ad7ae911de41c9a44174c574d9a15b6f8b83f70730a9dba6116229c89d0
     tests/test_implementer_cd_prefix_exclusion_docs.py: sha256:055f2f254d7eb525a7fdc8becd13d41198ad1ba929610135a89fc0ea6869a337
     tests/test_tests_yaml_id_resolution.py: sha256:0a3efad228d09365da06eb47b32f25247b98156e8aaa61fdf396475d3656713f
+  self_write_set: []
 artifacts: []
 patches: []
 progress_fingerprint: null
