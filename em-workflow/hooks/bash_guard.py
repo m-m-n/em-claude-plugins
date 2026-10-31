@@ -26,30 +26,24 @@ had no cd prefix (never a new deny):
   - syntax: `cd`, blanks, one double-quoted absolute path (no `"`, `$`,
     backtick, backslash or line break in it), blanks, then the first `&&`;
     everything after that `&&` is the remainder
-  - path: the area is <main worktree>/.claude/worktrees/em-workflow, where
-    the main worktree is the parent of the git common dir of the hook's cwd.
-    The logical path (the realpath of <path> with each `..` first collapsed
-    against the component written before it, as Bash's default cd does) and
-    the physical path (the realpath of <path> exactly as written, each `..`
-    applying to the directory already resolved) are compared per path
-    component. When the logical path is an existing directory, the logical
-    path and the physical path must both be existing directories strictly
-    below the area. Otherwise the physical path alone must be an existing
-    directory strictly below the area, which is where Bash lands through its
-    physical-path fallback. A path under /proc or /dev/fd fails the path
-    check: it is under /proc when its first component is `proc`, and under
-    /dev/fd when its first two components are `dev` and `fd`, empty and `.`
-    components ignored. This is judged on the path as written, on each stage
-    reached while resolving the logical path and the physical path component
-    by component, and on the target of each link followed, not on the final
-    realpath alone. The lexical check of a link's target text applies only to
-    an absolute target; a relative target is joined to the directory that holds
-    the link and judged at the resolution stages. The stage check continues
-    past an absent or non-directory stage the way the lenient realpath does, so
-    a stage under /proc or /dev/fd after such a stage fails the path check too.
-    A resolution error counts as not below.
-    <path> is only resolved, never used as the directory or argument of a
-    child process
+  - path: <path> must be a canonical absolute path strictly below the area
+    (<main worktree>/.claude/worktrees/em-workflow), at any depth; the area
+    itself is not below it. The main worktree is the parent of the git common
+    dir of the hook's cwd, and the area is used only when its realpath lies
+    strictly below the realpath of the main worktree; otherwise no cd prefix
+    form is allowed. A canonical absolute path (a) is absolute and has no
+    empty, `.` or `..` component other than the root, (b) lies strictly below
+    the area when the text as written is compared per path component, (c)
+    equals its own realpath, with every component existing and every link
+    resolved, and (d) is an existing directory. <path> is never normalized
+    and then accepted. A path whose length in bytes in the file-system
+    encoding is greater than or equal to the path-length limit that the
+    operating system reports for the root directory, obtained at run time, is
+    refused before the area is resolved and before any file-system access; so
+    is a path that cannot be encoded, and so is every path when the limit
+    cannot be obtained or is not positive. A resolution error counts as not
+    below. <path> is only resolved, never used as the directory or argument of
+    a child process
   - approval: the remainder, with surrounding blanks removed, equals one
     approved string of the cwd's project
   - operators: no lone `&`, `;`, `||` or line break at the top level of the
@@ -84,7 +78,6 @@ Override the store path with $EM_WORKFLOW_APPROVALS (tests only).
 import json
 import os
 import re
-import stat
 import subprocess
 import sys
 from datetime import datetime
@@ -238,14 +231,21 @@ def split_cd_prefix(command):
 
 
 def worktree_area(common_dir):
-    """Realpath of <main worktree>/.claude/worktrees/em-workflow, or None."""
+    """Realpath of <main worktree>/.claude/worktrees/em-workflow, or None.
+
+    The main worktree is the parent of the git common dir. The resolved area
+    is returned only when it lies strictly below the realpath of the main
+    worktree; a link at the area or at one of its ancestors that leads out of
+    the main worktree makes the answer None. Never raises."""
     if not common_dir:
         return None
-    main_tree = os.path.dirname(os.path.normpath(common_dir))
     try:
-        return os.path.realpath(os.path.join(main_tree, *WORKTREE_AREA_PARTS))
+        main_tree = os.path.dirname(os.path.normpath(common_dir))
+        main_real = os.path.realpath(main_tree)
+        area = os.path.realpath(os.path.join(main_tree, *WORKTREE_AREA_PARTS))
     except (OSError, ValueError):
         return None
+    return area if strictly_below(area, main_real) else None
 
 
 def strictly_below(path, area):
@@ -260,165 +260,61 @@ def strictly_below(path, area):
     )
 
 
-def resolves_to_directory(path):
-    """True when the operating system resolves path exactly as written to a
-    directory. The kernel applies each `..` to the directory already reached,
-    so a regular file, a missing component, or a link to either, placed before
-    a `..`, makes the resolution fail. Raises OSError or ValueError when path
-    cannot be resolved (the caller treats that as not a directory)."""
-    return stat.S_ISDIR(os.stat(path).st_mode)
-
-
-# The most links the Linux kernel follows while resolving one path. A loop
-# always exceeds it, so it is also the loop detection of the stage walk.
-FOLLOWED_LINK_LIMIT = 40
-
-
-def _under_proc_or_dev_fd(text):
-    """True when text, read lexically, names /proc or /dev/fd or a location
-    below one of them: after dropping empty components and `.`, the first
-    component is `proc`, or the first two are `dev` then `fd`. `..` is not
-    interpreted, and the file system is not consulted."""
-    parts = [part for part in text.split("/") if part not in ("", ".")]
-    return parts[:1] == ["proc"] or parts[:2] == ["dev", "fd"]
-
-
-def _stage_walk_refuses(path):
-    """True when resolving the absolute path text component by component, the
-    way the kernel does, reaches a stage under /proc or /dev/fd, or follows a
-    link whose absolute target text is under one, or follows more than
-    FOLLOWED_LINK_LIMIT links, or, before the walk stalls, meets an error other
-    than an absent or non-directory stage. The walk stops at the first refused
-    stage, so it never resolves anything inside /proc.
-
-    The lexical check of a link's target text applies only to an absolute
-    target; a relative target is joined to the directory that holds the link
-    and judged at the resolution stages. Every stage it leads to, the location
-    left after each `..` included, is checked like any other stage, so a
-    relative target is refused only when a stage it leads to is under /proc or
-    /dev/fd.
-
-    The walk stalls at the first stage that does not exist, or that exists and
-    is neither a directory nor a link. The stage check continues past an absent
-    or non-directory stage the way the lenient realpath does, which is what the
-    realpath calls of the caller do next: from the stall to the end of the path
-    the stage joins as an ordinary name and a later `..` removes it; stages are
-    probed and links followed again once the walk is back at an existing
-    location; a relative target resolves from the directory that holds the
-    link and an absolute target resets to the root; the /proc and /dev/fd
-    checks apply unchanged, before probing; links followed after the stall
-    count toward the same FOLLOWED_LINK_LIMIT; and an operating-system error
-    while a stage is probed or a link is read after the stall makes the name an
-    ordinary name, with no refusal. Any other exception, for example an
-    embedded NUL, refuses. When the walk reaches the end of the path it does
-    not refuse, and the caller's rule decides."""
-    pending = path.split("/")
-    # Components of the location reached so far. Before the stall every one is
-    # an existing directory and never a link. After the stall it may also hold
-    # ordinary names that do not exist, regular files, and a link whose target
-    # could not be read.
-    reached = []
-    followed = 0
-    stalled = False
+def within_length_bound(path):
+    """True when the byte length of path in the file-system encoding is less
+    than the path-length limit that the operating system reports for the root
+    directory, obtained at run time. False when the length reaches the limit,
+    when the limit cannot be obtained or is not positive, or when path cannot
+    be encoded. Touches no file; never raises."""
     try:
-        while pending:
-            name = pending.pop(0)
-            if name in ("", "."):
-                continue
-            if name == "..":
-                if reached:
-                    reached.pop()
-                if _under_proc_or_dev_fd("/" + "/".join(reached)):
-                    return True
-                continue
-            stage = "/" + "/".join(reached + [name])
-            if _under_proc_or_dev_fd(stage):
-                return True
-            try:
-                mode = os.lstat(stage).st_mode
-            except (FileNotFoundError, NotADirectoryError):
-                stalled = True
-                reached.append(name)
-                continue
-            except OSError:
-                if not stalled:
-                    raise
-                reached.append(name)
-                continue
-            if stat.S_ISLNK(mode):
-                followed += 1
-                if followed > FOLLOWED_LINK_LIMIT:
-                    return True
-                try:
-                    target = os.readlink(stage)
-                except OSError:
-                    if not stalled:
-                        raise
-                    reached.append(name)
-                    continue
-                if target.startswith("/"):
-                    if _under_proc_or_dev_fd(target):
-                        return True
-                    reached = []
-                # A relative target starts from the directory that holds the
-                # link, which is `reached`; the stage checks of this loop
-                # judge each stage it leads to.
-                pending = target.split("/") + pending
-                continue
-            if not stat.S_ISDIR(mode):
-                stalled = True
-            reached.append(name)
+        bound = os.pathconf("/", "PC_PATH_MAX")
+        if not isinstance(bound, int) or bound <= 0:
+            return False
+        return len(os.fsencode(path)) < bound
     except (OSError, ValueError):
-        return True
-    return False
+        return False
+
+
+def is_canonical_text(path):
+    """True when path, read as text, is absolute and has no empty, `.` or `..`
+    component other than the root. The file system is not consulted."""
+    if not path.startswith("/"):
+        return False
+    return all(part not in ("", ".", "..") for part in path[1:].split("/"))
 
 
 def is_below(path, area):
-    """True when path reaches an existing directory strictly below area the
-    way Bash's cd does. path is only resolved, never handed to a child process.
+    """True when path is a canonical absolute path strictly below area, at any
+    depth. area is an area that worktree_area accepted: the resolved
+    <main worktree>/.claude/worktrees/em-workflow, whose realpath lies strictly
+    below the realpath of the main worktree. path is only resolved, never used
+    as the directory or argument of a child process.
 
-    A path under /proc or /dev/fd fails the path check: the operating system
-    resolves such a path against the process that asks, and the hook process is
-    not the Bash process. This is judged on the path as written, on each stage
-    reached while resolving the logical path and the physical path component by
-    component, and on the target of each link followed, never on the final
-    realpath alone. The lexical check of a link's target text applies only to
-    an absolute target; a relative target is joined to the directory that holds
-    the link and judged at the resolution stages. The stage check continues
-    past an absent or non-directory stage the way the lenient realpath does, so
-    a stage under /proc or /dev/fd after such a stage is refused before the
-    realpath calls below can reach it. A link loop or more than
-    FOLLOWED_LINK_LIMIT followed links fails the check as well. This
-    precondition runs before the rule below and never replaces it.
-
-    Bash first moves to the logical path (each `..` collapsed against the
-    component written before it, then links resolved). When that move fails
-    it falls back to the physical path (links resolved component by component,
-    each `..` applying to the directory already resolved). The physical path
-    is an existing directory only when the operating system itself resolves
-    path as written to a directory; the lenient realpath is used for the
-    location compared against area, never to decide that. So:
-      - logical path is an existing directory: both paths must be existing
-        directories strictly below area;
-      - otherwise: the physical path alone must be an existing directory
-        strictly below area.
-    Any resolution error is False.
+    path is never normalized and then accepted: the text as written is what is
+    compared. A canonical absolute path
+      (a) is absolute and has no empty, `.` or `..` component other than the
+          root;
+      (b) lies strictly below the area when the text as written is compared
+          per path component;
+      (c) equals its own realpath, with every component existing and every
+          link resolved;
+      (d) is an existing directory.
+    A path whose length in bytes in the file-system encoding is greater than
+    or equal to the path-length limit that the operating system reports for the
+    root directory is refused first, before any file-system access; so is a
+    path that cannot be encoded, and so is every path when the limit cannot be
+    obtained or is not positive. Conditions (a) and (b) are decided on the text
+    alone, before the file system is consulted. A resolution error counts as
+    not below, and the answer is False; this function never raises.
     """
     try:
-        if _under_proc_or_dev_fd(path):
+        if not within_length_bound(path):
             return False
-        if _stage_walk_refuses(os.path.normpath(path)) or _stage_walk_refuses(path):
+        if not is_canonical_text(path) or not strictly_below(path, area):
             return False
-        physical = os.path.realpath(path)
-        logical = os.path.realpath(os.path.normpath(path))
-        physical_is_directory = os.path.isdir(physical) and resolves_to_directory(path)
-        if os.path.isdir(logical):
-            return (
-                physical_is_directory
-                and strictly_below(logical, area)
-                and strictly_below(physical, area)
-            )
-        return physical_is_directory and strictly_below(physical, area)
+        if os.path.realpath(path, strict=True) != path:
+            return False
+        return os.path.isdir(path)
     except (OSError, ValueError):
         return False
 
@@ -428,12 +324,15 @@ def is_cd_prefixed_approved(command, approved, common_dir):
 
     This is the cd prefix candidate: it decides whether the command is
     workflow-relevant. Whether the cd prefix allow is given is decided by
-    cd_prefix_allowed.
+    cd_prefix_allowed. The length bound is checked first, so an over-long path
+    never reaches worktree_area or the file system.
     """
     parts = split_cd_prefix(command)
     if parts is None:
         return False
     path, remainder = parts
+    if not within_length_bound(path):
+        return False
     if remainder.strip() not in approved:
         return False
     area = worktree_area(common_dir)

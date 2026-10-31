@@ -123,28 +123,24 @@ depends on the role:
     - the command starts with `cd`, then one double-quoted absolute path,
       with no `cd` options;
     - only spaces or tabs sit between the closing quote and the first `&&`;
-    - the path reaches an existing directory strictly below
-      `.claude/worktrees/em-workflow/` under the main working tree, judged on
-      two paths: the logical path (the realpath of the path with each `..`
-      first collapsed against the component written before it, as Bash's
-      default `cd` does) and the physical path (the realpath of the path
-      exactly as written, each `..` applying to the directory already
-      resolved). When the logical path is an existing directory, the logical
-      path and the physical path must both be existing directories strictly
-      below that directory. Otherwise the physical path alone must be an
-      existing directory strictly below it, which is where Bash lands through
-      its physical-path fallback. A path under /proc or /dev/fd fails the path
-      check: it is under /proc when its first component is `proc`, and under
-      /dev/fd when its first two components are `dev` and `fd`, empty and `.`
-      components ignored. This is judged on the path as written, on each stage
-      reached while resolving the logical path and the physical path component
-      by component, and on the target of each link followed, not on the final
-      realpath alone. The lexical check of a link's target text applies only to
-      an absolute target; a relative target is joined to the directory that
-      holds the link and judged at the resolution stages. The stage check
-      continues past an absent or non-directory stage the way the lenient
-      realpath does, so a stage under /proc or /dev/fd after such a stage fails
-      the path check too;
+    - the path is a canonical absolute path strictly below the area (the
+      directory `.claude/worktrees/em-workflow/` of the main worktree), at any
+      depth; the area itself is not below it. The main worktree is the parent
+      of the git common dir of the hook's cwd, and the area is used only when
+      its realpath lies strictly below the realpath of the main worktree;
+      otherwise no cd prefix form is allowed. A canonical absolute path (a) is
+      absolute and has no empty, `.` or `..` component other than the root,
+      (b) lies strictly below the area when the text as written is compared
+      per path component, (c) equals its own realpath, with every component
+      existing and every link resolved, and (d) is an existing directory. The
+      path is never normalized and then accepted. A path whose length in bytes
+      in the file-system encoding is greater than or equal to the path-length
+      limit that the operating system reports for the root directory,
+      obtained at run time, is refused before the area is resolved and before
+      any file-system access; so is a path that cannot be encoded, and so is
+      every path when the limit cannot be obtained or is not positive. A
+      resolution error counts as not below. The path is only resolved, never
+      used as the directory or argument of a child process;
     - everything after the first `&&` matches an approved string exactly
       (surrounding whitespace aside);
     - that remainder has no lone `&`, no `;`, no `||` and no line break at its
