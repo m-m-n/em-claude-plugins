@@ -1,0 +1,43 @@
+feature: unattended-merge-medium-fixes
+collected_at: "2026-11-01T02:30:00+09:00"
+session_ids: [01a192ec-4e16-73f3-9209-c0e4b10f01e8]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の最終スコア 2.02（confidence 0.96）が新規ロジック・複数モジュール・外部契約の変更を示し、閾値表により full と判定した"
+    bases:
+      - basis: description_only
+        score:
+          type: score
+          score: 1.89
+          confidence: 0.89
+          probabilities: {'0': 0.0, '1': 0.11, '2': 0.89, '3': 0.0}
+        observed_at: "2026-11-01T00:00:16+09:00"
+      - basis: description_plus_code
+        score:
+          type: score
+          score: 2.02
+          confidence: 0.96
+          probabilities: {'0': 0.0, '1': 0.01, '2': 0.96, '3': 0.03}
+        observed_at: "2026-11-01T00:04:33+09:00"
+    pre_survey_estimate:
+      changed_lines_approx: 450
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: []
+      covering_tests_exist: true
+      work_still_required: true
+      body_change_kind: new_logic
+      change_containment: multiple_modules
+      changes_external_contract: true
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "review_data_too_large で走らなかった architecture / spec 観点を、対象を 6 分割して round 2-7 で 1 ラウンドずつ実施した。分割レビュー自体はラウンド数を増やすが、各ラウンドで evaluator を 1 回ずつ使えた"
+  - "medium の残件（round1: d17e1a08d32875cf, 08bb31da5c63385d / round2: bbc1e5a40942e498, 22317f774603b30b / round6: 64742b16658d5b04）が resolution: unresolved のまま残った。無人実行の auto-fix が critical / high 限定のため、同じ形の medium 修正タスクが連鎖的に生まれる"
