@@ -123,7 +123,11 @@ workflow:
   status: completed
   completed_at_commit: c16df5a55647c5645b64fd419ec7865d8a100685
 - id: verify
-  status: in_progress
+  status: completed
+  completed_at_commit: db764f87e34c9ab798788b7f59e94864bdedb92b
+  result: pass
+  failed_items: []
+  summary: 'python3 -m unittest discover -s tests: 12376 tests OK (skipped=1). TS-1..TS-6 pass via the unit suite. TS-7 inspection pass: question-resolution.md (+8/-0) and SKILL.md (+3/-0) added lines only; no Notion URL or home-directory path in added lines (matches are only forbidden-token fixtures inside tests); no plugin.json or marketplace.json changed; step 2 addition English, step 3 addition Japanese. Manual read-through items both pass. Build/format/E2E: not configured.'
 - id: retrospect
   status: pending
 tasks:
