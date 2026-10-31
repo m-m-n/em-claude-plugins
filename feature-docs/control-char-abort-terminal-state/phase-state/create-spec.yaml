@@ -1,7 +1,7 @@
 schema_version: 1
 feature: control-char-abort-terminal-state
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 966ce074c5f00a91c0c49e13479c3ae52562d696
 last_input_digest: sha256:50638b739073863af16c6fe45f6ea35897318129f5703056ef102f765ba2cca3
