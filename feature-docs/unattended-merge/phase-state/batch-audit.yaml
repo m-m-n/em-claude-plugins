@@ -31,3 +31,13 @@ records:
   freeform: null
   normalized_answer: 'task0009: 5 件の deviation を declared change set に自動追加しない'
   resolution_note: 'task_id: task0009; declined paths: tests/test_batch_structured_result_output_version_bump.py, tests/test_muse_consent_version_bump.py, tests/test_threat_model_review_phase.py, tests/test_threat_model_reviewer_inputs.py, tests/test_threat_model_planner_contract.py; failed check: identifier part missing (報告が AC-n / 要件 ID を名指ししていない。内容は既存テストの plugin.json / marketplace.json の SHA-256 固定値の更新); path shape check and control-path check: passed. admitted: tests/test_unattended_merge_manifest_version_bump.py (AC-1, AC-1 の red-first テストを書く場所が無い)'
+- question_id: implement.deviation-auto-addition
+  packet_id: null
+  answered_at: '2026-10-31T20:06:00+09:00'
+  source: orchestrator-deviation-rule
+  answer_mode: select
+  selected_option_ids:
+  - decline
+  freeform: null
+  normalized_answer: 'task0007: 3 件の deviation を declared change set に自動追加しない'
+  resolution_note: 'task_id: task0007; declined paths: tests/test_destructive_guard_lexer_agreement.py, tests/test_destructive_guard_extglob_units.py, tests/test_destructive_guard_command_substitution.py; failed check: identifier part missing (報告が AC-n / 要件 ID を名指ししていない。内容は 4 要素目付きケースを読み飛ばすフィルタの追加); path shape check and control-path check: passed. admitted: tests/test_destructive_guard_merge_allow.py (AC-1〜AC-6、各受け入れ条件を選択実行できるテストを置く場所が無い). no-op: em-workflow/hooks/destructive-guard.py と em-workflow/hooks/tests/run-destructive-guard.py は既に files に登録済み'

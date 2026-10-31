@@ -245,6 +245,7 @@ tasks:
     - em-workflow/hooks/tests/run-destructive-guard.py
     - em-workflow/README.md
     - .claude/rules/hook-tests.md
+    - tests/test_destructive_guard_merge_allow.py
     skills:
     - backend-impl
     domains:
@@ -256,7 +257,7 @@ tasks:
     - FR20
     - FR23
     - NFR6
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/unattended-merge/task0007
   task0008:
