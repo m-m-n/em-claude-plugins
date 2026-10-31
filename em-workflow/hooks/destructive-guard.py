@@ -9142,10 +9142,12 @@ def main(payload):
     in_integration_worktree = is_integration_worktree_cwd(cwd)
     merge_allowed_seen = False
     context_changed = False
+    statement_count = 0
 
     for (
         segment, toks, lexed, shaped_words, shaped_redirects, origin
     ) in statements(command, unsettled):
+        statement_count += 1
         check_bypass(segment, toks)
 
         # task0001 D1: every check below reads SHAPED_WORDS/SHAPED_REDIRECTS
@@ -9242,7 +9244,11 @@ def main(payload):
         # A chunk was left unread: the verdict is the `ask` of an unsettled
         # text, unless what was read earns a `deny`.
         raise unsettled[0]
-    if merge_allowed_seen and context_changed and (top is None or top[0] != "deny"):
+    if (
+        merge_allowed_seen
+        and (context_changed or statement_count >= 2)
+        and (top is None or top[0] != "deny")
+    ):
         decide(
             "ask",
             "gh-pr-merge",
