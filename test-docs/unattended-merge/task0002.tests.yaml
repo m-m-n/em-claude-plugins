@@ -1,0 +1,141 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_merge_preflight.TestFeatureNameAndIntegrationBranch.test_ac1_invalid_feature_name_stops_before_any_git_command
+      - tests.test_merge_preflight.TestFeatureNameAndIntegrationBranch.test_ac1_invalid_feature_name_detail_does_not_echo_the_name
+      - tests.test_merge_preflight.TestFeatureNameAndIntegrationBranch.test_ac1_valid_name_without_integration_branch_stops
+      - tests.test_merge_preflight.TestFeatureNameAndIntegrationBranch.test_ac1_a_tag_with_the_branch_name_is_not_a_branch
+      - tests.test_merge_preflight.TestFeatureNameAndIntegrationBranch.test_ac1_directory_that_is_not_a_repository_stops
+      - tests.test_merge_preflight.TestFeatureNameAndIntegrationBranch.test_ac1_malformed_arguments_exit_2_without_stdout
+      - tests.test_merge_preflight.TestFeatureNameAndIntegrationBranch.test_ac1_equals_form_of_options_is_accepted
+    red_confirmed: true
+    red_reason: >-
+      With em-workflow/scripts/merge-preflight.py absent, every invocation
+      exited 2 ("can't open file ... merge-preflight.py: No such file or
+      directory"), so the decision assertions failed with "AssertionError: 2
+      != 0" for the invalid-name, missing-branch, non-repository, equals-form
+      tests, and the exit-2 test failed on its exit-0 control call for a
+      well-formed invocation.
+  AC-2:
+    tests:
+      - tests.test_merge_preflight.TestWorkflowRecord.test_ac2_absent_workflow_yaml_stops
+      - tests.test_merge_preflight.TestWorkflowRecord.test_ac2_unparseable_document_stops
+      - tests.test_merge_preflight.TestWorkflowRecord.test_ac2_non_utf8_document_stops
+      - tests.test_merge_preflight.TestWorkflowRecord.test_ac2_non_mapping_document_stops
+      - tests.test_merge_preflight.TestWorkflowRecord.test_ac2_object_construction_tags_stop_and_run_nothing
+      - tests.test_merge_preflight.TestWorkflowRecord.test_ac2_workflow_that_is_not_a_list_of_mappings_stops
+      - tests.test_merge_preflight.TestWorkflowRecord.test_ac2_loader_unavailable_stops
+      - tests.test_merge_preflight.TestWorkflowRecord.test_ac2_workflow_yaml_is_read_from_the_branch_tip_not_a_working_tree
+    red_confirmed: true
+    red_reason: >-
+      With the script absent, each stop assertion failed with "AssertionError:
+      2 != 0" (the interpreter could not open
+      em-workflow/scripts/merge-preflight.py). The object-tag test
+      additionally asserts that its marker file is never created; the
+      loader-unavailable test asserts the same repository proceeds when the
+      loader is available.
+  AC-3:
+    tests:
+      - tests.test_merge_preflight.TestBaseBranch.test_ac3_missing_base_branch_stops
+      - tests.test_merge_preflight.TestBaseBranch.test_ac3_unsafe_values_stop
+      - tests.test_merge_preflight.TestBaseBranch.test_ac3_conservative_names_are_accepted
+      - tests.test_merge_preflight.TestBaseBranch.test_ac3_base_branch_need_not_exist_locally_or_remotely
+      - tests.test_merge_preflight.TestBaseBranch.test_ac3_base_branch_is_checked_before_the_precondition
+    red_confirmed: true
+    red_reason: >-
+      With the script absent, each stop and accept assertion failed with
+      "AssertionError: 2 != 0" (the interpreter could not open
+      em-workflow/scripts/merge-preflight.py).
+  AC-4:
+    tests:
+      - tests.test_merge_preflight.TestPrecondition.test_ac4_pending_implement_stops_naming_the_step
+      - tests.test_merge_preflight.TestPrecondition.test_ac4_failed_verify_stops_naming_the_step
+      - tests.test_merge_preflight.TestPrecondition.test_ac4_completed_verify_with_result_fail_stops
+      - tests.test_merge_preflight.TestPrecondition.test_ac4_unrecognised_verify_result_stops
+      - tests.test_merge_preflight.TestPrecondition.test_ac4_all_completed_or_skipped_passes
+      - tests.test_merge_preflight.TestPrecondition.test_ac4_verify_without_result_key_passes_when_completed
+      - tests.test_merge_preflight.TestPrecondition.test_ac4_every_other_status_stops
+      - tests.test_merge_preflight.TestPrecondition.test_ac4_missing_or_non_string_status_stops
+      - tests.test_merge_preflight.TestPrecondition.test_ac4_every_failing_step_is_listed
+      - tests.test_merge_preflight.TestPrecondition.test_ac4_hostile_step_text_is_not_echoed
+      - tests.test_merge_preflight.TestPrecondition.test_ac4_precondition_is_checked_before_review_findings_and_approval
+    red_confirmed: true
+    red_reason: >-
+      With the script absent, each precondition assertion failed with
+      "AssertionError: 2 != 0" (the interpreter could not open
+      em-workflow/scripts/merge-preflight.py).
+  AC-5:
+    tests:
+      - tests.test_merge_preflight.TestReviewFindings.test_ac5_only_the_latest_round_is_judged
+      - tests.test_merge_preflight.TestReviewFindings.test_ac5_declined_and_fixed_critical_high_pass
+      - tests.test_merge_preflight.TestReviewFindings.test_ac5_no_round_records_pass_with_null_round
+      - tests.test_merge_preflight.TestReviewFindings.test_ac5_reviews_directory_without_round_files_passes
+      - tests.test_merge_preflight.TestReviewFindings.test_ac5_the_largest_round_number_wins_numerically
+      - tests.test_merge_preflight.TestReviewFindings.test_ac5_unreadable_latest_round_stops
+      - tests.test_merge_preflight.TestReviewFindings.test_ac5_a_non_blob_latest_round_entry_stops
+      - tests.test_merge_preflight.TestReviewFindings.test_ac5_an_unreadable_earlier_round_does_not_matter
+      - tests.test_merge_preflight.TestReviewFindings.test_ac5_severity_is_compared_case_insensitively
+      - tests.test_merge_preflight.TestReviewFindings.test_ac5_lower_severities_never_block
+      - tests.test_merge_preflight.TestReviewFindings.test_ac5_resolution_must_be_exactly_fixed_or_declined
+      - tests.test_merge_preflight.TestReviewFindings.test_ac5_missing_resolution_blocks
+      - tests.test_merge_preflight.TestReviewFindings.test_ac5_every_blocking_id_is_listed_once_in_order
+      - tests.test_merge_preflight.TestReviewFindings.test_ac5_missing_or_unsafe_ids_block_as_a_fixed_placeholder
+      - tests.test_merge_preflight.TestReviewFindings.test_ac5_findings_are_checked_after_the_precondition
+      - tests.test_merge_preflight.TestReviewFindings.test_ac5_round_records_are_read_from_the_branch_tip
+      - tests.test_merge_preflight.TestReviewFindings.test_ac5_instruction_shaped_descriptions_change_no_verdict
+    red_confirmed: true
+    red_reason: >-
+      With the script absent, each review-finding assertion failed with
+      "AssertionError: 2 != 0" (the interpreter could not open
+      em-workflow/scripts/merge-preflight.py).
+  AC-6:
+    tests:
+      - tests.test_merge_preflight.TestCommandApproval.test_ac6_empty_store_stops_naming_every_unapproved_command
+      - tests.test_merge_preflight.TestCommandApproval.test_ac6_absent_store_stays_absent
+      - tests.test_merge_preflight.TestCommandApproval.test_ac6_existing_store_is_byte_identical_afterwards
+      - tests.test_merge_preflight.TestCommandApproval.test_ac6_only_unapproved_commands_are_named
+      - tests.test_merge_preflight.TestCommandApproval.test_ac6_all_approved_proceeds_with_commands_in_order
+      - tests.test_merge_preflight.TestCommandApproval.test_ac6_format_command_is_neither_collected_nor_required
+      - tests.test_merge_preflight.TestCommandApproval.test_ac6_empty_commands_are_skipped
+      - tests.test_merge_preflight.TestCommandApproval.test_ac6_project_without_components_proceeds_with_no_commands
+      - tests.test_merge_preflight.TestCommandApproval.test_ac6_commands_are_carried_verbatim
+      - tests.test_merge_preflight.TestCommandApproval.test_ac6_approval_is_an_exact_string_match
+      - tests.test_merge_preflight.TestCommandApproval.test_ac6_leading_or_trailing_blanks_are_not_approved_by_a_stripped_entry
+      - tests.test_merge_preflight.TestCommandApproval.test_ac6_multi_line_commands_are_unapproved
+      - tests.test_merge_preflight.TestCommandApproval.test_ac6_non_string_commands_are_unapproved
+      - tests.test_merge_preflight.TestCommandApproval.test_ac6_malformed_project_section_cannot_confirm_approval
+      - tests.test_merge_preflight.TestCommandApproval.test_ac6_invalid_component_names_never_reach_the_output
+      - tests.test_merge_preflight.TestCommandApproval.test_ac6_approvals_of_another_project_do_not_count
+      - tests.test_merge_preflight.TestCommandApproval.test_ac6_a_corrupt_store_approves_nothing
+      - tests.test_merge_preflight.TestCommandApproval.test_ac6_approval_is_checked_last
+      - tests.test_merge_preflight.TestCommandApproval.test_ac6_list_mode_of_the_plugins_own_bash_guard_is_called_read_only
+      - tests.test_merge_preflight.TestCommandApproval.test_ac6_failing_list_call_stops
+      - tests.test_merge_preflight.TestCommandApproval.test_ac6_undecodable_list_output_stops
+      - tests.test_merge_preflight.TestCommandApproval.test_ac6_missing_bash_guard_stops
+      - tests.test_merge_preflight.TestCommandApproval.test_ac6_no_list_call_when_there_is_nothing_to_approve
+    red_confirmed: true
+    red_reason: >-
+      With the script absent, the approval assertions failed with
+      "AssertionError: 2 != 0", and the tests that copy the script next to a
+      stub bash_guard.py errored with FileNotFoundError on
+      em-workflow/scripts/merge-preflight.py.
+  AC-7:
+    tests:
+      - tests.test_merge_preflight.TestProceedOutputAndBoundaries.test_ac7_proceed_carries_every_field_with_validated_values
+      - tests.test_merge_preflight.TestProceedOutputAndBoundaries.test_ac7_project_root_is_the_main_working_tree_even_from_a_linked_worktree
+      - tests.test_merge_preflight.TestProceedOutputAndBoundaries.test_ac7_tip_follows_the_branch
+      - tests.test_merge_preflight.TestProceedOutputAndBoundaries.test_ac7_instruction_shaped_free_text_changes_no_verdict
+      - tests.test_merge_preflight.TestProceedOutputAndBoundaries.test_ac7_instruction_shaped_text_cannot_turn_a_stop_into_proceed
+      - tests.test_merge_preflight.TestProceedOutputAndBoundaries.test_ac7_only_read_git_subcommands_and_no_gh
+      - tests.test_merge_preflight.TestProceedOutputAndBoundaries.test_ac7_repository_and_approval_store_are_not_written
+      - tests.test_merge_preflight.TestProceedOutputAndBoundaries.test_ac7_script_writes_no_bytecode_cache_next_to_itself
+      - tests.test_merge_preflight.TestProceedOutputAndBoundaries.test_ac7_stderr_is_quiet_on_a_normal_decision
+      - tests.test_merge_preflight.TestProceedOutputAndBoundaries.test_ac7_ambient_git_environment_cannot_redirect_the_script
+    red_confirmed: true
+    red_reason: >-
+      With the script absent, the proceed-field, git-subcommand, no-write and
+      instruction-text assertions failed with "AssertionError: 2 != 0" (the
+      interpreter could not open em-workflow/scripts/merge-preflight.py).
