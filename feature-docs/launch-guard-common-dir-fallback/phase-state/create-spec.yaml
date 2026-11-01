@@ -4,14 +4,62 @@ phase: create-spec
 status: dispatching
 generation: 1
 base_revision: 381aecd5a61a6a040ece6f58882562d3090aa450
-last_input_digest: sha256:15c7c6819bd9a112fc4262e2631de0670febe74537cfb9b68e06f43532d16c0e
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+last_input_digest: sha256:188f137df66ff2e895a8ba4f35db6a0f0e7d2e8163568177db37d48b1ab85b19
+active_request_id: create-spec-run-0002
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-11-01T14:21:30+09:00'
+    questions:
+    - question_id: requirement.fr2.linked-worktree-root-mechanism
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+answers:
+  create-spec.feature-identity:
+    packet_id: null
+    answered_at: '2026-11-01T14:21:30+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - derive_from_task_description
+    freeform: null
+    normalized_answer: 'feature name derived from the task description: launch-guard-common-dir-fallback'
+  requirement.fr2.linked-worktree-root-mechanism:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-01T14:21:30+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - containment_and_cwd_ancestor
+    freeform: null
+    normalized_answer: 'containment_and_cwd_ancestor を採用。追加条件: (a)(b) は区切りが無いフォールバック経路に限る。内包は
+      realpath と commonpath で比べる。(b) は「求めたルートが cwd の git toplevel を内包し、かつその toplevel
+      が task worktree を真に内包する（同一は除く）」場合に限り拒否しない。git-common-dir の呼び出しは既存の 1 回を再利用する。既存単体テストの
+      /proj-store と /proj/.git の組は内包が成り立つ配置に直し、拒否の検証を残す。'
+    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation);
+      codex_consulted: true (entry codex, 1 turn, converged); Codex CHOICE matched
+      option containment_and_cwd_ancestor and added the narrowing condition for (b);
+      opus_escalation: not run'
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-01T14:21:30+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design step skipped per requirements-analyst recommendation
+      (UI の無いフック内部の判定変更)
+    resolution_note: 'gate: create-spec.design-step; batch policy select decide_autonomously'
 worker_runs:
-  - request_id: create-spec-run-0001
-    status: dispatched
-    input_digest: sha256:15c7c6819bd9a112fc4262e2631de0670febe74537cfb9b68e06f43532d16c0e
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:15c7c6819bd9a112fc4262e2631de0670febe74537cfb9b68e06f43532d16c0e
+  self_write_set: []
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:188f137df66ff2e895a8ba4f35db6a0f0e7d2e8163568177db37d48b1ab85b19
 artifacts: []
 patches: []
 progress_fingerprint: null
@@ -27,10 +75,10 @@ resolved_input_cache:
   reference_scan_targets:
     resolved_at_generation: 1
     paths:
-      - em-workflow/hooks/queue_launch_guard.py
-      - tests/test_queue_launch_guard.py
-      - tests/test_queue_launch_guard_linked_layout.py
-      - tests/test_merge_unverified_exit_doc_contract.py
-      - tests/test_hook_classification_pin.py
-      - .claude/rules/hook-tests.md
+    - em-workflow/hooks/queue_launch_guard.py
+    - tests/test_queue_launch_guard.py
+    - tests/test_queue_launch_guard_linked_layout.py
+    - tests/test_merge_unverified_exit_doc_contract.py
+    - tests/test_hook_classification_pin.py
+    - .claude/rules/hook-tests.md
 last_error: null
