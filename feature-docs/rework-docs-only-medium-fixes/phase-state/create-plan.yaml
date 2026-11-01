@@ -1,7 +1,7 @@
 schema_version: 1
 feature: rework-docs-only-medium-fixes
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: d2e6ac5610784f320d08c220ba30ee89ae1f7050
 last_input_digest: sha256:5fd81b46604b88a9d12d4c8730e6992ba4336ad7b38c640b41ed33488abc38a6
