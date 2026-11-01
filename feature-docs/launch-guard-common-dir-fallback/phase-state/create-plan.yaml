@@ -1,11 +1,11 @@
 schema_version: 1
 feature: launch-guard-common-dir-fallback
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: cb5005331d4fef5bed9c16d81e4779b629968e58
 last_input_digest: sha256:5f5b8e9f3c274fba4a531a62808908fb7b4563f1eff6e07e12aebe64caa3353f
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
