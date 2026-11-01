@@ -1,0 +1,46 @@
+round: 1
+executed_at: "2026-11-01T13:05:09+09:00"
+scope:
+  review_mode: diff
+  base_commit: 669157a899a665c1e0f9b28045dc8b37108723e4
+  head_commit: 25471dff1678b5032b526583ab33bdf7f33bf570
+  changed_files:
+  - test-docs/hook-test-bytecode-suppression/task0001.tests.yaml
+  - tests/test_destructive_guard_extglob_units.py
+  - tests/test_destructive_guard_lexer_agreement.py
+plan:
+  floor: [comprehensive, security, performance, spec]
+  discretionary: []
+  cross_validation: false
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings: []
+evaluation:
+  round_summary: "4 観点（comprehensive / security / performance / spec）はいずれも指摘ゼロで完了。評価者は差分 3 ファイル・SPEC.md・tasks/task0001.md を読み、load_hook() / _load_hook() が exec_module() の間だけ sys.dont_write_bytecode を True にし try/finally で元の値に戻すこと、追加テストが AC-1〜AC-5 を一時ディレクトリのプローブで確かめていることを確認した。FR3・NFR1・AC-6 のコマンド実行結果は評価者が読み取り専用のため未確認（verify で確認する）。test-docs のテスト件数差 14 と追加テスト数 13 の 1 件のずれは未確認で、指摘にはしていない。各観点 corroborated。レビュー出力に指示の差し込みは無かった。"
+  recommended_action: complete
+  action_rationale: "中以上の指摘が無く、FR1・FR2・NFR3 の実装と AC-1〜AC-5 のテストが SPEC と task0001 の契約どおりであることを評価者が確認した。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-hook-test-bytecode-suppression-20261101T040453Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
