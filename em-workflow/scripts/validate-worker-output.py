@@ -1390,6 +1390,78 @@ def _validate_tests_replace_entry(fr_id, rpatch):
     return errors
 
 
+# rework-docs-only-medium-fixes/task0002 (FR3, IMPLEMENTATION.md D3): the two
+# steps a docs-only round may return to `pending` -- the origin of the rework,
+# which is the `type` of the input envelope's `rework_source` (`review` or
+# `verify`).
+DOCS_ONLY_ORIGIN_STEPS = ("verify", "review")
+
+
+def _docs_only_origin_steps(envelope):
+    """rework-docs-only-medium-fixes/task0002 (FR3, NFR1, D3): the step ids
+    that a docs-only round's single step patch may target. Taken from the
+    run's input envelope when the validator holds one:
+
+    - `rework_source` is a mapping whose `type` is exactly the string
+      `review` or `verify`: that one step.
+    - no envelope (or one that is not a mapping), no `rework_source` key, or
+      a `rework_source` mapping without a `type` key: either of
+      DOCS_ONLY_ORIGIN_STEPS.
+    - `rework_source` present but not a mapping, or `type` present with any
+      other value (null, a non-string, another string): the empty tuple --
+      no origin step, so no step patch can match it (fail-closed).
+
+    Never raises: nothing here is hashed or indexed before it is known to be
+    a string."""
+    if not isinstance(envelope, dict) or "rework_source" not in envelope:
+        return DOCS_ONLY_ORIGIN_STEPS
+    rework_source = envelope["rework_source"]
+    if not isinstance(rework_source, dict):
+        return ()
+    if "type" not in rework_source:
+        return DOCS_ONLY_ORIGIN_STEPS
+    source_type = rework_source["type"]
+    if isinstance(source_type, str) and source_type in DOCS_ONLY_ORIGIN_STEPS:
+        return (source_type,)
+    return ()
+
+
+def _docs_only_step_patches_violation(step_patches, origin_steps):
+    """rework-docs-only-medium-fixes/task0002 (FR3, NFR1, D3): None when
+    `step_patches` (the patch's raw value) is a list of exactly one mapping
+    whose `step_id` is one of `origin_steps` and whose `set.status` is the
+    string `pending`; otherwise the message naming the first violated
+    condition -- the count, the step_id against the origin, or the status.
+    Never raises on a malformed shape; a malformed shape is a violation."""
+    if not isinstance(step_patches, list):
+        return (
+            "step_patches must be a list holding exactly one entry, for the origin step "
+            "(a docs-only round)"
+        )
+    if len(step_patches) != 1:
+        return (
+            f"step_patches holds {len(step_patches)} entries; a docs-only round "
+            "(append_rework with no tasks_patch.entries) requires exactly one, for the origin step"
+        )
+    entry = step_patches[0]
+    if not isinstance(entry, dict):
+        return "step_patches[0] must be a mapping (a docs-only round requires exactly one entry, for the origin step)"
+    step_id = entry.get("step_id")
+    if not isinstance(step_id, str) or step_id not in origin_steps:
+        if origin_steps:
+            wanted = " or ".join(repr(step) for step in origin_steps)
+            return f"step_patches[0].step_id {step_id!r} is not the origin step ({wanted})"
+        return (
+            f"step_patches[0].step_id {step_id!r} cannot match an origin step: the input "
+            "envelope's rework_source is not a mapping whose type is 'review' or 'verify'"
+        )
+    set_block = entry.get("set")
+    status = set_block.get("status") if isinstance(set_block, dict) else None
+    if status != "pending":
+        return f"step_patches[0].set.status must be 'pending', got {status!r}"
+    return None
+
+
 def validate_workflow_patch(
     data,
     *,
@@ -1399,6 +1471,7 @@ def validate_workflow_patch(
     phase_state=None,
     dry_run=False,
     feature_dir=None,
+    envelope=None,
 ):
     if not isinstance(data, dict):
         return [err("structure", "workflow patch must be a mapping")]
@@ -1496,36 +1569,56 @@ def validate_workflow_patch(
         if not isinstance(sp, dict):
             errors.append(err("step_patches", f"step_patches[{i}] must be a mapping"))
             continue
-        if not sp.get("step_id"):
+        step_id = sp.get("step_id")
+        if not step_id:
             errors.append(err("step_patches", f"step_patches[{i}].step_id is required"))
+        elif not isinstance(step_id, str):
+            errors.append(err("step_patches", f"step_patches[{i}].step_id must be a string"))
         set_block = sp.get("set") or {}
-        if set(set_block) - {"status"}:
+        if not isinstance(set_block, dict):
+            errors.append(err("step_patches", f"step_patches[{i}].set must be a mapping"))
+        elif set(set_block) - {"status"}:
             errors.append(err("step_patches", f"step_patches[{i}].set may only contain 'status'"))
-        if workflow is not None and sp.get("step_id") not in workflow_step_ids(workflow):
-            errors.append(err("step_patches", f"step_patches[{i}].step_id {sp.get('step_id')!r} does not exist in workflow.yaml"))
+        # A non-string step_id was reported above and is never looked up
+        # (it may not even be hashable).
+        step_id_is_lookupable = step_id is None or isinstance(step_id, str)
+        if workflow is not None and step_id_is_lookupable and step_id not in workflow_step_ids(workflow):
+            errors.append(err("step_patches", f"step_patches[{i}].step_id {step_id!r} does not exist in workflow.yaml"))
 
-    # rework-docs-only-task-routing/task0004 (FR5, TM-2): a docs-only round
-    # is recognized by empty task entries (no new patch field marks it), so
-    # an `append_rework` patch whose `tasks_patch.entries` is absent or empty
-    # must not return `implement` to `pending` -- implement stays completed.
-    # "Empty" follows this function's own reading of `entries` above
-    # (`tasks_patch.get("entries") or {}`). Structural layer: runs with and
-    # without --dry-run-apply. The rule's prose is owned by
+    # A docs-only round is recognized by empty task entries (no new patch
+    # field marks it): an `append_rework` patch whose `tasks_patch.entries`
+    # is absent or empty. "Empty" follows this function's own reading of
+    # `entries` above (`tasks_patch.get("entries") or {}`). Structural layer:
+    # runs with and without --dry-run-apply, and on both routes that
+    # validate a patch. The rule's prose is owned by
     # references/rework-task-synthesis.md ("Docs-only correction route"),
-    # cited not restated.
+    # cited not restated. Two independent checks, either or both of which
+    # may report on one patch:
+    #
+    # - rework-docs-only-task-routing/task0004 (FR5, TM-2), widened by
+    #   rework-docs-only-medium-fixes/task0002 (FR3): every step patch that
+    #   targets `implement` is `docs-only-implement-reset`, whatever its
+    #   set.status is -- implement stays completed.
+    # - rework-docs-only-medium-fixes/task0002 (FR3, D3):
+    #   `docs-only-step-patches`, once per patch, unless step_patches is
+    #   exactly one entry for the origin step with set.status `pending`. The
+    #   origin step comes from the input envelope's rework_source
+    #   (`_docs_only_origin_steps`).
     if operation == "append_rework" and not tasks_patch.get("entries"):
         for i, sp in enumerate(step_patches):
-            if not isinstance(sp, dict) or sp.get("step_id") != "implement":
-                continue
-            sp_set = sp.get("set")
-            if isinstance(sp_set, dict) and sp_set.get("status") == "pending":
+            if isinstance(sp, dict) and sp.get("step_id") == "implement":
                 errors.append(
                     err(
                         "docs-only-implement-reset",
-                        f"step_patches[{i}] sets implement to 'pending' on an append_rework patch "
+                        f"step_patches[{i}] targets implement on an append_rework patch "
                         "with no tasks_patch.entries (a docs-only round); implement must stay completed",
                     )
                 )
+        violation = _docs_only_step_patches_violation(
+            data.get("step_patches"), _docs_only_origin_steps(envelope)
+        )
+        if violation is not None:
+            errors.append(err("docs-only-step-patches", violation))
 
     preserve = data.get("preserve")
     if preserve is None:
@@ -1580,8 +1673,13 @@ def _validate_dry_run_apply(data, *, workflow, digest_source, phase_state, featu
         errors.append(err("dry-run-apply", "--workflow is required for --dry-run-apply"))
         return errors
 
-    # Rule 3: all `expected` values must match current state.
-    for i, sp in enumerate((data.get("step_patches") or [])):
+    # Rule 3: all `expected` values must match current state. A step_patches
+    # that is not a list, or an element that is not a mapping, is reported by
+    # the structural layer and has no `expected` to compare here.
+    step_patches = data.get("step_patches")
+    for i, sp in enumerate(step_patches if isinstance(step_patches, list) else []):
+        if not isinstance(sp, dict):
+            continue
         expected = sp.get("expected") or {}
         if "status" in expected:
             step = workflow_find_step(workflow, sp.get("step_id"))
@@ -2184,6 +2282,7 @@ def validate_worker_result(
                     phase_state=phase_state,
                     dry_run=dry_run,
                     feature_dir=feature_dir,
+                    envelope=envelope,
                 ),
                 "workflow_patch",
             )
@@ -2590,6 +2689,7 @@ def main(argv=None):
                 phase_state=phase_state,
                 dry_run=args.dry_run_apply,
                 feature_dir=feature_dir,
+                envelope=envelope,
             )
         elif args.kind == "phase-state":
             errors = validate_phase_state(data)

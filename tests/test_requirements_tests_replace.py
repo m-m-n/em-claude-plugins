@@ -87,7 +87,12 @@ def _patch_with(entries):
         "operation": "append_rework",
         "tasks_patch": {"mode": "append", "expected_next_task_id": "task0002", "entries": {}},
         "requirements_patch": {"mode": "merge_entries", "entries": entries},
-        "step_patches": [],
+        # Empty tasks_patch.entries make this a docs-only round, which is
+        # valid only with exactly one origin-step entry set to pending
+        # (rework-docs-only-medium-fixes/task0002, FR3).
+        "step_patches": [
+            {"expected": {"status": "failed"}, "set": {"status": "pending"}, "step_id": "verify"}
+        ],
         "preserve": ["workflow.implement.base_commit"],
     }
 
