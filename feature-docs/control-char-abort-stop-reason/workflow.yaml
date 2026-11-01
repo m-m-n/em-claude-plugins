@@ -1,0 +1,167 @@
+schema_version: 1
+feature: control-char-abort-stop-reason
+created: '2026-11-02'
+base_branch: main
+goal: |
+  # em-workflow の batch 構造化結果で、制御文字検査による implement 中止の reason が step_needs_intervention に決まらない
+
+  種別: バグ
+
+  ## 現象 (必須)
+
+  em-workflow の `references/batch-terminal-line.md` の Precedence rule は、`stop-condition-3` 行が受け持つ範囲を「今回の実行のどの経路も書いていない `failed` / `needs_update` を Step B が読んだ停止」に絞っている。今回の実行で `implement` を `failed` にする経路のうち、専用の行を持つのは `implement-second-failure` だけ。
+
+  `references/implement-phase.md` Step I.2.a の Control-character check は、制御文字による停止で今回の実行の中で `implement: failed` / `failed_kind: decision` を書き、develop の停止条件 3 で制御を返す。文面どおりに読むと、この停止はどの行にも当たらず Fallback rule で `unmapped_stop` になる。理由コード表の `step_needs_intervention` の意味と、停止条件 3 で戻るという記述は `step_needs_intervention` を指しており、batch の外部利用者が受け取る `reason` が読み方によって変わる。
+
+  ## 再現手順 (必須)
+
+  1. `.claude/worktrees/em-workflow` 配下にリンクを置き、リンク先のディレクトリ名に改行を含める
+  2. `/em-workflow:develop --batch` で implement フェーズに入る
+  3. Control-character check が停止し、`implement: failed` / `failed_kind: decision` がコミットされる
+  4. 構造化結果の `reason` を `batch-terminal-line.md` の Stop point coverage と Precedence rule に照らすと、`step_needs_intervention` ではなく `unmapped_stop` に結びつく
+
+  ## 期待する挙動 (必須)
+
+  制御文字検査による停止（Step I.2.a）が、`batch-terminal-line.md` の Precedence rule で `stop-condition-3`（`step_needs_intervention`）に結びつくと明記されている。「今回の実行が書いた failed は除外する」という絞り込みはそのまま残す。
+
+  ## 完了の定義 (必須)
+
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある（この結びつきを固定する文書テスト）
+
+  ## 該当箇所 (任意)
+
+  - `em-workflow/references/batch-terminal-line.md` の Precedence rule（205-235 行付近）
+  - `em-workflow/references/implement-phase.md` Step I.2.a の Control-character check 段落（408-423 行付近）
+
+  ## 実害・発生条件 (任意)
+
+  正規化済み worktree\_path に制御文字が入り、batch 実行で制御文字検査が停止したときだけ発生する。feature control-char-abort-terminal-state の review round 1 で evaluator が medium として報告した（stable\_id f6cac47d5859854b）。
+parent_branch: em-workflow/control-char-abort-stop-reason/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.02
+      '1': 0.98
+      '2': 0.0
+      '3': 0.0
+    description_plus_code:
+      '0': 0.01
+      '1': 0.91
+      '2': 0.08
+      '3': 0.0
+  at: '2026-11-02T00:01:40+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: 56de4c919834414383088f1f9d8d9513f5a742a1
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI の無い参照文書と文書テストの変更で、画面・視覚的な設計判断を伴わない
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: Bind the control-character stop to stop-condition-3 in the Precedence rule
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: Keep the current-run exclusion of stop-condition-3
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: Document test pinning the binding
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: Precedence rule paragraph stays one block
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: Pinned anchor phrases survive
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: Reason codes and coverage rows unchanged
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: Standard-library document test convention
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: Plugin version unchanged
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

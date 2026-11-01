@@ -1,7 +1,7 @@
 schema_version: 1
 feature: control-char-abort-stop-reason
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: bf05a11074ad6ead2e6fc81572cd575cc28606f0
 last_input_digest: sha256:3751874b3d7919166988d03ba4dc4850be69e91950ff7faa41c93d8fd13a7c39
