@@ -10,27 +10,29 @@ goal: '# launch guard の git-common-dir フォールバックが、共通管理
 
   ## やりたいこと
 
-  launch guard が `git rev-parse --git-common-dir` の親を無条件にプロジェクトのルートとみなす処理を、共通管理ディレクトリが主作業場所直下の `.git`
-  でない構成でも誤って拒否しないようにする。
+  launch guard が `git rev-parse --git-common-dir` の親を無条件にプロジェクトのルートとみなす処理を、共通管理ディレクトリが主作業場所直下の
+  `.git` でない構成でも誤って拒否しないようにする。
 
 
   ## 背景
 
   feature canonical-worktree-path-guards のレビュー（round 1、medium、stable_id `a3fe8ddbe09570f2`）で指摘された。`em-workflow/hooks/queue_launch_guard.py:151`
-  の `git_common_dir_root` は共通管理ディレクトリの親をそのまま返し、`cwd_outside_project_root` がそれと cwd の git toplevel を比べて違えば拒否する。
+  の `git_common_dir_root` は共通管理ディレクトリの親をそのまま返し、`cwd_outside_project_root` がそれと cwd
+  の git toplevel を比べて違えば拒否する。
 
 
   次の構成では正しい場所からの起動も拒否される。
 
-  - サブモジュール: 共通管理ディレクトリが `/super/.git/modules/sub` のとき、ルートが `/super/.git/modules` になる
+  - サブモジュール: 共通管理ディレクトリが `/super/.git/modules/sub` のとき、ルートが `/super/.git/modules`
+  になる
 
   - `--separate-git-dir`: 共通管理ディレクトリが `/store/proj.git` のとき、ルートが `/store` になる
 
   - プロジェクトのルート自体が linked worktree: ルートが主作業場所になる
 
 
-  変更前は区切りが無ければ確認を省いていた（fail-open）。区切りの無い linked layout と重なると、実装担当の起動が毎回拒否される。NFR2 の「判断できない状態は fail-open
-  を保つ」から外れる。
+  変更前は区切りが無ければ確認を省いていた（fail-open）。区切りの無い linked layout と重なると、実装担当の起動が毎回拒否される。NFR2
+  の「判断できない状態は fail-open を保つ」から外れる。
 
 
   ## 受け入れ条件
@@ -103,7 +105,38 @@ workflow:
   status: pending
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Launch guard git-common-dir fallback rules, tests and content pin
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/hooks/queue_launch_guard.py
+    - tests/test_merge_unverified_exit_doc_contract.py
+    - tests/test_queue_launch_guard_linked_layout.py
+    skills:
+    - backend-impl
+    domains:
+    - auth
+    - input-handling
+    - external-io
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - FR8
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    status: pending
+    notes: null
+    branch: null
 review:
   status: pending
 requirements:
@@ -112,92 +145,137 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
   FR2:
     title: ルートが worktree_path を内包しないときの fail-open
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-5
+    - TS-6
   FR3:
     title: linked worktree のルートからの起動を拒否しない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-6
+    - TS-7
+    - TS-8
   FR4:
     title: git 呼び出しの回数
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-10
   FR5:
     title: 区切りがある経路は変えない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-10
   FR6:
     title: モジュール docstring
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-10
   FR7:
     title: テスト
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-5
+    - TS-6
+    - TS-7
+    - TS-8
+    - TS-10
   FR8:
     title: sha256 の固定値の更新
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-11
   NFR1:
     title: 標準ライブラリだけを import する
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-12
   NFR2:
     title: 判断できない状態は fail-open
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-3
+    - TS-5
+    - TS-10
   NFR3:
     title: git-common-dir の呼び出しの形と回数を保つ
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-10
   NFR4:
     title: 標準 linked layout の拒否を保つ
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-8
+    - TS-9
   NFR5:
     title: テストは時間待ちや CPU 負荷に頼らない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-12
 batch:
   review_rework_count: 0
   verify_rework:
