@@ -421,7 +421,10 @@ ALLOW_CASES = (
     (ALLOW, "no space after &&", 'cd "@IN@" &&' + PLAIN_COMMAND),
     (ALLOW, "tabs around the path and &&", 'cd\t"@IN@"\t&&\t' + PLAIN_COMMAND),
     (ALLOW, "several spaces everywhere", 'cd   "@IN@"   &&   ' + PLAIN_COMMAND),
-    (ALLOW, "surrounding whitespace on the command", '  cd "@IN@" && ' + PLAIN_COMMAND + "  \n"),
+    # Feature approval-unicode-whitespace: only spaces and tabs are removed
+    # from the ends of the command, so the trailing line feed keeps the
+    # remainder from being matchable and the form gets no decision.
+    (SILENT, "surrounding whitespace on the command", '  cd "@IN@" && ' + PLAIN_COMMAND + "  \n"),
     (ALLOW, "path containing && is not used for splitting", 'cd "@AMP@" && ' + PLAIN_COMMAND),
     (ALLOW, "path containing a space", 'cd "@SPACED@" && ' + PLAIN_COMMAND),
     (ALLOW, "a git worktree below the area", 'cd "@WT@" && ' + PLAIN_COMMAND),

@@ -1195,8 +1195,8 @@ class TestCommandApproval(PreflightBase):
             ("stored entry had blanks, approved", "make lint"),
             ("stored entry had blanks, blanks added, approved", "\tmake lint  "),
             ("inner tab kept, approved", " make\tfmt "),
-            ("form feed and vertical tab, approved", "\x0cmake test\x0b"),
-            ("no-break space, approved", " make test "),
+            ("form feed and vertical tab, not approved", "\x0cmake test\x0b"),
+            ("no-break space, not approved", "\u00a0make test\u00a0"),
             ("trailing blank, wrong command", "make test -v "),
             ("leading blank, wrong command", " make tests"),
             ("two inner blanks", "make  test "),
@@ -1223,6 +1223,14 @@ class TestCommandApproval(PreflightBase):
                     guard_allows,
                     f"preflight and bash_guard.py disagree on {command!r}: {result}",
                 )
+                # A case labelled "not approved" is refused by both; one
+                # labelled "approved" is accepted by both.
+                if label.endswith(", not approved"):
+                    self.assertFalse(guard_allows, f"bash_guard.py allowed {command!r}")
+                    self.assert_stop(result, "commands_unapproved")
+                elif label.endswith(", approved"):
+                    self.assertTrue(guard_allows, f"bash_guard.py refused {command!r}")
+                    self.assert_proceed(result)
                 approved_seen.add(guard_allows)
         # The set must exercise both verdicts, or the agreement would be vacuous.
         self.assertEqual(approved_seen, {True, False})
@@ -1361,6 +1369,166 @@ class TestCommandApproval(PreflightBase):
         self.assert_proceed(result)
         self.assertEqual(result["commands"], [])
         self.assertEqual(self.stub_calls(), [])
+
+
+NBSP = "\u00a0"
+VT = "\u000b"
+FF = "\u000c"
+PRIMARY_PADDING = (("U+00A0", NBSP), ("U+000B", VT), ("U+000C", FF))
+OTHER_PADDING = (
+    ("U+0085", "\u0085"),
+    ("U+2000", "\u2000"),
+    ("U+3000", "\u3000"),
+    ("U+001F", "\u001f"),
+)
+
+
+def padded_forms(value, char):
+    """(label, text) pairs: `char` before, after and on both sides of `value`,
+    alone and mixed with spaces and tabs."""
+    return (
+        ("before", char + value),
+        ("after", value + char),
+        ("both", char + value + char),
+        ("blanks then char before", " \t" + char + value),
+        ("char then blanks before", char + " \t" + value),
+        ("char then blanks after", value + char + " \t"),
+        ("blanks then char after", value + " \t" + char),
+        ("blanks and char on both sides", " " + char + "\t" + value + "\t" + char + " "),
+    )
+
+
+class TestCommandApprovalSpaceTabTrim(PreflightBase):
+    """Feature approval-unicode-whitespace, task0001 (AC-1, AC-2, AC-6, AC-5
+    with the agreement test above): the approval trim removes only spaces and
+    tabs, and a value that still has another whitespace character at either end
+    is never approved.
+
+    Non-ASCII and control whitespace is written here as escape sequences and
+    reaches workflow.yaml as `\\uXXXX` escapes of a JSON (YAML) document.
+    """
+
+    APPROVED = "/usr/bin/true"
+
+    def feature_with(self, name, **commands):
+        """Add a feature whose components carry `commands` (build=, test=, e2e=)."""
+        doc = make_doc(project={"components": make_components(**commands)})
+        text = json.dumps(doc, indent=2, ensure_ascii=True) + "\n"
+        self.add_feature(name, workflow=text)
+        return name
+
+    def assert_names_only(self, result, *names):
+        self.assert_stop(result, "commands_unapproved")
+        for name in names:
+            self.assertIn(name, result["detail"])
+
+    def test_ac1_primary_characters_around_an_approved_value_stop(self):
+        self.write_store([self.APPROVED])
+        count = 0
+        for char_name, char in PRIMARY_PADDING:
+            for position, command in padded_forms(self.APPROVED, char):
+                with self.subTest(char=char_name, position=position):
+                    feature = self.feature_with(f"pad{count}", test=command)
+                    count += 1
+                    result = self.decide(feature)
+                    self.assert_names_only(result, "main.test_command")
+
+    def test_ac1_the_unpadded_value_is_approved_in_the_same_fixture(self):
+        self.write_store([self.APPROVED])
+        feature = self.feature_with("control", test=self.APPROVED)
+        result = self.decide(feature)
+        self.assert_proceed(result)
+        self.assertEqual(result["commands"][0]["command"], self.APPROVED)
+
+    def test_ac1_every_command_field_refuses_a_padded_value(self):
+        self.write_store([self.APPROVED])
+        for field, key in (
+            ("build_command", "build"),
+            ("test_command", "test"),
+            ("e2e_test_command", "e2e"),
+        ):
+            with self.subTest(field=field):
+                feature = self.feature_with(f"field-{key}", **{key: NBSP + self.APPROVED})
+                self.assert_names_only(self.decide(feature), f"main.{field}")
+
+    def test_ac1_only_the_padded_field_is_named(self):
+        self.write_store([self.APPROVED, "make build"])
+        feature = self.feature_with(
+            "named", build="make build", test=self.APPROVED + VT, e2e=" make build "
+        )
+        result = self.decide(feature)
+        self.assert_names_only(result, "main.test_command")
+        self.assertNotIn("main.build_command", result["detail"])
+        self.assertNotIn("main.e2e_test_command", result["detail"])
+
+    def test_ac1_the_attack_scenario_stops(self):
+        # test_command = U+00A0 + "/usr/bin/true", and an executable file at the
+        # work-tree-relative path U+00A0 + "/usr/bin/true" in the committed tree.
+        attack = self.repo / NBSP / "usr" / "bin" / "true"
+        attack.parent.mkdir(parents=True)
+        attack.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        attack.chmod(0o755)
+        self.write_store([self.APPROVED])
+        feature = self.feature_with("attack", test=NBSP + self.APPROVED)
+        committed = self.git("ls-tree", "-r", "--name-only", f"em-workflow/{feature}/integration")
+        self.assertIn("usr/bin/true", committed)
+        self.assert_names_only(self.decide(feature), "main.test_command")
+
+    def test_ac2_a_value_made_only_of_a_no_break_space_is_not_skipped(self):
+        for i, command in enumerate((NBSP, NBSP + NBSP, " " + NBSP + "\t", VT, FF, "\u0085", "\u3000")):
+            with self.subTest(command=command):
+                feature = self.feature_with(f"only{i}", test=command)
+                self.assert_names_only(self.decide(feature), "main.test_command")
+
+    def test_ac2_a_value_made_only_of_spaces_and_tabs_is_still_skipped(self):
+        for i, command in enumerate((" ", "\t", " \t \t", "   ")):
+            with self.subTest(command=command):
+                feature = self.feature_with(f"blank{i}", test=command, build=" ")
+                result = self.decide(feature)
+                self.assert_proceed(result)
+                self.assertEqual(result["commands"], [])
+
+    def test_ac2_a_raw_line_break_or_cr_still_stops_when_the_trimmed_value_is_approved(self):
+        self.write_store(["make a"])
+        for i, command in enumerate(("make a\n", " make a \r", "\nmake a", "make a\r\n", "make a\nmake a")):
+            with self.subTest(command=command):
+                feature = self.feature_with(f"lb{i}", test=command)
+                self.assert_names_only(self.decide(feature), "main.test_command")
+
+    def test_ac2_a_value_approved_after_the_space_and_tab_trim_proceeds_untrimmed(self):
+        self.write_store([self.APPROVED])
+        command = " \t" + self.APPROVED + "\t  "
+        feature = self.feature_with("trimmed", test=command)
+        result = self.decide(feature)
+        self.assert_proceed(result)
+        self.assertEqual(
+            result["commands"],
+            [{"component": "main", "field": "test_command", "command": command}],
+        )
+
+    def test_ac6_spaces_and_tabs_alone_around_an_approved_value_still_approve(self):
+        self.write_store([self.APPROVED])
+        for i, command in enumerate((" " + self.APPROVED, self.APPROVED + "\t", "\t " + self.APPROVED + " \t")):
+            with self.subTest(command=command):
+                feature = self.feature_with(f"blanks{i}", test=command)
+                self.assert_proceed(self.decide(feature))
+
+    def test_ac6_other_whitespace_characters_before_or_after_stop(self):
+        self.write_store([self.APPROVED])
+        count = 0
+        for char_name, char in OTHER_PADDING:
+            for position, command in padded_forms(self.APPROVED, char):
+                with self.subTest(char=char_name, position=position):
+                    feature = self.feature_with(f"other{count}", test=command)
+                    count += 1
+                    self.assert_names_only(self.decide(feature), "main.test_command")
+
+    def test_ac6_a_no_break_space_inside_does_not_match_a_blank(self):
+        self.write_store(["make test"])
+        for i, command in enumerate(("make" + NBSP + "test", " make" + NBSP + "test ")):
+            with self.subTest(command=command):
+                feature = self.feature_with(f"inner{i}", test=command)
+                self.assert_names_only(self.decide(feature), "main.test_command")
 
 
 class TestProceedOutputAndBoundaries(PreflightBase):

@@ -1,0 +1,119 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests before any change: Ran 13566 tests, OK (skipped=1)
+final_failures: []             # python3 -m unittest discover -s tests after the implementation and this record: no failure; subset of baseline
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_merge_preflight.TestCommandApprovalSpaceTabTrim.test_ac1_primary_characters_around_an_approved_value_stop
+      - tests.test_merge_preflight.TestCommandApprovalSpaceTabTrim.test_ac1_every_command_field_refuses_a_padded_value
+      - tests.test_merge_preflight.TestCommandApprovalSpaceTabTrim.test_ac1_only_the_padded_field_is_named
+      - tests.test_merge_preflight.TestCommandApprovalSpaceTabTrim.test_ac1_the_attack_scenario_stops
+    red_confirmed: true
+    red_reason: >-
+      Before the implementation each of the four failed with
+      "AssertionError: 'proceed' != 'stop'": a test_command padded with U+00A0,
+      U+000B or U+000C (alone and mixed with spaces and tabs), and the attack
+      scenario (U+00A0 + /usr/bin/true with an executable file at that path in
+      the committed tree), was approved by the full str.strip().
+      test_ac1_the_unpadded_value_is_approved_in_the_same_fixture is the
+      control and passed before and after.
+  AC-2:
+    tests:
+      - tests.test_merge_preflight.TestCommandApprovalSpaceTabTrim.test_ac2_a_value_made_only_of_a_no_break_space_is_not_skipped
+      - tests.test_merge_preflight.TestCommandApprovalSpaceTabTrim.test_ac2_a_value_made_only_of_spaces_and_tabs_is_still_skipped
+      - tests.test_merge_preflight.TestCommandApprovalSpaceTabTrim.test_ac2_a_raw_line_break_or_cr_still_stops_when_the_trimmed_value_is_approved
+      - tests.test_merge_preflight.TestCommandApprovalSpaceTabTrim.test_ac2_a_value_approved_after_the_space_and_tab_trim_proceeds_untrimmed
+    red_confirmed: true
+    red_reason: >-
+      test_ac2_a_value_made_only_of_a_no_break_space_is_not_skipped failed
+      before the implementation with "AssertionError: 'proceed' != 'stop'"
+      (a U+00A0-only value was skipped as empty). The other three assert
+      behaviour that already held (space/tab-only values skipped, raw LF / CR
+      still stopping, untrimmed command in the proceed output) and passed
+      before the change; they guard against the narrowed trim breaking those.
+  AC-3:
+    tests:
+      - tests.test_bash_guard_unicode_whitespace.TestAc3PaddedCommandIsNeverAllowed.test_ac3_a_padded_command_that_is_not_declared_gets_no_decision
+      - tests.test_bash_guard_unicode_whitespace.TestAc3PaddedCommandIsNeverAllowed.test_ac3_a_padded_command_that_is_declared_is_denied_as_unapproved
+      - tests.test_bash_guard_unicode_whitespace.TestAc3PaddedCommandIsNeverAllowed.test_ac3_the_attack_scenario_gets_no_allow
+      - tests.test_bash_guard_unicode_whitespace.TestAc3PaddedCommandIsNeverAllowed.test_ac3_a_command_empty_after_the_trim_gets_no_decision
+      - tests.test_bash_guard_unicode_whitespace.TestDeclaredCommandExtraction.test_a_no_break_space_after_the_colon_is_part_of_the_value
+      - tests.test_bash_guard_unicode_whitespace.TestDeclaredCommandExtraction.test_a_no_break_space_at_the_end_of_the_line_is_part_of_the_value
+    red_confirmed: true
+    red_reason: >-
+      Before the implementation the padded-command tests failed with the
+      hook's "allow" where "silent" (not declared) or a deny (declared) was
+      expected, including the attack scenario; the two extraction tests failed
+      because the separator and trailing classes still matched \s. The
+      empty-after-trim test asserts behaviour that already held and passed
+      before the change.
+  AC-4:
+    tests:
+      - tests.test_bash_guard_unicode_whitespace.TestAc4LineFeedAndCdPrefixRemainder.test_ac4_a_trailing_line_feed_is_not_allowed_standalone
+      - tests.test_bash_guard_unicode_whitespace.TestAc4LineFeedAndCdPrefixRemainder.test_ac4_a_trailing_line_feed_is_not_allowed_as_the_cd_prefix_remainder
+      - tests.test_bash_guard_unicode_whitespace.TestAc4LineFeedAndCdPrefixRemainder.test_ac4_a_padded_remainder_is_not_allowed
+      - tests.test_bash_guard_unicode_whitespace.TestAc4LineFeedAndCdPrefixRemainder.test_ac4_a_character_directly_after_the_separator_is_part_of_the_remainder
+      - tests.test_bash_guard_cd_prefix.TestAc1AllowedPrefixForm.test_ac1_allow_when_cwd_is_main_worktree
+      - tests.test_bash_guard_cd_prefix.TestAc1AllowedPrefixForm.test_ac1_allow_when_cwd_is_a_git_worktree
+      - tests.test_bash_guard_cd_prefix_operators.TestAc2RecognizedFormsStillAllowed.test_ac2_surrounding_blanks_and_a_trailing_line_feed_allow
+    red_confirmed: true
+    red_reason: >-
+      Before the implementation these failed with the hook's "allow" where no
+      decision was expected: an approved string with a trailing line feed
+      (standalone and as the cd prefix remainder) and a remainder padded with
+      U+00A0 / U+000B / U+000C were allowed. The two existing cd prefix tests
+      now expect SILENT for the unchanged command "surrounding whitespace on
+      the command" and failed against the old hook for the same reason. The
+      backslash-and-line-feed subcases passed before the change (the
+      backslash already kept that command from matching).
+  AC-5:
+    tests:
+      - tests.test_merge_preflight.TestCommandApproval.test_fr4_ac3_preflight_agrees_with_bash_guards_own_approval_decision
+    red_confirmed: true
+    red_reason: >-
+      The two cases are relabelled "not approved" and asserted refused by both
+      scripts; before the implementation the "form feed and vertical tab" and
+      "no-break space" subtests failed because both scripts still approved
+      them. The agreement assertion and the both-verdicts assertion are kept.
+  AC-6:
+    tests:
+      - tests.test_bash_guard_unicode_whitespace.TestAc6SpacesAndTabsStillApprove.test_ac6_spaces_and_tabs_around_a_command_are_removed_for_the_exact_match
+      - tests.test_bash_guard_unicode_whitespace.TestAc6SpacesAndTabsStillApprove.test_ac6_spaces_and_tabs_around_the_remainder_are_removed_for_the_cd_prefix
+      - tests.test_bash_guard_unicode_whitespace.TestAc6SpacesAndTabsStillApprove.test_ac6_surrounding_spaces_and_tabs_on_the_whole_cd_form_are_removed
+      - tests.test_bash_guard_unicode_whitespace.TestAc6SpacesAndTabsStillApprove.test_ac6_other_whitespace_characters_before_or_after_are_not_allowed
+      - tests.test_bash_guard_unicode_whitespace.TestAc6SpacesAndTabsStillApprove.test_ac6_other_whitespace_characters_around_the_cd_remainder_are_not_allowed
+      - tests.test_bash_guard_unicode_whitespace.TestAc6SpacesAndTabsStillApprove.test_ac6_a_no_break_space_inside_does_not_match_a_blank
+      - tests.test_merge_preflight.TestCommandApprovalSpaceTabTrim.test_ac6_spaces_and_tabs_alone_around_an_approved_value_still_approve
+      - tests.test_merge_preflight.TestCommandApprovalSpaceTabTrim.test_ac6_other_whitespace_characters_before_or_after_stop
+      - tests.test_merge_preflight.TestCommandApprovalSpaceTabTrim.test_ac6_a_no_break_space_inside_does_not_match_a_blank
+    red_confirmed: true
+    red_reason: >-
+      The tests for U+0085, U+2000, U+3000 and U+001F failed before the
+      implementation (hook: "allow" where "silent" or a deny was expected;
+      preflight: "'proceed' != 'stop'"). The tests that spaces and tabs alone
+      still approve, and that make<U+00A0>test does not match make test, assert
+      behaviour that already held and passed before the change; they guard the
+      narrowed trim.
+  AC-7:
+    tests:
+      - tests.test_bash_guard_unicode_whitespace.TestAc7Documentation.test_ac7_the_docstring_states_the_space_and_tab_only_trim
+      - tests.test_bash_guard_unicode_whitespace.TestAc7Documentation.test_ac7_the_cd_prefix_approval_item_states_the_same_for_the_remainder
+      - tests.test_bash_guard_unicode_whitespace.TestAc7Documentation.test_ac7_the_docstring_no_longer_describes_the_full_strip
+      - tests.test_bash_guard_unicode_whitespace.TestAc7Documentation.test_ac7_the_hook_imports_only_standard_library_modules
+      - tests.test_bash_guard_unicode_whitespace.TestAc7Documentation.test_ac7_the_hook_source_has_no_status_substring
+      - tests.test_bash_guard_unicode_whitespace.TestAc7Documentation.test_ac7_this_module_imports_only_standard_library_modules
+      - tests.test_bash_guard_unicode_whitespace.TestAc7PreflightDocumentation.test_ac7_the_module_docstring_states_the_space_and_tab_only_trim
+      - tests.test_bash_guard_unicode_whitespace.TestAc7PreflightDocumentation.test_ac7_the_check_approval_comment_states_the_same
+      - tests.test_bash_guard_unicode_whitespace.TestTrimHelpers.test_trim_removes_only_spaces_and_tabs_from_both_ends
+      - tests.test_bash_guard_unicode_whitespace.TestTrimHelpers.test_matchable_is_true_exactly_for_a_non_empty_value_with_no_whitespace_end
+      - tests.test_bash_guard_unicode_whitespace.TestTrimHelpers.test_the_helpers_are_defined_once
+    red_confirmed: true
+    red_reason: >-
+      Before the implementation the docstring and comment tests failed
+      ("not found" assertions on the space/tab-only wording, and the old
+      "surrounding blanks removed" phrase still present), and the three helper
+      tests failed with AttributeError / missing definitions (no trim_blanks
+      or is_matchable in bash_guard.py). The standard-library-only and
+      no-"status" tests assert properties that already held and passed before
+      the change; the existing TestAc7StandardLibraryOnly modules and
+      tests/test_hook_classification_pin.py pin the same properties.

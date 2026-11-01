@@ -394,10 +394,16 @@ class TestAc2RecognizedFormsStillAllowed(HookCase):
                     self.check_prefix_allow(FIX.expand(prefixed(remainder)), cwd)
 
     def test_ac2_surrounding_blanks_and_a_trailing_line_feed_allow(self):
+        # Feature approval-unicode-whitespace: only spaces and tabs are removed
+        # from the ends of the command, so the trailing line feed keeps the
+        # remainder from being matchable and the form gets no decision. The
+        # command is unchanged; the expectation is a decision other than ALLOW.
         for cwd in self.cwds():
             with self.subTest(cwd=cwd.name):
                 command = "  " + FIX.expand(prefixed("make test 2>&1")) + "  \n"
-                self.check_prefix_allow(command, cwd)
+                decision, output = decide(FIX.run_hook(command, cwd))
+                self.assertNotEqual(decision, ALLOW)
+                self.assertEqual((decision, output), (SILENT, None))
 
     def test_ac2_operators_in_the_path_are_not_scanned(self):
         for cwd in self.cwds():

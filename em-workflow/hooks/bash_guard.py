@@ -18,6 +18,15 @@ in a feature-docs/*/workflow.yaml or present in the approval store, or a cd
 prefix in front of an approved command). All other Bash commands pass through
 untouched.
 
+Matching: the command is compared after removing surrounding spaces and tabs
+only; every other character stays, a line feed included. A command with any
+other whitespace at either end is never allowed (whitespace as Python's
+str.isspace() defines it: line feed, carriage return, vertical tab, form feed,
+no-break space and the like). Such a command is denied as unapproved when a
+workflow.yaml declares it and gets no decision otherwise. A command that is
+empty after the removal gets no decision. Whitespace inside the command is
+never normalized.
+
 cd prefix: a subagent's working directory does not survive between Bash
 calls, so an implementer runs an approved command as one call of the form
 `cd "<path>" && <approved command>`. The hook allows that form only when all
@@ -44,8 +53,9 @@ had no cd prefix (never a new deny):
     cannot be obtained or is not positive. A resolution error counts as not
     below. <path> is only resolved, never used as the directory or argument of
     a child process
-  - approval: the remainder, with surrounding blanks removed, equals one
-    approved string of the cwd's project
+  - approval: the remainder, with surrounding spaces and tabs removed (only
+    those), equals one approved string of the cwd's project; a remainder with
+    any other whitespace at either end is not approved
   - operators: no lone `&`, `;`, `||` or line break at the top level of the
     remainder (outside quotes and backslash escapes); a line break counts
     inside quotes too. The recognized tokens (`&&`, `|&`, `>&`, `<&`, `&>`,
@@ -83,7 +93,7 @@ import sys
 from datetime import datetime
 
 COMMAND_KEY_RE = re.compile(
-    r"^\s*(build_command|test_command|format_command|e2e_test_command):\s*(.+?)\s*$"
+    r"^\s*(build_command|test_command|format_command|e2e_test_command):[ \t]*(.+?)[ \t]*$"
 )
 
 # Aligned with the "Refusal cases" section of command-execution-protocol.md.
@@ -150,6 +160,20 @@ def strip_yaml_quotes(value):
     return value
 
 
+def trim_blanks(value):
+    """The approval trim: `value` without its leading and trailing spaces
+    (U+0020) and tabs (U+0009). No other character is removed or changed.
+    Pure; no I/O."""
+    return value.strip(" \t")
+
+
+def is_matchable(text):
+    """True when `text`, a result of trim_blanks, may be compared with approved
+    strings: it is not empty, and neither its first nor its last character is
+    whitespace by str.isspace(). Pure; no I/O."""
+    return bool(text) and not text[0].isspace() and not text[-1].isspace()
+
+
 def declared_commands(roots):
     """Command strings declared in any feature-docs/*/workflow.yaml under roots.
 
@@ -179,7 +203,11 @@ def declared_commands(roots):
                             continue
                         value = strip_yaml_quotes(match.group(2))
                         if value and value not in ("null", "~"):
-                            commands.add(value.strip())
+                            # A value that is not matchable stays in the set,
+                            # so the hook denies it as unapproved.
+                            trimmed = trim_blanks(value)
+                            if trimmed:
+                                commands.add(trimmed)
             except OSError:
                 continue
     return commands
@@ -333,7 +361,8 @@ def is_cd_prefixed_approved(command, approved, common_dir):
     path, remainder = parts
     if not within_length_bound(path):
         return False
-    if remainder.strip() not in approved:
+    trimmed = trim_blanks(remainder)
+    if not is_matchable(trimmed) or trimmed not in approved:
         return False
     area = worktree_area(common_dir)
     return area is not None and is_below(path, area)
@@ -361,10 +390,13 @@ def cd_remainder_excluded(remainder):
 
     One left-to-right pass with three quoting states (unquoted, single-quoted,
     double-quoted). Pure: no file read, no child process. Nesting is never
-    parsed; one hit of any rule is enough. The remainder is trimmed first, so
-    the scanned string is the one compared with the approval store.
+    parsed; one hit of any rule is enough. The remainder is trimmed first, by
+    spaces and tabs only, so the scanned string is the one compared with the
+    approval store. A remainder that is not matchable is excluded.
     """
-    text = remainder.strip()
+    text = trim_blanks(remainder)
+    if not is_matchable(text):
+        return True
     # E4: a line break anywhere. E7, E8, E10: position-independent text.
     if "\n" in text or "\r" in text:
         return True
@@ -443,9 +475,14 @@ def hook_main():
         return 0
     tool_input = data.get("tool_input") or {}
     command = tool_input.get("command")
-    if not isinstance(command, str) or not command.strip():
+    if not isinstance(command, str):
         return 0
-    command = command.strip()
+    command = trim_blanks(command)
+    if not command:
+        return 0
+    # A command with other whitespace at either end is never allowed; it still
+    # reaches the refusal-pattern deny and the unapproved-declared deny.
+    matchable = is_matchable(command)
     cwd = data.get("cwd") or os.getcwd()
 
     roots = []
@@ -465,8 +502,9 @@ def hook_main():
     common_dir = git_common_dir(cwd)
     key = common_dir or os.path.realpath(cwd)
     approved = approved_for(load_store(store_path), key)
-    cd_candidate = is_cd_prefixed_approved(command, approved, common_dir)
-    if command not in declared and command not in approved and not cd_candidate:
+    exact = matchable and command in approved
+    cd_candidate = matchable and is_cd_prefixed_approved(command, approved, common_dir)
+    if command not in declared and not exact and not cd_candidate:
         return 0  # not workflow-relevant: stay silent
 
     reason = refusal_reason(command)
@@ -477,7 +515,7 @@ def hook_main():
             "workflow.yaml のコマンド定義からこのパターンを除去して。回避策を探さず、"
             "ユーザーに定義の修正を報告すること。",
         )
-    elif command in approved:
+    elif exact:
         emit("allow", "em-workflow guard: 承認済みコマンド（approvals.json に完全一致）")
     elif cd_prefix_allowed(command, cd_candidate):
         emit(

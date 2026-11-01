@@ -44,14 +44,20 @@ operations (rev-parse, cat-file, ls-tree) and never runs gh. Approval is read
 through `hooks/bash_guard.py --list` of the plugin this script belongs to.
 
 Approval rule (check 7): a verification command is approved when it is
-approvable and its `str.strip()` value is a member of the set read through
-`bash_guard.py --list`. That is the same trim bash_guard.py applies to stored
-and incoming commands, so leading and trailing blanks never decide the verdict
-differently from the hook. A command is approvable only when it is a string
-with a valid component name and its raw value holds no line break and no CR;
-the raw value is judged, so the trim cannot turn a multi line command into an
-approved one. Inner whitespace is compared as is. The `command` carried in the
-proceed output is the original, untrimmed string.
+approvable, its trimmed value is matchable and that trimmed value is a member
+of the set read through `bash_guard.py --list`. The trim is the one
+bash_guard.py applies to incoming commands: only spaces and tabs are removed
+from both ends, so leading and trailing blanks never decide the verdict
+differently from the hook. A trimmed value is matchable when it is not empty
+and neither its first nor its last character is whitespace (str.isspace());
+any other whitespace at either end is not approved, so a value padded with a
+no-break space, a vertical tab, a form feed or the like never matches. A value
+that is empty after the trim is not a command and is skipped; a value made only
+of other whitespace is not skipped and is not approved. A command is approvable
+only when it is a string with a valid component name and its raw value holds no
+line break and no CR; the raw value is judged, so the trim cannot turn a multi
+line command into an approved one. Inner whitespace is compared as is. The
+`command` carried in the proceed output is the original, untrimmed string.
 """
 
 import json
@@ -84,6 +90,9 @@ BLOCKING_SEVERITIES = ("critical", "high")
 RESOLVED = ("fixed", "declined")
 PASSING_STEP_STATUSES = ("completed", "skipped")
 COMMAND_FIELDS = ("build_command", "test_command", "e2e_test_command")
+
+# The approval trim removes only these characters from both ends of a value.
+APPROVAL_BLANKS = " \t"
 
 GIT_TIMEOUT_SECONDS = 30
 GUARD_TIMEOUT_SECONDS = 30
@@ -380,12 +389,26 @@ def check_review_findings(root, tip, feature):
     return latest
 
 
+def trim_blanks(value):
+    """The approval trim: `value` without its leading and trailing spaces and
+    tabs. No other character is removed or changed."""
+    return value.strip(APPROVAL_BLANKS)
+
+
+def is_matchable(text):
+    """True when `text`, a trimmed value, may be compared with approved
+    strings: it is not empty and neither its first nor its last character is
+    whitespace by str.isspace()."""
+    return bool(text) and not text[0].isspace() and not text[-1].isspace()
+
+
 def collect_commands(doc):
     """Non-empty verification commands, components in name order, fields in order.
 
     Each entry is (component label, field, command, approvable); an entry that
-    cannot be approved by construction (invalid component name, non string or
-    multi line command) is flagged rather than dropped.
+    cannot be approved by construction (invalid component name, non string,
+    multi line or not matchable command) is flagged rather than dropped. Only a
+    string value that is empty after the space and tab trim is skipped.
     """
     malformed = Stop(
         "commands_unapproved",
@@ -412,9 +435,15 @@ def collect_commands(doc):
             if command is None:
                 continue
             if isinstance(command, str):
-                if not command.strip():
+                trimmed = trim_blanks(command)
+                if not trimmed:
                     continue
-                approvable = name_ok and "\n" not in command and "\r" not in command
+                approvable = (
+                    name_ok
+                    and "\n" not in command
+                    and "\r" not in command
+                    and is_matchable(trimmed)
+                )
             else:
                 approvable = False
             entries.append((label, field, command, approvable))
@@ -457,13 +486,17 @@ def check_approval(root, doc):
         )
     unapproved = []
     for label, field, command, approvable in entries:
-        # Compare the trimmed value, as bash_guard.py does for stored and
-        # incoming commands. `approvable` already excludes every non string
-        # and every raw value with a line break or CR, so the trim never
-        # turns such a value into an approved one. Inner whitespace is not
-        # normalized, and the emitted command below stays untrimmed.
-        if approvable and command.strip() in approved:
-            continue
+        # Compare the value trimmed of spaces and tabs only, as bash_guard.py
+        # does for incoming commands. After that trim, a value with any other
+        # whitespace at either end is not approved: it is not matchable,
+        # whatever the approved set holds. `approvable` already excludes every
+        # non string and every raw value with a line break or CR, so the trim
+        # never turns such a value into an approved one. Inner whitespace is
+        # not normalized, and the emitted command below stays untrimmed.
+        if approvable:
+            trimmed = trim_blanks(command)
+            if is_matchable(trimmed) and trimmed in approved:
+                continue
         name = f"{label}.{field}"
         if name not in unapproved:
             unapproved.append(name)
