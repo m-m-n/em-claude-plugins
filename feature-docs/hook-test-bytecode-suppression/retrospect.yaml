@@ -1,5 +1,5 @@
 feature: hook-test-bytecode-suppression
-collected_at: "2026-11-01T13:31:00+09:00"
+collected_at: "2026-11-01T13:18:41+09:00"
 session_ids: [01a19553-7391-73a3-80b5-cf029c097e5e]
 signals:
   review_critical_high: []
