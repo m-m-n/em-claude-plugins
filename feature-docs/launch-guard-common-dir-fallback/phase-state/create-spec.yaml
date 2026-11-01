@@ -1,11 +1,11 @@
 schema_version: 1
 feature: launch-guard-common-dir-fallback
 phase: create-spec
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: 381aecd5a61a6a040ece6f58882562d3090aa450
 last_input_digest: sha256:180c9462f4bbb64afd047cd9efa0f65da5c54878b8240ae48d9c3c3d408733a6
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -84,13 +84,23 @@ worker_runs:
     tests/test_queue_launch_guard_linked_layout.py: sha256:8305634797dee34f3bf4d2256449d178718a6fe68891651b40fd5651e5dc0f52
   self_write_set: []
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:180c9462f4bbb64afd047cd9efa0f65da5c54878b8240ae48d9c3c3d408733a6
   dispatch_digest_inputs:
     em-workflow/references/contracts/spec-writer-contract.md: sha256:9032c6287d75f4a88e556bd3962c32ab8b4905cf3b6ececa895206788bcd0b63
     em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
     em-workflow/references/templates/spec-document.md: sha256:203dfcddbe507886ce861694fccd20ae25e5af0bd1b0efa5e935991add950cbd
-artifacts: []
+  output_digest: null
+  self_write_set:
+  - feature-docs/launch-guard-common-dir-fallback/REQUIREMENTS.md
+  - feature-docs/launch-guard-common-dir-fallback/SPEC.md
+artifacts:
+- path: feature-docs/launch-guard-common-dir-fallback/REQUIREMENTS.md
+  sha256: sha256:aad262e6b6dfcad5d0b778761834e8fd86bcd076ba75e81ae593602fa905a3bc
+  produced_by: create-spec-run-0003
+- path: feature-docs/launch-guard-common-dir-fallback/SPEC.md
+  sha256: sha256:97599cda6176e3f308741ff84adff21f946293e04abd38a3c321c83db5b66266
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
