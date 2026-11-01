@@ -1321,17 +1321,14 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # raising. PINNED_VALIDATOR_TEST_LINE below is unaffected and still
     # asserted. Same rationale: refresh, don't remove.
     #
-    # Refreshed again by rework-docs-only-medium-fixes/task0002 (FR3):
-    # `validate_workflow_patch` takes the input envelope and rejects an
-    # `append_rework` patch with empty `tasks_patch.entries` unless
-    # `step_patches` is exactly one entry for the origin step with
-    # `set.status` `pending` (`docs-only-step-patches`), and every step patch
-    # that targets `implement` is `docs-only-implement-reset` whatever its
-    # status; the step_patches shape checks no longer raise on a malformed
-    # `set` or `step_id`. PINNED_VALIDATOR_TEST_LINE below is unaffected and
-    # still asserted. Same rationale: refresh, don't remove.
+    # Refreshed again by rework-docs-only-medium-fixes/task0003 (FR4):
+    # `_validate_tests_replace_entry` also rejects an entry whose
+    # `tests_replace` `from` set and `to` set share an ID (a chain or a
+    # swap), reported as `requirements_patch`. PINNED_VALIDATOR_TEST_LINE
+    # below is unaffected and still asserted. Same rationale: refresh,
+    # don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "01f3651a55583c4306758952e43d8f1e321e63215c0b2fbdb364a18446e999ba"
+        "6b507079c379220862add43f0069f69f2ae4b445ace463f2997fd8307bbc2a0c"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-

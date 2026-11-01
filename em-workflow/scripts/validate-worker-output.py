@@ -1344,7 +1344,13 @@ def _validate_tests_replace_entry(fr_id, rpatch):
     mappings with non-empty string `from` and `to`, `from` different from
     `to`, no `from` repeated, and every `from` listed in the entry's
     `expected.tests_contains`; `expected.tests_contains`, when present, is
-    a list of strings (also without any replacement beside it). Every
+    a list of strings (also without any replacement beside it).
+    rework-docs-only-medium-fixes/task0003 (FR4, IMPLEMENTATION.md D4): the
+    entry's `from` set (the string `from` values of its mapping pairs) and
+    `to` set (the string `to` values) must not share an ID, so a sequential
+    application can never lose a scenario reference (a chain TS-1->TS-2,
+    TS-2->TS-3 and a swap TS-1->TS-2, TS-2->TS-1 both share one); pairs that
+    only share a `to` do not overlap. Every
     finding carries the code `requirements_patch`. Malformed input is a
     finding, never an exception: nothing here is hashed or indexed before
     it is known to be a string, and a non-mapping `set` / `expected` is
@@ -1387,6 +1393,22 @@ def _validate_tests_replace_entry(fr_id, rpatch):
         seen_from.add(old)
         if not contains_malformed and old not in listed:
             errors.append(err("requirements_patch", f"{q} 'from' {old!r} must be listed in {p}.expected.tests_contains"))
+    # FR4 / D4: only string values of mapping pairs enter the two sets, so a
+    # malformed pair (a non-string, unhashable `from` / `to`, a missing key)
+    # is never hashed here and stays with the shape findings above.
+    mapping_pairs = [pair for pair in pairs if isinstance(pair, dict)]
+    from_ids = {pair["from"] for pair in mapping_pairs if isinstance(pair.get("from"), str)}
+    to_ids = {pair["to"] for pair in mapping_pairs if isinstance(pair.get("to"), str)}
+    overlap = sorted(from_ids & to_ids)
+    if overlap:
+        errors.append(
+            err(
+                "requirements_patch",
+                f"{p}.set.tests_replace 'from' and 'to' share {overlap!r}: a sequential "
+                "application would lose a scenario reference (no ID may be both replaced "
+                "and a replacement within one entry)",
+            )
+        )
     return errors
 
 
