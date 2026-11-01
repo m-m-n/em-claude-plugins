@@ -1,7 +1,7 @@
 schema_version: 1
 feature: approval-unicode-whitespace
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: a642d2c82836a7480dcc860117232231127ff4ef
 last_input_digest: sha256:ce039fe14f801b0561becba6dac7fd07172ab609be744143b3915005b72def94
