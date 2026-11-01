@@ -122,7 +122,8 @@ workflow:
   base_commit: dc311c1083106f86e5db52396593267e258fe0c7
   completed_at_commit: 94365927b26371255cf98df7c38cf654b51b4322
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 3a815662666e78e8a6a95d273243bf9976e56a0e
 - id: verify
   status: pending
 - id: retrospect
@@ -152,8 +153,9 @@ tasks:
     notes: null
     branch: em-workflow/control-char-abort-stop-reason/task0001
 review:
-  status: pending
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
+  perspectives: [comprehensive, security, architecture, spec]
   plan:
     floor: [comprehensive, security, architecture, spec]
     discretionary: []
