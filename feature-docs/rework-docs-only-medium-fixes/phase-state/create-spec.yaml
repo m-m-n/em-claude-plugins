@@ -1,7 +1,7 @@
 schema_version: 1
 feature: rework-docs-only-medium-fixes
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: 1f85d3e0c1e36c2944d4f8c9c6bd31668b49948a
 last_input_digest: sha256:e3fca8582c37c466e1fd043dba8b06fad01248962ccddd99662785fd34dbfcc9

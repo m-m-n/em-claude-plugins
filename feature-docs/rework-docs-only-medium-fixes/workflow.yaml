@@ -1,0 +1,198 @@
+schema_version: 1
+feature: rework-docs-only-medium-fixes
+created: '2026-11-01'
+base_branch: main
+goal: |
+  # em-workflow の文書のみ修正経路（rework-docs-only-task-routing）のレビューで残った medium 指摘 4 件を直す
+
+  種別: 改善
+
+  ## やりたいこと (必須)
+
+  em-workflow の文書のみ修正経路（feature `rework-docs-only-task-routing`、PR #50）のレビュー round 1 で残った medium 指摘 4 件を直す。
+
+  ## 背景・なぜ (必須)
+
+  レビューで次の 4 件が medium として残った（自動修正の対象は critical / high のみのため未対応）。いずれも `em-workflow/scripts/validate-worker-output.py` の文書のみの回・シナリオ ID 改名・tests 参照置換の検査が、SSOT の規則より緩い。
+
+  - `c588505add1da8c7` 改名申告の改名先 (to) が変更後の VERIFICATION.md に実在するか検査していない
+  - `33f072c3b90c3aea` 改名で文書から消えた旧シナリオ ID を covered_by_existing として受理してしまう
+  - `6ed87da72e3f5de3` 文書のみの回の step_patches 検査が SSOT の機械検査規則より狭い
+  - `a3ac237a09af8436` from と to が重なる tests_replace を受理し、逐次適用で参照が失われる
+
+  詳細はブランチ `em-workflow/rework-docs-only-task-routing/integration` の `feature-docs/rework-docs-only-task-routing/reviews/round1.yaml` にある。
+
+  ## 受け入れ条件 / 完了の定義 (必須)
+
+  - [ ] 4 件それぞれについて、不正な出力を拒否する失敗例の fixture とテストがある
+  - [ ] 既存の成功例 fixture が引き続き受理される
+
+  ## 制約・前提 (任意)
+
+  PR #50 のマージ後に着手する。
+parent_branch: em-workflow/rework-docs-only-medium-fixes/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.94
+      '2': 0.06
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.42
+      '2': 0.37
+      '3': 0.21
+  at: '2026-11-01T12:05:16+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: d75b64945fc0cf9bb0a3bf86278f0deb932f1794
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI が無く、変更は検証スクリプト・references・fixture・テストだけ（batch-policies の create-spec.design-step → decide_autonomously）
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: 改名による受理は文書の差分で裏付ける（c588505add1da8c7）
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
+    - TS-6
+  FR2:
+    title: 改名で消えた旧 ID を受理しない（33f072c3b90c3aea）
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-7
+    - TS-8
+    - TS-9
+  FR3:
+    title: 文書のみの回の step_patches を SSOT の規則どおりに検査する（6ed87da72e3f5de3）
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-10
+    - TS-11
+    - TS-12
+    - TS-13
+    - TS-14
+    - TS-15
+    - TS-16
+  FR4:
+    title: from と to が重なる tests_replace を拒否する（a3ac237a09af8436）
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-17
+    - TS-18
+    - TS-19
+  FR5:
+    title: SSOT を検査規則に揃える
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-22
+  FR6:
+    title: 拒否例の fixture とテスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: 既存の成功例 fixture を受理し続ける
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-6
+    - TS-19
+    - TS-20
+  NFR1:
+    title: 不正な入力で例外を出さない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-21
+  NFR2:
+    title: テストは標準ライブラリだけを使う
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: テストスイート全体が通る
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
