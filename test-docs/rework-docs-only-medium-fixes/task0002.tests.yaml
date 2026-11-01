@@ -1,6 +1,6 @@
 task_id: task0002
-baseline_failures:             # refreshed after parent-side adoption (python3 -m unittest discover -s tests, Ran 13491 tests, skipped=1); before the first edit of this task the suite had no failure (Ran 13410 tests, OK)
-  - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical   # the byte pin the parent carries no longer matches the merged validator (the parent's validator edit plus this task's edit); this task's re-implementation refreshes the pin
+baseline_failures:             # refreshed after parent-side adoption (python3 -m unittest discover -s tests, Ran 13514 tests, skipped=1); before the first edit of this task the suite had no failure (Ran 13410 tests, OK)
+  - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical   # the byte pin the parent carries no longer matches the merged validator (the parent's validator edits plus this task's edit); this task's re-implementation refreshes the pin
 final_failures: []             # re-executed after the pin refresh on the updated parent: python3 -m unittest discover -s tests -> no failing test
 acceptance_tests:
   AC-1:
