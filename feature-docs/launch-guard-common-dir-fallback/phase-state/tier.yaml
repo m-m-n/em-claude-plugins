@@ -1,0 +1,51 @@
+schema_version: 2
+feature: launch-guard-common-dir-fallback
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.03
+    confidence: 0.97
+    probabilities:
+      '0': 0.0
+      '1': 0.97
+      '2': 0.03
+      '3': 0.0
+  observed_at: '2026-11-01T14:11:58+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.35
+    confidence: 0.65
+    probabilities:
+      '0': 0.0
+      '1': 0.65
+      '2': 0.35
+      '3': 0.0
+  observed_at: '2026-11-01T14:13:44+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/hooks/queue_launch_guard.py
+  - tests/test_queue_launch_guard_linked_layout.py
+  - tests/test_merge_unverified_exit_doc_contract.py
+  changed_lines_approx: 80
+  new_functions_needed: 0
+  new_files_needed: []
+  new_dependencies_needed: []
+  covering_tests_exist: true
+  spillover_modules:
+  - tests/test_merge_unverified_exit_doc_contract.py
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 3
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  caller_and_dependency_count: 4
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: em-workflow/hooks/queue_launch_guard.py:151 は末尾名を確認せず親を返し、:204 の比較で不一致なら拒否する。呼出し元は
+    :171 と :334、Git取得処理は :137 と :201 にある。書込みを伴わない模擬実行で３構成とも拒否判定を確認した。tests/test_queue_launch_guard_linked_layout.py:281
+    に RecordingRunner、:538 に正規化、:605 に不一致時の拒否テストがあるが、対象３構成のテストはない。tests/test_merge_unverified_exit_doc_contract.py:960
+    と :986 が現在の sha256 を固定・検証している。行数と追加件数は概算
+decided_at: '2026-11-01T14:13:47+09:00'
