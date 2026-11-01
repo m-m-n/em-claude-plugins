@@ -1,7 +1,7 @@
 schema_version: 1
 feature: approval-unicode-whitespace
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: b681d58d584a6772f6f90621185750c945a7cea7
 last_input_digest: sha256:5327eeabaaf1e0499e9b3e85ad883f56bd56e0e930b34cc5a6f59f4ee7203c29
