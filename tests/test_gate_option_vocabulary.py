@@ -1136,8 +1136,16 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # and the sentence listing the operations permitted under `set` names
     # the replacement. The numbered application rules stay eighteen. Same
     # rationale: refresh, don't remove.
+    #
+    # Refreshed again by rework-docs-only-medium-fixes/task0004 (FR5): the
+    # "Tests replacement" subsection gains one paragraph stating that no ID
+    # may appear both as a `from` and as a `to` within one entry (chains and
+    # swaps are rejected as malformed, with or without `--dry-run-apply`)
+    # and that pairs sharing a `to` are not affected. The numbered
+    # application rules stay eighteen. Same rationale: refresh, don't
+    # remove.
     WORKFLOW_PATCH_SHA256 = (
-        "799f418ebe67c03f36506a4daed6b8e0d5e51f2f8d58ad7f4a9eac5384a1e4bd"
+        "9df879b81ea806447ea2da88ca26f96b282ee78da2e4b607aea3e7c8a657e5b9"
     )
     # Updated by goal-vs-spec-divergence/task0016 (review round1 rework),
     # which the user's SPEC.md/REQUIREMENTS.md Declared Change Set extension
@@ -1302,14 +1310,18 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # `_apply_tests_replace`. PINNED_VALIDATOR_TEST_LINE below is unaffected
     # and still asserted. Same rationale: refresh, don't remove.
     #
-    # Refreshed again by rework-docs-only-medium-fixes/task0003 (FR4):
-    # `_validate_tests_replace_entry` also rejects an entry whose
-    # `tests_replace` `from` set and `to` set share an ID (a chain or a
-    # swap), reported as `requirements_patch`. PINNED_VALIDATOR_TEST_LINE
-    # below is unaffected and still asserted. Same rationale: refresh,
-    # don't remove.
+    # Refreshed again by rework-docs-only-medium-fixes/task0001 (FR1, FR2,
+    # NFR1): `_validate_rework_index` judges each `covered_by_existing` ID
+    # through `_RenameAwareCoverage` -- a declared rename is accepted only
+    # when the baseline and post-change VERIFICATION.md (read by
+    # `_VerificationDiff`) confirm it, the old ID of a rename is never
+    # accepted, and with the diff every covered ID must exist in the
+    # post-change VERIFICATION.md; a non-string covered entry and a
+    # VERIFICATION.md that cannot be read as text are reported instead of
+    # raising. PINNED_VALIDATOR_TEST_LINE below is unaffected and still
+    # asserted. Same rationale: refresh, don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "f7d28776812548322fc081b15e54f909ef7f82a3904f3b785965147201cd5ce6"
+        "8227dcfe0dfe8ac74fd41bbf2a094456d23199ed055edb7ce0303c055e7f550f"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-

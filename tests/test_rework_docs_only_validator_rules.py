@@ -19,17 +19,16 @@ asserts only the validator's rendering of them):
   `payload.doc_corrections[].scenario_renames` pair maps a
   `verification_index` key (`from`) to it (`to`); otherwise code
   `rework-index`. Malformed declarations contribute no pair and never raise.
-
-- tests_replace overlap (FR4, TM-4, rework-docs-only-medium-fixes task0003):
-  a `requirements_patch` entry whose `set.tests_replace` has a `from` set and
-  a `to` set that share an ID (a chain TS-1->TS-2, TS-2->TS-3 or a swap
-  TS-1->TS-2, TS-2->TS-1) is reported with code `requirements_patch`, at the
-  structural layer (with and without `--dry-run-apply`, through both
-  `--kind workflow-patch` and `--kind worker-result`). Pairs that only share
-  a `to` are not rejected by this check. Malformed shapes never raise.
+- rename coverage backed by the document diff (rework-docs-only-medium-fixes,
+  task0001; FR1, FR2, NFR1): with `--feature-dir` / `--baseline-dir` (the
+  post-change and baseline VERIFICATION.md) a declared rename is accepted only
+  when both documents confirm it; without the diff no rename is accepted; the
+  old ID of a rename is never accepted; with the diff every covered ID must
+  exist in the post-change VERIFICATION.md. TestRenameCoverageDiff and
+  TestRenameDiffFixtures pin it.
 
 Standard-library imports only. The module reads the validator script and the
-fixtures under references/fixtures/worker-result/rework-planner/ that its
+fixtures under references/fixtures/worker-result/rework-planner/ that these
 tasks own.
 """
 
@@ -37,6 +36,7 @@ import ast
 import copy
 import importlib.util
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -447,9 +447,29 @@ class TestDocsOnlyImplementReset(unittest.TestCase):
 class TestRenameAwareCoverage(unittest.TestCase):
     PRE_RENAME_INDEX = {"TS3": ["FR1"]}
 
+    # rework-docs-only-medium-fixes/task0001 (D2): a declared rename is accepted
+    # only when the baseline and post-change VERIFICATION.md confirm it, so the
+    # tests below that expect an accepted rename pass the confirming pair of
+    # directories (baseline defines TS3, post-change defines TS-3 and not TS3).
+    # The tests that expect a rejection need no directories: without the diff no
+    # rename is accepted either. The diff itself is pinned by
+    # TestRenameCoverageDiff.
+    def _confirming_diff(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        tmp_path = Path(tmp.name)
+        _write_verification_md(tmp_path / "feature-dir", ["TS-3"])
+        _write_verification_md(tmp_path / "baseline-dir", ["TS3"])
+        plans = tmp_path / "feature-dir" / "tasks"
+        plans.mkdir()
+        (plans / "task0007.md").write_text(TASK_PLAN_TEXT, encoding="utf-8")
+        return {"feature_dir": tmp_path / "feature-dir", "baseline_dir": tmp_path / "baseline-dir"}
+
     def test_ac4_declared_rename_makes_the_renamed_id_covered(self):
         result = _rework_result(doc_corrections=[_correction(_rename("TS3", "TS-3"))])
-        self.assertEqual(_validate_result(result, self.PRE_RENAME_INDEX), [])
+        self.assertEqual(
+            _validate_result(result, self.PRE_RENAME_INDEX, **self._confirming_diff()), []
+        )
 
     def test_ac4_undeclared_rename_is_rejected_with_a_message_naming_the_missing_declaration(self):
         for label, kwargs in (
@@ -483,7 +503,9 @@ class TestRenameAwareCoverage(unittest.TestCase):
         result = _rework_result(
             doc_corrections=[_correction(_rename("TS8", "TS-8")), _correction(_rename("TS3", "TS-3"))]
         )
-        self.assertEqual(_validate_result(result, self.PRE_RENAME_INDEX), [])
+        self.assertEqual(
+            _validate_result(result, self.PRE_RENAME_INDEX, **self._confirming_diff()), []
+        )
 
     def test_ac4_id_that_is_a_verification_index_key_passes_without_any_declaration(self):
         self.assertEqual(_validate_result(_rework_result(), {"TS-3": ["FR1"]}), [])
@@ -492,7 +514,7 @@ class TestRenameAwareCoverage(unittest.TestCase):
         result = _rework_result(
             covered=("TS-3", "TS-7"), doc_corrections=[_correction(_rename("TS3", "TS-3"))]
         )
-        errors = _validate_result(result, self.PRE_RENAME_INDEX)
+        errors = _validate_result(result, self.PRE_RENAME_INDEX, **self._confirming_diff())
         self.assertEqual(_codes(errors), [REWORK_INDEX_CODE])
         self.assertIn("'TS-7'", errors[0]["message"])
 
@@ -536,7 +558,9 @@ class TestRenameAwareCoverage(unittest.TestCase):
                 _correction("junk", {"from": "TS3"}, _rename("TS3", "TS-3")),
             ]
         )
-        self.assertEqual(_validate_result(result, self.PRE_RENAME_INDEX), [])
+        self.assertEqual(
+            _validate_result(result, self.PRE_RENAME_INDEX, **self._confirming_diff()), []
+        )
 
     def test_ac5_malformed_shapes_through_the_cli_exit_1_not_2(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -573,17 +597,29 @@ FIXTURE_EXPECTED_CODES = {
 }
 
 
+def fixture_cli_args(case):
+    """The validator CLI arguments for one rework-planner fixture directory.
+    A `feature-dir/` and a `baseline-dir/` subdirectory, each independently
+    when it exists, become `--feature-dir` / `--baseline-dir`: they hold the
+    post-change and the baseline VERIFICATION.md. A fixture with neither runs
+    with the input and the envelope only."""
+    case_dir = FIXTURE_GROUP_DIR / case
+    args = [
+        "--kind", "worker-result",
+        "--worker", "rework-planner",
+        "--input", str(case_dir / "input.json"),
+        "--input-envelope", str(case_dir / "envelope.json"),
+    ]
+    for flag, dirname in (("--feature-dir", "feature-dir"), ("--baseline-dir", "baseline-dir")):
+        if (case_dir / dirname).is_dir():
+            args += [flag, str(case_dir / dirname)]
+    return args
+
+
 class TestFixtures(unittest.TestCase):
     def _run(self, case):
-        case_dir = FIXTURE_GROUP_DIR / case
-        return run_cli(
-            [
-                "--kind", "worker-result",
-                "--worker", "rework-planner",
-                "--input", str(case_dir / "input.json"),
-                "--input-envelope", str(case_dir / "envelope.json"),
-            ]
-        )
+        # passes feature-dir/ and baseline-dir/ when the fixture has them
+        return run_cli(fixture_cli_args(case))
 
     def test_ac6_the_six_fixtures_exist_with_input_and_envelope(self):
         self.assertEqual(len(FIXTURE_EXPECTED_CODES), 6)
@@ -640,421 +676,652 @@ class TestFixtures(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# tests_replace overlap (FR4): TestTestsReplaceOverlap
+# Rename-aware coverage backed by the document diff
+# (rework-docs-only-medium-fixes, task0001; rule: D2 -- FR1, FR2, NFR1)
+#
+# A covered_by_existing ID reached through a declared scenario rename is
+# accepted only when the baseline and post-change VERIFICATION.md confirm the
+# rename; the old ID of a rename is never accepted; with the diff available
+# every covered ID must exist in the post-change VERIFICATION.md.
 # ---------------------------------------------------------------------------
 
-REQUIREMENTS_PATCH_CODE = "requirements_patch"
-FIXTURES_ROOT = REPO_ROOT / "em-workflow" / "references" / "fixtures"
+# Each message of the rework-index rule carries a phrase no other message
+# carries, so a test can tell the rejections apart.
+MSG_NO_DECLARATION = "no declared rename"                                        # (a)
+MSG_DIFF_UNAVAILABLE = "document diff is unavailable"                            # (b)
+MSG_NOT_CONFIRMED = "is not confirmed by the VERIFICATION.md diff"               # (c)
+MSG_OLD_ID = "is the old ID of declared rename"                                  # (d)
+MSG_MISSING_FROM_POST = (
+    "is a verification_index key but is missing from the post-change VERIFICATION.md"
+)                                                                                # (e)
+MSG_UNREADABLE = "cannot be read as text"                                        # (f)
 
-CHAIN = [_rename("TS-1", "TS-2"), _rename("TS-2", "TS-3")]
-SWAP = [_rename("TS-1", "TS-2"), _rename("TS-2", "TS-1")]
-DISJOINT = [_rename("TS1", "TS-1"), _rename("TS2", "TS-2")]
-SHARED_TO = [_rename("TS1", "X"), _rename("TS2", "X")]
+ALL_MESSAGE_PHRASES = (
+    MSG_NO_DECLARATION,
+    MSG_DIFF_UNAVAILABLE,
+    MSG_NOT_CONFIRMED,
+    MSG_OLD_ID,
+    MSG_MISSING_FROM_POST,
+    MSG_UNREADABLE,
+)
 
-# new fixture -> (its tests_replace pairs, the IDs both sets share)
-OVERLAP_FIXTURES = {
-    "invalid-docs-only-round-tests-replace-chain": (CHAIN, ["TS-2"]),
-    "invalid-docs-only-round-tests-replace-swap": (SWAP, ["TS-1", "TS-2"]),
-}
-OVERLAP_SOURCE_FIXTURE = "valid-docs-only-round"
+NO_FILE = object()  # the directory exists but holds no VERIFICATION.md
+KEEP = object()     # the test already put something into the directory
 
-# (route, dry_run): the four ways the structural layer is reached
-ROUTES = [
-    (route, dry_run)
-    for route in ("workflow-patch", "worker-result")
-    for dry_run in (False, True)
-]
+TASK_PLAN_TEXT = """# Task Plan: task0007 -- Fix auth bypass
 
-OVERLAP_INDEX = {"TS-1": ["FR1"], "TS-2": ["FR1"], "TS-3": ["FR1"]}
+## Goal
+
+Fix the auth bypass.
+
+## Requirements
+
+FR1
+
+## Scope
+
+### Files to Create
+
+### Files to Modify
+- `src/auth.go` -- the fix
+
+## Design
+
+Small change.
+
+## Acceptance Criteria (MANDATORY)
+
+- [ ] AC-1: the bypass is closed
+
+## Test Notes
+
+None.
+
+## Out of Scope
+
+None.
+"""
+
+
+def _write_verification_md(dir_path, scenario_ids):
+    dir_path.mkdir(parents=True, exist_ok=True)
+    lines = [
+        "## Test Verification",
+        "",
+        "### Test Scenarios from SPEC.md",
+        "",
+        "| ID | Scenario | Expected | Layer |",
+        "|---|---|---|---|",
+    ]
+    lines.extend(f"| {tid} | scenario | outcome | Unit |" for tid in scenario_ids)
+    (dir_path / "VERIFICATION.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def _messages(errors):
     return [e["message"] for e in errors]
 
 
-def _replace_entry(pairs, contains=_ABSENT):
-    """One requirements_patch entry replacing tests by `pairs`. `contains`
-    defaults to every string `from`, so the expectation is never the defect."""
-    if contains is _ABSENT:
-        contains = [
-            p["from"] for p in pairs if isinstance(p, dict) and isinstance(p.get("from"), str)
-        ]
-    return {
-        "expected": {"tests_contains": copy.deepcopy(contains)},
-        "set": {"tests_replace": copy.deepcopy(pairs)},
-    }
+class TestRenameCoverageDiff(unittest.TestCase):
+    PRE_INDEX = {"TS3": ["FR1"]}
 
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.tmp = Path(tmp.name)
+        self.feature_dir = self.tmp / "feature-dir"
+        self.baseline_dir = self.tmp / "baseline-dir"
 
-def _replace_patch(entries):
-    """A docs-only-round append_rework patch (verify back to pending) that
-    carries `entries` as its requirements_patch."""
-    patch = _append_patch({}, [VERIFY_PENDING])
-    patch["requirements_patch"] = {"entries": copy.deepcopy(entries), "mode": "merge_entries"}
-    return patch
+    # -- builders -----------------------------------------------------------
 
+    def _make_dir(self, path, ids):
+        """Builds the directory afresh (sub-cases share one temporary
+        directory). None: the directory is not made (the option is not given).
+        NO_FILE: the directory exists without a VERIFICATION.md. KEEP: the
+        directory is left as the test made it. A list: the IDs the
+        VERIFICATION.md defines."""
+        if ids is KEEP:
+            return path
+        shutil.rmtree(path, ignore_errors=True)
+        if ids is None:
+            return None
+        path.mkdir(parents=True)
+        if ids is not NO_FILE:
+            _write_verification_md(path, ids)
+        return path
 
-def _dry_run_inputs(patch):
-    """`_dry_run_context` for `patch`, with a workflow.yaml that already
-    satisfies every `expected` of the patch (step statuses, the requirement's
-    current tests, the registered task ids below expected_next_task_id), so
-    the only thing --dry-run-apply can add is a finding about the patch
-    itself."""
-    bound, workflow, digest_source = _dry_run_context(patch)
-    step_patches = bound.get("step_patches")
-    for sp in step_patches if isinstance(step_patches, list) else []:
-        status = (sp.get("expected") or {}).get("status")
-        for step in workflow["workflow"]:
-            if status is not None and step["id"] == sp.get("step_id"):
-                step["status"] = status
-    entries = (bound.get("requirements_patch") or {}).get("entries") or {}
-    for fr_id, rpatch in entries.items():
-        contains = (rpatch.get("expected") or {}).get("tests_contains")
-        if isinstance(contains, list):
-            req = workflow["requirements"].setdefault(
-                fr_id, {"status": "ok", "tasks": [], "tests": [], "title": "x"}
-            )
-            req["tests"] = [c for c in contains if isinstance(c, str)]
-    next_id = int(bound["tasks_patch"]["expected_next_task_id"][len("task"):])
-    for n in range(2, next_id):
-        workflow["tasks"][f"task{n:04d}"] = copy.deepcopy(workflow["tasks"]["task0001"])
-    return bound, workflow, digest_source
-
-
-def _worker_result_with(patch):
-    result = _rework_result(entries={}, rework_index={}, step_patches=(VERIFY_PENDING,))
-    result["workflow_patch"] = copy.deepcopy(patch)
-    return result
-
-
-def _errors_via(route, dry_run, patch):
-    """In-process findings for `patch` on one of the four routes."""
-    if route == "workflow-patch":
-        if dry_run:
-            bound, workflow, digest_source = _dry_run_inputs(patch)
-            return VWO.validate_workflow_patch(
-                bound, workflow=workflow, digest_source=digest_source, dry_run=True
-            )
-        return VWO.validate_workflow_patch(copy.deepcopy(patch))
-    result = _worker_result_with(patch)
-    if dry_run:
-        bound, workflow, digest_source = _dry_run_inputs(patch)
-        result["workflow_patch"] = bound
-        return _validate_result(
-            result, OVERLAP_INDEX, workflow=workflow, digest_source=digest_source, dry_run=True
+    def _errors(
+        self,
+        *,
+        covered=("TS-3",),
+        renames=(("TS3", "TS-3"),),
+        index=None,
+        post=("TS-3",),
+        baseline=("TS3",),
+    ):
+        index = self.PRE_INDEX if index is None else index
+        doc_corrections = (
+            _ABSENT if renames is None else [_correction(*[_rename(f, t) for f, t in renames])]
         )
-    return _validate_result(result, OVERLAP_INDEX)
-
-
-def _cli_via(tmp_path, route, dry_run, document, envelope=None):
-    """Runs the validator CLI on `document` (a workflow patch for
-    `workflow-patch`, a worker result for `worker-result`)."""
-    document = copy.deepcopy(document)
-    args = ["--kind", route, "--worker", "rework-planner"]
-    if dry_run:
-        patch = document["workflow_patch"] if route == "worker-result" else document
-        bound, workflow, digest_source = _dry_run_inputs(patch)
-        if route == "worker-result":
-            document["workflow_patch"] = bound
-        else:
-            document = bound
-        (tmp_path / "workflow.json").write_text(json.dumps(workflow), encoding="utf-8")
-        (tmp_path / "digest-source.json").write_text(json.dumps(digest_source), encoding="utf-8")
-    (tmp_path / "input.json").write_text(json.dumps(document), encoding="utf-8")
-    args += ["--input", str(tmp_path / "input.json")]
-    if route == "worker-result":
-        envelope = _rework_envelope(OVERLAP_INDEX) if envelope is None else envelope
-        (tmp_path / "envelope.json").write_text(json.dumps(envelope), encoding="utf-8")
-        args += ["--input-envelope", str(tmp_path / "envelope.json")]
-    if dry_run:
-        args += [
-            "--workflow", str(tmp_path / "workflow.json"),
-            "--digest-source", str(tmp_path / "digest-source.json"),
-            "--dry-run-apply",
-        ]
-    return run_cli(args)
-
-
-def _read_fixture(case, name):
-    return json.loads((FIXTURE_GROUP_DIR / case / name).read_text(encoding="utf-8"))
-
-
-def _overlap_of(rpatch):
-    """The IDs a requirements_patch entry's tests_replace from set and to set
-    share, computed independently of the validator (string values of mapping
-    pairs only)."""
-    pairs = ((rpatch.get("set") or {}).get("tests_replace")) if isinstance(rpatch, dict) else None
-    pairs = [p for p in pairs if isinstance(p, dict)] if isinstance(pairs, list) else []
-    return {p["from"] for p in pairs if isinstance(p.get("from"), str)} & {
-        p["to"] for p in pairs if isinstance(p.get("to"), str)
-    }
-
-
-# tests_replace values (AC-6) that are not a well-formed list of pairs; each
-# must end as a requirements_patch finding, never as an exception
-MALFORMED_TESTS_REPLACE = {
-    "not a list: string": "TS-1",
-    "not a list: mapping": {"from": "TS-1", "to": "TS-2"},
-    "not a list: null": None,
-    "not a list: number": 3,
-    "not a list: bool": True,
-    "empty list": [],
-    "pair is a string": ["TS-1"],
-    "pair is null": [None],
-    "pair is a list": [["TS-1", "TS-2"]],
-    "pair is a number": [7],
-    "pair lacks from": [{"to": "TS-2"}],
-    "pair lacks to": [{"from": "TS-1"}],
-    "pair is empty": [{}],
-    "from is a number": [{"from": 1, "to": "TS-2"}],
-    "to is null": [{"from": "TS-1", "to": None}],
-    "from is a list (unhashable)": [{"from": ["TS-1"], "to": "TS-2"}],
-    "from is a mapping (unhashable)": [{"from": {"a": 1}, "to": "TS-2"}],
-    "to is a list (unhashable)": [{"from": "TS-1", "to": ["TS-2"]}],
-    "to is a mapping (unhashable)": [{"from": "TS-1", "to": {"a": 1}}],
-    "from and to are both unhashable": [{"from": ["TS-1"], "to": {"a": 1}}],
-    "a valid pair beside an unhashable one": [_rename("TS-1", "TS-2"), {"from": ["TS-2"], "to": "TS-3"}],
-}
-
-
-class TestTestsReplaceOverlap(unittest.TestCase):
-    def _entry_errors(self, pairs, **kwargs):
-        return VWO.validate_workflow_patch(_replace_patch({"FR1": _replace_entry(pairs, **kwargs)}))
-
-    def _assert_overlap_rejection(self, errors, overlap):
-        self.assertEqual(_codes(errors), [REQUIREMENTS_PATCH_CODE], errors)
-        self.assertIn("FR1", errors[0]["message"])
-        for test_id in overlap:
-            self.assertIn(test_id, errors[0]["message"])
-
-    # AC-1 -----------------------------------------------------------------
-
-    def test_ac1_chain_is_rejected_with_requirements_patch(self):
-        self._assert_overlap_rejection(self._entry_errors(CHAIN), ["TS-2"])
-
-    def test_ac1_chain_exits_1_with_the_code_through_the_cli(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            completed = _cli_via(Path(tmp), "workflow-patch", False, _replace_patch({"FR1": _replace_entry(CHAIN)}))
-            self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
-            self.assertEqual(_codes(json.loads(completed.stdout)["errors"]), [REQUIREMENTS_PATCH_CODE])
-
-    def test_ac1_only_the_overlapping_entry_is_named(self):
-        patch = _replace_patch(
-            {"FR1": _replace_entry(DISJOINT), "FR2": _replace_entry(CHAIN)}
+        result = _rework_result(covered=covered, doc_corrections=doc_corrections)
+        return VWO._validate_rework_index(
+            result["payload"]["rework_index"],
+            result["workflow_patch"],
+            _rework_envelope(index),
+            self._make_dir(self.feature_dir, post),
+            self._make_dir(self.baseline_dir, baseline),
+            payload=result["payload"],
         )
-        errors = VWO.validate_workflow_patch(patch)
-        self.assertEqual(_codes(errors), [REQUIREMENTS_PATCH_CODE])
-        self.assertIn("entries[FR2]", errors[0]["message"])
-        self.assertNotIn("FR1", errors[0]["message"])
 
-    def test_ac1_only_the_shared_ids_are_named_among_several_pairs(self):
-        pairs = [_rename("TS1", "TS-1"), _rename("TS-1", "TS-9"), _rename("TS7", "TS-7")]
-        errors = self._entry_errors(pairs)
-        self._assert_overlap_rejection(errors, ["TS-1"])
-        for other in ("TS1", "TS-9", "TS7", "TS-7"):
-            self.assertNotIn(repr(other), errors[0]["message"])
+    def _assert_one_rejection(self, errors, *phrases):
+        self.assertEqual(_codes(errors), [REWORK_INDEX_CODE], errors)
+        for phrase in phrases:
+            self.assertIn(phrase, errors[0]["message"])
 
-    # AC-2 -----------------------------------------------------------------
+    def _assert_only_phrase(self, errors, phrase):
+        """The one message carries `phrase` and none of the other messages' phrases."""
+        message = errors[0]["message"]
+        self.assertIn(phrase, message)
+        for other in ALL_MESSAGE_PHRASES:
+            if other != phrase:
+                self.assertNotIn(other, message)
 
-    def test_ac2_swap_is_rejected_with_requirements_patch(self):
-        self._assert_overlap_rejection(self._entry_errors(SWAP), ["TS-1", "TS-2"])
+    # -- AC-1: the four conditions (TS-1, TS-2, TS-3, TS-6) -----------------
 
-    def test_ac2_swap_exits_1_with_the_code_through_the_cli(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            completed = _cli_via(Path(tmp), "workflow-patch", False, _replace_patch({"FR1": _replace_entry(SWAP)}))
-            self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
-            self.assertEqual(_codes(json.loads(completed.stdout)["errors"]), [REQUIREMENTS_PATCH_CODE])
+    def test_ac1_ts6_rename_confirmed_by_both_documents_is_accepted(self):
+        self.assertEqual(self._errors(), [])
 
-    # AC-3 -----------------------------------------------------------------
+    def test_ac1_ts1_to_absent_from_the_post_change_document_is_rejected(self):
+        errors = self._errors(post=["TS-4"])
+        self._assert_one_rejection(
+            errors, "'TS3'", "'TS-3'", "'TS-3' is absent from the post-change VERIFICATION.md"
+        )
+        self._assert_only_phrase(errors, MSG_NOT_CONFIRMED)
 
-    def test_ac3_chain_and_swap_are_rejected_on_all_four_routes_in_process(self):
-        for label, pairs, overlap in (("chain", CHAIN, ["TS-2"]), ("swap", SWAP, ["TS-1", "TS-2"])):
-            patch = _replace_patch({"FR1": _replace_entry(pairs)})
-            for route, dry_run in ROUTES:
-                with self.subTest(pairs=label, route=route, dry_run=dry_run):
-                    errors = _errors_via(route, dry_run, patch)
-                    self._assert_overlap_rejection(errors, overlap)
-                    if route == "worker-result":
-                        self.assertIn("workflow_patch", errors[0]["message"])
+    def test_ac1_ts2_from_still_in_the_post_change_document_is_rejected(self):
+        errors = self._errors(post=["TS3", "TS-3"])
+        self._assert_one_rejection(
+            errors, "'TS3'", "'TS-3'", "'TS3' is still defined in the post-change VERIFICATION.md"
+        )
+        self._assert_only_phrase(errors, MSG_NOT_CONFIRMED)
 
-    def test_ac3_chain_and_swap_exit_1_on_all_four_routes_through_the_cli(self):
-        for label, pairs in (("chain", CHAIN), ("swap", SWAP)):
-            patch = _replace_patch({"FR1": _replace_entry(pairs)})
-            for route, dry_run in ROUTES:
-                with self.subTest(pairs=label, route=route, dry_run=dry_run):
-                    document = patch if route == "workflow-patch" else _worker_result_with(patch)
-                    with tempfile.TemporaryDirectory() as tmp:
-                        completed = _cli_via(Path(tmp), route, dry_run, document)
-                    self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
-                    self.assertEqual(
-                        _codes(json.loads(completed.stdout)["errors"]), [REQUIREMENTS_PATCH_CODE]
-                    )
+    def test_ac1_ts3_from_absent_from_the_baseline_document_is_rejected(self):
+        for label, baseline in (("empty baseline", []), ("no baseline VERIFICATION.md", NO_FILE)):
+            with self.subTest(case=label):
+                errors = self._errors(baseline=baseline)
+                self._assert_one_rejection(
+                    errors, "'TS3'", "'TS-3'", "'TS3' is absent from the baseline VERIFICATION.md"
+                )
+                self._assert_only_phrase(errors, MSG_NOT_CONFIRMED)
 
-    def test_ac3_each_fixtures_own_workflow_patch_is_rejected_with_and_without_dry_run(self):
-        for case in OVERLAP_FIXTURES:
-            patch = _read_fixture(case, "input.json")["workflow_patch"]
-            for dry_run in (False, True):
-                with self.subTest(case=case, dry_run=dry_run):
-                    with tempfile.TemporaryDirectory() as tmp:
-                        completed = _cli_via(Path(tmp), "workflow-patch", dry_run, patch)
-                    self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
-                    self.assertEqual(
-                        _codes(json.loads(completed.stdout)["errors"]), [REQUIREMENTS_PATCH_CODE]
-                    )
+    def test_ac1_from_that_is_not_a_verification_index_key_is_rejected(self):
+        errors = self._errors(renames=(("TS9", "TS-3"),), post=["TS-3"], baseline=["TS9"])
+        self._assert_one_rejection(
+            errors, "'TS9'", "'TS-3'", "'TS9' is not a verification_index key"
+        )
+        self._assert_only_phrase(errors, MSG_NOT_CONFIRMED)
 
-    def test_ac3_each_fixture_as_a_worker_result_is_rejected_with_and_without_dry_run(self):
-        for case in OVERLAP_FIXTURES:
-            result = _read_fixture(case, "input.json")
-            envelope = _read_fixture(case, "envelope.json")
-            for dry_run in (False, True):
-                with self.subTest(case=case, dry_run=dry_run):
-                    with tempfile.TemporaryDirectory() as tmp:
-                        completed = _cli_via(Path(tmp), "worker-result", dry_run, result, envelope)
-                    self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
-                    self.assertEqual(
-                        _codes(json.loads(completed.stdout)["errors"]), [REQUIREMENTS_PATCH_CODE]
-                    )
+    def test_ac1_every_declared_pair_with_the_same_to_must_be_confirmed(self):
+        index = {"TS3": ["FR1"], "TS4": ["FR1"]}
+        renames = (("TS3", "TS-3"), ("TS4", "TS-3"))
+        errors = self._errors(renames=renames, index=index, baseline=["TS3"])
+        self._assert_one_rejection(errors, "'TS4'", "'TS-3'", "'TS4' is absent from the baseline")
+        self.assertEqual(
+            self._errors(renames=renames, index=index, baseline=["TS3", "TS4"]), []
+        )
 
-    # AC-4 -----------------------------------------------------------------
+    def test_ac1_the_first_failed_condition_is_the_one_named(self):
+        # from is not a key AND to is absent from the post set: the key
+        # condition comes first.
+        errors = self._errors(renames=(("TS9", "TS-3"),), post=["TS-4"], baseline=["TS9"])
+        self._assert_one_rejection(errors, "'TS9' is not a verification_index key")
+        self.assertNotIn("absent from the post-change", errors[0]["message"])
 
-    def test_ac4_pairs_without_overlap_are_accepted_on_all_four_routes(self):
-        patch = _replace_patch({"FR1": _replace_entry(DISJOINT)})
-        for route, dry_run in ROUTES:
-            with self.subTest(route=route, dry_run=dry_run):
-                self.assertEqual(_errors_via(route, dry_run, patch), [])
+    def test_ac1_rename_is_judged_per_covered_id(self):
+        errors = self._errors(covered=("TS-3", "TS-7"), post=["TS-3"])
+        self.assertEqual(_codes(errors), [REWORK_INDEX_CODE])
+        self.assertIn("'TS-7'", errors[0]["message"])
+        self._assert_only_phrase(errors, MSG_NO_DECLARATION)
 
-    def test_ac4_valid_docs_only_round_fixture_is_accepted(self):
-        completed = run_cli(
-            [
-                "--kind", "worker-result",
-                "--worker", "rework-planner",
-                "--input", str(FIXTURE_GROUP_DIR / OVERLAP_SOURCE_FIXTURE / "input.json"),
-                "--input-envelope", str(FIXTURE_GROUP_DIR / OVERLAP_SOURCE_FIXTURE / "envelope.json"),
-            ]
+    # -- AC-2: the diff is unavailable (TS-4, TS-5) -------------------------
+
+    def test_ac2_ts4_missing_option_means_no_rename_is_accepted_and_the_message_names_it(self):
+        cases = (
+            ("neither option", None, None, ("--feature-dir", "--baseline-dir")),
+            ("no --baseline-dir", ["TS-3"], None, ("--baseline-dir",)),
+            ("no --feature-dir", None, ["TS3"], ("--feature-dir",)),
+        )
+        for label, post, baseline, named in cases:
+            with self.subTest(case=label):
+                errors = self._errors(post=post, baseline=baseline)
+                self._assert_one_rejection(errors, "'TS-3'", *named)
+                self._assert_only_phrase(errors, MSG_DIFF_UNAVAILABLE)
+                for flag in ("--feature-dir", "--baseline-dir"):
+                    if flag not in named:
+                        self.assertNotIn(flag, errors[0]["message"])
+
+    def test_ac2_ts5_feature_dir_without_a_verification_md_is_unavailable(self):
+        errors = self._errors(post=NO_FILE, baseline=["TS3"])
+        self._assert_one_rejection(errors, "'TS-3'", "feature-dir's VERIFICATION.md")
+        self._assert_only_phrase(errors, MSG_DIFF_UNAVAILABLE)
+        self.assertNotIn("--baseline-dir", errors[0]["message"])
+
+    def test_ac2_diff_unavailable_message_differs_from_the_no_declaration_message(self):
+        unavailable = self._errors(post=None, baseline=None)
+        undeclared = self._errors(renames=None, post=None, baseline=None)
+        self._assert_only_phrase(unavailable, MSG_DIFF_UNAVAILABLE)
+        self._assert_only_phrase(undeclared, MSG_NO_DECLARATION)
+        self.assertNotEqual(unavailable[0]["message"], undeclared[0]["message"])
+
+    def test_ac2_no_declaration_message_keeps_its_wording(self):
+        errors = self._errors(renames=None, post=["TS-3"], baseline=["TS3"])
+        self.assertEqual(
+            errors[0]["message"],
+            "task0007: covered_by_existing 'TS-3' not in verification_index, and no "
+            "declared rename maps it to the verification index "
+            "(payload.doc_corrections[].scenario_renames)",
+        )
+
+    # -- AC-3: the old ID of a rename (TS-7) --------------------------------
+
+    def test_ac3_ts7_from_of_a_declared_pair_is_rejected_with_the_diff(self):
+        errors = self._errors(covered=("TS3",), post=["TS-3"], baseline=["TS3"])
+        self._assert_one_rejection(errors, "'TS3'", "'TS-3'")
+        self._assert_only_phrase(errors, MSG_OLD_ID)
+
+    def test_ac3_ts7_from_of_a_declared_pair_is_rejected_without_the_diff(self):
+        errors = self._errors(covered=("TS3",), post=None, baseline=None)
+        self._assert_one_rejection(errors, "'TS3'", "'TS-3'")
+        self._assert_only_phrase(errors, MSG_OLD_ID)
+
+    def test_ac3_from_is_rejected_even_when_the_to_is_confirmed(self):
+        errors = self._errors(covered=("TS-3", "TS3"))
+        self._assert_one_rejection(errors, "'TS3'")
+        self._assert_only_phrase(errors, MSG_OLD_ID)
+
+    def test_ac3_from_is_rejected_when_the_diff_cannot_confirm_the_rename(self):
+        errors = self._errors(covered=("TS3",), post=["TS3", "TS-3"], baseline=["TS3"])
+        self._assert_one_rejection(errors)
+        self._assert_only_phrase(errors, MSG_OLD_ID)
+
+    # -- AC-4: every covered ID must exist after the change (TS-8, TS-9) -----
+
+    def test_ac4_ts8_verification_index_key_absent_from_the_post_set_is_rejected(self):
+        errors = self._errors(
+            covered=("TS-8",), renames=None, index={"TS-8": ["FR1"]}, post=["TS-1"], baseline=["TS-8"]
+        )
+        self._assert_one_rejection(errors, "'TS-8'")
+        self._assert_only_phrase(errors, MSG_MISSING_FROM_POST)
+
+    def test_ac4_unrelated_key_is_rejected_next_to_a_confirmed_rename(self):
+        errors = self._errors(
+            covered=("TS-3", "TS-8"),
+            index={"TS3": ["FR1"], "TS-8": ["FR1"]},
+            post=["TS-3"],
+        )
+        self._assert_one_rejection(errors, "'TS-8'")
+        self._assert_only_phrase(errors, MSG_MISSING_FROM_POST)
+
+    def test_ac4_verification_index_key_present_in_the_post_set_is_accepted(self):
+        errors = self._errors(
+            covered=("TS-8",), renames=None, index={"TS-8": ["FR1"]}, post=["TS-8"], baseline=["TS-8"]
+        )
+        self.assertEqual(errors, [])
+
+    def test_ac4_ts9_without_the_directories_a_key_is_accepted_as_before(self):
+        for label, post, baseline in (
+            ("neither option", None, None),
+            ("only --feature-dir", ["TS-1"], None),
+            ("only --baseline-dir", None, ["TS-8"]),
+            ("feature-dir without VERIFICATION.md", NO_FILE, ["TS-8"]),
+        ):
+            with self.subTest(case=label):
+                errors = self._errors(
+                    covered=("TS-8",),
+                    renames=None,
+                    index={"TS-8": ["FR1"]},
+                    post=post,
+                    baseline=baseline,
+                )
+                self.assertEqual(errors, [])
+
+    # -- AC-7: malformed input ends in an error, never an exception ----------
+
+    def test_ac7_non_string_covered_entries_are_reported_and_never_raise(self):
+        for label, post, baseline in (("with the diff", ["TS-3"], ["TS3"]), ("without", None, None)):
+            for bad in (3, None, ["TS-3"], {"id": "TS-3"}, True, 1.5):
+                with self.subTest(case=label, entry=repr(bad)):
+                    errors = self._errors(covered=(bad,), post=post, baseline=baseline)
+                    self._assert_one_rejection(errors, "not a string")
+
+    def test_ac7_a_non_string_entry_does_not_hide_the_judgement_of_the_others(self):
+        errors = self._errors(covered=(["TS-3"], "TS-3", "TS-7"))
+        self.assertEqual(_codes(errors), [REWORK_INDEX_CODE, REWORK_INDEX_CODE])
+        self.assertIn("not a string", errors[0]["message"])
+        self.assertIn("'TS-7'", errors[1]["message"])
+
+    def test_ac7_covered_by_existing_that_is_not_a_list_is_reported(self):
+        result = _rework_result(covered=())
+        result["payload"]["rework_index"]["task0007"]["covered_by_existing"] = "TS-3"
+        errors = VWO._validate_rework_index(
+            result["payload"]["rework_index"],
+            result["workflow_patch"],
+            _rework_envelope({"TS-3": ["FR1"]}),
+            None,
+            None,
+            payload=result["payload"],
+        )
+        self.assertEqual(_codes(errors), [REWORK_INDEX_CODE])
+        self.assertIn("covered_by_existing", errors[0]["message"])
+
+    def test_ac7_unreadable_verification_md_is_one_error_naming_the_file(self):
+        # Both rename (row 3) and key (row 2) need the post set; one error
+        # names the unreadable file and nothing is accepted on its strength.
+        self.feature_dir.mkdir()
+        (self.feature_dir / "VERIFICATION.md").mkdir()
+        errors = self._errors(
+            covered=("TS-3", "TS-8"),
+            index={"TS3": ["FR1"], "TS-8": ["FR1"]},
+            post=KEEP,
+            baseline=["TS3"],
+        )
+        self.assertEqual(_codes(errors), [REWORK_INDEX_CODE], errors)
+        self._assert_only_phrase(errors, MSG_UNREADABLE)
+        self.assertIn(str(self.feature_dir / "VERIFICATION.md"), errors[0]["message"])
+
+    def test_ac7_undecodable_post_change_verification_md_is_one_error_naming_the_file(self):
+        self.feature_dir.mkdir()
+        (self.feature_dir / "VERIFICATION.md").write_bytes(b"### Test Scenarios from SPEC.md\n\xff\xfe\x80 TS-3\n")
+        errors = self._errors(post=KEEP, baseline=["TS3"])
+        self.assertEqual(_codes(errors), [REWORK_INDEX_CODE], errors)
+        self._assert_only_phrase(errors, MSG_UNREADABLE)
+        self.assertIn(str(self.feature_dir / "VERIFICATION.md"), errors[0]["message"])
+
+    def test_ac7_undecodable_baseline_verification_md_is_one_error_naming_the_file(self):
+        self.baseline_dir.mkdir()
+        (self.baseline_dir / "VERIFICATION.md").write_bytes(b"\xff\xfe\x80\x81")
+        errors = self._errors(post=["TS-3"], baseline=KEEP)
+        self.assertEqual(_codes(errors), [REWORK_INDEX_CODE], errors)
+        self._assert_only_phrase(errors, MSG_UNREADABLE)
+        self.assertIn(str(self.baseline_dir / "VERIFICATION.md"), errors[0]["message"])
+
+    def test_ac7_an_unreadable_baseline_is_not_reported_when_no_id_needs_it(self):
+        # A verification_index key is judged against the post set only.
+        self.baseline_dir.mkdir()
+        (self.baseline_dir / "VERIFICATION.md").write_bytes(b"\xff\xfe\x80\x81")
+        errors = self._errors(
+            covered=("TS-8",), renames=None, index={"TS-8": ["FR1"]}, post=["TS-8"], baseline=KEEP
+        )
+        self.assertEqual(errors, [])
+
+    def test_ac7_an_unreadable_file_is_reported_for_new_scenarios_too(self):
+        self.feature_dir.mkdir()
+        (self.feature_dir / "VERIFICATION.md").write_bytes(b"\xff\xfe\x80\x81")
+        result = _rework_result(covered=())
+        result["payload"]["rework_index"]["task0007"]["new_scenarios"] = ["TS-9"]
+        result["workflow_patch"]["requirements_patch"] = {
+            "mode": "merge_entries",
+            "entries": {"FR1": {"expected": {}, "set": {"tests_append": ["TS-9"]}}},
+        }
+        errors = VWO._validate_rework_index(
+            result["payload"]["rework_index"],
+            result["workflow_patch"],
+            _rework_envelope({}),
+            self._make_dir(self.feature_dir, KEEP),
+            self._make_dir(self.baseline_dir, []),
+            payload=result["payload"],
+        )
+        self.assertEqual(_codes(errors), [REWORK_INDEX_CODE], errors)
+        self._assert_only_phrase(errors, MSG_UNREADABLE)
+
+    # -- AC-7 through the CLI: exit 1 with JSON error details, never exit 2 --
+
+    def _run_cli(self, result, index, *, post=("TS-3",), baseline=("TS3",)):
+        feature_dir = self._make_dir(self.feature_dir, post)
+        baseline_dir = self._make_dir(self.baseline_dir, baseline)
+        if feature_dir is not None:
+            (feature_dir / "tasks").mkdir(parents=True, exist_ok=True)
+            (feature_dir / "tasks" / "task0007.md").write_text(TASK_PLAN_TEXT, encoding="utf-8")
+        (self.tmp / "input.json").write_text(json.dumps(result), encoding="utf-8")
+        (self.tmp / "envelope.json").write_text(
+            json.dumps(_rework_envelope(index)), encoding="utf-8"
+        )
+        args = [
+            "--kind", "worker-result",
+            "--worker", "rework-planner",
+            "--input", str(self.tmp / "input.json"),
+            "--input-envelope", str(self.tmp / "envelope.json"),
+        ]
+        if feature_dir is not None:
+            args += ["--feature-dir", str(feature_dir)]
+        if baseline_dir is not None:
+            args += ["--baseline-dir", str(baseline_dir)]
+        return run_cli(args)
+
+    def _assert_rejected_with_json(self, completed, *phrases):
+        self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
+        errors = json.loads(completed.stdout)["errors"]
+        self.assertEqual(_codes(errors), [REWORK_INDEX_CODE] * len(errors))
+        self.assertTrue(errors)
+        for phrase in phrases:
+            self.assertTrue(any(phrase in m for m in _messages(errors)), (phrase, errors))
+        return errors
+
+    def test_ac7_cli_baseline_the_valid_rename_is_accepted_with_both_documents(self):
+        completed = self._run_cli(
+            _rework_result(doc_corrections=[_correction(_rename("TS3", "TS-3"))]), self.PRE_INDEX
         )
         self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
 
-    def test_ac4_pairs_sharing_a_to_are_not_rejected_by_this_check(self):
-        patch = _replace_patch({"FR1": _replace_entry(SHARED_TO)})
-        for route, dry_run in ROUTES:
-            with self.subTest(route=route, dry_run=dry_run):
-                self.assertEqual(_errors_via(route, dry_run, patch), [])
+    def test_ac7_cli_malformed_rename_declarations_exit_1_with_the_diff_available(self):
+        valid_pair = _rename("TS3", "TS-3")
+        malformed = {
+            "scenario_renames is a string": [{"scenario_renames": "TS3->TS-3"}],
+            "scenario_renames is a mapping": [{"scenario_renames": valid_pair}],
+            "scenario_renames is null": [{"scenario_renames": None}],
+            "pair is a string": [_correction("TS3->TS-3")],
+            "pair is null": [_correction(None)],
+            "pair is a list": [_correction(["TS3", "TS-3"])],
+            "pair lacks from": [_correction({"to": "TS-3"})],
+            "pair lacks to": [_correction({"from": "TS3"})],
+            "from is not a string": [_correction(_rename(3, "TS-3"))],
+            "to is not a string": [_correction(_rename("TS3", ["TS-3"]))],
+            "from is a list": [_correction(_rename(["TS3"], "TS-3"))],
+        }
+        for label, doc_corrections in malformed.items():
+            with self.subTest(case=label):
+                completed = self._run_cli(
+                    _rework_result(doc_corrections=doc_corrections), self.PRE_INDEX
+                )
+                self._assert_rejected_with_json(completed, MSG_NO_DECLARATION)
 
-    def test_ac4_overlap_is_judged_per_entry(self):
-        patch = _replace_patch(
-            {
-                "FR1": _replace_entry([_rename("TS-1", "TS-2")]),
-                "FR2": _replace_entry([_rename("TS-2", "TS-3")]),
-            }
-        )
-        self.assertEqual(VWO.validate_workflow_patch(patch), [])
+    def test_ac7_cli_non_string_covered_entry_exits_1_with_and_without_the_diff(self):
+        for label, post, baseline in (("with the diff", ("TS-3",), ("TS3",)), ("without", None, None)):
+            for bad in (3, None, ["TS-3"], {"id": "TS-3"}):
+                with self.subTest(case=label, entry=repr(bad)):
+                    result = _rework_result(covered=(bad,))
+                    completed = self._run_cli(result, self.PRE_INDEX, post=post, baseline=baseline)
+                    self._assert_rejected_with_json(completed, "not a string")
 
-    def test_ac4_no_existing_valid_fixture_has_overlapping_tests_replace(self):
-        seen_tests_replace = 0
-        for input_path in sorted(FIXTURES_ROOT.glob("*/*/valid-*/input.json")):
-            data = json.loads(input_path.read_text(encoding="utf-8"))
-            if not isinstance(data, dict):
-                continue
-            patch = data.get("workflow_patch") if isinstance(data.get("workflow_patch"), dict) else data
-            requirements_patch = patch.get("requirements_patch")
-            entries = requirements_patch.get("entries") if isinstance(requirements_patch, dict) else None
-            for fr_id, rpatch in (entries.items() if isinstance(entries, dict) else ()):
-                if isinstance(rpatch, dict) and "tests_replace" in (rpatch.get("set") or {}):
-                    seen_tests_replace += 1
-                with self.subTest(fixture=str(input_path.relative_to(FIXTURES_ROOT)), entry=fr_id):
-                    self.assertEqual(_overlap_of(rpatch), set())
-        self.assertGreater(seen_tests_replace, 0, "the scan found no valid fixture with tests_replace")
+    def test_ac7_cli_verification_md_that_is_a_directory_exits_1(self):
+        feature_dir = self._make_dir(self.feature_dir, NO_FILE)
+        (feature_dir / "VERIFICATION.md").mkdir()
+        result = _rework_result(doc_corrections=[_correction(_rename("TS3", "TS-3"))])
+        completed = self._run_cli(result, self.PRE_INDEX, post=KEEP, baseline=("TS3",))
+        errors = self._assert_rejected_with_json(completed, MSG_UNREADABLE)
+        self.assertEqual(len(errors), 1, errors)
 
-    # AC-5 -----------------------------------------------------------------
+    def test_ac7_cli_undecodable_verification_md_exits_1(self):
+        for which in ("feature", "baseline"):
+            with self.subTest(which=which):
+                bad_dir = self.feature_dir if which == "feature" else self.baseline_dir
+                bad_dir.mkdir(parents=True, exist_ok=True)
+                (bad_dir / "VERIFICATION.md").write_bytes(b"### Test Scenarios from SPEC.md\n\xff\xfe\x80\n")
+                result = _rework_result(doc_corrections=[_correction(_rename("TS3", "TS-3"))])
+                completed = self._run_cli(
+                    result,
+                    self.PRE_INDEX,
+                    post=KEEP if which == "feature" else ("TS-3",),
+                    baseline=KEEP if which == "baseline" else ("TS3",),
+                )
+                errors = self._assert_rejected_with_json(completed, MSG_UNREADABLE)
+                self.assertEqual(len(errors), 1, errors)
 
-    def test_ac5_the_two_fixtures_exist_with_input_and_envelope(self):
-        self.assertEqual(len(OVERLAP_FIXTURES), 2)
-        for case in OVERLAP_FIXTURES:
-            self.assertTrue(case.startswith("invalid-"))
+    def test_ac7_cli_new_scenarios_with_an_undecodable_verification_md_exits_1(self):
+        result = _rework_result(covered=())
+        result["payload"]["rework_index"]["task0007"]["new_scenarios"] = ["TS-9"]
+        result["workflow_patch"]["requirements_patch"] = {
+            "mode": "merge_entries",
+            "entries": {"FR1": {"expected": {}, "set": {"tests_append": ["TS-9"]}}},
+        }
+        self.feature_dir.mkdir()
+        (self.feature_dir / "VERIFICATION.md").write_bytes(b"\xff\xfe\x80\x81")
+        completed = self._run_cli(result, {}, post=KEEP, baseline=())
+        self._assert_rejected_with_json(completed, MSG_UNREADABLE)
+
+
+# ---------------------------------------------------------------------------
+# AC-5 / AC-6: the new fixtures and the runner that wires feature-dir /
+# baseline-dir (rework-docs-only-medium-fixes, task0001)
+# ---------------------------------------------------------------------------
+
+DECLARED_FIXTURE = "valid-mixed-round-renamed-scenario-declared"
+UNDECLARED_FIXTURE = "invalid-mixed-round-renamed-scenario-undeclared"
+
+# Fixtures that join the rework-planner group for FR1 / FR2. They stay out of
+# FIXTURE_EXPECTED_CODES, the set that test_ac6_no_fixture_uses_tests_replace
+# and the six-fixture count pin, and none of them contains tests_replace.
+RENAME_DIFF_FIXTURE_EXPECTED = {
+    "invalid-mixed-round-rename-to-missing": MSG_NOT_CONFIRMED,
+    "invalid-mixed-round-rename-without-diff": MSG_DIFF_UNAVAILABLE,
+    "invalid-mixed-round-rename-from-covered": MSG_OLD_ID,
+}
+
+
+def _fixture_json(case, name):
+    return json.loads((FIXTURE_GROUP_DIR / case / name).read_text(encoding="utf-8"))
+
+
+class TestRenameDiffFixtures(unittest.TestCase):
+    def test_ac5_the_three_fixtures_exist_with_input_and_envelope(self):
+        for case in RENAME_DIFF_FIXTURE_EXPECTED:
             for name in ("input.json", "envelope.json"):
                 with self.subTest(case=case, file=name):
                     self.assertTrue((FIXTURE_GROUP_DIR / case / name).is_file())
 
-    def test_ac5_the_fixtures_are_rejected_with_exit_1_and_only_requirements_patch(self):
-        for case, (_, overlap) in OVERLAP_FIXTURES.items():
+    def test_ac5_each_fixture_is_rejected_with_exit_1_and_rework_index(self):
+        for case, phrase in RENAME_DIFF_FIXTURE_EXPECTED.items():
             with self.subTest(case=case):
-                completed = run_cli(
-                    [
-                        "--kind", "worker-result",
-                        "--worker", "rework-planner",
-                        "--input", str(FIXTURE_GROUP_DIR / case / "input.json"),
-                        "--input-envelope", str(FIXTURE_GROUP_DIR / case / "envelope.json"),
-                    ]
-                )
+                completed = run_cli(fixture_cli_args(case))
                 self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
                 errors = json.loads(completed.stdout)["errors"]
-                self.assertEqual(_codes(errors), [REQUIREMENTS_PATCH_CODE])
-                self.assertIn("FR1", errors[0]["message"])
-                for test_id in overlap:
-                    self.assertIn(test_id, errors[0]["message"])
+                self.assertEqual(_codes(errors), [REWORK_INDEX_CODE], errors)
+                self.assertIn(phrase, errors[0]["message"])
 
-    def test_ac5_the_fixtures_stay_outside_the_set_that_forbids_tests_replace(self):
-        for case in OVERLAP_FIXTURES:
+    def test_ac5_no_new_fixture_uses_tests_replace(self):
+        for case in RENAME_DIFF_FIXTURE_EXPECTED:
             self.assertNotIn(case, FIXTURE_EXPECTED_CODES)
+            for path in (FIXTURE_GROUP_DIR / case).rglob("*"):
+                if path.is_file():
+                    with self.subTest(path=str(path.relative_to(FIXTURE_GROUP_DIR))):
+                        self.assertNotIn("tests_replace", path.read_text(encoding="utf-8"))
 
-    def test_ac5_each_fixture_differs_from_valid_docs_only_round_only_in_the_overlap(self):
-        source = _read_fixture(OVERLAP_SOURCE_FIXTURE, "input.json")
-        source_envelope = _read_fixture(OVERLAP_SOURCE_FIXTURE, "envelope.json")
-        for case, (pairs, _) in OVERLAP_FIXTURES.items():
+    def test_ac5_valid_fixture_carries_the_post_change_and_baseline_documents(self):
+        case_dir = FIXTURE_GROUP_DIR / DECLARED_FIXTURE
+        post = VWO.extract_verification_scenario_ids(
+            (case_dir / "feature-dir" / "VERIFICATION.md").read_text(encoding="utf-8")
+        )
+        baseline = VWO.extract_verification_scenario_ids(
+            (case_dir / "baseline-dir" / "VERIFICATION.md").read_text(encoding="utf-8")
+        )
+        self.assertIn("TS-3", post)
+        self.assertNotIn("TS3", post)
+        self.assertIn("TS3", baseline)
+
+    def test_ac5_to_missing_defines_every_other_id_but_not_the_renamed_to(self):
+        case_dir = FIXTURE_GROUP_DIR / "invalid-mixed-round-rename-to-missing"
+        declared = _fixture_json("invalid-mixed-round-rename-to-missing", "input.json")
+        pair = declared["payload"]["doc_corrections"][0]["scenario_renames"][0]
+        covered = declared["payload"]["rework_index"]["task0007"]["covered_by_existing"]
+        self.assertEqual(covered, [pair["to"]])
+        post = VWO.extract_verification_scenario_ids(
+            (case_dir / "feature-dir" / "VERIFICATION.md").read_text(encoding="utf-8")
+        )
+        baseline = VWO.extract_verification_scenario_ids(
+            (case_dir / "baseline-dir" / "VERIFICATION.md").read_text(encoding="utf-8")
+        )
+        self.assertNotIn(pair["to"], post)
+        self.assertNotIn(pair["from"], post)
+        self.assertIn(pair["from"], baseline)
+        self.assertIn(pair["from"], _fixture_json("invalid-mixed-round-rename-to-missing", "envelope.json")["verification_index"])
+
+    def test_ac5_without_diff_has_neither_directory(self):
+        case_dir = FIXTURE_GROUP_DIR / "invalid-mixed-round-rename-without-diff"
+        self.assertFalse((case_dir / "feature-dir").exists())
+        self.assertFalse((case_dir / "baseline-dir").exists())
+        self.assertEqual(
+            _fixture_json("invalid-mixed-round-rename-without-diff", "input.json"),
+            _fixture_json(DECLARED_FIXTURE, "input.json"),
+        )
+        self.assertEqual(
+            _fixture_json("invalid-mixed-round-rename-without-diff", "envelope.json"),
+            _fixture_json(DECLARED_FIXTURE, "envelope.json"),
+        )
+
+    def test_ac5_from_covered_differs_from_the_valid_fixture_only_by_the_from_id(self):
+        valid = _fixture_json(DECLARED_FIXTURE, "input.json")
+        derived = _fixture_json("invalid-mixed-round-rename-from-covered", "input.json")
+        covered = derived["payload"]["rework_index"]["task0007"]["covered_by_existing"]
+        self.assertEqual(
+            covered,
+            valid["payload"]["rework_index"]["task0007"]["covered_by_existing"] + ["TS3"],
+        )
+        valid["payload"]["rework_index"]["task0007"]["covered_by_existing"] = covered
+        self.assertEqual(valid, derived)
+        for dirname in ("feature-dir", "baseline-dir"):
+            self.assertTrue(
+                (FIXTURE_GROUP_DIR / "invalid-mixed-round-rename-from-covered" / dirname / "VERIFICATION.md").is_file()
+            )
+
+    def test_ac2_the_two_messages_of_the_pair_of_fixtures_differ_and_name_what_is_missing(self):
+        undeclared = json.loads(run_cli(fixture_cli_args(UNDECLARED_FIXTURE)).stdout)["errors"]
+        without_diff = json.loads(
+            run_cli(fixture_cli_args("invalid-mixed-round-rename-without-diff")).stdout
+        )["errors"]
+        self.assertEqual(_codes(undeclared), [REWORK_INDEX_CODE])
+        self.assertEqual(_codes(without_diff), [REWORK_INDEX_CODE])
+        self.assertNotEqual(undeclared[0]["message"], without_diff[0]["message"])
+        self.assertIn(MSG_NO_DECLARATION, undeclared[0]["message"])
+        self.assertIn(MSG_DIFF_UNAVAILABLE, without_diff[0]["message"])
+        self.assertNotIn(MSG_NO_DECLARATION, without_diff[0]["message"])
+        self.assertIn("--feature-dir", without_diff[0]["message"])
+        self.assertIn("--baseline-dir", without_diff[0]["message"])
+
+    def test_ac6_the_runner_passes_each_directory_that_exists_independently(self):
+        def flags(case):
+            args = fixture_cli_args(case)
+            return [a for a in args if a in ("--feature-dir", "--baseline-dir")]
+
+        self.assertEqual(flags(DECLARED_FIXTURE), ["--feature-dir", "--baseline-dir"])
+        self.assertEqual(flags(UNDECLARED_FIXTURE), [])
+        args = fixture_cli_args(DECLARED_FIXTURE)
+        self.assertEqual(
+            args[args.index("--feature-dir") + 1],
+            str(FIXTURE_GROUP_DIR / DECLARED_FIXTURE / "feature-dir"),
+        )
+        self.assertEqual(
+            args[args.index("--baseline-dir") + 1],
+            str(FIXTURE_GROUP_DIR / DECLARED_FIXTURE / "baseline-dir"),
+        )
+
+    def test_ac6_every_valid_rework_planner_fixture_is_accepted_with_exit_0(self):
+        cases = sorted(
+            p.name for p in FIXTURE_GROUP_DIR.iterdir() if p.is_dir() and p.name.startswith("valid-")
+        )
+        self.assertIn(DECLARED_FIXTURE, cases)
+        for case in cases:
             with self.subTest(case=case):
-                derived = _read_fixture(case, "input.json")
-                self.assertEqual(_read_fixture(case, "envelope.json"), source_envelope)
-                derived_entries = derived["workflow_patch"]["requirements_patch"]["entries"]
-                self.assertEqual(derived_entries["FR1"], _replace_entry(pairs))
-                source_entries = source["workflow_patch"]["requirements_patch"]["entries"]
-                derived_entries["FR1"] = source_entries["FR1"]
-                self.assertEqual(derived, source)
-
-    # AC-6 -----------------------------------------------------------------
-
-    def test_ac6_malformed_tests_replace_is_reported_never_raised_on_all_four_routes(self):
-        for label, value in MALFORMED_TESTS_REPLACE.items():
-            entry = {"expected": {"tests_contains": ["TS-1"]}, "set": {"tests_replace": value}}
-            patch = _replace_patch({"FR1": entry})
-            for route, dry_run in ROUTES:
-                with self.subTest(case=label, route=route, dry_run=dry_run):
-                    errors = _errors_via(route, dry_run, patch)
-                    self.assertTrue(errors, "a malformed tests_replace must be reported")
-                    self.assertEqual(set(_codes(errors)), {REQUIREMENTS_PATCH_CODE}, errors)
-
-    def test_ac6_malformed_tests_replace_exits_1_with_json_details_never_2(self):
-        for label in (
-            "not a list: string",
-            "pair is a list",
-            "pair lacks from",
-            "from is a list (unhashable)",
-            "from is a mapping (unhashable)",
-            "to is a list (unhashable)",
-            "from and to are both unhashable",
-        ):
-            entry = {
-                "expected": {"tests_contains": ["TS-1"]},
-                "set": {"tests_replace": MALFORMED_TESTS_REPLACE[label]},
-            }
-            patch = _replace_patch({"FR1": entry})
-            for route, dry_run in ROUTES:
-                with self.subTest(case=label, route=route, dry_run=dry_run):
-                    document = patch if route == "workflow-patch" else _worker_result_with(patch)
-                    with tempfile.TemporaryDirectory() as tmp:
-                        completed = _cli_via(Path(tmp), route, dry_run, document)
-                    self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
-                    errors = json.loads(completed.stdout)["errors"]
-                    self.assertEqual(set(_codes(errors)), {REQUIREMENTS_PATCH_CODE}, errors)
-
-    def test_ac6_a_malformed_pair_does_not_hide_an_overlap_nor_make_the_check_raise(self):
-        overlap_only = self._entry_errors(CHAIN)
-        self.assertEqual(_codes(overlap_only), [REQUIREMENTS_PATCH_CODE])
-        malformed = {"from": ["TS-9"], "to": {"a": 1}}
-        for extra in (malformed, None, "TS-9", {"from": "TS-9"}):
-            with self.subTest(extra=extra):
-                errors = self._entry_errors(CHAIN + [extra], contains=["TS-1", "TS-2"])
-                self.assertEqual(set(_codes(errors)), {REQUIREMENTS_PATCH_CODE})
-                self.assertIn(_messages(overlap_only)[0], _messages(errors))
-                self.assertGreater(len(errors), 1)
+                completed = run_cli(fixture_cli_args(case))
+                self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
 
 
 # ---------------------------------------------------------------------------

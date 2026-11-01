@@ -96,6 +96,7 @@ tasks:
     - em-workflow/scripts/validate-worker-output.py
     - tests/test_rework_docs_only_validator_rules.py
     - em-workflow/references/fixtures/**
+    - tests/test_gate_option_vocabulary.py
     skills:
     - backend-impl
     domains:
@@ -110,9 +111,9 @@ tasks:
     - NFR1
     - NFR2
     - NFR3
-    status: pending
+    status: merged
     notes: null
-    branch: null
+    branch: em-workflow/rework-docs-only-medium-fixes/task0001
   task0002:
     title: Docs-only round step_patches check
     plan: tasks/task0002.md
@@ -133,9 +134,9 @@ tasks:
     - NFR1
     - NFR2
     - NFR3
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/rework-docs-only-medium-fixes/task0002
   task0003:
     title: Reject overlapping tests_replace pairs
     plan: tasks/task0003.md
@@ -156,9 +157,9 @@ tasks:
     - NFR1
     - NFR2
     - NFR3
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/rework-docs-only-medium-fixes/task0003
   task0004:
     title: State the tightened rules in the SSOT documents
     plan: tasks/task0004.md
@@ -166,6 +167,7 @@ tasks:
     - em-workflow/references/rework-task-synthesis.md
     - em-workflow/references/contracts/rework-planner-contract.md
     - em-workflow/references/workflow-patch.md
+    - tests/test_gate_option_vocabulary.py
     skills: []
     domains:
     - api-contract
@@ -173,9 +175,9 @@ tasks:
     requirements:
     - FR5
     - NFR3
-    status: pending
+    status: merged
     notes: null
-    branch: null
+    branch: em-workflow/rework-docs-only-medium-fixes/task0004
 review:
   status: pending
   rounds_completed: 0
