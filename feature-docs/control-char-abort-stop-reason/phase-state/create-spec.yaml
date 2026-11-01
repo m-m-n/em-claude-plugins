@@ -4,7 +4,7 @@ phase: create-spec
 status: dispatching
 generation: 1
 base_revision: bf05a11074ad6ead2e6fc81572cd575cc28606f0
-last_input_digest: sha256:1bf4881cfba606a68a2978a628bac7f1d84de856edf623a272ccd9b1b8f103d4
+last_input_digest: sha256:3751874b3d7919166988d03ba4dc4850be69e91950ff7faa41c93d8fd13a7c39
 active_request_id: null
 packets: {}
 answers:
@@ -46,7 +46,19 @@ worker_runs:
     tests/test_failed_kind_batch_docs.py: sha256:2c1b3a206c423ea0de60e4b227d9325cd068598473bcf5969b8f2f66b7b7524b
     tests/test_stop_reason_catch_all.py: sha256:e4e4c16a37b5402cfe2c7d31ca1c0ab22077024d151f4daf39bf361d47da68f7
   self_write_set: []
-artifacts: []
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:3751874b3d7919166988d03ba4dc4850be69e91950ff7faa41c93d8fd13a7c39
+  output_digest: null
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/spec-writer-contract.md: sha256:9032c6287d75f4a88e556bd3962c32ab8b4905cf3b6ececa895206788bcd0b63
+    em-workflow/references/templates/spec-document.md: sha256:203dfcddbe507886ce861694fccd20ae25e5af0bd1b0efa5e935991add950cbd
+  self_write_set:
+  - feature-docs/control-char-abort-stop-reason/SPEC.md
+artifacts:
+- path: feature-docs/control-char-abort-stop-reason/SPEC.md
+  sha256: sha256:6eccf3cfc765dd9ba6318a06b12a788c63b8a6ee5a637678a35a2285456a5f30
+  produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
