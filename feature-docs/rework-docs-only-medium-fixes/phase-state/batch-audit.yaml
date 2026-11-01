@@ -1,0 +1,18 @@
+schema_version: 1
+feature: rework-docs-only-medium-fixes
+records:
+- question_id: requirement.rename-coverage.no-diff
+  packet_id: create-spec-q0001
+  answered_at: '2026-11-01T12:17:23+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - fail_closed
+  freeform: null
+  normalized_answer: fail_closed
+  resolution_note: 'relaxed route (category security, batch): options fail_closed / check_when_available;
+    chosen fail_closed; not chosen check_when_available; codex_consulted: true (codex entry); opus_escalation:
+    false. batch: create-spec.requirement-clarification -> codex_consultation (codex entry, 1 turn; category
+    security は batch の緩和経路で同じ相談に合流). Codex: fail_closed を推奨。レビュー提案が差分なしの拒否を明記しており、検証スクリプトでは --feature-dir
+    / --baseline-dir が任意で、オーケストレーターが常に両方を渡す規定も無い（em-workflow/scripts/validate-worker-output.py:2493、em-workflow/references/phases/create-plan-phase.md:315）。既存の成功例
+    fixture に feature-dir / baseline-dir を足せば受理を保てる。オーケストレーター判断: 採用。申告だけで架空の改名先が通る穴を閉じる方が安全側。'
