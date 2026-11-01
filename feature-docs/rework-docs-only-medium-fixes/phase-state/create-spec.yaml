@@ -4,7 +4,7 @@ phase: create-spec
 status: in_progress
 generation: 1
 base_revision: 1f85d3e0c1e36c2944d4f8c9c6bd31668b49948a
-last_input_digest: sha256:ba54617d00ed0a737fdf5641d516525c0e604bba072f30469c1beb6d19af3822
+last_input_digest: sha256:93d45b4f1aa7fe17c565f3af3693575021650a9cdb1465ae15137a4af4c41856
 active_request_id: null
 packets:
   create-spec-q0001:
@@ -149,6 +149,81 @@ worker_runs:
     tests/test_requirements_tests_replace.py: sha256:6b584b9a90dd28386c36d9ed268f7b1c5090d9716ec4e026ba0c9c528e1c3cd0
     tests/test_rework_docs_only_validator_rules.py: sha256:22dc072ee2c28af97ff99f074b825e8e6972eba5a4f18b0b4e68e462c107b2df
     tests/test_validate_worker_output.py: sha256:3181b6ac44db62138b2627d82b2211c49958069167701e37bf4cba44ad39a49b
+  self_write_set: []
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:93d45b4f1aa7fe17c565f3af3693575021650a9cdb1465ae15137a4af4c41856
+  dispatch_digest_inputs:
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    em-workflow/README.md: sha256:ad17deb2b788441758de76b7573771b0fab155518e5240e641e6ee2607f85413
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
+    em-workflow/references/contracts/rework-planner-contract.md: sha256:1dc8ef32fade0e611a7e105f960e5334de6946d8725899deae38fee42ca9e8aa
+    em-workflow/references/fixtures/worker-result/rework-planner/invalid-docs-only-round-resets-implement/envelope.json: sha256:137614fa0290b0723bb4f7d98f4ebd95b19d42df9e1e529bf5b0f8f285bf05c7
+    em-workflow/references/fixtures/worker-result/rework-planner/invalid-docs-only-round-resets-implement/input.json: sha256:571c90165615d56c3b2a6c2e3af90b130e74dab40410194801e4f7fa615d6e4e
+    em-workflow/references/fixtures/worker-result/rework-planner/invalid-missing-rework-index/envelope.json: sha256:137614fa0290b0723bb4f7d98f4ebd95b19d42df9e1e529bf5b0f8f285bf05c7
+    em-workflow/references/fixtures/worker-result/rework-planner/invalid-missing-rework-index/input.json: sha256:18c3fdd81d9dd54855aeb1b1e26fd633256e9a802db53c3fe76a9e9d25c4e3c5
+    em-workflow/references/fixtures/worker-result/rework-planner/invalid-missing-shared-contract-rationale/envelope.json: sha256:137614fa0290b0723bb4f7d98f4ebd95b19d42df9e1e529bf5b0f8f285bf05c7
+    em-workflow/references/fixtures/worker-result/rework-planner/invalid-missing-shared-contract-rationale/input.json: sha256:46eacfcde24c42cdf59dd5a087a443a66f6c070663b83ae126ce20a4d11d1224
+    em-workflow/references/fixtures/worker-result/rework-planner/invalid-mixed-round-renamed-scenario-undeclared/envelope.json: sha256:b5ff5c0f8e0061f467459fa4bbd6f20a9e0de7c6a281a294b9dc1616fe2c076c
+    em-workflow/references/fixtures/worker-result/rework-planner/invalid-mixed-round-renamed-scenario-undeclared/input.json: sha256:93618d773c9c9221a10521ee8b70b863f142edd727eb1a0e45e7a1e81bef6d08
+    em-workflow/references/fixtures/worker-result/rework-planner/invalid-new-scenarios-without-baseline/envelope.json: sha256:137614fa0290b0723bb4f7d98f4ebd95b19d42df9e1e529bf5b0f8f285bf05c7
+    em-workflow/references/fixtures/worker-result/rework-planner/invalid-new-scenarios-without-baseline/input.json: sha256:90f49c564f1517b5e1f885e4814bef7a38b7c53f408c913ad1f45d9f1e263580
+    em-workflow/references/fixtures/worker-result/rework-planner/invalid-rework-index-missing-task-entry/envelope.json: sha256:137614fa0290b0723bb4f7d98f4ebd95b19d42df9e1e529bf5b0f8f285bf05c7
+    em-workflow/references/fixtures/worker-result/rework-planner/invalid-rework-index-missing-task-entry/input.json: sha256:b47b93109aad11ee48243a33198e325a8fb1d958a1bf74e7cff06eb05bae6a3b
+    em-workflow/references/fixtures/worker-result/rework-planner/invalid-rework-index-unknown-task/envelope.json: sha256:137614fa0290b0723bb4f7d98f4ebd95b19d42df9e1e529bf5b0f8f285bf05c7
+    em-workflow/references/fixtures/worker-result/rework-planner/invalid-rework-index-unknown-task/input.json: sha256:27bb75240321bdb0a0c98a008f81bd6df4c3e73e1bcd0f47df30417a4deb24b7
+    em-workflow/references/fixtures/worker-result/rework-planner/invalid-task-files-code-and-feature-docs/envelope.json: sha256:137614fa0290b0723bb4f7d98f4ebd95b19d42df9e1e529bf5b0f8f285bf05c7
+    em-workflow/references/fixtures/worker-result/rework-planner/invalid-task-files-code-and-feature-docs/input.json: sha256:2a214b3db1092281ca3cf2b862061c8196e2c4a33188d8a980a82d0b9de82e9f
+    em-workflow/references/fixtures/worker-result/rework-planner/invalid-task-files-feature-docs-only/envelope.json: sha256:137614fa0290b0723bb4f7d98f4ebd95b19d42df9e1e529bf5b0f8f285bf05c7
+    em-workflow/references/fixtures/worker-result/rework-planner/invalid-task-files-feature-docs-only/input.json: sha256:a8fe5dfd71171cc50f3c13fc510449ddb43b815dcde7b8128efa9dc46e977b8d
+    em-workflow/references/fixtures/worker-result/rework-planner/valid-blocked/envelope.json: sha256:81a5c89480fa5ddde2e916f43466fb9ddf066432d312214ea4afd9aacabd20ff
+    em-workflow/references/fixtures/worker-result/rework-planner/valid-blocked/input.json: sha256:5aab465fbb47ab8770d8f401d68f27bed1bd7550955c51d256cc18927248458c
+    em-workflow/references/fixtures/worker-result/rework-planner/valid-completed/envelope.json: sha256:137614fa0290b0723bb4f7d98f4ebd95b19d42df9e1e529bf5b0f8f285bf05c7
+    em-workflow/references/fixtures/worker-result/rework-planner/valid-completed/input.json: sha256:9c1bfd347d4451888a19f31090552ff25123d4b512c810f721d294872b3e71ec
+    em-workflow/references/fixtures/worker-result/rework-planner/valid-docs-only-round/DRY_RUN_APPLY: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+    em-workflow/references/fixtures/worker-result/rework-planner/valid-docs-only-round/digest-source.json: sha256:13ffb08de236fb8f752cd85f3d470c1d220bbdef430a4b7b88553e9c9b0a3e62
+    em-workflow/references/fixtures/worker-result/rework-planner/valid-docs-only-round/envelope.json: sha256:1c6159fcd74c14c75e419b83231f0b2d25909375c5e4d3f6a3189b610e1850c3
+    em-workflow/references/fixtures/worker-result/rework-planner/valid-docs-only-round/input.json: sha256:623e180e11025f10d893a182ea68f30c8c8953217624c93128cbe5ae478d1120
+    em-workflow/references/fixtures/worker-result/rework-planner/valid-docs-only-round/workflow.json: sha256:c154da919bbfa99b080d94190819c5f5346eb87ff25777f7a9bac5e8597a9f63
+    em-workflow/references/fixtures/worker-result/rework-planner/valid-failed/envelope.json: sha256:81a5c89480fa5ddde2e916f43466fb9ddf066432d312214ea4afd9aacabd20ff
+    em-workflow/references/fixtures/worker-result/rework-planner/valid-failed/input.json: sha256:1dc04c2b4386bb6d1a094c52ab1b4028c9570eefde8c3c33e6c1eed9d493920c
+    em-workflow/references/fixtures/worker-result/rework-planner/valid-invalid-input/envelope.json: sha256:81a5c89480fa5ddde2e916f43466fb9ddf066432d312214ea4afd9aacabd20ff
+    em-workflow/references/fixtures/worker-result/rework-planner/valid-invalid-input/input.json: sha256:77547e6588f32ed7368a0d71c4bc4d08df537875a479b8476aa00c55f2730fea
+    em-workflow/references/fixtures/worker-result/rework-planner/valid-mixed-round-renamed-scenario-declared/envelope.json: sha256:b5ff5c0f8e0061f467459fa4bbd6f20a9e0de7c6a281a294b9dc1616fe2c076c
+    em-workflow/references/fixtures/worker-result/rework-planner/valid-mixed-round-renamed-scenario-declared/input.json: sha256:7a01c4701df4e6ce891ef725efc0fb0a56fa4c7b1aa809a4417c1adc9d138629
+    em-workflow/references/fixtures/worker-result/rework-planner/valid-needs-user-input/envelope.json: sha256:1e044ce4aa3e226b9e07ed1b69856009bbb7c03342de9a15730f36eb38449b46
+    em-workflow/references/fixtures/worker-result/rework-planner/valid-needs-user-input/input.json: sha256:e059be578f0a2c93a3b3aabb27e575820cd31af700aa0109b250760ab60b96bc
+    em-workflow/references/fixtures/worker-result/rework-planner/valid-stale-input/envelope.json: sha256:81a5c89480fa5ddde2e916f43466fb9ddf066432d312214ea4afd9aacabd20ff
+    em-workflow/references/fixtures/worker-result/rework-planner/valid-stale-input/input.json: sha256:3aee1e14f1d3c896c102322eee8c27303d04f806eebe70e0b400a40d1a50aa32
+    em-workflow/references/fixtures/worker-result/rework-planner/valid-task-files-code-only/envelope.json: sha256:137614fa0290b0723bb4f7d98f4ebd95b19d42df9e1e529bf5b0f8f285bf05c7
+    em-workflow/references/fixtures/worker-result/rework-planner/valid-task-files-code-only/input.json: sha256:d5e5140b91e310e1a1b7a5207533d9fa4e0c8a84bba1cfae12fe2b2174e580f0
+    em-workflow/references/fixtures/workflow-patch/append_rework/invalid-expected-status-mismatch/DRY_RUN_APPLY: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+    em-workflow/references/fixtures/workflow-patch/append_rework/invalid-expected-status-mismatch/digest-source.json: sha256:592fdf6c70c0318d2091d551ddc62c6b5c1fb0f4b9514de1c12b43cc47262e40
+    em-workflow/references/fixtures/workflow-patch/append_rework/invalid-expected-status-mismatch/input.json: sha256:17e56528a133cd8fa61ecb8f22116d81e648398c8ff58cb110626dfb8d662b74
+    em-workflow/references/fixtures/workflow-patch/append_rework/invalid-expected-status-mismatch/workflow.json: sha256:f5f032bddf34cd96847a81e0121bedf8bcf2e9c92b389e971051abf1b4e83b13
+    em-workflow/references/fixtures/workflow-patch/append_rework/invalid-missing-base-commit-preserve/input.json: sha256:e3180dea2a41dace0d0405fa14a57ff6286ce0ae7c7bb2b5dd38ad81aca6858e
+    em-workflow/references/fixtures/workflow-patch/append_rework/invalid-tests-replace-expected-mismatch/DRY_RUN_APPLY: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+    em-workflow/references/fixtures/workflow-patch/append_rework/invalid-tests-replace-expected-mismatch/digest-source.json: sha256:592fdf6c70c0318d2091d551ddc62c6b5c1fb0f4b9514de1c12b43cc47262e40
+    em-workflow/references/fixtures/workflow-patch/append_rework/invalid-tests-replace-expected-mismatch/input.json: sha256:37b598607fa4e7d5f6c150a249d4a5b554fba4fa4cca83040913d343b54741e8
+    em-workflow/references/fixtures/workflow-patch/append_rework/invalid-tests-replace-expected-mismatch/workflow.json: sha256:f4aa5039ed7df07d33faf6c05fc1e7d733cfc6159b0f1503fd3668ebbee2554f
+    em-workflow/references/fixtures/workflow-patch/append_rework/valid-append-legacy-failed-items-without-category/input.json: sha256:17e56528a133cd8fa61ecb8f22116d81e648398c8ff58cb110626dfb8d662b74
+    ? em-workflow/references/fixtures/workflow-patch/append_rework/valid-append-legacy-failed-items-without-category/workflow.json
+    : sha256:01902524fdb44ee5831930e414fc13ca6813fc788d370743179855fb9b4c65ae
+    em-workflow/references/fixtures/workflow-patch/append_rework/valid-append/input.json: sha256:17e56528a133cd8fa61ecb8f22116d81e648398c8ff58cb110626dfb8d662b74
+    em-workflow/references/fixtures/workflow-patch/append_rework/valid-dry-run-apply/DRY_RUN_APPLY: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+    em-workflow/references/fixtures/workflow-patch/append_rework/valid-dry-run-apply/digest-source.json: sha256:592fdf6c70c0318d2091d551ddc62c6b5c1fb0f4b9514de1c12b43cc47262e40
+    em-workflow/references/fixtures/workflow-patch/append_rework/valid-dry-run-apply/input.json: sha256:17e56528a133cd8fa61ecb8f22116d81e648398c8ff58cb110626dfb8d662b74
+    em-workflow/references/fixtures/workflow-patch/append_rework/valid-dry-run-apply/workflow.json: sha256:076cd8732d5c6f2925ecde82518d834f8557cd3663caa67458e4deb66dc9320b
+    em-workflow/references/rework-task-synthesis.md: sha256:2695a506222317e4a1a8247fd926f0a67df2c465b609d9955045a2b7d01cf6e0
+    em-workflow/references/workflow-patch.md: sha256:799f418ebe67c03f36506a4daed6b8e0d5e51f2f8d58ad7f4a9eac5384a1e4bd
+    em-workflow/scripts/validate-worker-output.py: sha256:1a3a10798f73463c9f47314fc95faee9060f5130219a853de2227616ffa964f9
+    feature-docs/rework-docs-only-task-routing/SPEC.md: sha256:3cee2d9153fd13f8fc60231cb5823820da7e296f7bf5affc10bde5fd7197bb07
+    feature-docs/rework-docs-only-task-routing/reviews/round1.yaml: sha256:593987ed6be86b425153f7ba83b7a00f3fe8ce3d1b66142c20c23d84bc71da3f
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+    tests/test_requirements_tests_replace.py: sha256:6b584b9a90dd28386c36d9ed268f7b1c5090d9716ec4e026ba0c9c528e1c3cd0
+    tests/test_rework_docs_only_validator_rules.py: sha256:22dc072ee2c28af97ff99f074b825e8e6972eba5a4f18b0b4e68e462c107b2df
+    tests/test_validate_worker_output.py: sha256:3181b6ac44db62138b2627d82b2211c49958069167701e37bf4cba44ad39a49b
+  output_digest: sha256:70725e39e57fd1a825d152de178e921b54e13fcf052ea7ecc03658c6249deb62
   self_write_set: []
 artifacts: []
 patches: []
