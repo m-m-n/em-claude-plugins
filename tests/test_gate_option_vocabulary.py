@@ -1301,8 +1301,19 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # `apply_patch` applies `tests_replace` before `tests_append` through
     # `_apply_tests_replace`. PINNED_VALIDATOR_TEST_LINE below is unaffected
     # and still asserted. Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by rework-docs-only-medium-fixes/task0001 (FR1, FR2,
+    # NFR1): `_validate_rework_index` judges each `covered_by_existing` ID
+    # through `_RenameAwareCoverage` -- a declared rename is accepted only
+    # when the baseline and post-change VERIFICATION.md (read by
+    # `_VerificationDiff`) confirm it, the old ID of a rename is never
+    # accepted, and with the diff every covered ID must exist in the
+    # post-change VERIFICATION.md; a non-string covered entry and a
+    # VERIFICATION.md that cannot be read as text are reported instead of
+    # raising. PINNED_VALIDATOR_TEST_LINE below is unaffected and still
+    # asserted. Same rationale: refresh, don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "1a3a10798f73463c9f47314fc95faee9060f5130219a853de2227616ffa964f9"
+        "8227dcfe0dfe8ac74fd41bbf2a094456d23199ed055edb7ce0303c055e7f550f"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-
