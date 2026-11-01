@@ -1,0 +1,36 @@
+schema_version: 1
+feature: launch-guard-common-dir-fallback
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: 381aecd5a61a6a040ece6f58882562d3090aa450
+last_input_digest: sha256:15c7c6819bd9a112fc4262e2631de0670febe74537cfb9b68e06f43532d16c0e
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: dispatched
+    input_digest: sha256:15c7c6819bd9a112fc4262e2631de0670febe74537cfb9b68e06f43532d16c0e
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache:
+  design_system_candidates:
+    resolved_at_generation: 1
+    paths: []
+    truncated: false
+  e2e:
+    resolved_at_generation: 1
+    paths: []
+  reference_scan_targets:
+    resolved_at_generation: 1
+    paths:
+      - em-workflow/hooks/queue_launch_guard.py
+      - tests/test_queue_launch_guard.py
+      - tests/test_queue_launch_guard_linked_layout.py
+      - tests/test_merge_unverified_exit_doc_contract.py
+      - tests/test_hook_classification_pin.py
+      - .claude/rules/hook-tests.md
+last_error: null
