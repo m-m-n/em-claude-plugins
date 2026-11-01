@@ -1,7 +1,7 @@
 schema_version: 1
 feature: hook-test-bytecode-suppression
 phase: create-plan
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: 9004f9c4d0f2eee9a691b9f7a5b5b8ad1c0346c2
 last_input_digest: sha256:59da37857f225a7254c436c1a24f38316f7bc123749bf258a972bd563f4bbce4
@@ -10,9 +10,9 @@ packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:59da37857f225a7254c436c1a24f38316f7bc123749bf258a972bd563f4bbce4
-  output_digest: null
+  output_digest: sha256:4e8ce82580199459d5ad905fdfe805064b03ccd1c18adfa51e391e0dcfa80baa
   dispatch_digest_inputs:
     em-workflow/references/contracts/planner-contract.md: sha256:6476cc99ea8a1d2d4f376d1702bd636b1ab9898655397ec80ab1d6fb47cbe9e8
     em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
@@ -25,8 +25,29 @@ worker_runs:
     feature-docs/hook-test-bytecode-suppression/REQUIREMENTS.md: sha256:46312290292585f4af71e8f0ce2ac5960220e809c5932614f08d641ef272908c
     feature-docs/hook-test-bytecode-suppression/SPEC.md: sha256:ed6728451e71da3e59a0eaf37a4f775bc06969297ab3c743db3a28578e30b5cd
     feature-docs/hook-test-bytecode-suppression/workflow.yaml: sha256:21c7f6c370c72df0fa2c5dac7a52880743574382f65a79b910d269e01be15434
-artifacts: []
-patches: []
+  self_write_set:
+  - feature-docs/hook-test-bytecode-suppression/IMPLEMENTATION.md
+  - feature-docs/hook-test-bytecode-suppression/THREAT-MODEL.md
+  - feature-docs/hook-test-bytecode-suppression/VERIFICATION.md
+  - feature-docs/hook-test-bytecode-suppression/tasks/task0001.md
+artifacts:
+- path: feature-docs/hook-test-bytecode-suppression/IMPLEMENTATION.md
+  sha256: sha256:0f15ecc18a398d0594ceca566e79fb8e539992ce1fee56637b871e2510bdce10
+  produced_by: create-plan-run-0001
+- path: feature-docs/hook-test-bytecode-suppression/VERIFICATION.md
+  sha256: sha256:05605c1a0cc645eb00e25e39019ab9f0b5730795afe76df12048e2bdbd650403
+  produced_by: create-plan-run-0001
+- path: feature-docs/hook-test-bytecode-suppression/THREAT-MODEL.md
+  sha256: sha256:e61ed57d1c996c2b29960ff79103326f66422048d59a4465375e602b99890775
+  produced_by: create-plan-run-0001
+- path: feature-docs/hook-test-bytecode-suppression/tasks/task0001.md
+  sha256: sha256:e7df36650ee4e7ae76ed0de7fc3295fd9cd119c2d54d9961c393d8470cddcc25
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: create-plan-p0001
+  status: validated
+  base_input_digest: sha256:59da37857f225a7254c436c1a24f38316f7bc123749bf258a972bd563f4bbce4
+  base_workflow_blob: 48122f5cc37c6b33f0ceaea9398a381b8c2553ac
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
