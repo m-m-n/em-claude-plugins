@@ -16,3 +16,16 @@ records:
     security は batch の緩和経路で同じ相談に合流). Codex: fail_closed を推奨。レビュー提案が差分なしの拒否を明記しており、検証スクリプトでは --feature-dir
     / --baseline-dir が任意で、オーケストレーターが常に両方を渡す規定も無い（em-workflow/scripts/validate-worker-output.py:2493、em-workflow/references/phases/create-plan-phase.md:315）。既存の成功例
     fixture に feature-dir / baseline-dir を足せば受理を保てる。オーケストレーター判断: 採用。申告だけで架空の改名先が通る穴を閉じる方が安全側。'
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-11-01T13:38:03+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'declined: tests/test_gate_option_vocabulary.py'
+  normalized_answer: 'declined: tests/test_gate_option_vocabulary.py'
+  resolution_note: 'task_id: task0003; declined deviation path tests/test_gate_option_vocabulary.py (sha256 pin refresh for
+    validate-worker-output.py); missing evidence part: the identifier of the acceptance criterion or requirement that
+    would otherwise be dropped (the report names only "the suite regresses", no AC-n or requirement id). Path shape check
+    and failure statement (test_validate_worker_output_py_byte_identical) were present. Not auto-added to tasks.task0003.files;
+    the same path is already declared by task0001 and task0004.'
