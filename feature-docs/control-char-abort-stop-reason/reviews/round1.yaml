@@ -1,0 +1,46 @@
+round: 1
+executed_at: "2026-11-02T00:47:57+09:00"
+scope:
+  review_mode: diff
+  base_commit: dc311c1083106f86e5db52396593267e258fe0c7
+  head_commit: 3a815662666e78e8a6a95d273243bf9976e56a0e
+  changed_files:
+    - em-workflow/references/batch-terminal-line.md
+    - test-docs/control-char-abort-stop-reason/task0001.tests.yaml
+    - tests/test_control_char_abort_stop_reason.py
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary: []
+  cross_validation: false
+perspective_runs:
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings: []
+evaluation:
+  round_summary: "ラウンド1（diff モード）。4 観点のレビューはすべて指摘ゼロ。評価者の独自確認: Precedence rule 段落の追記は implement-phase.md Step I.2.a の Control-character check 段落と一致し、段落は 1 ブロックのまま、カバレッジ表は 14 行、停止理由コードの追加なし。テストに埋め込んだ変更前本文は基準リビジョンと一致。新テスト 26 件と隣接文書テストを含む 326 件が成功。プラグインの version は変更なし。インジェクションの試みなし。軽い所見（指摘外）: Control-character check の終端ステータスコミットが exit-4 を 2 回返す場合は、段落冒頭の phase-specific 優先規則で docs_commit_conflict_aborted に決まり、SPEC A3 で範囲外。カバレッジ: security / architecture / spec / comprehensive いずれも corroborated。"
+  recommended_action: complete
+  action_rationale: "4 観点とも指摘ゼロで、評価者自身の確認でも裏付けが取れた。FR1〜FR3、NFR1〜NFR5 を満たし、新テストと隣接テストはすべて成功。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-control-char-abort-stop-reason-20261101T154741Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

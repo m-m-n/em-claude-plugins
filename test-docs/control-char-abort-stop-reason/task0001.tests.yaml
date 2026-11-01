@@ -1,0 +1,108 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_control_char_abort_stop_reason.TestBindingStated.test_binding_stated
+      - tests.test_control_char_abort_stop_reason.TestNegativeProofs.test_binding_matcher_rejects_an_affirmative_unmapped_stop_binding
+    red_confirmed: true
+    red_reason: >-
+      Against the live document before the edit (the paragraph equalled the
+      pre-change paragraph), TestBindingStated.test_binding_stated failed
+      with "AssertionError: 'Control-character check of Step I.2.a in
+      `references/implement-phase.md`' not found in <pre-change
+      paragraph>". The matcher is also pinned against the verbatim
+      pre-change constant by
+      TestNegativeProofs.test_binding_matcher_rejects_pre_change_paragraph,
+      and its no-affirmative-binding clause is proven non-vacuous by the
+      forged affirmative sample above.
+  AC-2:
+    tests:
+      - tests.test_control_char_abort_stop_reason.TestExceptionStated.test_exception_stated_after_exclusion_anchor
+      - tests.test_control_char_abort_stop_reason.TestNegativeProofs.test_exception_matcher_rejects_text_that_drops_the_confinement
+      - tests.test_control_char_abort_stop_reason.TestNegativeProofs.test_exception_matcher_rejects_an_exception_placed_before_the_anchor
+    red_confirmed: true
+    red_reason: >-
+      Against the live document before the edit,
+      TestExceptionStated.test_exception_stated_after_exclusion_anchor
+      failed with "AssertionError: -1 == -1 : named exception not found
+      after the exclusion anchor" (the exclusion anchor itself was present).
+      The matcher is also pinned against the verbatim pre-change constant by
+      TestNegativeProofs.test_exception_matcher_rejects_pre_change_paragraph.
+  AC-3:
+    tests:
+      - tests.test_control_char_abort_stop_reason.TestNegativeProofs.test_binding_matcher_rejects_pre_change_paragraph
+      - tests.test_control_char_abort_stop_reason.TestNegativeProofs.test_exception_matcher_rejects_pre_change_paragraph
+      - tests.test_control_char_abort_stop_reason.TestPreChangeSamplesAreTheRealText.test_paragraph_begins_with_the_label
+      - tests.test_control_char_abort_stop_reason.TestPreChangeSamplesAreTheRealText.test_paragraph_carries_existing_anchors
+      - tests.test_control_char_abort_stop_reason.TestPreChangeSamplesAreTheRealText.test_paragraph_has_no_blank_line
+      - tests.test_control_char_abort_stop_reason.TestPreChangeSamplesAreTheRealText.test_paragraph_does_not_name_the_control_character_check
+      - tests.test_control_char_abort_stop_reason.TestModuleHygiene.test_imports_only_the_standard_library
+      - tests.test_control_char_abort_stop_reason.TestModuleHygiene.test_document_path_is_relative_to_this_module
+    red_confirmed: false
+    red_reason: >-
+      The criterion describes properties of the new test module itself (its
+      imports, its document path, the negative proofs and the non-vacuity
+      guard over the frozen pre-change constant). They hold from the moment
+      the module exists and read no document text that the edit changes, so
+      none of these tests was ever observed failing. The red for the
+      statements the matchers assert is recorded under AC-1 and AC-2; the
+      negative proofs show the same failure deterministically against the
+      verbatim pre-change constant.
+  AC-4:
+    tests:
+      - tests.test_control_char_abort_stop_reason.TestStructuralGuards.test_paragraph_has_no_blank_line
+      - tests.test_control_char_abort_stop_reason.TestStructuralGuards.test_coverage_table_has_fourteen_rows_and_none_for_the_control_char_stop
+      - tests.test_control_char_abort_stop_reason.TestNegativeProofs.test_blank_line_guard_rejects_a_paragraph_with_a_blank_line_inserted
+      - tests.test_control_char_abort_stop_reason.TestNegativeProofs.test_blank_line_guard_rejects_an_empty_paragraph
+      - tests.test_control_char_abort_stop_reason.TestNegativeProofs.test_blank_line_guard_accepts_the_unforged_pre_change_paragraph
+      - tests.test_control_char_abort_stop_reason.TestNegativeProofs.test_table_guard_rejects_a_table_with_a_control_char_row_added
+      - tests.test_control_char_abort_stop_reason.TestNegativeProofs.test_table_guard_rejects_a_control_char_key_even_at_fourteen_rows
+      - tests.test_control_char_abort_stop_reason.TestNegativeProofs.test_table_guard_rejects_a_table_with_a_row_removed
+      - tests.test_control_char_abort_stop_reason.TestNegativeProofs.test_table_guard_accepts_the_unforged_pre_change_table
+      - tests.test_control_char_abort_stop_reason.TestPreChangeSamplesAreTheRealText.test_table_has_header_and_fourteen_data_rows
+      - tests.test_control_char_abort_stop_reason.TestPreChangeSamplesAreTheRealText.test_table_matches_the_live_document
+    red_confirmed: false
+    red_reason: >-
+      Regression guards over invariants that predate the edit (the
+      paragraph has no blank line; the coverage table has fourteen rows and
+      none for the control-character stop). The pre-change text already
+      satisfies them, so the live-document guards passed before the edit
+      and no red state occurred. They are proven non-vacuous instead by the
+      forged-sample tests above (a blank line inserted into the paragraph, a
+      control-character row added to the table, a control-character key at
+      fourteen rows, a row removed), each of which makes the guard raise,
+      and by the unforged pre-change samples, which the guards accept.
+  AC-5:
+    tests:
+      - tests.test_batch_stop_contract
+      - tests.test_abort_terminal_commit_precedence
+      - tests.test_failed_kind_batch_docs
+      - tests.test_no_work_required_stop
+      - tests.test_stop_reason_catch_all
+      - tests.test_canonical_worktree_path_docs
+    red_confirmed: false
+    red_reason: >-
+      The verifiable outcome is the exit status of
+      `python3 -m unittest discover -s tests` with the six neighbouring
+      pinned modules left unmodified. A dedicated new module is out of
+      scope, but the existing modules listed above read
+      `em-workflow/references/batch-terminal-line.md` (found by searching
+      tests/ for the path and the basename `batch-terminal-line.md`) and
+      detect a blank line, a moved exclusion anchor, a retired phrase, a
+      `no-work-required` mention or a changed coverage table in the
+      paragraph this task appends to; no red state occurred for this change,
+      because the appended text kept every one of those pins green.
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Change-set criterion, verified by inspecting `git diff --stat` and the
+      hunk of `em-workflow/references/batch-terminal-line.md` against the
+      starting commit, not by a test. Searching tests/ by the repository
+      relative path and by the basename `batch-terminal-line.md` finds only
+      modules that read the document's content; none inspects which files a
+      change set touches or whether a hunk consists of added lines, so no
+      existing test covers this criterion and no executable check exists
+      that could be made to fail first.
