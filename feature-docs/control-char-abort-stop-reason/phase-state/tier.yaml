@@ -1,0 +1,65 @@
+schema_version: 2
+feature: control-char-abort-stop-reason
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 0.99
+    confidence: 0.98
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.02
+      '1': 0.98
+      '2': 0.0
+      '3': 0.0
+  observed_at: '2026-11-01T23:59:20+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.07
+    confidence: 0.91
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.01
+      '1': 0.91
+      '2': 0.08
+      '3': 0.0
+  observed_at: '2026-11-02T00:01:24+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/references/batch-terminal-line.md
+  - tests/test_batch_stop_contract.py
+  changed_lines_approx: 20
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  work_still_required_evidence: em-workflow/references/batch-terminal-line.md:217
+    は今回の実行が書いた状態を除外している。em-workflow/references/implement-phase.md:408 は制御文字検査で failed/decision
+    を書き、:423 で停止条件3へ戻す。既存の絞り込みを残し、この経路を明示的に追加する必要がある。tests/test_batch_stop_contract.py:633
+    の既存検査は、この結びつきを検査していない
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 1
+  body_change_kind: wording_or_rule_addition
+  change_containment: single_module
+  caller_and_dependency_count: 0
+  changes_external_contract: true
+  changes_behavior: true
+decided_at: '2026-11-02T00:01:40+09:00'
