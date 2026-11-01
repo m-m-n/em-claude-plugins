@@ -1,0 +1,57 @@
+schema_version: 2
+feature: rework-docs-only-task-routing
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.06
+    confidence: 0.94
+    probabilities:
+      '0': 0.0
+      '1': 0.94
+      '2': 0.06
+      '3': 0.0
+  observed_at: '2026-11-01T01:19:35+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.54
+    confidence: 0.51
+    probabilities:
+      '0': 0.0
+      '1': 0.47
+      '2': 0.51
+      '3': 0.02
+  observed_at: '2026-11-01T01:22:01+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/agents/rework-planner.md
+  - em-workflow/references/rework-task-synthesis.md
+  - em-workflow/references/contracts/rework-planner-contract.md
+  - em-workflow/skills/develop/SKILL.md
+  - tests/test_wording_correction_route.py
+  - tests/test_rework_synthesis_contract.py
+  - tests/test_develop_skill_rewiring.py
+  changed_lines_approx: 180
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules:
+  - em-workflow/references/review-phase.md
+  - em-workflow/references/implement-phase.md
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 6
+  body_change_kind: wording_or_rule_addition
+  change_containment: multiple_modules
+  caller_and_dependency_count: 4
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: em-workflow/references/rework-task-synthesis.md:175-189 は要件とテストの対応変更を文言修正経路から除外し、通常合成か仕様変更へ送る。em-workflow/agents/rework-planner.md:11-14
+    は既存計画の書き換えを禁止し、em-workflow/references/contracts/rework-planner-contract.md:124-140
+    は新規タスク作成と限定的な文書拡張を定義する。em-workflow/agents/implementer.md:311-312 は feature-docs/**
+    の変更を禁止する。tests/test_wording_correction_route.py:118-164 は現行の除外条件と通常経路への復帰を検査し、tests/test_develop_skill_rewiring.py:276-331
+    は既存のタスク合成経路を検査する。文書限定修正を別経路で処理する回帰検証はこれらにない。
+decided_at: '2026-11-01T01:22:20+09:00'

@@ -866,7 +866,12 @@ verify step の status 遷移は対話時と変わらない）:
    検証・適用した patch の
    `step_patches` の中で implement / verify を `pending` に戻す（新しい
    rework task が 1 件以上 workflow.yaml へ登録されるまで戻さない — 同
-   SSOT Invariant 1）。タスク合成の中身（grouping / task ID 割当 /
+   SSOT Invariant 1）。ただし rework-planner の検証済みの結果が文書のみの回
+   （`${CLAUDE_PLUGIN_ROOT}/references/rework-task-synthesis.md` の
+   `### Docs-only correction route`、文書のみ修正経路）の場合は、適用した
+   patch は `verify` だけを `pending` に戻し、`implement` は `completed` の
+   まま残して、この変更を commit-docs.sh でコミットする。
+   タスク合成の中身（grouping / task ID 割当 /
    metadata 導出 / 検証カバレッジ等）は同 SSOT が定義し、ここでは繰り返さ
    ない。pass → `completed`
    （batch: 確認せず自動 rework。cap 判定は次段落「batch 自動 rework の
@@ -875,7 +880,12 @@ verify step の status 遷移は対話時と変わらない）:
    `${CLAUDE_PLUGIN_ROOT}/references/rework-task-synthesis.md` に従って
    patch を検証・適用して implement / verify を `pending` に戻す
    （`implement` の `pending` 復帰は同 patch の中で行う — 別書き込みには
-   しない）。どちらか一方でも到達していれば rework を回さず、
+   しない）。ただし rework-planner の検証済みの結果が文書のみの回
+   （`${CLAUDE_PLUGIN_ROOT}/references/rework-task-synthesis.md` の
+   `### Docs-only correction route`、文書のみ修正経路）の場合は、自動 rework でも
+   適用した patch は `verify` だけを `pending` に戻し、`implement` は
+   `completed` のまま残して、この変更を commit-docs.sh でコミットする。
+   どちらか一方でも到達していれば rework を回さず、
    `verify.status` は `failed` のまま走行を停止せず retrospect フェーズへ
    進む。残った `failed_items` に `deferred` を与えない）。
    いずれの分岐も workflow.yaml 更新後に commit-docs.sh でコミットする
@@ -1058,6 +1068,12 @@ retrospect の各更新でその都度 integration worktree に commit-docs.sh
 | `retrospect` | `retrospect` が `completed` に達し、コミット済み（Step C（完了処理）はここでは実行せず、独立した 1 フェーズとして次の起動に持ち越す） | Step C（完了処理） |
 | verify 失敗時の rework | rework パッチを適用し、`implement` と `verify` を `pending` に戻し、コミット済み | `implement` |
 | 自動再エントリ | ルーティングパッチを適用してコミット済み（implement I.2.c の `create-plan` → `needs_update`、rework の spec-change 遷移による `create-spec` → `needs_update`、またはアップグレード手順による `create-spec` → `needs_update` / `create-plan` → `needs_update`） | 再エントリした step |
+
+文書のみの回（`${CLAUDE_PLUGIN_ROOT}/references/rework-task-synthesis.md` の
+`### Docs-only correction route`）の verify rework も、上の表の「verify 失敗時の
+rework」行と同じ境界でターンを終える。patch を適用して `verify` を `pending` に
+戻し（`implement` は `completed` のまま）、コミット済みになった時点で終え、
+次の起動は `verify` から再開する。
 
 **非境界**: `--once` は implement フェーズの途中ではターンを終えない
 （in-flight の実装者がプロセス終了で失われるため）。停止条件 5 の待機ターン、

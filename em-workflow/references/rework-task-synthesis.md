@@ -104,6 +104,14 @@ already point to); this document does not restate that vocabulary. The
 `files` rule of the section cited in Section 6 applies on top of the
 meaning-derived `files`.
 
+**Feature-docs files rule**: a rework-synthesized task's `files` contain no
+path whose first path segment is exactly `feature-docs`. The segments are
+taken with `\` treated as `/` and with empty and `.` segments dropped (the
+normalization the validator already applies to allowed-root containment).
+The rule applies to the entries of an `append_rework` patch only. Planning
+documents under that directory change through the Docs-only correction
+route (Section 9), never through an implementer task.
+
 ## 8. Verification coverage rules
 
 Every rework task MUST declare its verification coverage in
@@ -158,8 +166,9 @@ first; the trigger that caused rework does not substitute for it.
 | Document | Update condition |
 |---|---|
 | `tasks/taskNNNN.md` | Always created, one per synthesized task |
-| `VERIFICATION.md` | Per Section 8's coverage rules |
-| `IMPLEMENTATION.md` | Only when the rework task introduces a NEW shared contract (interface, data format) with an existing task; the synthesizing worker always emits `payload.shared_contract_rationale` (summary of what was added, or why nothing needed adding) regardless of which branch it took, so the decision has a human-readable trail |
+| Existing `tasks/*.md` | Changed only through the docs-only correction route below |
+| `VERIFICATION.md` | Per Section 8's coverage rules, or the docs-only correction route below |
+| `IMPLEMENTATION.md` | Only when the rework task introduces a NEW shared contract (interface, data format) with an existing task, or through the docs-only correction route below; the synthesizing worker always emits `payload.shared_contract_rationale` (summary of what was added, or why nothing needed adding) regardless of which branch it took, so the decision has a human-readable trail |
 | `SPEC.md` / `REQUIREMENTS.md` | Never updated by this synthesis; a rework that needs a SPEC change takes the transition in Section 10 instead |
 
 ### Wording-correction route
@@ -185,15 +194,64 @@ document-update channel with no task synthesized, `create-plan` is NOT set
 to `needs_update`, and no workflow patch touching planning is produced.
 
 **Guard**: failing any ONE of the three conditions above makes this route
-inapplicable, and the change instead goes through rework-task synthesis or
-the SPEC-change transition (Section 10). Each condition names the concrete
+inapplicable, and the change instead goes to the Docs-only correction route
+below; a change that route does not accept goes through rework-task synthesis
+or the SPEC-change transition (Section 10). Each condition names the concrete
 artefact whose change disqualifies the route, so a change that turns out to
 have touched, for example, requirement metadata is recognizable after the
 fact rather than only by the intent behind it.
 
 **Ordering**: this route is checked first; only a change that fails it can
-reach the SPEC-change transition and, through it, the classification gate
+reach the Docs-only correction route below, and only a change that fails that
+route as well can reach rework-task synthesis or the SPEC-change transition
+and, through the transition, the classification gate
 (`references/question-resolution.md`).
+
+### Docs-only correction route
+
+A needed change that fails the Wording-correction route above is checked next
+against this route, before it is routed to rework-task synthesis or to the
+SPEC-change transition (Section 10).
+
+**Scope**: a needed change that fails the Wording-correction route's
+eligibility and is resolved by changing only `VERIFICATION.md`,
+`IMPLEMENTATION.md` and existing `tasks/*.md` under `feature-docs/{feature}/`,
+and the requirement test references (the `tests` of a requirement) in
+`workflow.yaml`. A change that needs `SPEC.md` or `REQUIREMENTS.md` stays with
+the SPEC-change transition (Section 10); this route never changes either.
+
+**Decision order**: Wording-correction route -> Docs-only correction route ->
+rework-task synthesis / SPEC-change transition. A change takes the first route
+in this order whose conditions it meets.
+
+**Result of a docs-only round**: no task is synthesized. The rework-planner
+corrects the documents itself, as
+`references/contracts/rework-planner-contract.md` states (cited, not
+restated). Requirement test references change through the tests replacement
+of `references/workflow-patch.md` (cited, not restated). The patch returns
+only the origin step to `pending`: `verify` for verify-sourced rework,
+`review` for review-sourced rework. This route does not return `implement` to
+`pending`. Invariant 1 (Section 11) governs a transition that returns
+`implement` to `pending` and is therefore not engaged by this route.
+
+**Mixed round**: a round that holds both code corrections and docs-only
+corrections. Docs-only items are corrected directly by the rework-planner;
+code items become tasks under the grouping rules of Section 4. A round with at
+least one task returns `implement` and the origin step to `pending`, as before.
+The origin-step-only result above is limited to docs-only rounds, which
+register no task.
+
+**Declaration**: every correction made through this route, in a docs-only
+round or in a mixed round, is declared in `payload.doc_corrections`, which
+`references/contracts/rework-planner-contract.md` defines (cited, not
+restated).
+
+**Consistency with the specification**: every change this route makes keeps
+the changed document consistent with `SPEC.md` and `REQUIREMENTS.md`, which
+this route never changes. A correction that would make a scenario or
+acceptance criterion check less than `SPEC.md` or `REQUIREMENTS.md` require
+is not a docs-only correction; it continues to rework-task synthesis or the
+SPEC-change transition (Section 10).
 
 ## 10. Workflow state transition
 
@@ -332,6 +390,11 @@ Machine-checkable rules a validator applies against the synthesis output:
 - Every synthesized task appears as a key in `rework_index`.
 - Every ID listed in a task's `covered_by_existing` exists in the input's
   `verification_index`.
+- Rename-aware coverage: a `covered_by_existing` ID that is not itself a key
+  of `verification_index` is still accepted when some `scenario_renames` pair
+  declared in `payload.doc_corrections` has it as `to` and that pair's `from`
+  is a key of `verification_index`; any other ID is rejected with the code
+  `rework-index`. This refines the previous rule for renamed scenarios only.
 - Every ID listed in a task's `new_scenarios` exists in the VERIFICATION.md
   diff the synthesis produced.
 - When `new_scenarios` is non-empty, the same IDs also appear in the
@@ -342,6 +405,13 @@ Machine-checkable rules a validator applies against the synthesis output:
   current feature directory is rejected outright, fail-closed, distinctly
   from a claim rejected merely because no baseline directory was supplied
   (Section 8a).
+- No synthesized task's `files` (an `append_rework` entry) contains a path
+  whose first path segment is exactly `feature-docs`, with `\` treated as `/`
+  and with empty and `.` segments dropped (Section 7).
+- An `append_rework` patch whose `tasks_patch.entries` is absent or empty
+  never returns `implement` to `pending`: its `step_patches` hold one entry,
+  for the origin step only, and none targets `implement` (Section 9,
+  Docs-only correction route).
 
 ## 13. Execution adapter
 

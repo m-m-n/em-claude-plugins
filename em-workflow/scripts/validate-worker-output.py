@@ -200,6 +200,7 @@ ROUTEBACK_RECORD_FIELD = "routeback_failed_journal_line"
 REQUIREMENTS_PATCH_SET_KEYS = {
     "tasks_append",
     "tests_append",
+    "tests_replace",
     "status",
     "tbd_reason",
     "excluded_reason",
@@ -1314,6 +1315,78 @@ def validate_task_entry(task_id, entry, mode, registries, workflow):
             errors.append(err("provenance", f"{p}.provenance must be a mapping"))
         elif provenance.get("source") not in ("review", "verify"):
             errors.append(err("provenance", f"{p}.provenance.source must be 'review' or 'verify'"))
+        # rework-docs-only-task-routing/task0004 (FR3, TM-1): `append` is the
+        # mode bound to `append_rework`, so this is the rework-synthesized
+        # task entry; `replace_planning` entries are never checked. A path
+        # is a planning document when its first normalized segment
+        # (path_segments: `\` as `/`, empty and `.` dropped) is exactly
+        # `feature-docs` -- exact segment equality, so `feature-docs-archive/x`
+        # and `src/feature-docs/x` pass. The rule's prose is owned by
+        # references/rework-task-synthesis.md, cited not restated.
+        for f in files:
+            if isinstance(f, str) and path_segments(f)[:1] == ["feature-docs"]:
+                errors.append(
+                    err(
+                        "rework-task-feature-docs",
+                        f"{p}.files entry {f!r} is a feature-docs planning document; "
+                        "a rework-synthesized task's files must not reach feature-docs/**",
+                    )
+                )
+    return errors
+
+
+def _validate_tests_replace_entry(fr_id, rpatch):
+    """rework-docs-only-task-routing/task0003 (FR2, FR4): the structural
+    half of the `requirements_patch` tests replacement
+    (references/workflow-patch.md, `requirements_patch` section, owns the
+    operation; IMPLEMENTATION.md D3 owns the binding). For one requirement
+    entry: `set.tests_replace`, when present, is a non-empty list of
+    mappings with non-empty string `from` and `to`, `from` different from
+    `to`, no `from` repeated, and every `from` listed in the entry's
+    `expected.tests_contains`; `expected.tests_contains`, when present, is
+    a list of strings (also without any replacement beside it). Every
+    finding carries the code `requirements_patch`. Malformed input is a
+    finding, never an exception: nothing here is hashed or indexed before
+    it is known to be a string, and a non-mapping `set` / `expected` is
+    left to the checks that already report it."""
+    errors = []
+    p = f"requirements_patch.entries[{fr_id}]"
+    expected = rpatch.get("expected")
+    if not isinstance(expected, dict):
+        expected = {}
+    listed = []
+    contains_malformed = False
+    if "tests_contains" in expected:
+        value = expected["tests_contains"]
+        if isinstance(value, list) and all(isinstance(i, str) for i in value):
+            listed = value
+        else:
+            contains_malformed = True
+            errors.append(err("requirements_patch", f"{p}.expected.tests_contains must be a list of strings"))
+    set_block = rpatch.get("set")
+    if not isinstance(set_block, dict) or "tests_replace" not in set_block:
+        return errors
+    pairs = set_block["tests_replace"]
+    if not isinstance(pairs, list) or not pairs:
+        errors.append(err("requirements_patch", f"{p}.set.tests_replace must be a non-empty list of from/to pairs"))
+        return errors
+    seen_from = set()
+    for i, pair in enumerate(pairs):
+        q = f"{p}.set.tests_replace[{i}]"
+        if not isinstance(pair, dict):
+            errors.append(err("requirements_patch", f"{q} must be a mapping with 'from' and 'to'"))
+            continue
+        old, new = pair.get("from"), pair.get("to")
+        if not (isinstance(old, str) and old and isinstance(new, str) and new):
+            errors.append(err("requirements_patch", f"{q} 'from' and 'to' must be non-empty strings"))
+            continue
+        if old == new:
+            errors.append(err("requirements_patch", f"{q} 'from' and 'to' must differ ({old!r})"))
+        if old in seen_from:
+            errors.append(err("requirements_patch", f"{q} repeats 'from' {old!r} within one entry"))
+        seen_from.add(old)
+        if not contains_malformed and old not in listed:
+            errors.append(err("requirements_patch", f"{q} 'from' {old!r} must be listed in {p}.expected.tests_contains"))
     return errors
 
 
@@ -1410,6 +1483,7 @@ def validate_workflow_patch(
             for k in set_block:
                 if k not in REQUIREMENTS_PATCH_SET_KEYS:
                     errors.append(err("requirements_patch", f"requirements_patch.entries[{fr_id}].set has disallowed key {k!r}"))
+            errors.extend(_validate_tests_replace_entry(fr_id, rpatch))
 
     step_patches = data.get("step_patches")
     if step_patches is None:
@@ -1429,6 +1503,29 @@ def validate_workflow_patch(
             errors.append(err("step_patches", f"step_patches[{i}].set may only contain 'status'"))
         if workflow is not None and sp.get("step_id") not in workflow_step_ids(workflow):
             errors.append(err("step_patches", f"step_patches[{i}].step_id {sp.get('step_id')!r} does not exist in workflow.yaml"))
+
+    # rework-docs-only-task-routing/task0004 (FR5, TM-2): a docs-only round
+    # is recognized by empty task entries (no new patch field marks it), so
+    # an `append_rework` patch whose `tasks_patch.entries` is absent or empty
+    # must not return `implement` to `pending` -- implement stays completed.
+    # "Empty" follows this function's own reading of `entries` above
+    # (`tasks_patch.get("entries") or {}`). Structural layer: runs with and
+    # without --dry-run-apply. The rule's prose is owned by
+    # references/rework-task-synthesis.md ("Docs-only correction route"),
+    # cited not restated.
+    if operation == "append_rework" and not tasks_patch.get("entries"):
+        for i, sp in enumerate(step_patches):
+            if not isinstance(sp, dict) or sp.get("step_id") != "implement":
+                continue
+            sp_set = sp.get("set")
+            if isinstance(sp_set, dict) and sp_set.get("status") == "pending":
+                errors.append(
+                    err(
+                        "docs-only-implement-reset",
+                        f"step_patches[{i}] sets implement to 'pending' on an append_rework patch "
+                        "with no tasks_patch.entries (a docs-only round); implement must stay completed",
+                    )
+                )
 
     preserve = data.get("preserve")
     if preserve is None:
@@ -1499,6 +1596,21 @@ def _validate_dry_run_apply(data, *, workflow, digest_source, phase_state, featu
             current_tasks = (workflow.get("requirements", {}).get(fr_id) or {}).get("tasks") or []
             if not set(tasks_contains).issubset(current_tasks):
                 errors.append(err("expected-mismatch", f"requirements_patch.entries[{fr_id}].expected.tasks_contains not satisfied by current workflow.yaml"))
+        # rework-docs-only-task-routing/task0003 (FR4): the tests
+        # replacement's expectation (workflow-patch.md, `requirements_patch`
+        # section) -- every listed ID must be in the requirement's current
+        # `tests`. A malformed `tests_contains` is reported by the
+        # structural layer; it contributes nothing here.
+        tests_contains = expected.get("tests_contains")
+        if isinstance(tests_contains, list):
+            current_reqs = workflow.get("requirements")
+            current_req = current_reqs.get(fr_id) if isinstance(current_reqs, dict) else None
+            current_tests = current_req.get("tests") if isinstance(current_req, dict) else None
+            if not isinstance(current_tests, list):
+                current_tests = []
+            absent = [i for i in tests_contains if i not in current_tests]
+            if absent:
+                errors.append(err("expected-mismatch", f"requirements_patch.entries[{fr_id}].expected.tests_contains {absent!r} not satisfied by current workflow.yaml"))
 
     # Rule 5 / 5.5.1: replace_all permission conditions. Two permitted
     # paths (workflow-patch.md "replace_all permission conditions"):
@@ -1657,6 +1769,30 @@ def _validate_dry_run_apply(data, *, workflow, digest_source, phase_state, featu
     return errors
 
 
+def _apply_tests_replace(tests, pairs):
+    """rework-docs-only-task-routing/task0003 (FR4): the in-memory
+    application of a requirement entry's `set.tests_replace`
+    (workflow-patch.md, `requirements_patch` section). Pairs are applied in
+    their listed order. Each `from` found in `tests` is replaced by its `to`
+    at the same position; when `to` is already present, `from` is removed
+    and `to` is not duplicated; a `from` that is absent leaves `tests`
+    unchanged. Returns a new list. A malformed `tests` or pair is skipped,
+    never raised on (the structural layer reports it)."""
+    current = list(tests) if isinstance(tests, list) else []
+    for pair in pairs if isinstance(pairs, list) else []:
+        if not isinstance(pair, dict):
+            continue
+        old, new = pair.get("from"), pair.get("to")
+        if not (isinstance(old, str) and isinstance(new, str)) or old == new or old not in current:
+            continue
+        if new in current:
+            current = [t for t in current if t != old]
+        else:
+            position = current.index(old)
+            current = current[:position] + [new] + [t for t in current[position + 1:] if t != old]
+    return current
+
+
 def apply_patch(workflow, patch):
     """A minimal, in-memory simulation of 5.5.5's application rules, used
     only to check post-application structure and preserve invariance under
@@ -1699,7 +1835,14 @@ def apply_patch(workflow, patch):
     for fr_id, rpatch in (requirements_patch.get("entries") or {}).items():
         req = requirements.setdefault(fr_id, {})
         set_block = rpatch.get("set") or {}
+        # tests_replace is applied before tests_append within one entry
+        # (workflow-patch.md, `requirements_patch` section), whatever the
+        # order of the keys in the entry.
+        if "tests_replace" in set_block:
+            req["tests"] = _apply_tests_replace(req.get("tests"), set_block["tests_replace"])
         for key, value in set_block.items():
+            if key == "tests_replace":
+                continue
             if key == "tasks_append":
                 req["tasks"] = list(req.get("tasks") or []) + list(value)
             elif key == "tests_append":
@@ -2051,7 +2194,14 @@ def validate_worker_result(
     # --- rework_index coverage (5.4.4) ---
     if worker == "rework-planner" and status == "completed":
         errors.extend(
-            _validate_rework_index(payload.get("rework_index") or {}, workflow_patch, envelope, feature_dir, baseline_dir)
+            _validate_rework_index(
+                payload.get("rework_index") or {},
+                workflow_patch,
+                envelope,
+                feature_dir,
+                baseline_dir,
+                payload=payload,
+            )
         )
 
     return errors
@@ -2182,9 +2332,45 @@ def _validate_task_plans_against_patch(workflow_patch, feature_dir):
     return errors
 
 
-def _validate_rework_index(rework_index, workflow_patch, envelope, feature_dir, baseline_dir):
+def _declared_scenario_renames(payload):
+    """rework-docs-only-task-routing/task0004 (FR6, FR7, TM-5): the rename
+    relation the rework-planner declared in
+    `payload.doc_corrections[].scenario_renames`, as a set of
+    `(from, to)` pairs. The validator consumes only `scenario_renames`
+    (`doc_corrections` itself stays optional); a malformed declaration
+    contributes no pair and never raises -- `doc_corrections` not a list,
+    an entry not a mapping, `scenario_renames` not a list, a pair not a
+    mapping, or a pair whose `from` / `to` is not a non-blank string."""
+    pairs = set()
+    doc_corrections = payload.get("doc_corrections") if isinstance(payload, dict) else None
+    if not isinstance(doc_corrections, list):
+        return pairs
+    for correction in doc_corrections:
+        if not isinstance(correction, dict):
+            continue
+        renames = correction.get("scenario_renames")
+        if not isinstance(renames, list):
+            continue
+        for pair in renames:
+            if not isinstance(pair, dict):
+                continue
+            old_id, new_id = pair.get("from"), pair.get("to")
+            if isinstance(old_id, str) and old_id.strip() and isinstance(new_id, str) and new_id.strip():
+                pairs.add((old_id, new_id))
+    return pairs
+
+
+def _validate_rework_index(rework_index, workflow_patch, envelope, feature_dir, baseline_dir, payload=None):
     errors = []
     verification_index = (envelope or {}).get("verification_index") or {}
+    # Rename-aware coverage rule (rework-docs-only-task-routing/task0004):
+    # a `covered_by_existing` ID that is not a verification_index key passes
+    # only when a declared pair maps one of those keys (`from`) to it
+    # (`to`). `payload` is the result's payload; None (a caller that has no
+    # payload) declares nothing.
+    renamed_to_existing = {
+        new_id for (old_id, new_id) in _declared_scenario_renames(payload) if old_id in verification_index
+    }
 
     # bs10 (round 2, validator half): without a baseline directory there is
     # nothing to diff VERIFICATION.md against, so "new" cannot be verified --
@@ -2239,8 +2425,15 @@ def _validate_rework_index(rework_index, workflow_patch, envelope, feature_dir, 
         if not covered and not new_sc:
             errors.append(err("rework-index", f"{task_id}: covered_by_existing and new_scenarios are both empty"))
         for cid in covered:
-            if cid not in verification_index:
-                errors.append(err("rework-index", f"{task_id}: covered_by_existing {cid!r} not in verification_index"))
+            if cid not in verification_index and cid not in renamed_to_existing:
+                errors.append(
+                    err(
+                        "rework-index",
+                        f"{task_id}: covered_by_existing {cid!r} not in verification_index, and no "
+                        "declared rename maps it to the verification index "
+                        "(payload.doc_corrections[].scenario_renames)",
+                    )
+                )
         if new_sc and baseline_dir is None:
             errors.append(
                 err(

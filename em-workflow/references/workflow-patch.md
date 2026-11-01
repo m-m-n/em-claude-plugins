@@ -182,8 +182,38 @@ requirements_patch:
 ```
 
 The only operations permitted under `set` are the `_append` forms of
-`tasks` and `tests`, and direct assignment of `status`, `tbd_reason`, and
+`tasks` and `tests`, the `tests_replace` replacement of scenario IDs in
+`tests`, and direct assignment of `status`, `tbd_reason`, and
 `excluded_reason`. No other field of a requirements entry is patchable.
+
+### Tests replacement
+
+```yaml
+requirements_patch:
+  mode: merge_entries
+  entries:
+    FR3:
+      expected: { tests_contains: [TS3] }
+      set: { tests_replace: [{ from: TS3, to: TS-3 }] }
+```
+
+`tests_replace` replaces scenario IDs in the requirement's `tests`. Its value
+is a non-empty list of pairs, each a mapping with `from` (the old ID) and
+`to` (the new ID), both non-empty strings, `from` different from `to`, and
+no `from` repeated within one requirement entry.
+
+The `expected` key `tests_contains` is a list of scenario IDs. Every `from`
+of an entry's `tests_replace` must also be listed in that same entry's
+`tests_contains`, so a replacement never skips the expectation check; an
+entry that replaces an ID it does not list there is rejected as malformed.
+Application rule 3 below covers `tests_contains` like every other `expected`
+value: when any listed ID is absent from the requirement's current `tests`,
+the patch is rejected with `expected-mismatch`.
+
+Applying an entry replaces each `from` by its `to` at the same position in
+`tests`; when `to` is already present, `from` is removed and `to` is not
+duplicated. Within one entry, `tests_replace` is applied before
+`tests_append`.
 
 ## `step_patches` (array)
 

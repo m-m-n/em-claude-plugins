@@ -1,0 +1,34 @@
+feature: rework-docs-only-task-routing
+collected_at: "2026-11-01T06:49:00+09:00"
+session_ids: [01a193ee-6fbf-75cd-bb36-b10767cf0772]
+signals:
+  review_critical_high: []
+  conflict_reworks:
+    - {task: task0003, retries: 1}
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の最終読みがバケット 2（0.51）とバケット 1（0.47）に割れ、閾値行により full を採用した"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.06, confidence: 0.94, probabilities: {'0': 0.0, '1': 0.94, '2': 0.06, '3': 0.0}}
+        observed_at: "2026-11-01T01:19:35+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.54, confidence: 0.51, probabilities: {'0': 0.0, '1': 0.47, '2': 0.51, '3': 0.02}}
+        observed_at: "2026-11-01T01:22:01+09:00"
+    pre_survey_estimate:
+      changed_lines_approx: 180
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: true
+      work_still_required: true
+      change_containment: multiple_modules
+      body_change_kind: wording_or_rule_addition
+      test_change_kind: new_behavior_tests
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 の medium 4 件（c588505add1da8c7 / 33f072c3b90c3aea / 6ed87da72e3f5de3 / a3ac237a09af8436）はいずれも validate-worker-output.py の検査の狭さで、unresolved のまま残っている"
+  - "事前調査の changed_lines_approx 180 / new_files_needed 0 に対し、実際は新規テスト 5 本と fixture 多数を追加しており、規模を過小に見積もった"
