@@ -125,7 +125,12 @@ workflow:
   status: completed
   completed_at_commit: 3a815662666e78e8a6a95d273243bf9976e56a0e
 - id: verify
-  status: in_progress
+  status: completed
+  result: pass
+  failed_items: []
+  excluded_scenarios: []
+  summary: 'test_command exit 0 (13593 tests, 1 skipped). TS-1..TS-6 pass. Manual reading checks pass: Precedence rule binds the Step I.2.a control-character stop to step_needs_intervention; route matches implement-phase.md Step I.2.a.'
+  completed_at_commit: a3abd0984e94560b43812e9a994a061119eedcad
 - id: retrospect
   status: pending
 tasks:
