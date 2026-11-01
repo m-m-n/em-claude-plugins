@@ -86,7 +86,94 @@ workflow:
   status: pending
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Rename-aware coverage backed by the document diff
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/validate-worker-output.py
+    - tests/test_rework_docs_only_validator_rules.py
+    - em-workflow/references/fixtures/**
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    - api-contract
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR6
+    - FR7
+    - NFR1
+    - NFR2
+    - NFR3
+    status: pending
+    notes: null
+    branch: null
+  task0002:
+    title: Docs-only round step_patches check
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/scripts/validate-worker-output.py
+    - tests/test_rework_docs_only_validator_rules.py
+    - em-workflow/references/fixtures/**
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    - api-contract
+    complexity: high
+    requirements:
+    - FR3
+    - FR6
+    - FR7
+    - NFR1
+    - NFR2
+    - NFR3
+    status: pending
+    notes: null
+    branch: null
+  task0003:
+    title: Reject overlapping tests_replace pairs
+    plan: tasks/task0003.md
+    files:
+    - em-workflow/scripts/validate-worker-output.py
+    - tests/test_rework_docs_only_validator_rules.py
+    - em-workflow/references/fixtures/**
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    - api-contract
+    complexity: high
+    requirements:
+    - FR4
+    - FR6
+    - FR7
+    - NFR1
+    - NFR2
+    - NFR3
+    status: pending
+    notes: null
+    branch: null
+  task0004:
+    title: State the tightened rules in the SSOT documents
+    plan: tasks/task0004.md
+    files:
+    - em-workflow/references/rework-task-synthesis.md
+    - em-workflow/references/contracts/rework-planner-contract.md
+    - em-workflow/references/workflow-patch.md
+    skills: []
+    domains:
+    - api-contract
+    complexity: medium
+    requirements:
+    - FR5
+    - NFR3
+    status: pending
+    notes: null
+    branch: null
 review:
   status: pending
   rounds_completed: 0
@@ -99,7 +186,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-2
@@ -112,7 +200,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-7
     - TS-8
@@ -122,7 +211,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0002
     tests:
     - TS-10
     - TS-11
@@ -136,7 +226,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0003
     tests:
     - TS-17
     - TS-18
@@ -146,7 +237,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0004
     tests:
     - TS-22
   FR6:
@@ -154,14 +246,30 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    tests:
+    - TS-1
+    - TS-4
+    - TS-7
+    - TS-10
+    - TS-11
+    - TS-12
+    - TS-13
+    - TS-14
+    - TS-17
+    - TS-18
   FR7:
     title: 既存の成功例 fixture を受理し続ける
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
     tests:
     - TS-6
     - TS-19
@@ -171,7 +279,10 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
     tests:
     - TS-21
   NFR2:
@@ -179,15 +290,24 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    tests:
+    - TS-23
   NFR3:
     title: テストスイート全体が通る
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS-24
 batch:
   review_rework_count: 0
   verify_rework:

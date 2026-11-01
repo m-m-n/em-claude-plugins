@@ -57,7 +57,7 @@ artifacts:
   produced_by: create-plan-run-0001
 patches:
 - patch_id: rework-docs-only-medium-fixes-p0001
-  status: validated
+  status: applied
   base_input_digest: sha256:5fd81b46604b88a9d12d4c8730e6992ba4336ad7b38c640b41ed33488abc38a6
   base_workflow_blob: f57e7a4c9b9eccaf881c924ec0958a000517ff5c
 progress_fingerprint: null
