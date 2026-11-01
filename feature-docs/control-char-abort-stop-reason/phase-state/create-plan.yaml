@@ -1,18 +1,18 @@
 schema_version: 1
 feature: control-char-abort-stop-reason
 phase: create-plan
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: e395ac150470cff714c0547eb15d45fa47354b79
 last_input_digest: sha256:7ad7c41f38e5cd7eeda8228ce68382de446b6a7b64f00cd1bef3b59d248d3ade
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:7ad7c41f38e5cd7eeda8228ce68382de446b6a7b64f00cd1bef3b59d248d3ade
-  output_digest: null
+  output_digest: sha256:2cb75a50d7bc861abbcf47cda8c0b44a1476c567a6b54ee66f15bdde1d5b18ce
   dispatch_digest_inputs:
     em-workflow/references/contracts/planner-contract.md: sha256:6476cc99ea8a1d2d4f376d1702bd636b1ab9898655397ec80ab1d6fb47cbe9e8
     em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
@@ -24,7 +24,24 @@ worker_runs:
     em-workflow/skills/plan-writing/SKILL.md: sha256:880bd01ad6c60af5695495e0a6784de7fe98e1ea9463dc6703164f8ffffdbccb
     feature-docs/control-char-abort-stop-reason/SPEC.md: sha256:6eccf3cfc765dd9ba6318a06b12a788c63b8a6ee5a637678a35a2285456a5f30
     feature-docs/control-char-abort-stop-reason/workflow.yaml: sha256:942c04e78ccb24fa7e4e4ce7c3530d6275d102a140edad91887a0c6de642a395
-artifacts: []
+  self_write_set:
+  - feature-docs/control-char-abort-stop-reason/IMPLEMENTATION.md
+  - feature-docs/control-char-abort-stop-reason/THREAT-MODEL.md
+  - feature-docs/control-char-abort-stop-reason/VERIFICATION.md
+  - feature-docs/control-char-abort-stop-reason/tasks/task0001.md
+artifacts:
+- path: feature-docs/control-char-abort-stop-reason/IMPLEMENTATION.md
+  sha256: sha256:bd149af40e31c9bfb0352f15638d7db544eec102929cdd3d174463158ec2cb3f
+  produced_by: create-plan-run-0001
+- path: feature-docs/control-char-abort-stop-reason/VERIFICATION.md
+  sha256: sha256:f8b087f1d418b5ec964c8b10887b26759eea8a5bfc8346362f1838e0692d8c2b
+  produced_by: create-plan-run-0001
+- path: feature-docs/control-char-abort-stop-reason/THREAT-MODEL.md
+  sha256: sha256:920a45f493de586b71a8abaf78841e4702ecb74d7014f3a0b59a9951d2cbc3ed
+  produced_by: create-plan-run-0001
+- path: feature-docs/control-char-abort-stop-reason/tasks/task0001.md
+  sha256: sha256:b8305ba2041322a44f501c65308bcd3ca96b7f4f09834b5b29c6698278040158
+  produced_by: create-plan-run-0001
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
