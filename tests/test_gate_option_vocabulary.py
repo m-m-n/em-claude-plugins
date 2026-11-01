@@ -1320,8 +1320,15 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # VERIFICATION.md that cannot be read as text are reported instead of
     # raising. PINNED_VALIDATOR_TEST_LINE below is unaffected and still
     # asserted. Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by rework-docs-only-medium-fixes/task0003 (FR4):
+    # `_validate_tests_replace_entry` also rejects an entry whose
+    # `tests_replace` `from` set and `to` set share an ID (a chain or a
+    # swap), reported as `requirements_patch`. PINNED_VALIDATOR_TEST_LINE
+    # below is unaffected and still asserted. Same rationale: refresh,
+    # don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "8227dcfe0dfe8ac74fd41bbf2a094456d23199ed055edb7ce0303c055e7f550f"
+        "6b507079c379220862add43f0069f69f2ae4b445ace463f2997fd8307bbc2a0c"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-

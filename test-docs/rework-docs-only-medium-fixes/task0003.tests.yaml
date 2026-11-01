@@ -1,6 +1,15 @@
 task_id: task0003
-baseline_failures: []          # before any edit: python3 -m unittest discover -s tests (Ran 13410 tests in 486.838s, OK, skipped=1) -> no failing test
-final_failures: []             # re-executed after the implementation, the hash-pin refresh and this record: python3 -m unittest discover -s tests -> no failing test
+# Refreshed after parent-side adoption (merge of the parent branch into this task branch). Before any
+# edit, python3 -m unittest discover -s tests (Ran 13410 tests, OK, skipped=1) had no failing test. Run
+# again at the adoption commit (parent merged, re-implementation not yet applied; Ran 13457 tests,
+# failures=2, skipped=1), its only two failures were both caused by this task's own contributions in that
+# commit and are cleared by the re-implementation: the pinned sha256 of the validator (the parent's pin
+# against the validator that carries this task's check) and this task's own record naming tests that the
+# adoption commit did not yet contain. No failure was inherited from the parent.
+baseline_failures:
+  - test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical
+  - test_tests_yaml_id_resolution.TestRecordResolution.test_record__test_docs_rework_docs_only_medium_fixes_task0003_tests_yaml
+final_failures: []             # re-executed after the re-implementation on the updated parent, the hash-pin refresh and this record: python3 -m unittest discover -s tests -> no failing test
 acceptance_tests:
   AC-1:
     tests:
