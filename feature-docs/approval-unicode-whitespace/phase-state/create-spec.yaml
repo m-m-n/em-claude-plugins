@@ -5,7 +5,7 @@ status: in_progress
 generation: 1
 base_revision: a642d2c82836a7480dcc860117232231127ff4ef
 last_input_digest: sha256:ce039fe14f801b0561becba6dac7fd07172ab609be744143b3915005b72def94
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -118,15 +118,23 @@ worker_runs:
     tests/test_merge_preflight.py: sha256:8151521c35152ea05e4ebd8101c2f3a290f3338320f9af6b37eb9ed636e9aa0d
   output_digest: null
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:ce039fe14f801b0561becba6dac7fd07172ab609be744143b3915005b72def94
   dispatch_digest_inputs:
     em-workflow/references/contracts/spec-writer-contract.md: sha256:9032c6287d75f4a88e556bd3962c32ab8b4905cf3b6ececa895206788bcd0b63
     em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
     em-workflow/references/templates/spec-document.md: sha256:203dfcddbe507886ce861694fccd20ae25e5af0bd1b0efa5e935991add950cbd
   output_digest: null
-  self_write_set: []
-artifacts: []
+  self_write_set:
+  - feature-docs/approval-unicode-whitespace/REQUIREMENTS.md
+  - feature-docs/approval-unicode-whitespace/SPEC.md
+artifacts:
+- path: feature-docs/approval-unicode-whitespace/REQUIREMENTS.md
+  sha256: sha256:3de20de82c598bc8fc4cf3058ce5f3d3ed640b5decac2657b2201ad4b7ece152
+  produced_by: create-spec-run-0003
+- path: feature-docs/approval-unicode-whitespace/SPEC.md
+  sha256: sha256:9b84d09626414ab005d40f8289630385d44362ecb2fbe309e206682bb55ab15b
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
