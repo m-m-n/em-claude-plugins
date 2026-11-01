@@ -179,6 +179,15 @@ tasks:
     branch: em-workflow/approval-unicode-whitespace/task0003
 review:
   status: pending
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - performance
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
 requirements:
   FR1:
     title: 「照合対象」とトリムの定義
