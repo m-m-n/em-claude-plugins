@@ -1,10 +1,10 @@
 schema_version: 1
 feature: control-char-abort-stop-reason
 phase: create-spec
-status: initialized
+status: dispatching
 generation: 1
 base_revision: bf05a11074ad6ead2e6fc81572cd575cc28606f0
-last_input_digest: null
+last_input_digest: sha256:1bf4881cfba606a68a2978a628bac7f1d84de856edf623a272ccd9b1b8f103d4
 active_request_id: null
 packets: {}
 answers:
@@ -17,10 +17,56 @@ answers:
     - derive_from_task_description
     freeform: null
     normalized_answer: 'feature name derived from the task description: control-char-abort-stop-reason'
-worker_runs: []
+  design-step.decision:
+    packet_id: null
+    answered_at: '2026-11-02T00:12:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design step skipped per requirements-analyst recommendation
+      (UI の無い文書と文書テストの変更)
+    resolution_note: 'gate: create-spec.design-step; batch policy select decide_autonomously'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: completed
+  input_digest: sha256:1bf4881cfba606a68a2978a628bac7f1d84de856edf623a272ccd9b1b8f103d4
+  output_digest: sha256:a8852187db4678a0d777d15d3ed3fcde9aad563a5648a278bb29df61b926336b
+  dispatch_digest_inputs:
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    em-workflow/references/batch-terminal-line.md: sha256:133c9d9a3c6f410b0f2c719a72dd061fc618afbf740ad0ac371c1bc3448caf12
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
+    em-workflow/references/implement-phase.md: sha256:35635e6898c96cc92454af05fe00948efcf7da1c6a0ef8df98f2587fcd323067
+    em-workflow/skills/develop/SKILL.md: sha256:df8f34cb7b26ff93745a15e36f4d2bb8bac06498ad00369bb11b10effef2d58e
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+    tests/test_abort_terminal_commit_precedence.py: sha256:c8e47e6603ad05c109be5d94f12082a82065520f4dfd1a44302bbf4f38bdb3a1
+    tests/test_batch_stop_contract.py: sha256:2b815c4f844df61a3699006245810192ffef0973988b5e517e60c50d4744a422
+    tests/test_canonical_worktree_path_docs.py: sha256:737b20fda3b7de47f2ed2cf23197d8f22d1d226758b7dde374481355f3f2b80f
+    tests/test_failed_kind_batch_docs.py: sha256:2c1b3a206c423ea0de60e4b227d9325cd068598473bcf5969b8f2f66b7b7524b
+    tests/test_stop_reason_catch_all.py: sha256:e4e4c16a37b5402cfe2c7d31ca1c0ab22077024d151f4daf39bf361d47da68f7
+  self_write_set: []
 artifacts: []
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
-resolved_input_cache: {}
+resolved_input_cache:
+  design_system_candidates:
+    resolved_at_generation: 1
+    paths: []
+    truncated: false
+  e2e:
+    resolved_at_generation: 1
+    paths: []
+  reference_scan_targets:
+    resolved_at_generation: 1
+    paths:
+    - em-workflow/references/batch-terminal-line.md
+    - em-workflow/references/implement-phase.md
+    - tests/test_batch_stop_contract.py
+    - tests/test_abort_terminal_commit_precedence.py
+    - tests/test_stop_reason_catch_all.py
+    - tests/test_canonical_worktree_path_docs.py
+    - tests/test_failed_kind_batch_docs.py
+    - em-workflow/skills/develop/SKILL.md
 last_error: null
