@@ -29,3 +29,39 @@ records:
     would otherwise be dropped (the report names only "the suite regresses", no AC-n or requirement id). Path shape check
     and failure statement (test_validate_worker_output_py_byte_identical) were present. Not auto-added to tasks.task0003.files;
     the same path is already declared by task0001 and task0004.'
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-11-01T13:54:55+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'declined: tests/test_gate_option_vocabulary.py'
+  normalized_answer: 'declined: tests/test_gate_option_vocabulary.py'
+  resolution_note: 'task_id: task0002; declined deviation path tests/test_gate_option_vocabulary.py (sha256 pin refresh
+    for validate-worker-output.py); missing evidence parts: no AC-n or requirement id named, and no observable failure
+    stated in the deviation entry itself. Not auto-added to tasks.task0002.files; the same path is already declared by
+    task0001 and task0004.'
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-11-01T13:54:55+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'declined: tests/test_requirements_tests_replace.py'
+  normalized_answer: 'declined: tests/test_requirements_tests_replace.py'
+  resolution_note: 'task_id: task0002; declined deviation path tests/test_requirements_tests_replace.py (_patch_with helper
+    step_patches changed from [] to one verify pending entry; 37 failures in TestStructuralCheckOfTestsReplace without it);
+    missing evidence part: the identifier of the acceptance criterion or requirement that would otherwise be dropped. Not
+    auto-added to tasks.task0002.files; left to the review containment check.'
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-11-01T13:54:55+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'declined: test-docs/rework-docs-only-task-routing/task0004.tests.yaml'
+  normalized_answer: 'declined: test-docs/rework-docs-only-task-routing/task0004.tests.yaml'
+  resolution_note: 'task_id: task0002; declined deviation path test-docs/rework-docs-only-task-routing/task0004.tests.yaml
+    (one test ID renamed to keep the older feature''s record resolvable); missing evidence parts: no AC-n or requirement
+    id named, and no observable failure stated. Not auto-added to tasks.task0002.files; left to the review containment
+    check.'
