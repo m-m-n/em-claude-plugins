@@ -104,7 +104,7 @@ workflow:
   failed_items: []
   completed_at_commit: 565de35091fcccfaf61174dd04aa84e9f877fab8
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: Space/tab-only trim on the command path (preflight check 7, hook entry,
