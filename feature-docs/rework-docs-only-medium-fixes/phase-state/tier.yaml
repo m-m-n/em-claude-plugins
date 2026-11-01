@@ -1,0 +1,78 @@
+schema_version: 2
+feature: rework-docs-only-medium-fixes
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.06
+    confidence: 0.94
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.94
+      '2': 0.06
+      '3': 0.0
+  observed_at: '2026-11-01T12:05:16+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.78
+    confidence: 0.21
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.42
+      '2': 0.37
+      '3': 0.21
+  observed_at: '2026-11-01T12:05:16+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/scripts/validate-worker-output.py
+  - em-workflow/references/rework-task-synthesis.md
+  - em-workflow/references/contracts/rework-planner-contract.md
+  - em-workflow/references/workflow-patch.md
+  - feature-docs/rework-docs-only-task-routing/THREAT-MODEL.md
+  - tests/test_rework_docs_only_validator_rules.py
+  - tests/test_requirements_tests_replace.py
+  - tests/test_rework_docs_only_route_doc.py
+  - tests/test_rework_planner_docs_only_doc.py
+  - em-workflow/references/fixtures/worker-result/rework-planner/
+  - em-workflow/references/fixtures/workflow-patch/append_rework/
+  changed_lines_approx: 1200
+  new_functions_needed: 0
+  new_files_needed: 19
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 12
+  body_change_kind: new_logic
+  change_containment: single_module
+  caller_and_dependency_count: 10
+  changes_external_contract: true
+  changes_behavior: true
+  evidence:
+    c588505add1da8c7: main に残存する：from の verification_index 所属だけで改名先を受理し、変更後の文書に存在しない
+      TS-9999 でも検査結果は [] になる（em-workflow/scripts/validate-worker-output.py:2371）
+    33f072c3b90c3aea: main に残存する：verification_index にある旧 ID を無条件で受理し、変更後の文書から消えた TS3
+      を covered_by_existing に指定しても検査結果は [] になる（em-workflow/scripts/validate-worker-output.py:2428）
+    6ed87da72e3f5de3: main に残存する：implement を pending にする場合だけ拒否し、step_patches の空配列、verify
+      の completed、複数ステップ、implement の completed はいずれも受理する（em-workflow/scripts/validate-worker-output.py:1516）
+    a3ac237a09af8436: main に残存する：from と to の集合の交差を検査せず、連鎖と入れ替えを受理し、逐次適用すると参照が 1 件に減る（em-workflow/scripts/validate-worker-output.py:1373、em-workflow/scripts/validate-worker-output.py:1788）
+decided_at: '2026-11-01T12:05:16+09:00'

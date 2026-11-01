@@ -202,6 +202,13 @@ is a non-empty list of pairs, each a mapping with `from` (the old ID) and
 `to` (the new ID), both non-empty strings, `from` different from `to`, and
 no `from` repeated within one requirement entry.
 
+Within one entry no ID may appear both as a `from` and as a `to`. A chain
+(`TS-1` to `TS-2` together with `TS-2` to `TS-3`) and a swap (`TS-1` to
+`TS-2` together with `TS-2` to `TS-1`) are both covered: each is rejected as
+malformed (code `requirements_patch`) by the structural check, whether or
+not `--dry-run-apply` is given. Pairs that share a `to` (`TS1` to `X`, `TS2`
+to `X`) are not affected by this rule and keep the application rule below.
+
 The `expected` key `tests_contains` is a list of scenario IDs. Every `from`
 of an entry's `tests_replace` must also be listed in that same entry's
 `tests_contains`, so a replacement never skips the expectation check; an

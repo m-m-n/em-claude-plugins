@@ -41,7 +41,7 @@ acceptance_tests:
       - tests.test_rework_docs_only_validator_rules.TestDocsOnlyImplementReset.test_ac3_cli_workflow_patch_exits_1_with_the_code
       - tests.test_rework_docs_only_validator_rules.TestDocsOnlyImplementReset.test_ac3_patch_with_entries_returning_implement_is_accepted
       - tests.test_rework_docs_only_validator_rules.TestDocsOnlyImplementReset.test_ac3_empty_entries_returning_only_the_origin_step_is_accepted
-      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyImplementReset.test_ac3_empty_entries_with_implement_not_set_to_pending_is_accepted
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyImplementReset.test_ac3_empty_entries_with_implement_not_set_to_pending_is_rejected_too
       - tests.test_rework_docs_only_validator_rules.TestDocsOnlyImplementReset.test_ac3_rule_is_limited_to_append_rework
     red_confirmed: true
     red_reason: >-

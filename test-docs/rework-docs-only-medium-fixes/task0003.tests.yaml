@@ -1,0 +1,106 @@
+task_id: task0003
+# Refreshed after parent-side adoption (merge of the parent branch into this task branch). Before any
+# edit, python3 -m unittest discover -s tests (Ran 13410 tests, OK, skipped=1) had no failing test. Run
+# again at the adoption commit (parent merged, re-implementation not yet applied; Ran 13457 tests,
+# failures=2, skipped=1), its only two failures were both caused by this task's own contributions in that
+# commit and are cleared by the re-implementation: the pinned sha256 of the validator (the parent's pin
+# against the validator that carries this task's check) and this task's own record naming tests that the
+# adoption commit did not yet contain. No failure was inherited from the parent.
+baseline_failures:
+  - test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical
+  - test_tests_yaml_id_resolution.TestRecordResolution.test_record__test_docs_rework_docs_only_medium_fixes_task0003_tests_yaml
+final_failures: []             # re-executed after the re-implementation on the updated parent, the hash-pin refresh and this record: python3 -m unittest discover -s tests -> no failing test
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_rework_docs_only_validator_rules.TestTestsReplaceOverlap.test_ac1_chain_is_rejected_with_requirements_patch
+      - tests.test_rework_docs_only_validator_rules.TestTestsReplaceOverlap.test_ac1_chain_exits_1_with_the_code_through_the_cli
+      - tests.test_rework_docs_only_validator_rules.TestTestsReplaceOverlap.test_ac1_only_the_overlapping_entry_is_named
+      - tests.test_rework_docs_only_validator_rules.TestTestsReplaceOverlap.test_ac1_only_the_shared_ids_are_named_among_several_pairs
+    red_confirmed: true
+    red_reason: >-
+      Before the validator edit all four tests FAILED: validate_workflow_patch returned
+      no errors where one requirements_patch error was asserted ("AssertionError: Lists
+      differ: [] != ['requirements_patch']"), and the CLI exited 0 where exit 1 was
+      asserted ("AssertionError: 0 != 1"), for the chain TS-1->TS-2, TS-2->TS-3. The
+      validator accepted the chain because nothing compared the from set with the to set.
+  AC-2:
+    tests:
+      - tests.test_rework_docs_only_validator_rules.TestTestsReplaceOverlap.test_ac2_swap_is_rejected_with_requirements_patch
+      - tests.test_rework_docs_only_validator_rules.TestTestsReplaceOverlap.test_ac2_swap_exits_1_with_the_code_through_the_cli
+    red_confirmed: true
+    red_reason: >-
+      Before the validator edit both tests FAILED the same way as AC-1 for the swap
+      TS-1->TS-2, TS-2->TS-1: no errors from validate_workflow_patch ("Lists differ: []
+      != ['requirements_patch']") and exit 0 from the CLI ("0 != 1").
+  AC-3:
+    tests:
+      - tests.test_rework_docs_only_validator_rules.TestTestsReplaceOverlap.test_ac3_chain_and_swap_are_rejected_on_all_four_routes_in_process
+      - tests.test_rework_docs_only_validator_rules.TestTestsReplaceOverlap.test_ac3_chain_and_swap_exit_1_on_all_four_routes_through_the_cli
+      - tests.test_rework_docs_only_validator_rules.TestTestsReplaceOverlap.test_ac3_each_fixtures_own_workflow_patch_is_rejected_with_and_without_dry_run
+      - tests.test_rework_docs_only_validator_rules.TestTestsReplaceOverlap.test_ac3_each_fixture_as_a_worker_result_is_rejected_with_and_without_dry_run
+    red_confirmed: true
+    red_reason: >-
+      Before the validator edit every subtest FAILED on all four routes (workflow-patch
+      and worker-result, each with and without --dry-run-apply), for the chain and the
+      swap, in process (no errors returned) and through the CLI (exit 0 instead of 1).
+      The dry-run subtests also show the supporting workflow.yaml used by the tests is
+      clean: with it the overlap was the only thing missing from the findings.
+  AC-4:
+    tests:
+      - tests.test_rework_docs_only_validator_rules.TestTestsReplaceOverlap.test_ac4_pairs_without_overlap_are_accepted_on_all_four_routes
+      - tests.test_rework_docs_only_validator_rules.TestTestsReplaceOverlap.test_ac4_valid_docs_only_round_fixture_is_accepted
+      - tests.test_rework_docs_only_validator_rules.TestTestsReplaceOverlap.test_ac4_pairs_sharing_a_to_are_not_rejected_by_this_check
+      - tests.test_rework_docs_only_validator_rules.TestTestsReplaceOverlap.test_ac4_overlap_is_judged_per_entry
+      - tests.test_rework_docs_only_validator_rules.TestTestsReplaceOverlap.test_ac4_no_existing_valid_fixture_has_overlapping_tests_replace
+    red_confirmed: false
+    red_reason: >-
+      The behavior pre-existed: before the edit no rule rejected any tests_replace pair
+      for overlap, so non-overlapping pairs (valid-docs-only-round's TS1->TS-1, TS2->TS-2),
+      pairs sharing a to (TS1->X, TS2->X), an overlap split across two entries, and every
+      existing valid- fixture were all accepted, and these tests were green before any
+      implementation. The criterion is a boundary on how far the new check reaches, so it
+      has no red state; the tests guard against an over-broad check (for example one that
+      treats a shared to, or a cross-entry repeat, as an overlap). The existing
+      TestFixtureCorpusDataDriven also runs valid-docs-only-round and every other valid-
+      fixture; a dedicated new module is out of scope.
+  AC-5:
+    tests:
+      - tests.test_rework_docs_only_validator_rules.TestTestsReplaceOverlap.test_ac5_the_two_fixtures_exist_with_input_and_envelope
+      - tests.test_rework_docs_only_validator_rules.TestTestsReplaceOverlap.test_ac5_the_fixtures_are_rejected_with_exit_1_and_only_requirements_patch
+      - tests.test_rework_docs_only_validator_rules.TestTestsReplaceOverlap.test_ac5_the_fixtures_stay_outside_the_set_that_forbids_tests_replace
+      - tests.test_rework_docs_only_validator_rules.TestTestsReplaceOverlap.test_ac5_each_fixture_differs_from_valid_docs_only_round_only_in_the_overlap
+      - tests.test_rework_docs_only_validator_rules.TestFixtures.test_ac6_no_fixture_uses_tests_replace
+      - tests.test_validate_worker_output.TestFixtureCorpusDataDriven.test_every_fixture_matches_its_declared_exit_code
+      - tests.test_rework_docs_only_validator_rules.TestStandardLibraryOnly.test_ac7_this_module_imports_only_standard_library_modules
+    red_confirmed: true
+    red_reason: >-
+      The two fixtures were written first and run before the validator edit: both exited
+      0 (expected 1). test_ac5_the_fixtures_are_rejected_with_exit_1_and_only_requirements_patch
+      FAILED for both cases ("AssertionError: 0 != 1"), and the existing data-driven
+      runner test_every_fixture_matches_its_declared_exit_code FAILED for both
+      ("expected exit 1, got 0") on the new invalid-docs-only-round-tests-replace-chain and
+      -swap directories. The existence, outside-the-forbidden-set and single-defect
+      derivation tests, test_ac6_no_fixture_uses_tests_replace (it targets only the six
+      FIXTURE_EXPECTED_CODES fixtures) and the standard-library-only check assert
+      properties of the fixture files and the module and were green from the moment the
+      fixtures and tests were written. "Every existing valid- fixture is accepted" is
+      covered by the same existing runner and was green before and after.
+  AC-6:
+    tests:
+      - tests.test_rework_docs_only_validator_rules.TestTestsReplaceOverlap.test_ac6_malformed_tests_replace_is_reported_never_raised_on_all_four_routes
+      - tests.test_rework_docs_only_validator_rules.TestTestsReplaceOverlap.test_ac6_malformed_tests_replace_exits_1_with_json_details_never_2
+      - tests.test_rework_docs_only_validator_rules.TestTestsReplaceOverlap.test_ac6_a_malformed_pair_does_not_hide_an_overlap_nor_make_the_check_raise
+    red_confirmed: true
+    red_reason: >-
+      Only test_ac6_a_malformed_pair_does_not_hide_an_overlap_nor_make_the_check_raise was
+      observed red before the validator edit: with a malformed pair (unhashable from / to,
+      null, a string, a pair missing to) beside a chain it asserts the overlap finding is
+      still reported, and the validator returned no errors ("Lists differ: [] !=
+      ['requirements_patch']"). The other two tests (21 malformed tests_replace shapes on
+      four routes in process, and the CLI exit 1 with JSON details, never 2) were green
+      before the edit, because the existing shape checks already reported every malformed
+      shape without raising; they guard the new check. As a sensitivity check, with a
+      deliberately naive set computation over pair.get("from") / pair.get("to") temporarily
+      in place, 41 of these subtests went red (TypeError for the unhashable from / to, and
+      exit 2 through the CLI); that edit was reverted.

@@ -1,0 +1,33 @@
+feature: rework-docs-only-medium-fixes
+collected_at: "2026-11-01T14:18:28+09:00"
+session_ids: [01a1958a-d6d0-7713-892b-44741dbac58e]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の最終読みで bucket 1 が 0.42、bucket 2-3 が計 0.58 に分かれ、削減しない full を採用した"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.06, confidence: 0.94}
+        observed_at: "2026-11-01T12:05:16+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.78, confidence: 0.21}
+        observed_at: "2026-11-01T12:05:16+09:00"
+    pre_survey_estimate:
+      changed_lines_approx: 1200
+      new_files_needed: 19
+      new_functions_needed: 0
+      new_dependencies_needed: 0
+      body_change_kind: new_logic
+      change_containment: single_module
+      changes_external_contract: true
+      work_still_required: true
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 の medium 58060ec00a7b29e6: VERIFICATION.md 読み込み経路の差し替えで is_file() 確認が消えた（TM-5 / NFR1 の後退）。未解決のまま残っている"
+  - "review round 1 の medium a7c787f4b6584710: task0002 が files 宣言外の 2 件（tests/test_requirements_tests_replace.py、test-docs/rework-docs-only-task-routing/task0004.tests.yaml）を追従変更した。implementer 報告の deviations は記録に残っておらず file_prediction_misses には載らなかった"

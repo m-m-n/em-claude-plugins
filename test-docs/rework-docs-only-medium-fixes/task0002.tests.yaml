@@ -1,0 +1,133 @@
+task_id: task0002
+baseline_failures:             # refreshed after parent-side adoption (python3 -m unittest discover -s tests, Ran 13514 tests, skipped=1); before the first edit of this task the suite had no failure (Ran 13410 tests, OK)
+  - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical   # the byte pin the parent carries no longer matches the merged validator (the parent's validator edits plus this task's edit); this task's re-implementation refreshes the pin
+final_failures: []             # re-executed after the pin refresh on the updated parent: python3 -m unittest discover -s tests -> no failing test
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac1_implement_entry_is_rejected_whatever_its_status
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac1_implement_entry_without_a_status_is_rejected
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac1_each_implement_entry_is_reported_and_named_by_index
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac1_a_single_implement_completed_entry_also_fails_the_shape_check
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac1_implement_entry_on_a_patch_with_task_entries_is_not_checked
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac6_the_five_fixtures_are_rejected_with_their_codes
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyImplementReset.test_ac3_empty_entries_with_implement_not_set_to_pending_is_rejected_too
+      - tests.test_rework_docs_only_validator_rules.TestFixtures.test_ac6_prefix_matches_the_exit_code_and_the_reported_codes
+    red_confirmed: true
+    red_reason: >-
+      Before the validator edit the implement entries with set.status completed,
+      in_progress, failed and skipped, and the entries with no set / no status, were NOT
+      reported: docs-only-implement-reset "not found in []". The single implement
+      completed entry returned no errors where [docs-only-implement-reset,
+      docs-only-step-patches] was asserted, and the implement-completed fixture exited 0
+      where 1 was expected. The existing invalid-docs-only-round-resets-implement fixture
+      (implement pending, the pending half of the criterion) failed the updated expected
+      codes in TestFixtures. The pending status itself was already rejected, and
+      test_ac1_implement_entry_on_a_patch_with_task_entries_is_not_checked was green
+      before and after (a boundary control: entries present means not a docs-only round).
+  AC-2:
+    tests:
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac2_empty_step_patches_is_rejected
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac2_two_or_more_entries_are_rejected
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac2_single_origin_entry_whose_status_is_not_pending_is_rejected
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac2_the_shape_error_is_reported_once_per_patch
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac2_the_message_names_the_violated_condition
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac2_a_single_pending_origin_entry_is_accepted
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac2_rule_is_limited_to_append_rework_with_empty_entries
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac6_the_five_fixtures_are_rejected_with_their_codes
+    red_confirmed: true
+    red_reason: >-
+      Before the validator edit the empty step_patches, the two-or-more-entry cases and
+      the single verify / review entry with status completed, in_progress, failed or
+      skipped returned no errors: "Lists differ: [] != ['docs-only-step-patches']". The
+      message-naming test raised IndexError (no error to read). The no-step-patches,
+      extra-step and origin-not-pending fixtures exited 0 where 1 was expected. The
+      accept side (a single pending origin entry; entries present; replace_planning) was
+      green before and after as a boundary control.
+  AC-3:
+    tests:
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac3_envelope_type_that_differs_from_the_entry_is_rejected
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac3_entry_that_equals_the_envelope_type_is_accepted
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac3_envelope_type_is_applied_through_the_cli_for_both_kinds
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac6_the_five_fixtures_are_rejected_with_their_codes
+    red_confirmed: true
+    red_reason: >-
+      Before the validator edit a single review entry under an envelope whose
+      rework_source.type is verify (and the reverse) was accepted: docs-only-step-patches
+      "not found" in the reported codes, and the CLI exited 0 for both --kind
+      worker-result and --kind workflow-patch (with --input-envelope). The
+      origin-mismatch fixture exited 0 where 1 was expected. The accept case (the entry
+      equals rework_source.type) was green before and after as a pass-through control.
+  AC-4:
+    tests:
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac4_without_an_envelope_verify_or_review_with_pending_is_accepted
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac4_without_an_envelope_any_other_step_id_is_rejected
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac4_envelope_without_a_usable_type_falls_back_to_verify_or_review
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac4_a_rework_source_that_is_not_a_mapping_is_rejected
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac4_a_type_that_is_not_review_or_verify_is_rejected
+    red_confirmed: true
+    red_reason: >-
+      Before the validator edit any other step_id (implement, create-spec, design,
+      create-plan, retrospect, bogus, empty) was accepted on its own, a retrospect entry
+      was accepted under an envelope with no usable rework_source, and every non-mapping
+      rework_source and every type that is null, a non-string or another string was
+      accepted: docs-only-step-patches "not found" in the reported codes. The accept half
+      (a single verify / review entry with pending and no envelope) was green before and
+      after as a pass-through control.
+  AC-5:
+    tests:
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac5_rejected_on_every_route_in_process
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac5_rejected_on_every_route_through_the_cli
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac5_worker_result_messages_name_the_workflow_patch
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyImplementReset.test_ac3_rejected_with_dry_run_apply
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyImplementReset.test_ac3_rejected_through_worker_result_with_and_without_dry_run
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyImplementReset.test_ac3_cli_workflow_patch_exits_1_with_the_code
+    red_confirmed: true
+    red_reason: >-
+      Before the validator edit each of the five envelope-independent rejection cases
+      (implement completed, implement pending beside review, empty step_patches, two
+      entries, origin entry not pending) was missing at least docs-only-step-patches on
+      the four routes (workflow-patch and worker-result, with and without
+      --dry-run-apply), both in process and through the CLI (exit 0 where 1 was
+      expected, 20 failing combinations each). The existing docs-only tests, updated to
+      expect both codes for an implement pending entry, failed the same way.
+  AC-6:
+    tests:
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac6_the_five_fixtures_exist_next_to_their_source
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac6_the_five_fixtures_are_rejected_with_their_codes
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac6_each_fixture_differs_from_its_source_only_in_the_targeted_defect
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac6_each_fixture_carries_the_step_patches_its_name_states
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac6_the_new_fixtures_stay_outside_the_tests_replace_free_set
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac6_every_existing_valid_fixture_is_accepted
+      - tests.test_rework_docs_only_validator_rules.TestFixtures.test_ac6_prefix_matches_the_exit_code_and_the_reported_codes
+      - tests.test_rework_docs_only_validator_rules.TestStandardLibraryOnly.test_ac7_this_module_imports_only_standard_library_modules
+    red_confirmed: true
+    red_reason: >-
+      Before the validator edit test_ac6_the_five_fixtures_are_rejected_with_their_codes
+      FAILED for all five new fixtures (each exited 0 where 1 was expected; run after the
+      fixtures were created, so the existence and derivation tests were green from the
+      start and prove only the fixtures' shape) and the updated
+      invalid-docs-only-round-resets-implement expectation in TestFixtures FAILED. The
+      valid- fixtures (test_ac6_every_existing_valid_fixture_is_accepted, including
+      valid-docs-only-round) and the standard-library-only import check are boundary
+      controls that were green before and after. The whole-suite criterion
+      (python3 -m unittest discover -s tests passes from the repository root) is verified
+      by the final full-suite run recorded in final_failures, not by a single test.
+  AC-7:
+    tests:
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac7_malformed_shapes_are_reported_in_process_on_every_route
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac7_malformed_shapes_exit_1_with_json_details_through_the_cli
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac7_malformed_rework_source_reaches_the_workflow_patch_route_through_the_envelope
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac7_a_malformed_envelope_is_treated_as_holding_no_rework_source
+      - tests.test_rework_docs_only_validator_rules.TestDocsOnlyStepPatches.test_ac7_step_patch_shape_checks_do_not_raise_outside_docs_only_rounds
+    red_confirmed: true
+    red_reason: >-
+      Before the validator edit the malformed shapes raised: a set that is a number gave
+      "TypeError: 'int' object is not iterable", an unhashable step_id gave "TypeError:
+      cannot use 'list' as a set element", and a non-mapping step_patches element or
+      string step_patches under --dry-run-apply gave "AttributeError: 'str' object has no
+      attribute 'get'". Through the CLI those cases exited 2 ("execution error:
+      unexpected exception during --kind 'workflow-patch' validation") where 1 was
+      expected, and the non-mapping rework_source / non-string type cases exited 0.
+      The malformed-envelope test failed with "TypeError: validate_workflow_patch() got
+      an unexpected keyword argument 'envelope'" (the keyword the check adds).

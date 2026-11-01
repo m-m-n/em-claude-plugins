@@ -1,0 +1,341 @@
+schema_version: 1
+feature: rework-docs-only-medium-fixes
+created: '2026-11-01'
+base_branch: main
+goal: |
+  # em-workflow の文書のみ修正経路（rework-docs-only-task-routing）のレビューで残った medium 指摘 4 件を直す
+
+  種別: 改善
+
+  ## やりたいこと (必須)
+
+  em-workflow の文書のみ修正経路（feature `rework-docs-only-task-routing`、PR #50）のレビュー round 1 で残った medium 指摘 4 件を直す。
+
+  ## 背景・なぜ (必須)
+
+  レビューで次の 4 件が medium として残った（自動修正の対象は critical / high のみのため未対応）。いずれも `em-workflow/scripts/validate-worker-output.py` の文書のみの回・シナリオ ID 改名・tests 参照置換の検査が、SSOT の規則より緩い。
+
+  - `c588505add1da8c7` 改名申告の改名先 (to) が変更後の VERIFICATION.md に実在するか検査していない
+  - `33f072c3b90c3aea` 改名で文書から消えた旧シナリオ ID を covered_by_existing として受理してしまう
+  - `6ed87da72e3f5de3` 文書のみの回の step_patches 検査が SSOT の機械検査規則より狭い
+  - `a3ac237a09af8436` from と to が重なる tests_replace を受理し、逐次適用で参照が失われる
+
+  詳細はブランチ `em-workflow/rework-docs-only-task-routing/integration` の `feature-docs/rework-docs-only-task-routing/reviews/round1.yaml` にある。
+
+  ## 受け入れ条件 / 完了の定義 (必須)
+
+  - [ ] 4 件それぞれについて、不正な出力を拒否する失敗例の fixture とテストがある
+  - [ ] 既存の成功例 fixture が引き続き受理される
+
+  ## 制約・前提 (任意)
+
+  PR #50 のマージ後に着手する。
+parent_branch: em-workflow/rework-docs-only-medium-fixes/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.94
+      '2': 0.06
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.42
+      '2': 0.37
+      '3': 0.21
+  at: '2026-11-01T12:05:16+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: d75b64945fc0cf9bb0a3bf86278f0deb932f1794
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI が無く、変更は検証スクリプト・references・fixture・テストだけ（batch-policies の create-spec.design-step → decide_autonomously）
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: completed
+  completed_at_commit: 0266e795ca8436a3f929d9c34a5812f5785aceab
+- id: implement
+  status: completed
+  base_commit: e4600e6dca8ff55a7167428dfe4be3f4515ec259
+  completed_at_commit: 94f08977390bebe05e4a96a480360827bc6ba943
+- id: review
+  status: completed
+  completed_at_commit: 351b4f4490d17ad6864869ec07229d37c649ea1e
+- id: verify
+  status: completed
+  result: pass
+  failed_items: []
+  summary: 'python3 -m unittest discover -s tests: 13514 tests OK (skipped=1). TS-1..TS-21, TS-24 automated pass; TS-22 (SSOT docs state FR1-FR4) and TS-23 (stdlib/repo-local imports only) checked manually: pass. No excluded requirements.'
+  completed_at_commit: e08455e4ef576a7b15681beee2eef6f365656d95
+- id: retrospect
+  status: completed
+  completed_at_commit: 8a7839b8c519179fe22775b8c04adcbf1829e747
+tasks:
+  task0001:
+    title: Rename-aware coverage backed by the document diff
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/validate-worker-output.py
+    - tests/test_rework_docs_only_validator_rules.py
+    - em-workflow/references/fixtures/**
+    - tests/test_gate_option_vocabulary.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    - api-contract
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR6
+    - FR7
+    - NFR1
+    - NFR2
+    - NFR3
+    status: merged
+    notes: null
+    branch: em-workflow/rework-docs-only-medium-fixes/task0001
+  task0002:
+    title: Docs-only round step_patches check
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/scripts/validate-worker-output.py
+    - tests/test_rework_docs_only_validator_rules.py
+    - em-workflow/references/fixtures/**
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    - api-contract
+    complexity: high
+    requirements:
+    - FR3
+    - FR6
+    - FR7
+    - NFR1
+    - NFR2
+    - NFR3
+    status: merged
+    notes: null
+    branch: em-workflow/rework-docs-only-medium-fixes/task0002
+  task0003:
+    title: Reject overlapping tests_replace pairs
+    plan: tasks/task0003.md
+    files:
+    - em-workflow/scripts/validate-worker-output.py
+    - tests/test_rework_docs_only_validator_rules.py
+    - em-workflow/references/fixtures/**
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    - api-contract
+    complexity: high
+    requirements:
+    - FR4
+    - FR6
+    - FR7
+    - NFR1
+    - NFR2
+    - NFR3
+    status: merged
+    notes: null
+    branch: em-workflow/rework-docs-only-medium-fixes/task0003
+  task0004:
+    title: State the tightened rules in the SSOT documents
+    plan: tasks/task0004.md
+    files:
+    - em-workflow/references/rework-task-synthesis.md
+    - em-workflow/references/contracts/rework-planner-contract.md
+    - em-workflow/references/workflow-patch.md
+    - tests/test_gate_option_vocabulary.py
+    skills: []
+    domains:
+    - api-contract
+    complexity: medium
+    requirements:
+    - FR5
+    - NFR3
+    status: merged
+    notes: null
+    branch: em-workflow/rework-docs-only-medium-fixes/task0004
+review:
+  status: completed
+  rounds_completed: 1
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
+  perspectives:
+    security: completed
+    comprehensive: completed
+    architecture: completed
+    spec: completed
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: 改名による受理は文書の差分で裏付ける（c588505add1da8c7）
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
+    - TS-6
+  FR2:
+    title: 改名で消えた旧 ID を受理しない（33f072c3b90c3aea）
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-7
+    - TS-8
+    - TS-9
+  FR3:
+    title: 文書のみの回の step_patches を SSOT の規則どおりに検査する（6ed87da72e3f5de3）
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0002
+    tests:
+    - TS-10
+    - TS-11
+    - TS-12
+    - TS-13
+    - TS-14
+    - TS-15
+    - TS-16
+  FR4:
+    title: from と to が重なる tests_replace を拒否する（a3ac237a09af8436）
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0003
+    tests:
+    - TS-17
+    - TS-18
+    - TS-19
+  FR5:
+    title: SSOT を検査規則に揃える
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0004
+    tests:
+    - TS-22
+  FR6:
+    title: 拒否例の fixture とテスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    tests:
+    - TS-1
+    - TS-4
+    - TS-7
+    - TS-10
+    - TS-11
+    - TS-12
+    - TS-13
+    - TS-14
+    - TS-17
+    - TS-18
+  FR7:
+    title: 既存の成功例 fixture を受理し続ける
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    tests:
+    - TS-6
+    - TS-19
+    - TS-20
+  NFR1:
+    title: 不正な入力で例外を出さない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    tests:
+    - TS-21
+  NFR2:
+    title: テストは標準ライブラリだけを使う
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    tests:
+    - TS-23
+  NFR3:
+    title: テストスイート全体が通る
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS-24
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

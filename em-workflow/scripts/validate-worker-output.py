@@ -1344,7 +1344,13 @@ def _validate_tests_replace_entry(fr_id, rpatch):
     mappings with non-empty string `from` and `to`, `from` different from
     `to`, no `from` repeated, and every `from` listed in the entry's
     `expected.tests_contains`; `expected.tests_contains`, when present, is
-    a list of strings (also without any replacement beside it). Every
+    a list of strings (also without any replacement beside it).
+    rework-docs-only-medium-fixes/task0003 (FR4, IMPLEMENTATION.md D4): the
+    entry's `from` set (the string `from` values of its mapping pairs) and
+    `to` set (the string `to` values) must not share an ID, so a sequential
+    application can never lose a scenario reference (a chain TS-1->TS-2,
+    TS-2->TS-3 and a swap TS-1->TS-2, TS-2->TS-1 both share one); pairs that
+    only share a `to` do not overlap. Every
     finding carries the code `requirements_patch`. Malformed input is a
     finding, never an exception: nothing here is hashed or indexed before
     it is known to be a string, and a non-mapping `set` / `expected` is
@@ -1387,7 +1393,95 @@ def _validate_tests_replace_entry(fr_id, rpatch):
         seen_from.add(old)
         if not contains_malformed and old not in listed:
             errors.append(err("requirements_patch", f"{q} 'from' {old!r} must be listed in {p}.expected.tests_contains"))
+    # FR4 / D4: only string values of mapping pairs enter the two sets, so a
+    # malformed pair (a non-string, unhashable `from` / `to`, a missing key)
+    # is never hashed here and stays with the shape findings above.
+    mapping_pairs = [pair for pair in pairs if isinstance(pair, dict)]
+    from_ids = {pair["from"] for pair in mapping_pairs if isinstance(pair.get("from"), str)}
+    to_ids = {pair["to"] for pair in mapping_pairs if isinstance(pair.get("to"), str)}
+    overlap = sorted(from_ids & to_ids)
+    if overlap:
+        errors.append(
+            err(
+                "requirements_patch",
+                f"{p}.set.tests_replace 'from' and 'to' share {overlap!r}: a sequential "
+                "application would lose a scenario reference (no ID may be both replaced "
+                "and a replacement within one entry)",
+            )
+        )
     return errors
+
+
+# rework-docs-only-medium-fixes/task0002 (FR3, IMPLEMENTATION.md D3): the two
+# steps a docs-only round may return to `pending` -- the origin of the rework,
+# which is the `type` of the input envelope's `rework_source` (`review` or
+# `verify`).
+DOCS_ONLY_ORIGIN_STEPS = ("verify", "review")
+
+
+def _docs_only_origin_steps(envelope):
+    """rework-docs-only-medium-fixes/task0002 (FR3, NFR1, D3): the step ids
+    that a docs-only round's single step patch may target. Taken from the
+    run's input envelope when the validator holds one:
+
+    - `rework_source` is a mapping whose `type` is exactly the string
+      `review` or `verify`: that one step.
+    - no envelope (or one that is not a mapping), no `rework_source` key, or
+      a `rework_source` mapping without a `type` key: either of
+      DOCS_ONLY_ORIGIN_STEPS.
+    - `rework_source` present but not a mapping, or `type` present with any
+      other value (null, a non-string, another string): the empty tuple --
+      no origin step, so no step patch can match it (fail-closed).
+
+    Never raises: nothing here is hashed or indexed before it is known to be
+    a string."""
+    if not isinstance(envelope, dict) or "rework_source" not in envelope:
+        return DOCS_ONLY_ORIGIN_STEPS
+    rework_source = envelope["rework_source"]
+    if not isinstance(rework_source, dict):
+        return ()
+    if "type" not in rework_source:
+        return DOCS_ONLY_ORIGIN_STEPS
+    source_type = rework_source["type"]
+    if isinstance(source_type, str) and source_type in DOCS_ONLY_ORIGIN_STEPS:
+        return (source_type,)
+    return ()
+
+
+def _docs_only_step_patches_violation(step_patches, origin_steps):
+    """rework-docs-only-medium-fixes/task0002 (FR3, NFR1, D3): None when
+    `step_patches` (the patch's raw value) is a list of exactly one mapping
+    whose `step_id` is one of `origin_steps` and whose `set.status` is the
+    string `pending`; otherwise the message naming the first violated
+    condition -- the count, the step_id against the origin, or the status.
+    Never raises on a malformed shape; a malformed shape is a violation."""
+    if not isinstance(step_patches, list):
+        return (
+            "step_patches must be a list holding exactly one entry, for the origin step "
+            "(a docs-only round)"
+        )
+    if len(step_patches) != 1:
+        return (
+            f"step_patches holds {len(step_patches)} entries; a docs-only round "
+            "(append_rework with no tasks_patch.entries) requires exactly one, for the origin step"
+        )
+    entry = step_patches[0]
+    if not isinstance(entry, dict):
+        return "step_patches[0] must be a mapping (a docs-only round requires exactly one entry, for the origin step)"
+    step_id = entry.get("step_id")
+    if not isinstance(step_id, str) or step_id not in origin_steps:
+        if origin_steps:
+            wanted = " or ".join(repr(step) for step in origin_steps)
+            return f"step_patches[0].step_id {step_id!r} is not the origin step ({wanted})"
+        return (
+            f"step_patches[0].step_id {step_id!r} cannot match an origin step: the input "
+            "envelope's rework_source is not a mapping whose type is 'review' or 'verify'"
+        )
+    set_block = entry.get("set")
+    status = set_block.get("status") if isinstance(set_block, dict) else None
+    if status != "pending":
+        return f"step_patches[0].set.status must be 'pending', got {status!r}"
+    return None
 
 
 def validate_workflow_patch(
@@ -1399,6 +1493,7 @@ def validate_workflow_patch(
     phase_state=None,
     dry_run=False,
     feature_dir=None,
+    envelope=None,
 ):
     if not isinstance(data, dict):
         return [err("structure", "workflow patch must be a mapping")]
@@ -1496,36 +1591,56 @@ def validate_workflow_patch(
         if not isinstance(sp, dict):
             errors.append(err("step_patches", f"step_patches[{i}] must be a mapping"))
             continue
-        if not sp.get("step_id"):
+        step_id = sp.get("step_id")
+        if not step_id:
             errors.append(err("step_patches", f"step_patches[{i}].step_id is required"))
+        elif not isinstance(step_id, str):
+            errors.append(err("step_patches", f"step_patches[{i}].step_id must be a string"))
         set_block = sp.get("set") or {}
-        if set(set_block) - {"status"}:
+        if not isinstance(set_block, dict):
+            errors.append(err("step_patches", f"step_patches[{i}].set must be a mapping"))
+        elif set(set_block) - {"status"}:
             errors.append(err("step_patches", f"step_patches[{i}].set may only contain 'status'"))
-        if workflow is not None and sp.get("step_id") not in workflow_step_ids(workflow):
-            errors.append(err("step_patches", f"step_patches[{i}].step_id {sp.get('step_id')!r} does not exist in workflow.yaml"))
+        # A non-string step_id was reported above and is never looked up
+        # (it may not even be hashable).
+        step_id_is_lookupable = step_id is None or isinstance(step_id, str)
+        if workflow is not None and step_id_is_lookupable and step_id not in workflow_step_ids(workflow):
+            errors.append(err("step_patches", f"step_patches[{i}].step_id {step_id!r} does not exist in workflow.yaml"))
 
-    # rework-docs-only-task-routing/task0004 (FR5, TM-2): a docs-only round
-    # is recognized by empty task entries (no new patch field marks it), so
-    # an `append_rework` patch whose `tasks_patch.entries` is absent or empty
-    # must not return `implement` to `pending` -- implement stays completed.
-    # "Empty" follows this function's own reading of `entries` above
-    # (`tasks_patch.get("entries") or {}`). Structural layer: runs with and
-    # without --dry-run-apply. The rule's prose is owned by
+    # A docs-only round is recognized by empty task entries (no new patch
+    # field marks it): an `append_rework` patch whose `tasks_patch.entries`
+    # is absent or empty. "Empty" follows this function's own reading of
+    # `entries` above (`tasks_patch.get("entries") or {}`). Structural layer:
+    # runs with and without --dry-run-apply, and on both routes that
+    # validate a patch. The rule's prose is owned by
     # references/rework-task-synthesis.md ("Docs-only correction route"),
-    # cited not restated.
+    # cited not restated. Two independent checks, either or both of which
+    # may report on one patch:
+    #
+    # - rework-docs-only-task-routing/task0004 (FR5, TM-2), widened by
+    #   rework-docs-only-medium-fixes/task0002 (FR3): every step patch that
+    #   targets `implement` is `docs-only-implement-reset`, whatever its
+    #   set.status is -- implement stays completed.
+    # - rework-docs-only-medium-fixes/task0002 (FR3, D3):
+    #   `docs-only-step-patches`, once per patch, unless step_patches is
+    #   exactly one entry for the origin step with set.status `pending`. The
+    #   origin step comes from the input envelope's rework_source
+    #   (`_docs_only_origin_steps`).
     if operation == "append_rework" and not tasks_patch.get("entries"):
         for i, sp in enumerate(step_patches):
-            if not isinstance(sp, dict) or sp.get("step_id") != "implement":
-                continue
-            sp_set = sp.get("set")
-            if isinstance(sp_set, dict) and sp_set.get("status") == "pending":
+            if isinstance(sp, dict) and sp.get("step_id") == "implement":
                 errors.append(
                     err(
                         "docs-only-implement-reset",
-                        f"step_patches[{i}] sets implement to 'pending' on an append_rework patch "
+                        f"step_patches[{i}] targets implement on an append_rework patch "
                         "with no tasks_patch.entries (a docs-only round); implement must stay completed",
                     )
                 )
+        violation = _docs_only_step_patches_violation(
+            data.get("step_patches"), _docs_only_origin_steps(envelope)
+        )
+        if violation is not None:
+            errors.append(err("docs-only-step-patches", violation))
 
     preserve = data.get("preserve")
     if preserve is None:
@@ -1580,8 +1695,13 @@ def _validate_dry_run_apply(data, *, workflow, digest_source, phase_state, featu
         errors.append(err("dry-run-apply", "--workflow is required for --dry-run-apply"))
         return errors
 
-    # Rule 3: all `expected` values must match current state.
-    for i, sp in enumerate((data.get("step_patches") or [])):
+    # Rule 3: all `expected` values must match current state. A step_patches
+    # that is not a list, or an element that is not a mapping, is reported by
+    # the structural layer and has no `expected` to compare here.
+    step_patches = data.get("step_patches")
+    for i, sp in enumerate(step_patches if isinstance(step_patches, list) else []):
+        if not isinstance(sp, dict):
+            continue
         expected = sp.get("expected") or {}
         if "status" in expected:
             step = workflow_find_step(workflow, sp.get("step_id"))
@@ -2184,6 +2304,7 @@ def validate_worker_result(
                     phase_state=phase_state,
                     dry_run=dry_run,
                     feature_dir=feature_dir,
+                    envelope=envelope,
                 ),
                 "workflow_patch",
             )
@@ -2360,17 +2481,216 @@ def _declared_scenario_renames(payload):
     return pairs
 
 
+# Phrases that tell the rename-aware coverage messages apart (the
+# no-declaration message of row 4 carries its own, "no declared rename").
+_MSG_OLD_ID = "is the old ID of declared rename"
+_MSG_DIFF_UNAVAILABLE = "document diff is unavailable"
+_MSG_NOT_CONFIRMED = "is not confirmed by the VERIFICATION.md diff"
+
+
+def _load_scenario_ids(path):
+    """rework-docs-only-medium-fixes/task0001: the scenario-ID set a
+    VERIFICATION.md defines, as `(state, value)`.
+
+    - `("ok", ids)`: the file was read as text; `ids` come from
+      `extract_verification_scenario_ids` (the one derivation every
+      cross-artifact check shares).
+    - `("absent", None)`: no such file.
+    - `("unreadable", reason)`: the path exists but cannot be read as text (a
+      directory, a permission failure, bytes that do not decode as UTF-8).
+      Never raises."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (FileNotFoundError, NotADirectoryError):
+        return "absent", None
+    except (OSError, ValueError) as exc:
+        return "unreadable", type(exc).__name__
+    return "ok", extract_verification_scenario_ids(text)
+
+
+class _VerificationDiff:
+    """rework-docs-only-medium-fixes/task0001 (D2): the document diff the
+    rename-aware coverage rule leans on.
+
+    The diff is *available* when `--feature-dir` and `--baseline-dir` are both
+    given and feature-dir contains VERIFICATION.md. `post` is the scenario-ID
+    set of `{feature-dir}/VERIFICATION.md`; `baseline` is that of
+    `{baseline-dir}/VERIFICATION.md`, empty when the file is absent. `missing`
+    names what keeps the diff unavailable. A VERIFICATION.md that exists but
+    cannot be read as text is recorded in `unreadable` (label -> (path,
+    reason)); its set stays None. `need_*` records that a judgement used a
+    set, so `unreadable_errors` reports one `rework-index` error per
+    unreadable file that was actually needed -- never one per covered ID."""
+
+    def __init__(self, feature_dir, baseline_dir):
+        self.post = None
+        self.baseline = None
+        self.available = False
+        self.missing = []
+        self.unreadable = {}
+        self._needed = set()
+        if feature_dir is None:
+            self.missing.append("--feature-dir")
+        if baseline_dir is None:
+            self.missing.append("--baseline-dir")
+        post_state = None
+        if feature_dir is not None:
+            post_path = Path(feature_dir) / "VERIFICATION.md"
+            post_state, post_value = _load_scenario_ids(post_path)
+            if post_state == "absent":
+                self.missing.append("feature-dir's VERIFICATION.md")
+            elif post_state == "ok":
+                self.post = post_value
+            else:
+                self.unreadable["post"] = (post_path, post_value)
+        if feature_dir is None or baseline_dir is None or post_state == "absent":
+            return
+        self.available = True
+        baseline_path = Path(baseline_dir) / "VERIFICATION.md"
+        baseline_state, baseline_value = _load_scenario_ids(baseline_path)
+        if baseline_state == "ok":
+            self.baseline = baseline_value
+        elif baseline_state == "absent":
+            self.baseline = set()
+        else:
+            self.unreadable["baseline"] = (baseline_path, baseline_value)
+
+    @property
+    def usable(self):
+        """The diff is available and both sets could be built."""
+        return self.available and not self.unreadable
+
+    def need_post(self):
+        self._needed.add("post")
+        return "post" not in self.unreadable
+
+    def need_both(self):
+        self._needed.update(("post", "baseline"))
+        return not self.unreadable
+
+    def unreadable_errors(self):
+        errors = []
+        for label in ("post", "baseline"):
+            if label in self.unreadable and label in self._needed:
+                path, reason = self.unreadable[label]
+                errors.append(
+                    err(
+                        "rework-index",
+                        f"{path} {'(post-change)' if label == 'post' else '(baseline)'} "
+                        f"cannot be read as text ({reason}); no covered_by_existing or "
+                        "new_scenarios ID is accepted on the strength of it",
+                    )
+                )
+        return errors
+
+
+class _RenameAwareCoverage:
+    """rework-docs-only-medium-fixes/task0001 (D2, FR1, FR2): judges one
+    `covered_by_existing` ID at a time. The first matching row decides:
+
+    1. the `from` of a declared pair -> rejected, with or without the diff;
+    2. a verification_index key -> with the diff, accepted only when it is in
+       the post set; without the diff, accepted (unchanged behavior);
+    3. the `to` of declared pair(s) -> with the diff, accepted only when every
+       pair with this `to` meets all four conditions (from is a
+       verification_index key, to is in the post set, from is in the baseline
+       set, from is not in the post set); without the diff, rejected;
+    4. anything else -> rejected with the no-declaration message.
+
+    Every rejection is a `rework-index` error. `judge` returns the errors for
+    the ID; an ID whose judgement needs a set that cannot be read gets none,
+    because the one error of `_VerificationDiff.unreadable_errors` covers it."""
+
+    def __init__(self, declared_pairs, verification_index, diff):
+        self.verification_index = verification_index
+        self.diff = diff
+        self.froms = {}
+        self.tos = {}
+        for old_id, new_id in sorted(declared_pairs):
+            self.froms.setdefault(old_id, []).append(new_id)
+            self.tos.setdefault(new_id, []).append(old_id)
+
+    def _failed_condition(self, old_id, new_id):
+        """The first of the four conditions the pair fails, or None."""
+        if old_id not in self.verification_index:
+            return f"{old_id!r} is not a verification_index key"
+        if new_id not in self.diff.post:
+            return f"{new_id!r} is absent from the post-change VERIFICATION.md"
+        if old_id not in self.diff.baseline:
+            return f"{old_id!r} is absent from the baseline VERIFICATION.md"
+        if old_id in self.diff.post:
+            return f"{old_id!r} is still defined in the post-change VERIFICATION.md"
+        return None
+
+    def judge(self, task_id, cid):
+        diff = self.diff
+        if cid in self.froms:  # row 1
+            targets = ", ".join(repr(t) for t in self.froms[cid])
+            return [
+                err(
+                    "rework-index",
+                    f"{task_id}: covered_by_existing {cid!r} {_MSG_OLD_ID} "
+                    f"{cid!r} -> {targets}; a renamed-away ID is never covered "
+                    "(payload.doc_corrections[].scenario_renames)",
+                )
+            ]
+        if cid in self.verification_index:  # row 2
+            if not diff.available:
+                return []
+            if not diff.need_post() or cid in diff.post:
+                return []
+            return [
+                err(
+                    "rework-index",
+                    f"{task_id}: covered_by_existing {cid!r} is a verification_index key but "
+                    "is missing from the post-change VERIFICATION.md",
+                )
+            ]
+        if cid in self.tos:  # row 3
+            if not diff.available:
+                return [
+                    err(
+                        "rework-index",
+                        f"{task_id}: covered_by_existing {cid!r} is the target of a declared "
+                        f"rename, but the rename cannot be confirmed because the {_MSG_DIFF_UNAVAILABLE} "
+                        f"(missing: {', '.join(diff.missing)})",
+                    )
+                ]
+            if not diff.need_both():
+                return []
+            for old_id in self.tos[cid]:
+                failed = self._failed_condition(old_id, cid)
+                if failed is not None:
+                    return [
+                        err(
+                            "rework-index",
+                            f"{task_id}: covered_by_existing {cid!r}: declared rename "
+                            f"{old_id!r} -> {cid!r} {_MSG_NOT_CONFIRMED}: {failed}",
+                        )
+                    ]
+            return []
+        return [  # row 4 -- wording is fixed by earlier features; do not reword
+            err(
+                "rework-index",
+                f"{task_id}: covered_by_existing {cid!r} not in verification_index, and no "
+                "declared rename maps it to the verification index "
+                "(payload.doc_corrections[].scenario_renames)",
+            )
+        ]
+
+
 def _validate_rework_index(rework_index, workflow_patch, envelope, feature_dir, baseline_dir, payload=None):
     errors = []
     verification_index = (envelope or {}).get("verification_index") or {}
-    # Rename-aware coverage rule (rework-docs-only-task-routing/task0004):
-    # a `covered_by_existing` ID that is not a verification_index key passes
-    # only when a declared pair maps one of those keys (`from`) to it
-    # (`to`). `payload` is the result's payload; None (a caller that has no
-    # payload) declares nothing.
-    renamed_to_existing = {
-        new_id for (old_id, new_id) in _declared_scenario_renames(payload) if old_id in verification_index
-    }
+    # Rename-aware coverage rule (rework-docs-only-task-routing/task0004,
+    # tightened by rework-docs-only-medium-fixes/task0001): a
+    # `covered_by_existing` ID reached through a declared pair (`from` ->
+    # `to`) is accepted only when the baseline and post-change VERIFICATION.md
+    # confirm the rename, and the old ID of a rename is never accepted.
+    # `payload` is the result's payload; None (a caller that has no payload)
+    # declares nothing. See `_RenameAwareCoverage` for the decision order.
+    diff = _VerificationDiff(feature_dir, baseline_dir)
+    coverage = _RenameAwareCoverage(_declared_scenario_renames(payload), verification_index, diff)
 
     # bs10 (round 2, validator half): without a baseline directory there is
     # nothing to diff VERIFICATION.md against, so "new" cannot be verified --
@@ -2390,17 +2710,13 @@ def _validate_rework_index(rework_index, workflow_patch, envelope, feature_dir, 
     # `new_ids_in_doc` staying None and therefore silently skipping the
     # check below (the pre-task0008 gap) -- `verification_doc_absent`
     # records it explicitly so the per-task loop gives it its own outcome.
-    new_ids_in_doc = None
-    verification_doc_absent = False
-    if feature_dir is not None and baseline_dir is not None:
-        vpath = feature_dir / "VERIFICATION.md"
-        if vpath.is_file():
-            after_ids = extract_verification_scenario_ids(vpath.read_text(encoding="utf-8"))
-            bpath = baseline_dir / "VERIFICATION.md"
-            before_ids = extract_verification_scenario_ids(bpath.read_text(encoding="utf-8")) if bpath.is_file() else set()
-            new_ids_in_doc = after_ids - before_ids
-        else:
-            verification_doc_absent = True
+    #
+    # rework-docs-only-medium-fixes/task0001: both sets come from
+    # `_VerificationDiff`, the one reader the rename-aware coverage rule
+    # shares, so the two checks agree and a VERIFICATION.md that cannot be
+    # read as text is an error rather than an exception.
+    new_ids_in_doc = diff.post - diff.baseline if diff.usable else None
+    verification_doc_absent = feature_dir is not None and baseline_dir is not None and not diff.available
 
     tests_append_all = set()
     if workflow_patch is not None:
@@ -2420,20 +2736,25 @@ def _validate_rework_index(rework_index, workflow_patch, envelope, feature_dir, 
         errors.append(err("rework-index", f"{task_id}: present in rework_index but not created by tasks_patch"))
 
     for task_id, ri in rework_index.items():
+        if not isinstance(ri, dict):
+            errors.append(err("rework-index", f"{task_id}: rework_index entry must be a mapping"))
+            continue
         covered = ri.get("covered_by_existing") or []
         new_sc = ri.get("new_scenarios") or []
         if not covered and not new_sc:
             errors.append(err("rework-index", f"{task_id}: covered_by_existing and new_scenarios are both empty"))
+        if not isinstance(covered, list):
+            errors.append(err("rework-index", f"{task_id}: covered_by_existing must be a list of scenario IDs"))
+            covered = []
         for cid in covered:
-            if cid not in verification_index and cid not in renamed_to_existing:
+            if not isinstance(cid, str):
+                # Non-string values never take part in set or membership
+                # computations: they are excluded and reported (NFR1).
                 errors.append(
-                    err(
-                        "rework-index",
-                        f"{task_id}: covered_by_existing {cid!r} not in verification_index, and no "
-                        "declared rename maps it to the verification index "
-                        "(payload.doc_corrections[].scenario_renames)",
-                    )
+                    err("rework-index", f"{task_id}: covered_by_existing entry {cid!r} is not a string")
                 )
+                continue
+            errors.extend(coverage.judge(task_id, cid))
         if new_sc and baseline_dir is None:
             errors.append(
                 err(
@@ -2461,12 +2782,15 @@ def _validate_rework_index(rework_index, workflow_patch, envelope, feature_dir, 
                     "be verified",
                 )
             )
-        elif new_ids_in_doc is not None:
-            for nid in new_sc:
-                if nid not in new_ids_in_doc:
-                    errors.append(err("rework-index", f"{task_id}: new_scenarios {nid!r} is not a new VERIFICATION.md scenario"))
+        elif diff.available and new_sc:
+            # An unreadable set is reported once, after the loop.
+            if diff.need_both():
+                for nid in new_sc:
+                    if nid not in new_ids_in_doc:
+                        errors.append(err("rework-index", f"{task_id}: new_scenarios {nid!r} is not a new VERIFICATION.md scenario"))
         if new_sc and not set(new_sc).issubset(tests_append_all):
             errors.append(err("rework-index", f"{task_id}: new_scenarios must also appear in requirements_patch tests_append"))
+    errors.extend(diff.unreadable_errors())
     return errors
 
 
@@ -2590,6 +2914,7 @@ def main(argv=None):
                 phase_state=phase_state,
                 dry_run=args.dry_run_apply,
                 feature_dir=feature_dir,
+                envelope=envelope,
             )
         elif args.kind == "phase-state":
             errors = validate_phase_state(data)

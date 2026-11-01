@@ -390,11 +390,41 @@ Machine-checkable rules a validator applies against the synthesis output:
 - Every synthesized task appears as a key in `rework_index`.
 - Every ID listed in a task's `covered_by_existing` exists in the input's
   `verification_index`.
-- Rename-aware coverage: a `covered_by_existing` ID that is not itself a key
-  of `verification_index` is still accepted when some `scenario_renames` pair
-  declared in `payload.doc_corrections` has it as `to` and that pair's `from`
-  is a key of `verification_index`; any other ID is rejected with the code
-  `rework-index`. This refines the previous rule for renamed scenarios only.
+- Rename-aware coverage: the previous bullet is refined as follows for
+  `covered_by_existing` IDs, and every rejection below carries the code
+  `rework-index`. A declared pair is a `scenario_renames` mapping under
+  `payload.doc_corrections` whose `from` and `to` are both non-empty strings.
+  The document diff is available when `--feature-dir` and `--baseline-dir`
+  are both given and the feature directory holds `VERIFICATION.md`. The
+  post-change set is the scenario IDs that the feature directory's
+  `VERIFICATION.md` defines; the baseline set is the scenario IDs that the
+  baseline directory's `VERIFICATION.md` defines, empty when that file is
+  absent. When a set is needed and the `VERIFICATION.md` it comes from
+  exists but cannot be read as text, the check reports one `rework-index`
+  error that names the file, and no ID is accepted on the strength of that
+  set. Each `covered_by_existing` ID is judged by the first of these rules
+  that matches:
+  - The ID is the `from` of any declared pair: rejected, with or without the
+    diff, even when the ID is a key of `verification_index`. A declared
+    pair's `from` is never accepted as `covered_by_existing`.
+  - The ID is a key of `verification_index`: with the diff available it is
+    accepted only when it is in the post-change set, whether or not the ID
+    has anything to do with a rename; without the diff it is accepted as
+    before, so a key unrelated to any rename is not affected.
+  - The ID is the `to` of one or more declared pairs: with the diff
+    available it is accepted only when EVERY declared pair with that `to`
+    meets all four conditions: the pair's `from` is a key of
+    `verification_index`, its `to` is in the post-change set, its `from` is
+    in the baseline set, and its `from` is not in the post-change set.
+    Without the diff a rename is never accepted (fail-closed); the
+    rejection message names what is missing (`--feature-dir`,
+    `--baseline-dir`, or the feature directory's `VERIFICATION.md`) and is
+    worded differently from the message for an ID that no declared pair
+    renames.
+  - Any other ID: rejected, with the message for an ID that no declared pair
+    renames.
+  - With the diff available, every accepted `covered_by_existing` ID is
+    therefore in the post-change set.
 - Every ID listed in a task's `new_scenarios` exists in the VERIFICATION.md
   diff the synthesis produced.
 - When `new_scenarios` is non-empty, the same IDs also appear in the
@@ -409,9 +439,32 @@ Machine-checkable rules a validator applies against the synthesis output:
   whose first path segment is exactly `feature-docs`, with `\` treated as `/`
   and with empty and `.` segments dropped (Section 7).
 - An `append_rework` patch whose `tasks_patch.entries` is absent or empty
-  never returns `implement` to `pending`: its `step_patches` hold one entry,
-  for the origin step only, and none targets `implement` (Section 9,
-  Docs-only correction route).
+  never returns `implement` to `pending`: its `step_patches` hold exactly
+  one entry, for the origin step only, with `set.status` equal to
+  `pending`, and none targets `implement` (Section 9, Docs-only correction
+  route).
+  - Origin step: the `type` of `rework_source` in the input envelope
+    (`review` or `verify`) when the validator holds that envelope and
+    `rework_source` is a mapping with a `type`. With no envelope (for
+    example `--kind workflow-patch` alone), with no `rework_source`, or
+    with a `rework_source` mapping that has no `type` key, the origin step
+    is either `verify` or `review`. A `rework_source` that is not a
+    mapping, or a `type` that is present but is not exactly the string
+    `review` or `verify` (null, a non-string, or any other string), leaves
+    no origin step that can match: the patch is rejected (fail-closed).
+  - An entry whose `step_id` is `implement` is rejected whatever its
+    `set.status` is.
+  - The check is structural: it applies with and without `--dry-run-apply`,
+    and on both routes that validate the patch, the result's
+    `workflow_patch` under `--kind worker-result` and the patch under
+    `--kind workflow-patch`.
+  - Codes: every entry whose `step_id` is `implement` reports
+    `docs-only-implement-reset`. Any other violation, that is
+    `step_patches` not being a list of exactly one mapping, an entry for a
+    step other than the origin step, or a `set.status` that is not the
+    string `pending`, reports `docs-only-step-patches` once per patch, with
+    a message that names the violated condition. An `implement` entry
+    therefore reports both codes.
 
 ## 13. Execution adapter
 

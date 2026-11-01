@@ -1,0 +1,67 @@
+schema_version: 1
+feature: rework-docs-only-medium-fixes
+records:
+- question_id: requirement.rename-coverage.no-diff
+  packet_id: create-spec-q0001
+  answered_at: '2026-11-01T12:17:23+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - fail_closed
+  freeform: null
+  normalized_answer: fail_closed
+  resolution_note: 'relaxed route (category security, batch): options fail_closed / check_when_available;
+    chosen fail_closed; not chosen check_when_available; codex_consulted: true (codex entry); opus_escalation:
+    false. batch: create-spec.requirement-clarification -> codex_consultation (codex entry, 1 turn; category
+    security は batch の緩和経路で同じ相談に合流). Codex: fail_closed を推奨。レビュー提案が差分なしの拒否を明記しており、検証スクリプトでは --feature-dir
+    / --baseline-dir が任意で、オーケストレーターが常に両方を渡す規定も無い（em-workflow/scripts/validate-worker-output.py:2493、em-workflow/references/phases/create-plan-phase.md:315）。既存の成功例
+    fixture に feature-dir / baseline-dir を足せば受理を保てる。オーケストレーター判断: 採用。申告だけで架空の改名先が通る穴を閉じる方が安全側。'
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-11-01T13:38:03+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'declined: tests/test_gate_option_vocabulary.py'
+  normalized_answer: 'declined: tests/test_gate_option_vocabulary.py'
+  resolution_note: 'task_id: task0003; declined deviation path tests/test_gate_option_vocabulary.py (sha256 pin refresh for
+    validate-worker-output.py); missing evidence part: the identifier of the acceptance criterion or requirement that
+    would otherwise be dropped (the report names only "the suite regresses", no AC-n or requirement id). Path shape check
+    and failure statement (test_validate_worker_output_py_byte_identical) were present. Not auto-added to tasks.task0003.files;
+    the same path is already declared by task0001 and task0004.'
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-11-01T13:54:55+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'declined: tests/test_gate_option_vocabulary.py'
+  normalized_answer: 'declined: tests/test_gate_option_vocabulary.py'
+  resolution_note: 'task_id: task0002; declined deviation path tests/test_gate_option_vocabulary.py (sha256 pin refresh
+    for validate-worker-output.py); missing evidence parts: no AC-n or requirement id named, and no observable failure
+    stated in the deviation entry itself. Not auto-added to tasks.task0002.files; the same path is already declared by
+    task0001 and task0004.'
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-11-01T13:54:55+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'declined: tests/test_requirements_tests_replace.py'
+  normalized_answer: 'declined: tests/test_requirements_tests_replace.py'
+  resolution_note: 'task_id: task0002; declined deviation path tests/test_requirements_tests_replace.py (_patch_with helper
+    step_patches changed from [] to one verify pending entry; 37 failures in TestStructuralCheckOfTestsReplace without it);
+    missing evidence part: the identifier of the acceptance criterion or requirement that would otherwise be dropped. Not
+    auto-added to tasks.task0002.files; left to the review containment check.'
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-11-01T13:54:55+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'declined: test-docs/rework-docs-only-task-routing/task0004.tests.yaml'
+  normalized_answer: 'declined: test-docs/rework-docs-only-task-routing/task0004.tests.yaml'
+  resolution_note: 'task_id: task0002; declined deviation path test-docs/rework-docs-only-task-routing/task0004.tests.yaml
+    (one test ID renamed to keep the older feature''s record resolvable); missing evidence parts: no AC-n or requirement
+    id named, and no observable failure stated. Not auto-added to tasks.task0002.files; left to the review containment
+    check.'

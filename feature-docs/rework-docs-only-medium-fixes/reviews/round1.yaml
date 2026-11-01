@@ -1,0 +1,157 @@
+round: 1
+executed_at: '2026-11-01T14:07:52+09:00'
+scope:
+  review_mode: diff
+  base_commit: e4600e6dca8ff55a7167428dfe4be3f4515ec259
+  head_commit: 351b4f4490d17ad6864869ec07229d37c649ea1e
+  changed_files:
+  - em-workflow/references/contracts/rework-planner-contract.md
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-docs-only-round-extra-step/DRY_RUN_APPLY
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-docs-only-round-extra-step/digest-source.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-docs-only-round-extra-step/envelope.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-docs-only-round-extra-step/input.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-docs-only-round-extra-step/workflow.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-docs-only-round-implement-completed/DRY_RUN_APPLY
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-docs-only-round-implement-completed/digest-source.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-docs-only-round-implement-completed/envelope.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-docs-only-round-implement-completed/input.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-docs-only-round-implement-completed/workflow.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-docs-only-round-no-step-patches/DRY_RUN_APPLY
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-docs-only-round-no-step-patches/digest-source.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-docs-only-round-no-step-patches/envelope.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-docs-only-round-no-step-patches/input.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-docs-only-round-no-step-patches/workflow.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-docs-only-round-origin-mismatch/DRY_RUN_APPLY
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-docs-only-round-origin-mismatch/digest-source.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-docs-only-round-origin-mismatch/envelope.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-docs-only-round-origin-mismatch/input.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-docs-only-round-origin-mismatch/workflow.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-docs-only-round-origin-not-pending/DRY_RUN_APPLY
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-docs-only-round-origin-not-pending/digest-source.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-docs-only-round-origin-not-pending/envelope.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-docs-only-round-origin-not-pending/input.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-docs-only-round-origin-not-pending/workflow.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-docs-only-round-tests-replace-chain/envelope.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-docs-only-round-tests-replace-chain/input.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-docs-only-round-tests-replace-swap/envelope.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-docs-only-round-tests-replace-swap/input.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-mixed-round-rename-from-covered/baseline-dir/VERIFICATION.md
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-mixed-round-rename-from-covered/envelope.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-mixed-round-rename-from-covered/feature-dir/VERIFICATION.md
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-mixed-round-rename-from-covered/feature-dir/tasks/task0007.md
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-mixed-round-rename-from-covered/input.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-mixed-round-rename-to-missing/baseline-dir/VERIFICATION.md
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-mixed-round-rename-to-missing/envelope.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-mixed-round-rename-to-missing/feature-dir/VERIFICATION.md
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-mixed-round-rename-to-missing/feature-dir/tasks/task0007.md
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-mixed-round-rename-to-missing/input.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-mixed-round-rename-without-diff/envelope.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/invalid-mixed-round-rename-without-diff/input.json
+  - em-workflow/references/fixtures/worker-result/rework-planner/valid-mixed-round-renamed-scenario-declared/baseline-dir/VERIFICATION.md
+  - em-workflow/references/fixtures/worker-result/rework-planner/valid-mixed-round-renamed-scenario-declared/feature-dir/VERIFICATION.md
+  - em-workflow/references/fixtures/worker-result/rework-planner/valid-mixed-round-renamed-scenario-declared/feature-dir/tasks/task0007.md
+  - em-workflow/references/rework-task-synthesis.md
+  - em-workflow/references/workflow-patch.md
+  - em-workflow/scripts/validate-worker-output.py
+  - test-docs/rework-docs-only-medium-fixes/task0001.tests.yaml
+  - test-docs/rework-docs-only-medium-fixes/task0002.tests.yaml
+  - test-docs/rework-docs-only-medium-fixes/task0003.tests.yaml
+  - test-docs/rework-docs-only-medium-fixes/task0004.tests.yaml
+  - test-docs/rework-docs-only-task-routing/task0004.tests.yaml
+  - tests/test_gate_option_vocabulary.py
+  - tests/test_requirements_tests_replace.py
+  - tests/test_rework_docs_only_validator_rules.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 58060ec00a7b29e6
+  severity: medium
+  category: security
+  file: em-workflow/scripts/validate-worker-output.py
+  line: 2503
+  title: 'TM-5: 通常ファイルでない VERIFICATION.md で検証が止まる（is_file() 確認の消失による後退）'
+  description: '_load_scenario_ids は path.read_text() を無条件に呼ぶ。変更前の _validate_rework_index にあった vpath.is_file() / bpath.is_file() の確認は、この差分で消えた。経路: validate_worker_result → _validate_rework_index → _VerificationDiff → _load_scenario_ids({feature-dir}/VERIFICATION.md) → read_text。feature-dir の VERIFICATION.md は rework 回で worker が書ける範囲にある（THREAT-MODEL TB-1）。書き手のいない FIFO なら open でブロックし、終了コード 1 も JSON 診断も返らない。/dev/zero などへのシンボリックリンクでは読み取りが終わらずメモリを使い切る。THREAT-MODEL の TM-5 と NFR1 を満たしていない。'
+  suggestion: _load_scenario_ids で os.open(path, O_RDONLY|O_NONBLOCK) で開き、os.fstat の結果を stat.S_ISREG で確かめ、通常ファイルでなければ ("unreadable", "not a regular file") を返す。通常ファイルなら上限まで読んで UTF-8 で復号する。FIFO と /dev/zero へのシンボリックリンクを置くテストを subprocess の timeout 付きで足す。
+  reproduction: 有効な docs-only の worker-result を用意し、--feature-dir 内の VERIFICATION.md が書き手のいない FIFO の状態で検証する。_validate_rework_index → _VerificationDiff → _load_scenario_ids の経路で読み込みが停止し、終了コードも JSON 診断も返らない。同等の確認として、匿名パイプの /proc/self/fd/<read_fd> を _load_scenario_ids に渡し、通常ファイル判定が false でも外部タイマーで中断するまで待ち続けることを確認した。ファイルは作成していない。
+  sources:
+  - codex:security
+  confidence: 85
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: unresolved
+  resolution_reason: 'medium severity: not an auto-fix candidate (Phase R4 gate is critical/high); not counted in residual_critical_high'
+- stable_id: a7c787f4b6584710
+  severity: medium
+  category: spec
+  file: tests/test_requirements_tests_replace.py
+  line: 90
+  title: 宣言された変更範囲の外にあるファイルが 2 件変更されている（task0002）
+  description: 'SPEC の Declared Change Set（各タスクの files + feature-docs/rework-docs-only-medium-fixes/** + test-docs/rework-docs-only-medium-fixes/**）に含まれない 2 件を task0002 が変更している。(1) tests/test_requirements_tests_replace.py: _patch_with の step_patches を空から verify 1 件（pending）に変更。(2) test-docs/rework-docs-only-task-routing/task0004.tests.yaml: 完了済み feature のテスト記録で参照するテスト名を差し替え。どちらも FR3 の挙動変更に伴う追従で中身に問題は無いが、範囲チェックで違反になるおそれがある。'
+  suggestion: 変更は残し、2 件のパスを task0002 の files に足すか、範囲外変更として記録する。(2) には FR3 に合わせてテスト名を差し替えた旨を書き残す。
+  reproduction: null
+  sources:
+  - claude:evaluator
+  confidence: 55
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: unresolved
+  resolution_reason: 'medium severity: not an auto-fix candidate (Phase R4 gate is critical/high); not counted in residual_critical_high'
+evaluation:
+  round_summary: 'round 1（cross_validation=true）。4 観点すべて完了、unreviewed_perspectives 無し。reviewer の報告は security#0 の medium 1 件のみで critical / high は無い。security の TM-5 指摘はコード読解で reproduced と判断し、/dev/zero へのシンボリックリンクの場合を説明に追加。evaluator 自身の確認で spec 観点の medium 1 件（宣言範囲外の変更 2 件）を追加。注入の試みは無し。観点ごとの確認: security corroborated、comprehensive corroborated（tests と fixture は未読）、architecture corroborated、spec findings（FR6 / FR7 の fixture・テストの中身は読む量の上限で未確認）。読んだファイルは 10 件で上限に達した。'
+  recommended_action: auto_fix
+  action_rationale: critical / high は無く medium 2 件のみ。security 指摘は 1 箇所の修正とテスト 1 件で済む。spec 指摘の扱いは review-phase.md の規則に任せる。
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-rework-docs-only-medium-fixes-20261101T050723Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
