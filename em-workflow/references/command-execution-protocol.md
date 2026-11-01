@@ -75,7 +75,11 @@ result, and the orchestrator is the one that turns that packet into an
 gate either.
 
 1. Resolve every command string from `workflow.yaml` `project.components`
-   (build / test / format / e2e). Trim surrounding whitespace; skip empty.
+   (build / test / format / e2e). Remove only spaces and tabs from both ends;
+   skip a value that is empty after that. A value that still has any other
+   whitespace character at either end is never approved: `bash_guard.py` and
+   `merge-preflight.py` refuse it, and `--record` refuses an input that
+   carries it.
 2. Diff against `bash_guard.py --list`. If nothing is unapproved, the gate
    is silent — no prompt.
 3. Commands matching a refusal pattern (below): hard fail. Report the
@@ -104,9 +108,10 @@ in force.
 
 ## Verbatim execution rule
 
-The hook compares exact strings (after trimming). Agents MUST run approved
-commands **byte-for-byte as recorded**. How the working directory is set
-depends on the role:
+The hook compares exact strings after removing surrounding spaces and tabs
+only; a command with any other surrounding whitespace is never allowed. Agents
+MUST run approved commands **byte-for-byte as recorded**. How the working
+directory is set depends on the role:
 
 - **Orchestrator (main session)**: never prefix `cd {dir} && …` — change
   directory with a separate `cd` call first (shell cwd persists between Bash
@@ -142,7 +147,8 @@ depends on the role:
       resolution error counts as not below. The path is only resolved, never
       used as the directory or argument of a child process;
     - everything after the first `&&` matches an approved string exactly
-      (surrounding whitespace aside);
+      (surrounding spaces and tabs aside); any other whitespace at either end
+      of the remainder excludes the cd prefix allow;
     - that remainder has no lone `&`, no `;`, no `||` and no line break at its
       top level. A lone `&` is an `&` that is not part of a recognized token:
       `&&`, `|&`, `>&`, `<&`, `&>` and `&>>`, where the longest token is taken
