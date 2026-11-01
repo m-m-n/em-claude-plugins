@@ -1,0 +1,65 @@
+schema_version: 2
+feature: approval-unicode-whitespace
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.11
+    confidence: 0.9
+    probabilities:
+      '0': 0.0
+      '1': 0.9
+      '2': 0.1
+      '3': 0.0
+  observed_at: '2026-11-01T22:24:40+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.31
+    confidence: 0.69
+    probabilities:
+      '0': 0.0
+      '1': 0.69
+      '2': 0.31
+      '3': 0.0
+  observed_at: '2026-11-01T22:27:53+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/scripts/merge-preflight.py
+  - em-workflow/hooks/bash_guard.py
+  - tests/test_merge_preflight.py
+  - tests/test_bash_guard_cd_prefix.py
+  - tests/test_bash_guard_cd_prefix_operators.py
+  changed_lines_approx: 0
+  new_functions_needed: 0
+  new_files_needed: []
+  new_dependencies_needed: []
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 27
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  caller_and_dependency_count: 3
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: '問題は現在のコードに残っている。preflight は生の値について LF/CR を除外するが、承認照合には引数なしの strip() を使い、元の文字列を返す（em-workflow/scripts/merge-preflight.py:417、em-workflow/scripts/merge-preflight.py:465、em-workflow/scripts/merge-preflight.py:472）。フックも入口と
+    cd 後の文字列で同じ処理を行い、承認済みなら allow を返す（em-workflow/hooks/bash_guard.py:336、em-workflow/hooks/bash_guard.py:448、em-workflow/hooks/bash_guard.py:480、em-workflow/hooks/bash_guard.py:482）。承認一覧をメモリ上で
+    /usr/bin/true に差し替えた検証では、U+00A0/U+000B/U+000C を先頭・末尾・両端に付けた全9入力が preflight と通常のフックで承認された。cd
+    前置形もパス検証を差し替えた条件で全9入力が承認された。実行ファイルを配置する攻撃再現は行っていない。
+
+    その他のコマンド文字列に対する strip() は、空値判定、宣言抽出、保存済み承認の読み込み、cd 後の除外判定、標準入力の読み込みにもある（em-workflow/scripts/merge-preflight.py:415、em-workflow/hooks/bash_guard.py:182、em-workflow/hooks/bash_guard.py:202、em-workflow/hooks/bash_guard.py:367、em-workflow/hooks/bash_guard.py:446、em-workflow/hooks/bash_guard.py:502）。標準入力は行単位なので、コマンドの空白処理と行末の処理を区別する必要がある（em-workflow/hooks/bash_guard.py:501）。
+
+    既存テストには対象文字があるが、拒否を明示せず、両実装の判定が一致することを検証している（tests/test_merge_preflight.py:1198、tests/test_merge_preflight.py:1199、tests/test_merge_preflight.py:1221）。通常承認と
+    cd 前置形の試験基盤は既にある（tests/test_bash_guard_cd_prefix.py:550、tests/test_bash_guard_cd_prefix.py:645）。27
+    は3文字×先頭・末尾・両端×preflight・通常フック・cd 前置形という拒否検証条件の数で、追加する関数の数ではない。スペースとタブだけを除く方針では、末尾
+    LF を承認する既存テストとの整合も確認対象になる（tests/test_bash_guard_cd_prefix.py:424、tests/test_bash_guard_cd_prefix_operators.py:396）。hooks/tests
+    の実行器は destructive-guard.py を対象としている（em-workflow/hooks/tests/run-destructive-guard.py:63）。
+
+    既存関数内の文字列処理と判定条件が変更対象で、追加関数・追加ファイル・追加依存を必須とする箇所は確認できない（em-workflow/scripts/merge-preflight.py:465、em-workflow/hooks/bash_guard.py:336、em-workflow/hooks/bash_guard.py:448）。外部契約の値は
+    CLI 引数・JSON 構造・承認保存形式についての判定で、承認結果の動作変更とは区別した（em-workflow/scripts/merge-preflight.py:487、em-workflow/hooks/bash_guard.py:424、em-workflow/hooks/bash_guard.py:534、em-workflow/hooks/bash_guard.py:556）。接続数3は、merge
+    手順から preflight、Bash フック登録から bash_guard、preflight から承認一覧 CLI への直接接続を数えた（em-workflow/skills/merge/SKILL.md:75、em-workflow/hooks/hooks.json:21、em-workflow/scripts/merge-preflight.py:431）。変更行数は未確定であり、changed_lines_approx
+    の0は変更不要という意味ではない。ファイル変更は行わず、ファイルを作成する既存テスト一式も実行していない（tests/test_merge_preflight.py:5、tests/test_bash_guard_cd_prefix.py:154）。'
+decided_at: '2026-11-01T22:27:55+09:00'
