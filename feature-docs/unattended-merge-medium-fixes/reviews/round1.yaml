@@ -1,0 +1,137 @@
+round: 1
+executed_at: '2026-11-01T01:41:25+09:00'
+scope:
+  review_mode: diff
+  base_commit: b1694fa9c1a164357ce522a54798a66d0f9aaa73
+  head_commit: c33c63d3d70ab4e0c429dc8c109fdf35a294c8a0
+  changed_files:
+  - em-workflow/scripts/merge-ci-wait.py
+  - em-workflow/scripts/merge-pr.py
+  - em-workflow/scripts/merge-preflight.py
+  - em-workflow/skills/merge/SKILL.md
+  - test-docs/unattended-merge-medium-fixes/task0001.tests.yaml
+  - test-docs/unattended-merge-medium-fixes/task0002.tests.yaml
+  - test-docs/unattended-merge-medium-fixes/task0003.tests.yaml
+  - test-docs/unattended-merge-medium-fixes/task0004.tests.yaml
+  - test-docs/unattended-merge/task0002.tests.yaml
+  - tests/test_merge_ci_wait.py
+  - tests/test_merge_pr.py
+  - tests/test_merge_preflight.py
+  - tests/test_merge_skill_doc.py
+  split_target: B
+  split_group: this feature diff
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+  model: gpt-6-astra
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: d17e1a08d32875cf
+  severity: medium
+  category: security
+  file: em-workflow/scripts/merge-preflight.py
+  line: 465
+  title: str.strip() は Bash が区切りとしない空白まで除くため、未承認の実行ファイルが承認される
+  description: check_approval は command.strip() の値で照合する。一方、approvable が生の値で除外するのは LF と CR だけ（408-417 行）。Python の str.strip() は U+00A0、U+000B、U+000C、U+001C-U+001F、U+0085、U+2000 系なども除くが、Bash が語の区切りにするのはスペースとタブだけ。承認済みが
+    /usr/bin/true のとき、test_command を「U+00A0 + /usr/bin/true」にすると proceed になり、元の文字列がそのまま commands[].command に載る。手順 10 でこのコマンドが実行されるとき、bash_guard.py もフックの入口（448 行）と is_cd_prefixed_approved（336 行）で同じ strip
+    をしてから照合するので allow する。その結果、Bash は worktree 相対の <U+00A0>/usr/bin/true を実行する。変更前は完全一致で照合していたので、この値は止まっていた。新しいテスト test_fr4_ac3_preflight_agrees_with_bash_guards_own_approval_decision は、no-break space や
+    U+000C / U+000B を前後に付けた値を「承認」として固定している。THREAT-MODEL の TM-1 は「hook judges the exact string that runs」を前提にしているが、この差によってその前提は成り立たない。コードを読んで再現を確認した（reproduced）。high から medium に下げた理由は 3 つ。(1) 実行時の関門である bash_guard.py（as-6
+    で変更対象外）は、以前から同じ入力を allow している。(2) 悪用できるのは、先頭の語に / を含み、リポジトリの外の実行ファイルを指す承認コマンドだけ。make test のように PATH で解決するコマンドは <U+00A0>make が見つからず失敗する。リポジトリ内のスクリプトや Makefile を走らせる承認コマンドは、もともとリポジトリの中身を実行する。(3) SPEC
+    の FR4 と TS5 が、str.strip() を使うことと bash_guard.py の判定と一致することを明示している。
+  suggestion: 照合は FR4 のとおり str.strip() のまま保つ。そのうえで、改行・CR と同じく生の値で approvable を判定し、前後の空白にスペース・タブ以外を含む値（command.strip() と command.strip(' \t') が異なる値）は承認不可として commands_unapproved で止める。これで preflight は bash_guard.py
+    より厳しくなるが、NFR2（fail-closed）の向きに沿う。TS5 の一致テストのうち no-break space と form feed / vertical tab のケースは、preflight が止まることを期待する形に改める。U+00A0 を前に付けた絶対パスが承認されないテストも足す。この除外を THREAT-MODEL の TM-1 に書き足す。bash_guard.py
+    側にある同じ弱さは as-6 により今回は直せないので、別の feature への持ち越しとして記録する。
+  reproduction: ファイルを変更せず、承認一覧をメモリ上で {'/usr/bin/true'} に差し替え、test_command が '\u00a0/usr/bin/true' の文書を check_approval に渡した。承認され、元の文字列が返ることと、同じ入力に bash_guard が allow を返すことを確認した。その文字列を Bash に渡すと、承認済みの /usr/bin/true
+    ではなく、U+00A0 で始まる相対パスの実行を試み、ファイルがないため終了コード127になった。攻撃者が作業ツリーの <U+00A0>/usr/bin/true に実行可能ファイルを含めれば、そのファイルが実行される。通常の /usr/bin/true は終了コード0だった。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 80
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix 対象外（critical/high のみ）。残件として起票'
+- stable_id: 08bb31da5c63385d
+  severity: medium
+  category: comprehensive
+  file: em-workflow/skills/merge/SKILL.md
+  line: 216
+  title: ロック取得後の再判定が事前判定時の先端を使うので、別の走行が base を取り込んでからマージした場合に internal_error になる
+  description: 手順 6 の 4 の PR ルートは、resolve に事前判定時の integration_tip を渡している。merge-pr.py の resolve は、head が --integration-tip と異なる MERGED の PR を判定から外す（docstring 37 行、cmd_resolve 517-521 行）。FR3 が想定するのは「ロックを待っている間に、別の走行がマージを済ませた」場面。その走行が手順
+    8 で base を取り込み、先端を T1 から T2 に進め、T2 で PR をマージしていたとする。するとこの走行の再判定は T1 で none を受け取り、already_merged ではなく internal_error で終わる。マージ側には倒れないので NFR2 は保たれる。ただし THREAT-MODEL の TM-6 が挙げる「wrong result」は、base が進んでいた場合には防げていない。SPEC
+    の FR3 と Data Flow が --integration-tip <integration_tip> を指定しているので、実装は仕様の文言どおり。tests/test_merge_skill_doc.py の AC4 のテストは、この場面を扱っていない。
+  suggestion: held を得た後、再判定の前に git rev-parse --verify refs/heads/em-workflow/<feature>/integration で現在の先端を読む。値は、検証した 40 桁の小文字 16 進だけを使う。その値を --integration-tip に渡す。読めない場合と none の場合は、従来どおり internal_error
+    にする。再判定に使う先端がロック取得後に読んだ値であることを確かめる文書テストを足す。SPEC FR3 の「同じ integration の先端」をこう解釈したことを、この feature の文書に記録する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 70
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix 対象外（critical/high のみ）。残件として起票'
+evaluation:
+  round_summary: 'ラウンド 1（diff、cross_validation=true）。dispatch した 5 観点はすべて completed。security#0 の high（merge-preflight.py:465）は、reproduction をコードを読んで追い、reproduced と判定した。そのうえで medium に下げて採用した（理由は finding
+    に記載）。comprehensive#0 の medium（SKILL.md:216）は、merge-pr.py の cmd_resolve を読んで成立を確かめ、採用した。dismissed_sites は無い。reviewer の出力に、プロンプト注入の試みは見つからなかった。観点ごとの独自検査の結果: comprehensive=corroborated、security=corroborated、performance=corroborated、architecture=corroborated（HOST_RE
+    が merge-pr.py と merge-ci-wait.py の両方に定義され、OWNER/NAME の検証が 2 本で異なるが、後者は変更前からある差で medium 未満）、spec=corroborated（FR1〜FR5 の実装と FR6 のテスト名を照合した。2 件の finding はどちらも SPEC の文言どおりに実装した結果として生じている）。読み取り予算は 10/10。tests/test_merge_ci_wait.py
+    と test-docs 配下は読んでいない。'
+  recommended_action: auto_fix
+  action_rationale: critical / high は無い。残る medium 2 件は、どちらも局所的で小さな修正で済む。ただし 2 件とも SPEC の文言に関わる（FR4/TS5、FR3）。bash_guard.py 側の同じ弱さは as-6 により今回の対象外なので、持ち越しとして残す。
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

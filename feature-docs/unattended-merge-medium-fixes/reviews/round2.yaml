@@ -1,0 +1,107 @@
+round: 2
+executed_at: '2026-11-01T01:41:25+09:00'
+scope:
+  review_mode: diff
+  base_commit: 8136b9a04c221e1f36832b037bcad5c7edcb0dbd
+  head_commit: c33c63d3d70ab4e0c429dc8c109fdf35a294c8a0
+  changed_files:
+  - em-workflow/skills/merge/SKILL.md
+  - em-workflow/references/merge-result.md
+  - em-workflow/scripts/merge-ci-wait.py
+  - em-workflow/scripts/merge-git.py
+  - em-workflow/scripts/merge-lock.py
+  - em-workflow/scripts/merge-pr.py
+  - em-workflow/scripts/merge-preflight.py
+  - em-workflow/scripts/merge-result.py
+  split_target: A1-core
+  split_group: unattended-merge change set (round2.yaml scope.changed_files)
+plan:
+  floor:
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: bbc1e5a40942e498
+  severity: medium
+  category: spec
+  file: em-workflow/skills/merge/SKILL.md
+  line: 279
+  title: 事前判定が見た integration の先端と、取り込み・検証・マージする先端が結び付いていない
+  description: 手順 2 の merge-preflight.py は integration_tip（T1）の workflow.yaml と review 記録で FR4/FR5 を判定し、commands もそこから取る。一方、手順 7・8 は worktree の現在の HEAD を取り込み元にする。merge-git.py integrate（merge-git.py:479-484）は、worktree
+    HEAD が refs/heads/<branch> と一致することしか確かめない。手順 8 は出力の head をそのまま head_sha にする。integration_tip との照合はどこにも無い。このため、preflight の後に integration ブランチが T2 へ進むと、FR4/FR5 を判定していない T2 が検証・push・マージされる。medium-fixes
+    FR1 はローカルマージを head_sha に束縛したが、head_sha そのものは integration_tip に束縛されていない。加えて、手順 6.4（SKILL.md:201）は『先端は手順 4 / 5.2 と同じ integration_tip』と書いている。しかしローカルルートの merge-git.py merged（merge-git.py:350-359）は先端を引数に取らず、その時点の
+    refs/heads を読む。medium-fixes FR3 の『同じ integration の先端で判定し直す』と記述が食い違う。fail-closed（medium-fixes NFR2）に反する向きの隙間になる。起きるのは、preflight の後に integration ブランチを動かす並行の書き手がいる場合に限られる。
+  suggestion: 手順 8 の前（または integrate の中）で、取り込み前の worktree HEAD が integration_tip と一致することを確かめ、異なれば止める。例として、integrate に期待する先端を渡す引数を足し、不一致なら stop にする。手順 6.4 のローカル再判定も integration_tip と照合する形にするか、SKILL.md:201
+    の記述を実際の挙動に合わせて直す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - claude:evaluator
+  confidence: 70
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix 対象外（critical/high のみ）。残件として起票'
+- stable_id: 22317f774603b30b
+  severity: medium
+  category: architecture
+  file: em-workflow/references/merge-result.md
+  line: 95
+  title: 結果契約の SSOT にある reason code の条件が、SKILL の実際の使い方とずれている
+  description: merge-result.md は reason-code 表の唯一の持ち主だと宣言している。しかし verification_failed の条件は『build/test/e2e コマンドの失敗か timeout』だけになっている。SKILL は、手順 10 の未コミット変更・HEAD 不一致（SKILL.md:398）でも、medium-fixes FR1 で足した手順
+    13.3 の integration ブランチ移動（SKILL.md:522）でも verification_failed を出す。git_failed（merge-result.md:103）は『fetch / worktree add / 衝突でない merge 失敗 / merge abort』と列挙している。SKILL はこれ以外にも、手順 9 の commit 失敗、手順 10 と
+    13.3 の git status / rev-parse の失敗で使う。remote_unresolved（merge-result.md:85）には、ホストの形が不正な場合（medium-fixes FR5）が無い。SKILL.md:649-682 は同じ 28 コードの表を別に持ち、更新されているのはそちらだけ。dispatcher が契約文書の条件をもとに reason を解釈すると、ブランチの移動（再試行で収まる競合）をテスト失敗と読み違える。
+  suggestion: merge-result.md の Reason codes 表の条件を、SKILL の実際の発生箇所（verification_failed、git_failed、remote_unresolved）に合わせて更新する。SKILL.md の表は SSOT を引用する形に寄せ、条件の二重記述を減らす。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - claude:evaluator
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix 対象外（critical/high のみ）。残件として起票'
+evaluation:
+  round_summary: '[orchestrator] severity low dropped: em-workflow/scripts/merge-ci-wait.py:143。round 2（A1-core: unattended-merge の変更 8 ファイル、architecture/spec 観点）の評価。両 reviewer（litellm、muse-spark-contributor）は空の
+    findings を返した。cross_validation=true なので、読み取り予算 10 ファイルを SPEC 2 本（unattended-merge と unattended-merge-medium-fixes）と changed_files 8 本すべてに使い、独自に点検した。予算はこれで使い切った。reviewer 出力に注入の試みは無い。reviewer が報告した critical/high
+    は無いので、dismissed_sites は空。観点ごとの判定は次のとおり。architecture: findings（merge-result.md の reason 条件が SKILL とずれている、--repo の文法が 2 か所に重複している）。spec: findings（事前判定の先端と取り込む先端が結び付いていない、手順 6.4 の記述が merge-git merged の挙動と一致しない）。medium-fixes
+    FR1〜FR5 は、SKILL とスクリプトの側では SPEC どおりに入っていることを確認した。tests/ 配下のテストファイルは changed_files に無いため読んでいない。'
+  recommended_action: auto_fix
+  action_rationale: critical/high は無い。medium 2 件と low 1 件は、文書表の更新と、取り込み前の先端照合を 1 か所足すことで直せる局所的な修正。3 件とも評価者が見つけたもの（claude:evaluator 帰属）なので、自動修正の前に人の承認が要るかどうかは review-phase の規則に従う。
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

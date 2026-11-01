@@ -1,0 +1,72 @@
+task_id: task0004
+baseline_failures: []          # 4a, before any file was touched: python3 -m unittest discover -s tests from the worktree root -> Ran 13058 tests, OK (skipped=1)
+final_failures: []             # actually re-executed after implementation and after this record was written: python3 -m unittest discover -s tests -> Ran 13071 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_merge_ci_wait.TestRepoIdentifier.test_fr5_ac1_host_qualified_repo_reaches_every_gh_call_verbatim
+      - tests.test_merge_ci_wait.TestRepoIdentifier.test_fr5_ac1_every_final_outcome_is_reachable_with_a_host_qualified_repo
+      - tests.test_merge_ci_wait.TestRepoIdentifier.test_fr5_ac1_host_characters_and_case_are_passed_through_unchanged
+      - tests.test_merge_ci_wait.TestRepoIdentifier.test_fr5_ac1_a_host_of_253_characters_is_accepted
+      - tests.test_merge_ci_wait.TestRepoIdentifier.test_fr5_ac1_the_owner_and_name_rules_of_this_script_apply_in_the_host_form
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged script, every test of the entry failed. The host-qualified
+      value ghe.example/acme/service was refused at argument parsing, so the run exited 2
+      with a usage message instead of a decision (AssertionError 2 != 0 on the exit code,
+      with "argument --repo: must be OWNER/NAME" on stderr) and the gh stub logged no call.
+  AC-2:
+    tests:
+      - tests.test_merge_ci_wait.TestRepoIdentifier.test_fr5_ac2_legacy_two_segment_repo_keeps_its_gh_arguments
+      - tests.test_merge_ci_wait.TestReadOnlyAndPacing.test_ac6_log_holds_only_read_operations_on_the_given_repo_and_pr
+      - tests.test_merge_ci_wait.TestReadOnlyAndPacing.test_ac6_log_names_the_repo_and_pr_given_on_the_command_line
+      - tests.test_merge_ci_wait.TestArguments.test_malformed_identifiers_are_rejected
+    red_confirmed: false
+    red_reason: >-
+      The legacy OWNER/NAME behavior pre-existed and is meant to stay unchanged, so no red
+      state occurred for it. The new test and the existing tests that read the gh arguments
+      (the exact argv shapes with octo/widgets and with the dotted other-org/other.repo)
+      passed before the change and after it. One case of the existing
+      test_malformed_identifiers_are_rejected ("repo with extra segment") was rewritten from
+      a/b/c to a/b/c/d, because a/b/c is a valid HOST/OWNER/NAME under C1 (host "a"); four
+      segments are the malformed shape. No other existing test was changed.
+  AC-3:
+    tests:
+      - tests.test_merge_ci_wait.TestRepoIdentifier.test_fr5_ac3_three_segments_are_valid_and_four_segments_are_a_usage_error
+      - tests.test_merge_ci_wait.TestRepoIdentifier.test_fr5_ac3_each_malformed_repo_is_a_usage_error_next_to_its_valid_control
+      - tests.test_merge_ci_wait.TestRepoIdentifier.test_fr5_ac3_a_malformed_repo_is_rejected_whatever_else_is_valid
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged script, the first two tests failed (AssertionError 2 != 0):
+      each pairs a malformed value with its nearest valid control, and the valid
+      three-segment control (ghe.example/acme/service, a 253-character host, a/b/c) was
+      refused. The malformed values themselves (one segment, four segments, empty
+      segments, port, underscore, userinfo, leading dot or hyphen, 254-character host, and
+      the rest of the table) were already rejected by the old script, so the rejection half
+      of the pairs went red only through the control. The third test (a malformed value
+      with an already-past deadline still yields no decision) passed before the change.
+  AC-4:
+    tests:
+      - tests.test_merge_ci_wait.TestRepoIdentifier.test_fr5_ac4_help_names_both_forms
+      - tests.test_merge_ci_wait.TestRepoIdentifier.test_fr5_ac4_the_error_message_names_both_forms
+      - tests.test_merge_ci_wait.TestRepoIdentifier.test_fr5_ac4_the_module_docstring_lists_both_forms_for_repo
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged script, all three failed with AssertionError
+      'HOST/OWNER/NAME' not found in the --help text ("GitHub repository as OWNER/NAME"),
+      in the error message ("argument --repo: must be OWNER/NAME") and in the --repo entry
+      of the module docstring ("--repo OWNER/NAME ...").
+  AC-5:
+    tests:
+      - tests.test_merge_ci_wait.TestRepoIdentifier.test_fr5_ac1_host_qualified_repo_reaches_every_gh_call_verbatim
+      - tests.test_merge_ci_wait.TestRepoIdentifier.test_fr5_ac3_three_segments_are_valid_and_four_segments_are_a_usage_error
+      - tests.test_merge_ci_wait.TestRepoIdentifier.test_fr5_ac4_help_names_both_forms
+      - tests.test_merge_ci_wait
+    red_confirmed: true
+    red_reason: >-
+      The new tests were written first and run against the unchanged script
+      (em-workflow/scripts/merge-ci-wait.py as of the base revision): the AC-1, AC-3 and
+      AC-4 tests named here failed (42 failures and subtest failures in the run of
+      TestRepoIdentifier and TestArguments; the pair test failed with AssertionError
+      2 != 0 on the three-segment side). After the change the whole module
+      tests.test_merge_ci_wait passes (Ran 75 tests, OK).

@@ -1,0 +1,69 @@
+round: 7
+executed_at: '2026-11-01T01:41:25+09:00'
+scope:
+  review_mode: diff
+  base_commit: 8136b9a04c221e1f36832b037bcad5c7edcb0dbd
+  head_commit: c33c63d3d70ab4e0c429dc8c109fdf35a294c8a0
+  changed_files:
+  - tests/test_merge_skill_doc.py
+  split_target: A6-tests-skill-doc
+  split_group: unattended-merge change set (round2.yaml scope.changed_files)
+plan:
+  floor:
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings: []
+evaluation:
+  round_summary: 'Round 7 (split target A6-tests-skill-doc, diff base 8136b9a04): tests/test_merge_skill_doc.py is the only changed file. It is new in this range (1686 lines). It holds the static contract
+    tests for task0008 and task0010 of unattended-merge, plus task0001 of unattended-merge-medium-fixes. Both reviewer runs (architecture#0, spec#0) returned no findings, and no reviewer output contains
+    an injection attempt. Independent inspection: I read the whole test file and checked its assertions against em-workflow/skills/merge/SKILL.md, feature-docs/unattended-merge-medium-fixes/SPEC.md (FR1-FR6,
+    TS1-TS3), and the relevant lines of feature-docs/unattended-merge/SPEC.md (NFR1, FR15) and tasks/task0001.md (AC-1 to AC-7). This used 6 of the 10 allowed file reads. The FR1, FR2, FR3 and FR5 (SKILL
+    side) assertions match the current SKILL.md: ordering, single-cd adjacency, the fixed detail sentences, the 3 resolve forms and the HOST/OWNER/NAME wording all line up. I found no contradiction with
+    the base SPEC or the medium-fixes SPEC. The two adjusted assertions (the nearest-previous-cd rule for the local merge, and the resolve count going from 2 to 3) are backed by the new adjacency test,
+    so neither is weaker than before. Architecture: the file is cohesive around one SKILL.md, imports no plugin script and does not write bytecode. Running the hooks as subprocesses is deliberate under
+    D2. I found no layer violation or SSOT drift with a concrete cost. One minor observation that is not reported as a finding: fenced_blocks() keeps `prev` across adjacent fenced blocks. As a result, the
+    general timeout test lets the step-10 `git rev-parse HEAD` block (SKILL.md lines 394-396) pass using the timeout line written for the `git status` block above it. The effective timeout is 60000 or the
+    Bash default either way, so NFR1 has no practical exposure. Coverage: architecture=corroborated; spec=corroborated.'
+  recommended_action: complete
+  action_rationale: Neither dispatched perspective reported a finding, and my own reading of the single changed file against SKILL.md and both SPECs supports both empty results. There is no critical, high
+    or medium issue to fix. The one observation is below the schema's minimum severity and does not block completion.
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-unattended-merge-medium-fixes-20261031T164038Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

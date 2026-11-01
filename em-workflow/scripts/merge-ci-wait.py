@@ -9,7 +9,9 @@ this script echoes. No loop over this script exists in any command string.
 Arguments (long options only):
 
   --project-root PATH   main working tree root (gh is run from there)
-  --repo OWNER/NAME     GitHub repository, named explicitly on every gh read
+  --repo REPO           GitHub repository, OWNER/NAME or HOST/OWNER/NAME, named
+                        explicitly on every gh read (the value reaches gh
+                        verbatim; any other form is a usage error)
   --pr N                pull request number
   --head SHA            the pushed / verified head (40 lowercase hex)
   --deadline-in SECS    first call: deadline = now + SECS (absolute epoch)
@@ -83,7 +85,12 @@ MAX_NAME_LENGTH = 80
 
 SHA_RE = re.compile(r"[0-9a-f]{40}")
 PR_RE = re.compile(r"[1-9][0-9]{0,11}")
-REPO_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*/[A-Za-z0-9._-]+")
+# --repo is OWNER/NAME or HOST/OWNER/NAME (IMPLEMENTATION.md C1). HOST is 1 to
+# 253 characters of [A-Za-z0-9.-] with an alphanumeric first character, so it
+# has no port, userinfo or scheme and can never look like an option.
+HOST_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9.-]{0,252}")
+OWNER_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
+NAME_RE = re.compile(r"[A-Za-z0-9._-]+")
 
 _current_child = None
 
@@ -134,8 +141,20 @@ def pr_value(text):
 
 
 def repo_value(text):
-    if not REPO_RE.fullmatch(text) or text.rsplit("/", 1)[1] in (".", ".."):
-        raise argparse.ArgumentTypeError("must be OWNER/NAME")
+    """Accept OWNER/NAME or HOST/OWNER/NAME (C1); the text is returned verbatim."""
+    segments = text.split("/")
+    if len(segments) == 3 and HOST_RE.fullmatch(segments[0]):
+        segments = segments[1:]
+    if len(segments) != 2:
+        owner = name = ""
+    else:
+        owner, name = segments
+    if (
+        not OWNER_RE.fullmatch(owner)
+        or not NAME_RE.fullmatch(name)
+        or name in (".", "..")
+    ):
+        raise argparse.ArgumentTypeError("must be OWNER/NAME or HOST/OWNER/NAME")
     return text
 
 
@@ -151,7 +170,8 @@ def build_parser():
     parser.add_argument("--project-root", required=True,
                         help="main working tree root")
     parser.add_argument("--repo", required=True, type=repo_value,
-                        help="GitHub repository as OWNER/NAME")
+                        help="GitHub repository as OWNER/NAME or HOST/OWNER/NAME; "
+                             "used verbatim for every gh call")
     parser.add_argument("--pr", required=True, type=pr_value,
                         help="pull request number")
     parser.add_argument("--head", required=True, type=sha_value,

@@ -103,7 +103,7 @@ acceptance_tests:
       - tests.test_merge_preflight.TestCommandApproval.test_ac6_project_without_components_proceeds_with_no_commands
       - tests.test_merge_preflight.TestCommandApproval.test_ac6_commands_are_carried_verbatim
       - tests.test_merge_preflight.TestCommandApproval.test_ac6_approval_is_an_exact_string_match
-      - tests.test_merge_preflight.TestCommandApproval.test_ac6_leading_or_trailing_blanks_are_not_approved_by_a_stripped_entry
+      - tests.test_merge_preflight.TestCommandApproval.test_fr4_ac1_leading_or_trailing_blanks_are_approved_by_a_trimmed_entry
       - tests.test_merge_preflight.TestCommandApproval.test_ac6_multi_line_commands_are_unapproved
       - tests.test_merge_preflight.TestCommandApproval.test_ac6_non_string_commands_are_unapproved
       - tests.test_merge_preflight.TestCommandApproval.test_ac6_malformed_project_section_cannot_confirm_approval

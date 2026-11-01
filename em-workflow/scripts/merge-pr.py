@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """GitHub repository and pull-request decisions for the unattended merge
 (em-workflow plugin, task0004 and task0010 of feature-docs/unattended-merge;
-FR6, FR7, FR8, FR9, FR22, NFR3, NFR4, NFR5).
+FR6, FR7, FR8, FR9, FR22, NFR3, NFR4, NFR5; task0003 of
+feature-docs/unattended-merge-medium-fixes, FR5).
 
 Three read-only subcommands; each prints exactly ONE JSON object on ONE
 stdout line.  Common keys: `outcome`, `reason` (a reason code when `outcome`
@@ -11,13 +12,25 @@ add).  Diagnostics go to stderr only.
   repo     --project-root P --remote R
       Resolve remote R's URL to a GitHub repository through gh, then confirm
       that gh's own default repository for the project is the same one.
-      outcome `github` (+ `repo` = owner/name)
+      Both sides are asked for owner/name and repository URL.  The host of
+      each side is the host of the URL gh reported (never the text of the
+      remote's URL), and it must satisfy the host rule: 1 to 253 characters,
+      only letters, digits, `.` and `-`, the first one a letter or digit (so
+      no port, userinfo, scheme or leading `-`).  The two sides are the same
+      repository only when host and owner/name both match, ignoring letter
+      case.
+      outcome `github` (+ `repo` = HOST/OWNER/NAME of the remote side, as gh
+                        reported them)
       stop `remote_not_github`  gh cannot resolve the remote's URL
       stop `remote_unresolved`  the remote does not exist, or gh's default
-                                repository cannot be determined or differs
-                                (both names in `detail` when known)
+                                repository cannot be determined, or either
+                                side's host fails the host rule (`detail`
+                                says which side, without echoing the host),
+                                or host or owner/name differs (both
+                                host-qualified identifiers in `detail`)
+      A gh answer without a string `url` is an internal failure.
 
-  resolve  --project-root P --repo O/N --feature F --base B --integration-tip SHA
+  resolve  --project-root P --repo R --feature F --base B --integration-tip SHA
       List the PRs (every state) whose head is `em-workflow/F/integration`
       and whose base is B, ignoring cross-repository (fork) PRs.
       SHA is the integration branch's commit this run is about to merge, or
@@ -33,7 +46,7 @@ add).  Diagnostics go to stderr only.
       several PRs share a class, the highest PR number is used.  `head` is
       the PR's head commit SHA.
 
-  state    --project-root P --repo O/N --pr N --head SHA --base B
+  state    --project-root P --repo R --pr N --head SHA --base B
       Read the PR's state right before the merge.
       outcome `merged` (+ `pr_url`, `merge_commit`)
       outcome `ready`  (+ `pr_url`, `head`)
@@ -44,6 +57,12 @@ add).  Diagnostics go to stderr only.
       head SHA differs from --head or its base branch differs from B (the
       detail names both).  Mergeability MERGEABLE or UNKNOWN counts as not
       conflicting.
+
+--repo R (resolve and state) is HOST/OWNER/NAME, as `repo` reports it, or the
+legacy OWNER/NAME; HOST follows the host rule above.  Any other value (one
+segment, four or more, an empty segment, a malformed host) is a usage error
+(exit 2) raised before any gh call.  An accepted value is given to every gh
+call of the subcommand verbatim.
 
 Exit codes: 0 when a decision was produced (stop outcomes included); 2 for
 missing or malformed arguments; 1 for an internal failure (gh output that is
@@ -73,6 +92,7 @@ GH_TIMEOUT_DEFAULT = 60.0
 GIT_TIMEOUT = 30.0
 GH_TIMEOUT_ENV = "EM_WORKFLOW_MERGE_PR_GH_TIMEOUT"
 LIST_LIMIT = "100"
+REPO_VIEW_FIELDS = "nameWithOwner,url"
 
 # --- validation -------------------------------------------------------------
 
@@ -83,6 +103,7 @@ GIT_NAME_CHARS_RE = re.compile(r"[A-Za-z0-9._/-]+")
 REPO_RE = re.compile(
     r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}/(?!\.{1,2}$)[A-Za-z0-9._][A-Za-z0-9._-]{0,99}"
 )
+HOST_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9.-]{0,252}")
 HTTPS_URL_RE = re.compile(r"https://[A-Za-z0-9.-]+(?::[0-9]{1,5})?/[A-Za-z0-9._~%/+-]+")
 REMOTE_SCHEMES = ("https", "http", "ssh", "git", "git+ssh", "ssh+git")
 SCHEME_URL_RE = re.compile(r"([A-Za-z][A-Za-z0-9+.-]*)://([^/@]*@)?(.+)", re.DOTALL)
@@ -128,6 +149,20 @@ def valid_repo(value):
     return isinstance(value, str) and REPO_RE.fullmatch(value) is not None
 
 
+def valid_host(value):
+    return isinstance(value, str) and HOST_RE.fullmatch(value) is not None
+
+
+def valid_repo_selector(value):
+    """The two accepted `--repo` forms: OWNER/NAME and HOST/OWNER/NAME."""
+    if not isinstance(value, str):
+        return False
+    host, sep, rest = value.partition("/")
+    if sep and "/" in rest:
+        return valid_host(host) and valid_repo(rest)
+    return valid_repo(value)
+
+
 # --- argument types (a failure here is exit 2) -------------------------------
 
 
@@ -156,8 +191,10 @@ def arg_pr(value):
 
 
 def arg_repo(value):
-    if not valid_repo(value):
-        raise argparse.ArgumentTypeError("not an owner/name repository")
+    if not valid_repo_selector(value):
+        raise argparse.ArgumentTypeError(
+            "not a host/owner/name or owner/name repository"
+        )
     return value
 
 
@@ -281,6 +318,27 @@ def name_with_owner(doc, what):
     return value
 
 
+def repo_answer(doc, what):
+    """Owner/name and repository URL of one `gh repo view` answer.  A missing
+    or non-string URL is an internal failure; the host in it is judged later."""
+    name = name_with_owner(doc, what)
+    url = doc.get("url")
+    if not isinstance(url, str):
+        raise InternalFailure("%s carries no url string" % what)
+    return name, url
+
+
+def url_host(url):
+    """The text between the first scheme separator and the next `/` (or the
+    end); None when the URL has no scheme separator."""
+    start = url.find("://")
+    if start < 0:
+        return None
+    rest = url[start + 3:]
+    end = rest.find("/")
+    return rest if end < 0 else rest[:end]
+
+
 # --- results -------------------------------------------------------------------
 
 
@@ -329,31 +387,50 @@ def cmd_repo(args):
             "the URL of remote '%s' is not a GitHub repository URL" % args.remote,
         )
 
-    remote_doc = gh_json(["repo", "view", target, "--json", "nameWithOwner"], root)
+    remote_doc = gh_json(["repo", "view", target, "--json", REPO_VIEW_FIELDS], root)
     if remote_doc is None:
         return stop(
             "remote_not_github",
             "gh cannot resolve remote '%s' to a GitHub repository" % args.remote,
         )
-    remote_repo = name_with_owner(remote_doc, "gh repo view (remote)")
+    remote_repo, remote_url = repo_answer(remote_doc, "gh repo view (remote)")
 
     # By design this query names no repository: it asks gh what it would use
     # for `gh pr create` / `gh pr merge` in this project.
-    default_doc = gh_json(["repo", "view", "--json", "nameWithOwner"], root)
+    default_doc = gh_json(["repo", "view", "--json", REPO_VIEW_FIELDS], root)
     if default_doc is None:
         return stop(
             "remote_unresolved",
             "gh default repository cannot be determined (remote repository: %s)"
             % remote_repo,
         )
-    default_repo = name_with_owner(default_doc, "gh repo view (default)")
-    if default_repo.lower() != remote_repo.lower():
+    default_repo, default_url = repo_answer(default_doc, "gh repo view (default)")
+
+    # The host is the one gh reported for each side, never the remote's URL
+    # text (ssh.github.com and ssh-config aliases are not the repository's host).
+    # The rejected host is not echoed.
+    remote_host = url_host(remote_url)
+    if not valid_host(remote_host):
         return stop(
             "remote_unresolved",
-            "gh default repository %s differs from remote repository %s"
-            % (default_repo, remote_repo),
+            "the URL gh reported for the remote repository has no valid host",
         )
-    return result("github", repo=remote_repo)
+    default_host = url_host(default_url)
+    if not valid_host(default_host):
+        return stop(
+            "remote_unresolved",
+            "the URL gh reported for its default repository has no valid host",
+        )
+    if (
+        default_host.lower() != remote_host.lower()
+        or default_repo.lower() != remote_repo.lower()
+    ):
+        return stop(
+            "remote_unresolved",
+            "gh default repository %s/%s differs from remote repository %s/%s"
+            % (default_host, default_repo, remote_host, remote_repo),
+        )
+    return result("github", repo="%s/%s" % (remote_host, remote_repo))
 
 
 # --- PR parsing ----------------------------------------------------------------

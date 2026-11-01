@@ -1,0 +1,80 @@
+round: 6
+executed_at: '2026-11-01T01:41:25+09:00'
+scope:
+  review_mode: diff
+  base_commit: 8136b9a04c221e1f36832b037bcad5c7edcb0dbd
+  head_commit: c33c63d3d70ab4e0c429dc8c109fdf35a294c8a0
+  changed_files:
+  - tests/test_merge_pr.py
+  - tests/test_merge_preflight.py
+  split_target: A5-tests-pr-preflight
+  split_group: unattended-merge change set (round2.yaml scope.changed_files)
+plan:
+  floor:
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 64742b16658d5b04
+  severity: medium
+  category: spec
+  file: tests/test_merge_pr.py
+  line: 219
+  title: Fixture git calls inherit the caller's GIT_DIR / GIT_WORK_TREE / GIT_INDEX_FILE, so per-test repository isolation (NFR5) depends on the environment
+  description: MergePrTestCase.setUp builds self.env and self.real_env from os.environ (lines 219-233). It removes only GH_REPO, GH_TOKEN, GITHUB_TOKEN and EM_WORKFLOW_MERGE_PR_GH_TIMEOUT. Every fixture
+    call is `git -C <tmp>/project ...` run with that environment, and a GIT_DIR already set in the environment overrides the repository lookup that -C depends on. If the suite runs with GIT_DIR (or GIT_INDEX_FILE)
+    set, setUp's git config / commit write to the caller's real repository instead of the temporary one. tests/test_merge_preflight.py deletes every GIT_* key before building its fixtures. GIT_CONFIG_GLOBAL
+    is also not pinned. Nothing in the current workflow runs the suite from a git hook, so the trigger is conditional.
+  suggestion: In MergePrTestCase.setUp, remove every key starting with GIT_ from self.env before adding the test values, as test_merge_preflight.py does. Set GIT_CONFIG_GLOBAL to os.devnull next to GIT_CONFIG_NOSYSTEM.
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - claude:evaluator
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix 対象外（critical/high のみ）。残件として起票'
+evaluation:
+  round_summary: 'Round 6, split target A5-tests-pr-preflight. Both reviewer runs returned empty findings; no critical/high site, dismissed_sites empty; no injection attempt. architecture: corroborated
+    (both files read in full, test-only change). spec: findings (NFR5 isolation in tests/test_merge_pr.py setUp). TS4-TS8 coverage corroborated. Read budget 9 of 10.'
+  recommended_action: auto_fix
+  action_rationale: No critical/high. The only finding is a medium, mechanical test-isolation fix; the round can complete with it recorded.
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

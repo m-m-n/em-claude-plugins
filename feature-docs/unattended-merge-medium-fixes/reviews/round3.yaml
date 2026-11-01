@@ -1,0 +1,72 @@
+round: 3
+executed_at: '2026-11-01T01:41:25+09:00'
+scope:
+  review_mode: diff
+  base_commit: 8136b9a04c221e1f36832b037bcad5c7edcb0dbd
+  head_commit: c33c63d3d70ab4e0c429dc8c109fdf35a294c8a0
+  changed_files:
+  - .claude-plugin/marketplace.json
+  - .claude/rules/hook-tests.md
+  - em-workflow/.claude-plugin/plugin.json
+  - em-workflow/README.md
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/merge_pr_allow.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - em-workflow/hooks/tests/run-destructive-guard.py
+  - tests/test_destructive_guard_command_substitution.py
+  - tests/test_destructive_guard_extglob_units.py
+  - tests/test_destructive_guard_lexer_agreement.py
+  - tests/test_destructive_guard_merge_allow.py
+  split_target: A2-hooks
+  split_group: unattended-merge change set (round2.yaml scope.changed_files)
+plan:
+  floor:
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: failed
+findings: []
+evaluation:
+  round_summary: '[orchestrator] evaluator の返却に必須の root field `dismissed_sites` が無かったため、Phase R3b の evaluator-failure degradation を適用した。reviewer 自身の findings（architecture#0 / spec#0 ともに 0 件）だけを採用し、evaluator
+    自身が挙げた medium 1 件（em-workflow/README.md:134、destructive-guard の gh pr merge 例外の条件が README で不足）は findings に載せず、残件として別途起票する。evaluator の要約: (see original; README medium finding; architecture findings,
+    spec corroborated; tests/test_destructive_guard_merge_allow.py not read — read budget exhausted)'
+  recommended_action: complete
+  action_rationale: critical / high の指摘は無く、残っているのは README の記述ずれ（medium）1 件だけ。実装の挙動には影響しない。
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
