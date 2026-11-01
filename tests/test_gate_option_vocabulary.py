@@ -1301,8 +1301,15 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # `apply_patch` applies `tests_replace` before `tests_append` through
     # `_apply_tests_replace`. PINNED_VALIDATOR_TEST_LINE below is unaffected
     # and still asserted. Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by rework-docs-only-medium-fixes/task0003 (FR4):
+    # `_validate_tests_replace_entry` also rejects an entry whose
+    # `tests_replace` `from` set and `to` set share an ID (a chain or a
+    # swap), reported as `requirements_patch`. PINNED_VALIDATOR_TEST_LINE
+    # below is unaffected and still asserted. Same rationale: refresh,
+    # don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "1a3a10798f73463c9f47314fc95faee9060f5130219a853de2227616ffa964f9"
+        "f7d28776812548322fc081b15e54f909ef7f82a3904f3b785965147201cd5ce6"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-

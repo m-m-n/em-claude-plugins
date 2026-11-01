@@ -20,9 +20,17 @@ asserts only the validator's rendering of them):
   `verification_index` key (`from`) to it (`to`); otherwise code
   `rework-index`. Malformed declarations contribute no pair and never raise.
 
+- tests_replace overlap (FR4, TM-4, rework-docs-only-medium-fixes task0003):
+  a `requirements_patch` entry whose `set.tests_replace` has a `from` set and
+  a `to` set that share an ID (a chain TS-1->TS-2, TS-2->TS-3 or a swap
+  TS-1->TS-2, TS-2->TS-1) is reported with code `requirements_patch`, at the
+  structural layer (with and without `--dry-run-apply`, through both
+  `--kind workflow-patch` and `--kind worker-result`). Pairs that only share
+  a `to` are not rejected by this check. Malformed shapes never raise.
+
 Standard-library imports only. The module reads the validator script and the
-six fixtures under references/fixtures/worker-result/rework-planner/ that
-this task owns.
+fixtures under references/fixtures/worker-result/rework-planner/ that its
+tasks own.
 """
 
 import ast
@@ -629,6 +637,424 @@ class TestFixtures(unittest.TestCase):
             )
             self.assertIn("TS3", envelope["verification_index"])
             self.assertNotIn("TS-3", envelope["verification_index"])
+
+
+# ---------------------------------------------------------------------------
+# tests_replace overlap (FR4): TestTestsReplaceOverlap
+# ---------------------------------------------------------------------------
+
+REQUIREMENTS_PATCH_CODE = "requirements_patch"
+FIXTURES_ROOT = REPO_ROOT / "em-workflow" / "references" / "fixtures"
+
+CHAIN = [_rename("TS-1", "TS-2"), _rename("TS-2", "TS-3")]
+SWAP = [_rename("TS-1", "TS-2"), _rename("TS-2", "TS-1")]
+DISJOINT = [_rename("TS1", "TS-1"), _rename("TS2", "TS-2")]
+SHARED_TO = [_rename("TS1", "X"), _rename("TS2", "X")]
+
+# new fixture -> (its tests_replace pairs, the IDs both sets share)
+OVERLAP_FIXTURES = {
+    "invalid-docs-only-round-tests-replace-chain": (CHAIN, ["TS-2"]),
+    "invalid-docs-only-round-tests-replace-swap": (SWAP, ["TS-1", "TS-2"]),
+}
+OVERLAP_SOURCE_FIXTURE = "valid-docs-only-round"
+
+# (route, dry_run): the four ways the structural layer is reached
+ROUTES = [
+    (route, dry_run)
+    for route in ("workflow-patch", "worker-result")
+    for dry_run in (False, True)
+]
+
+OVERLAP_INDEX = {"TS-1": ["FR1"], "TS-2": ["FR1"], "TS-3": ["FR1"]}
+
+
+def _messages(errors):
+    return [e["message"] for e in errors]
+
+
+def _replace_entry(pairs, contains=_ABSENT):
+    """One requirements_patch entry replacing tests by `pairs`. `contains`
+    defaults to every string `from`, so the expectation is never the defect."""
+    if contains is _ABSENT:
+        contains = [
+            p["from"] for p in pairs if isinstance(p, dict) and isinstance(p.get("from"), str)
+        ]
+    return {
+        "expected": {"tests_contains": copy.deepcopy(contains)},
+        "set": {"tests_replace": copy.deepcopy(pairs)},
+    }
+
+
+def _replace_patch(entries):
+    """A docs-only-round append_rework patch (verify back to pending) that
+    carries `entries` as its requirements_patch."""
+    patch = _append_patch({}, [VERIFY_PENDING])
+    patch["requirements_patch"] = {"entries": copy.deepcopy(entries), "mode": "merge_entries"}
+    return patch
+
+
+def _dry_run_inputs(patch):
+    """`_dry_run_context` for `patch`, with a workflow.yaml that already
+    satisfies every `expected` of the patch (step statuses, the requirement's
+    current tests, the registered task ids below expected_next_task_id), so
+    the only thing --dry-run-apply can add is a finding about the patch
+    itself."""
+    bound, workflow, digest_source = _dry_run_context(patch)
+    step_patches = bound.get("step_patches")
+    for sp in step_patches if isinstance(step_patches, list) else []:
+        status = (sp.get("expected") or {}).get("status")
+        for step in workflow["workflow"]:
+            if status is not None and step["id"] == sp.get("step_id"):
+                step["status"] = status
+    entries = (bound.get("requirements_patch") or {}).get("entries") or {}
+    for fr_id, rpatch in entries.items():
+        contains = (rpatch.get("expected") or {}).get("tests_contains")
+        if isinstance(contains, list):
+            req = workflow["requirements"].setdefault(
+                fr_id, {"status": "ok", "tasks": [], "tests": [], "title": "x"}
+            )
+            req["tests"] = [c for c in contains if isinstance(c, str)]
+    next_id = int(bound["tasks_patch"]["expected_next_task_id"][len("task"):])
+    for n in range(2, next_id):
+        workflow["tasks"][f"task{n:04d}"] = copy.deepcopy(workflow["tasks"]["task0001"])
+    return bound, workflow, digest_source
+
+
+def _worker_result_with(patch):
+    result = _rework_result(entries={}, rework_index={}, step_patches=(VERIFY_PENDING,))
+    result["workflow_patch"] = copy.deepcopy(patch)
+    return result
+
+
+def _errors_via(route, dry_run, patch):
+    """In-process findings for `patch` on one of the four routes."""
+    if route == "workflow-patch":
+        if dry_run:
+            bound, workflow, digest_source = _dry_run_inputs(patch)
+            return VWO.validate_workflow_patch(
+                bound, workflow=workflow, digest_source=digest_source, dry_run=True
+            )
+        return VWO.validate_workflow_patch(copy.deepcopy(patch))
+    result = _worker_result_with(patch)
+    if dry_run:
+        bound, workflow, digest_source = _dry_run_inputs(patch)
+        result["workflow_patch"] = bound
+        return _validate_result(
+            result, OVERLAP_INDEX, workflow=workflow, digest_source=digest_source, dry_run=True
+        )
+    return _validate_result(result, OVERLAP_INDEX)
+
+
+def _cli_via(tmp_path, route, dry_run, document, envelope=None):
+    """Runs the validator CLI on `document` (a workflow patch for
+    `workflow-patch`, a worker result for `worker-result`)."""
+    document = copy.deepcopy(document)
+    args = ["--kind", route, "--worker", "rework-planner"]
+    if dry_run:
+        patch = document["workflow_patch"] if route == "worker-result" else document
+        bound, workflow, digest_source = _dry_run_inputs(patch)
+        if route == "worker-result":
+            document["workflow_patch"] = bound
+        else:
+            document = bound
+        (tmp_path / "workflow.json").write_text(json.dumps(workflow), encoding="utf-8")
+        (tmp_path / "digest-source.json").write_text(json.dumps(digest_source), encoding="utf-8")
+    (tmp_path / "input.json").write_text(json.dumps(document), encoding="utf-8")
+    args += ["--input", str(tmp_path / "input.json")]
+    if route == "worker-result":
+        envelope = _rework_envelope(OVERLAP_INDEX) if envelope is None else envelope
+        (tmp_path / "envelope.json").write_text(json.dumps(envelope), encoding="utf-8")
+        args += ["--input-envelope", str(tmp_path / "envelope.json")]
+    if dry_run:
+        args += [
+            "--workflow", str(tmp_path / "workflow.json"),
+            "--digest-source", str(tmp_path / "digest-source.json"),
+            "--dry-run-apply",
+        ]
+    return run_cli(args)
+
+
+def _read_fixture(case, name):
+    return json.loads((FIXTURE_GROUP_DIR / case / name).read_text(encoding="utf-8"))
+
+
+def _overlap_of(rpatch):
+    """The IDs a requirements_patch entry's tests_replace from set and to set
+    share, computed independently of the validator (string values of mapping
+    pairs only)."""
+    pairs = ((rpatch.get("set") or {}).get("tests_replace")) if isinstance(rpatch, dict) else None
+    pairs = [p for p in pairs if isinstance(p, dict)] if isinstance(pairs, list) else []
+    return {p["from"] for p in pairs if isinstance(p.get("from"), str)} & {
+        p["to"] for p in pairs if isinstance(p.get("to"), str)
+    }
+
+
+# tests_replace values (AC-6) that are not a well-formed list of pairs; each
+# must end as a requirements_patch finding, never as an exception
+MALFORMED_TESTS_REPLACE = {
+    "not a list: string": "TS-1",
+    "not a list: mapping": {"from": "TS-1", "to": "TS-2"},
+    "not a list: null": None,
+    "not a list: number": 3,
+    "not a list: bool": True,
+    "empty list": [],
+    "pair is a string": ["TS-1"],
+    "pair is null": [None],
+    "pair is a list": [["TS-1", "TS-2"]],
+    "pair is a number": [7],
+    "pair lacks from": [{"to": "TS-2"}],
+    "pair lacks to": [{"from": "TS-1"}],
+    "pair is empty": [{}],
+    "from is a number": [{"from": 1, "to": "TS-2"}],
+    "to is null": [{"from": "TS-1", "to": None}],
+    "from is a list (unhashable)": [{"from": ["TS-1"], "to": "TS-2"}],
+    "from is a mapping (unhashable)": [{"from": {"a": 1}, "to": "TS-2"}],
+    "to is a list (unhashable)": [{"from": "TS-1", "to": ["TS-2"]}],
+    "to is a mapping (unhashable)": [{"from": "TS-1", "to": {"a": 1}}],
+    "from and to are both unhashable": [{"from": ["TS-1"], "to": {"a": 1}}],
+    "a valid pair beside an unhashable one": [_rename("TS-1", "TS-2"), {"from": ["TS-2"], "to": "TS-3"}],
+}
+
+
+class TestTestsReplaceOverlap(unittest.TestCase):
+    def _entry_errors(self, pairs, **kwargs):
+        return VWO.validate_workflow_patch(_replace_patch({"FR1": _replace_entry(pairs, **kwargs)}))
+
+    def _assert_overlap_rejection(self, errors, overlap):
+        self.assertEqual(_codes(errors), [REQUIREMENTS_PATCH_CODE], errors)
+        self.assertIn("FR1", errors[0]["message"])
+        for test_id in overlap:
+            self.assertIn(test_id, errors[0]["message"])
+
+    # AC-1 -----------------------------------------------------------------
+
+    def test_ac1_chain_is_rejected_with_requirements_patch(self):
+        self._assert_overlap_rejection(self._entry_errors(CHAIN), ["TS-2"])
+
+    def test_ac1_chain_exits_1_with_the_code_through_the_cli(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            completed = _cli_via(Path(tmp), "workflow-patch", False, _replace_patch({"FR1": _replace_entry(CHAIN)}))
+            self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
+            self.assertEqual(_codes(json.loads(completed.stdout)["errors"]), [REQUIREMENTS_PATCH_CODE])
+
+    def test_ac1_only_the_overlapping_entry_is_named(self):
+        patch = _replace_patch(
+            {"FR1": _replace_entry(DISJOINT), "FR2": _replace_entry(CHAIN)}
+        )
+        errors = VWO.validate_workflow_patch(patch)
+        self.assertEqual(_codes(errors), [REQUIREMENTS_PATCH_CODE])
+        self.assertIn("entries[FR2]", errors[0]["message"])
+        self.assertNotIn("FR1", errors[0]["message"])
+
+    def test_ac1_only_the_shared_ids_are_named_among_several_pairs(self):
+        pairs = [_rename("TS1", "TS-1"), _rename("TS-1", "TS-9"), _rename("TS7", "TS-7")]
+        errors = self._entry_errors(pairs)
+        self._assert_overlap_rejection(errors, ["TS-1"])
+        for other in ("TS1", "TS-9", "TS7", "TS-7"):
+            self.assertNotIn(repr(other), errors[0]["message"])
+
+    # AC-2 -----------------------------------------------------------------
+
+    def test_ac2_swap_is_rejected_with_requirements_patch(self):
+        self._assert_overlap_rejection(self._entry_errors(SWAP), ["TS-1", "TS-2"])
+
+    def test_ac2_swap_exits_1_with_the_code_through_the_cli(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            completed = _cli_via(Path(tmp), "workflow-patch", False, _replace_patch({"FR1": _replace_entry(SWAP)}))
+            self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
+            self.assertEqual(_codes(json.loads(completed.stdout)["errors"]), [REQUIREMENTS_PATCH_CODE])
+
+    # AC-3 -----------------------------------------------------------------
+
+    def test_ac3_chain_and_swap_are_rejected_on_all_four_routes_in_process(self):
+        for label, pairs, overlap in (("chain", CHAIN, ["TS-2"]), ("swap", SWAP, ["TS-1", "TS-2"])):
+            patch = _replace_patch({"FR1": _replace_entry(pairs)})
+            for route, dry_run in ROUTES:
+                with self.subTest(pairs=label, route=route, dry_run=dry_run):
+                    errors = _errors_via(route, dry_run, patch)
+                    self._assert_overlap_rejection(errors, overlap)
+                    if route == "worker-result":
+                        self.assertIn("workflow_patch", errors[0]["message"])
+
+    def test_ac3_chain_and_swap_exit_1_on_all_four_routes_through_the_cli(self):
+        for label, pairs in (("chain", CHAIN), ("swap", SWAP)):
+            patch = _replace_patch({"FR1": _replace_entry(pairs)})
+            for route, dry_run in ROUTES:
+                with self.subTest(pairs=label, route=route, dry_run=dry_run):
+                    document = patch if route == "workflow-patch" else _worker_result_with(patch)
+                    with tempfile.TemporaryDirectory() as tmp:
+                        completed = _cli_via(Path(tmp), route, dry_run, document)
+                    self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
+                    self.assertEqual(
+                        _codes(json.loads(completed.stdout)["errors"]), [REQUIREMENTS_PATCH_CODE]
+                    )
+
+    def test_ac3_each_fixtures_own_workflow_patch_is_rejected_with_and_without_dry_run(self):
+        for case in OVERLAP_FIXTURES:
+            patch = _read_fixture(case, "input.json")["workflow_patch"]
+            for dry_run in (False, True):
+                with self.subTest(case=case, dry_run=dry_run):
+                    with tempfile.TemporaryDirectory() as tmp:
+                        completed = _cli_via(Path(tmp), "workflow-patch", dry_run, patch)
+                    self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
+                    self.assertEqual(
+                        _codes(json.loads(completed.stdout)["errors"]), [REQUIREMENTS_PATCH_CODE]
+                    )
+
+    def test_ac3_each_fixture_as_a_worker_result_is_rejected_with_and_without_dry_run(self):
+        for case in OVERLAP_FIXTURES:
+            result = _read_fixture(case, "input.json")
+            envelope = _read_fixture(case, "envelope.json")
+            for dry_run in (False, True):
+                with self.subTest(case=case, dry_run=dry_run):
+                    with tempfile.TemporaryDirectory() as tmp:
+                        completed = _cli_via(Path(tmp), "worker-result", dry_run, result, envelope)
+                    self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
+                    self.assertEqual(
+                        _codes(json.loads(completed.stdout)["errors"]), [REQUIREMENTS_PATCH_CODE]
+                    )
+
+    # AC-4 -----------------------------------------------------------------
+
+    def test_ac4_pairs_without_overlap_are_accepted_on_all_four_routes(self):
+        patch = _replace_patch({"FR1": _replace_entry(DISJOINT)})
+        for route, dry_run in ROUTES:
+            with self.subTest(route=route, dry_run=dry_run):
+                self.assertEqual(_errors_via(route, dry_run, patch), [])
+
+    def test_ac4_valid_docs_only_round_fixture_is_accepted(self):
+        completed = run_cli(
+            [
+                "--kind", "worker-result",
+                "--worker", "rework-planner",
+                "--input", str(FIXTURE_GROUP_DIR / OVERLAP_SOURCE_FIXTURE / "input.json"),
+                "--input-envelope", str(FIXTURE_GROUP_DIR / OVERLAP_SOURCE_FIXTURE / "envelope.json"),
+            ]
+        )
+        self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
+
+    def test_ac4_pairs_sharing_a_to_are_not_rejected_by_this_check(self):
+        patch = _replace_patch({"FR1": _replace_entry(SHARED_TO)})
+        for route, dry_run in ROUTES:
+            with self.subTest(route=route, dry_run=dry_run):
+                self.assertEqual(_errors_via(route, dry_run, patch), [])
+
+    def test_ac4_overlap_is_judged_per_entry(self):
+        patch = _replace_patch(
+            {
+                "FR1": _replace_entry([_rename("TS-1", "TS-2")]),
+                "FR2": _replace_entry([_rename("TS-2", "TS-3")]),
+            }
+        )
+        self.assertEqual(VWO.validate_workflow_patch(patch), [])
+
+    def test_ac4_no_existing_valid_fixture_has_overlapping_tests_replace(self):
+        seen_tests_replace = 0
+        for input_path in sorted(FIXTURES_ROOT.glob("*/*/valid-*/input.json")):
+            data = json.loads(input_path.read_text(encoding="utf-8"))
+            if not isinstance(data, dict):
+                continue
+            patch = data.get("workflow_patch") if isinstance(data.get("workflow_patch"), dict) else data
+            requirements_patch = patch.get("requirements_patch")
+            entries = requirements_patch.get("entries") if isinstance(requirements_patch, dict) else None
+            for fr_id, rpatch in (entries.items() if isinstance(entries, dict) else ()):
+                if isinstance(rpatch, dict) and "tests_replace" in (rpatch.get("set") or {}):
+                    seen_tests_replace += 1
+                with self.subTest(fixture=str(input_path.relative_to(FIXTURES_ROOT)), entry=fr_id):
+                    self.assertEqual(_overlap_of(rpatch), set())
+        self.assertGreater(seen_tests_replace, 0, "the scan found no valid fixture with tests_replace")
+
+    # AC-5 -----------------------------------------------------------------
+
+    def test_ac5_the_two_fixtures_exist_with_input_and_envelope(self):
+        self.assertEqual(len(OVERLAP_FIXTURES), 2)
+        for case in OVERLAP_FIXTURES:
+            self.assertTrue(case.startswith("invalid-"))
+            for name in ("input.json", "envelope.json"):
+                with self.subTest(case=case, file=name):
+                    self.assertTrue((FIXTURE_GROUP_DIR / case / name).is_file())
+
+    def test_ac5_the_fixtures_are_rejected_with_exit_1_and_only_requirements_patch(self):
+        for case, (_, overlap) in OVERLAP_FIXTURES.items():
+            with self.subTest(case=case):
+                completed = run_cli(
+                    [
+                        "--kind", "worker-result",
+                        "--worker", "rework-planner",
+                        "--input", str(FIXTURE_GROUP_DIR / case / "input.json"),
+                        "--input-envelope", str(FIXTURE_GROUP_DIR / case / "envelope.json"),
+                    ]
+                )
+                self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
+                errors = json.loads(completed.stdout)["errors"]
+                self.assertEqual(_codes(errors), [REQUIREMENTS_PATCH_CODE])
+                self.assertIn("FR1", errors[0]["message"])
+                for test_id in overlap:
+                    self.assertIn(test_id, errors[0]["message"])
+
+    def test_ac5_the_fixtures_stay_outside_the_set_that_forbids_tests_replace(self):
+        for case in OVERLAP_FIXTURES:
+            self.assertNotIn(case, FIXTURE_EXPECTED_CODES)
+
+    def test_ac5_each_fixture_differs_from_valid_docs_only_round_only_in_the_overlap(self):
+        source = _read_fixture(OVERLAP_SOURCE_FIXTURE, "input.json")
+        source_envelope = _read_fixture(OVERLAP_SOURCE_FIXTURE, "envelope.json")
+        for case, (pairs, _) in OVERLAP_FIXTURES.items():
+            with self.subTest(case=case):
+                derived = _read_fixture(case, "input.json")
+                self.assertEqual(_read_fixture(case, "envelope.json"), source_envelope)
+                derived_entries = derived["workflow_patch"]["requirements_patch"]["entries"]
+                self.assertEqual(derived_entries["FR1"], _replace_entry(pairs))
+                source_entries = source["workflow_patch"]["requirements_patch"]["entries"]
+                derived_entries["FR1"] = source_entries["FR1"]
+                self.assertEqual(derived, source)
+
+    # AC-6 -----------------------------------------------------------------
+
+    def test_ac6_malformed_tests_replace_is_reported_never_raised_on_all_four_routes(self):
+        for label, value in MALFORMED_TESTS_REPLACE.items():
+            entry = {"expected": {"tests_contains": ["TS-1"]}, "set": {"tests_replace": value}}
+            patch = _replace_patch({"FR1": entry})
+            for route, dry_run in ROUTES:
+                with self.subTest(case=label, route=route, dry_run=dry_run):
+                    errors = _errors_via(route, dry_run, patch)
+                    self.assertTrue(errors, "a malformed tests_replace must be reported")
+                    self.assertEqual(set(_codes(errors)), {REQUIREMENTS_PATCH_CODE}, errors)
+
+    def test_ac6_malformed_tests_replace_exits_1_with_json_details_never_2(self):
+        for label in (
+            "not a list: string",
+            "pair is a list",
+            "pair lacks from",
+            "from is a list (unhashable)",
+            "from is a mapping (unhashable)",
+            "to is a list (unhashable)",
+            "from and to are both unhashable",
+        ):
+            entry = {
+                "expected": {"tests_contains": ["TS-1"]},
+                "set": {"tests_replace": MALFORMED_TESTS_REPLACE[label]},
+            }
+            patch = _replace_patch({"FR1": entry})
+            for route, dry_run in ROUTES:
+                with self.subTest(case=label, route=route, dry_run=dry_run):
+                    document = patch if route == "workflow-patch" else _worker_result_with(patch)
+                    with tempfile.TemporaryDirectory() as tmp:
+                        completed = _cli_via(Path(tmp), route, dry_run, document)
+                    self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
+                    errors = json.loads(completed.stdout)["errors"]
+                    self.assertEqual(set(_codes(errors)), {REQUIREMENTS_PATCH_CODE}, errors)
+
+    def test_ac6_a_malformed_pair_does_not_hide_an_overlap_nor_make_the_check_raise(self):
+        overlap_only = self._entry_errors(CHAIN)
+        self.assertEqual(_codes(overlap_only), [REQUIREMENTS_PATCH_CODE])
+        malformed = {"from": ["TS-9"], "to": {"a": 1}}
+        for extra in (malformed, None, "TS-9", {"from": "TS-9"}):
+            with self.subTest(extra=extra):
+                errors = self._entry_errors(CHAIN + [extra], contains=["TS-1", "TS-2"])
+                self.assertEqual(set(_codes(errors)), {REQUIREMENTS_PATCH_CODE})
+                self.assertIn(_messages(overlap_only)[0], _messages(errors))
+                self.assertGreater(len(errors), 1)
 
 
 # ---------------------------------------------------------------------------
