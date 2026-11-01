@@ -1,7 +1,7 @@
 schema_version: 1
 feature: launch-guard-common-dir-fallback
 phase: create-spec
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 381aecd5a61a6a040ece6f58882562d3090aa450
 last_input_digest: sha256:180c9462f4bbb64afd047cd9efa0f65da5c54878b8240ae48d9c3c3d408733a6
