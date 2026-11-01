@@ -150,6 +150,23 @@ def strip_yaml_quotes(value):
     return value
 
 
+def trim_blanks(value):
+    """The approval trim: remove leading and trailing spaces and tabs only.
+
+    Every other character, whitespace included, stays where it is.
+    """
+    return value.strip(" \t")
+
+
+def is_matchable(text):
+    """True when a trimmed value may be compared with approved strings.
+
+    The value is non-empty and neither its first nor its last character is
+    whitespace by `str.isspace()`. Inner whitespace is not looked at.
+    """
+    return bool(text) and not text[0].isspace() and not text[-1].isspace()
+
+
 def declared_commands(roots):
     """Command strings declared in any feature-docs/*/workflow.yaml under roots.
 
@@ -199,7 +216,8 @@ def load_store(path):
 def approved_for(store, key):
     entry = store["projects"].get(key) or {}
     commands = entry.get("approved_commands") or []
-    return {c.strip() for c in commands if isinstance(c, str) and c.strip()}
+    trimmed = (trim_blanks(c) for c in commands if isinstance(c, str))
+    return {c for c in trimmed if is_matchable(c)}
 
 
 # `cd`, blanks, one double-quoted absolute path, blanks, the first `&&`.
@@ -497,12 +515,24 @@ def hook_main():
 
 
 def read_stdin_commands():
+    """Split stdin into (matchable lines, non-matchable lines), in input order.
+
+    Exactly one trailing LF is removed from a line, then the approval trim
+    applies. A line that is empty after the trim is skipped.
+    """
     commands = []
+    unmatchable = []
     for line in sys.stdin:
-        line = line.strip()
-        if line:
+        if line.endswith("\n"):
+            line = line[:-1]
+        line = trim_blanks(line)
+        if not line:
+            continue
+        if is_matchable(line):
             commands.append(line)
-    return commands
+        else:
+            unmatchable.append(line)
+    return commands, unmatchable
 
 
 def cli_main(mode, project_dir):
@@ -515,17 +545,28 @@ def cli_main(mode, project_dir):
             print(command)
         return 0
 
-    commands = read_stdin_commands()
+    commands, unmatchable = read_stdin_commands()
+    # Every refusal is decided before the store is written, so a refused run
+    # leaves the store file and its directory exactly as they were.
+    refused = False
+    for line in unmatchable:
+        # ascii() keeps the invisible character visible in the report.
+        reason = "whitespace other than space or tab at an end of the line"
+        print(f"bash_guard: REFUSED ({reason}): {ascii(line)}", file=sys.stderr)
+        refused = True
+    if mode == "--record":
+        for command in commands:
+            reason = refusal_reason(command)
+            if reason:
+                print(f"bash_guard: REFUSED ({reason}): {command}", file=sys.stderr)
+                refused = True
+    if refused:
+        return 1
     if not commands:
         print("bash_guard: no commands on stdin", file=sys.stderr)
         return 1
 
     if mode == "--record":
-        refused = [(c, refusal_reason(c)) for c in commands if refusal_reason(c)]
-        if refused:
-            for command, reason in refused:
-                print(f"bash_guard: REFUSED ({reason}): {command}", file=sys.stderr)
-            return 1
         merged = approved_for(store, key) | set(commands)
     else:  # --remove
         merged = approved_for(store, key) - set(commands)
