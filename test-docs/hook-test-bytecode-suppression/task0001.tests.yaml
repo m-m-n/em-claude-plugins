@@ -1,0 +1,45 @@
+task_id: task0001
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 13410 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 13424 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_extglob_units.TestHookLoadWritesNoBytecode.test_ac1_flag_is_true_while_the_module_body_runs
+      - tests.test_destructive_guard_extglob_units.TestHookLoadWritesNoBytecode.test_ac1_flag_is_true_while_a_raising_body_runs
+    red_confirmed: true
+    red_reason: "Against the unchanged load_hook(), both failed in the starting=False subtest: AssertionError: False is not True (the probe body recorded the flag as False) and AssertionError: 'probe body raised; flag=False' != 'probe body raised; flag=True'. The starting=True subtests passed before the change, because the flag was already True."
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestHookLoadWritesNoBytecode.test_ac2_flag_is_true_while_the_module_body_runs
+      - tests.test_destructive_guard_lexer_agreement.TestHookLoadWritesNoBytecode.test_ac2_flag_is_true_while_a_raising_body_runs
+      - tests.test_destructive_guard_lexer_agreement.TestHookLoadWritesNoBytecode.test_ac2_the_module_level_hook_binding_is_made_by_the_loader
+    red_confirmed: true
+    red_reason: "Against the unchanged _load_hook(), the first two failed in the starting=False subtest: AssertionError: False is not True and AssertionError: 'probe body raised; flag=False' != 'probe body raised; flag=True'. The module-level binding test (second sentence of the criterion) passed before the change, because the import-time call H = _load_hook() already existed; it pins that the call stays."
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_extglob_units.TestHookLoadWritesNoBytecode.test_ac3_flag_holds_the_starting_value_after_a_normal_return
+      - tests.test_destructive_guard_lexer_agreement.TestHookLoadWritesNoBytecode.test_ac3_flag_holds_the_starting_value_after_a_normal_return
+    red_confirmed: false
+    red_reason: "Both passed against the unchanged helpers, because nothing changed the flag yet; they pin the restore behavior the change must keep. They were observed to discriminate by a temporary mutation of each helper (the restore line removed): both failed with the flag left at True for starting=False; the helpers were restored afterwards."
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_extglob_units.TestHookLoadWritesNoBytecode.test_ac4_flag_holds_the_starting_value_after_the_body_raises
+      - tests.test_destructive_guard_lexer_agreement.TestHookLoadWritesNoBytecode.test_ac4_flag_holds_the_starting_value_after_the_body_raises
+    red_confirmed: false
+    red_reason: "Both passed against the unchanged helpers, because nothing changed the flag yet; they pin the restore behavior the change must keep (and that the caller receives the raised exception). They were observed to discriminate by a temporary mutation of each helper (restore only on a normal return, without try/finally): both failed with the flag left at True for starting=False; the helpers were restored afterwards."
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_extglob_units.TestHookLoadWritesNoBytecode.test_ac5_a_passing_failing_or_erroring_test_puts_the_flag_back
+      - tests.test_destructive_guard_lexer_agreement.TestHookLoadWritesNoBytecode.test_ac5_a_passing_failing_or_erroring_test_puts_the_flag_back
+    red_confirmed: false
+    red_reason: "Both passed before the change, because the per-test flag cleanup registered in setUp does not depend on the loaders. They were observed to discriminate by a temporary mutation that removed the cleanup from setUp: both failed (the deliberately failing and erroring nested tests left the flag flipped); setUp was restored afterwards. The same tests compare the file listing under em-workflow/ before and after the nested run."
+  AC-6:
+    tests: []
+    red_confirmed: true
+    red_reason: "Executable check is the command-level listing of __pycache__ under em-workflow/hooks/, no test selects it. Search of tests/ by path and basename: test_destructive_guard_merge_allow.py checks only merge_pr_allow* caches and a synthetic copy in a temporary directory, so no existing test covers the hook's own bytecode. Observed before the change, from a start with no __pycache__ under em-workflow/hooks/ and PYTHONDONTWRITEBYTECODE and PYTHONPYCACHEPREFIX unset: (c) python3 -m unittest discover -s tests left em-workflow/hooks/__pycache__/destructive-guard.cpython-314.pyc; (a) and (b) run against the unchanged modules in a scratch copy of the repository each left the same file. After the change, (a), (b) and (c) run in the worktree in that order each left no __pycache__ under em-workflow/hooks/."
+  AC-7:
+    tests:
+      - tests.test_destructive_guard_extglob_units.TestModuleContract.test_hook_and_test_import_only_the_standard_library
+      - tests.test_destructive_guard_lexer_agreement.TestModuleContract.test_hook_and_test_import_only_the_standard_library
+    red_confirmed: false
+    red_reason: "The two import checks passed before and after the change; python3 -m unittest discover -s tests and python3 em-workflow/hooks/tests/run-destructive-guard.py both exit 0 (13424 tests OK, 1137/1137 cases passed). These are exit-code results that already held before the change, so no red state occurred. The change set is the two listed test modules plus this record."
