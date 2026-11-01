@@ -173,7 +173,7 @@ tasks:
     - FR9
     - NFR3
     - NFR4
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/approval-unicode-whitespace/task0003
 review:
