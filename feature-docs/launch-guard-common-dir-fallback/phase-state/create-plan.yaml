@@ -1,0 +1,54 @@
+schema_version: 1
+feature: launch-guard-common-dir-fallback
+phase: create-plan
+status: completed
+generation: 1
+base_revision: cb5005331d4fef5bed9c16d81e4779b629968e58
+last_input_digest: sha256:5f5b8e9f3c274fba4a531a62808908fb7b4563f1eff6e07e12aebe64caa3353f
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: completed
+  input_digest: sha256:5f5b8e9f3c274fba4a531a62808908fb7b4563f1eff6e07e12aebe64caa3353f
+  output_digest: sha256:99885c682056c4c69a543161cb5a1692797b98d0044c6cc3e44313e09bf7250a
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/planner-contract.md: sha256:6476cc99ea8a1d2d4f376d1702bd636b1ab9898655397ec80ab1d6fb47cbe9e8
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
+    em-workflow/references/workflow-schema.md: sha256:3f14dea83919415634fac7006dd66c3f2c8b4a1b8b75c9889bcabc61072b36fe
+    em-workflow/skills/plan-writing/SKILL.md: sha256:880bd01ad6c60af5695495e0a6784de7fe98e1ea9463dc6703164f8ffffdbccb
+    feature-docs/launch-guard-common-dir-fallback/REQUIREMENTS.md: sha256:aad262e6b6dfcad5d0b778761834e8fd86bcd076ba75e81ae593602fa905a3bc
+    feature-docs/launch-guard-common-dir-fallback/SPEC.md: sha256:97599cda6176e3f308741ff84adff21f946293e04abd38a3c321c83db5b66266
+    feature-docs/launch-guard-common-dir-fallback/workflow.yaml: sha256:a22588e4cd038b9a935a750b5d67a64344743ee05716a1d00b62e2ac1df3bc79
+  self_write_set:
+  - feature-docs/launch-guard-common-dir-fallback/IMPLEMENTATION.md
+  - feature-docs/launch-guard-common-dir-fallback/THREAT-MODEL.md
+  - feature-docs/launch-guard-common-dir-fallback/VERIFICATION.md
+  - feature-docs/launch-guard-common-dir-fallback/tasks/task0001.md
+artifacts:
+- path: feature-docs/launch-guard-common-dir-fallback/IMPLEMENTATION.md
+  sha256: sha256:f9e2bac42855007db17d17f5475eaec286b6e3d2226a68a8cbd1abc09c2be74a
+  produced_by: create-plan-run-0001
+- path: feature-docs/launch-guard-common-dir-fallback/VERIFICATION.md
+  sha256: sha256:dfec58ed99c232c83405ca15669e1264dc1bebdb3b4ee6c797c7f61efb00335e
+  produced_by: create-plan-run-0001
+- path: feature-docs/launch-guard-common-dir-fallback/THREAT-MODEL.md
+  sha256: sha256:12a2231097d23d6502b6f94f8299c0faaaaef9330036d2968b37e8895ce1c96f
+  produced_by: create-plan-run-0001
+- path: feature-docs/launch-guard-common-dir-fallback/tasks/task0001.md
+  sha256: sha256:6f817a265e6d1dc837440633096b90d7647d2871526c8a24d044be47fcf49e45
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: create-plan-p0001
+  status: applied
+  base_input_digest: sha256:5f5b8e9f3c274fba4a531a62808908fb7b4563f1eff6e07e12aebe64caa3353f
+  base_workflow_blob: 3840ffe23f930f08f0391b39a403bf72c2d0ff86
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

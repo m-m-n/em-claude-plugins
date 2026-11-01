@@ -1,0 +1,160 @@
+task_id: task0001
+baseline_failures: []          # before any edit: python3 -m unittest discover -s tests -> Ran 13424 tests, OK (skipped=1); no failing test
+final_failures: []             # re-executed after the implementation and after writing this record: python3 -m unittest discover -s tests -> Ran 13462 tests, OK (skipped=1); no failing test
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_queue_launch_guard_linked_layout.TestCommonDirLastElement.test_a_common_dir_not_ending_in_dot_git_leaves_the_root_undetermined
+      - tests.test_queue_launch_guard_linked_layout.TestCommonDirLastElement.test_a_common_dir_not_ending_in_dot_git_gives_no_denial_although_the_toplevel_resolves
+      - tests.test_queue_launch_guard_linked_layout.TestCommonDirLastElement.test_outputs_normalizing_to_dot_git_yield_the_root
+      - tests.test_queue_launch_guard_linked_layout.TestCommonDirLastElement.test_outputs_normalizing_to_dot_git_still_deny_another_toplevel
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged hook (tests written first), the first two
+      tests failed for each of the six non-.git outputs: project_root_for
+      returned the parent of the common dir ('/super/.git/modules' for
+      '/super/.git/modules/sub', '/store' for '/store/proj.git') instead of
+      undetermined, so the cwd check denied. The last two tests are controls
+      for outputs that normalize to /proj/.git; they passed before the change
+      and pin that the root and the denial are kept.
+  AC-2:
+    tests:
+      - tests.test_queue_launch_guard_linked_layout.TestRootNotContainingTheWorktreePath.test_the_root_is_undetermined
+      - tests.test_queue_launch_guard_linked_layout.TestRootNotContainingTheWorktreePath.test_the_cwd_check_gives_no_denial_and_makes_no_toplevel_call
+      - tests.test_queue_launch_guard_linked_layout.TestRootNotContainingTheWorktreePath.test_a_shared_name_prefix_is_not_containment
+      - tests.test_queue_launch_guard_linked_layout.TestRootNotContainingTheWorktreePath.test_a_root_containing_the_worktree_path_is_kept
+      - tests.test_queue_launch_guard_linked_layout.TestRootNotContainingTheWorktreePath.test_a_worktree_path_reached_through_a_link_into_the_root_is_contained
+      - tests.test_queue_launch_guard_linked_layout.TestRootNotContainingTheWorktreePath.test_a_root_reached_through_a_link_contains_the_worktree_path
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged hook (tests written first),
+      test_the_root_is_undetermined and test_a_shared_name_prefix_is_not_containment
+      failed with AssertionError: '/proj' is not None, and
+      test_the_cwd_check_gives_no_denial_and_makes_no_toplevel_call failed
+      with AssertionError: no outcome scripted for ['git', 'rev-parse',
+      '--show-toplevel'] (the show-toplevel call was made). The other three
+      tests are controls for contained worktree paths (plain, through a link,
+      root through a link); they passed before the change and pin that a
+      contained path keeps its root.
+  AC-3:
+    tests:
+      - tests.test_queue_launch_guard_linked_layout.TestToplevelContainmentRule.test_a_toplevel_below_the_root_that_strictly_contains_the_worktree_path_is_allowed
+      - tests.test_queue_launch_guard_linked_layout.TestToplevelContainmentRule.test_a_toplevel_equal_to_the_worktree_path_is_a_denial_naming_the_root
+      - tests.test_queue_launch_guard_linked_layout.TestToplevelContainmentRule.test_a_toplevel_below_the_root_that_does_not_contain_the_worktree_path_is_a_denial
+      - tests.test_queue_launch_guard_linked_layout.TestToplevelContainmentRule.test_a_toplevel_below_the_worktree_path_is_a_denial
+      - tests.test_queue_launch_guard_linked_layout.TestToplevelContainmentRule.test_a_toplevel_equal_to_the_root_is_allowed
+      - tests.test_queue_launch_guard_linked_layout.TestToplevelContainmentRule.test_a_toplevel_that_contains_the_root_is_a_denial_naming_the_root
+      - tests.test_queue_launch_guard_linked_layout.TestToplevelContainmentRule.test_an_unrelated_toplevel_is_a_denial_naming_the_root
+      - tests.test_queue_launch_guard_linked_layout.TestToplevelContainmentRule.test_the_segment_path_keeps_its_denial_for_a_toplevel_inside_the_root
+      - tests.test_queue_launch_guard_linked_layout.TestToplevelContainmentRule.test_containment_is_decided_on_real_paths
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged hook (tests written first),
+      test_a_toplevel_below_the_root_that_strictly_contains_the_worktree_path_is_allowed
+      failed with AssertionError: '/proj' is not None, and
+      test_containment_is_decided_on_real_paths failed with the root path in
+      place of None. The other seven tests (denial for a toplevel equal to
+      the worktree path, below the root without containing it, below the
+      worktree path, containing the root, unrelated; the allow for a toplevel
+      equal to the root; the segment path keeping its denial) describe
+      behavior that already held and passed before the change; they pin that
+      the new rule removes no other denial (NFR4).
+  AC-4:
+    tests:
+      - tests.test_queue_launch_guard_linked_layout.TestHookEntryUnderTheFallbackRules.test_the_hook_exits_zero_with_no_output_and_records_the_launch
+      - tests.test_queue_launch_guard_linked_layout.TestHookEntryUnderTheFallbackRules.test_a_determined_root_with_another_toplevel_is_still_a_denial
+      - tests.test_queue_launch_guard_linked_layout.TestContainmentComputationFailure.test_the_scenario_is_a_denial_when_every_comparison_works
+      - tests.test_queue_launch_guard_linked_layout.TestContainmentComputationFailure.test_a_failing_comparison_gives_no_denial_and_raises_nothing
+      - tests.test_queue_launch_guard_linked_layout.TestContainmentComputationFailure.test_a_failing_comparison_leaves_the_project_root_undetermined
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged hook (tests written first),
+      test_the_hook_exits_zero_with_no_output_and_records_the_launch failed
+      for each of its three cases (submodule common dir, bare-style common
+      dir, root not containing the worktree path): the hook wrote a deny
+      decision instead of empty output. The control
+      test_a_determined_root_with_another_toplevel_is_still_a_denial passed
+      before the change. TestContainmentComputationFailure (the NFR2 check
+      that a comparison which cannot be computed gives no denial and raises
+      nothing) was added after the red run and was not itself observed
+      failing before the implementation.
+  AC-5:
+    tests:
+      - tests.test_queue_launch_guard_linked_layout.TestLinkedWorktreeAsProjectRoot.test_launch_from_a_linked_root_outside_the_main_worktree_is_allowed_and_recorded
+      - tests.test_queue_launch_guard_linked_layout.TestLinkedWorktreeAsProjectRoot.test_launch_from_a_linked_root_inside_the_main_worktree_is_allowed_and_recorded
+      - tests.test_queue_launch_guard_linked_layout.TestLinkedWorktreeAsProjectRoot.test_launch_from_the_integration_worktree_with_a_linked_root_inside_the_main_worktree_is_denied
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged hook (tests written first), the two allow
+      tests failed for each of the three link placements with
+      AssertionError: the hook wrote a deny decision (cwd = the linked
+      worktree, project root named = the main worktree) where empty stdout
+      was expected. The integration-worktree test is the NFR4 control; it
+      passed before the change and still passes.
+  AC-6:
+    tests:
+      - tests.test_queue_launch_guard_linked_layout.TestFallbackCallShape.test_path_without_the_segment_triggers_exactly_one_git_common_dir_call
+      - tests.test_queue_launch_guard_linked_layout.TestFallbackCallShape.test_root_is_the_parent_directory_of_the_normalized_output
+      - tests.test_queue_launch_guard_linked_layout.TestFallbackCallShape.test_cwd_check_without_the_segment_makes_one_common_dir_call
+      - tests.test_queue_launch_guard_linked_layout.TestFallbackCallShape.test_path_with_the_segment_triggers_no_process_at_all
+      - tests.test_queue_launch_guard_linked_layout.TestFallbackCallShape.test_segment_at_the_start_of_the_path_is_undetermined_without_fallback
+      - tests.test_queue_launch_guard_linked_layout.TestFallbackFailures.test_a_resolved_common_dir_with_another_toplevel_is_a_denial
+      - tests.test_queue_launch_guard_linked_layout.TestFallbackFailures.test_each_failure_leaves_the_project_root_undetermined
+      - tests.test_queue_launch_guard_linked_layout.TestLinkedLayoutOtherWorktreeLaunch.test_launch_from_integration_worktree_is_denied_naming_the_main_worktree
+      - tests.test_queue_launch_guard_linked_layout.TestLinkedLayoutOtherWorktreeLaunch.test_denied_launch_leaves_no_launched_event_and_no_journal
+      - tests.test_queue_launch_guard_linked_layout.TestLinkedLayoutOtherWorktreeLaunch.test_launch_from_the_task_worktree_itself_is_also_denied
+      - tests.test_queue_launch_guard.TestCwdOutsideProjectRoot.test_cwd_inside_integration_worktree_is_denied_without_journal_write
+    red_confirmed: false
+    red_reason: >-
+      The behavior pre-existed: these tests passed against the unchanged hook
+      with the unchanged fixtures, so no red state occurred before the
+      implementation; the criterion is a preservation check. After the three
+      rules were in the hook and before the two fixture paths were rewritten,
+      test_path_without_the_segment_triggers_exactly_one_git_common_dir_call,
+      test_root_is_the_parent_directory_of_the_normalized_output and
+      test_a_resolved_common_dir_with_another_toplevel_is_a_denial failed
+      (the old fixture paths lie outside /proj), and passed again once both
+      fixture paths became segment-free paths under /proj with every
+      assertion unchanged.
+  AC-7:
+    tests:
+      - tests.test_queue_launch_guard_linked_layout.TestHookDocstring.test_the_last_element_rule_is_stated
+      - tests.test_queue_launch_guard_linked_layout.TestHookDocstring.test_the_last_element_presence_search_rejects_a_forged_text
+      - tests.test_queue_launch_guard_linked_layout.TestHookDocstring.test_the_root_contains_the_worktree_path_rule_is_stated
+      - tests.test_queue_launch_guard_linked_layout.TestHookDocstring.test_the_root_contains_the_worktree_path_presence_search_rejects_a_forged_text
+      - tests.test_queue_launch_guard_linked_layout.TestHookDocstring.test_the_toplevel_containment_rule_is_stated
+      - tests.test_queue_launch_guard_linked_layout.TestHookDocstring.test_the_toplevel_containment_presence_search_rejects_a_forged_text
+      - tests.test_queue_launch_guard_linked_layout.TestHookDocstring.test_each_current_statement_is_present
+      - tests.test_queue_launch_guard_linked_layout.TestHookDocstring.test_the_outside_layout_skip_statement_is_absent
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged hook docstring (tests written first), the six
+      new tests failed: each presence check found no statement of its rule,
+      and each forged-text proof failed its assertNotEqual because there was
+      nothing to remove from the docstring. The last two tests are the
+      existing pins (the three retained statements present, the
+      outside-layout statement absent); they passed before and after.
+  AC-8:
+    tests:
+      - tests.test_merge_unverified_exit_doc_contract.TestNeverModifiedFilesAreByteIdentical.test_launch_guard_untouched
+      - tests.test_merge_unverified_exit_doc_contract.TestNeverModifiedFilesAreByteIdentical.test_launch_guard_pin_comment_names_the_task_that_set_the_current_value
+      - tests.test_merge_unverified_exit_doc_contract.TestNeverModifiedFilesAreByteIdentical.test_launch_guard_pin_comment_does_not_claim_the_hook_is_unmodified
+      - tests.test_merge_unverified_exit_doc_contract.TestNeverModifiedFilesAreByteIdentical.test_pin_class_docstring_does_not_claim_the_hook_is_unmodified
+      - tests.test_merge_unverified_exit_doc_contract.TestNeverModifiedFilesAreByteIdentical.test_the_claim_search_finds_the_claims_in_the_pre_change_texts
+      - tests.test_queue_launch_guard_linked_layout.TestStdlibAndDeterminism.test_the_hook_imports_only_standard_library_modules
+      - tests.test_queue_launch_guard_linked_layout.TestStdlibAndDeterminism.test_this_module_imports_only_standard_library_modules
+      - tests.test_queue_launch_guard_linked_layout.TestStdlibAndDeterminism.test_this_module_imports_no_other_test_module
+      - tests.test_queue_launch_guard_linked_layout.TestStdlibAndDeterminism.test_this_module_neither_sleeps_nor_imports_a_timing_module
+      - tests.test_merge_unverified_exit_doc_contract.TestModuleImportsStdlibOnly.test_module_uses_only_standard_library_imports
+    red_confirmed: true
+    red_reason: >-
+      The three wording tests were written before the comment and the class
+      docstring were edited and failed against the old texts:
+      the comment test found the claim ['un-modified'], the docstring test
+      found ['untouched'], and the task-name test did not find
+      'launch-guard-common-dir-fallback task0001' in the comment.
+      test_launch_guard_untouched was observed failing once the hook code was
+      edited and the pin was still stale (AssertionError: sha256 of the new
+      hook bytes != the old pin) and passes with the pin set to the sha256
+      of the final hook bytes. The claim-search proof and the stdlib and
+      determinism tests passed before the change.
