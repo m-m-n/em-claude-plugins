@@ -1,0 +1,83 @@
+task_id: task0004
+baseline_failures: []          # full suite, 13410 tests (1 skipped), 0 failures before any change
+final_failures: []             # full suite re-executed after the document edits, the pin refresh and this record, 0 failures
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_rework_docs_only_route_doc.TestFeatureDocsFilesRuleAndSection12.test_section_12_lists_the_rename_aware_coverage_rule
+      - tests.test_rework_docs_only_route_doc.TestFeatureDocsFilesRuleAndSection12.test_section_12_has_exactly_three_additional_bullets
+      - tests.test_rework_docs_only_route_doc.TestFeatureDocsFilesRuleAndSection12.test_section_12_keeps_its_six_base_bullets_unchanged
+    red_confirmed: false
+    red_reason: >-
+      Documentation-only task whose plan verifies AC-1 by inspection against the
+      Design list (TS-22), so a dedicated new test module is out of scope. The
+      existing tests above read Section 12 and detect its bullet structure (one
+      bullet naming `scenario_renames` with the `covered_by_existing`,
+      `verification_index`, `from`, `to` and `rework-index` tokens, nine bullets
+      in total, the six base bullets unchanged); they were green before the edit
+      and stay green, so no red state occurred for this change. They do not pin
+      the new wording. A throwaway inline phrase check of the Design list, run
+      against the unmodified copy of the document, reported every element
+      missing; it is not a project test and is not listed.
+  AC-2:
+    tests:
+      - tests.test_rework_docs_only_route_doc.TestFeatureDocsFilesRuleAndSection12.test_section_12_lists_the_empty_entries_rule
+    red_confirmed: false
+    red_reason: >-
+      Documentation-only task verified by inspection (TS-22); a dedicated new
+      module is out of scope, but the existing test above detects that exactly
+      one Section 12 bullet states that an `append_rework` patch with absent or
+      empty `tasks_patch.entries` never returns `implement` to `pending`; no red
+      state occurred for this change because that sentence pre-existed. The new
+      wording (origin source, fail-closed case, implement rejection, structural
+      layer on both routes, codes) is not pinned by any existing test. The same
+      throwaway inline phrase check, run against the unmodified document,
+      reported those elements missing; it is not a project test.
+  AC-3:
+    tests:
+      - tests.test_rework_planner_docs_only_doc.CoverageCheckTwoTests.test_check_two_accepts_a_renamed_id_only_through_a_declared_pair
+      - tests.test_rework_planner_docs_only_doc.CoverageCheckTwoTests.test_checklist_has_exactly_four_numbered_items
+      - tests.test_rework_planner_docs_only_doc.CoverageCheckTwoTests.test_baseline_first_appears_after_item_four
+      - tests.test_worker_contracts_planning.TestReworkPlannerContract.test_rework_index_four_validation_checks_present
+      - tests.test_worker_contracts_planning.TestReworkPlannerContract.test_check_three_depends_on_a_supplied_baseline
+    red_confirmed: false
+    red_reason: >-
+      Documentation-only task verified by inspection (TS-22); a dedicated new
+      module is out of scope, but the existing tests above detect that check 2
+      still names `covered_by_existing`, `verification_index` and the
+      `scenario_renames` pair rule, that the checklist keeps exactly four numbered
+      items, and that the word "baseline" first appears after item 4 (so check 2
+      may not use it); no red state occurred for this change. The agreement with
+      Section 12 is not pinned by any existing test. The throwaway inline phrase
+      check, run against the unmodified document, reported the new conditions
+      missing; it is not a project test.
+  AC-4:
+    tests:
+      - tests.test_requirements_tests_replace.TestWorkflowPatchDocumentsTestsReplace.test_document_describes_the_tests_replacement_and_keeps_eighteen_rules
+    red_confirmed: false
+    red_reason: >-
+      Documentation-only task verified by inspection (TS-22); a dedicated new
+      module is out of scope, but the existing test above detects that the
+      Tests replacement prose keeps the `from` / `to` / `tests_contains` binding,
+      the application order, the in-place and no-duplicate rules and the
+      eighteen application rules; no red state occurred for this change. The
+      disjointness rule is not pinned by any existing test. The throwaway inline
+      phrase check, run against the unmodified document, reported the
+      disjointness, chain, swap, shared-`to` and `--dry-run-apply` statements
+      missing; it is not a project test.
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      The outcomes are a file-scope inspection (`git diff --name-only` lists the
+      three documents plus the pin refresh named in the report's deviations and
+      this record), a contradiction inspection against IMPLEMENTATION.md D2 to D4
+      (TS-22), and the full-suite run `python3 -m unittest discover -s tests`,
+      which exits 0; none is a single selectable test ID. Search of the test
+      directory by repository-relative path and by basename found
+      tests.test_gate_option_vocabulary (TestFrozenMachineReadSurface
+      `test_workflow_patch_md_byte_identical`), which pins the sha256 of
+      workflow-patch.md; it was green before the edit, failed with a hash
+      mismatch after the Tests replacement edit, and its pin was refreshed per
+      the convention that file documents. No red state occurred before the
+      implementation, so nothing here is recorded as an observed red.

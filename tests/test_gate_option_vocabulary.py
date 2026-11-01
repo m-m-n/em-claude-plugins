@@ -1136,8 +1136,16 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # and the sentence listing the operations permitted under `set` names
     # the replacement. The numbered application rules stay eighteen. Same
     # rationale: refresh, don't remove.
+    #
+    # Refreshed again by rework-docs-only-medium-fixes/task0004 (FR5): the
+    # "Tests replacement" subsection gains one paragraph stating that no ID
+    # may appear both as a `from` and as a `to` within one entry (chains and
+    # swaps are rejected as malformed, with or without `--dry-run-apply`)
+    # and that pairs sharing a `to` are not affected. The numbered
+    # application rules stay eighteen. Same rationale: refresh, don't
+    # remove.
     WORKFLOW_PATCH_SHA256 = (
-        "799f418ebe67c03f36506a4daed6b8e0d5e51f2f8d58ad7f4a9eac5384a1e4bd"
+        "9df879b81ea806447ea2da88ca26f96b282ee78da2e4b607aea3e7c8a657e5b9"
     )
     # Updated by goal-vs-spec-divergence/task0016 (review round1 rework),
     # which the user's SPEC.md/REQUIREMENTS.md Declared Change Set extension

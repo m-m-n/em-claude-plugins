@@ -185,7 +185,22 @@ The validation script (5.11.1) performs these four checks:
 2. Every ID in `covered_by_existing` already exists in `verification_index`;
    an ID outside `verification_index` passes only through a declared
    `scenario_renames` pair (`payload.doc_corrections`, below) that has it as
-   `to` and whose `from` is in `verification_index`.
+   `to`, and only when the document diff that check 3 uses is available
+   (the feature directory and the pre-change directory both supplied, and a
+   `VERIFICATION.md` in the feature directory). Every declared pair with that
+   `to` must then have its `from` in `verification_index`, its `to` in the
+   post-change `VERIFICATION.md`, its `from` in the pre-change
+   `VERIFICATION.md` (the other side of that diff), and its `from` absent
+   from the post-change `VERIFICATION.md`. Without the diff a rename is never
+   accepted, and the rejection names the missing diff input, distinctly from
+   the rejection of an ID that no declared pair renames. An ID that is the
+   `from` of a declared pair never passes, even when it is a key of
+   `verification_index`. When the diff is available, an ID in
+   `verification_index` must also be in the post-change `VERIFICATION.md`. A
+   `VERIFICATION.md` that cannot be read as text is rejected. Every rejection
+   carries the code `rework-index`;
+   `references/rework-task-synthesis.md` Section 12 states the full rule
+   (cited, not restated).
 3. Every ID in `new_scenarios` actually exists in the `VERIFICATION.md` diff
    (i.e. the scenario was really added, not merely claimed).
 4. If `new_scenarios` is non-empty, the same IDs also appear in the
