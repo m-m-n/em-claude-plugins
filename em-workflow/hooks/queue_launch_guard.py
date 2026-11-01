@@ -48,7 +48,13 @@ dir resolved from the worktree path (`git rev-parse --path-format=absolute
 this is the case in a linked layout, where `.claude`, `.claude/worktrees` or
 `.claude/worktrees/em-workflow` is a link and the canonical worktree path has
 no such segment. When neither resolves, the project root is undetermined and
-the cwd check is skipped (fail-open).
+the cwd check is skipped (fail-open). The parent of the git common dir is taken
+only when the last element of the normalized common dir is `.git`; otherwise
+the project root is undetermined. A project root that does not contain the
+worktree path is undetermined too. Containment is decided on real paths. On
+the segment-free path, the cwd check does not deny when the project root
+contains the cwd's git toplevel and that toplevel strictly contains the
+worktree path. The segment path has no such exception.
 
 Fail-open convention: this hook is a net, not an authority. Any unexpected
 state — malformed stdin, an invalid task id or worktree path, an unreadable
@@ -75,6 +81,10 @@ IMPLEMENTER_SUBAGENT_TYPE = "em-workflow:implementer"
 
 # Task worktrees live at `{project_root}/.claude/worktrees/em-workflow/{feature}/{T}`.
 WORKTREES_SEGMENT = "/.claude/worktrees/em-workflow/"
+
+# The name of a git directory a project root holds; the common dir's last
+# element must equal it for the root to be taken from the common dir.
+GIT_DIR_NAME = ".git"
 
 GIT_TIMEOUT_SECONDS = 5
 
@@ -131,7 +141,10 @@ def git_common_dir_root(worktree_path):
     One `git rev-parse` run with `worktree_path` as its working directory,
     bounded by GIT_TIMEOUT_SECONDS. A process that cannot start (a missing
     working directory included), a timeout, a non-zero exit, and output that
-    is empty or not an absolute path all leave the root undetermined.
+    is empty or not an absolute path all leave the root undetermined. So does
+    a normalized common dir whose last element is not exactly `.git` (a
+    submodule's `.git/modules/<name>` or a separate git dir, for example):
+    its parent is not a project root.
     """
     try:
         proc = subprocess.run(
@@ -148,7 +161,26 @@ def git_common_dir_root(worktree_path):
     common_dir = proc.stdout.strip()
     if not common_dir or not os.path.isabs(common_dir):
         return None
-    return os.path.dirname(os.path.normpath(common_dir))
+    common_dir = os.path.normpath(common_dir)
+    if os.path.basename(common_dir) != GIT_DIR_NAME:
+        return None
+    return os.path.dirname(common_dir)
+
+
+def path_contains(outer, inner, strict=False):
+    """True when real(`outer`) contains real(`inner`); `strict` excludes
+    equality of the two real paths.
+
+    Both absolute paths are resolved to real paths first, then compared by
+    their common path (a shared name prefix is not containment). Raises
+    OSError or ValueError when the comparison cannot be computed; callers
+    treat that as an undecidable state.
+    """
+    real_outer = os.path.realpath(outer)
+    real_inner = os.path.realpath(inner)
+    if strict and real_outer == real_inner:
+        return False
+    return os.path.commonpath([real_outer, real_inner]) == real_outer
 
 
 def project_root_for(worktree_path):
@@ -160,7 +192,11 @@ def project_root_for(worktree_path):
     segment at the very start of the path leaves the root undetermined, with
     no fallback). When the segment does not occur at all, as in a linked
     layout where the canonical path lacks it, the root is the parent of the
-    git common dir resolved from the worktree path.
+    git common dir resolved from the worktree path, provided that common dir
+    ends in `.git` and that parent contains the worktree path (both resolved
+    to real paths). A root that does not contain the worktree path is
+    undetermined, like every other state the fallback cannot decide, so the
+    cwd check is skipped for it.
     """
     norm = os.path.normpath(worktree_path)
     index = norm.rfind(WORKTREES_SEGMENT)
@@ -168,7 +204,14 @@ def project_root_for(worktree_path):
         return norm[:index]
     if index == 0:
         return None
-    return git_common_dir_root(worktree_path)
+    root = git_common_dir_root(worktree_path)
+    if root is None:
+        return None
+    try:
+        contained = path_contains(root, worktree_path)
+    except (OSError, ValueError):
+        return None
+    return root if contained else None
 
 
 def git_toplevel(cwd):
@@ -189,10 +232,34 @@ def git_toplevel(cwd):
     return top or None
 
 
+def worktree_path_has_segment(worktree_path):
+    """True when the normalized worktree path contains the
+    `.claude/worktrees/em-workflow/` segment (no process is started)."""
+    return WORKTREES_SEGMENT in os.path.normpath(worktree_path)
+
+
+def toplevel_between_root_and_worktree(project_root, top, worktree_path):
+    """True when `project_root` contains `top` and `top` strictly contains
+    `worktree_path`. OSError or ValueError from a comparison that cannot be
+    computed propagates to the caller."""
+    return path_contains(project_root, top) and path_contains(
+        top, worktree_path, strict=True
+    )
+
+
 def cwd_outside_project_root(cwd, worktree_path):
     """The project root when it is determined, `cwd`'s git toplevel is
     resolvable and is not it (the launch must be denied); None otherwise
-    (including every undecidable state)."""
+    (including every undecidable state).
+
+    On the segment-free path (the root came from the git common dir) there is
+    no denial either when the root contains the toplevel and the toplevel
+    strictly contains the worktree path: a cwd inside a worktree that holds
+    the task worktree, such as a linked worktree used as the project root.
+    The toplevel equal to the worktree path, or inside another worktree of
+    the project, is still a denial, and so is a toplevel that contains the
+    root. The segment path is not affected by this rule.
+    """
     if not isinstance(cwd, str) or not cwd:
         return None
     project_root = project_root_for(worktree_path)
@@ -203,6 +270,12 @@ def cwd_outside_project_root(cwd, worktree_path):
         return None
     if os.path.realpath(top) == os.path.realpath(project_root):
         return None
+    if not worktree_path_has_segment(worktree_path):
+        try:
+            if toplevel_between_root_and_worktree(project_root, top, worktree_path):
+                return None
+        except (OSError, ValueError):
+            return None
     return project_root
 
 

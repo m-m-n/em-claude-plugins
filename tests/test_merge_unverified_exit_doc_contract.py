@@ -954,11 +954,46 @@ class TestNoSC6CodeLeaksFromThisTasksEditedRegions(unittest.TestCase):
                 self.assertNotIn(code, self.readme)
 
 
-# Hash computed from the un-modified launch guard at routeback-deferred-
-# findings task0004's own base commit (eabf7278) -- a byte-identity
-# regression guard, cheaper than a git subprocess call (NFR7).
+# Verbatim text of the launch guard pin's comment and of the first sentence of
+# the pin class docstring as they read before launch-guard-common-dir-fallback
+# task0001 made the pin follow the hook. The claim search below is shown to
+# find a claim in each, so its absence from the live texts is not vacuous.
+PRE_CHANGE_LAUNCH_GUARD_PIN_COMMENT = (
+    "# Hash computed from the un-modified launch guard at routeback-deferred-\n"
+    "# findings task0004's own base commit (eabf7278) -- a byte-identity\n"
+    "# regression guard, cheaper than a git subprocess call (NFR7).\n"
+)
+PRE_CHANGE_PIN_CLASS_DOCSTRING_SAMPLE = (
+    "`em-workflow/hooks/queue_launch_guard.py` is untouched since\n"
+    "routeback-deferred-findings task0004's base commit; the content pin of\n"
+)
+UNMODIFIED_CLAIM_PHRASES = ("un-modified", "unmodified", "untouched")
+
+
+def _launch_guard_pin_comment():
+    """The comment block directly above `EXPECTED_LAUNCH_GUARD_SHA256`."""
+    lines = Path(__file__).read_text(encoding="utf-8").splitlines()
+    index = lines.index("EXPECTED_LAUNCH_GUARD_SHA256 = (")
+    block = []
+    for line in reversed(lines[:index]):
+        if not line.startswith("#"):
+            break
+        block.append(line)
+    return "\n".join(reversed(block))
+
+
+def _unmodified_claims_in(search_text):
+    """The unmodified-claim phrases found in already normalized text."""
+    return [phrase for phrase in UNMODIFIED_CLAIM_PHRASES if phrase in search_text]
+
+
+# Content pin of the current `em-workflow/hooks/queue_launch_guard.py`. Any
+# commit that changes the hook also sets this value to the new content's
+# sha256 in the same commit (launch-guard-common-dir-fallback task0001 set it
+# after adding the common-dir last-element rule, the root-contains-worktree
+# rule and the toplevel-containment rule to the segment-free path).
 EXPECTED_LAUNCH_GUARD_SHA256 = (
-    "6a6a5990632a09283b62a8b13951197226ab6a90c263abdeda94dd4713c5ccfb"
+    "b1b4871fc9afe6031d7ae9cf0c7e990374c2b5614d06fd009a0aa2b459809904"
 )
 # Content pin of the current `em-workflow/scripts/merge-task.sh`. Any commit
 # that changes the script also sets this value to the new content's sha256
@@ -977,15 +1012,40 @@ EXPECTED_MERGE_TASK_SH_SHA256 = (
 
 
 class TestNeverModifiedFilesAreByteIdentical(unittest.TestCase):
-    """`em-workflow/hooks/queue_launch_guard.py` is untouched since
-    routeback-deferred-findings task0004's base commit; the content pin of
-    `em-workflow/scripts/merge-task.sh` matches its current bytes, and the
-    script still names its already-contained case (merge-task-worktree-
-    binding task0001, FR7)."""
+    """The content pins of `em-workflow/hooks/queue_launch_guard.py` and of
+    `em-workflow/scripts/merge-task.sh` match the current bytes of each file,
+    and the script still names its already-contained case (merge-task-
+    worktree-binding task0001, FR7)."""
 
     def test_launch_guard_untouched(self):
+        # The content pin: the test id predates the pin following the hook;
+        # it asserts the sha256 of the current queue_launch_guard.py.
         actual = hashlib.sha256(LAUNCH_GUARD_PATH.read_bytes()).hexdigest()
         self.assertEqual(actual, EXPECTED_LAUNCH_GUARD_SHA256)
+
+    def test_launch_guard_pin_comment_names_the_task_that_set_the_current_value(self):
+        comment = _phrase_search_text(_launch_guard_pin_comment())
+        self.assertIn("launch-guard-common-dir-fallback task0001", comment)
+
+    def test_launch_guard_pin_comment_does_not_claim_the_hook_is_unmodified(self):
+        comment = _phrase_search_text(_launch_guard_pin_comment())
+        self.assertTrue(comment)
+        self.assertEqual(_unmodified_claims_in(comment), [])
+
+    def test_pin_class_docstring_does_not_claim_the_hook_is_unmodified(self):
+        docstring = _phrase_search_text(TestNeverModifiedFilesAreByteIdentical.__doc__)
+        self.assertIn("queue_launch_guard.py", docstring)
+        self.assertEqual(_unmodified_claims_in(docstring), [])
+
+    def test_the_claim_search_finds_the_claims_in_the_pre_change_texts(self):
+        for label, text in (
+            ("comment", PRE_CHANGE_LAUNCH_GUARD_PIN_COMMENT),
+            ("docstring", PRE_CHANGE_PIN_CLASS_DOCSTRING_SAMPLE),
+        ):
+            with self.subTest(text=label):
+                self.assertNotEqual(
+                    _unmodified_claims_in(_phrase_search_text(text)), []
+                )
 
     def test_merge_task_sh_untouched(self):
         # The content pin: the test id predates the pin following the
