@@ -1,0 +1,79 @@
+task_id: task0003
+baseline_failures: []          # before any edit: python3 -m unittest discover -s tests -> Ran 13566 tests, OK (skipped=1); no failing test
+final_failures: []             # re-executed after the document edit and this record: python3 -m unittest discover -s tests; no failing test
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_approval_trim_docs.TestApprovalGateStepOne.test_ac1_removes_only_spaces_and_tabs_from_both_ends
+      - tests.test_approval_trim_docs.TestApprovalGateStepOne.test_ac1_skips_a_value_that_is_empty_after_that
+      - tests.test_approval_trim_docs.TestApprovalGateStepOne.test_ac1_never_approves_other_whitespace_at_either_end
+      - tests.test_approval_trim_docs.TestApprovalGateStepOne.test_ac1_names_the_paths_that_refuse_it
+      - tests.test_approval_trim_docs.TestApprovalGateStepOne.test_ac1_step_one_does_not_state_the_per_path_table
+      - tests.test_approval_trim_docs.TestApprovalGateStepOne.test_ac1_step_one_is_the_command_resolution_step
+      - tests.test_approval_trim_docs.TestApprovalGateStepOne.test_ac1_step_two_is_still_the_diff_against_the_list
+    red_confirmed: true
+    red_reason: >-
+      Before the document edit the four phrase tests FAILED with `AssertionError: Regex
+      didn't match` against step 1 of the approval gate, which still read "Trim surrounding
+      whitespace; skip empty": "only spaces and tabs ... from both ends", "empty after that
+      ... skip", "any other whitespace character at either end ... never approved", and the
+      "`bash_guard.py` ... `merge-preflight.py` ... refuse" / "`--record` refuses an input
+      that carries it" statements. The other three tests in the class (step 1 is the command
+      resolution step, it does not restate the per-path table, step 2 is still the diff)
+      are boundary guards that were green before and after.
+  AC-2:
+    tests:
+      - tests.test_approval_trim_docs.TestVerbatimExecutionRuleTrim.test_ac2_exact_comparison_after_removing_spaces_and_tabs_only
+      - tests.test_approval_trim_docs.TestVerbatimExecutionRuleTrim.test_ac2_other_surrounding_whitespace_is_never_allowed
+      - tests.test_approval_trim_docs.TestVerbatimExecutionRuleTrim.test_ac2_cd_prefix_remainder_trim_is_spaces_and_tabs_aside
+      - tests.test_approval_trim_docs.TestVerbatimExecutionRuleTrim.test_ac2_other_whitespace_at_either_end_excludes_the_cd_prefix
+      - tests.test_approval_trim_docs.TestVerbatimExecutionRuleTrim.test_ac2_the_cd_prefix_statement_sits_in_the_implementer_bullet
+      - tests.test_approval_trim_docs.TestVerbatimExecutionRuleTrim.test_ac2_the_cd_prefix_statement_follows_the_path_conditions
+      - tests.test_approval_trim_docs.TestVerbatimExecutionRuleTrim.test_ac2_the_statement_opens_the_section
+      - tests.test_approval_trim_docs.TestReplacedPhrasesAreGone.test_both_sections_are_found
+      - tests.test_approval_trim_docs.TestReplacedPhrasesAreGone.test_ac2_the_gate_step_phrase_is_gone
+      - tests.test_approval_trim_docs.TestReplacedPhrasesAreGone.test_ac2_the_after_trimming_phrase_is_gone
+      - tests.test_approval_trim_docs.TestReplacedPhrasesAreGone.test_ac2_the_surrounding_whitespace_aside_phrase_is_gone
+      - tests.test_approval_trim_docs.TestReplacedPhrasesAreGone.test_ac2_no_replaced_statement_remains_anywhere
+      - tests.test_approval_trim_docs.TestReplacedPhrasesAreGone.test_ac2_the_matcher_flags_each_old_statement
+      - tests.test_approval_trim_docs.TestReplacedPhrasesAreGone.test_ac2_the_matcher_leaves_the_new_wording_alone
+    red_confirmed: true
+    red_reason: >-
+      Before the document edit the four presence tests FAILED with `AssertionError: Regex
+      didn't match` against the Verbatim execution rule section ("compares exact strings
+      (after trimming)" had no space/tab-only wording, no "any other surrounding whitespace
+      is never allowed", and the cd prefix remainder read "(surrounding whitespace
+      aside)"). The three phrase-gone tests FAILED with `AssertionError: '(after
+      trimming)' unexpectedly found` (and the same for 'Trim surrounding whitespace; skip
+      empty' and '(surrounding whitespace aside)'), and the combined test with `Lists
+      differ: ['cd prefix remainder', 'exact comparison', 'gate step 1'] != []`. The two
+      position tests ERRORED with `ValueError: substring not found` on "surrounding spaces
+      and tabs aside". The section-found test, the section-opening order test and the two
+      matcher tests (forged old text flagged, new wording left alone) were green before and
+      after; they are guards for the pairing of absence with presence and for the matcher.
+  AC-3:
+    tests:
+      - tests.test_approval_trim_docs.TestLocatingText.test_section_of_a_renamed_heading_is_none_not_empty
+      - tests.test_approval_trim_docs.TestLocatingText.test_section_matches_a_heading_that_starts_with_the_name
+      - tests.test_approval_trim_docs.TestLocatingText.test_section_skips_headings_inside_fenced_code
+      - tests.test_approval_trim_docs.TestLocatingText.test_numbered_step_runs_to_the_next_step
+      - tests.test_approval_trim_docs.TestLocatingText.test_numbered_step_is_none_when_the_number_is_absent
+      - tests.test_approval_trim_docs.TestLocatingText.test_numbered_step_ignores_numbers_inside_fenced_code
+      - tests.test_approval_trim_docs.TestLocatingText.test_normalize_collapses_line_wraps
+      - tests.test_approval_trim_docs.TestLocatingText.test_gate_step_one_is_found_in_the_document
+      - tests.test_approval_trim_docs.TestStandardLibraryOnly.test_ac3_imports_are_standard_library
+      - tests.test_cd_prefix_operator_exclusion_docs.TestVerbatimSectionOperators
+      - tests.test_cd_prefix_operator_exclusion_docs.TestVerbatimSectionSafeSide
+      - tests.test_cd_prefix_operator_exclusion_docs.TestVerbatimSectionImplementerHandling
+    red_confirmed: false
+    red_reason: >-
+      The criterion constrains the new test module's own method (locate by heading, fail
+      loudly on a missing heading, whitespace-normalized text, standard library only) and
+      requires the existing document test and the full suite to keep passing. The helper
+      tests and the standard-library test exercise code defined in the same new file, so
+      they were green the first time they ran; no implementation preceded them and no red
+      state occurred for these checks. The part of the criterion that the new module checks
+      AC-1 and AC-2 was observed red through the AC-1 and AC-2 tests above. The existing
+      tests.test_cd_prefix_operator_exclusion_docs module reads the same protocol
+      document, was not edited, and passed before and after the edit (regression guard, no
+      red state).
