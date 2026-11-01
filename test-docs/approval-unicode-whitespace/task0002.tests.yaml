@@ -1,0 +1,66 @@
+task_id: task0002
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 13566 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 13607 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_bash_guard_store_unicode_whitespace.TestAc1StoredEntryWithOtherWhitespace.test_ac1_list_omits_an_entry_padded_with_other_whitespace
+      - tests.test_bash_guard_store_unicode_whitespace.TestAc1StoredEntryWithOtherWhitespace.test_ac1_hook_does_not_allow_the_stripped_form_of_such_an_entry
+      - tests.test_bash_guard_store_unicode_whitespace.TestAc1StoredEntryWithOtherWhitespace.test_ac1_entry_mixed_with_spaces_and_tabs_is_still_not_approved
+    red_confirmed: true
+    red_reason: "Against the unchanged bash_guard.py, all 15 U+00A0 / U+000B / U+000C / CR / LF x before / after / both cases failed in both tests: --list printed the stripped form (AssertionError: Lists differ: ['/usr/bin/true'] != []) and the hook returned allow for the stripped form (AssertionError: 'allow' != 'silent'). The mixed space/tab case failed the same way."
+  AC-2:
+    tests:
+      - tests.test_bash_guard_store_unicode_whitespace.TestAc2NonMatchableLineRefusesInput.test_ac2_refused_with_an_existing_store
+      - tests.test_bash_guard_store_unicode_whitespace.TestAc2NonMatchableLineRefusesInput.test_ac2_refused_with_no_store
+      - tests.test_bash_guard_store_unicode_whitespace.TestAc2NonMatchableLineRefusesInput.test_ac2_crlf_terminated_line_is_refused
+      - tests.test_bash_guard_store_unicode_whitespace.TestAc2NonMatchableLineRefusesInput.test_ac2_line_of_only_other_whitespace_is_refused_not_skipped
+      - tests.test_bash_guard_store_unicode_whitespace.TestAc2NonMatchableLineRefusesInput.test_ac2_every_non_matchable_line_is_reported_and_matchable_ones_are_not
+      - tests.test_bash_guard_store_unicode_whitespace.TestAc2NonMatchableLineRefusesInput.test_ac2_final_line_without_a_line_feed_is_judged_as_it_is
+      - tests.test_bash_guard_store_unicode_whitespace.TestAc2NonMatchableLineRefusesInput.test_ac2_refused_run_approves_nothing_for_the_hook
+    red_confirmed: true
+    red_reason: "Against the unchanged bash_guard.py, every non-matchable stdin line was stripped and recorded or removed: AssertionError: 0 != 1 (exit code) for --record and --remove, with the store written (planted store changed, absent store created), in all of U+00A0 / U+000B / U+000C / CR before / after / both. The CRLF, lone-whitespace, final-line-without-LF and hook-after-refusal tests failed the same way."
+  AC-3:
+    tests:
+      - tests.test_bash_guard_store_unicode_whitespace.TestAc3SpaceAndTabBehaviour.test_ac3_record_stores_the_space_and_tab_trimmed_form
+      - tests.test_bash_guard_store_unicode_whitespace.TestAc3SpaceAndTabBehaviour.test_ac3_remove_matches_the_space_and_tab_trimmed_form
+      - tests.test_bash_guard_store_unicode_whitespace.TestAc3SpaceAndTabBehaviour.test_ac3_exactly_one_trailing_line_feed_is_removed
+      - tests.test_bash_guard_store_unicode_whitespace.TestAc3SpaceAndTabBehaviour.test_ac3_stored_entry_with_spaces_and_tabs_is_listed_and_approved_trimmed
+      - tests.test_bash_guard_store_unicode_whitespace.TestAc3SpaceAndTabBehaviour.test_ac3_non_string_and_empty_stored_entries_are_not_members
+      - tests.test_bash_guard_store_unicode_whitespace.TestAc3SpaceAndTabBehaviour.test_ac3_input_with_no_command_left_exits_1_with_the_existing_message
+      - tests.test_bash_guard_store_unicode_whitespace.TestAc3SpaceAndTabBehaviour.test_ac3_refusal_pattern_still_refuses_record
+    red_confirmed: false
+    red_reason: "The criterion states behaviour that must keep holding: space/tab trimming, skipping of empty lines, the no-commands message and the refusal-pattern refusal all pre-existed, so all seven tests passed against the unchanged bash_guard.py and no red state occurred. They are regression guards for the new trim."
+  AC-4:
+    tests:
+      - tests.test_bash_guard_store_unicode_whitespace.TestAc4NonMatchableEntryDropsOnNextWrite.test_ac4_successful_record_drops_non_matchable_entries
+      - tests.test_bash_guard_store_unicode_whitespace.TestAc4NonMatchableEntryDropsOnNextWrite.test_ac4_successful_remove_drops_non_matchable_entries
+      - tests.test_bash_guard_store_unicode_whitespace.TestAc4NonMatchableEntryDropsOnNextWrite.test_ac4_remove_of_an_absent_command_still_drops_them
+      - tests.test_bash_guard_store_unicode_whitespace.TestAc4NonMatchableEntryDropsOnNextWrite.test_ac4_remove_leaves_no_project_entry_when_nothing_matchable_remains
+      - tests.test_bash_guard_store_unicode_whitespace.TestAc4NonMatchableEntryDropsOnNextWrite.test_ac4_dropped_entry_is_not_resurrected_by_its_stripped_form
+      - tests.test_bash_guard_store_unicode_whitespace.TestAc4NonMatchableEntryDropsOnNextWrite.test_ac4_refused_run_does_not_drop_them
+    red_confirmed: true
+    red_reason: "Against the unchanged bash_guard.py, all six failed: the stored list kept the stripped form of each non-matchable entry (AssertionError: Lists differ: ['/usr/bin/true', 'make build', 'make clean', 'make lint', 'make test'] != ['make build', 'make clean', 'make lint'])."
+  AC-5:
+    tests:
+      - tests.test_bash_guard_store_unicode_whitespace.TestAc5OtherWhitespaceAndInnerWhitespace.test_ac5_stdin_line_with_other_whitespace_at_an_end_refuses_the_input
+      - tests.test_bash_guard_store_unicode_whitespace.TestAc5OtherWhitespaceAndInnerWhitespace.test_ac5_stored_entry_with_other_whitespace_is_neither_listed_nor_approved
+      - tests.test_bash_guard_store_unicode_whitespace.TestAc5OtherWhitespaceAndInnerWhitespace.test_ac5_inner_u00a0_is_recorded_and_listed_as_it_is_and_does_not_approve_make_test
+      - tests.test_bash_guard_store_unicode_whitespace.TestAc5OtherWhitespaceAndInnerWhitespace.test_ac5_other_whitespace_inside_a_value_is_kept
+      - tests.test_bash_guard_store_unicode_whitespace.TestAc5OtherWhitespaceAndInnerWhitespace.test_ac5_remove_of_make_test_does_not_remove_the_inner_u00a0_entry
+    red_confirmed: true
+    red_reason: "The first two tests failed against the unchanged bash_guard.py for every U+0085 / U+2000 / U+3000 / U+001F x before / after / both case (stdin: AssertionError: 0 != 1; stored entry: listed and approved through str.strip()). The three inner-whitespace tests (make<U+00A0>test recorded and listed as it is, not approving make test) passed against the unchanged file because that behaviour pre-existed; they are regression guards and no red state occurred for them."
+  AC-6:
+    tests:
+      - tests.test_bash_guard_store_unicode_whitespace.TestAc6ModuleContract.test_ac6_trim_blanks_removes_spaces_and_tabs_only
+      - tests.test_bash_guard_store_unicode_whitespace.TestAc6ModuleContract.test_ac6_is_matchable_follows_the_string_whitespace_test_at_both_ends
+      - tests.test_bash_guard_store_unicode_whitespace.TestAc6ModuleContract.test_ac6_trim_helpers_are_defined_once_between_strip_yaml_quotes_and_declared_commands
+      - tests.test_bash_guard_store_unicode_whitespace.TestAc6ModuleContract.test_ac6_trim_helper_names_and_docstrings_have_no_status_substring
+      - tests.test_bash_guard_store_unicode_whitespace.TestAc6ModuleContract.test_ac6_approved_for_keeps_only_matchable_trimmed_string_entries
+      - tests.test_bash_guard_store_unicode_whitespace.TestAc6ModuleContract.test_ac6_guard_imports_only_standard_library_modules
+      - tests.test_bash_guard_store_unicode_whitespace.TestAc6ModuleContract.test_ac6_guard_executable_text_has_no_status_substring
+      - tests.test_bash_guard_store_unicode_whitespace.TestAc6ModuleContract.test_ac6_this_module_imports_only_standard_library_modules
+      - tests.test_bash_guard_cd_prefix.TestAc7StandardLibraryOnly.test_ac7_hook_imports_only_standard_library_modules
+      - tests.test_bash_guard_cd_prefix.TestAc7StandardLibraryOnly.test_ac7_hook_executable_text_has_no_status_substring
+    red_confirmed: true
+    red_reason: "Against the unchanged bash_guard.py, the C2 helper tests failed: trim_blanks and is_matchable tests raised KeyError (the names were not defined), the placement test failed with AssertionError: 0 != 1 : trim_blanks, and the approved_for contract test failed. The standard-library-only and no-'status' tests passed before the change because the existing tests/test_bash_guard_cd_prefix.py TestAc7StandardLibraryOnly already detects both; no red state occurred for those parts. The full-suite part of the criterion is the final_failures run."

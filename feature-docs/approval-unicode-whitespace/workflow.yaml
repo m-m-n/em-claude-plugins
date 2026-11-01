@@ -131,9 +131,9 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/approval-unicode-whitespace/task0001
   task0002:
     title: Space/tab-only trim on the approval store side (approved_for, --list, --record
       / --remove)
@@ -156,9 +156,9 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
+    status: merged
     notes: null
-    branch: null
+    branch: em-workflow/approval-unicode-whitespace/task0002
   task0003:
     title: Space/tab-only trim in command-execution-protocol.md
     plan: tasks/task0003.md
@@ -173,9 +173,9 @@ tasks:
     - FR9
     - NFR3
     - NFR4
-    status: pending
+    status: merged
     notes: null
-    branch: null
+    branch: em-workflow/approval-unicode-whitespace/task0003
 review:
   status: pending
 requirements:
