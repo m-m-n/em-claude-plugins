@@ -241,6 +241,15 @@ terminal-commit exception in implement-phase.md's Branch & Worktree
 Model. This resolution is confined to that one collision: the Step I.1
 baseline, Step I.2.a launch, Step I.2.b wake and Step I.3 completion
 exit-4 stops keep their binding to `docs_commit_conflict_aborted` alone.
+The batch stop raised by the Control-character check of Step I.2.a in
+`references/implement-phase.md` is a named exception to the `stop-condition-3`
+row's current-run exclusion above. In the current run, that check writes
+`implement: failed` / `failed_kind: decision`, the stop has no
+phase-specific row of its own, and control returns through develop's stop
+condition 3. This stop binds to the `stop-condition-3` row,
+`step_needs_intervention`, and not to `unmapped_stop`. The exception covers
+this one stop only; it is not a general rule for other current-run routes
+that write `implement: failed` / `failed_kind: decision`.
 
 Exactly one documented `reason` code, `context_budget_reached`, has no
 stop point in the table above: it is reserved by the consumer and never
