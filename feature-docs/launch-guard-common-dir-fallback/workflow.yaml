@@ -112,7 +112,8 @@ workflow:
   failed_items: []
   excluded_scenarios: []
 - id: retrospect
-  status: pending
+  status: completed
+  completed_at_commit: 135573e323719203df33bd653d4d9647c02fa1b4
 tasks:
   task0001:
     title: Launch guard git-common-dir fallback rules, tests and content pin
