@@ -88,7 +88,7 @@ workflow:
   completed_at_commit: 9cbac928aaa65244c7407c0e46a2e30e296a7f7e
   base_commit: 669157a899a665c1e0f9b28045dc8b37108723e4
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -117,7 +117,15 @@ tasks:
     notes: null
     branch: em-workflow/hook-test-bytecode-suppression/task0001
 review:
-  status: pending
+  status: in_progress
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - performance
+    - spec
+    discretionary: []
+    cross_validation: false
   rounds_completed: 0
   residual_critical_high: 0
   needs_rework: false
