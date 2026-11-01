@@ -5,8 +5,18 @@ status: in_progress
 generation: 1
 base_revision: a642d2c82836a7480dcc860117232231127ff4ef
 last_input_digest: sha256:056271402477d502e35580c59a4fd1870098c799602a8d2ae6beb3557d3999c4
-active_request_id: create-spec-run-0001
-packets: {}
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-11-01T22:33:40+09:00'
+    questions:
+    - question_id: requirement.hook-entry-line-feed
+      status: answered
+    - question_id: requirement.non-blank-surrounding-whitespace
+      status: answered
+    - question_id: design-step.recommendation
+      status: answered
 answers:
   create-spec.feature-identity:
     packet_id: null
@@ -17,9 +27,62 @@ answers:
     - derive_from_task_description
     freeform: null
     normalized_answer: 'feature name derived from the task description: approval-unicode-whitespace'
+  requirement.hook-entry-line-feed:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-01T22:40:10+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - blanks_only_everywhere
+    freeform: null
+    normalized_answer: 'blanks_only_everywhere を採用。フック入口もスペースとタブだけを除き、前後の LF は除かない。追加条件:
+      末尾 LF 付きを ALLOW としている既存テスト 2 件（tests/test_bash_guard_cd_prefix.py の ''surrounding
+      whitespace on the command''、tests/test_bash_guard_cd_prefix_operators.py の test_ac2_surrounding_blanks_and_a_trailing_line_feed_allow）は
+      ALLOW を期待しない形に変える。承認済み文字列の末尾にバックスラッシュ + LF を付けた値が ALLOW されない回帰テストを足す。'
+    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation;
+      security question, relaxed route); option chosen: blanks_only_everywhere; not
+      chosen: keep_lf_at_hook_entry (worker tentative); key points: Codex pointed
+      out that an unquoted backslash followed by LF is a line continuation in Bash,
+      so stripping LF before matching lets an approved value ending in a backslash
+      run a different program; the exact-match path has no trailing-backslash check,
+      and preflight already excludes values containing LF; codex_consulted: true (entry
+      codex, 1 turn, converged); opus_escalation: not run'
+  requirement.non-blank-surrounding-whitespace:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-01T22:40:10+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - refuse_everywhere
+    freeform: null
+    normalized_answer: 'refuse_everywhere を採用。スペースとタブを除いた後も前後に str.isspace() が真の文字が残る値は、全経路で承認しない。--record
+      は禁止パターンと同じく保存前に終了コード 1 で拒む。approved_for は既に保存済みのそうした値を承認として数えない。フックは承認しない。preflight
+      は未承認として止める。空値判定もスペースとタブだけで行い、そうした文字だけの値を空として飛ばさない。追加条件: --record / --remove
+      の標準入力では、行区切りとして末尾の LF を 1 文字だけ除いてから検証し、CR・U+000B・U+000C・U+00A0 は残して拒む。不適格な値が
+      1 件でもあれば、その一括入力は 1 件も保存しない。'
+    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation;
+      security question, relaxed route); option chosen: refuse_everywhere (worker
+      tentative); not chosen: verbatim_exact_match; key points: the batch create-spec
+      approval gate auto-records every unapproved command via --record, so exact match
+      alone would still auto-approve an NBSP-prefixed value; refuse at record time
+      before saving, ignore already-stored such values, and make the empty-value check
+      space/tab only; Codex added: strip exactly one line-terminating LF on CLI stdin
+      and refuse a whole batch without partial save if any value is ineligible; codex_consulted:
+      true (entry codex, 1 turn, converged); opus_escalation: not run'
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-01T22:40:10+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - skip
+    freeform: null
+    normalized_answer: design step skipped per requirements-analyst recommendation
+      (画面の無いフックと CLI スクリプトの文字列照合だけの変更)
+    resolution_note: 'gate: create-spec.design-step; batch policy select decide_autonomously'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:056271402477d502e35580c59a4fd1870098c799602a8d2ae6beb3557d3999c4
   self_write_set: []
   dispatch_digest_inputs:
