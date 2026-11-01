@@ -1,0 +1,31 @@
+feature: control-char-abort-stop-reason
+collected_at: "2026-11-02T00:58:00+09:00"
+session_ids: [01a197d3-b623-7422-beba-7833fc83315e]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: "description_plus_code score 1.07 (confidence 0.91): rule addition with a matching document test in a single module"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 0.99, confidence: 0.98}
+        observed_at: "2026-11-01T23:59:20+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.07, confidence: 0.91}
+        observed_at: "2026-11-02T00:01:24+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/references/batch-terminal-line.md
+        - tests/test_batch_stop_contract.py
+      changed_lines_approx: 20
+      new_files_needed: 0
+      test_change_kind: extend_existing_one_to_one
+      change_containment: single_module
+follow_up_drafts: []
+lessons_candidates:
+  - "pre_survey_estimate predicted extending tests/test_batch_stop_contract.py; the plan placed the pin in a new tests/test_control_char_abort_stop_reason.py instead"
