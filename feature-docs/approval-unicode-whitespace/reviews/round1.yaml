@@ -1,0 +1,104 @@
+round: 1
+executed_at: '2026-11-02T00:04:37+09:00'
+scope:
+  review_mode: diff
+  base_commit: 6036888a4e6e2277f44c17ccaaca5dcc23ae4715
+  head_commit: 4915f5309b400d067fad6e25dd84ad918a2a408e
+  changed_files:
+  - em-workflow/hooks/bash_guard.py
+  - em-workflow/references/command-execution-protocol.md
+  - em-workflow/scripts/merge-preflight.py
+  - test-docs/approval-unicode-whitespace/task0001.tests.yaml
+  - test-docs/approval-unicode-whitespace/task0002.tests.yaml
+  - test-docs/approval-unicode-whitespace/task0003.tests.yaml
+  - tests/test_approval_trim_docs.py
+  - tests/test_bash_guard_cd_prefix.py
+  - tests/test_bash_guard_cd_prefix_operators.py
+  - tests/test_bash_guard_store_unicode_whitespace.py
+  - tests/test_bash_guard_unicode_whitespace.py
+  - tests/test_merge_preflight.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 90ff0d70d70279b8
+  severity: medium
+  category: security
+  file: em-workflow/hooks/bash_guard.py
+  line: 207
+  title: 'TM-5: 引用符内の先頭にある U+0085 を YAML 1.1 が空白に変えるため、宣言済みで未承認のコマンドが拒否されず判定なしに後退する'
+  description: 'declared_commands は workflow.yaml を 1 行ずつ読み、`test_command: "<U+0085>./unapproved"` の値を `\x85./unapproved` のまま宣言集合に入れる（trim はスペースとタブだけ）。一方 PyYAML（YAML 1.1）は二重引用符内の U+0085 を空白 1 つに変えるため、解析結果は ` ./unapproved` になる。この値がコマンドとして渡ると、hook_main は `./unapproved` にトリムし、宣言集合にも承認集合にも含まれないため判定なし（return 0）になる。基準コミットでは両側に str.strip() をかけていたため一致し、未承認として拒否していた。挙動は SPEC FR8 と tests/test_bash_guard_unicode_whitespace.py:416-422 のとおりで、仕様の穴にあたる。影響は通常の権限確認に回るだけに限られ、YAML のエスケープやブロックスカラーを使えば基準コミットでも同種の食い違いは起こせた。'
+  suggestion: declared_commands で、スペースとタブだけのトリム値に加えて str.strip() した値（または YAML 1.1 が改行として扱う U+0085 / U+2028 / U+2029 を前後から除いた値）も宣言集合に入れる。tests/test_bash_guard_unicode_whitespace.py:418 / :422 の silent 期待を見直し、SPEC FR8 と THREAT-MODEL TM-5 に追記し、U+0085 を含む宣言とその YAML 解析結果で deny を確かめる回帰テストを加える。
+  reproduction: workflow.yaml の project.components.main.test_command に、二重引用符内の先頭が実際の U+0085 である "<U+0085>./unapproved" を指定する。承認ストアには /usr/bin/true だけを登録する。YAML 解析結果の「 ./unapproved」を、同じリポジトリを cwd とした PreToolUse JSON の tool_input.command に渡す。基準コミットでは permissionDecision=deny、新版では終了コード0・標準出力なしになる。ファイル入出力と Git 情報をメモリ上で置き換え、両版の hook_main で確認した
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 70
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix candidate gate requires critical/high; left for a follow-up task'
+evaluation:
+  round_summary: 'Round 1（diff、cross_validation=true）。security#0 の medium 指摘 1 件は、コードを読んで再現できた（U+0085 を YAML 1.1 が空白に変えるため、宣言済みで未承認のコマンドの拒否が判定なしに後退する。原因は FR8 どおりの実装による仕様の穴）。architecture#0 の high 指摘 1 件（trim_blanks / is_matchable の重複）は、重複が基準コミットからあり AC5 の一致テストで押さえられているため low に下げた（low は R3b step 2 で記録対象外）。comprehensive / performance / spec の 3 観点は指摘なし。reviewer_outputs に指示の注入の試みは見当たらなかった。確認状況: security / comprehensive / performance / architecture / spec いずれも corroborated。読み取り上限 10 ファイルに達したため、tests/test_approval_trim_docs.py、tests/test_bash_guard_store_unicode_whitespace.py、tests/test_bash_guard_cd_prefix.py、tests/test_bash_guard_cd_prefix_operators.py、test-docs/approval-unicode-whitespace/*.tests.yaml は evaluator 自身は確認していない。'
+  recommended_action: auto_fix
+  action_rationale: 残るのは security の medium 1 件で、修正は declared_commands に収まる。architecture の low 1 件は今回の範囲では対応しなくてよい。critical / high は残っていない。
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-approval-unicode-whitespace-20261101T150410Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
