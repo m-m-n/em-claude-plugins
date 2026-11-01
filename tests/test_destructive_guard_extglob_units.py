@@ -11,9 +11,10 @@ the parse-unit count, the met determination and the verdict of a judgment do
 not depend on the lexer cache or on which stage lexed a chunk first.
 
 The hook has no package, so every test loads the module from its file path
-(test/README.md) and drives it in-process: lex_shell() for the facts on a
-map, run() -- fed a payload on a replaced stdin -- for a judgment. A hook
-module loaded afresh has an empty lexer cache and no earlier judgment; a
+(test/README.md), with bytecode writing off for the load (no `__pycache__`
+is written next to the hook), and drives it in-process: lex_shell() for the
+facts on a map, run() -- fed a payload on a replaced stdin -- for a judgment. A
+hook module loaded afresh has an empty lexer cache and no earlier judgment; a
 module is never reset from the outside, only by what a judgment itself resets.
 Standard library only.
 
@@ -27,6 +28,9 @@ Layout:
   first judgment with an empty cache.
 - TestCacheDisabled (AC-3): every case-table entry with the lexer cache off.
 - TestVerdicts (AC-4): TS5, its differing-prefix variant and T2 AC-4.7.
+- TestHookLoadWritesNoBytecode (hook-test-bytecode-suppression task0001, FR1,
+  NFR3): bytecode writing is off while the hook module body runs and the
+  caller's value is back after the load, on a normal return and on a raise.
 - TestModuleContract (AC-6): standard library only.
 """
 
@@ -38,6 +42,7 @@ import io
 import json
 import os
 import sys
+import tempfile
 import unittest
 from unittest import mock
 
@@ -65,12 +70,21 @@ EXTGLOB_OPENERS = ("@(", "!(", "+(", "*(", "?(")
 
 
 def load_hook():
-    """A hook module of its own: empty lexer cache, no judgment behind it."""
+    """A hook module of its own: empty lexer cache, no judgment behind it.
+
+    The module body runs with bytecode writing off, so the load leaves no
+    `__pycache__` next to the hook; the caller's `sys.dont_write_bytecode` is
+    put back on every exit, a raising body included."""
     spec = importlib.util.spec_from_file_location(
         "destructive_guard_extglob_units_under_test", HOOK
     )
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    previous = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = previous
     return module
 
 
@@ -353,6 +367,120 @@ class TestVerdicts(unittest.TestCase):
 
     def test_t2_ac_4_7_allows(self):
         self.assertEqual(judge(load_hook(), T2_AC_4_7).verdict, "allow")
+
+
+class TestHookLoadWritesNoBytecode(unittest.TestCase):
+    """AC-1, AC-3, AC-4, AC-5 (hook-test-bytecode-suppression task0001; FR1,
+    NFR3): load_hook() turns bytecode writing off only while the module body
+    runs, and puts the caller's value back on every exit.
+
+    The tests aim the loader at a probe module in a test-owned temporary
+    directory (the module's HOOK constant is replaced for the duration of one
+    call), so a broken loader can never write under `em-workflow/`. Every test
+    sets the starting value of `sys.dont_write_bytecode` itself: in a whole run
+    the inherited value is already True, and a test that inherited it would
+    pass against a loader that never restored the flag."""
+
+    PROBE_RECORDS_FLAG = "import sys\nFLAG_SEEN_BY_BODY = sys.dont_write_bytecode\n"
+    PROBE_RAISES = (
+        "import sys\n"
+        "raise RuntimeError('probe body raised; flag=%r' % sys.dont_write_bytecode)\n"
+    )
+
+    def setUp(self):
+        # Registered first, so the value the test found comes back whether the
+        # test passes, fails or errors (AC-5).
+        self.addCleanup(setattr, sys, "dont_write_bytecode", sys.dont_write_bytecode)
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.tmpdir = tmp.name
+
+    def probe(self, source):
+        path = os.path.join(self.tmpdir, "probe_hook.py")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(source)
+        return path
+
+    def load_probe(self, source, starting):
+        """load_hook() aimed at a probe with `sys.dont_write_bytecode` set to
+        `starting` just before the call."""
+        path = self.probe(source)
+        sys.dont_write_bytecode = starting
+        with mock.patch.object(sys.modules[__name__], "HOOK", path):
+            return load_hook()
+
+    def test_ac1_flag_is_true_while_the_module_body_runs(self):
+        for starting in (False, True):
+            with self.subTest(starting=starting):
+                module = self.load_probe(self.PROBE_RECORDS_FLAG, starting)
+                self.assertIs(module.FLAG_SEEN_BY_BODY, True)
+
+    def test_ac3_flag_holds_the_starting_value_after_a_normal_return(self):
+        for starting in (False, True):
+            with self.subTest(starting=starting):
+                self.load_probe(self.PROBE_RECORDS_FLAG, starting)
+                self.assertIs(sys.dont_write_bytecode, starting)
+
+    def test_ac1_flag_is_true_while_a_raising_body_runs(self):
+        for starting in (False, True):
+            with self.subTest(starting=starting):
+                with self.assertRaises(RuntimeError) as caught:
+                    self.load_probe(self.PROBE_RAISES, starting)
+                self.assertEqual(
+                    str(caught.exception), "probe body raised; flag=True"
+                )
+
+    def test_ac4_flag_holds_the_starting_value_after_the_body_raises(self):
+        for starting in (False, True):
+            with self.subTest(starting=starting):
+                with self.assertRaises(RuntimeError):
+                    self.load_probe(self.PROBE_RAISES, starting)
+                self.assertIs(sys.dont_write_bytecode, starting)
+
+    def test_every_load_yields_a_module_of_its_own(self):
+        path = self.probe(self.PROBE_RECORDS_FLAG)
+        with mock.patch.object(sys.modules[__name__], "HOOK", path):
+            first, second = load_hook(), load_hook()
+        self.assertIsNot(first, second)
+
+    @staticmethod
+    def plugin_listing():
+        root = os.path.join(ROOT, "em-workflow")
+        return sorted(
+            os.path.join(directory, name)
+            for directory, dirs, files in os.walk(root)
+            for name in dirs + files
+        )
+
+    def test_ac5_a_passing_failing_or_erroring_test_puts_the_flag_back(self):
+        class Deliberate(TestHookLoadWritesNoBytecode):
+            def test_failing(self):
+                sys.dont_write_bytecode = not sys.dont_write_bytecode
+                self.fail("deliberate failure")
+
+            def test_erroring(self):
+                sys.dont_write_bytecode = not sys.dont_write_bytecode
+                raise RuntimeError("deliberate error")
+
+        own = "test_ac5_a_passing_failing_or_erroring_test_puts_the_flag_back"
+        names = [
+            name
+            for name in unittest.defaultTestLoader.getTestCaseNames(
+                TestHookLoadWritesNoBytecode
+            )
+            if name != own
+        ] + ["test_failing", "test_erroring"]
+        listing = self.plugin_listing()
+        for starting in (False, True):
+            with self.subTest(starting=starting):
+                sys.dont_write_bytecode = starting
+                suite = unittest.TestSuite(Deliberate(name) for name in names)
+                result = unittest.TextTestRunner(stream=io.StringIO()).run(suite)
+                self.assertEqual(result.testsRun, len(names))
+                self.assertTrue(any("test_failing" in t.id() for t, _ in result.failures))
+                self.assertTrue(any("test_erroring" in t.id() for t, _ in result.errors))
+                self.assertIs(sys.dont_write_bytecode, starting)
+        self.assertEqual(self.plugin_listing(), listing)
 
 
 class TestModuleContract(unittest.TestCase):

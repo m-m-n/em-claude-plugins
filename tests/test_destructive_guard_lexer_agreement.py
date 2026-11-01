@@ -10,8 +10,9 @@ expected real heredoc operators where relevant, and an expected hook verdict,
 all written out by hand as literals. Nothing here is computed by a shell.
 
 The hook has no package, so the module is loaded from its file path
-(test/README.md). Verdict, linearity and determinism checks run the hook
-through its stdin JSON / stdout contract. Standard library only.
+(test/README.md), with bytecode writing off for the load (no `__pycache__`
+is written next to the hook). Verdict, linearity and determinism checks run
+the hook through its stdin JSON / stdout contract. Standard library only.
 
 Layout:
 
@@ -67,6 +68,9 @@ Layout:
   (destructive-guard-lexer-round2-deferred task0007, review round 1): the `$`
   openers found past backslash-newline pairs, and the word split that takes
   every pair out that bash removes, with its offsets kept in the original text.
+- TestHookLoadWritesNoBytecode (hook-test-bytecode-suppression task0001, FR2,
+  NFR3): bytecode writing is off while the hook module body runs and the
+  caller's value is back after the load, on a normal return and on a raise.
 
 Rework round 1 (task0002) adds the forms of IMPLEMENTATION.md P10 (reserved
 words after closers and name-taking keywords), P11 (where a heredoc body
@@ -87,6 +91,7 @@ import re
 import shlex
 import subprocess
 import sys
+import tempfile
 import time
 import unittest
 from unittest import mock
@@ -102,9 +107,18 @@ GUARD_TIMEOUT_SECONDS = 10
 
 
 def _load_hook():
+    """A hook module of its own, loaded with bytecode writing off so the load
+    leaves no `__pycache__` next to the hook; the caller's
+    `sys.dont_write_bytecode` is put back on every exit, a raising body
+    included."""
     spec = importlib.util.spec_from_file_location("destructive_guard_under_test", HOOK)
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    previous = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = previous
     return module
 
 
@@ -7116,6 +7130,136 @@ class TestLineContinuationStageAgreement(TestStageAgreement):
     def test_the_forms_are_there_to_check(self):
         for _tag, _stable_id, _want, command in LINE_CONTINUATION_CASES:
             self.assertIn(command, self.commands)
+
+
+class TestHookLoadWritesNoBytecode(unittest.TestCase):
+    """AC-2, AC-3, AC-4, AC-5 (hook-test-bytecode-suppression task0001; FR2,
+    NFR3): _load_hook() turns bytecode writing off only while the module body
+    runs, and puts the caller's value back on every exit.
+
+    The tests aim the loader at a probe module in a test-owned temporary
+    directory (the module's HOOK constant is replaced for the duration of one
+    call), so a broken loader can never write under `em-workflow/`. Every test
+    sets the starting value of `sys.dont_write_bytecode` itself: in a whole run
+    the inherited value is already True, and a test that inherited it would
+    pass against a loader that never restored the flag."""
+
+    PROBE_RECORDS_FLAG = "import sys\nFLAG_SEEN_BY_BODY = sys.dont_write_bytecode\n"
+    PROBE_RAISES = (
+        "import sys\n"
+        "raise RuntimeError('probe body raised; flag=%r' % sys.dont_write_bytecode)\n"
+    )
+
+    def setUp(self):
+        # Registered first, so the value the test found comes back whether the
+        # test passes, fails or errors (AC-5).
+        self.addCleanup(setattr, sys, "dont_write_bytecode", sys.dont_write_bytecode)
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.tmpdir = tmp.name
+
+    def probe(self, source):
+        path = os.path.join(self.tmpdir, "probe_hook.py")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(source)
+        return path
+
+    def load_probe(self, source, starting):
+        """_load_hook() aimed at a probe with `sys.dont_write_bytecode` set to
+        `starting` just before the call."""
+        path = self.probe(source)
+        sys.dont_write_bytecode = starting
+        with mock.patch.object(sys.modules[__name__], "HOOK", path):
+            return _load_hook()
+
+    def test_ac2_flag_is_true_while_the_module_body_runs(self):
+        for starting in (False, True):
+            with self.subTest(starting=starting):
+                module = self.load_probe(self.PROBE_RECORDS_FLAG, starting)
+                self.assertIs(module.FLAG_SEEN_BY_BODY, True)
+
+    def test_ac2_the_module_level_hook_binding_is_made_by_the_loader(self):
+        with open(os.path.abspath(__file__), encoding="utf-8") as f:
+            tree = ast.parse(f.read())
+        bindings = [
+            node
+            for node in tree.body
+            if isinstance(node, ast.Assign)
+            and [t.id for t in node.targets if isinstance(t, ast.Name)] == ["H"]
+        ]
+        self.assertEqual(len(bindings), 1)
+        call = bindings[0].value
+        self.assertIsInstance(call, ast.Call)
+        self.assertIsInstance(call.func, ast.Name)
+        self.assertEqual(call.func.id, "_load_hook")
+        self.assertEqual(H.__name__, "destructive_guard_under_test")
+
+    def test_ac3_flag_holds_the_starting_value_after_a_normal_return(self):
+        for starting in (False, True):
+            with self.subTest(starting=starting):
+                self.load_probe(self.PROBE_RECORDS_FLAG, starting)
+                self.assertIs(sys.dont_write_bytecode, starting)
+
+    def test_ac2_flag_is_true_while_a_raising_body_runs(self):
+        for starting in (False, True):
+            with self.subTest(starting=starting):
+                with self.assertRaises(RuntimeError) as caught:
+                    self.load_probe(self.PROBE_RAISES, starting)
+                self.assertEqual(
+                    str(caught.exception), "probe body raised; flag=True"
+                )
+
+    def test_ac4_flag_holds_the_starting_value_after_the_body_raises(self):
+        for starting in (False, True):
+            with self.subTest(starting=starting):
+                with self.assertRaises(RuntimeError):
+                    self.load_probe(self.PROBE_RAISES, starting)
+                self.assertIs(sys.dont_write_bytecode, starting)
+
+    def test_every_load_yields_a_module_of_its_own(self):
+        path = self.probe(self.PROBE_RECORDS_FLAG)
+        with mock.patch.object(sys.modules[__name__], "HOOK", path):
+            first, second = _load_hook(), _load_hook()
+        self.assertIsNot(first, second)
+
+    @staticmethod
+    def plugin_listing():
+        root = os.path.join(ROOT, "em-workflow")
+        return sorted(
+            os.path.join(directory, name)
+            for directory, dirs, files in os.walk(root)
+            for name in dirs + files
+        )
+
+    def test_ac5_a_passing_failing_or_erroring_test_puts_the_flag_back(self):
+        class Deliberate(TestHookLoadWritesNoBytecode):
+            def test_failing(self):
+                sys.dont_write_bytecode = not sys.dont_write_bytecode
+                self.fail("deliberate failure")
+
+            def test_erroring(self):
+                sys.dont_write_bytecode = not sys.dont_write_bytecode
+                raise RuntimeError("deliberate error")
+
+        own = "test_ac5_a_passing_failing_or_erroring_test_puts_the_flag_back"
+        names = [
+            name
+            for name in unittest.defaultTestLoader.getTestCaseNames(
+                TestHookLoadWritesNoBytecode
+            )
+            if name != own
+        ] + ["test_failing", "test_erroring"]
+        listing = self.plugin_listing()
+        for starting in (False, True):
+            with self.subTest(starting=starting):
+                sys.dont_write_bytecode = starting
+                suite = unittest.TestSuite(Deliberate(name) for name in names)
+                result = unittest.TextTestRunner(stream=io.StringIO()).run(suite)
+                self.assertEqual(result.testsRun, len(names))
+                self.assertTrue(any("test_failing" in t.id() for t, _ in result.failures))
+                self.assertTrue(any("test_erroring" in t.id() for t, _ in result.errors))
+                self.assertIs(sys.dont_write_bytecode, starting)
+        self.assertEqual(self.plugin_listing(), listing)
 
 
 if __name__ == "__main__":
