@@ -1,0 +1,78 @@
+schema_version: 2
+feature: hook-test-bytecode-suppression
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.01
+    confidence: 0.95
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.02
+      '1': 0.95
+      '2': 0.03
+      '3': 0.0
+  observed_at: '2026-11-01T12:02:54+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.41
+    confidence: 0.58
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.01
+      '1': 0.58
+      '2': 0.41
+      '3': 0.0
+  observed_at: '2026-11-01T12:02:54+09:00'
+pre_survey_estimate:
+  files_expected:
+  - tests/test_destructive_guard_extglob_units.py
+  - tests/test_destructive_guard_lexer_agreement.py
+  changed_lines_approx: 6
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: none
+  added_test_cases_approx: 0
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  caller_and_dependency_count: 19
+  changes_external_contract: false
+  changes_behavior: true
+  evidence:
+  - 'tests/test_destructive_guard_extglob_units.py:67-74: HEADのload_hookはspec_from_file_location、module_from_spec、exec_moduleを使用し、バイトコード書き込みの抑制処理はない'
+  - 'tests/test_destructive_guard_lexer_agreement.py:104-111: HEADの_load_hookも同じ読み込み方法を使用し、抑制処理はない。モジュール初期化時にHへ読み込む'
+  - 'tests/test_destructive_guard_extglob_units.py:67-74、tests/test_destructive_guard_lexer_agreement.py:104-108:
+    SourceFileLoaderの明示指定やsys.pathの変更はない'
+  - 'tests/test_destructive_guard_extglob_units.py:40-42、tests/test_destructive_guard_lexer_agreement.py:89-92:
+    両ファイルはsysとunittest.mockをすでに読み込んでいる'
+  - 'tests/test_destructive_guard_merge_allow.py:76-82: 既存の読み込み関数はmock.patch.object(sys,
+    "dont_write_bytecode", True)でexec_moduleを囲んでいる'
+  - 'tests/test_queue_launch_guard_linked_layout.py:255-266: フック読み込み中だけsys.dont_write_bytecodeをTrueにし、finallyで復元する既存例もある'
+  - 'em-workflow/hooks/destructive-guard.py:8722-8758: 隣接するmerge_pr_allow.pyを動的に読み込み、その間はバイトコード書き込みを抑制してfinallyで復元する'
+  - 'em-workflow/hooks/destructive-guard.py:9155: コマンド判定処理はload_merge_exceptionを呼ぶ'
+  - 'em-workflow/hooks/merge_pr_allow.py:38-39: import文で読み込むのはosとreだけ'
+  - 'tests/test_destructive_guard_extglob_units.py:163-355: load_hookの呼出元は15関数で、呼出箇所は16箇所ある'
+  - 'tests/test_destructive_guard_lexer_agreement.py:105-111: モジュール初期化の呼出元1箇所と、両読み込み関数に共通する呼出先3種を加え、呼出元・依存先を19と数えた'
+  - 'tests/test_destructive_guard_merge_allow.py:908-948: フックの別プロセス実行後のキャッシュ不在と、リポジトリ内のmerge_pr_allowのキャッシュ不在を検証する既存試験がある。対象2関数の読み込み後にdestructive-guardのキャッシュ不在を検証する内容ではない'
+  - 'tests/test_merge_ci_wait.py:50: この試験モジュールはsys.dont_write_bytecodeを全体設定としてTrueにしている'
+decided_at: '2026-11-01T12:02:54+09:00'
