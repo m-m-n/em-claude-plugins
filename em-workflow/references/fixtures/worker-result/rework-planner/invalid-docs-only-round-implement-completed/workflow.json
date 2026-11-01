@@ -1,0 +1,125 @@
+{
+  "feature": "docs-only-demo",
+  "project": {
+    "license": "MIT"
+  },
+  "requirements": {
+    "FR1": {
+      "status": "ok",
+      "tasks": [
+        "task0001",
+        "task0002"
+      ],
+      "tests": [
+        "TS1",
+        "TS2"
+      ],
+      "title": "first requirement"
+    },
+    "FR2": {
+      "status": "ok",
+      "tasks": [
+        "task0003"
+      ],
+      "tests": [
+        "TS3"
+      ],
+      "title": "second requirement"
+    }
+  },
+  "schema_version": 1,
+  "tasks": {
+    "task0001": {
+      "branch": "em-workflow/docs-only-demo/task0001",
+      "complexity": "low",
+      "domains": [],
+      "files": [
+        "src/first.go"
+      ],
+      "notes": null,
+      "plan": "tasks/task0001.md",
+      "requirements": [
+        "FR1"
+      ],
+      "skills": [],
+      "status": "merged",
+      "title": "first task"
+    },
+    "task0002": {
+      "branch": "em-workflow/docs-only-demo/task0002",
+      "complexity": "low",
+      "domains": [],
+      "files": [
+        "src/second.go"
+      ],
+      "notes": null,
+      "plan": "tasks/task0002.md",
+      "requirements": [
+        "FR1"
+      ],
+      "skills": [],
+      "status": "merged",
+      "title": "second task"
+    },
+    "task0003": {
+      "branch": "em-workflow/docs-only-demo/task0003",
+      "complexity": "low",
+      "domains": [],
+      "files": [
+        "src/third.go"
+      ],
+      "notes": null,
+      "plan": "tasks/task0003.md",
+      "requirements": [
+        "FR2"
+      ],
+      "skills": [],
+      "status": "merged",
+      "title": "third task"
+    }
+  },
+  "workflow": [
+    {
+      "completed_at_commit": "aaa",
+      "id": "create-spec",
+      "status": "completed"
+    },
+    {
+      "id": "design",
+      "skipped_reason": "no UI",
+      "status": "skipped"
+    },
+    {
+      "completed_at_commit": "bbb",
+      "id": "create-plan",
+      "status": "completed"
+    },
+    {
+      "base_commit": "deadbeef",
+      "completed_at_commit": "ccc",
+      "id": "implement",
+      "status": "completed"
+    },
+    {
+      "completed_at_commit": "ddd",
+      "id": "review",
+      "status": "completed"
+    },
+    {
+      "failed_items": [
+        {
+          "category": "spec",
+          "id": "TS1",
+          "note": "scenario ID does not use the TS-<n> format"
+        }
+      ],
+      "id": "verify",
+      "result": "fail",
+      "status": "failed"
+    },
+    {
+      "id": "retrospect",
+      "status": "pending"
+    }
+  ]
+}

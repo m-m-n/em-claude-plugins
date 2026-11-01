@@ -1,0 +1,44 @@
+{
+  "allowed_write_roots": [
+    "feature-docs/docs-only-demo/tasks"
+  ],
+  "input_revision": {
+    "input_digest": "sha256:4c78baa0dbc39bd971ca147c3237cafbc5db08f82ef0f26d35a7c1376d7a7eb2",
+    "workflow_blob": "5d3b7a2"
+  },
+  "mode": "interactive",
+  "phase": "verify",
+  "request_id": "env-run-0001",
+  "resolved_input_paths": {},
+  "schema_version": 1,
+  "verification_index": {
+    "TS1": [
+      "FR1"
+    ],
+    "TS2": [
+      "FR1"
+    ],
+    "TS3": [
+      "FR2"
+    ]
+  },
+  "write_policy": {
+    "targets": [
+      {
+        "action": "replace_own",
+        "expect_digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+        "path": "feature-docs/docs-only-demo/VERIFICATION.md"
+      },
+      {
+        "action": "replace_own",
+        "expect_digest": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+        "path": "feature-docs/docs-only-demo/tasks/task0001.md"
+      },
+      {
+        "action": "replace_own",
+        "expect_digest": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+        "path": "feature-docs/docs-only-demo/tasks/task0003.md"
+      }
+    ]
+  }
+}
