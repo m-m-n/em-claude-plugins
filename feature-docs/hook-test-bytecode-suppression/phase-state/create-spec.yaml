@@ -1,22 +1,40 @@
 schema_version: 1
 feature: hook-test-bytecode-suppression
 phase: create-spec
-status: initialized
+status: dispatching
 generation: 1
 base_revision: 27ff4ef7e1c49404e3513f16e4491792e1789dc4
-last_input_digest: null
-active_request_id: null
+last_input_digest: sha256:994f8c11ab6e3f5400d1b3a681e24e0afe9b77a5446777acaf02efa02154a397
+active_request_id: create-spec-run-0001
 packets: {}
 answers:
   create-spec.feature-identity:
     packet_id: null
-    answered_at: "2026-11-01T12:03:56+09:00"
+    answered_at: '2026-11-01T12:03:56+09:00'
     source: batch-decision-table
     answer_mode: single_select
-    selected_option_ids: [derive_from_task_description]
+    selected_option_ids:
+    - derive_from_task_description
     freeform: null
-    normalized_answer: "feature name derived from the task description: hook-test-bytecode-suppression"
-worker_runs: []
+    normalized_answer: 'feature name derived from the task description: hook-test-bytecode-suppression'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:994f8c11ab6e3f5400d1b3a681e24e0afe9b77a5446777acaf02efa02154a397
+  output_digest: null
+  dispatch_digest_inputs:
+    .claude/rules/core-plugin-structure.md: sha256:62e2ad8531369d37f83ad5458d3f5077b4ca3edf7584ecba83b4be044909fd56
+    .claude/rules/hook-tests.md: sha256:2ae9d862d09c554e2f88d864896d09b89676f7ce567b7f3c098a89e610ffea9b
+    .gitignore: sha256:9ce2c0d99fe23b6c290581d178802555262777eff7cb3afe5c919e7c53a880f9
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    em-workflow/hooks/destructive-guard.py: sha256:2c7d3e1cc86d0686d106767628b4813484e18653d3caf97806ee5d1ed633fd78
+    em-workflow/hooks/tests/run-destructive-guard.py: sha256:e09d392a2857b4b6fe126502b856bca6ce989742b027a59704fc3deb64e055db
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+    tests/test_destructive_guard_extglob_units.py: sha256:01cc73021907bd04d381567e266f9c9d8065c0e06d63571c0c0c5e702459d618
+    tests/test_destructive_guard_lexer_agreement.py: sha256:a1bad2b1867a38d3b7720ee3078fd108b21bab82a0550ae8806962532a415292
+    tests/test_destructive_guard_merge_allow.py: sha256:1ac243748e9bce21e660c50a62b45969a16e2644fedfe74a5c364a2d814f5b89
+    tests/test_queue_launch_guard_linked_layout.py: sha256:8305634797dee34f3bf4d2256449d178718a6fe68891651b40fd5651e5dc0f52
 artifacts: []
 patches: []
 progress_fingerprint: null
