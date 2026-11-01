@@ -1,0 +1,48 @@
+round: 1
+executed_at: "2026-11-01T15:17:36+09:00"
+scope:
+  review_mode: diff
+  base_commit: e1f8118a46604b50b2492403485768b05db6c2e9
+  head_commit: 906b88cab02758b22d7d2dbc0f8d853a6ba1ec0c
+  changed_files:
+  - em-workflow/hooks/queue_launch_guard.py
+  - test-docs/launch-guard-common-dir-fallback/task0001.tests.yaml
+  - tests/test_merge_unverified_exit_doc_contract.py
+  - tests/test_queue_launch_guard_linked_layout.py
+plan:
+  floor: [comprehensive, security, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings: []
+evaluation:
+  round_summary: "All five runs returned schema-valid empty findings; no injection attempts. With cross_validation set, the evaluator read all 4 changed files plus SPEC.md and confirmed FR1-FR8 and NFR1-NFR5: the common-dir parent is taken only when the normalized basename is .git; a root that does not contain the worktree path is undetermined (fail-open, OSError/ValueError included); the toplevel-containment exception applies only on the segment-free path and still denies a toplevel equal to the worktree path, a sibling integration worktree, or one containing the root; one git-common-dir call per launch; segment path unchanged; TS1-TS8 covered with no deny test removed; the sha256 pin matches the hook and the pin comment/docstring no longer claim the hook is unmodified. Noted behavior change: a linked layout whose store is outside the project now fails open from the integration worktree, which SPEC FR2/TS5 sanctions and NFR4 scopes out. Tests were not executed (read-only role). Coverage: comprehensive, security, performance, architecture, spec all corroborated."
+  recommended_action: "complete"
+  action_rationale: "No reviewer findings and none from independent inspection; every requirement confirmed and no critical/high sites to account for."
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
