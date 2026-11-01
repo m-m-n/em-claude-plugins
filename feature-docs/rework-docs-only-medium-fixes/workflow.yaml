@@ -93,7 +93,7 @@ workflow:
   summary: 'python3 -m unittest discover -s tests: 13514 tests OK (skipped=1). TS-1..TS-21, TS-24 automated pass; TS-22 (SSOT docs state FR1-FR4) and TS-23 (stdlib/repo-local imports only) checked manually: pass. No excluded requirements.'
   completed_at_commit: e08455e4ef576a7b15681beee2eef6f365656d95
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: Rename-aware coverage backed by the document diff
