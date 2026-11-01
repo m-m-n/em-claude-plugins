@@ -97,7 +97,7 @@ workflow:
   completed_at_commit: 9af5122c5135263c3445566a0954add6a6fcde7f
   summary: 'TS-1..TS-7 pass. unittest discover 13424 tests OK (skipped=1); run-destructive-guard 1137/1137; no __pycache__ under em-workflow/hooks/ after TS-1, TS-2, TS-3; change set limited to the two test modules plus feature/test docs. Excluded: none.'
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: Load the destructive-guard hook without writing bytecode in two test modules
