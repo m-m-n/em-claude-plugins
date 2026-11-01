@@ -1,0 +1,17 @@
+schema_version: 1
+feature: rework-docs-only-medium-fixes
+phase: create-spec
+status: in_progress
+generation: 1
+base_revision: 1f85d3e0c1e36c2944d4f8c9c6bd31668b49948a
+last_input_digest: null
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
