@@ -1,0 +1,140 @@
+task_id: task0001
+baseline_failures: []          # before any edit: python3 -m unittest discover -s tests -> Ran 13410 tests, OK (skipped=1); no failing test
+final_failures: []             # re-executed after the implementation, the fixtures, the hash-pin refresh and this record: python3 -m unittest discover -s tests -> Ran 13455 tests, OK (skipped=1); no failing test
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_rework_docs_only_validator_rules.TestRenameCoverageDiff.test_ac1_ts6_rename_confirmed_by_both_documents_is_accepted
+      - tests.test_rework_docs_only_validator_rules.TestRenameCoverageDiff.test_ac1_ts1_to_absent_from_the_post_change_document_is_rejected
+      - tests.test_rework_docs_only_validator_rules.TestRenameCoverageDiff.test_ac1_ts2_from_still_in_the_post_change_document_is_rejected
+      - tests.test_rework_docs_only_validator_rules.TestRenameCoverageDiff.test_ac1_ts3_from_absent_from_the_baseline_document_is_rejected
+      - tests.test_rework_docs_only_validator_rules.TestRenameCoverageDiff.test_ac1_from_that_is_not_a_verification_index_key_is_rejected
+      - tests.test_rework_docs_only_validator_rules.TestRenameCoverageDiff.test_ac1_every_declared_pair_with_the_same_to_must_be_confirmed
+      - tests.test_rework_docs_only_validator_rules.TestRenameCoverageDiff.test_ac1_the_first_failed_condition_is_the_one_named
+      - tests.test_rework_docs_only_validator_rules.TestRenameCoverageDiff.test_ac1_rename_is_judged_per_covered_id
+      - tests.test_rework_docs_only_validator_rules.TestFixtures.test_ac6_prefix_matches_the_exit_code_and_the_reported_codes
+    red_confirmed: true
+    red_reason: >-
+      Before the validator edit the rejection tests FAILED with `AssertionError: Lists
+      differ: [] != ['rework-index']`: ts1 (`to` absent from the post set), ts2 (`from`
+      still in the post set), ts3 (`from` absent from the baseline set, both with an empty
+      baseline VERIFICATION.md and with none), `from` not a verification_index key, the
+      second pair of a shared `to` not confirmed, and the first-failed-condition test. The
+      validator accepted every one of them through the declared pair alone. The accept side
+      was green before and after and pins the boundary: ts6 (rename confirmed by both
+      documents, exit 0), rename_is_judged_per_covered_id, and the existing fixture test
+      (valid-mixed-round-renamed-scenario-declared with its new feature-dir/baseline-dir is
+      accepted with exit 0).
+  AC-2:
+    tests:
+      - tests.test_rework_docs_only_validator_rules.TestRenameCoverageDiff.test_ac2_ts4_missing_option_means_no_rename_is_accepted_and_the_message_names_it
+      - tests.test_rework_docs_only_validator_rules.TestRenameCoverageDiff.test_ac2_ts5_feature_dir_without_a_verification_md_is_unavailable
+      - tests.test_rework_docs_only_validator_rules.TestRenameCoverageDiff.test_ac2_diff_unavailable_message_differs_from_the_no_declaration_message
+      - tests.test_rework_docs_only_validator_rules.TestRenameCoverageDiff.test_ac2_no_declaration_message_keeps_its_wording
+      - tests.test_rework_docs_only_validator_rules.TestRenameDiffFixtures.test_ac2_the_two_messages_of_the_pair_of_fixtures_differ_and_name_what_is_missing
+    red_confirmed: true
+    red_reason: >-
+      Before the validator edit ts4 FAILED for all three sub-cases (neither option, no
+      --baseline-dir, no --feature-dir) and ts5 FAILED (feature-dir without a
+      VERIFICATION.md): the validator accepted the rename and returned no errors where one
+      rework-index error naming the missing piece was asserted. The message-distinction test
+      ERRORED (IndexError: no error to read) and the fixture-pair test ERRORED
+      (the invalid-mixed-round-rename-without-diff fixture did not exist yet). The
+      no-declaration wording test is a negative control that was green before and after: it
+      pins that the existing message (a) is not reworded.
+  AC-3:
+    tests:
+      - tests.test_rework_docs_only_validator_rules.TestRenameCoverageDiff.test_ac3_ts7_from_of_a_declared_pair_is_rejected_with_the_diff
+      - tests.test_rework_docs_only_validator_rules.TestRenameCoverageDiff.test_ac3_ts7_from_of_a_declared_pair_is_rejected_without_the_diff
+      - tests.test_rework_docs_only_validator_rules.TestRenameCoverageDiff.test_ac3_from_is_rejected_even_when_the_to_is_confirmed
+      - tests.test_rework_docs_only_validator_rules.TestRenameCoverageDiff.test_ac3_from_is_rejected_when_the_diff_cannot_confirm_the_rename
+    red_confirmed: true
+    red_reason: >-
+      Before the validator edit all four FAILED with `AssertionError: Lists differ: [] !=
+      ['rework-index']`: TS3, the `from` of a declared pair and a verification_index key, was
+      accepted as an ordinary index key, with the diff and without it, and next to a
+      confirmed `to`.
+  AC-4:
+    tests:
+      - tests.test_rework_docs_only_validator_rules.TestRenameCoverageDiff.test_ac4_ts8_verification_index_key_absent_from_the_post_set_is_rejected
+      - tests.test_rework_docs_only_validator_rules.TestRenameCoverageDiff.test_ac4_unrelated_key_is_rejected_next_to_a_confirmed_rename
+      - tests.test_rework_docs_only_validator_rules.TestRenameCoverageDiff.test_ac4_verification_index_key_present_in_the_post_set_is_accepted
+      - tests.test_rework_docs_only_validator_rules.TestRenameCoverageDiff.test_ac4_ts9_without_the_directories_a_key_is_accepted_as_before
+    red_confirmed: true
+    red_reason: >-
+      Before the validator edit ts8 and the unrelated-key-next-to-a-confirmed-rename test
+      FAILED with `AssertionError: Lists differ: [] != ['rework-index']`: a
+      verification_index key missing from the post-change VERIFICATION.md was accepted. The
+      two accept-side tests (key present in the post set; ts9, a key accepted without the
+      directories, with one directory, and with a feature-dir that has no VERIFICATION.md)
+      were green before and after; ts9 pins that the unchanged behavior stays.
+  AC-5:
+    tests:
+      - tests.test_rework_docs_only_validator_rules.TestRenameDiffFixtures.test_ac5_the_three_fixtures_exist_with_input_and_envelope
+      - tests.test_rework_docs_only_validator_rules.TestRenameDiffFixtures.test_ac5_each_fixture_is_rejected_with_exit_1_and_rework_index
+      - tests.test_rework_docs_only_validator_rules.TestRenameDiffFixtures.test_ac5_no_new_fixture_uses_tests_replace
+      - tests.test_rework_docs_only_validator_rules.TestRenameDiffFixtures.test_ac5_valid_fixture_carries_the_post_change_and_baseline_documents
+      - tests.test_rework_docs_only_validator_rules.TestRenameDiffFixtures.test_ac5_to_missing_defines_every_other_id_but_not_the_renamed_to
+      - tests.test_rework_docs_only_validator_rules.TestRenameDiffFixtures.test_ac5_without_diff_has_neither_directory
+      - tests.test_rework_docs_only_validator_rules.TestRenameDiffFixtures.test_ac5_from_covered_differs_from_the_valid_fixture_only_by_the_from_id
+      - tests.test_validate_worker_output.TestFixtureCorpusDataDriven.test_every_fixture_matches_its_declared_exit_code
+    red_confirmed: true
+    red_reason: >-
+      Before the fixtures existed the existence test FAILED for all six sub-cases (input.json
+      and envelope.json of each of the three fixtures missing) and the single-defect tests
+      ERRORED on the missing files. Once the fixtures were added but the validator was
+      unchanged, the rejection test FAILED for all three fixtures (the validator exited 0
+      where exit 1 and rework-index were asserted). The corpus test
+      TestFixtureCorpusDataDriven wires feature-dir/baseline-dir by role name and checks
+      every fixture's exit code from its valid-/invalid- prefix; it picks the three new
+      fixtures up automatically and was not run red on its own.
+  AC-6:
+    tests:
+      - tests.test_rework_docs_only_validator_rules.TestRenameDiffFixtures.test_ac6_the_runner_passes_each_directory_that_exists_independently
+      - tests.test_rework_docs_only_validator_rules.TestRenameDiffFixtures.test_ac6_every_valid_rework_planner_fixture_is_accepted_with_exit_0
+      - tests.test_rework_docs_only_validator_rules.TestFixtures.test_ac6_prefix_matches_the_exit_code_and_the_reported_codes
+      - tests.test_rework_docs_only_validator_rules.TestStandardLibraryOnly.test_ac7_this_module_imports_only_standard_library_modules
+      - tests.test_validate_worker_output.TestFixtureCorpusDataDriven.test_every_fixture_matches_its_declared_exit_code
+    red_confirmed: true
+    red_reason: >-
+      The runner test FAILED before the fixtures gained their directories (the declared
+      fixture's flags were [] where ['--feature-dir', '--baseline-dir'] was asserted). The
+      other tests are guards that were green before and after: every valid-
+      rework-planner fixture is accepted with exit 0 (the standard-library-only test, the
+      existing fixture test and the corpus test included); the criterion's last sentence
+      (`python3 -m unittest discover -s tests` passes from the repository root) is the
+      full-suite run recorded in final_failures and has no red state of its own.
+  AC-7:
+    tests:
+      - tests.test_rework_docs_only_validator_rules.TestRenameCoverageDiff.test_ac7_non_string_covered_entries_are_reported_and_never_raise
+      - tests.test_rework_docs_only_validator_rules.TestRenameCoverageDiff.test_ac7_a_non_string_entry_does_not_hide_the_judgement_of_the_others
+      - tests.test_rework_docs_only_validator_rules.TestRenameCoverageDiff.test_ac7_covered_by_existing_that_is_not_a_list_is_reported
+      - tests.test_rework_docs_only_validator_rules.TestRenameCoverageDiff.test_ac7_unreadable_verification_md_is_one_error_naming_the_file
+      - tests.test_rework_docs_only_validator_rules.TestRenameCoverageDiff.test_ac7_undecodable_post_change_verification_md_is_one_error_naming_the_file
+      - tests.test_rework_docs_only_validator_rules.TestRenameCoverageDiff.test_ac7_undecodable_baseline_verification_md_is_one_error_naming_the_file
+      - tests.test_rework_docs_only_validator_rules.TestRenameCoverageDiff.test_ac7_an_unreadable_baseline_is_not_reported_when_no_id_needs_it
+      - tests.test_rework_docs_only_validator_rules.TestRenameCoverageDiff.test_ac7_an_unreadable_file_is_reported_for_new_scenarios_too
+      - tests.test_rework_docs_only_validator_rules.TestRenameCoverageDiff.test_ac7_cli_baseline_the_valid_rename_is_accepted_with_both_documents
+      - tests.test_rework_docs_only_validator_rules.TestRenameCoverageDiff.test_ac7_cli_malformed_rename_declarations_exit_1_with_the_diff_available
+      - tests.test_rework_docs_only_validator_rules.TestRenameCoverageDiff.test_ac7_cli_non_string_covered_entry_exits_1_with_and_without_the_diff
+      - tests.test_rework_docs_only_validator_rules.TestRenameCoverageDiff.test_ac7_cli_verification_md_that_is_a_directory_exits_1
+      - tests.test_rework_docs_only_validator_rules.TestRenameCoverageDiff.test_ac7_cli_undecodable_verification_md_exits_1
+      - tests.test_rework_docs_only_validator_rules.TestRenameCoverageDiff.test_ac7_cli_new_scenarios_with_an_undecodable_verification_md_exits_1
+      - tests.test_rework_docs_only_validator_rules.TestRenameAwareCoverage.test_ac5_malformed_doc_corrections_shapes_are_judged_as_no_rename_declared
+      - tests.test_rework_docs_only_validator_rules.TestRenameAwareCoverage.test_ac5_malformed_shapes_through_the_cli_exit_1_not_2
+    red_confirmed: true
+    red_reason: >-
+      Before the validator edit a non-string covered_by_existing entry that is unhashable (a
+      list or a mapping) made `cid not in verification_index` raise TypeError (the unit tests
+      ERRORED and the CLI exited 2 instead of 1); an int, null, bool or float entry produced
+      the "not in verification_index" message instead of a "not a string" report (FAILED).
+      A VERIFICATION.md that bytes cannot decode as text raised UnicodeDecodeError out of
+      `_validate_rework_index` (ERRORED in unit tests; the CLI exited 2 instead of 1); a
+      VERIFICATION.md that is a directory was read as absent and the declared rename was
+      accepted (the CLI test FAILED: exit 0 where exit 1 and the file-naming error were
+      asserted); a covered_by_existing string and an unreadable file under new_scenarios were
+      not reported. The malformed rename-declaration shapes (scenario_renames not a list, a
+      pair not a mapping, a missing or non-string from / to) and the valid-rename CLI
+      baseline were green before and after: they never raised in the old code, and they pin
+      that the diff-aware code keeps exit 1 with JSON details for them (the existing
+      TestRenameAwareCoverage tests listed here do the same without the directories).

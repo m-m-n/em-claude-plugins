@@ -2459,17 +2459,216 @@ def _declared_scenario_renames(payload):
     return pairs
 
 
+# Phrases that tell the rename-aware coverage messages apart (the
+# no-declaration message of row 4 carries its own, "no declared rename").
+_MSG_OLD_ID = "is the old ID of declared rename"
+_MSG_DIFF_UNAVAILABLE = "document diff is unavailable"
+_MSG_NOT_CONFIRMED = "is not confirmed by the VERIFICATION.md diff"
+
+
+def _load_scenario_ids(path):
+    """rework-docs-only-medium-fixes/task0001: the scenario-ID set a
+    VERIFICATION.md defines, as `(state, value)`.
+
+    - `("ok", ids)`: the file was read as text; `ids` come from
+      `extract_verification_scenario_ids` (the one derivation every
+      cross-artifact check shares).
+    - `("absent", None)`: no such file.
+    - `("unreadable", reason)`: the path exists but cannot be read as text (a
+      directory, a permission failure, bytes that do not decode as UTF-8).
+      Never raises."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (FileNotFoundError, NotADirectoryError):
+        return "absent", None
+    except (OSError, ValueError) as exc:
+        return "unreadable", type(exc).__name__
+    return "ok", extract_verification_scenario_ids(text)
+
+
+class _VerificationDiff:
+    """rework-docs-only-medium-fixes/task0001 (D2): the document diff the
+    rename-aware coverage rule leans on.
+
+    The diff is *available* when `--feature-dir` and `--baseline-dir` are both
+    given and feature-dir contains VERIFICATION.md. `post` is the scenario-ID
+    set of `{feature-dir}/VERIFICATION.md`; `baseline` is that of
+    `{baseline-dir}/VERIFICATION.md`, empty when the file is absent. `missing`
+    names what keeps the diff unavailable. A VERIFICATION.md that exists but
+    cannot be read as text is recorded in `unreadable` (label -> (path,
+    reason)); its set stays None. `need_*` records that a judgement used a
+    set, so `unreadable_errors` reports one `rework-index` error per
+    unreadable file that was actually needed -- never one per covered ID."""
+
+    def __init__(self, feature_dir, baseline_dir):
+        self.post = None
+        self.baseline = None
+        self.available = False
+        self.missing = []
+        self.unreadable = {}
+        self._needed = set()
+        if feature_dir is None:
+            self.missing.append("--feature-dir")
+        if baseline_dir is None:
+            self.missing.append("--baseline-dir")
+        post_state = None
+        if feature_dir is not None:
+            post_path = Path(feature_dir) / "VERIFICATION.md"
+            post_state, post_value = _load_scenario_ids(post_path)
+            if post_state == "absent":
+                self.missing.append("feature-dir's VERIFICATION.md")
+            elif post_state == "ok":
+                self.post = post_value
+            else:
+                self.unreadable["post"] = (post_path, post_value)
+        if feature_dir is None or baseline_dir is None or post_state == "absent":
+            return
+        self.available = True
+        baseline_path = Path(baseline_dir) / "VERIFICATION.md"
+        baseline_state, baseline_value = _load_scenario_ids(baseline_path)
+        if baseline_state == "ok":
+            self.baseline = baseline_value
+        elif baseline_state == "absent":
+            self.baseline = set()
+        else:
+            self.unreadable["baseline"] = (baseline_path, baseline_value)
+
+    @property
+    def usable(self):
+        """The diff is available and both sets could be built."""
+        return self.available and not self.unreadable
+
+    def need_post(self):
+        self._needed.add("post")
+        return "post" not in self.unreadable
+
+    def need_both(self):
+        self._needed.update(("post", "baseline"))
+        return not self.unreadable
+
+    def unreadable_errors(self):
+        errors = []
+        for label in ("post", "baseline"):
+            if label in self.unreadable and label in self._needed:
+                path, reason = self.unreadable[label]
+                errors.append(
+                    err(
+                        "rework-index",
+                        f"{path} {'(post-change)' if label == 'post' else '(baseline)'} "
+                        f"cannot be read as text ({reason}); no covered_by_existing or "
+                        "new_scenarios ID is accepted on the strength of it",
+                    )
+                )
+        return errors
+
+
+class _RenameAwareCoverage:
+    """rework-docs-only-medium-fixes/task0001 (D2, FR1, FR2): judges one
+    `covered_by_existing` ID at a time. The first matching row decides:
+
+    1. the `from` of a declared pair -> rejected, with or without the diff;
+    2. a verification_index key -> with the diff, accepted only when it is in
+       the post set; without the diff, accepted (unchanged behavior);
+    3. the `to` of declared pair(s) -> with the diff, accepted only when every
+       pair with this `to` meets all four conditions (from is a
+       verification_index key, to is in the post set, from is in the baseline
+       set, from is not in the post set); without the diff, rejected;
+    4. anything else -> rejected with the no-declaration message.
+
+    Every rejection is a `rework-index` error. `judge` returns the errors for
+    the ID; an ID whose judgement needs a set that cannot be read gets none,
+    because the one error of `_VerificationDiff.unreadable_errors` covers it."""
+
+    def __init__(self, declared_pairs, verification_index, diff):
+        self.verification_index = verification_index
+        self.diff = diff
+        self.froms = {}
+        self.tos = {}
+        for old_id, new_id in sorted(declared_pairs):
+            self.froms.setdefault(old_id, []).append(new_id)
+            self.tos.setdefault(new_id, []).append(old_id)
+
+    def _failed_condition(self, old_id, new_id):
+        """The first of the four conditions the pair fails, or None."""
+        if old_id not in self.verification_index:
+            return f"{old_id!r} is not a verification_index key"
+        if new_id not in self.diff.post:
+            return f"{new_id!r} is absent from the post-change VERIFICATION.md"
+        if old_id not in self.diff.baseline:
+            return f"{old_id!r} is absent from the baseline VERIFICATION.md"
+        if old_id in self.diff.post:
+            return f"{old_id!r} is still defined in the post-change VERIFICATION.md"
+        return None
+
+    def judge(self, task_id, cid):
+        diff = self.diff
+        if cid in self.froms:  # row 1
+            targets = ", ".join(repr(t) for t in self.froms[cid])
+            return [
+                err(
+                    "rework-index",
+                    f"{task_id}: covered_by_existing {cid!r} {_MSG_OLD_ID} "
+                    f"{cid!r} -> {targets}; a renamed-away ID is never covered "
+                    "(payload.doc_corrections[].scenario_renames)",
+                )
+            ]
+        if cid in self.verification_index:  # row 2
+            if not diff.available:
+                return []
+            if not diff.need_post() or cid in diff.post:
+                return []
+            return [
+                err(
+                    "rework-index",
+                    f"{task_id}: covered_by_existing {cid!r} is a verification_index key but "
+                    "is missing from the post-change VERIFICATION.md",
+                )
+            ]
+        if cid in self.tos:  # row 3
+            if not diff.available:
+                return [
+                    err(
+                        "rework-index",
+                        f"{task_id}: covered_by_existing {cid!r} is the target of a declared "
+                        f"rename, but the rename cannot be confirmed because the {_MSG_DIFF_UNAVAILABLE} "
+                        f"(missing: {', '.join(diff.missing)})",
+                    )
+                ]
+            if not diff.need_both():
+                return []
+            for old_id in self.tos[cid]:
+                failed = self._failed_condition(old_id, cid)
+                if failed is not None:
+                    return [
+                        err(
+                            "rework-index",
+                            f"{task_id}: covered_by_existing {cid!r}: declared rename "
+                            f"{old_id!r} -> {cid!r} {_MSG_NOT_CONFIRMED}: {failed}",
+                        )
+                    ]
+            return []
+        return [  # row 4 -- wording is fixed by earlier features; do not reword
+            err(
+                "rework-index",
+                f"{task_id}: covered_by_existing {cid!r} not in verification_index, and no "
+                "declared rename maps it to the verification index "
+                "(payload.doc_corrections[].scenario_renames)",
+            )
+        ]
+
+
 def _validate_rework_index(rework_index, workflow_patch, envelope, feature_dir, baseline_dir, payload=None):
     errors = []
     verification_index = (envelope or {}).get("verification_index") or {}
-    # Rename-aware coverage rule (rework-docs-only-task-routing/task0004):
-    # a `covered_by_existing` ID that is not a verification_index key passes
-    # only when a declared pair maps one of those keys (`from`) to it
-    # (`to`). `payload` is the result's payload; None (a caller that has no
-    # payload) declares nothing.
-    renamed_to_existing = {
-        new_id for (old_id, new_id) in _declared_scenario_renames(payload) if old_id in verification_index
-    }
+    # Rename-aware coverage rule (rework-docs-only-task-routing/task0004,
+    # tightened by rework-docs-only-medium-fixes/task0001): a
+    # `covered_by_existing` ID reached through a declared pair (`from` ->
+    # `to`) is accepted only when the baseline and post-change VERIFICATION.md
+    # confirm the rename, and the old ID of a rename is never accepted.
+    # `payload` is the result's payload; None (a caller that has no payload)
+    # declares nothing. See `_RenameAwareCoverage` for the decision order.
+    diff = _VerificationDiff(feature_dir, baseline_dir)
+    coverage = _RenameAwareCoverage(_declared_scenario_renames(payload), verification_index, diff)
 
     # bs10 (round 2, validator half): without a baseline directory there is
     # nothing to diff VERIFICATION.md against, so "new" cannot be verified --
@@ -2489,17 +2688,13 @@ def _validate_rework_index(rework_index, workflow_patch, envelope, feature_dir, 
     # `new_ids_in_doc` staying None and therefore silently skipping the
     # check below (the pre-task0008 gap) -- `verification_doc_absent`
     # records it explicitly so the per-task loop gives it its own outcome.
-    new_ids_in_doc = None
-    verification_doc_absent = False
-    if feature_dir is not None and baseline_dir is not None:
-        vpath = feature_dir / "VERIFICATION.md"
-        if vpath.is_file():
-            after_ids = extract_verification_scenario_ids(vpath.read_text(encoding="utf-8"))
-            bpath = baseline_dir / "VERIFICATION.md"
-            before_ids = extract_verification_scenario_ids(bpath.read_text(encoding="utf-8")) if bpath.is_file() else set()
-            new_ids_in_doc = after_ids - before_ids
-        else:
-            verification_doc_absent = True
+    #
+    # rework-docs-only-medium-fixes/task0001: both sets come from
+    # `_VerificationDiff`, the one reader the rename-aware coverage rule
+    # shares, so the two checks agree and a VERIFICATION.md that cannot be
+    # read as text is an error rather than an exception.
+    new_ids_in_doc = diff.post - diff.baseline if diff.usable else None
+    verification_doc_absent = feature_dir is not None and baseline_dir is not None and not diff.available
 
     tests_append_all = set()
     if workflow_patch is not None:
@@ -2519,20 +2714,25 @@ def _validate_rework_index(rework_index, workflow_patch, envelope, feature_dir, 
         errors.append(err("rework-index", f"{task_id}: present in rework_index but not created by tasks_patch"))
 
     for task_id, ri in rework_index.items():
+        if not isinstance(ri, dict):
+            errors.append(err("rework-index", f"{task_id}: rework_index entry must be a mapping"))
+            continue
         covered = ri.get("covered_by_existing") or []
         new_sc = ri.get("new_scenarios") or []
         if not covered and not new_sc:
             errors.append(err("rework-index", f"{task_id}: covered_by_existing and new_scenarios are both empty"))
+        if not isinstance(covered, list):
+            errors.append(err("rework-index", f"{task_id}: covered_by_existing must be a list of scenario IDs"))
+            covered = []
         for cid in covered:
-            if cid not in verification_index and cid not in renamed_to_existing:
+            if not isinstance(cid, str):
+                # Non-string values never take part in set or membership
+                # computations: they are excluded and reported (NFR1).
                 errors.append(
-                    err(
-                        "rework-index",
-                        f"{task_id}: covered_by_existing {cid!r} not in verification_index, and no "
-                        "declared rename maps it to the verification index "
-                        "(payload.doc_corrections[].scenario_renames)",
-                    )
+                    err("rework-index", f"{task_id}: covered_by_existing entry {cid!r} is not a string")
                 )
+                continue
+            errors.extend(coverage.judge(task_id, cid))
         if new_sc and baseline_dir is None:
             errors.append(
                 err(
@@ -2560,12 +2760,15 @@ def _validate_rework_index(rework_index, workflow_patch, envelope, feature_dir, 
                     "be verified",
                 )
             )
-        elif new_ids_in_doc is not None:
-            for nid in new_sc:
-                if nid not in new_ids_in_doc:
-                    errors.append(err("rework-index", f"{task_id}: new_scenarios {nid!r} is not a new VERIFICATION.md scenario"))
+        elif diff.available and new_sc:
+            # An unreadable set is reported once, after the loop.
+            if diff.need_both():
+                for nid in new_sc:
+                    if nid not in new_ids_in_doc:
+                        errors.append(err("rework-index", f"{task_id}: new_scenarios {nid!r} is not a new VERIFICATION.md scenario"))
         if new_sc and not set(new_sc).issubset(tests_append_all):
             errors.append(err("rework-index", f"{task_id}: new_scenarios must also appear in requirements_patch tests_append"))
+    errors.extend(diff.unreadable_errors())
     return errors
 
 
