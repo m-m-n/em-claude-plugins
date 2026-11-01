@@ -1,7 +1,7 @@
 schema_version: 1
 feature: hook-test-bytecode-suppression
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 27ff4ef7e1c49404e3513f16e4491792e1789dc4
 last_input_digest: sha256:2db32b043f573577309ec293df113b6e235af5586c40604376587f03c22e4427

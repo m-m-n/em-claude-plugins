@@ -1,0 +1,140 @@
+schema_version: 1
+feature: hook-test-bytecode-suppression
+created: '2026-11-01'
+base_branch: main
+goal: |
+  # destructive-guard を読み込む既存テスト 2 本が em-workflow/hooks/__pycache__ にバイトコードを書く
+
+  種別: 改善
+
+  ## やりたいこと
+  tests/test_destructive_guard_extglob_units.py と tests/test_destructive_guard_lexer_agreement.py が em-workflow/hooks/__pycache__/ にバイトコードを書かないようにする。
+
+  ## 背景・なぜ
+  python3 -m unittest discover -s tests の実行で em-workflow/hooks/__pycache__/destructive-guard.cpython-*.pyc が生成される（上記 2 本を単体実行して確認）。プラグイン配下は配布物にそのままコピーされる。unattended-merge の verify で見つけたが、この挙動は同 feature より前からあり範囲外。
+
+  ## 受け入れ条件 / 完了の定義
+  - [ ] 2 本のテストと全体実行の後、em-workflow/hooks/ 配下に __pycache__ ができない
+  - [ ] 既存テストはすべて通る
+parent_branch: em-workflow/hook-test-bytecode-suppression/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.02
+      '1': 0.95
+      '2': 0.03
+      '3': 0.0
+    description_plus_code:
+      '0': 0.01
+      '1': 0.58
+      '2': 0.41
+      '3': 0.0
+  at: '2026-11-01T12:02:54+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+    destructive-guard:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: e214c54944d0cfb325274ad94eb72173278a8de1
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: テストコードの読み込み処理だけの変更で、画面や利用者に見える振る舞いの変更が無い
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: 669157a899a665c1e0f9b28045dc8b37108723e4
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: extglob_units のフック読み込みでバイトコードを書かない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: lexer_agreement のフック読み込みでバイトコードを書かない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: 全体実行でも em-workflow/hooks/ 配下に __pycache__ ができない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 既存テストはすべて通る
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: テストコードは標準ライブラリだけを使う
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: 読み込み後の sys.dont_write_bytecode は読み込み前の値と同じ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
