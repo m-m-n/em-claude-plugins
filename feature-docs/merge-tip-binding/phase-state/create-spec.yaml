@@ -4,8 +4,8 @@ phase: create-spec
 status: in_progress
 generation: 1
 base_revision: 6122f1b1a9d26039f721a108b8289d179f648373
-last_input_digest: null
-active_request_id: create-spec-run-0003
+last_input_digest: sha256:0c50c87aca4f0bb1421659fbac3e52e119f567d071c07ffd35069277c54d1de2
+active_request_id: create-spec-run-0004
 packets:
   create-spec-q0001:
     iteration: 1
@@ -71,6 +71,28 @@ worker_runs:
   output_digest: null
   dispatch_digest_inputs: null
   self_write_set: []
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:0c50c87aca4f0bb1421659fbac3e52e119f567d071c07ffd35069277c54d1de2
+  output_digest: null
+  dispatch_digest_inputs:
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
+    em-workflow/references/merge-result.md: sha256:782927704d314d834b10a2b3ab3684b2283aba181f1e0b0f7cd09ebccf4c7b32
+    em-workflow/scripts/merge-git.py: sha256:48c4e839f4426c724e7716ec8b6a031eeba64111323235bbcb0f39d06a648778
+    em-workflow/scripts/merge-pr.py: sha256:296483d2ec5164550194459e6aa662afd0780f73e4d65ad2cb2569470f30ef58
+    em-workflow/scripts/merge-preflight.py: sha256:793425e9190877a64c2fd7eb9535e887e0b45c6ce785ffff01d409334ca1ec26
+    em-workflow/scripts/merge-result.py: sha256:15baf0e0ed8733147eb70e3ec4da365c9e9533a19643c1b470d4dfae2d2d776a
+    em-workflow/skills/merge/SKILL.md: sha256:82e1d6a16404e6b62bdb6478f428810c09bbfc73d2744731bc35677bb5c98a74
+    feature-docs/unattended-merge-medium-fixes/reviews/round1.yaml: sha256:869abd2a7ecff24b629020555543e499f606c1836789254dff8ed97f0172945f
+    feature-docs/unattended-merge-medium-fixes/reviews/round2.yaml: sha256:2801068e64a4ae8efb2f4b91aa0d2318c0d39f0ccd56aad3fab70ef60f21afda
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+    tests/test_merge_git.py: sha256:dea1e3d18515bd134986982101a216bcc9598dbc91de4c2806c5ab12309d96c9
+    tests/test_merge_local_route.py: sha256:c00432959f7865d4c2dfa834247108be2367013b579e844461422ffe181facb8
+    tests/test_merge_pr.py: sha256:e31d30b03e28f2daf36a324f2519818254b8357bee3089b5220c40e94c29097e
+    tests/test_merge_preflight.py: sha256:a6b89bae56feec3977cbb9d537d551be80816a6cc1092dc0cc4770173c194cc7
+    tests/test_merge_skill_doc.py: sha256:440136bd6164e0529cf66e28e7750ca01a35b2579338d41a0f0b8ffbef8ffc16
+  self_write_set: []
 artifacts: []
 patches: []
 progress_fingerprint: null
@@ -97,4 +119,6 @@ resolved_input_cache:
     - tests/test_merge_skill_doc.py
     - feature-docs/unattended-merge-medium-fixes/reviews/round1.yaml
     - feature-docs/unattended-merge-medium-fixes/reviews/round2.yaml
+    - em-workflow/references/merge-result.md
+    - em-workflow/scripts/merge-result.py
 last_error: null
