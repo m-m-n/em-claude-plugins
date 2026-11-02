@@ -140,7 +140,7 @@ tasks:
     complexity: low
     requirements:
     - FR4
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/declared-command-yaml-breaks/task0002
 review:
