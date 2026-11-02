@@ -1,0 +1,120 @@
+task_id: task0001
+# python3 -m unittest discover -s tests before any change in this worktree:
+# Ran 13709 tests, OK (skipped=1).
+baseline_failures: []
+# python3 -m unittest discover -s tests after the implementation and after this
+# record: no failure; subset of the baseline.
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_bash_guard_declared_yaml_breaks.TestAc1LeadingNextLine.test_ac1_every_form_of_a_leading_u0085_declaration_is_denied_as_unapproved
+      - tests.test_bash_guard_declared_yaml_breaks.TestAc1LeadingNextLine.test_ac1_the_end_stripped_form_is_denied_for_every_command_key
+      - tests.test_bash_guard_declared_yaml_breaks.TestAc1LeadingNextLine.test_ac1_the_forms_get_no_decision_without_a_declaration
+    red_confirmed: true
+    red_reason: >-
+      Before the change the YAML-parsed form (one space + ./unapproved) and the
+      end-stripped form (./unapproved) of a declaration with a leading U+0085
+      got no decision: "AssertionError: 'silent' != 'deny'" for both forms, and
+      for the end-stripped form under each of the four command keys. The raw
+      form was already denied. The no-declaration test is the control and
+      passed before and after.
+  AC-2:
+    tests:
+      - tests.test_bash_guard_declared_yaml_breaks.TestAc2TrailingNextLine.test_ac2_every_form_of_a_trailing_u0085_declaration_is_denied_as_unapproved
+      - tests.test_bash_guard_declared_yaml_breaks.TestAc2TrailingNextLine.test_ac2_the_forms_get_no_decision_without_a_declaration
+    red_confirmed: true
+    red_reason: >-
+      Before the change the YAML-parsed form (./unapproved + one space) and the
+      end-stripped form of a declaration with a trailing U+0085 failed with
+      "AssertionError: 'silent' != 'deny'"; the raw form was already denied.
+      The no-declaration test is the control and passed before and after.
+  AC-3:
+    tests:
+      - tests.test_bash_guard_declared_yaml_breaks.TestAc3LineAndParagraphSeparators.test_ac3_raw_and_end_stripped_forms_are_denied_as_unapproved
+      - tests.test_bash_guard_declared_yaml_breaks.TestAc3LineAndParagraphSeparators.test_ac3_the_forms_get_no_decision_without_a_declaration
+    red_confirmed: true
+    red_reason: >-
+      Before the change the end-stripped form failed with "AssertionError:
+      'silent' != 'deny'" for U+2028 and U+2029 at the leading and at the
+      trailing end; the raw forms were already denied. The no-declaration test
+      is the control and passed before and after.
+  AC-4:
+    tests:
+      - tests.test_bash_guard_declared_yaml_breaks.TestAc4OtherQuotingAndEmptyResults.test_ac4_single_quoted_and_unquoted_declarations_deny_the_end_stripped_form
+      - tests.test_bash_guard_declared_yaml_breaks.TestAc4OtherQuotingAndEmptyResults.test_ac4_single_quoted_and_unquoted_declarations_put_both_forms_into_the_set
+      - tests.test_bash_guard_declared_yaml_breaks.TestAc4OtherQuotingAndEmptyResults.test_ac4_a_value_that_is_empty_after_end_stripping_adds_no_form_b_entry
+      - tests.test_bash_guard_declared_yaml_breaks.TestAc4OtherQuotingAndEmptyResults.test_ac4_blanks_around_a_break_only_value_are_trimmed_for_form_a_only
+      - tests.test_bash_guard_declared_yaml_breaks.TestAc4OtherQuotingAndEmptyResults.test_ac4_a_value_without_removable_ends_contributes_one_entry
+    red_confirmed: true
+    red_reason: >-
+      Before the change the first two failed for single-quoted and unquoted
+      declarations with each of the three characters at each end: the hook gave
+      no decision for ./unapproved ("'silent' != 'deny'") and the declared set
+      lacked the end-stripped entry ("Items in the second set but not the
+      first"). The other three assert the empty-after-end-stripping case and the
+      single-entry case, which held already (form (a) is unchanged and there
+      was no form (b)); they passed before the change and guard against an
+      empty or duplicate entry.
+  AC-5:
+    tests:
+      - tests.test_bash_guard_declared_yaml_breaks.TestAc5OtherWhitespaceIsNotRemoved.test_ac5_a_no_break_space_after_the_key_stays_part_of_the_value
+      - tests.test_bash_guard_declared_yaml_breaks.TestAc5OtherWhitespaceIsNotRemoved.test_ac5_other_whitespace_at_an_end_of_a_quoted_value_is_not_removed
+      - tests.test_bash_guard_declared_yaml_breaks.TestAc5OtherWhitespaceIsNotRemoved.test_ac5_removal_stops_at_the_first_character_outside_the_set
+      - tests.test_bash_guard_declared_yaml_breaks.TestAc5OtherWhitespaceIsNotRemoved.test_ac5_only_the_five_characters_are_removed_and_only_at_the_ends
+      - tests.test_bash_guard_declared_yaml_breaks.TestAc5OtherWhitespaceIsNotRemoved.test_ac5_form_b_gets_no_null_or_tilde_exclusion
+      - tests.test_bash_guard_declared_yaml_breaks.TestAc5OtherWhitespaceIsNotRemoved.test_ac5_the_existing_exclusion_of_null_and_tilde_is_unchanged
+      - tests.test_bash_guard_unicode_whitespace.TestDeclaredCommandExtraction.test_a_no_break_space_after_the_colon_is_part_of_the_value
+      - tests.test_bash_guard_unicode_whitespace.TestDeclaredCommandExtraction.test_a_no_break_space_at_the_end_of_the_line_is_part_of_the_value
+    red_confirmed: true
+    red_reason: >-
+      Before the change the removal-boundary test (U+0085 then U+00A0 at an
+      end, removal must stop at U+00A0), the five-characters-only test and the
+      null / tilde test failed with "Items in the second set but not the first"
+      because no end-stripped entry existed. The tests that U+00A0, U+000B,
+      U+000C, U+2000 to U+200A and U+3000 are not removed, and the two existing
+      tests TestDeclaredCommandExtraction (the assertions at lines 418 and 422
+      of tests/test_bash_guard_unicode_whitespace.py, unchanged), assert
+      behaviour that held already and passed before the change; they guard
+      against a strip that is too wide; for those, the existing
+      TestDeclaredCommandExtraction tests detect a no-break space being removed,
+      and no red state occurred for this change.
+  AC-6:
+    tests:
+      - tests.test_bash_guard_declared_yaml_breaks.TestAc6NoAllowPathIsWidened.test_ac6_no_padded_or_end_stripped_unapproved_command_is_allowed
+      - tests.test_bash_guard_declared_yaml_breaks.TestAc6NoAllowPathIsWidened.test_ac6_the_approved_command_padded_with_a_break_char_is_denied_where_declared
+      - tests.test_bash_guard_declared_yaml_breaks.TestAc6NoAllowPathIsWidened.test_ac6_the_approved_command_padded_with_a_break_char_gets_no_decision_elsewhere
+      - tests.test_bash_guard_declared_yaml_breaks.TestAc6NoAllowPathIsWidened.test_ac6_the_bare_approved_command_keeps_its_exact_match_allow
+    red_confirmed: true
+    red_reason: >-
+      Before the change the first test failed with "AssertionError: 'silent' !=
+      'deny'" for bare ./unapproved and for ./unapproved padded with spaces or
+      tabs (the declared set held no end-stripped entry); no form was ever
+      allowed. The other three assert that the approved command padded with
+      U+0085 / U+2028 / U+2029 is denied only where declared, gets no decision
+      elsewhere, and that bare /usr/bin/true is allowed by exact match; that
+      held already and they passed before the change. They guard the no-allow
+      invariant.
+  AC-7:
+    tests:
+      - tests.test_bash_guard_declared_yaml_breaks.TestAc7SourceConstraints.test_ac7_the_hook_source_has_no_raw_next_line_or_separator_character
+      - tests.test_bash_guard_declared_yaml_breaks.TestAc7SourceConstraints.test_ac7_the_hook_helpers_are_defined_once_and_in_order
+      - tests.test_bash_guard_declared_yaml_breaks.TestAc7SourceConstraints.test_ac7_the_hook_imports_only_standard_library_modules
+      - tests.test_bash_guard_declared_yaml_breaks.TestAc7SourceConstraints.test_ac7_this_module_imports_only_standard_library_modules
+      - tests.test_bash_guard_declared_yaml_breaks.TestAc7SourceConstraints.test_ac7_this_module_source_has_only_ascii_characters
+      - tests.test_bash_guard_unicode_whitespace.TestAc7Documentation.test_ac7_the_docstring_states_the_space_and_tab_only_trim
+      - tests.test_bash_guard_unicode_whitespace.TestAc7Documentation.test_ac7_the_cd_prefix_approval_item_states_the_same_for_the_remainder
+      - tests.test_bash_guard_unicode_whitespace.TestAc7Documentation.test_ac7_the_hook_source_has_no_status_substring
+      - tests.test_bash_guard_unicode_whitespace.TestTrimHelpers.test_trim_removes_only_spaces_and_tabs_from_both_ends
+      - tests.test_bash_guard_unicode_whitespace.TestTrimHelpers.test_the_helpers_are_defined_once
+    red_confirmed: false
+    red_reason: >-
+      The criterion states constraints that the change must keep (pinned
+      docstring phrases, no status substring, helper order, standard-library
+      imports, no raw U+0085 / U+2028 / U+2029 in the hook source, ASCII-only
+      test source) and that the full suite stays green. A dedicated new red is
+      out of scope; the new TestAc7SourceConstraints checks and the existing
+      TestAc7Documentation / TestTrimHelpers checks detect a violation, but all
+      of them passed before the change, so no red state occurred. The
+      untouched plugin.json and marketplace.json are confirmed from the task's
+      diff, not by a test.

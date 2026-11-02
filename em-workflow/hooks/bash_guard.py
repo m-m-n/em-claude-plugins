@@ -177,6 +177,13 @@ def is_matchable(text):
     return bool(text) and not text[0].isspace() and not text[-1].isspace()
 
 
+# Characters removed from both ends of a declared value for its second form:
+# the blanks the approval trim removes, and U+0085, U+2028 and U+2029, which a
+# YAML reader folds into a space or keeps at an end of a quoted value. No other
+# whitespace character is in the set.
+DECLARED_END_STRIP = " \t\u0085\u2028\u2029"
+
+
 def declared_commands(roots):
     """Command strings declared in any feature-docs/*/workflow.yaml under roots.
 
@@ -184,6 +191,11 @@ def declared_commands(roots):
     four *_command fields as single-line scalars. Anything this parser cannot
     see simply gets no hook decision and falls back to the normal permission
     prompt — fail-open to the user, never to silent execution.
+
+    Each extracted value adds up to two entries: the value after the approval
+    trim (spaces and tabs only), and the value with every character of
+    DECLARED_END_STRIP removed from both ends, when that is not empty. The
+    second form covers the string a YAML reader gives for a quoted value.
     """
     commands = set()
     for root in roots:
@@ -211,6 +223,10 @@ def declared_commands(roots):
                             trimmed = trim_blanks(value)
                             if trimmed:
                                 commands.add(trimmed)
+                            # The second form takes no "null" / "~" exclusion.
+                            end_stripped = value.strip(DECLARED_END_STRIP)
+                            if end_stripped:
+                                commands.add(end_stripped)
             except OSError:
                 continue
     return commands
