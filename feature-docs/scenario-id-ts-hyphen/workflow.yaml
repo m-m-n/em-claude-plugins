@@ -143,7 +143,7 @@ tasks:
     requirements:
     - FR2
     - NFR3
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/scenario-id-ts-hyphen/task0003
   task0004:
@@ -161,7 +161,7 @@ tasks:
     requirements:
     - FR5
     - NFR3
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/scenario-id-ts-hyphen/task0004
 review:
