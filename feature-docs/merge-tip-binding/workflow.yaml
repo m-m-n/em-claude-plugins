@@ -111,7 +111,8 @@ tasks:
     domains: [concurrency, input-handling, external-io, api-contract]
     complexity: high
     requirements: [FR2, FR3, FR4, FR6, NFR1, NFR2, NFR3, NFR4, NFR5, NFR6]
-    status: pending
+    status: in_progress
+    branch: em-workflow/merge-tip-binding/task0001
   task0002:
     title: Re-decide after the lock at the current tip (step 6.4)
     plan: tasks/task0002.md
@@ -123,7 +124,8 @@ tasks:
     domains: [concurrency, input-handling]
     complexity: high
     requirements: [FR1, FR5, FR6, NFR1, NFR2, NFR3, NFR4, NFR5, NFR6]
-    status: pending
+    status: in_progress
+    branch: em-workflow/merge-tip-binding/task0002
 review:
   status: pending
 requirements:
