@@ -82,8 +82,12 @@ particular:
   `NFR1`, `NFR2`, … (hyphen-less, matching
   `^(FR|NFR)[1-9][0-9]*$`) — these IDs must agree exactly, as literal
   strings, with `payload.spec_index.requirements` and with the IDs
-  `workflow.yaml`'s requirements mapping already carries. No Last-Updated
-  / Change History sections.
+  `workflow.yaml`'s requirements mapping already carries. Number every test
+  scenario in the Test Scenarios section `TS-1`, `TS-2`, … (hyphenated, as
+  one sequence starting at `TS-1`, matching `^TS-[1-9][0-9]*$`) — these IDs
+  must agree exactly, as literal strings, with
+  `payload.spec_index.test_scenarios[].id`. No Last-Updated / Change History
+  sections.
 - Every requirement with `status: tbd` in `requirements_analysis` carries a
   non-empty `tbd_reason` in both documents.
 
@@ -94,7 +98,8 @@ particular:
 - `payload.spec_index.requirements[]` — `id`, `title`, `status`,
   `tbd_reason`; these IDs must agree exactly with the IDs appearing in
   SPEC.md.
-- `payload.spec_index.test_scenarios[]` — `id`, `requirement_ids`.
+- `payload.spec_index.test_scenarios[]` — `id`, `requirement_ids`; `id` is
+  the TS-n string (`TS-1`, `TS-2`, …) used in SPEC.md.
 - `payload.assumptions_written[]` — every assumption you rendered into
   either document, traced back to `requirements_analysis`.
 

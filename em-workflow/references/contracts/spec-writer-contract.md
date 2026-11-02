@@ -153,7 +153,8 @@ recorded digest written by the earlier git-blob method is compared as its
 
 - `spec_index`:
   - `requirements[]` — `id`, `title`, `status`, `tbd_reason`
-  - `test_scenarios[]` — `id`, `requirement_ids`
+  - `test_scenarios[]` — `id`, `requirement_ids`; `id` uses the TS-n form
+    (`TS-1`, `TS-2`) and agrees exactly with the IDs in SPEC.md
 - `assumptions_written[]`
 
 ## Post-conditions

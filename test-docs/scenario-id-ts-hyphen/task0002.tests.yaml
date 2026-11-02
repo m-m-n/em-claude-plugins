@@ -1,0 +1,52 @@
+task_id: task0002
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests before any edit: 13740 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record was written: python3 -m unittest discover -s tests, 13797 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_scenario_id_spec_writer_docs.TestSpecWriterRenderingRule.test_ac1_names_ts_1
+      - tests.test_scenario_id_spec_writer_docs.TestSpecWriterRenderingRule.test_ac1_names_ts_2
+      - tests.test_scenario_id_spec_writer_docs.TestSpecWriterRenderingRule.test_ac1_gives_the_scenario_id_pattern
+      - tests.test_scenario_id_spec_writer_docs.TestSpecWriterRenderingRule.test_ac1_states_one_sequence_starting_at_ts_1
+      - tests.test_scenario_id_spec_writer_docs.TestSpecWriterRenderingRule.test_ac1_requires_literal_agreement_with_spec_index_ids
+    red_confirmed: true
+    red_reason: "AssertionError: False is not true, printing the unchanged '- SPEC.md (English):' bullet of em-workflow/agents/spec-writer.md (no TS-1, TS-2, ^TS-[1-9][0-9]*$, 'as one sequence starting at', or literal agreement with payload.spec_index.test_scenarios[].id); all five tests failed before the documents were edited"
+  AC-2:
+    tests:
+      - tests.test_scenario_id_spec_writer_docs.TestSpecWriterOutputBullet.test_ac2_bullet_states_id_is_the_ts_n_string_used_in_spec_md
+    red_confirmed: true
+    red_reason: "AssertionError: unexpectedly None, printing the unchanged bullet '- `payload.spec_index.test_scenarios[]` — `id`, `requirement_ids`.' (no statement that id is the TS-n string used in SPEC.md)"
+  AC-3:
+    tests:
+      - tests.test_scenario_id_spec_writer_docs.TestTemplateScenarioIds.test_ac3_every_item_has_an_id_and_the_ids_run_from_ts_1
+      - tests.test_scenario_id_spec_writer_docs.TestTemplateScenarioIds.test_ac3_every_id_matches_the_scenario_id_pattern
+    red_confirmed: true
+    red_reason: "AssertionError: Lists differ, the problem list was non-empty: every placeholder item of spec-document.md (for example '### Unit Tests: item does not begin with a TS-n ID: - [ ] Test 1: {Description} - {Expected behavior}') lacked a TS-n ID; the pattern test failed on the first item for the same reason"
+  AC-4:
+    tests:
+      - tests.test_scenario_id_spec_writer_docs.TestTemplateStructureUnchanged.test_ac4_heading_lines_are_identical_to_the_base_revision
+      - tests.test_scenario_id_spec_writer_docs.TestTemplateStructureUnchanged.test_ac4_e2e_detection_and_regression_lines_are_unchanged
+    red_confirmed: false
+    red_reason: "Retention criterion: both tests passed before the edit because the heading list and the E2E lines are the base revision's own content; nothing could fail first. Their matchers are shown failing on mutated copies (renamed, removed, added and reordered heading; an ID on the regression line; an altered detection line) by tests.test_scenario_id_spec_writer_docs.TestMatchersFailOnPreChangeExcerpts. No red state occurred for this criterion."
+  AC-5:
+    tests:
+      - tests.test_scenario_id_spec_writer_docs.TestContractScenarioEntry.test_ac5_entry_states_the_ts_n_form_for_id
+      - tests.test_scenario_id_spec_writer_docs.TestContractScenarioEntry.test_ac5_entry_gives_ts_1_as_an_example
+      - tests.test_scenario_id_spec_writer_docs.TestContractScenarioEntry.test_ac5_entry_states_exact_agreement_with_spec_md_ids
+      - tests.test_scenario_id_spec_writer_docs.TestContractScenarioEntry.test_ac5_gate_id_set_is_unchanged
+    red_confirmed: true
+    red_reason: "The three entry tests failed with AssertionError: False is not true, printing the unchanged entry '- `test_scenarios[]` — `id`, `requirement_ids`' of spec-writer-contract.md. test_ac5_gate_id_set_is_unchanged is the retention half of the criterion and passed before the edit (the gate_id set is the base revision's own content); its matcher is shown failing on a table with an added or a removed gate row."
+  AC-6:
+    tests:
+      - tests.test_scenario_id_spec_writer_docs.TestNoHyphenlessScenarioIds.test_ac6_spec_writer_whole_file_has_no_hyphenless_id
+      - tests.test_scenario_id_spec_writer_docs.TestNoHyphenlessScenarioIds.test_ac6_template_whole_file_has_no_hyphenless_id
+      - tests.test_scenario_id_spec_writer_docs.TestNoHyphenlessScenarioIds.test_ac6_contract_whole_file_has_no_hyphenless_id
+      - tests.test_scenario_id_spec_writer_docs.TestNoHyphenlessScenarioIds.test_ac6_edited_sections_have_no_hyphenless_id
+      - tests.test_scenario_id_spec_writer_docs.TestNoHyphenlessScenarioIds.test_ac6_each_document_names_a_ts_n_id
+    red_confirmed: false
+    red_reason: "The three documents held no hyphen-less scenario ID before the change (they held no scenario ID at all), so the four absence tests passed before the edit and no red state occurred for the absence property. test_ac6_each_document_names_a_ts_n_id (non-vacuity guard) failed before the edit for all three documents ('TS-[1-9][0-9]*' not found), but a guard failing is not the criterion failing. The detector is shown firing on hyphen-less test data and on a hyphen-less copy of the numbered Test Scenarios excerpt by tests.test_scenario_id_spec_writer_docs.TestMatchersFailOnPreChangeExcerpts."
+  AC-7:
+    tests:
+      - tests.test_scenario_id_spec_writer_docs
+    red_confirmed: true
+    red_reason: "With the module present and the three documents unedited, python3 -m unittest tests.test_scenario_id_spec_writer_docs ran 56 tests and reported FAILED (failures=14): the AC-1, AC-2, AC-3 and AC-5 tests plus the AC-6 non-vacuity guard (3 sub-cases). The negative-proof classes (TestMatchersFailOnPreChangeExcerpts, TestPreChangeExcerptGuards) are green by construction: they run the matchers against embedded pre-change excerpts and mutated copies and assert the matchers fail there."
