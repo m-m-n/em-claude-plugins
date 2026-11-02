@@ -1173,14 +1173,19 @@ class TestPrDecisionBindings(SkillCase):
 
     def test_ac6_every_resolve_form_in_the_skill_passes_an_integration_tip(self):
         # Three forms since unattended-merge-medium-fixes task0001 AC-4: step
-        # 5.2, the re-decision after the lock (step 6) and step 13.2.
+        # 5.2, the re-decision after the lock (step 6) and step 13.2. Since
+        # merge-tip-binding task0002 AC-2 the step 6 form passes the tip read
+        # after the lock (<locked_tip>), not the preflight tip.
         forms = merge_pr_forms(self.text, "resolve")
         self.assertEqual(len(forms), 3, forms)
+        tips = []
         for form in forms:
-            self.assertRegex(
-                form,
-                r"--integration-tip <(integration_tip|head_sha)>(\s|$)",
+            match = re.search(
+                r"--integration-tip <(integration_tip|locked_tip|head_sha)>(\s|$)", form
             )
+            self.assertIsNotNone(match, form)
+            tips.append(match.group(1))
+        self.assertEqual(tips, ["integration_tip", "locked_tip", "head_sha"], forms)
 
     def test_ac6_the_new_option_values_stay_literal_identifiers(self):
         for subcommand in ("resolve", "state"):
@@ -1556,16 +1561,21 @@ class TestPostLockMergedRedecision(SkillCase):
         step4 = [f for f in command_forms(self.section("4. ")) if "merge-git.py merged " in f]
         self.assertEqual(len(step4), 1)
         self.assertEqual(merged.body[0], step4[0])
+        # merge-tip-binding task0002 AC-2: the PR-route form is the step 5.2
+        # form token for token, except that the tip value is <locked_tip>.
         step5 = merge_pr_forms(self.section("5. "), "resolve")
         self.assertEqual(len(step5), 1)
-        self.assertEqual(resolve.body[0], step5[0])
+        expected = ["<locked_tip>" if t == "<integration_tip>" else t for t in step5[0].split()]
+        self.assertNotEqual(expected, step5[0].split(), "the step 5.2 form carries no <integration_tip>")
+        self.assertEqual(resolve.body[0].split(), expected)
         for option, value in (
             ("--repo", "<repo>"),
             ("--feature", "<feature>"),
             ("--base", "<base_branch>"),
-            ("--integration-tip", "<integration_tip>"),
+            ("--integration-tip", "<locked_tip>"),
         ):
             self.assertTrue(has_option(resolve.body[0], option, value), resolve.body[0])
+        self.assertNotIn("<integration_tip>", resolve.body[0])
 
     def test_ac4_each_outcome_is_handled_as_the_decision_table_says(self):
         text = redecision_text(self.text)
@@ -1627,6 +1637,505 @@ class TestPostLockMergedRedecision(SkillCase):
         self.assertNotIn("手順 14", outcomes["merged"])
         self.assertNotIn("手順 14", outcomes["stop"])
         self.assertIsNone(redecision_text("### 6. ロック\n\n3. 確かめる。\n"))
+
+
+# ---------------------------------------------------------------------------
+# merge-tip-binding task0002 (feature-docs/merge-tip-binding): the PR route
+# re-decides after the lock at the integration tip read after the lock
+# ---------------------------------------------------------------------------
+
+PROJECT_ROOT_CD = 'cd "<project_root>"'
+TIP_READ_FORM = "git rev-parse --verify " + TIP_REF
+LOCKED_TIP = "<locked_tip>"
+HEX40_PHRASE = "40 桁の小文字 16 進"
+OLD_TIP_PHRASES = (
+    "手順 4 / 5.2 と同じ `integration_tip`",
+    "`--integration-tip` には `integration_tip` を渡す",
+)
+ROUTE_TIP_STATEMENTS = (
+    r"`merge-git\.py merged` は、呼んだ時点の integration ブランチの先端で判定する",
+    r"PR ルートは.*`locked_tip` で判定する",
+)
+RULE_NEEDLES = ("末尾の改行", "`locked_tip`", "git が失敗", "手順 14", "`internal_error`")
+
+
+def step6_blocks(text):
+    """Bash blocks of step 6 in document order, with whole-document indices.
+    Empty when the step 6 or step 7 heading is absent."""
+    start = heading_line_index(text, "6. ")
+    end = heading_line_index(text, "7. ")
+    if start is None or end is None or start >= end:
+        return []
+    return [b for b in bash_blocks(text) if start < b.open_index < end]
+
+
+def first_block(blocks, predicate, after):
+    """Index of the first block after position `after` that satisfies
+    `predicate`, or None."""
+    for i in range(after + 1, len(blocks)):
+        if blocks[i].body and predicate(blocks[i]):
+            return i
+    return None
+
+
+def is_wait_verify(block):
+    return "merge-lock.py verify " in block.body[0] and "--wait" in block.body[0]
+
+
+def is_merged_form(block):
+    return "merge-git.py merged " in block.body[0]
+
+
+def is_project_root_cd(block):
+    return block.body == [PROJECT_ROOT_CD]
+
+
+def is_tip_read(block):
+    return len(block.body) == 1 and TIP_READ_RE.match(block.body[0]) is not None
+
+
+def is_pr_resolve(block):
+    return "merge-pr.py resolve " in block.body[0]
+
+
+POST_LOCK_CHAIN = (
+    ("wait", is_wait_verify),
+    ("merged", is_merged_form),
+    ("cd", is_project_root_cd),
+    ("read", is_tip_read),
+    ("resolve", is_pr_resolve),
+)
+
+
+def post_lock_chain(text):
+    """(blocks, positions): the Bash blocks of step 6 and, per name of
+    POST_LOCK_CHAIN, the index of the first block after the previous name's
+    block; None where the chain breaks, and for every later name."""
+    blocks = step6_blocks(text)
+    positions = {}
+    at = -1
+    for name, predicate in POST_LOCK_CHAIN:
+        found = first_block(blocks, predicate, at) if at is not None else None
+        positions[name] = found
+        at = found
+    return blocks, positions
+
+
+def directly_preceding_line(lines, block):
+    """Index of the last non-blank line right before the block's opening fence."""
+    i = block.open_index - 1
+    while i >= 0 and not lines[i].strip():
+        i -= 1
+    return i if i >= 0 else None
+
+
+def chain_problems(text):
+    """AC-1: order, own timeout lines and shell safety of the PR route's
+    post-lock blocks. An empty list means none."""
+    blocks, at = post_lock_chain(text)
+    missing = [name for name, index in at.items() if index is None]
+    if missing:
+        return [
+            "step 6 has no %s block in the order wait, merged, cd, read, resolve" % name
+            for name in missing
+        ]
+    problems = []
+    lines = text.split("\n")
+    for name in ("cd", "read", "resolve"):
+        line_index = directly_preceding_line(lines, blocks[at[name]])
+        match = TIMEOUT_RE.search(lines[line_index]) if line_index is not None else None
+        if match is None or not 0 < int(match.group(1)) <= 600000:
+            problems.append("the %s block has no own timeout line of at most 600000" % name)
+    read_line = blocks[at["read"]].body[0]
+    if read_line != TIP_READ_FORM:
+        problems.append("the read line is not exactly %s" % TIP_READ_FORM)
+    if shell_unsafe(read_line):
+        problems.append("the read line is not shell-safe")
+    return problems
+
+
+def resolve_problems(text):
+    """AC-2: the step 6 resolve form is the step 5.2 form with only the tip
+    value replaced by <locked_tip>, and no other command form carries it."""
+    forms = [b.body[0] for b in step6_blocks(text) if b.body and is_pr_resolve(b)]
+    if len(forms) != 1:
+        return ["step 6 does not hold exactly one merge-pr.py resolve form"]
+    form = forms[0]
+    problems = []
+    if not has_option(form, "--integration-tip", LOCKED_TIP):
+        problems.append("the step 6 resolve form does not pass --integration-tip %s" % LOCKED_TIP)
+    if "<integration_tip>" in form:
+        problems.append("the step 6 resolve form still carries <integration_tip>")
+    step5 = merge_pr_forms(section(text, "5. ") or "", "resolve")
+    if len(step5) != 1:
+        problems.append("step 5 does not hold exactly one resolve form")
+    else:
+        expected = [LOCKED_TIP if t == "<integration_tip>" else t for t in step5[0].split()]
+        if form.split() != expected:
+            problems.append("the step 6 resolve form is not the step 5.2 form with only the tip replaced")
+    users = [f for f in command_forms(text) if LOCKED_TIP in f]
+    if users != [form]:
+        problems.append("%s is used in a command form other than the step 6 resolve form" % LOCKED_TIP)
+    return problems
+
+
+def step6_line_index(text, line):
+    """Index of the first line equal to `line` inside the step 6 range."""
+    lines = text.split("\n")
+    start = heading_line_index(text, "6. ")
+    end = heading_line_index(text, "7. ")
+    if start is None or end is None:
+        return None
+    for i in range(start, end):
+        if lines[i] == line:
+            return i
+    return None
+
+
+def read_rule_problems(text):
+    """AC-3: item 4 states, as prose between the read and the resolve, that the
+    output becomes `locked_tip` only when it is exactly 40 lowercase hex
+    characters, that anything else ends in 手順 14 and `internal_error`, and
+    that `integration_tip` is not overwritten."""
+    item = redecision_text(text)
+    if item is None:
+        return ["no item 4 in step 6"]
+    prose = without_fences(item)
+    problems = []
+    if "`integration_tip` は上書きしない" not in prose:
+        problems.append("item 4 does not say that `integration_tip` is not overwritten")
+    rules = [line for line in prose.split("\n") if HEX40_PHRASE in line]
+    if len(rules) != 1:
+        return problems + ["item 4 does not hold exactly one line stating the 40-digit rule"]
+    rule = rules[0]
+    for needle in RULE_NEEDLES:
+        if needle not in rule:
+            problems.append("the read-value rule does not contain %s" % needle)
+    if "スクリプトの失敗" in rule:
+        problems.append("the read-value rule reuses the phrase スクリプトの失敗")
+    if re.match(r"^\s*-\s", rule):
+        problems.append("the read-value rule is written as a bullet")
+    blocks, at = post_lock_chain(text)
+    rule_index = step6_line_index(text, rule)
+    if at["read"] is not None and at["resolve"] is not None and rule_index is not None:
+        if not blocks[at["read"]].open_index < rule_index < blocks[at["resolve"]].open_index:
+            problems.append("the read-value rule is not between the read and the resolve")
+    return problems
+
+
+def route_tip_problems(text):
+    """AC-4: item 4 no longer reuses the preflight tip as the tip of both
+    routes; it says what each route judges."""
+    item = redecision_text(text)
+    if item is None:
+        return ["no item 4 in step 6"]
+    prose = without_fences(item)
+    problems = []
+    for phrase in OLD_TIP_PHRASES:
+        if phrase in item:
+            problems.append("item 4 still contains %s" % phrase)
+    for pattern in ROUTE_TIP_STATEMENTS:
+        if not re.search(pattern, prose):
+            problems.append("item 4 does not state %s" % pattern)
+    return problems
+
+
+def held_value_description(text, name):
+    """The full-width-parenthesised description after `name` in 「保持する値」."""
+    body = section(text, "保持する値")
+    if body is None:
+        return None
+    match = re.search(r"`%s`（([^）]*)）" % re.escape(name), body)
+    return match.group(1) if match else None
+
+
+def held_values_problems(text):
+    """AC-5: `integration_tip` is also step 8's value and never overwritten;
+    `locked_tip` is the tip read after the lock, passed only to step 6.4."""
+    problems = []
+    tip = held_value_description(text, "integration_tip")
+    if tip is None:
+        problems.append("the held values have no `integration_tip` description")
+    else:
+        for needle in ("手順 5", "手順 8", "上書きしない"):
+            if needle not in tip:
+                problems.append("the `integration_tip` description does not contain %s" % needle)
+    locked = held_value_description(text, "locked_tip")
+    if locked is None:
+        problems.append("the held values have no `locked_tip` description")
+    else:
+        for needle in ("手順 6.4", "ロックを取った後", "integration ブランチの先端", "`resolve` にだけ渡す"):
+            if needle not in locked:
+                problems.append("the `locked_tip` description does not contain %s" % needle)
+    return problems
+
+
+# A document in the shape the matchers read, for the forged-text cases. The
+# default arguments make the control document that every matcher accepts; each
+# forged case changes one thing.
+FORGED_MERGED = (
+    "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/merge-git.py merged "
+    '--project-root "<project_root>" --feature <feature> --base <base_branch>'
+)
+FORGED_WAIT = (
+    "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/merge-lock.py verify "
+    '--project-root "<project_root>" --token <lock_token> --wait 30'
+)
+FORGED_RESOLVE = (
+    "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/merge-pr.py resolve "
+    '--project-root "<project_root>" --repo <repo> --feature <feature> '
+    "--base <base_branch> --integration-tip %s"
+)
+FORGED_BLOCKS = {
+    "wait": (120000, FORGED_WAIT),
+    "merged": (120000, FORGED_MERGED),
+    "cd": (60000, PROJECT_ROOT_CD),
+    "read": (60000, TIP_READ_FORM),
+    "resolve": (600000, FORGED_RESOLVE % LOCKED_TIP),
+}
+GOOD_OPENING = (
+    "`held` を得たら、手順 7 の前に、マージ済みかを判定し直す。"
+    "ローカルルートの `merge-git.py merged` は、呼んだ時点の integration ブランチの先端で判定する。"
+    "PR ルートは、ロックを取った後に読み直した `locked_tip` で判定する。"
+)
+GOOD_RULE = (
+    "読んだ出力の末尾の改行を除いた値が、40 桁の小文字 16 進のちょうどであるときだけ "
+    "`locked_tip` として保持する。git が失敗したとき、またはそれ以外の値のときは、"
+    "手順 14 で保持タスクを止めてから、`internal_error` で終端へ進む。"
+    "`integration_tip` は上書きしない。"
+)
+GOOD_HELD = (
+    "`integration_tip`（事前判定が読んだ先端。手順 5 の `resolve` に渡す。"
+    "手順 8 の取り込みで期待する HEAD としても使う。上書きしない）、"
+    "`locked_tip`（手順 6.4 の PR ルートが、ロックを取った後に読んだ integration ブランチの先端。"
+    "手順 6.4 の `resolve` にだけ渡す）。"
+)
+
+
+def forged_skill(
+    pre=("wait",),
+    post=("merged", "cd", "read", "resolve"),
+    opening=GOOD_OPENING,
+    rule=GOOD_RULE,
+    rule_after="read",
+    held=GOOD_HELD,
+    **overrides
+):
+    """`pre` are the step 6 blocks before item 4, `post` the blocks inside it;
+    `overrides` replace a block's (timeout, command) pair, a timeout of None
+    omits its timeout line."""
+    specs = dict(FORGED_BLOCKS)
+    specs.update(overrides)
+
+    def emit(names):
+        parts = []
+        for name in names:
+            timeout, command = specs[name]
+            if timeout is not None:
+                parts.append("   Bash 呼び出し（timeout: %d）:\n" % timeout)
+            parts.append("   ```bash\n   %s\n   ```\n" % command)
+            if rule and name == rule_after:
+                parts.append("   %s\n" % rule)
+        return "\n".join(parts)
+
+    return (
+        "## 保持する値\n\n%s\n\n"
+        "## 手順\n\n"
+        "### 4. ローカルルートの確認\n\n"
+        "```bash\n%s\n```\n\n"
+        "### 5. PR ルートの確認と PR の確保\n\n"
+        "2. PR の解決。\n\n"
+        "   ```bash\n   %s\n   ```\n\n"
+        "### 6. ロック\n\n"
+        "3. 取得できたことを確かめる。\n\n%s\n"
+        "4. %s\n\n%s\n"
+        "   - `merged`（ローカル / PR）: 「マージ済みの経路」へ進む。\n"
+        "ここから先のどの終端でも、描画の前に手順 14 の停止を行う。\n\n"
+        "### 7. integration worktree\n"
+    ) % (
+        held,
+        FORGED_MERGED,
+        FORGED_RESOLVE % "<integration_tip>",
+        emit(pre),
+        opening,
+        emit(post),
+    )
+
+
+ALL_TIP_CHECKS = (
+    chain_problems,
+    resolve_problems,
+    read_rule_problems,
+    route_tip_problems,
+    held_values_problems,
+)
+
+
+class TestPostLockTipBinding(SkillCase):
+    """AC-1 to AC-6 of merge-tip-binding task0002 (FR1, FR5, FR6).
+
+    Coverage: AC-1 the order, timeout lines and shell safety of the PR route's
+    cd / read / resolve blocks in step 6; AC-2 the step 6 resolve form carries
+    `<locked_tip>` and is otherwise the step 5.2 form; AC-3 the read-value
+    rule of item 4 (40 lowercase hex, fail-closed to 手順 14 and
+    `internal_error`, `integration_tip` not overwritten); AC-4 item 4 says
+    what each route judges; AC-5 the held values describe `integration_tip`
+    and `locked_tip`; AC-6 every matcher fires on a forged document. AC-7
+    (`merge-pr.py` unchanged) is covered by the existing task0010 AC-4 tests
+    of tests/test_merge_pr.py and the full suite.
+    """
+
+    def test_ac1_the_pr_route_reads_the_tip_between_the_wait_verify_and_the_resolve(self):
+        self.assertEqual(chain_problems(self.text), [])
+
+    def test_ac1_the_local_route_block_is_unchanged_and_precedes_the_pr_route_blocks(self):
+        blocks, at = post_lock_chain(self.text)
+        self.assertIsNotNone(at["merged"], "no merged block after the wait verify")
+        self.assertIsNotNone(at["cd"], "no cd block after the merged block")
+        self.assertLess(at["merged"], at["cd"])
+        step4 = [f for f in command_forms(self.section("4. ")) if "merge-git.py merged " in f]
+        self.assertEqual(len(step4), 1)
+        self.assertEqual(blocks[at["merged"]].body, step4)
+
+    def test_ac2_the_step_6_resolve_form_passes_the_locked_tip_and_is_otherwise_the_step_5_2_form(self):
+        self.assertEqual(resolve_problems(self.text), [])
+
+    def test_ac3_item_4_states_the_read_value_rule_between_the_read_and_the_resolve(self):
+        self.assertEqual(read_rule_problems(self.text), [])
+
+    def test_ac3_the_rule_adds_no_outcome_bullet_and_no_second_script_failure_line(self):
+        item = redecision_text(self.text)
+        self.assertIsNotNone(item, "no item 4 in step 6")
+        self.assertEqual(
+            set(outcome_lines(item)), {"merged", "not_merged", "open", "stop", "none"}
+        )
+        failure = [line for line in item.split("\n") if "スクリプトの失敗" in line]
+        self.assertEqual(len(failure), 1, failure)
+
+    def test_ac4_item_4_says_what_each_route_judges_and_drops_the_shared_tip_phrase(self):
+        self.assertEqual(route_tip_problems(self.text), [])
+
+    def test_ac5_the_held_values_describe_integration_tip_and_locked_tip(self):
+        self.assertEqual(held_values_problems(self.text), [])
+
+    def test_ac5_the_held_values_list_names_each_tip_once(self):
+        body = self.section("保持する値")
+        self.assertEqual(body.count("`integration_tip`（"), 1)
+        self.assertEqual(body.count("`locked_tip`（"), 1)
+
+    def test_ac6_the_control_document_passes_every_matcher(self):
+        text = forged_skill()
+        for check in ALL_TIP_CHECKS:
+            self.assertEqual(check(text), [], check.__name__)
+
+    def test_ac6_the_order_matcher_fires_when_the_read_block_is_missing(self):
+        problems = chain_problems(forged_skill(post=("merged", "cd", "resolve")))
+        self.assertTrue(any("no read block" in p for p in problems), problems)
+
+    def test_ac6_the_order_matcher_fires_when_the_cd_block_is_missing(self):
+        problems = chain_problems(forged_skill(post=("merged", "read", "resolve")))
+        self.assertTrue(any("no cd block" in p for p in problems), problems)
+
+    def test_ac6_the_order_matcher_fires_when_the_read_comes_before_the_wait_verify(self):
+        text = forged_skill(pre=("read", "wait"), post=("merged", "cd", "resolve"))
+        problems = chain_problems(text)
+        self.assertTrue(any("no read block" in p for p in problems), problems)
+
+    def test_ac6_the_order_matcher_fires_when_the_read_comes_before_the_cd(self):
+        problems = chain_problems(forged_skill(post=("merged", "read", "cd", "resolve")))
+        self.assertTrue(any("no read block" in p for p in problems), problems)
+
+    def test_ac6_the_order_matcher_fires_when_the_read_comes_after_the_resolve(self):
+        problems = chain_problems(forged_skill(post=("merged", "cd", "resolve", "read")))
+        self.assertTrue(any("no resolve block" in p for p in problems), problems)
+
+    def test_ac6_the_order_matcher_fires_when_the_merged_block_follows_the_pr_route_blocks(self):
+        problems = chain_problems(forged_skill(post=("cd", "read", "resolve", "merged")))
+        self.assertTrue(any("no cd block" in p for p in problems), problems)
+
+    def test_ac6_the_timeout_matcher_fires_when_a_block_shares_the_previous_timeout_line(self):
+        problems = chain_problems(forged_skill(read=(None, TIP_READ_FORM)))
+        self.assertEqual(problems, ["the read block has no own timeout line of at most 600000"])
+
+    def test_ac6_the_timeout_matcher_fires_on_a_timeout_above_600000(self):
+        problems = chain_problems(forged_skill(resolve=(600001, FORGED_RESOLVE % LOCKED_TIP)))
+        self.assertIn("the resolve block has no own timeout line of at most 600000", problems)
+
+    def test_ac6_the_read_form_matcher_fires_on_an_expansion_in_the_read_line(self):
+        unsafe = "git rev-parse --verify $(echo x) " + TIP_REF
+        problems = chain_problems(forged_skill(read=(60000, unsafe)))
+        self.assertIn("the read line is not shell-safe", problems)
+        self.assertIn("the read line is not exactly %s" % TIP_READ_FORM, problems)
+
+    def test_ac6_the_resolve_matcher_fires_when_the_form_still_carries_the_preflight_tip(self):
+        text = forged_skill(resolve=(600000, FORGED_RESOLVE % "<integration_tip>"))
+        problems = resolve_problems(text)
+        self.assertIn("the step 6 resolve form still carries <integration_tip>", problems)
+        self.assertTrue(any("does not pass --integration-tip" in p for p in problems), problems)
+
+    def test_ac6_the_resolve_matcher_fires_when_another_option_differs_from_step_5_2(self):
+        other = (FORGED_RESOLVE % LOCKED_TIP).replace("--base <base_branch>", "--base main")
+        problems = resolve_problems(forged_skill(resolve=(600000, other)))
+        self.assertTrue(any("only the tip replaced" in p for p in problems), problems)
+
+    def test_ac6_the_resolve_matcher_fires_when_locked_tip_reaches_another_command_form(self):
+        text = forged_skill() + "\n```bash\ngit log -n 1 <locked_tip>\n```\n"
+        problems = resolve_problems(text)
+        self.assertTrue(any("other than the step 6 resolve form" in p for p in problems), problems)
+
+    def test_ac6_the_rule_matcher_fires_when_the_rule_is_missing(self):
+        problems = read_rule_problems(forged_skill(rule=""))
+        self.assertTrue(any("exactly one line stating the 40-digit rule" in p for p in problems), problems)
+
+    def test_ac6_the_rule_matcher_fires_when_the_failure_path_is_not_stated(self):
+        rule = GOOD_RULE.replace("手順 14 で保持タスクを止めてから、`internal_error` で終端へ進む。", "")
+        problems = read_rule_problems(forged_skill(rule=rule))
+        self.assertIn("the read-value rule does not contain 手順 14", problems)
+        self.assertIn("the read-value rule does not contain `internal_error`", problems)
+
+    def test_ac6_the_rule_matcher_fires_when_integration_tip_is_not_said_to_stay(self):
+        problems = read_rule_problems(forged_skill(rule=GOOD_RULE.replace("`integration_tip` は上書きしない。", "")))
+        self.assertIn("item 4 does not say that `integration_tip` is not overwritten", problems)
+
+    def test_ac6_the_rule_matcher_fires_when_the_rule_reuses_the_script_failure_phrase(self):
+        problems = read_rule_problems(forged_skill(rule=GOOD_RULE + "スクリプトの失敗と同じ。"))
+        self.assertIn("the read-value rule reuses the phrase スクリプトの失敗", problems)
+
+    def test_ac6_the_rule_matcher_fires_when_the_rule_is_an_outcome_bullet(self):
+        problems = read_rule_problems(forged_skill(rule="- " + GOOD_RULE))
+        self.assertIn("the read-value rule is written as a bullet", problems)
+
+    def test_ac6_the_rule_matcher_fires_when_the_rule_follows_the_resolve(self):
+        problems = read_rule_problems(forged_skill(rule_after="resolve"))
+        self.assertIn("the read-value rule is not between the read and the resolve", problems)
+
+    def test_ac6_the_route_matcher_fires_when_item_4_keeps_the_old_phrase(self):
+        opening = "`held` を得たら、手順 7 の前に、マージ済みかを判定し直す。先端は手順 4 / 5.2 と同じ `integration_tip`。"
+        problems = route_tip_problems(forged_skill(opening=opening))
+        self.assertIn("item 4 still contains 手順 4 / 5.2 と同じ `integration_tip`", problems)
+        self.assertEqual(len(problems), 3, problems)
+
+    def test_ac6_the_route_matcher_fires_when_only_one_route_is_described(self):
+        opening = GOOD_OPENING.replace("PR ルートは、ロックを取った後に読み直した `locked_tip` で判定する。", "")
+        problems = route_tip_problems(forged_skill(opening=opening))
+        self.assertEqual(len(problems), 1, problems)
+        self.assertIn("locked_tip", problems[0])
+
+    def test_ac6_the_held_values_matcher_fires_without_locked_tip(self):
+        held = GOOD_HELD.split("、`locked_tip`")[0] + "。"
+        problems = held_values_problems(forged_skill(held=held))
+        self.assertEqual(problems, ["the held values have no `locked_tip` description"])
+
+    def test_ac6_the_held_values_matcher_fires_when_integration_tip_is_not_tied_to_step_8(self):
+        held = GOOD_HELD.replace("手順 8 の取り込みで期待する HEAD としても使う。", "").replace("上書きしない", "")
+        problems = held_values_problems(forged_skill(held=held))
+        self.assertIn("the `integration_tip` description does not contain 手順 8", problems)
+        self.assertIn("the `integration_tip` description does not contain 上書きしない", problems)
+
+    def test_ac6_the_held_values_matcher_fires_when_locked_tip_may_reach_another_step(self):
+        held = GOOD_HELD.replace("`resolve` にだけ渡す", "`resolve` に渡す")
+        problems = held_values_problems(forged_skill(held=held))
+        self.assertIn("the `locked_tip` description does not contain `resolve` にだけ渡す", problems)
 
 
 class TestHostQualifiedRepository(SkillCase):
