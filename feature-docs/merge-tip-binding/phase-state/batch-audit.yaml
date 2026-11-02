@@ -1,0 +1,25 @@
+schema_version: 1
+feature: merge-tip-binding
+records:
+- question_id: requirement.tip-mismatch-reason
+  packet_id: create-spec-q0001
+  answered_at: '2026-11-03T01:40:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: select_or_freeform
+  selected_option_ids:
+  - verification_failed
+  freeform: null
+  normalized_answer: step 8 stops with verification_failed and a fixed detail (e.g.
+    "integration branch moved after preflight") when worktree HEAD differs from the
+    expected tip; the closed 28-code set is unchanged; the verification_failed row
+    of the SKILL.md result table and the verification_failed condition in em-workflow/references/merge-result.md
+    both gain the step 8 tip mismatch
+  resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted:
+    true (harness entry: codex, 1 turn); Codex recommended verification_failed (consistent
+    with step 10 HEAD mismatch and step 13.3 branch-moved precedent, keeps the closed
+    set, new code would need contract/renderer/test changes; git_failed would conflate
+    with git execution failure); Codex noted the risk that reason alone does not distinguish
+    a branch move from a test failure and that merge-result.md condition must be updated
+    together; orchestrator mapped to verification_failed and folded the merge-result.md
+    condition update into the answer; options not chosen: new_reason_code, git_failed;
+    opus_escalation: not run'

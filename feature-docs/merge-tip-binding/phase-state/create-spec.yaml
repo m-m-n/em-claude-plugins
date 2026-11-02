@@ -5,8 +5,14 @@ status: in_progress
 generation: 1
 base_revision: 6122f1b1a9d26039f721a108b8289d179f648373
 last_input_digest: null
-active_request_id: create-spec-run-0002
-packets: {}
+active_request_id: create-spec-run-0003
+packets:
+  create-spec-q0001:
+    iteration: 1
+    request_id: create-spec-run-0002
+    question_ids:
+    - requirement.tip-mismatch-reason
+    - design-step.recommendation
 answers:
   create-spec.feature-identity:
     packet_id: null
@@ -17,6 +23,39 @@ answers:
     - derive_from_task_description
     freeform: null
     normalized_answer: 'feature name derived from the task description: merge-tip-binding'
+  requirement.tip-mismatch-reason:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-03T01:40:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - verification_failed
+    freeform: null
+    normalized_answer: step 8 stops with verification_failed and a fixed detail (e.g.
+      "integration branch moved after preflight") when worktree HEAD differs from
+      the expected tip; the closed 28-code set is unchanged; the verification_failed
+      row of the SKILL.md result table and the verification_failed condition in em-workflow/references/merge-result.md
+      both gain the step 8 tip mismatch
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted:
+      true (harness entry: codex, 1 turn); Codex recommended verification_failed (consistent
+      with step 10 HEAD mismatch and step 13.3 branch-moved precedent, keeps the closed
+      set, new code would need contract/renderer/test changes; git_failed would conflate
+      with git execution failure); Codex noted the risk that reason alone does not
+      distinguish a branch move from a test failure and that merge-result.md condition
+      must be updated together; orchestrator mapped to verification_failed and folded
+      the merge-result.md condition update into the answer; options not chosen: new_reason_code,
+      git_failed; opus_escalation: not run'
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-03T01:40:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design step skipped per requirements-analyst recommendation
+      (UI が無く、変更はスキル手順書・Python スクリプト・テストだけ)
+    resolution_note: 'gate: create-spec.design-step; batch policy select decide_autonomously'
 worker_runs:
 - request_id: create-spec-run-0001
   status: invalid_input
@@ -26,6 +65,12 @@ worker_runs:
   self_write_set: []
   note: 'orchestrator dispatch defect: task_description placeholder was not substituted;
     re-dispatched with the input fixed'
+- request_id: create-spec-run-0002
+  status: needs_user_input
+  input_digest: sha256:a188947582b86beb0d2efadc069af7d1b6de0f466e33cc1c984350d123dad395
+  output_digest: null
+  dispatch_digest_inputs: null
+  self_write_set: []
 artifacts: []
 patches: []
 progress_fingerprint: null
