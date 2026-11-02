@@ -5,7 +5,7 @@ status: in_progress
 generation: 1
 base_revision: 6afcdc71d5e0d842434df6e6bc697785f286270d
 last_input_digest: sha256:f2a28d8594893d798daa7ec49fe622d5b0738da199929fd05c5702a66e2ebf0b
-active_request_id: create-spec-run-0001
+active_request_id: null
 packets: {}
 answers:
   create-spec.feature-identity:
@@ -17,9 +17,82 @@ answers:
     - derive_from_task_description
     freeform: null
     normalized_answer: 'feature name derived from the task description: scenario-id-ts-hyphen'
+  requirement.tsn-detection-boundary:
+    packet_id: null
+    answered_at: '2026-11-03T01:27:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - opt_a
+    freeform: null
+    normalized_answer: new check flags hyphen-less TS-?\d+ matches not preceded by an alphanumeric; read-side regex unchanged
+      (A1)
+    resolution_note: 'gate: create-spec.requirement-clarification; analyst assumptions A1-A5 reviewed by orchestrator; codex_consulted:
+      true (harness entry: codex, 1 turn, 5 questions in one prompt); Codex chose opt_a for Q1-Q5, matching the analyst tentative
+      positions; orchestrator mapped each to the analyst assumption; opus_escalation: not run'
+  requirement.tsn-scan-range:
+    packet_id: null
+    answered_at: '2026-11-03T01:27:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - opt_a
+    freeform: null
+    normalized_answer: scan whole document minus fenced code blocks and HTML comments; inline code spans scanned (A2)
+    resolution_note: 'gate: create-spec.requirement-clarification; analyst assumptions A1-A5 reviewed by orchestrator; codex_consulted:
+      true (harness entry: codex, 1 turn, 5 questions in one prompt); Codex chose opt_a for Q1-Q5, matching the analyst tentative
+      positions; orchestrator mapped each to the analyst assumption; opus_escalation: not run'
+  requirement.newly-written-scope:
+    packet_id: null
+    answered_at: '2026-11-03T01:27:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - opt_a
+    freeform: null
+    normalized_answer: VERIFICATION.md plus tasks_patch entries plan files (TASK.md excluded); re-plan included; carried tasks
+      and rework-planner output excluded (A3, A4)
+    resolution_note: 'gate: create-spec.requirement-clarification; analyst assumptions A1-A5 reviewed by orchestrator; codex_consulted:
+      true (harness entry: codex, 1 turn, 5 questions in one prompt); Codex chose opt_a for Q1-Q5, matching the analyst tentative
+      positions; orchestrator mapped each to the analyst assumption; opus_escalation: not run'
+  requirement.spec-writer-enforcement:
+    packet_id: null
+    answered_at: '2026-11-03T01:27:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - opt_a
+    freeform: null
+    normalized_answer: spec-writer prompt, SPEC template and contract text require TS-n; no mechanical check on spec-writer
+      output (A5)
+    resolution_note: 'gate: create-spec.requirement-clarification; analyst assumptions A1-A5 reviewed by orchestrator; codex_consulted:
+      true (harness entry: codex, 1 turn, 5 questions in one prompt); Codex chose opt_a for Q1-Q5, matching the analyst tentative
+      positions; orchestrator mapped each to the analyst assumption; opus_escalation: not run'
+  requirement.legacy-spec-tsn:
+    packet_id: null
+    answered_at: '2026-11-03T01:27:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - opt_a
+    freeform: null
+    normalized_answer: planner writes the same number as TS-n in VERIFICATION.md and does not rewrite SPEC.md (A6)
+    resolution_note: 'gate: create-spec.requirement-clarification; analyst assumptions A1-A5 reviewed by orchestrator; codex_consulted:
+      true (harness entry: codex, 1 turn, 5 questions in one prompt); Codex chose opt_a for Q1-Q5, matching the analyst tentative
+      positions; orchestrator mapped each to the analyst assumption; opus_escalation: not run'
+  design-step.decision:
+    packet_id: null
+    answered_at: '2026-11-03T01:27:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design step skipped per requirements-analyst recommendation (UI の変更がない)
+    resolution_note: 'gate: create-spec.design-step; batch policy select decide_autonomously'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:f2a28d8594893d798daa7ec49fe622d5b0738da199929fd05c5702a66e2ebf0b
   output_digest: null
   dispatch_digest_inputs:
@@ -41,6 +114,7 @@ worker_runs:
     tests/test_gate_option_vocabulary.py: sha256:1a94542e9f9b7681dd5e30ea4a1f13096af3e89ede5e0e93c6cc3306e8ce7b03
     tests/test_requirements_tests_replace.py: sha256:26e468ae90d61f531c862d682d777b76dd26877c86c8a7a3ee4e6f98b6dbd272
     tests/test_validate_worker_output.py: sha256:3181b6ac44db62138b2627d82b2211c49958069167701e37bf4cba44ad39a49b
+  self_write_set: []
 artifacts: []
 patches: []
 progress_fingerprint: null

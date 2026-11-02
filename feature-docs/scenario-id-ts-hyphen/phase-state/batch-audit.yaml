@@ -1,0 +1,66 @@
+schema_version: 1
+feature: scenario-id-ts-hyphen
+records:
+- question_id: requirement.tsn-detection-boundary
+  packet_id: null
+  answered_at: '2026-11-03T01:27:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - opt_a
+  freeform: null
+  normalized_answer: new check flags hyphen-less TS-?\d+ matches not preceded by an alphanumeric; read-side regex unchanged
+    (A1)
+  resolution_note: 'gate: create-spec.requirement-clarification; analyst assumptions A1-A5 reviewed by orchestrator; codex_consulted:
+    true (harness entry: codex, 1 turn, 5 questions in one prompt); Codex chose opt_a for Q1-Q5, matching the analyst tentative
+    positions; orchestrator mapped each to the analyst assumption; opus_escalation: not run'
+- question_id: requirement.tsn-scan-range
+  packet_id: null
+  answered_at: '2026-11-03T01:27:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - opt_a
+  freeform: null
+  normalized_answer: scan whole document minus fenced code blocks and HTML comments; inline code spans scanned (A2)
+  resolution_note: 'gate: create-spec.requirement-clarification; analyst assumptions A1-A5 reviewed by orchestrator; codex_consulted:
+    true (harness entry: codex, 1 turn, 5 questions in one prompt); Codex chose opt_a for Q1-Q5, matching the analyst tentative
+    positions; orchestrator mapped each to the analyst assumption; opus_escalation: not run'
+- question_id: requirement.newly-written-scope
+  packet_id: null
+  answered_at: '2026-11-03T01:27:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - opt_a
+  freeform: null
+  normalized_answer: VERIFICATION.md plus tasks_patch entries plan files (TASK.md excluded); re-plan included; carried tasks
+    and rework-planner output excluded (A3, A4)
+  resolution_note: 'gate: create-spec.requirement-clarification; analyst assumptions A1-A5 reviewed by orchestrator; codex_consulted:
+    true (harness entry: codex, 1 turn, 5 questions in one prompt); Codex chose opt_a for Q1-Q5, matching the analyst tentative
+    positions; orchestrator mapped each to the analyst assumption; opus_escalation: not run'
+- question_id: requirement.spec-writer-enforcement
+  packet_id: null
+  answered_at: '2026-11-03T01:27:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - opt_a
+  freeform: null
+  normalized_answer: spec-writer prompt, SPEC template and contract text require TS-n; no mechanical check on spec-writer
+    output (A5)
+  resolution_note: 'gate: create-spec.requirement-clarification; analyst assumptions A1-A5 reviewed by orchestrator; codex_consulted:
+    true (harness entry: codex, 1 turn, 5 questions in one prompt); Codex chose opt_a for Q1-Q5, matching the analyst tentative
+    positions; orchestrator mapped each to the analyst assumption; opus_escalation: not run'
+- question_id: requirement.legacy-spec-tsn
+  packet_id: null
+  answered_at: '2026-11-03T01:27:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - opt_a
+  freeform: null
+  normalized_answer: planner writes the same number as TS-n in VERIFICATION.md and does not rewrite SPEC.md (A6)
+  resolution_note: 'gate: create-spec.requirement-clarification; analyst assumptions A1-A5 reviewed by orchestrator; codex_consulted:
+    true (harness entry: codex, 1 turn, 5 questions in one prompt); Codex chose opt_a for Q1-Q5, matching the analyst tentative
+    positions; orchestrator mapped each to the analyst assumption; opus_escalation: not run'
