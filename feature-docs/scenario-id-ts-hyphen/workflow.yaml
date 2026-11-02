@@ -110,9 +110,9 @@ tasks:
     - NFR1
     - NFR2
     - NFR3
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/scenario-id-ts-hyphen/task0001
   task0002:
     title: "spec-writer numbers SPEC.md test scenarios in the TS-n form"
     plan: tasks/task0002.md
@@ -128,9 +128,9 @@ tasks:
     requirements:
     - FR1
     - NFR3
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/scenario-id-ts-hyphen/task0002
   task0003:
     title: "plan-writing limits the hyphen-less form to reading existing documents"
     plan: tasks/task0003.md
@@ -143,9 +143,9 @@ tasks:
     requirements:
     - FR2
     - NFR3
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/scenario-id-ts-hyphen/task0003
   task0004:
     title: "Planner-side documents describe the TS-n requirement and its check"
     plan: tasks/task0004.md
@@ -161,9 +161,9 @@ tasks:
     requirements:
     - FR5
     - NFR3
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/scenario-id-ts-hyphen/task0004
 review:
   status: pending
 requirements:
