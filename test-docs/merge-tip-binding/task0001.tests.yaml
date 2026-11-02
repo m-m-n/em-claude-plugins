@@ -1,0 +1,158 @@
+task_id: task0001
+# python3 -m unittest discover -s tests before any change in this worktree:
+# Ran 13740 tests, OK (skipped=1).
+baseline_failures: []
+# python3 -m unittest discover -s tests after the implementation and after this
+# record: no failure; subset of the baseline.
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_merge_git.ArgumentTests.test_ac1_integrate_without_the_expected_head_exits_2
+      - tests.test_merge_git.ArgumentTests.test_ac1_integrate_rejects_an_expected_head_that_is_not_40_lowercase_hex
+      - tests.test_merge_git.ArgumentTests.test_ac1_the_remote_cases_fail_for_the_remote_not_for_the_missing_option
+      - tests.test_merge_git.ArgumentTests.test_ac1_the_other_subcommands_accept_no_expected_head
+      - tests.test_merge_git.ArgumentTests.test_missing_and_malformed_arguments_exit_2
+    red_confirmed: true
+    red_reason: >-
+      Run against the script as it was before the change. integrate without
+      --expected-head ran and exited 0 ("AssertionError: 0 != 2"), so the
+      missing-option test failed. The well-formed value was refused
+      ("merge-git.py: error: unrecognized arguments: --expected-head <sha>",
+      "AssertionError: 2 != 0"), so the malformed-value test failed at its
+      accepted-value control, and the remote test failed for its "a;b" case
+      because the error line named --expected-head instead of --remote. The
+      other-subcommands test and the updated existing argument test passed
+      before and after; they guard that the option exists for integrate only
+      and that the remote cases still fail for the remote value.
+  AC-2:
+    tests:
+      - tests.test_merge_git.IntegrateTests.test_ac2_a_head_other_than_the_expected_head_stops_verification_failed
+      - tests.test_merge_git.IntegrateTests.test_ac2_the_mismatch_stop_runs_no_fetch_and_no_merge
+      - tests.test_merge_git.IntegrateTests.test_ac2_the_same_fixture_fetches_and_merges_when_the_head_matches
+      - tests.test_merge_git.IntegrateTests.test_ac2_the_mismatch_stop_changes_no_ref_and_no_worktree
+      - tests.test_merge_git.IntegrateTests.test_ac2_an_unrelated_valid_sha_as_the_expected_head_also_stops
+      - tests.test_merge_git.IntegrateTests.test_ac2_a_matching_expected_head_integrates_as_before
+    red_confirmed: true
+    red_reason: >-
+      Run against the script as it was before the change, every test above
+      failed with "AssertionError: 2 != 0 ... unrecognized arguments:
+      --expected-head <sha>". Run against a copy that accepted the option but
+      never compared it, the four tests that expect the stop failed (the run
+      went on to fetch and merge): a_head_other_than_the_expected_head,
+      the_mismatch_stop_runs_no_fetch_and_no_merge,
+      the_mismatch_stop_changes_no_ref_and_no_worktree and
+      an_unrelated_valid_sha. The same_fixture and matching_expected_head
+      tests are the controls and pass with the comparison in place.
+  AC-3:
+    tests:
+      - tests.test_merge_git.IntegrateTests.test_ac3_a_dirty_worktree_still_stops_worktree_not_clean_on_a_mismatch
+      - tests.test_merge_git.IntegrateTests.test_ac3_an_absent_worktree_still_stops_git_failed_on_a_mismatch
+      - tests.test_merge_git.IntegrateTests.test_ac3_a_merge_in_progress_still_stops_git_failed_on_a_mismatch
+      - tests.test_merge_git.IntegrateTests.test_ac4_clean_case_creates_one_merge_commit
+      - tests.test_merge_git.IntegrateTests.test_ac4_local_base_branch_is_not_modified
+      - tests.test_merge_git.IntegrateTests.test_ac4_already_contained_base_is_up_to_date
+      - tests.test_merge_git.IntegrateTests.test_ac4_second_integration_after_the_first_is_up_to_date
+      - tests.test_merge_git.IntegrateTests.test_ac4_conflict_lists_paths_and_leaves_the_merge_in_progress
+      - tests.test_merge_git.IntegrateTests.test_ac4_conflict_with_a_delete_modify_pair
+      - tests.test_merge_git.IntegrateTests.test_ac4_conflicted_paths_keep_unusual_but_valid_names
+      - tests.test_merge_git.IntegrateTests.test_ac4_remote_fetched_tip_is_what_gets_integrated
+      - tests.test_merge_git.IntegrateTests.test_ac4_remote_without_news_is_up_to_date
+      - tests.test_merge_git.IntegrateTests.test_ac4_fetch_failure_stops_with_git_failed
+      - tests.test_merge_git.IntegrateTests.test_ac4_hooks_are_not_bypassed
+      - tests.test_merge_git.IntegrateTests.test_ac4_requires_a_clean_worktree
+      - tests.test_merge_git.IntegrateTests.test_ac4_absent_worktree_is_not_created
+      - tests.test_merge_git.IntegrateTests.test_ac4_merge_in_progress_is_not_continued
+      - tests.test_merge_git.IntegrateTests.test_ac4_missing_local_base_stops
+      - tests.test_merge_git.BoundaryTests.test_ac7_every_subcommand_runs_only_allowed_git_operations
+    red_confirmed: true
+    red_reason: >-
+      The existing integrate tests keep their assertions and now pass an
+      expected head equal to the branch tip (the helper default). Run against
+      the script as it was before the change, all of them failed with
+      "AssertionError: 2 != 0 ... unrecognized arguments: --expected-head
+      <sha>", together with the three new mismatch-ordering tests (dirty,
+      absent and merge-in-progress worktrees with a mismatching expected
+      head). They pass with the comparison placed after the existing checks.
+  AC-4:
+    tests:
+      - tests.test_merge_local_route.LocalRouteCoreTests.test_ac4_core_case_a_commit_after_the_tip_was_taken_is_not_integrated
+      - tests.test_merge_local_route.LocalRouteCoreTests.test_ac4_core_case_the_tip_taken_after_the_commit_integrates
+      - tests.test_merge_local_route.LocalRouteFullChainTests.test_ac4_full_chain_a_commit_after_preflight_is_not_integrated
+      - tests.test_merge_local_route.LocalRouteCoreTests.test_ac7_core_case_lands_a_merge_commit_and_removes_the_worktree
+      - tests.test_merge_local_route.LocalRouteCoreTests.test_ac7_core_case_is_resumable_after_the_merge
+      - tests.test_merge_local_route.LocalRouteFullChainTests.test_ac7_full_chain_passes_with_preflight_first
+    red_confirmed: true
+    red_reason: >-
+      Run against the script as it was before the change, all six failed with
+      "AssertionError: 2 != 0 ... unrecognized arguments: --expected-head
+      <sha>" (the chain now passes the tip). Run against a copy that accepted
+      the option but never compared it, the core and the full-chain
+      moved-branch tests failed (integrate did not stop, so the added commit
+      was merged on); the control with the tip taken after the added commit
+      and the three positive chains passed.
+  AC-5:
+    tests:
+      - tests.test_merge_skill_doc.TestIntegrationBoundToExpectedHead.test_ac5_step_8_holds_exactly_two_integrate_forms_passing_the_two_values_in_order
+      - tests.test_merge_skill_doc.TestIntegrationBoundToExpectedHead.test_ac5_no_integrate_form_carries_locked_tip
+      - tests.test_merge_skill_doc.TestIntegrationBoundToExpectedHead.test_ac5_each_integrate_form_has_its_own_timeout_line_of_at_most_600000
+      - tests.test_merge_skill_doc.TestIntegrationBoundToExpectedHead.test_ac5_the_first_form_is_for_the_first_integration_and_the_second_for_the_redo_return
+      - tests.test_merge_skill_doc.TestIntegrationBoundToExpectedHead.test_ac5_the_remote_option_rule_covers_both_forms
+      - tests.test_merge_skill_doc.TestIntegrationBoundToExpectedHead.test_ac5_the_other_outcomes_of_step_8_are_unchanged
+      - tests.test_merge_skill_doc.TestIntegrationBoundToExpectedHead.test_ac5_the_stop_bullet_names_verification_failed_and_step_14
+      - tests.test_merge_skill_doc.TestIntegrationBoundToExpectedHead.test_ac5_the_step_12_redo_bullet_points_back_to_step_8_with_head_sha
+      - tests.test_merge_skill_doc.TestForbiddenForms.test_ac3_every_foreground_bash_call_states_a_timeout_of_at_most_600_seconds
+      - tests.test_merge_skill_doc.TestDirectCommandForms.test_ac2_script_calls_are_the_closed_set_and_none_performs_a_guarded_operation
+      - tests.test_merge_skill_doc.TestDirectCommandForms.test_ac2_guard_sensitive_forms_carry_literals_only
+      - tests.test_merge_skill_doc.TestLockLifecycle.test_ac4_lifecycle_runs_token_hold_verify_then_integrate_then_verify_again
+      - tests.test_merge_skill_doc.TestScriptContractAgreement.test_ac2_options_exist_in_every_other_decision_script_when_present
+    red_confirmed: true
+    red_reason: >-
+      Run against SKILL.md as it was before the change: step 8 held one
+      integrate form ("AssertionError: 1 != 2" in the timeout-line and the
+      lead-in tests; the two-forms test listed "1 integrate forms in step 8,
+      expected 2", the expected-head values and the stop bullet), the remote
+      rule test found no "どちらの呼び出しでも" sentence, the stop bullet was
+      "- `stop`（`git_failed`）: 終端。" ("'`verification_failed`' not found")
+      and the step 12 redo bullet lacked `head_sha`. The locked_tip absence
+      test, the other-outcomes test and the five existing tests (timeout,
+      closed script set, literals, lock lifecycle, option agreement) passed
+      before and after; they guard the shape the change must keep.
+  AC-6:
+    tests:
+      - tests.test_merge_skill_doc.TestIntegrationBoundToExpectedHead.test_ac6_the_skill_row_lists_steps_8_10_13_the_new_origin_and_both_details
+      - tests.test_merge_skill_doc.TestIntegrationBoundToExpectedHead.test_ac6_the_contract_row_states_the_pre_integration_mismatch_and_the_new_origin
+      - tests.test_merge_skill_doc.TestIntegrationBoundToExpectedHead.test_ac6_both_tables_still_hold_exactly_the_28_codes_once_each
+      - tests.test_merge_skill_doc.TestLocalMergeBoundToHeadSha.test_ac2_the_verification_failed_row_lists_step_13_and_the_moved_branch_detail
+      - tests.test_merge_skill_doc.TestTerminals.test_ac6_reason_table_holds_exactly_the_28_codes_once_each
+      - tests.test_merge_skill_doc.TestScriptContractAgreement.test_ac6_contract_document_lists_every_code_the_skill_uses_when_present
+      - tests.test_merge_result
+    red_confirmed: true
+    red_reason: >-
+      Run against the documents as they were before the change, the row tests
+      failed: the SKILL.md row listed steps 10 and 13 ("steps ['10', '13'],
+      expected 8, 10, 13"; the updated existing row test failed with "Items in
+      the second set but not the first"), and the merge-result.md row lacked
+      the pre-integration HEAD mismatch condition and the merge-git integrate
+      origin. The 28-code tests and tests.test_merge_result passed before and
+      after; they guard that the closed set is unchanged and that
+      merge-result.py (not modified) still renders it.
+  AC-7:
+    tests:
+      - tests.test_merge_skill_doc.TestIntegrationBoundToExpectedHead.test_ac5_the_step_8_matchers_fire_on_forged_text
+      - tests.test_merge_skill_doc.TestIntegrationBoundToExpectedHead.test_ac5_the_step_12_matcher_fires_on_forged_text
+      - tests.test_merge_skill_doc.TestIntegrationBoundToExpectedHead.test_ac6_the_row_matchers_fire_on_forged_rows
+      - tests.test_merge_skill_doc.TestLocalMergeBoundToHeadSha.test_ac2_the_verification_failed_row_lists_step_13_and_the_moved_branch_detail
+      - tests.test_merge_skill_doc.TestResumptionAndText.test_ac7_no_notion_url_and_no_absolute_home_path
+    red_confirmed: false
+    red_reason: >-
+      The criterion is about the quality of the checks themselves (every new
+      matcher paired with a forged-text case on which it fires, the existing
+      row test updated rather than removed, no home path or Notion URL, the
+      whole suite passing). The forged-text tests exercise the matcher
+      functions of the test module on constructed text, so they were green as
+      soon as they were written; they cannot fail before the document change
+      except the row test, which is recorded under AC-6. The home-path and
+      Notion-URL test is an existing test that passed before and after. The
+      whole-suite outcome is the final_failures line of this record. No
+      executable red exists for this criterion as a whole.
