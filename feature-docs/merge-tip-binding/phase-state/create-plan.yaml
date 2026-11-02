@@ -53,7 +53,7 @@ artifacts:
   produced_by: create-plan-run-0001
 patches:
 - patch_id: merge-tip-binding-p0001
-  status: validated
+  status: applied
   base_input_digest: sha256:b519d382ac7229658ad73c03f489e3702d8ecebe4b30aa308b076b477380f455
   base_workflow_blob: 2814b666657ae290a43dd2c28fc58e23d36b0d6c
 progress_fingerprint: null
