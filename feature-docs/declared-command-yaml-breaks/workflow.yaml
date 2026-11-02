@@ -1,0 +1,190 @@
+schema_version: 1
+feature: declared-command-yaml-breaks
+created: '2026-11-02'
+base_branch: main
+goal: |
+  bash_guard の宣言抽出が YAML 1.1 の U+0085 変換と食い違い、宣言済み未承認コマンドの拒否が判定なしに後退する
+
+  ## 脆弱性の概要 (必須)
+
+  `bash_guard.py` の `declared_commands` は workflow.yaml を 1 行ずつ読み、前後のスペースとタブだけを除いた値を宣言集合に入れる。二重引用符内の先頭に U+0085 を置いた値は U+0085 を残したまま宣言集合に入るが、PyYAML（YAML 1.1）は同じ値の U+0085 を空白 1 つに変える。そのため、YAML 解析結果をコマンドとして実行すると宣言集合と一致せず、宣言済みで未承認のコマンドの拒否（deny）が判定なしに後退する。
+
+  ## 参照 (必須)
+
+  - CVE / GHSA ID: 該当なし
+  - アドバイザリ URL: 該当なし
+  - severity: medium
+  - 該当パッケージ: 該当なし
+  - 現在のバージョン: em-workflow 0.4.x（approval-unicode-whitespace の integration ブランチ）
+  - 修正済みバージョン: 無し
+
+  ## 攻撃シナリオ (必須)
+
+  リポジトリを書き換えられる者が workflow.yaml の `project.components.main.test_command` を、二重引用符内の先頭が実際の U+0085 である `"<U+0085>./unapproved"` にする。YAML 解析結果の ` ./unapproved` がコマンドとして渡ると、フックはスペースだけを除いて `./unapproved` にし、宣言集合（`\x85./unapproved`）にも承認集合にも一致しないため判定なしで終わる。変更前（両側 `str.strip()`）は一致して deny だった。
+
+  ## 影響範囲 (必須)
+
+  宣言済み・未承認のコマンドが、フックの deny ではなく通常の権限確認に回る。既存の Bash 許可がある環境では、承認記録なしで実行され得る。YAML のエスケープ（`\x2e` など）やブロックスカラーでも同種の食い違いは変更前から起こせた。
+
+  ## 完了の定義 (必須)
+
+  - [ ] 攻撃シナリオが成立しない
+  - [ ] 修正版に追随している（修正版が無い場合は暫定緩和策の欄に対応を記載）
+  - [ ] 引用符内の先頭に実際の U+0085 を置いた宣言と、その YAML 解析結果をフックに渡して deny を確かめる回帰テストがある
+
+  ## 該当箇所 (任意)
+
+  - `em-workflow/hooks/bash_guard.py:207`（`declared_commands`）
+  - `tests/test_bash_guard_unicode_whitespace.py:416-422`（除いた形を silent と固定しているテスト）
+  - feature-docs/approval-unicode-whitespace/SPEC.md の FR8、THREAT-MODEL.md の TM-5
+  - 詳細: integration ブランチ `em-workflow/approval-unicode-whitespace/integration` の `feature-docs/approval-unicode-whitespace/reviews/round1.yaml`（stable_id `90ff0d70d70279b8`）
+
+  ## 暫定緩和策 (任意)
+
+  `declared_commands` で、スペースとタブだけのトリム値に加えて `str.strip()` した値（または YAML 1.1 が改行として扱う U+0085 / U+2028 / U+2029 を前後から除いた値）も宣言集合に入れる。宣言集合が増えて効くのは拒否側だけで、承認済みのコマンドは完全一致の allow が先に決まる。
+parent_branch: em-workflow/declared-command-yaml-breaks/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.97
+      '2': 0.03
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.9
+      '2': 0.09
+      '3': 0.01
+  at: '2026-11-02T09:00:30+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: 1a01116e10015a888f2c3b7e631a3ad3e4a6d1de
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI や見た目を伴わない、フック内部の照合の変更とテスト・文書の追記
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+requirements:
+  FR1:
+    title: 宣言済みコマンドに 2 つ目の形を足す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: U+00A0 などは除かないまま残す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: 許可の範囲を広げない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: 対策を文書に残す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: 回帰テスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 依存
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: classification pin
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: トップレベル関数の並びと trim_blanks の意味
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: テスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: 既存の docstring で固定された文言
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR6:
+    title: Version
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

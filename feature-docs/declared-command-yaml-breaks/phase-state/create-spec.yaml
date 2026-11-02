@@ -1,7 +1,7 @@
 schema_version: 1
 feature: declared-command-yaml-breaks
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 2140004fccb7d131aebebc02d21ea22c76667b0f
 last_input_digest: sha256:251ccd1c444c44d1f86e98222dc1d4b17a92b7a34cc0a33159370006ca802248
