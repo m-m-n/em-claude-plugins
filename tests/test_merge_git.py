@@ -231,11 +231,42 @@ class GitCase(unittest.TestCase):
     def state(self, root, feature=FEATURE):
         return self.decide("worktree-state", "--project-root", root, "--feature", feature)
 
-    def integrate(self, root, remote=None, base="main"):
-        args = ["integrate", "--project-root", root, "--feature", FEATURE, "--base", base]
+    def integration_tip_now(self, root):
+        """The integration branch tip read with the test's own git; a valid but
+        unrelated SHA when the branch does not exist."""
+        proc = self.git(
+            root, "rev-parse", "--verify", "--quiet", "refs/heads/" + BRANCH, check=False
+        )
+        return proc.stdout.strip() if proc.returncode == 0 else "0" * 40
+
+    def integrate_args(self, root, remote=None, base="main", expected_head=None):
+        """Argument vector of `integrate`; the expected head defaults to the
+        integration branch tip read just now, so a test that does not care
+        about the binding keeps its meaning."""
+        if expected_head is None:
+            expected_head = self.integration_tip_now(root)
+        args = [
+            "integrate",
+            "--project-root",
+            root,
+            "--feature",
+            FEATURE,
+            "--base",
+            base,
+            "--expected-head",
+            expected_head,
+        ]
         if remote:
             args += ["--remote", remote]
-        return self.decide(*args)
+        return args
+
+    def integrate(self, root, remote=None, base="main", expected_head=None):
+        return self.decide(*self.integrate_args(root, remote, base, expected_head))
+
+    def logged_subcommands_since(self, offset):
+        """Git subcommands the shim recorded after byte `offset` of the log."""
+        records = [r for r in self.log.read_text()[offset:].split("\n") if r]
+        return [subcommand_of(r.split(SEP)[:-1])[0] for r in records]
 
     def base_check(self, root, integrated_base, redo_count, remote=None, base="main"):
         args = [
@@ -692,6 +723,118 @@ class IntegrateTests(GitCase):
         data = self.integrate(root, base="nope")
         self.assertStop(data, "git_failed")
 
+    # ---- merge-tip-binding task0001: the integration is bound to the judged tip ----
+
+    MOVED_DETAIL = "integration branch moved after preflight"
+
+    def moved_branch_fixture(self):
+        """A clean registered integration worktree with a remote, whose branch
+        moved after its tip was recorded. The commit is made inside the
+        worktree, so the worktree stays clean and HEAD equals the branch tip:
+        the expected-head comparison is the only check that can fire. The base
+        branch also moved on the remote, so a run that went on would fetch and
+        merge.
+        Returns (root, worktree, recorded_tip, moved_tip)."""
+        root = self.make_repo()
+        bare = self.make_bare("origin.git")
+        self.git(root, "remote", "add", "origin", str(bare))
+        self.git(root, "push", "-q", "origin", "main")
+        wt = self.add_integration(root)
+        recorded = self.tip(wt, "HEAD")
+        self.commit_file(root, "other.txt", "other\n", "base moves")
+        self.git(root, "push", "-q", "origin", "main")
+        moved = self.commit_file(wt, "late.txt", "late\n", "commit after the tip was recorded")
+        self.assertNotEqual(moved, recorded)
+        self.assertEqual(self.tip(root, BRANCH), moved)
+        self.assertEqual(self.state(root)["outcome"], "clean")
+        return root, wt, recorded, moved
+
+    def test_ac2_a_head_other_than_the_expected_head_stops_verification_failed(self):
+        root, wt, recorded, moved = self.moved_branch_fixture()
+        data = self.integrate(root, remote="origin", expected_head=recorded)
+        self.assertStop(data, "verification_failed")
+        self.assertEqual(data["detail"], self.MOVED_DETAIL)
+        self.assertIsNone(data["head"])
+        self.assertIsNone(data["integrated_base"])
+        self.assertEqual(data["conflicted_paths"], [])
+
+    def test_ac2_the_mismatch_stop_runs_no_fetch_and_no_merge(self):
+        root, wt, recorded, moved = self.moved_branch_fixture()
+        offset = len(self.log.read_text())
+        data = self.integrate(root, remote="origin", expected_head=recorded)
+        self.assertStop(data, "verification_failed")
+        subs = self.logged_subcommands_since(offset)
+        self.assertTrue(subs, "the shim recorded nothing for this run")
+        self.assertNotIn("fetch", subs)
+        self.assertNotIn("merge", subs)
+
+    def test_ac2_the_same_fixture_fetches_and_merges_when_the_head_matches(self):
+        # Control for the absence assertion above: the matching run is the one
+        # that fetches and merges, so the shim log does distinguish the two.
+        root, wt, recorded, moved = self.moved_branch_fixture()
+        offset = len(self.log.read_text())
+        data = self.integrate(root, remote="origin", expected_head=moved)
+        self.assertEqual(data["outcome"], "merged_clean", data)
+        subs = self.logged_subcommands_since(offset)
+        self.assertIn("fetch", subs)
+        self.assertIn("merge", subs)
+
+    def test_ac2_the_mismatch_stop_changes_no_ref_and_no_worktree(self):
+        root, wt, recorded, moved = self.moved_branch_fixture()
+        before = self.snapshot(root, wt)
+        base_tip = self.tip(root, "main")
+        self.integrate(root, remote="origin", expected_head=recorded)
+        self.assertEqual(self.snapshot(root, wt), before)
+        self.assertEqual(self.tip(root, BRANCH), moved)
+        self.assertEqual(self.tip(wt, "HEAD"), moved)
+        self.assertEqual(self.git(wt, "status", "--porcelain=v1", "--untracked-files=all"), "")
+        self.assertEqual(self.tip(root, "main"), base_tip)
+
+    def test_ac2_an_unrelated_valid_sha_as_the_expected_head_also_stops(self):
+        root = self.make_repo()
+        wt = self.add_integration(root)
+        self.commit_file(root, "other.txt", "other\n", "base moves")
+        before = self.snapshot(root, wt)
+        data = self.integrate(root, expected_head=self.tip(root, "main"))
+        self.assertStop(data, "verification_failed")
+        self.assertEqual(data["detail"], self.MOVED_DETAIL)
+        self.assertIsNone(data["head"])
+        self.assertIsNone(data["integrated_base"])
+        self.assertEqual(data["conflicted_paths"], [])
+        self.assertEqual(self.snapshot(root, wt), before)
+
+    def test_ac2_a_matching_expected_head_integrates_as_before(self):
+        root = self.make_repo()
+        wt = self.add_integration(root)
+        recorded = self.tip(wt, "HEAD")
+        base_tip = self.commit_file(root, "other.txt", "other\n", "base moves")
+        data = self.integrate(root, expected_head=recorded)
+        self.assertEqual(data["outcome"], "merged_clean")
+        self.assertEqual(data["integrated_base"], base_tip)
+        self.assertEqual(data["head"], self.tip(root, BRANCH))
+
+    def test_ac3_a_dirty_worktree_still_stops_worktree_not_clean_on_a_mismatch(self):
+        root = self.make_repo()
+        wt = self.add_integration(root)
+        (wt / "feature.txt").write_text("edited\n")
+        data = self.integrate(root, expected_head=self.tip(root, "main"))
+        self.assertStop(data, "worktree_not_clean")
+
+    def test_ac3_an_absent_worktree_still_stops_git_failed_on_a_mismatch(self):
+        root = self.make_repo()
+        self.git(root, "branch", BRANCH)
+        data = self.integrate(root, expected_head="1" * 40)
+        self.assertStop(data, "git_failed", "absent")
+        self.assertFalse(self.worktree_path(root).exists())
+
+    def test_ac3_a_merge_in_progress_still_stops_git_failed_on_a_mismatch(self):
+        root = self.make_repo()
+        wt = self.add_integration(root)
+        self.commit_file(root, "other.txt", "other\n", "base moves")
+        self.git(wt, "merge", "--no-ff", "--no-commit", "main")
+        data = self.integrate(root, expected_head="1" * 40)
+        self.assertStop(data, "git_failed", "merge_in_progress")
+
 
 class BaseCheckTests(GitCase):
     """AC-5 (TS7): base-check."""
@@ -918,6 +1061,7 @@ class ArgumentTests(GitCase):
 
     def test_missing_and_malformed_arguments_exit_2(self):
         root = self.make_repo()
+        head = self.tip(root, "main")
         cases = [
             [],
             ["unknown-subcommand"],
@@ -929,8 +1073,10 @@ class ArgumentTests(GitCase):
             ["merged", "--project-root", root, "--feature", FEATURE, "--base", "-x"],
             ["merged", "--project-root", root, "--feature", FEATURE, "--base", "a b"],
             ["worktree-state", "--project-root", root, "--feature", "UPPER"],
-            ["integrate", "--project-root", root, "--feature", FEATURE, "--base", "main", "--remote", "-r"],
-            ["integrate", "--project-root", root, "--feature", FEATURE, "--base", "main", "--remote", "a;b"],
+            ["integrate", "--project-root", root, "--feature", FEATURE, "--base", "main"]
+            + ["--expected-head", head, "--remote", "-r"],
+            ["integrate", "--project-root", root, "--feature", FEATURE, "--base", "main"]
+            + ["--expected-head", head, "--remote", "a;b"],
             ["main-tree", "--project-root", root, "--base", "ma$in"],
             ["main-tree", "--project-root", str(root / "missing"), "--base", "main"],
             ["route", "--project-root", root, "--base", "main", "--bogus", "1"],
@@ -946,6 +1092,93 @@ class ArgumentTests(GitCase):
         proc = self.run_script("route", "--project", root, "--base", "main")
         self.assertEqual(proc.returncode, 2)
         self.assertIn("usage:", proc.stderr)
+
+    # ---- merge-tip-binding task0001, AC-1: --expected-head of integrate ----
+
+    def integrate_command(self, root, *tail):
+        return [
+            "integrate",
+            "--project-root",
+            root,
+            "--feature",
+            FEATURE,
+            "--base",
+            "main",
+        ] + list(tail)
+
+    def assert_usage_error(self, args):
+        proc = self.run_script(*args)
+        self.assertEqual(proc.returncode, 2, args)
+        self.assertIn("usage:", proc.stderr, args)
+        self.assertEqual(proc.stdout, "", args)
+        return proc
+
+    def test_ac1_integrate_without_the_expected_head_exits_2(self):
+        root = self.make_repo()
+        for tail in ((), ("--remote", "origin")):
+            proc = self.assert_usage_error(self.integrate_command(root, *tail))
+            self.assertIn("--expected-head", proc.stderr.strip().splitlines()[-1], tail)
+
+    def test_ac1_integrate_rejects_an_expected_head_that_is_not_40_lowercase_hex(self):
+        root = self.make_repo()
+        good = self.tip(root, "main")
+        self.assertRegex(good, r"^[0-9a-f]{40}$")
+        bad_values = {
+            "uppercase": good.upper(),
+            "39 characters": good[:39],
+            "41 characters": good + "0",
+            "a non-hex character": good[:39] + "g",
+            "a revision name": "HEAD",
+            "a ref name": "refs/heads/main",
+            "empty": "",
+            "a trailing newline": good + "\n",
+            "a leading space": " " + good,
+        }
+        for label, value in bad_values.items():
+            with self.subTest(label):
+                self.assert_usage_error(self.integrate_command(root, "--expected-head", value))
+        # The control: the well-formed value is accepted by the same command.
+        proc = self.run_script(*self.integrate_command(root, "--expected-head", good))
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+
+    def test_ac1_the_remote_cases_fail_for_the_remote_not_for_the_missing_option(self):
+        root = self.make_repo()
+        head = self.tip(root, "main")
+        for remote in ("-r", "a;b"):
+            with self.subTest(remote):
+                proc = self.assert_usage_error(
+                    self.integrate_command(root, "--expected-head", head, "--remote", remote)
+                )
+                error = proc.stderr.strip().splitlines()[-1]
+                self.assertNotIn("--expected-head", error)
+                self.assertIn("--remote", error)
+
+    def test_ac1_the_other_subcommands_accept_no_expected_head(self):
+        root = self.make_repo()
+        head = self.tip(root, "main")
+        commands = [
+            ["route", "--project-root", root, "--base", "main"],
+            ["merged", "--project-root", root, "--feature", FEATURE, "--base", "main"],
+            ["worktree-state", "--project-root", root, "--feature", FEATURE],
+            [
+                "base-check",
+                "--project-root",
+                root,
+                "--base",
+                "main",
+                "--integrated-base",
+                head,
+                "--redo-count",
+                "0",
+            ],
+            ["main-tree", "--project-root", root, "--base", "main"],
+        ]
+        for args in commands:
+            with self.subTest(args[0]):
+                # Unchanged: the command still produces its decision (exit 0).
+                self.assertEqual(self.run_script(*args).returncode, 0, args)
+                # The option exists for integrate only.
+                self.assert_usage_error(args + ["--expected-head", head])
 
 
 if __name__ == "__main__":
