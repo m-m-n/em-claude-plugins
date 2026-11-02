@@ -1,0 +1,24 @@
+task_id: task0002
+baseline_failures: []          # python3 -m unittest discover -s tests before any edit: Ran 13709 tests, OK (skipped=1)
+final_failures: []             # re-executed after the two document edits and after writing this record: python3 -m unittest discover -s tests, Ran 13710 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: false
+    red_reason: "Documentation-only appended text in feature-docs/approval-unicode-whitespace/SPEC.md (FR8). The task plan's Test Notes say no unit test applies and put a code or test change out of scope; the criterion is checked by reading the appended lines. Searched tests/ by the path feature-docs/approval-unicode-whitespace/SPEC.md, by the basename SPEC.md together with approval-unicode-whitespace, and by FR8: the only tests that mention approval-unicode-whitespace (tests/test_approval_trim_docs.py, tests/test_bash_guard_unicode_whitespace.py and comments in the cd-prefix, merge-preflight and store tests) read em-workflow/references/command-execution-protocol.md, bash_guard.py or merge-preflight.py, none reads this SPEC.md; the glob over feature-docs/*/SPEC.md in tests/test_declared_change_set_invariants.py is a synthetic fixture string. No existing test covers this criterion, so no executable red exists."
+  AC-2:
+    tests: []
+    red_confirmed: false
+    red_reason: "Documentation-only appended text in feature-docs/approval-unicode-whitespace/THREAT-MODEL.md (note after the TB-2 table, naming TM-5). Same plan assignment as AC-1 (read the appended text; no test change in scope) and same search result by path and by the basename THREAT-MODEL.md: the tests that mention THREAT-MODEL.md read the templates, agent prompts and skills, or use synthetic fixtures; none reads this file. No existing test covers this criterion, so no executable red exists."
+  AC-3:
+    tests: []
+    red_confirmed: false
+    red_reason: "Change-set property of the diff, no executable check that can fail first and no existing test covers it (same search as AC-1 and AC-2). Checked by git diff --numstat on the task branch: SPEC.md 2 insertions 0 deletions, THREAT-MODEL.md 2 insertions 0 deletions; removing the inserted lines from the new content and comparing with git show HEAD:<file> gave a byte-identical result for both files."
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: "Change-set property of the diff, no executable check that can fail first and no existing test covers it (same search as AC-1 and AC-2). Checked on the inserted lines of the diff: no line starts with #, the only TB-n / TM-n token is the existing TM-5, and the Verdict section of THREAT-MODEL.md still reads threats-identified."
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: "Change-set property of the diff, no executable check that can fail first and no existing test covers it (same search as AC-1 and AC-2). Checked by git status and git diff --stat before the record was added: exactly two files changed (feature-docs/approval-unicode-whitespace/SPEC.md and feature-docs/approval-unicode-whitespace/THREAT-MODEL.md); feature-docs/approval-unicode-whitespace/reviews/round1.yaml and em-workflow/references/command-execution-protocol.md are unchanged. This record file is the task's own output and is not counted."
