@@ -1,0 +1,69 @@
+schema_version: 2
+feature: scenario-id-ts-hyphen
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.29
+    confidence: 0.69
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small
+        test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+    probabilities:
+      '0': 0.01
+      '1': 0.69
+      '2': 0.3
+      '3': 0.0
+  observed_at: '2026-11-03T01:09:47+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.83
+    confidence: 0.83
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small
+        test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.17
+      '2': 0.83
+      '3': 0.0
+  observed_at: '2026-11-03T01:14:29+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/agents/spec-writer.md
+  - em-workflow/references/templates/spec-document.md
+  - em-workflow/skills/plan-writing/SKILL.md
+  - em-workflow/scripts/validate-worker-output.py
+  - em-workflow/references/contracts/planner-contract.md
+  - em-workflow/references/phases/create-plan-phase.md
+  - tests/test_validate_worker_output.py
+  - tests/test_gate_option_vocabulary.py
+  changed_lines_approx: 200
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules:
+  - em-workflow/references/contracts/planner-contract.md
+  - em-workflow/references/phases/create-plan-phase.md
+  - tests/test_gate_option_vocabulary.py
+  work_still_required: true
+  work_still_required_evidence: spec-writer の執筆規則にはシナリオID形式の指定がなく（em-workflow/agents/spec-writer.md:79）、SPECテンプレートの例もTSnではなく「Test
+    1」「Scenario 1」になっている（em-workflow/references/templates/spec-document.md:211、em-workflow/references/templates/spec-document.md:222）。plan-writing
+    は新規VERIFICATION.mdにTS-nを指定する一方、TSnの許容を既存文書の読取に限定していない（em-workflow/skills/plan-writing/SKILL.md:307、em-workflow/skills/plan-writing/SKILL.md:309）。implementation-plannerには既にTS-n指定がある（em-workflow/agents/implementation-planner.md:239）。現在のタスク文書検査はFiles整合性と受け入れ条件を検査し、TSnを拒否していない（em-workflow/scripts/validate-worker-output.py:2426）。既存読取のTS-?\d+と文字列としての区別は保持する必要があり、読取・rework検証の既存テストがある（em-workflow/scripts/validate-worker-output.py:398、tests/test_validate_worker_output.py:1460、tests/test_validate_worker_output.py:1511）。新規出力を拒否する動作には追加テストが必要。検査規則の変更時は契約文書も更新する指示があり（em-workflow/scripts/validate-worker-output.py:17）、planner契約と検査項目一覧が関連する（em-workflow/references/contracts/planner-contract.md:178、em-workflow/references/phases/create-plan-phase.md:279）。検査本体と既存テストファイルの変更にはハッシュ固定値の更新が伴う（tests/test_gate_option_vocabulary.py:1340、tests/test_gate_option_vocabulary.py:1430、tests/test_gate_option_vocabulary.py:1449）。追加処理は既存関数内に置け、reとPathも導入済みなので、新規関数・ファイル・依存の追加は必須ではない（em-workflow/scripts/validate-worker-output.py:32、em-workflow/scripts/validate-worker-output.py:2148、em-workflow/scripts/validate-worker-output.py:2389）。呼出・依存数2はmainからvalidate_worker_resultへの呼出と、そこからタスク文書検査への呼出を数えている（em-workflow/scripts/validate-worker-output.py:2889、em-workflow/scripts/validate-worker-output.py:2313）。外部契約の変更なしはCLI引数・結果オブジェクト構造についての判定で、生成文書のIDと検査の受理条件は変わる（em-workflow/scripts/validate-worker-output.py:2807、em-workflow/scripts/validate-worker-output.py:2928）。変更200行・追加8ケースは概算で、検査対象を新規出力に限定する詳細とテスト配置は未確定
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 8
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  caller_and_dependency_count: 2
+  changes_external_contract: false
+  changes_behavior: true
+decided_at: '2026-11-03T01:15:10+09:00'
