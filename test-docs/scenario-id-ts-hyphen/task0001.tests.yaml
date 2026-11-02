@@ -1,0 +1,76 @@
+task_id: task0001
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> 13740 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation, pin refresh and this record: python3 -m unittest discover -s tests -> 13790 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckOnVerification.test_ac1_hyphenless_id_yields_exactly_one_error_naming_file_and_id
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckOnVerification.test_ac1_ids_are_listed_deduplicated_and_sorted
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckOnVerification.test_ac1_hyphenated_spelling_of_the_same_number_does_not_hide_the_error
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckOnVerification.test_ac1_an_id_outside_the_test_scenarios_section_is_found
+    red_confirmed: true
+    red_reason: "Run before the check existed: each of the four failed with AssertionError: 0 != 1 : [] (no scenario-id-form error was produced for a hyphen-less VERIFICATION.md)"
+  AC-2:
+    tests:
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckOnTaskPlans.test_ac2_hyphenless_id_in_a_plan_yields_one_error_naming_task_plan_and_id
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckOnTaskPlans.test_ac2_each_offending_plan_gets_its_own_error
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckOnTaskPlans.test_ac2_plan_ids_are_listed_deduplicated_and_sorted
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckOnTaskPlans.test_ac2_both_targets_are_reported_independently
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckOnTaskPlans.test_ac2_task_document_plan_is_exempt
+    red_confirmed: true
+    red_reason: "Run before the check existed: all five failed with AssertionError: 0 != 1 : [] (or 0 != 2 for the two-target case); in test_ac2_task_document_plan_is_exempt the TASK.md half (no scenario-id-form error) already held and the failure came from its control half, the same content under another file name"
+  AC-3:
+    tests:
+      - tests.test_validate_worker_output.TestHyphenlessScenarioIdFinder
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckOnVerification.test_ac3_documents_with_only_ignorable_occurrences_yield_no_error
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckOnVerification.test_ac3_documents_with_a_countable_occurrence_yield_an_error
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckOnTaskPlans.test_ac3_plans_with_only_ignorable_occurrences_yield_no_error
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckOnTaskPlans.test_ac3_plans_with_a_countable_occurrence_yield_an_error
+    red_confirmed: true
+    red_reason: "Run before the check existed: the finder tests errored with AttributeError (module has no attribute find_hyphenless_scenario_ids) and the countable-occurrence tests failed with AssertionError: 0 != 1 : [] for the inline code span, document start and after-Japanese-text cases, in both targets. The ignorable-occurrence tests (fenced block, HTML comment, ASCII letter or digit before TS) assert absence and passed before the check existed; each was observed to fail under a temporary mutation of the finished check (boundary condition removed, noise stripping removed) that was discarded."
+  AC-4:
+    tests:
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckScope.test_ac4_control_the_same_directory_is_rejected_for_a_completed_planner_result
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckScope.test_ac4_rework_planner_result_is_not_checked
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckScope.test_ac4_planner_result_with_another_status_is_not_checked
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckScope.test_ac4_validation_without_a_feature_directory_is_not_checked
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckScope.test_ac4_cli_without_feature_dir_exits_zero
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckScope.test_ac4_missing_verification_md_is_not_an_error
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckScope.test_ac4_plan_file_no_entry_names_is_not_read
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckScope.test_ac4_carried_task_plans_are_not_targets
+      - tests.test_validate_worker_output.TestFixtureCorpusDataDriven
+    red_confirmed: true
+    red_reason: "Run before the check existed: only the control test test_ac4_control_the_same_directory_is_rejected_for_a_completed_planner_result failed (AssertionError: 0 != 2 : []). The other tests assert absence of an error and passed before the check existed, so they carry no red of their own; against the finished check, a temporary mutation that dropped the worker condition made the rework-planner test fail, one that dropped the status condition made the other-status test fail, and one that dropped the feature-directory condition made the two no-feature-directory tests fail (all mutations discarded). TestFixtureCorpusDataDriven (the rework-planner fixtures whose baseline VERIFICATION.md is hyphen-less) passed at baseline and still passes with every exit code unchanged."
+  AC-5:
+    tests:
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckReadSafety.test_ac5_absolute_plan_path_is_not_read
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckReadSafety.test_ac5_plan_path_with_a_parent_segment_is_not_read
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckReadSafety.test_ac5_plan_that_is_a_symlink_is_not_read
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckReadSafety.test_ac5_plan_reached_through_a_symlinked_directory_is_not_read
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckReadSafety.test_ac5_oversized_or_missing_plan_is_left_to_the_existing_errors
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckReadSafety.test_ac5_verification_md_symlink_is_reported_and_not_followed
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckReadSafety.test_ac5_dangling_verification_md_symlink_is_reported
+    red_confirmed: true
+    red_reason: "Run before the check existed: the two VERIFICATION.md symlink tests failed with AssertionError: 0 != 1 : [] (no scenario-id-form error for a symlinked VERIFICATION.md). The plan-path tests assert absence of an error and passed before the check existed; against the finished check, a temporary mutation that skipped the containment helper made the absolute-path, parent-segment and symlinked-directory tests fail, and one that dropped the symlink classification of VERIFICATION.md made the two VERIFICATION.md symlink tests fail (mutations discarded)."
+  AC-6:
+    tests:
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckReadSafety.test_ac6_oversized_verification_md_is_reported_and_not_scanned
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckReadSafety.test_ac6_verification_md_of_exactly_the_limit_is_still_scanned
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckReadSafety.test_ac6_verification_md_directory_is_reported
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckReadSafety.test_ac6_verification_md_that_is_not_utf8_is_reported_and_not_scanned
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckReadSafety.test_ac6_cli_exits_one_not_two_for_each_unreadable_verification_md
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckReadSafety.test_check_does_not_raise_on_a_malformed_patch
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckCli
+    red_confirmed: true
+    red_reason: "Run before the check existed: the oversized, exact-limit, directory and not-UTF-8 tests failed with AssertionError: 0 != 1 : [], the CLI tests failed with AssertionError: 0 != 1 (exit 0, no scenario-id-form in stdout) for oversized, directory and not-UTF-8 VERIFICATION.md, and the malformed-patch subtests errored with AttributeError (no _validate_scenario_id_form)"
+  AC-7:
+    tests:
+      - tests.test_validate_worker_output.TestScenarioIdExtractionAcceptsBothForms
+      - tests.test_validate_worker_output.TestReworkIndexNoveltyWithBothScenarioIdForms
+      - tests.test_requirements_tests_replace
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_test_validate_worker_output_py_byte_identical
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_workflow_patch_md_byte_identical
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_pinned_validator_test_line_unchanged
+    red_confirmed: true
+    red_reason: "The two pin tests were observed failing with the pre-change pins against the changed validator and test module (a copy of tests/test_gate_option_vocabulary.py from HEAD, removed afterwards): AssertionError b29a553a... != 2a39e884... and 563cfbeb... != 3181b6ac.... The named extraction and novelty classes and tests/test_requirements_tests_replace.py are unchanged, passed at baseline and still pass; they guard behavior that pre-existed, so they have no red of their own. The workflow-patch pin and the pinned validator test line are untouched and still asserted."

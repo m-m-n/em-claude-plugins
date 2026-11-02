@@ -1337,8 +1337,19 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # status; the step_patches shape checks no longer raise on a malformed
     # `set` or `step_id`. PINNED_VALIDATOR_TEST_LINE below is unaffected and
     # still asserted. Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by scenario-id-ts-hyphen/task0001 (FR3): the new
+    # `find_hyphenless_scenario_ids` and `_validate_scenario_id_form` add the
+    # `scenario-id-form` check -- a completed implementation-planner result
+    # whose feature-directory VERIFICATION.md or newly planned task plans
+    # carry a hyphen-less (TSn) scenario ID is rejected -- called from
+    # `validate_worker_result`; `os` and `stat` are imported for its
+    # symlink-safe, size-capped read. The read grammar `_TS_ID_RE`,
+    # `extract_verification_scenario_ids` and `_strip_noise` are unchanged.
+    # PINNED_VALIDATOR_TEST_LINE below is unaffected and still asserted. Same
+    # rationale: refresh, don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "2a39e8849375a09b54690a3167e7f93132c7dd5103ef9666f665e7a52baab82c"
+        "b29a553a532bec7148b02383983811f21a7a220289f4fdeac435d69a6dbdaf79"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-
@@ -1427,8 +1438,18 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # that the rework_index novelty check treats both forms. PINNED_
     # VALIDATOR_TEST_LINE below is unaffected and still asserted. Same
     # rationale: refresh, don't remove.
+    #
+    # Refreshed again by scenario-id-ts-hyphen/task0001 (FR3):
+    # TestHyphenlessScenarioIdFinder, TestScenarioIdFormCheckOnVerification,
+    # TestScenarioIdFormCheckOnTaskPlans, TestScenarioIdFormCheckScope,
+    # TestScenarioIdFormCheckReadSafety and TestScenarioIdFormCheckCli are
+    # new, pinning the `scenario-id-form` check: what it rejects, that it runs
+    # only for a completed implementation-planner result with a feature
+    # directory, and that an unreadable VERIFICATION.md is reported instead of
+    # raising. PINNED_VALIDATOR_TEST_LINE below is unaffected and still
+    # asserted. Same rationale: refresh, don't remove.
     TEST_VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "3181b6ac44db62138b2627d82b2211c49958069167701e37bf4cba44ad39a49b"
+        "563cfbeb63a421be2bf26b8ade38d9f5557670bb25df360ccb02f39d09faf0ff"
     )
     FIXTURE_SHA256 = (
         "c8414e673876bb05dc9d35c571b35e255a53c185586d7bc876edf5aadd1f05f5"
