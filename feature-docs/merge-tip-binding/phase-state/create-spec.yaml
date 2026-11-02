@@ -1,7 +1,7 @@
 schema_version: 1
 feature: merge-tip-binding
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: 6122f1b1a9d26039f721a108b8289d179f648373
 last_input_digest: sha256:0c50c87aca4f0bb1421659fbac3e52e119f567d071c07ffd35069277c54d1de2
