@@ -1,0 +1,85 @@
+feature: scenario-id-ts-hyphen
+collected_at: '2026-11-03T03:19:36+09:00'
+session_ids:
+- 01a19d7b-c307-77d8-a329-a9f472c4bbef
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: description_plus_code の最終読みでバケット 2 の確率が 0.83（score 1.83）となり、閾値表に従って
+      full に決まった
+    bases:
+    - basis: description_only
+      score:
+        type: score
+        score: 1.29
+        confidence: 0.69
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread
+            across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to
+            an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+            or a change to the architecture.'
+        probabilities:
+          '0': 0.01
+          '1': 0.69
+          '2': 0.3
+          '3': 0.0
+      observed_at: '2026-11-03T01:09:47+09:00'
+    - basis: description_plus_code
+      score:
+        type: score
+        score: 1.83
+        confidence: 0.83
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread
+            across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to
+            an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+            or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.17
+          '2': 0.83
+          '3': 0.0
+      observed_at: '2026-11-03T01:14:29+09:00'
+    pre_survey_estimate:
+      files_expected:
+      - em-workflow/agents/spec-writer.md
+      - em-workflow/references/templates/spec-document.md
+      - em-workflow/skills/plan-writing/SKILL.md
+      - em-workflow/scripts/validate-worker-output.py
+      - em-workflow/references/contracts/planner-contract.md
+      - em-workflow/references/phases/create-plan-phase.md
+      - tests/test_validate_worker_output.py
+      - tests/test_gate_option_vocabulary.py
+      changed_lines_approx: 200
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: true
+      spillover_modules:
+      - em-workflow/references/contracts/planner-contract.md
+      - em-workflow/references/phases/create-plan-phase.md
+      - tests/test_gate_option_vocabulary.py
+      work_still_required: true
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 8
+      body_change_kind: new_logic
+      change_containment: multiple_modules
+      caller_and_dependency_count: 2
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+- review round 1 で medium 2 件が evaluator により low に下げられ findings から外れた（_strip_noise の未終端 <!-- に対する 2 乗時間、行頭を見ない囲み判定による行内三連バッククォート・~~~ ブロックの扱い）。どちらも後続タスク向き
+- 事前調査の files_expected に無かった spec-writer-contract.md・implementation-planner.md と、新規テスト 3 ファイルが計画で追加された

@@ -96,7 +96,8 @@ workflow:
   summary: "python3 -m unittest discover -s tests: 13932 tests OK (skipped=1). TS-1..TS-12 covered by passing tests; build/format/E2E not configured."
   completed_at_commit: e24c756142cb38ae019c7b2075e47dc160871f79
 - id: retrospect
-  status: pending
+  status: completed
+  completed_at_commit: 3c69b6e4d14f200c8cbead6687cd9946aec11c06
 tasks:
   task0001:
     title: "Validator check rejecting hyphen-less scenario IDs in planner output"
