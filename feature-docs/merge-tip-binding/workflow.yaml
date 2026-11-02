@@ -91,7 +91,7 @@ workflow:
   base_commit: 66d9b37690ee116d12a686756254df268f7978c5
   completed_at_commit: 7a3fd2d3a08a686f54d8254f0eb3fe92d4a87c9f
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
 - id: retrospect
@@ -129,6 +129,10 @@ tasks:
     branch: em-workflow/merge-tip-binding/task0002
 review:
   status: pending
+  plan:
+    floor: [comprehensive, security, performance, architecture, spec]
+    discretionary: []
+    cross_validation: true
 requirements:
   FR1:
     title: PR ルートのロック後の再判定は、その時点の先端で行う
