@@ -110,7 +110,7 @@ tasks:
     - NFR1
     - NFR2
     - NFR3
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/scenario-id-ts-hyphen/task0001
   task0002:
