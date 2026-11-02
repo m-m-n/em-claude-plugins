@@ -268,17 +268,29 @@ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/merge-git.py worktree-state --project-root
 
 ### 8. base の取り込み
 
+取り込むのは、integration worktree の HEAD が判定済みの先端と一致するときだけ。期待する先端を `--expected-head` に渡す。HEAD が異なれば、`integrate` は fetch もマージもせずに `verification_failed` で止まる。
+
+走行で最初に手順 8 へ来たときは、事前判定が読んだ `integration_tip` を渡す。
+
 Bash 呼び出し（timeout: 600000）:
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/scripts/merge-git.py integrate --project-root "<project_root>" --feature <feature> --base <base_branch>
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/merge-git.py integrate --project-root "<project_root>" --feature <feature> --base <base_branch> --expected-head <integration_tip>
 ```
 
-PR ルートでは、同じ呼び出しの末尾に `--remote <remote>` を付ける。
+手順 12 の `redo` から戻ったとき（手順 9 を通った後を含む）は、手順 10 が最後に検証した `head_sha` を渡す。
+
+Bash 呼び出し（timeout: 600000）:
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/merge-git.py integrate --project-root "<project_root>" --feature <feature> --base <base_branch> --expected-head <head_sha>
+```
+
+PR ルートでは、どちらの呼び出しでも末尾に `--remote <remote>` を付ける。
 
 - `merged_clean` / `up_to_date`: `integrated_base` を保持し、出力の `head` を `head_sha` とする。手順 10 へ。
 - `conflict`: `integrated_base` と `conflicted_paths`（リポジトリ相対）を保持して手順 9 へ。マージは進行中のまま、integration の先端は変わっていない。
-- `stop`（`git_failed`）: 終端。
+- `stop`（`git_failed` / `verification_failed`）: ロックを保持しているので、手順 14 で保持タスクを止めてから、その `reason` と `detail` をそのまま結果にして終端へ進む。
 
 ### 9. コンフリクトの解消
 
@@ -455,7 +467,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/merge-git.py base-check --project-root "<p
 PR ルートでは、同じ呼び出しの末尾に `--remote <remote>` を付ける。
 
 - `unchanged`: 手順 13 へ。
-- `redo`: base が動いた。`redo_count` に 1 を足して手順 8 へ戻る（ロックは持ったまま）。やり直しの上限は `base-check` が `redo_count` で判定する。数え方を自分で変えない。
+- `redo`: base が動いた。`redo_count` に 1 を足して手順 8 へ戻る（ロックは持ったまま。手順 8 の 2 つ目の形で、`head_sha` を渡す）。やり直しの上限は `base-check` が `redo_count` で判定する。数え方を自分で変えない。
 - `stop`（`base_moving` / `git_failed`）: 終端。
 
 ### 13. マージ
@@ -670,7 +682,7 @@ git worktree remove "<worktree_path>"
 | `lock_lost` | merge-lock verify | 6, 13 | スクリプトの `detail` |
 | `worktree_not_clean` | merge-git worktree-state | 7, 9 | スクリプトの `detail` |
 | `conflict_unattributable` | このスキル | 9 | 帰属できなかった最初のパス（リポジトリ相対） |
-| `verification_failed` | このスキル | 10, 13 | 手順 10: `component.field` と出力の要点。手順 13: `integration branch moved after verification` |
+| `verification_failed` | merge-git integrate / このスキル | 8, 10, 13 | 手順 8: `integration branch moved after preflight`。手順 10: `component.field` と出力の要点。手順 13: `integration branch moved after verification` |
 | `push_rejected` | このスキル | 5, 11 | `git push of the integration branch failed` と失敗の要点 |
 | `ci_failed` | merge-ci-wait | 11 | スクリプトの `detail`（チェック名） |
 | `ci_timeout` | merge-ci-wait | 11 | スクリプトの `detail` |

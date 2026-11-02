@@ -92,7 +92,7 @@ The set below is closed: no other code is written. `reason` is empty for
 | `lock_lost` | This run does not (or no longer) hold the merge lock | merge-lock verify |
 | `worktree_not_clean` | The integration worktree is dirty, on another branch, or inconsistently registered | merge-git worktree-state |
 | `conflict_unattributable` | A conflict cannot be attributed to a base-side feature with a readable spec | the skill |
-| `verification_failed` | A build, test or e2e command failed or timed out | the skill |
+| `verification_failed` | A build, test or e2e command failed or timed out, or the integration worktree HEAD before integration differs from the expected integration tip | the skill, merge-git integrate |
 | `push_rejected` | The push of the integration branch was rejected | the skill |
 | `ci_failed` | A pull request check failed or was cancelled | merge-ci-wait |
 | `ci_timeout` | Checks are still pending at the 60-minute deadline | merge-ci-wait |
