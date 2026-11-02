@@ -222,6 +222,22 @@ modify or delete files in the integration worktree (design-input.md
 capture through scope verification, and is not a permanent constraint on
 the plugin as a whole.
 
+## Scenario ID form
+
+New VERIFICATION.md files and new task plans written by the planner use the
+TS-n scenario ID form only. The rule text is owned by
+`skills/plan-writing/SKILL.md` (its scenario ID rule); this contract cites
+it and does not restate it.
+
+`scripts/validate-worker-output.py` rejects a `completed`
+`implementation-planner` result validated with `--feature-dir` when the
+feature directory's VERIFICATION.md or a task plan named by
+`tasks_patch.entries[].plan` (except a plan whose final path segment is
+`TASK.md`) contains a hyphen-less scenario ID outside fenced code blocks and
+HTML comments. The error code is `scenario-id-form`.
+
+`rework-planner` output is outside this check.
+
 ## Gate option vocabulary
 
 The option vocabulary a batch-policies.yaml `option_id` is checked against

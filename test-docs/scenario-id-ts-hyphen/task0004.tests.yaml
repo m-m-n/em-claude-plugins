@@ -1,0 +1,69 @@
+task_id: task0004
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> "Ran 13740 tests ... OK (skipped=1)" before any edit
+final_failures: []             # actual re-run after implementation (full suite incl. the new module and this record) -> "Ran 13791 tests ... OK (skipped=1)"
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_scenario_id_planner_docs.TestAC1ImplementedListBullet.test_bullet_names_every_required_element
+      - tests.test_scenario_id_planner_docs.TestAC1ImplementedListBullet.test_bullet_precedes_the_not_implemented_list
+      - tests.test_scenario_id_planner_docs.TestAC1ImplementedListBullet.test_not_implemented_list_does_not_hold_the_check
+      - tests.test_scenario_id_planner_docs.TestAC1ImplementedListBullet.test_matcher_rejects_pre_change_list
+      - tests.test_scenario_id_planner_docs.TestAC1ImplementedListBullet.test_matcher_rejects_bullet_missing_task_md_exclusion
+      - tests.test_scenario_id_planner_docs.TestAC1ImplementedListBullet.test_matcher_rejects_bullet_missing_rework_planner_statement
+    red_confirmed: true
+    red_reason: "Before the bullet existed: test_bullet_names_every_required_element failed with 'expected exactly one validator-implemented bullet naming `scenario-id-form`, found 0', and test_bullet_precedes_the_not_implemented_list errored with ValueError (substring `scenario-id-form` not found in create-plan-phase.md)."
+  AC-2:
+    tests:
+      - tests.test_scenario_id_planner_docs.TestAC2FeatureDirParagraphAndUnchangedParts.test_feature_dir_clause_lists_the_check_with_a_matching_count
+      - tests.test_scenario_id_planner_docs.TestAC2FeatureDirParagraphAndUnchangedParts.test_section_heading_line_unchanged
+      - tests.test_scenario_id_planner_docs.TestAC2FeatureDirParagraphAndUnchangedParts.test_not_implemented_list_unchanged
+      - tests.test_scenario_id_planner_docs.TestAC2FeatureDirParagraphAndUnchangedParts.test_canonical_invocation_block_unchanged
+      - tests.test_scenario_id_planner_docs.TestAC2FeatureDirParagraphAndUnchangedParts.test_clause_matcher_rejects_pre_change_paragraph
+      - tests.test_scenario_id_planner_docs.TestAC2FeatureDirParagraphAndUnchangedParts.test_clause_matcher_rejects_a_count_that_does_not_match_the_list
+    red_confirmed: true
+    red_reason: "Before the paragraph edit: test_feature_dir_clause_lists_the_check_with_a_matching_count failed with \"the skipped checks do not include the scenario-ID form check: ['Acceptance-Criteria', 'files-union', 'Shared-Components']\". The three pin tests (heading line, not-implemented list, canonical invocation block) guard parts that must stay identical, so they passed on the base revision by design; the red observed is for the changed clause."
+  AC-3:
+    tests:
+      - tests.test_scenario_id_planner_docs.TestAC3PlannerStep5Statement.test_step5_states_ts_n_only_cites_rule_and_rejection
+      - tests.test_scenario_id_planner_docs.TestAC3PlannerStep5Statement.test_statement_names_the_validator
+      - tests.test_scenario_id_planner_docs.TestAC3PlannerStep5Statement.test_matcher_rejects_pre_change_step5
+      - tests.test_scenario_id_planner_docs.TestAC3PlannerStep5Statement.test_matcher_rejects_statement_without_rejection
+    red_confirmed: true
+    red_reason: "Before the step 5 statement existed: both positive tests failed with 'expected exactly one step 5 paragraph citing the scenario ID rule, found 0'."
+  AC-4:
+    tests:
+      - tests.test_scenario_id_planner_docs.TestAC4PlannerPinnedSurfaces.test_gate_option_vocabulary_section_byte_identical
+      - tests.test_scenario_id_planner_docs.TestAC4PlannerPinnedSurfaces.test_step_headings_unchanged
+      - tests.test_scenario_id_planner_docs.TestAC4PlannerPinnedSurfaces.test_heading_pin_detects_a_renamed_or_removed_heading
+      - tests.test_threat_model_planner_agent.TestAC5ExistingFilesWrittenArtifactsAndGateIds.test_gate_option_vocabulary_table_byte_identical
+    red_confirmed: false
+    red_reason: "The criterion is an invariant (nothing may change), so the pins held on the base revision and no red state occurred. The existing tests.test_threat_model_planner_agent pin detects the same vocabulary-section change; the new module adds the step-heading pin. Each pin is shown able to fail by its negative-proof test (mutated section digest differs; renamed or removed heading changes the heading list)."
+  AC-5:
+    tests:
+      - tests.test_scenario_id_planner_docs.TestAC5ContractSection.test_section_states_requirement_rejection_and_scope
+      - tests.test_scenario_id_planner_docs.TestAC5ContractSection.test_existing_headings_unchanged_apart_from_the_new_section
+      - tests.test_scenario_id_planner_docs.TestAC5ContractSection.test_gate_option_vocabulary_section_byte_identical
+      - tests.test_scenario_id_planner_docs.TestAC5ContractSection.test_gate_id_set_unchanged
+      - tests.test_scenario_id_planner_docs.TestAC5ContractSection.test_matcher_rejects_pre_change_contract_excerpt
+      - tests.test_scenario_id_planner_docs.TestAC5ContractSection.test_matcher_rejects_section_placed_after_the_vocabulary
+      - tests.test_scenario_id_planner_docs.TestAC5ContractSection.test_matcher_rejects_section_without_rework_planner_scope
+    red_confirmed: true
+    red_reason: "Before the section existed: test_section_states_requirement_rejection_and_scope and test_existing_headings_unchanged_apart_from_the_new_section failed with 'expected exactly one `##` section naming `scenario-id-form`, found 0'. The vocabulary digest and gate_id set tests are invariants and passed on the base revision by design."
+  AC-6:
+    tests:
+      - tests.test_scenario_id_planner_docs.TestAC6NoHyphenlessIdInTheDocuments.test_phase_document_has_none
+      - tests.test_scenario_id_planner_docs.TestAC6NoHyphenlessIdInTheDocuments.test_planner_agent_has_none
+      - tests.test_scenario_id_planner_docs.TestAC6NoHyphenlessIdInTheDocuments.test_planner_contract_has_none
+      - tests.test_scenario_id_planner_docs.TestAC6NoHyphenlessIdInTheDocuments.test_rule_fires_on_a_plain_hyphenless_id
+      - tests.test_scenario_id_planner_docs.TestAC6NoHyphenlessIdInTheDocuments.test_rule_fires_inside_an_inline_code_span
+      - tests.test_scenario_id_planner_docs.TestAC6NoHyphenlessIdInTheDocuments.test_rule_fires_after_a_non_ascii_character
+      - tests.test_scenario_id_planner_docs.TestAC6NoHyphenlessIdInTheDocuments.test_rule_does_not_fire_after_an_ascii_letter_or_digit
+      - tests.test_scenario_id_planner_docs.TestAC6NoHyphenlessIdInTheDocuments.test_rule_skips_fenced_code_blocks_and_html_comments
+    red_confirmed: false
+    red_reason: "The three documents held no hyphen-less scenario ID on the base revision, so the three whole-file tests passed before any edit; no red state occurred for this invariant. The detection rule's own tests show it firing on forged hyphen-less samples (plain, start of text, inline code span, after a non-ASCII character) and not firing on the hyphenated form, after an ASCII letter or digit, or inside fenced code blocks and HTML comments."
+  AC-7:
+    tests:
+      - tests.test_scenario_id_planner_docs.TestAC7ModuleHygiene.test_module_imports_the_standard_library_only
+      - tests.test_scenario_id_planner_docs.TestAC7ModuleHygiene.test_all_three_documents_exist_and_are_non_empty
+    red_confirmed: false
+    red_reason: "The criterion is met by the new module existing with AC-1 to AC-6 assertions plus negative proofs, and by the full-suite run (python3 -m unittest discover -s tests) passing; there is no prior state in which the stdlib-only and file-presence checks could fail, so no red state occurred. The red/green evidence of AC-1 to AC-6 is the evidence for the module's content assertions."

@@ -297,6 +297,16 @@ to every invariant that would be desirable:
   Components` section. This is a deliberate approximation of "a shared
   contract exists where one is needed" (same-file overlap is neither
   necessary nor sufficient for that), not a defect to fix in this task.
+- Scenario-ID form of the documents a `completed` `implementation-planner`
+  result newly writes — **only when `--feature-dir` is supplied**; silently
+  skipped, not failed, when omitted: the feature directory's VERIFICATION.md
+  and every task plan named by `tasks_patch.entries[].plan` (except a plan
+  whose final path segment is `TASK.md`) contain no hyphen-less scenario ID
+  outside fenced code blocks and HTML comments. A violation is reported with
+  the error code `scenario-id-form`. The check runs for the `completed`
+  status only, and `rework-planner` output is not checked. The authoring rule
+  is owned by `skills/plan-writing/SKILL.md` (its scenario ID rule) and is
+  not restated here.
 
 The following are named as planning invariants but are **not implemented
 by the script** — they remain human review only, with no automated gate
@@ -339,9 +349,9 @@ exits 2 without it. `--workflow`, `--registries`, `--feature-dir` and
 one that is omitted here silently narrows validation rather than failing loudly:
 dropping `--workflow` skips the requirement-existence check, dropping
 `--registries` skips the vocabulary check, dropping `--feature-dir` skips
-the Acceptance-Criteria, files-union and Shared-Components checks together
-(all three are read from the task plan and IMPLEMENTATION.md files under
-`--feature-dir`), and dropping `--phase-state` skips the
+the Acceptance-Criteria, files-union, Shared-Components and scenario-ID form
+checks together (all four are read from the task plan, IMPLEMENTATION.md and
+VERIFICATION.md files under `--feature-dir`), and dropping `--phase-state` skips the
 duplicate-patch-identifier idempotency check. Running anything less than the
 invocation above is a coverage regression, not a smaller valid invocation.
 
