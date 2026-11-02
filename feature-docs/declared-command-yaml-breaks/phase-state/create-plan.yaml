@@ -46,7 +46,11 @@ artifacts:
 - path: feature-docs/declared-command-yaml-breaks/tasks/task0002.md
   sha256: sha256:154a8d1c96a0d7cfd657c68e2cbab29b9e31943f81897cacaafb423216b5102f
   produced_by: create-plan-run-0001
-patches: []
+patches:
+- patch_id: declared-command-yaml-breaks-plan-p0001
+  status: applied
+  base_input_digest: sha256:64c158d6274c3121f8f07a97ddce657d1122da5c6745740e673d168e9ac2450b
+  base_workflow_blob: 42f3e404428f92ec0a42bd92b4df129adebdf862
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
