@@ -91,7 +91,8 @@ workflow:
   base_commit: 66d9b37690ee116d12a686756254df268f7978c5
   completed_at_commit: 7a3fd2d3a08a686f54d8254f0eb3fe92d4a87c9f
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 206493fb7db2aaf7d57e78a38ade49852d2fc885
 - id: verify
   status: pending
 - id: retrospect
@@ -128,7 +129,11 @@ tasks:
     status: merged
     branch: em-workflow/merge-tip-binding/task0002
 review:
-  status: pending
+  status: completed
+  rounds_completed: 1
+  perspectives: [comprehensive, security, performance, architecture, spec]
+  residual_critical_high: 0
+  needs_rework: false
   plan:
     floor: [comprehensive, security, performance, architecture, spec]
     discretionary: []
