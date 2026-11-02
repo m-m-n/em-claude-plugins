@@ -87,7 +87,8 @@ workflow:
   base_commit: 4f91e753e7d28728937e9dedcba5f240745b5318
   completed_at_commit: 7aebf7aadc3b375e4e1fde198fe66f1adf33ce7e
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 704e27ab240923c2525c46712ed44b9ec3b97ae5
 - id: verify
   status: pending
 - id: retrospect
@@ -166,7 +167,15 @@ tasks:
     notes: null
     branch: em-workflow/scenario-id-ts-hyphen/task0004
 review:
-  status: pending
+  status: completed
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  residual_critical_high: 0
+  needs_rework: false
   plan:
     floor:
     - comprehensive
