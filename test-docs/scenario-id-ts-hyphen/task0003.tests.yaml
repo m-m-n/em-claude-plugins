@@ -1,0 +1,65 @@
+task_id: task0003
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests before any edit -> 13740 tests, OK (skipped=1)
+final_failures: []             # re-executed after the SKILL.md edit and this record: python3 -m unittest discover -s tests
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_scenario_id_plan_writing_rule.TestAc1TsNOnly.test_ac1_new_verification_and_task_plans_use_only_ts_n
+      - tests.test_scenario_id_plan_writing_rule.TestAc1TsNOnly.test_ac1_negative_proof_pre_change_block_is_rejected
+      - tests.test_scenario_id_plan_writing_rule.TestAc1TsNOnly.test_ac1_negative_proof_task_plans_are_required
+    red_confirmed: true
+    red_reason: "AssertionError: False is not true in test_ac1_new_verification_and_task_plans_use_only_ts_n against the unmodified SKILL.md; the base rule block says only 'New VERIFICATION.md files use the TS-n form' and names neither task plans nor 'only'"
+  AC-2:
+    tests:
+      - tests.test_scenario_id_plan_writing_rule.TestAc2TsnOnlyWhenReading.test_ac2_tsn_form_is_valid_only_when_an_existing_document_is_read
+      - tests.test_scenario_id_plan_writing_rule.TestAc2TsnOnlyWhenReading.test_ac2_no_sentence_grants_the_tsn_form_without_the_qualifier
+      - tests.test_scenario_id_plan_writing_rule.TestAc2TsnOnlyWhenReading.test_ac2_the_unqualified_sentence_is_gone
+      - tests.test_scenario_id_plan_writing_rule.TestAc2TsnOnlyWhenReading.test_ac2_negative_proof_pre_change_block_is_rejected
+      - tests.test_scenario_id_plan_writing_rule.TestAc2TsnOnlyWhenReading.test_ac2_negative_proof_pre_change_text_is_found_by_the_grant_matcher
+      - tests.test_scenario_id_plan_writing_rule.TestAc2TsnOnlyWhenReading.test_ac2_negative_proof_grant_matcher_finds_other_wordings
+      - tests.test_scenario_id_plan_writing_rule.TestAc2TsnOnlyWhenReading.test_ac2_negative_proof_grant_matcher_accepts_qualified_and_unrelated
+      - tests.test_scenario_id_plan_writing_rule.TestAc2TsnOnlyWhenReading.test_ac2_negative_proof_positive_matcher_needs_the_qualifier
+    red_confirmed: true
+    red_reason: "Three tests failed against the unmodified SKILL.md: test_ac2_tsn_form_is_valid_only_when_an_existing_document_is_read (AssertionError: False is not true), test_ac2_no_sentence_grants_the_tsn_form_without_the_qualifier (the list held the base sentence 'is also a valid scenario ID, and ... recognizes it'), test_ac2_the_unqualified_sentence_is_gone ('is also a valid scenario id' found in the text)"
+  AC-3:
+    tests:
+      - tests.test_scenario_id_plan_writing_rule.TestAc3ExistingStatementsKept.test_ac3_only_two_scenario_id_forms_is_kept
+      - tests.test_scenario_id_plan_writing_rule.TestAc3ExistingStatementsKept.test_ac3_literal_comparison_with_distinct_13_examples_is_kept
+      - tests.test_scenario_id_plan_writing_rule.TestAc3ExistingStatementsKept.test_ac3_negative_proof_matchers_reject_a_block_without_the_statements
+      - tests.test_scenario_id_plan_writing_rule.TestAc3ExistingStatementsKept.test_ac3_negative_proof_literal_comparison_needs_both_spellings
+      - tests.test_scenario_id_plan_writing_rule.TestAc3ExistingStatementsKept.test_ac3_both_statements_pre_existed_in_the_pre_change_block
+    red_confirmed: false
+    red_reason: "Retention criterion: the base revision already carried both statements (only two scenario ID forms; TS13 and TS-13 compared as distinct literal strings), so the positive tests passed before any edit and no red state occurred. The matchers are shown rejecting a block that lacks the statements (negative proof). Searched tests/ by the path em-workflow/skills/plan-writing/SKILL.md and by the basename SKILL.md: the existing tests that read this file (test_plan_version_plan_writing and others) do not read a scenario ID rule, so the new module is the only covering test"
+  AC-4:
+    tests:
+      - tests.test_scenario_id_plan_writing_rule.TestAc4LegacySpecMapping.test_ac4_hyphen_less_spec_maps_to_same_numbers_in_ts_n_form
+      - tests.test_scenario_id_plan_writing_rule.TestAc4LegacySpecMapping.test_ac4_negative_proof_pre_change_block_is_rejected
+      - tests.test_scenario_id_plan_writing_rule.TestAc4LegacySpecMapping.test_ac4_negative_proof_both_halves_are_required
+    red_confirmed: true
+    red_reason: "AssertionError: False is not true in test_ac4_hyphen_less_spec_maps_to_same_numbers_in_ts_n_form against the unmodified SKILL.md; the base rule block has no statement about a SPEC.md that uses the hyphen-less form"
+  AC-5:
+    tests:
+      - tests.test_scenario_id_plan_writing_rule.TestAc5ValidatorRejection.test_ac5_hyphen_less_id_anywhere_gets_the_planner_result_rejected
+      - tests.test_scenario_id_plan_writing_rule.TestAc5ValidatorRejection.test_ac5_negative_proof_pre_change_block_is_rejected
+      - tests.test_scenario_id_plan_writing_rule.TestAc5ValidatorRejection.test_ac5_negative_proof_every_element_is_required
+    red_confirmed: true
+    red_reason: "AssertionError: False is not true in test_ac5_hyphen_less_id_anywhere_gets_the_planner_result_rejected against the unmodified SKILL.md; the base rule block never says a hyphen-less ID outside fenced code blocks and HTML comments gets the implementation-planner result rejected"
+  AC-6:
+    tests:
+      - tests.test_scenario_id_plan_writing_rule.TestAc6Checklist.test_ac6_checklist_requires_ts_n_only_scenario_ids
+      - tests.test_scenario_id_plan_writing_rule.TestAc6Checklist.test_ac6_every_base_revision_checklist_item_is_still_present_unchanged
+      - tests.test_scenario_id_plan_writing_rule.TestAc6Checklist.test_ac6_negative_proof_base_checklist_has_no_such_item
+      - tests.test_scenario_id_plan_writing_rule.TestAc6Checklist.test_ac6_negative_proof_item_matcher_needs_every_element
+      - tests.test_scenario_id_plan_writing_rule.TestAc6Checklist.test_ac6_negative_proof_subset_check_detects_a_removed_item
+      - tests.test_scenario_id_plan_writing_rule.TestAc6Checklist.test_ac6_negative_proof_subset_check_detects_a_changed_item
+      - tests.test_scenario_id_plan_writing_rule.TestAc6Checklist.test_ac6_negative_proof_subset_check_accepts_the_pre_change_checklist
+    red_confirmed: true
+    red_reason: "AssertionError: False is not true in test_ac6_checklist_requires_ts_n_only_scenario_ids against the unmodified SKILL.md; the base checklist has no item requiring TS-n-only scenario IDs. test_ac6_every_base_revision_checklist_item_is_still_present_unchanged is a retention check and passed before the edit"
+  AC-7:
+    tests:
+      - tests.test_scenario_id_plan_writing_rule.TestAc7BlockLocation.test_ac7_block_sits_between_template_end_and_checklist_heading
+      - tests.test_scenario_id_plan_writing_rule.TestAc7BlockLocation.test_ac7_pre_change_block_is_located_from_the_embedded_document
+      - tests.test_scenario_id_plan_writing_rule.TestAc7BlockLocation.test_ac7_negative_proof_locator_rejects_missing_or_duplicated_anchors
+      - tests.test_scenario_id_plan_writing_rule.TestAc7BlockLocation.test_ac7_negative_proof_template_headings_in_the_fence_are_not_anchors
+    red_confirmed: false
+    red_reason: "The deliverable of AC-7 is the new test module itself, which did not exist before this task, so there is no earlier state of these checks to watch fail. The module's AC-1, AC-2, AC-4, AC-5 and AC-6 assertions were observed failing against the unmodified SKILL.md (see those criteria). The locator and negative-proof tests listed here exercise the embedded pre-change text and passed on their first run. The full-suite pass is verified by running python3 -m unittest discover -s tests"
