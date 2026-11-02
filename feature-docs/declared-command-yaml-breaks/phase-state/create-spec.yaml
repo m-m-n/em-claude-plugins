@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 2140004fccb7d131aebebc02d21ea22c76667b0f
 last_input_digest: sha256:251ccd1c444c44d1f86e98222dc1d4b17a92b7a34cc0a33159370006ca802248
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets: {}
 answers:
   create-spec.feature-identity:
@@ -81,13 +81,18 @@ worker_runs:
     tests/test_bash_guard_unicode_whitespace.py: sha256:201bad19a2b8a79bced9e0ac28e056fd20adf4b0084ebc65af2189c820bf1586
   self_write_set: []
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:251ccd1c444c44d1f86e98222dc1d4b17a92b7a34cc0a33159370006ca802248
   output_digest: null
   dispatch_digest_inputs:
     em-workflow/references/contracts/spec-writer-contract.md: sha256:9032c6287d75f4a88e556bd3962c32ab8b4905cf3b6ececa895206788bcd0b63
     em-workflow/references/templates/spec-document.md: sha256:203dfcddbe507886ce861694fccd20ae25e5af0bd1b0efa5e935991add950cbd
-artifacts: []
+  self_write_set:
+  - feature-docs/declared-command-yaml-breaks/SPEC.md
+artifacts:
+- path: feature-docs/declared-command-yaml-breaks/SPEC.md
+  sha256: sha256:0c2faa3e7afa0b4293751334f26560ad5bad6588ea759c3dc238d62b9072a115
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
