@@ -1,0 +1,74 @@
+schema_version: 1
+feature: scenario-id-ts-hyphen
+phase: create-spec
+status: in_progress
+generation: 1
+base_revision: 6afcdc71d5e0d842434df6e6bc697785f286270d
+last_input_digest: sha256:f2a28d8594893d798daa7ec49fe622d5b0738da199929fd05c5702a66e2ebf0b
+active_request_id: create-spec-run-0001
+packets: {}
+answers:
+  create-spec.feature-identity:
+    packet_id: null
+    answered_at: '2026-11-03T01:17:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - derive_from_task_description
+    freeform: null
+    normalized_answer: 'feature name derived from the task description: scenario-id-ts-hyphen'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:f2a28d8594893d798daa7ec49fe622d5b0738da199929fd05c5702a66e2ebf0b
+  output_digest: null
+  dispatch_digest_inputs:
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    em-workflow/agents/implementation-planner.md: sha256:44a212a4a1f46814eef855a85d2cc27430e91f2075b9d94dbba0d1bd8a6827f1
+    em-workflow/agents/spec-writer.md: sha256:82f6d568dabc85bfb3780b33fc4846068a668afb39ac3c70645c179a50cfa158
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
+    em-workflow/references/contracts/planner-contract.md: sha256:6476cc99ea8a1d2d4f376d1702bd636b1ab9898655397ec80ab1d6fb47cbe9e8
+    em-workflow/references/contracts/spec-writer-contract.md: sha256:9032c6287d75f4a88e556bd3962c32ab8b4905cf3b6ececa895206788bcd0b63
+    em-workflow/references/phases/create-plan-phase.md: sha256:590834254ab8f9e742fd9383d5decbe1b5bf02e113a4a58327d1cc660e35ea58
+    em-workflow/references/rework-task-synthesis.md: sha256:5e5f5c4e49f6b0c6b6db874a3d8005ee58722a7f3a9a4fab45977a74d94167d4
+    em-workflow/references/templates/spec-document.md: sha256:203dfcddbe507886ce861694fccd20ae25e5af0bd1b0efa5e935991add950cbd
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/references/workflow-patch.md: sha256:9df879b81ea806447ea2da88ca26f96b282ee78da2e4b607aea3e7c8a657e5b9
+    em-workflow/references/workflow-schema.md: sha256:3f14dea83919415634fac7006dd66c3f2c8b4a1b8b75c9889bcabc61072b36fe
+    em-workflow/scripts/validate-worker-output.py: sha256:2a39e8849375a09b54690a3167e7f93132c7dd5103ef9666f665e7a52baab82c
+    em-workflow/skills/plan-writing/SKILL.md: sha256:880bd01ad6c60af5695495e0a6784de7fe98e1ea9463dc6703164f8ffffdbccb
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+    tests/test_gate_option_vocabulary.py: sha256:1a94542e9f9b7681dd5e30ea4a1f13096af3e89ede5e0e93c6cc3306e8ce7b03
+    tests/test_requirements_tests_replace.py: sha256:26e468ae90d61f531c862d682d777b76dd26877c86c8a7a3ee4e6f98b6dbd272
+    tests/test_validate_worker_output.py: sha256:3181b6ac44db62138b2627d82b2211c49958069167701e37bf4cba44ad39a49b
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache:
+  design_system_candidates:
+    resolved_at_generation: 1
+    paths: []
+    truncated: false
+  e2e:
+    resolved_at_generation: 1
+    paths: []
+  reference_scan_targets:
+    resolved_at_generation: 1
+    paths:
+    - em-workflow/agents/spec-writer.md
+    - em-workflow/agents/implementation-planner.md
+    - em-workflow/references/templates/spec-document.md
+    - em-workflow/references/templates/task-plan.md
+    - em-workflow/skills/plan-writing/SKILL.md
+    - em-workflow/scripts/validate-worker-output.py
+    - em-workflow/references/contracts/planner-contract.md
+    - em-workflow/references/contracts/spec-writer-contract.md
+    - em-workflow/references/phases/create-plan-phase.md
+    - em-workflow/references/rework-task-synthesis.md
+    - em-workflow/references/workflow-schema.md
+    - em-workflow/references/workflow-patch.md
+    - tests/test_validate_worker_output.py
+    - tests/test_gate_option_vocabulary.py
+    - tests/test_requirements_tests_replace.py
+last_error: null
