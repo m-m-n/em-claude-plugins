@@ -55,7 +55,7 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash, TaskStop
 
 走行の間だけ手元に持つ値（ファイルには書かない）。
 
-`feature`、`project_root`、`worktree_path`、`base_branch`、`commands`、`integration_tip`（事前判定が読んだ先端。手順 5 の `resolve` に渡す）、`route`（`local` / `pr`）、`remote`、`repo`（`HOST/OWNER/NAME`。手順 5.1 が返す値で、以降の `--repo` にそのまま渡す）、`pr_number`、`pr_url`、`head_sha`、`integrated_base`、`redo_count`（0 から数える）、`lock_token`、`hold_task_id`、`merge_commit`。
+`feature`、`project_root`、`worktree_path`、`base_branch`、`commands`、`integration_tip`（事前判定が読んだ先端。手順 5 の `resolve` に渡す。手順 8 の取り込みで期待する HEAD としても使う。上書きしない）、`locked_tip`（手順 6.4 の PR ルートが、ロックを取った後に読んだ integration ブランチの先端。手順 6.4 の `resolve` にだけ渡す）、`route`（`local` / `pr`）、`remote`、`repo`（`HOST/OWNER/NAME`。手順 5.1 が返す値で、以降の `--repo` にそのまま渡す）、`pr_number`、`pr_url`、`head_sha`、`integrated_base`、`redo_count`（0 から数える）、`lock_token`、`hold_task_id`、`merge_commit`。
 
 ## 手順
 
@@ -198,7 +198,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/merge-git.py main-tree --project-root "<pr
 
    - `held`: 下の 4 へ。
    - `stop`（`lock_busy` / `lock_lost`）: `hold_task_id` のタスクを TaskStop で止めてから終端へ進む。他の走行がロックを持っているときは待たない。再試行は呼び出し側に任せる。
-4. `held` を得たら、手順 7 の前に、マージ済みかを判定し直す。先端は手順 4 / 5.2 と同じ `integration_tip`。
+4. `held` を得たら、手順 7 の前に、マージ済みかを判定し直す。ローカルルートの `merge-git.py merged` は、呼んだ時点の integration ブランチの先端で判定する。PR ルートは、ロックを取った後に読み直した `locked_tip` で判定する。
 
    ローカルルート（手順 4 と同じ呼び出し）。
 
@@ -208,12 +208,30 @@ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/merge-git.py main-tree --project-root "<pr
    python3 ${CLAUDE_PLUGIN_ROOT}/scripts/merge-git.py merged --project-root "<project_root>" --feature <feature> --base <base_branch>
    ```
 
-   PR ルート（手順 5.2 と同じ呼び出し。`--integration-tip` には `integration_tip` を渡す）。
+   PR ルート。まず作業ディレクトリをプロジェクトルートにする。
+
+   Bash 呼び出し（timeout: 60000）:
+
+   ```bash
+   cd "<project_root>"
+   ```
+
+   ロックを取った後の integration ブランチの先端を読む。
+
+   Bash 呼び出し（timeout: 60000）:
+
+   ```bash
+   git rev-parse --verify refs/heads/em-workflow/<feature>/integration
+   ```
+
+   読んだ出力の末尾の改行を除いた値が、40 桁の小文字 16 進のちょうどであるときだけ `locked_tip` として保持する。git が失敗したとき、またはそれ以外の値のときは、手順 14 で保持タスクを止めてから、`internal_error` で終端へ進む。`integration_tip` は上書きしない。
+
+   手順 5.2 と同じ呼び出し。`--integration-tip` には `locked_tip` を渡す。
 
    Bash 呼び出し（timeout: 600000）:
 
    ```bash
-   python3 ${CLAUDE_PLUGIN_ROOT}/scripts/merge-pr.py resolve --project-root "<project_root>" --repo <repo> --feature <feature> --base <base_branch> --integration-tip <integration_tip>
+   python3 ${CLAUDE_PLUGIN_ROOT}/scripts/merge-pr.py resolve --project-root "<project_root>" --repo <repo> --feature <feature> --base <base_branch> --integration-tip <locked_tip>
    ```
 
    - `merged`（ローカル / PR）: 「マージ済みの経路」へ進む。経路の 1 が、先に手順 14 で保持タスクを止める。PR ルートでは `pr_url` と `merge_commit` を保持する。結果は `already_merged`。
