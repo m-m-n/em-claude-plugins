@@ -64,3 +64,43 @@ records:
   resolution_note: 'gate: create-spec.requirement-clarification; analyst assumptions A1-A5 reviewed by orchestrator; codex_consulted:
     true (harness entry: codex, 1 turn, 5 questions in one prompt); Codex chose opt_a for Q1-Q5, matching the analyst tentative
     positions; orchestrator mapped each to the analyst assumption; opus_escalation: not run'
+- question_id: create-plan.open-point-check-status-scope
+  packet_id: null
+  answered_at: '2026-11-03T01:45:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - completed_only
+  freeform: null
+  normalized_answer: the hyphen-less ID check runs on completed planner results only (IMPLEMENTATION.md D1)
+  resolution_note: 'gate: unlisted (planner open point 1); options: completed_only / every_status; codex_consulted: true (1 turn, 4 points in one prompt); key point: checking needs_user_input results would reject on stale legacy files and stall the question loop; opus_escalation: not run'
+- question_id: create-plan.open-point-stale-verification
+  packet_id: null
+  answered_at: '2026-11-03T01:45:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - accept_as_planned
+  freeform: null
+  normalized_answer: check the feature-dir VERIFICATION.md regardless of written_artifacts, as planned
+  resolution_note: 'gate: unlisted (planner open point 2); options: accept_as_planned / limit_to_written_artifacts; codex_consulted: true; key point: SPEC FR3 names the feature-dir VERIFICATION.md, and limiting to written_artifacts lets an omission bypass the check; opus_escalation: not run'
+- question_id: create-plan.open-point-edge-case-ids
+  packet_id: null
+  answered_at: '2026-11-03T01:45:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - number_edge_cases
+  freeform: null
+  normalized_answer: spec-document.md Edge Cases items also carry TS-n IDs; orchestrator amended tasks/task0002.md Design and AC-3 accordingly after recording the planner artifacts
+  resolution_note: 'gate: unlisted (planner open point 3); options: keep_planner_choice (Edge Cases unnumbered) / number_edge_cases; codex_consulted: true; key point: SPEC FR1 asks every scenario in Test Scenarios to be numbered and does not exclude Edge Cases; opus_escalation: not run'
+- question_id: create-plan.open-point-unsafe-file-errors
+  packet_id: null
+  answered_at: '2026-11-03T01:45:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - accept_as_planned
+  freeform: null
+  normalized_answer: symlink / non-regular / oversized / non-UTF-8 VERIFICATION.md are reported as scenario-id-form errors with the cause in the message (TM-1, TM-2)
+  resolution_note: 'gate: unlisted (planner open point 4); options: accept_as_planned / change; codex_consulted: true; key point: the new read needs a safe refusal and the message states the cause; opus_escalation: not run'
