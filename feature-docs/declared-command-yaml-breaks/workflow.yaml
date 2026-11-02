@@ -126,7 +126,7 @@ tasks:
     - NFR4
     - NFR5
     - NFR6
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/declared-command-yaml-breaks/task0001
   task0002:
