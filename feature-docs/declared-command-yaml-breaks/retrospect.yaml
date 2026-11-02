@@ -1,0 +1,84 @@
+feature: declared-command-yaml-breaks
+collected_at: '2026-11-02T10:12:01+09:00'
+session_ids:
+- 01a199ce-eb12-753d-960c-3669487ec22b
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: description_plus_code の最終読みでバケット 1 の確率が 0.90（score 1.1）となり、閾値表に従って
+      reduced に決まった
+    bases:
+    - basis: description_only
+      score:
+        type: score
+        score: 1.03
+        confidence: 0.97
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread
+            across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to
+            an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+            or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.97
+          '2': 0.03
+          '3': 0.0
+      observed_at: '2026-11-02T08:57:48+09:00'
+    - basis: description_plus_code
+      score:
+        type: score
+        score: 1.1
+        confidence: 0.89
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread
+            across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to
+            an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+            or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.9
+          '2': 0.09
+          '3': 0.01
+      observed_at: '2026-11-02T09:00:07+09:00'
+    pre_survey_estimate:
+      files_expected:
+      - em-workflow/hooks/bash_guard.py
+      - tests/test_bash_guard_unicode_whitespace.py
+      - feature-docs/approval-unicode-whitespace/SPEC.md
+      - feature-docs/approval-unicode-whitespace/THREAT-MODEL.md
+      changed_lines_approx: 40
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: false
+      spillover_modules: []
+      work_still_required: true
+      work_still_required_evidence: 現在の main でも em-workflow/hooks/bash_guard.py:211
+        はスペースとタブだけを除いた値を宣言集合に追加し、同ファイル:511 は宣言・承認に一致しない値を判定なしで終了する。tests/test_bash_guard_unicode_whitespace.py:149
+        の宣言生成と同ファイル:391 の検証は文字列を直接使用しており、引用符内の実際の U+0085 を YAML 解析して渡す回帰テストはない。同ファイル:418
+        と同ファイル:422 の silent 期待も残っている。feature-docs/approval-unicode-whitespace/reviews/round1.yaml:71
+        は宣言集合の追加、回帰テスト、FR8・TM-5 の追記を提案し、同ファイル:78 は unresolved を記録している。呼出元・依存数は hook_main
+        1 個（em-workflow/hooks/bash_guard.py:501）と既存補助関数2個（同ファイル:207、同ファイル:211）を数えた。変更行数と追加テスト数は未実装のため保守的な概算
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 1
+      body_change_kind: new_logic
+      change_containment: single_function
+      caller_and_dependency_count: 3
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+- 'review round 1 の medium（stable_id 99609d9a91a78c9d）: FR1 が宣言集合に足す形を 2 つに限ったため、端の改行文字が混在・連続する宣言では
+  YAML 解析後の形が漏れる。仕様段階で PyYAML の端ごとの折り畳みを列挙していれば防げた可能性がある。batch では deferred にした'
