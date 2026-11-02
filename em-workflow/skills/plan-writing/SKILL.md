@@ -301,14 +301,21 @@ traceability checks compare these as literal strings.
 |----------|-------|-----------|-----|--------|
 ```
 
-Scenario IDs in the template's scenario table follow one rule, which stays
-outside the template block:
+Scenario IDs follow one rule, which stays outside the template block:
 
-- New VERIFICATION.md files use the TS-n form: `TS`, a hyphen, one or more
-  digits.
+- New VERIFICATION.md files and new task plans (`tasks/*.md`) use the TS-n
+  form only: `TS`, a hyphen, one or more digits.
 - The TSn form — `TS` immediately followed by one or more digits, no hyphen —
-  is also a valid scenario ID, and `em-workflow/scripts/validate-worker-output.py`
-  recognizes it.
+  is a valid scenario ID only when an existing document is read.
+  `em-workflow/scripts/validate-worker-output.py` recognizes both forms when
+  it extracts scenario IDs.
+- A new VERIFICATION.md or task plan contains no hyphen-less ID anywhere
+  outside fenced code blocks and HTML comments, not only in the scenario
+  table. An implementation-planner result that breaks this is rejected by the
+  scenario-ID form check of `em-workflow/scripts/validate-worker-output.py`.
+- When SPEC.md uses the hyphen-less form (a feature created before this
+  rule), the new VERIFICATION.md uses the same numbers in the TS-n form, and
+  SPEC.md is not rewritten.
 - These two are the only scenario ID forms.
 - Scenario IDs are compared as literal strings, so `TS13` and `TS-13` are
   distinct IDs.
@@ -339,3 +346,6 @@ outside the template block:
 - [ ] Exempt repository: no plan text instructs a version change and none
       contains a concrete version value; a minor or major bump names only
       where to bump.
+- [ ] New VERIFICATION.md and every task plan use only TS-n scenario
+      IDs, with no hyphen-less ID outside fenced code blocks and HTML
+      comments.
