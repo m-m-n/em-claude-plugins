@@ -29,7 +29,9 @@ import argparse
 import copy
 import hashlib
 import json
+import os
 import re
+import stat
 import sys
 from pathlib import Path
 
@@ -2312,6 +2314,13 @@ def validate_worker_result(
         if feature_dir is not None:
             errors.extend(_validate_task_plans_against_patch(workflow_patch, feature_dir))
 
+    # --- scenario-ID form (scenario-id-ts-hyphen/task0001, FR3) ---
+    # Only a completed implementation-planner result with a feature directory
+    # is checked (IMPLEMENTATION.md D1); rework-planner output and every other
+    # status or worker are left alone.
+    if worker == "implementation-planner" and status == "completed" and feature_dir is not None:
+        errors.extend(_validate_scenario_id_form(workflow_patch, feature_dir))
+
     # --- rework_index coverage (5.4.4) ---
     if worker == "rework-planner" and status == "completed":
         errors.extend(
@@ -2448,6 +2457,181 @@ def _validate_task_plans_against_patch(workflow_patch, feature_dir):
                 err(
                     "shared-components-missing",
                     "multiple tasks declare the same file but IMPLEMENTATION.md lacks a ## Shared Components section",
+                )
+            )
+    return errors
+
+
+# ---------------------------------------------------------------------------
+# Scenario-ID form check (scenario-id-ts-hyphen/task0001, FR3)
+#
+# The TS-n form is the only scenario ID form an implementation-planner result
+# may newly write into VERIFICATION.md or a task plan. This check reports the
+# hyphen-less (TSn) IDs it finds in those two kinds of document. It runs only
+# for a `completed` implementation-planner result with a feature directory
+# (IMPLEMENTATION.md D1) and reads nothing but VERIFICATION.md and the task
+# plans the patch names. The read side -- `_TS_ID_RE`,
+# `extract_verification_scenario_ids`, `_strip_noise` -- is not touched: both
+# forms stay readable (FR4).
+# ---------------------------------------------------------------------------
+
+SCENARIO_ID_FORM_ERROR_CODE = "scenario-id-form"
+VERIFICATION_DOCUMENT_FILE_NAME = "VERIFICATION.md"
+
+# Reasons `_read_document_for_scenario_scan` gives for not returning text.
+_SCAN_ABSENT = "absent"
+_SCAN_SYMLINK = "symlink"
+_SCAN_NOT_REGULAR = "not-regular"
+_SCAN_TOO_LARGE = "too-large"
+_SCAN_NOT_UTF8 = "not-utf8"
+_SCAN_UNREADABLE = "unreadable"
+
+
+def find_hyphenless_scenario_ids(text):
+    """Hyphen-less ID detection rule (IMPLEMENTATION.md Shared Components,
+    SPEC A1, A2). `text` first passes through `_strip_noise` (fenced code
+    blocks and HTML comments are removed; inline code spans are NOT, so
+    wrapping an ID in backticks does not hide it). Of the matches of the read
+    grammar `_TS_ID_RE`, the ones counted are those that contain no hyphen
+    and whose immediately preceding character is not an ASCII letter or an
+    ASCII digit (so `XTS1` and `UTS46` are not scenario IDs). A match at the
+    very start of the text has no preceding character and counts; a
+    non-ASCII preceding character, such as Japanese text, does not stop a
+    match from counting. Returns the set of matched literal strings. Pure:
+    no file access."""
+    stripped = _strip_noise(text)
+    found = set()
+    for match in _TS_ID_RE.finditer(stripped):
+        token = match.group(0)
+        if "-" in token:
+            continue
+        start = match.start()
+        if start > 0:
+            preceding = stripped[start - 1]
+            if preceding.isascii() and preceding.isalnum():
+                continue
+        found.add(token)
+    return found
+
+
+def _read_document_for_scenario_scan(path):
+    """Reads `path` as UTF-8 text for the scenario-ID scan and never raises.
+    Returns (text, None), or (None, reason) with reason one of the `_SCAN_*`
+    constants. The file is classified by `lstat` first, so a symlink, a
+    directory or a special file (a FIFO would block a read) is never opened;
+    it is then opened without following a symlink and without blocking, the
+    opened descriptor is checked to still be a regular file, and at most
+    `MAX_PLAN_READ_BYTES` + 1 bytes are read, so an oversized file is never
+    loaded in full."""
+    try:
+        info = os.lstat(path)
+    except (FileNotFoundError, NotADirectoryError):
+        return None, _SCAN_ABSENT
+    except OSError:
+        return None, _SCAN_UNREADABLE
+    if stat.S_ISLNK(info.st_mode):
+        return None, _SCAN_SYMLINK
+    if not stat.S_ISREG(info.st_mode):
+        return None, _SCAN_NOT_REGULAR
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+    try:
+        fd = os.open(path, flags)
+    except OSError:
+        return None, _SCAN_UNREADABLE
+    try:
+        handle = os.fdopen(fd, "rb")
+    except OSError:
+        os.close(fd)
+        return None, _SCAN_UNREADABLE
+    try:
+        with handle:
+            if not stat.S_ISREG(os.fstat(handle.fileno()).st_mode):
+                return None, _SCAN_NOT_REGULAR
+            data = handle.read(MAX_PLAN_READ_BYTES + 1)
+    except OSError:
+        return None, _SCAN_UNREADABLE
+    if len(data) > MAX_PLAN_READ_BYTES:
+        return None, _SCAN_TOO_LARGE
+    try:
+        return data.decode("utf-8"), None
+    except UnicodeDecodeError:
+        return None, _SCAN_NOT_UTF8
+
+
+def _scenario_scan_reason_text(reason):
+    return {
+        _SCAN_SYMLINK: "it is a symlink",
+        _SCAN_NOT_REGULAR: "it is not a regular file",
+        _SCAN_TOO_LARGE: f"it is too large (over {MAX_PLAN_READ_BYTES} bytes)",
+        _SCAN_NOT_UTF8: "it is not UTF-8",
+    }.get(reason, "it could not be read")
+
+
+def _hyphenless_ids_message(subject, ids):
+    return (
+        f"{subject} contains hyphen-less scenario IDs: {', '.join(sorted(ids))} "
+        "(write a hyphen between TS and the number)"
+    )
+
+
+def _validate_scenario_id_form(workflow_patch, feature_dir):
+    """The scenario-ID form check for one `completed` implementation-planner
+    result (Shared Components, "Scenario-ID form check contract"). Returns a
+    list of `scenario-id-form` errors, possibly empty, and never raises for
+    any file content or file state. The caller decides whether the check
+    applies (worker, status, feature directory).
+
+    Target (a): VERIFICATION.md directly under `feature_dir` -- absent is not
+    an error (the minimal tier writes none); a symlink, a non-regular file, a
+    file over `MAX_PLAN_READ_BYTES` or a file that is not UTF-8 gives one
+    error naming the reason and is not scanned.
+
+    Target (b): the plan of every `tasks_patch.entries` item whose final path
+    segment is not `TASK.md`. A plan is read only when it passes the checks
+    `_validate_task_plans_against_patch` applies to the same value (safe
+    path, no symlink segment, containment, regular file, size limit); one
+    that fails them is skipped, because those failures are reported there."""
+    errors = []
+    feature_dir = Path(feature_dir)
+
+    text, reason = _read_document_for_scenario_scan(feature_dir / VERIFICATION_DOCUMENT_FILE_NAME)
+    if reason is None:
+        found = find_hyphenless_scenario_ids(text)
+        if found:
+            errors.append(
+                err(SCENARIO_ID_FORM_ERROR_CODE, _hyphenless_ids_message(VERIFICATION_DOCUMENT_FILE_NAME, found))
+            )
+    elif reason != _SCAN_ABSENT:
+        errors.append(
+            err(
+                SCENARIO_ID_FORM_ERROR_CODE,
+                f"{VERIFICATION_DOCUMENT_FILE_NAME} was not scanned for hyphen-less scenario IDs: "
+                f"{_scenario_scan_reason_text(reason)}",
+            )
+        )
+
+    if not isinstance(workflow_patch, dict):
+        return errors
+    tasks_patch = workflow_patch.get("tasks_patch")
+    entries = tasks_patch.get("entries") if isinstance(tasks_patch, dict) else None
+    if not isinstance(entries, dict):
+        return errors
+    for task_id, entry in entries.items():
+        plan_rel = entry.get("plan") if isinstance(entry, dict) else None
+        if not plan_rel:
+            continue
+        plan_path, path_error = _resolve_contained_relative_path(feature_dir, plan_rel)
+        if path_error is not None or _task_entry_plan_is_task_document(plan_rel):
+            continue
+        plan_text, plan_reason = _read_document_for_scenario_scan(plan_path)
+        if plan_reason is not None:
+            continue
+        found = find_hyphenless_scenario_ids(plan_text)
+        if found:
+            errors.append(
+                err(
+                    SCENARIO_ID_FORM_ERROR_CODE,
+                    _hyphenless_ids_message(f"{task_id}: plan {plan_rel}", found),
                 )
             )
     return errors

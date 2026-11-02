@@ -3223,5 +3223,635 @@ class TestRetiredOriginIdentifierAbsenceScan(unittest.TestCase):
             self.assertEqual(self._scan([planted]), [str(planted)])
 
 
+
+# ---------------------------------------------------------------------------
+# scenario-id-ts-hyphen / task0001: the `scenario-id-form` check. A completed
+# implementation-planner result must not newly write a hyphen-less (TSn)
+# scenario ID into VERIFICATION.md or a task plan. The read side keeps
+# accepting both forms (TestScenarioIdExtractionAcceptsBothForms and
+# TestReworkIndexNoveltyWithBothScenarioIdForms above stay unchanged).
+# AC-n in the test names are the task plan's acceptance criteria.
+#
+# Hyphen-less IDs are test data built here; a document written to disk is
+# the only place they appear.
+# ---------------------------------------------------------------------------
+
+SCENARIO_ID_FORM = "scenario-id-form"
+
+
+def _scenario_plan_text(file_path="src/a.go", prefix="", extra=""):
+    """A task plan body that satisfies the existing Files and Acceptance
+    Criteria checks. `prefix` goes before the title, `extra` into Design."""
+    return (
+        prefix
+        + "# Task Plan: task0001 -- Something\n\n"
+        "## Goal\n\nDeliver something.\n\n"
+        "## Requirements\n\nFR1\n\n"
+        "## Scope\n\n"
+        "### Files to Create\n"
+        f"- `{file_path}` -- main file\n\n"
+        "### Files to Modify\n\n"
+        f"## Design\n\nNotes. {extra}\n\n"
+        "## Acceptance Criteria (MANDATORY)\n\n"
+        "- [ ] AC-1: something is delivered\n\n"
+        "## Test Notes\n\nNotes.\n\n"
+        "## Out of Scope\n\nNone.\n"
+    )
+
+
+def _scenario_verification_text(*lines):
+    return "\n".join(
+        ["## Test Verification", "", "### Test Scenarios from SPEC.md", "", *lines, ""]
+    )
+
+
+def _planner_result_obj(entries, worker="implementation-planner"):
+    """A completed result with a `replace_planning` patch. `entries` maps a
+    task id to its `plan` value; each task declares its own file
+    `src/<task id>.go`."""
+    return {
+        "schema_version": 1,
+        "request_id": "run-0001",
+        "worker": worker,
+        "status": "completed",
+        "input_revision": {"workflow_blob": "8f17c04", "input_digest": "sha256:" + "a" * 64},
+        "question_packet": None,
+        "blocking_reason": None,
+        "written_artifacts": [],
+        "workflow_patch": {
+            "schema_version": 1,
+            "patch_id": "create-plan-p0001",
+            "base_input_digest": "sha256:" + "a" * 64,
+            "base_workflow_blob": "8f17c04",
+            "operation": "replace_planning",
+            "tasks_patch": {
+                "mode": "replace_all",
+                "entries": {
+                    task_id: {
+                        "title": "Something",
+                        "plan": plan_rel,
+                        "files": [f"src/{task_id}.go"],
+                        "skills": ["backend-impl"],
+                        "domains": ["api-contract"],
+                        "complexity": "medium",
+                        "requirements": ["FR1"],
+                        "initial_status": "pending",
+                    }
+                    for task_id, plan_rel in entries.items()
+                },
+            },
+            "requirements_patch": None,
+            "step_patches": [],
+            "preserve": [],
+        },
+        "mode_echo": None,
+        "payload": {"task_index": {task_id: {"title": "Something"} for task_id in entries}},
+        "warnings": [],
+        "report": "done",
+    }
+
+
+def _planner_envelope_obj():
+    return {
+        "schema_version": 1,
+        "request_id": "env-run-0001",
+        "phase": "create-plan",
+        "mode": "interactive",
+        "input_revision": {"workflow_blob": "8f17c04", "input_digest": "sha256:" + "a" * 64},
+        "write_policy": {"targets": []},
+        "allowed_write_roots": ["feature-docs/example/"],
+        "resolved_input_paths": {},
+    }
+
+
+class _ScenarioIdFormCheckCase(unittest.TestCase):
+    """Shared scaffolding: a temporary feature directory and a way to run the
+    worker-result validation function against it."""
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.tmp_path = Path(tmp.name)
+        self.feature_dir = self.tmp_path / "feature-dir"
+        (self.feature_dir / "tasks").mkdir(parents=True)
+
+    def write_plan(self, rel="tasks/task0001.md", task_id="task0001", **plan_kwargs):
+        path = self.feature_dir / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(_scenario_plan_text(f"src/{task_id}.go", **plan_kwargs), encoding="utf-8")
+        return path
+
+    def write_verification(self, text):
+        path = self.feature_dir / "VERIFICATION.md"
+        path.write_text(text, encoding="utf-8")
+        return path
+
+    def validate(self, entries=None, feature_dir="default"):
+        if entries is None:
+            entries = {"task0001": "tasks/task0001.md"}
+        if feature_dir == "default":
+            feature_dir = self.feature_dir
+        return VWO.validate_worker_result(
+            _planner_result_obj(entries),
+            "implementation-planner",
+            envelope=_planner_envelope_obj(),
+            feature_dir=feature_dir,
+        )
+
+    @staticmethod
+    def form_errors(errors):
+        return [e for e in errors if e["code"] == SCENARIO_ID_FORM]
+
+    def symlink_or_skip(self, link, target):
+        try:
+            os.symlink(target, link)
+        except (OSError, NotImplementedError) as exc:
+            self.skipTest(f"cannot create symlinks on this platform: {exc}")
+
+    def run_cli_on(self, result_obj, with_feature_dir=True):
+        input_path = self.tmp_path / "input.json"
+        envelope_path = self.tmp_path / "envelope.json"
+        input_path.write_text(json.dumps(result_obj), encoding="utf-8")
+        envelope_path.write_text(json.dumps(_planner_envelope_obj()), encoding="utf-8")
+        args = [
+            "--kind", "worker-result",
+            "--worker", "implementation-planner",
+            "--input", str(input_path),
+            "--input-envelope", str(envelope_path),
+        ]
+        if with_feature_dir:
+            args += ["--feature-dir", str(self.feature_dir)]
+        return run_cli(args)
+
+
+class TestHyphenlessScenarioIdFinder(unittest.TestCase):
+    """The Hyphen-less ID detection rule, as a pure function of text."""
+
+    def test_finds_a_hyphenless_id(self):
+        self.assertEqual(VWO.find_hyphenless_scenario_ids("- TS3: boundary\n"), {"TS3"})
+
+    def test_hyphenated_ids_are_not_reported(self):
+        self.assertEqual(VWO.find_hyphenless_scenario_ids("- TS-3 and TS-12\n"), set())
+
+    def test_both_spellings_of_one_number_report_only_the_hyphenless_one(self):
+        self.assertEqual(VWO.find_hyphenless_scenario_ids("TS-3 is the same as TS3"), {"TS3"})
+
+    def test_all_digits_are_consumed_and_duplicates_collapse(self):
+        self.assertEqual(
+            VWO.find_hyphenless_scenario_ids("TS13, TS13 and TS2"), {"TS13", "TS2"}
+        )
+
+    def test_fenced_code_block_is_not_scanned(self):
+        text = "before\n```\nTS3\n```\nafter\n"
+        self.assertEqual(VWO.find_hyphenless_scenario_ids(text), set())
+
+    def test_html_comment_is_not_scanned(self):
+        self.assertEqual(VWO.find_hyphenless_scenario_ids("a <!-- TS3 --> b"), set())
+
+    def test_inline_code_span_is_scanned(self):
+        self.assertEqual(VWO.find_hyphenless_scenario_ids("see `TS3` here"), {"TS3"})
+
+    def test_match_at_the_very_start_of_the_text_counts(self):
+        self.assertEqual(VWO.find_hyphenless_scenario_ids("TS3 first"), {"TS3"})
+
+    def test_match_after_non_ascii_text_counts(self):
+        self.assertEqual(
+            VWO.find_hyphenless_scenario_ids("検証TS3を確認"), {"TS3"}
+        )
+
+    def test_match_after_ascii_punctuation_or_space_counts(self):
+        for text in ("(TS3)", "_TS3", "X-TS3", "a TS3", "\nTS3"):
+            with self.subTest(text=text):
+                self.assertEqual(VWO.find_hyphenless_scenario_ids(text), {"TS3"})
+
+    def test_match_directly_after_an_ascii_letter_or_digit_does_not_count(self):
+        for text in ("XTS1", "UTS46", "xTS7", "9TS5", "TS3TS4"):
+            with self.subTest(text=text):
+                expected = {"TS3"} if text == "TS3TS4" else set()
+                self.assertEqual(VWO.find_hyphenless_scenario_ids(text), expected)
+
+    def test_read_grammar_and_extraction_are_unchanged(self):
+        # FR4: the read side still returns both forms as literal strings.
+        self.assertEqual(VWO._TS_ID_RE.pattern, r"TS-?\d+")
+        self.assertEqual(
+            VWO.extract_verification_scenario_ids(_scenarios_section("TS-1", "TS2")),
+            {"TS-1", "TS2"},
+        )
+
+
+class TestScenarioIdFormCheckOnVerification(_ScenarioIdFormCheckCase):
+    """AC-1 and the VERIFICATION.md half of AC-3."""
+
+    def test_clean_documents_yield_no_errors(self):
+        self.write_plan()
+        self.write_verification(_scenario_verification_text("| TS-1 | something | ok | Unit |"))
+        self.assertEqual(self.validate(), [])
+
+    def test_ac1_hyphenless_id_yields_exactly_one_error_naming_file_and_id(self):
+        self.write_plan()
+        self.write_verification(_scenario_verification_text("| TS3 | something | ok | Unit |"))
+        found = self.form_errors(self.validate())
+        self.assertEqual(len(found), 1, found)
+        self.assertIn("VERIFICATION.md", found[0]["message"])
+        self.assertIn("TS3", found[0]["message"])
+
+    def test_ac1_ids_are_listed_deduplicated_and_sorted(self):
+        self.write_plan()
+        self.write_verification(
+            _scenario_verification_text("| TS3 | a |", "| TS12 | b |", "| TS3 | c |", "| TS2 | d |")
+        )
+        found = self.form_errors(self.validate())
+        self.assertEqual(len(found), 1, found)
+        self.assertIn("TS12, TS2, TS3", found[0]["message"])
+        self.assertEqual(found[0]["message"].count("TS3"), 1)
+
+    def test_ac1_hyphenated_spelling_of_the_same_number_does_not_hide_the_error(self):
+        self.write_plan()
+        self.write_verification(
+            _scenario_verification_text("| TS-3 | hyphenated |", "| TS3 | hyphen-less |")
+        )
+        found = self.form_errors(self.validate())
+        self.assertEqual(len(found), 1, found)
+        self.assertIn("TS3", found[0]["message"])
+        self.assertNotIn("TS-3", found[0]["message"])
+
+    def test_ac1_an_id_outside_the_test_scenarios_section_is_found(self):
+        self.write_plan()
+        self.write_verification(
+            _scenario_verification_text("| TS-1 | ok |") + "\n## Notes\n\nSee TS9 for details.\n"
+        )
+        found = self.form_errors(self.validate())
+        self.assertEqual(len(found), 1, found)
+        self.assertIn("TS9", found[0]["message"])
+
+    def test_ac3_documents_with_only_ignorable_occurrences_yield_no_error(self):
+        cases = {
+            "fenced code block": "```\nTS3\n```",
+            "html comment": "<!-- TS3 -->",
+            "letter before TS": "XTS1 and UTS46",
+            "digit before TS": "9TS5",
+        }
+        self.write_plan()
+        for label, body in cases.items():
+            with self.subTest(label=label):
+                self.write_verification(_scenario_verification_text(body))
+                self.assertEqual(self.form_errors(self.validate()), [])
+
+    def test_ac3_documents_with_a_countable_occurrence_yield_an_error(self):
+        cases = {
+            "inline code span": ("see `TS3`", "TS3"),
+            "very start of the document": ("TS4 leads the file", "TS4"),
+            "after Japanese text": ("検証TS5を確認", "TS5"),
+        }
+        self.write_plan()
+        for label, (body, expected_id) in cases.items():
+            with self.subTest(label=label):
+                text = _scenario_verification_text(body)
+                if label == "very start of the document":
+                    text = body + "\n" + text
+                self.write_verification(text)
+                found = self.form_errors(self.validate())
+                self.assertEqual(len(found), 1, found)
+                self.assertIn(expected_id, found[0]["message"])
+
+
+class TestScenarioIdFormCheckOnTaskPlans(_ScenarioIdFormCheckCase):
+    """AC-2 and the task-plan half of AC-3."""
+
+    def test_ac2_hyphenless_id_in_a_plan_yields_one_error_naming_task_plan_and_id(self):
+        self.write_plan(extra="Covers TS7.")
+        found = self.form_errors(self.validate())
+        self.assertEqual(len(found), 1, found)
+        message = found[0]["message"]
+        self.assertIn("task0001", message)
+        self.assertIn("tasks/task0001.md", message)
+        self.assertIn("TS7", message)
+
+    def test_ac2_each_offending_plan_gets_its_own_error(self):
+        self.write_plan("tasks/task0001.md", "task0001", extra="Covers TS7.")
+        self.write_plan("tasks/task0002.md", "task0002", extra="Covers TS-8.")
+        self.write_plan("tasks/task0003.md", "task0003", extra="Covers TS9.")
+        found = self.form_errors(
+            self.validate(
+                {
+                    "task0001": "tasks/task0001.md",
+                    "task0002": "tasks/task0002.md",
+                    "task0003": "tasks/task0003.md",
+                }
+            )
+        )
+        self.assertEqual(len(found), 2, found)
+        self.assertIn("task0001", found[0]["message"])
+        self.assertIn("task0003", found[1]["message"])
+
+    def test_ac2_plan_ids_are_listed_deduplicated_and_sorted(self):
+        self.write_plan(extra="TS3 TS12 TS3 TS2")
+        found = self.form_errors(self.validate())
+        self.assertEqual(len(found), 1, found)
+        self.assertIn("TS12, TS2, TS3", found[0]["message"])
+
+    def test_ac2_both_targets_are_reported_independently(self):
+        self.write_plan(extra="Covers TS7.")
+        self.write_verification(_scenario_verification_text("| TS3 | a |"))
+        found = self.form_errors(self.validate())
+        self.assertEqual(len(found), 2, found)
+        messages = " ".join(e["message"] for e in found)
+        self.assertIn("VERIFICATION.md", messages)
+        self.assertIn("TS3", messages)
+        self.assertIn("tasks/task0001.md", messages)
+        self.assertIn("TS7", messages)
+
+    def test_ac2_task_document_plan_is_exempt(self):
+        # A plan whose final path segment is TASK.md is not a target, with
+        # the very content that is rejected under another name.
+        content = "## Change\n\nTouch it for TS7.\n\n## Expected Result\n\nDone.\n"
+        task_doc = self.feature_dir / "tasks" / "task0001" / "TASK.md"
+        task_doc.parent.mkdir(parents=True)
+        task_doc.write_text(content, encoding="utf-8")
+        errors = self.validate({"task0001": "tasks/task0001/TASK.md"})
+        self.assertEqual(self.form_errors(errors), [])
+        self.assertEqual(errors, [])
+
+        other = self.feature_dir / "tasks" / "task0001" / "NOTES.md"
+        other.write_text(_scenario_plan_text("src/task0001.go", extra="TS7"), encoding="utf-8")
+        found = self.form_errors(self.validate({"task0001": "tasks/task0001/NOTES.md"}))
+        self.assertEqual(len(found), 1, found)
+
+    def test_ac3_plans_with_only_ignorable_occurrences_yield_no_error(self):
+        cases = {
+            "hyphenated form": "Covers TS-7.",
+            "fenced code block": "\n```\nTS7\n```\n",
+            "html comment": "<!-- TS7 -->",
+            "letter before TS": "XTS1 and UTS46",
+        }
+        for label, extra in cases.items():
+            with self.subTest(label=label):
+                self.write_plan(extra=extra)
+                errors = self.validate()
+                self.assertEqual(self.form_errors(errors), [])
+                self.assertEqual(errors, [])
+
+    def test_ac3_plans_with_a_countable_occurrence_yield_an_error(self):
+        cases = {
+            "inline code span": ({"extra": "see `TS7`"}, "TS7"),
+            "very start of the document": ({"prefix": "TS8 leads the file\n\n"}, "TS8"),
+            "after Japanese text": ({"extra": "検証TS9を確認"}, "TS9"),
+        }
+        for label, (kwargs, expected_id) in cases.items():
+            with self.subTest(label=label):
+                self.write_plan(**kwargs)
+                found = self.form_errors(self.validate())
+                self.assertEqual(len(found), 1, found)
+                self.assertIn(expected_id, found[0]["message"])
+
+
+class TestScenarioIdFormCheckScope(_ScenarioIdFormCheckCase):
+    """AC-4: the check runs only for a completed implementation-planner
+    result with a feature directory (IMPLEMENTATION.md D1)."""
+
+    def _hyphenless_feature_dir(self):
+        self.write_plan(extra="Covers TS7.")
+        self.write_verification(_scenario_verification_text("| TS3 | a |"))
+
+    def test_ac4_control_the_same_directory_is_rejected_for_a_completed_planner_result(self):
+        self._hyphenless_feature_dir()
+        self.assertEqual(len(self.form_errors(self.validate())), 2)
+
+    def test_ac4_rework_planner_result_is_not_checked(self):
+        # The rework-planner fixture's own input and envelope, validated
+        # against a feature directory that carries hyphen-less documents.
+        fixture = FIXTURES_ROOT / "worker-result" / "rework-planner" / "valid-completed"
+        result_obj = json.loads((fixture / "input.json").read_text(encoding="utf-8"))
+        envelope_obj = json.loads((fixture / "envelope.json").read_text(encoding="utf-8"))
+        self._hyphenless_feature_dir()
+        self.write_plan("tasks/task0007.md", "task0007", extra="Covers TS7.")
+        errors = VWO.validate_worker_result(
+            result_obj, "rework-planner", envelope=envelope_obj, feature_dir=self.feature_dir
+        )
+        self.assertEqual(self.form_errors(errors), [])
+
+    def test_ac4_planner_result_with_another_status_is_not_checked(self):
+        self._hyphenless_feature_dir()
+        references_dir = REPO_ROOT / "em-workflow" / "references"
+        gate_registry = VWO.build_gate_registry(references_dir)
+        for name in ("valid-needs-user-input", "valid-blocked", "valid-failed",
+                     "valid-invalid-input", "valid-stale-input"):
+            fixture = FIXTURES_ROOT / "worker-result" / "implementation-planner" / name
+            result_obj = json.loads((fixture / "input.json").read_text(encoding="utf-8"))
+            envelope_obj = json.loads((fixture / "envelope.json").read_text(encoding="utf-8"))
+            self.assertNotEqual(result_obj["status"], "completed", name)
+            with self.subTest(fixture=name):
+                errors = VWO.validate_worker_result(
+                    result_obj,
+                    "implementation-planner",
+                    envelope=envelope_obj,
+                    feature_dir=self.feature_dir,
+                    gate_registry=gate_registry,
+                )
+                self.assertEqual(errors, [])
+
+    def test_ac4_validation_without_a_feature_directory_is_not_checked(self):
+        self._hyphenless_feature_dir()
+        self.assertEqual(self.form_errors(self.validate(feature_dir=None)), [])
+
+    def test_ac4_cli_without_feature_dir_exits_zero(self):
+        self._hyphenless_feature_dir()
+        result = self.run_cli_on(_planner_result_obj({"task0001": "tasks/task0001.md"}), with_feature_dir=False)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_ac4_missing_verification_md_is_not_an_error(self):
+        self.write_plan()
+        self.assertFalse((self.feature_dir / "VERIFICATION.md").exists())
+        self.assertEqual(self.validate(), [])
+
+    def test_ac4_plan_file_no_entry_names_is_not_read(self):
+        self.write_plan()
+        self.write_plan("tasks/task0002.md", "task0002", extra="Covers TS7.")
+        self.assertEqual(self.validate(), [])
+
+    def test_ac4_carried_task_plans_are_not_targets(self):
+        # Ids in tasks_patch.carried_task_ids have no entry, so their plans
+        # are not read.
+        self.write_plan()
+        self.write_plan("tasks/task0002.md", "task0002", extra="Covers TS7.")
+        result_obj = _planner_result_obj({"task0001": "tasks/task0001.md"})
+        result_obj["workflow_patch"]["tasks_patch"]["carried_task_ids"] = ["task0002"]
+        found = self.form_errors(
+            VWO._validate_scenario_id_form(result_obj["workflow_patch"], self.feature_dir)
+        )
+        self.assertEqual(found, [])
+
+
+class TestScenarioIdFormCheckReadSafety(_ScenarioIdFormCheckCase):
+    """AC-5 and AC-6 (THREAT-MODEL.md TM-1, TM-2): file state is reported as
+    validation errors and never as an exception."""
+
+    def _outside_file(self):
+        outside = self.tmp_path / "outside.md"
+        outside.write_text(_scenario_plan_text("src/task0001.go", extra="Covers TS7."), encoding="utf-8")
+        return outside
+
+    def test_ac5_absolute_plan_path_is_not_read(self):
+        outside = self._outside_file()
+        errors = self.validate({"task0001": str(outside)})
+        self.assertEqual(self.form_errors(errors), [])
+        self.assertTrue(any(e["code"] == "task-plan-path" for e in errors), errors)
+
+    def test_ac5_plan_path_with_a_parent_segment_is_not_read(self):
+        self._outside_file()
+        errors = self.validate({"task0001": "../outside.md"})
+        self.assertEqual(self.form_errors(errors), [])
+        self.assertTrue(any(e["code"] == "task-plan-path" for e in errors), errors)
+
+    def test_ac5_plan_that_is_a_symlink_is_not_read(self):
+        outside = self._outside_file()
+        self.symlink_or_skip(self.feature_dir / "tasks" / "task0001.md", outside)
+        errors = self.validate()
+        self.assertEqual(self.form_errors(errors), [])
+        self.assertTrue(any(e["code"] == "task-plan-path" for e in errors), errors)
+
+    def test_ac5_plan_reached_through_a_symlinked_directory_is_not_read(self):
+        real_dir = self.tmp_path / "real-tasks"
+        real_dir.mkdir()
+        (real_dir / "task0001.md").write_text(
+            _scenario_plan_text("src/task0001.go", extra="Covers TS7."), encoding="utf-8"
+        )
+        self.symlink_or_skip(self.feature_dir / "linked", real_dir)
+        errors = self.validate({"task0001": "linked/task0001.md"})
+        self.assertEqual(self.form_errors(errors), [])
+        self.assertTrue(any(e["code"] == "task-plan-path" for e in errors), errors)
+
+    def test_ac5_oversized_or_missing_plan_is_left_to_the_existing_errors(self):
+        (self.feature_dir / "tasks" / "task0001.md").write_text(
+            "TS7 " + "x" * VWO.MAX_PLAN_READ_BYTES, encoding="utf-8"
+        )
+        errors = self.validate()
+        self.assertEqual(self.form_errors(errors), [])
+        self.assertTrue(any(e["code"] == "task-plan-too-large" for e in errors), errors)
+        errors = self.validate({"task0001": "tasks/missing.md"})
+        self.assertEqual(self.form_errors(errors), [])
+        self.assertTrue(any(e["code"] == "task-plan-missing" for e in errors), errors)
+
+    def test_ac5_verification_md_symlink_is_reported_and_not_followed(self):
+        self.write_plan()
+        target = self.tmp_path / "elsewhere.md"
+        target.write_text(_scenario_verification_text("| TS3 | a |"), encoding="utf-8")
+        self.symlink_or_skip(self.feature_dir / "VERIFICATION.md", target)
+        errors = self.validate()
+        found = self.form_errors(errors)
+        self.assertEqual(len(found), 1, found)
+        self.assertIn("VERIFICATION.md", found[0]["message"])
+        self.assertIn("symlink", found[0]["message"])
+        for e in errors:
+            self.assertNotIn("TS3", e["message"])
+
+    def test_ac5_dangling_verification_md_symlink_is_reported(self):
+        self.write_plan()
+        self.symlink_or_skip(self.feature_dir / "VERIFICATION.md", self.tmp_path / "does-not-exist.md")
+        found = self.form_errors(self.validate())
+        self.assertEqual(len(found), 1, found)
+        self.assertIn("symlink", found[0]["message"])
+
+    def test_ac6_oversized_verification_md_is_reported_and_not_scanned(self):
+        self.write_plan()
+        self.write_verification("TS3 " + "x" * VWO.MAX_PLAN_READ_BYTES)
+        self.assertGreater((self.feature_dir / "VERIFICATION.md").stat().st_size, VWO.MAX_PLAN_READ_BYTES)
+        found = self.form_errors(self.validate())
+        self.assertEqual(len(found), 1, found)
+        self.assertIn("VERIFICATION.md", found[0]["message"])
+        self.assertIn("too large", found[0]["message"])
+        self.assertNotIn("TS3", found[0]["message"])
+
+    def test_ac6_verification_md_of_exactly_the_limit_is_still_scanned(self):
+        self.write_plan()
+        self.write_verification("TS3 " + "x" * (VWO.MAX_PLAN_READ_BYTES - 4))
+        self.assertEqual((self.feature_dir / "VERIFICATION.md").stat().st_size, VWO.MAX_PLAN_READ_BYTES)
+        found = self.form_errors(self.validate())
+        self.assertEqual(len(found), 1, found)
+        self.assertIn("TS3", found[0]["message"])
+
+    def test_ac6_verification_md_directory_is_reported(self):
+        self.write_plan()
+        (self.feature_dir / "VERIFICATION.md").mkdir()
+        found = self.form_errors(self.validate())
+        self.assertEqual(len(found), 1, found)
+        self.assertIn("VERIFICATION.md", found[0]["message"])
+        self.assertIn("not a regular file", found[0]["message"])
+
+    def test_ac6_verification_md_that_is_not_utf8_is_reported_and_not_scanned(self):
+        self.write_plan()
+        (self.feature_dir / "VERIFICATION.md").write_bytes(b"TS3 \xff\xfe\xfa")
+        found = self.form_errors(self.validate())
+        self.assertEqual(len(found), 1, found)
+        self.assertIn("VERIFICATION.md", found[0]["message"])
+        self.assertIn("not UTF-8", found[0]["message"])
+        self.assertNotIn("TS3", found[0]["message"])
+
+    def test_ac6_cli_exits_one_not_two_for_each_unreadable_verification_md(self):
+        self.write_plan()
+        verification = self.feature_dir / "VERIFICATION.md"
+        result_obj = _planner_result_obj({"task0001": "tasks/task0001.md"})
+        variants = {
+            "oversized": lambda: verification.write_text(
+                "x" * (VWO.MAX_PLAN_READ_BYTES + 1), encoding="utf-8"
+            ),
+            "directory": lambda: verification.mkdir(),
+            "not UTF-8": lambda: verification.write_bytes(b"\xff\xfe\xfa"),
+        }
+        for label, make in variants.items():
+            with self.subTest(label=label):
+                if verification.is_dir():
+                    verification.rmdir()
+                elif verification.exists():
+                    verification.unlink()
+                make()
+                result = self.run_cli_on(result_obj)
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn(SCENARIO_ID_FORM, result.stdout)
+
+    def test_check_does_not_raise_on_a_malformed_patch(self):
+        self.write_verification(_scenario_verification_text("| TS-1 | a |"))
+        malformed = [
+            None,
+            "text",
+            [],
+            {},
+            {"tasks_patch": None},
+            {"tasks_patch": []},
+            {"tasks_patch": {"entries": None}},
+            {"tasks_patch": {"entries": ["task0001"]}},
+            {"tasks_patch": {"entries": {"task0001": None}}},
+            {"tasks_patch": {"entries": {"task0001": {"plan": 7}}}},
+            {"tasks_patch": {"entries": {"task0001": {"plan": ["tasks/task0001.md"]}}}},
+            {"tasks_patch": {"entries": {"task0001": {"plan": "\x00"}}}},
+            {"tasks_patch": {"entries": {"task0001": {"plan": ""}}}},
+            {"tasks_patch": {"entries": {"task0001": {"plan": "/"}}}},
+            {"tasks_patch": {"entries": {"task0001": {"plan": "."}}}},
+        ]
+        for patch in malformed:
+            with self.subTest(patch=repr(patch)):
+                self.assertEqual(VWO._validate_scenario_id_form(patch, self.feature_dir), [])
+
+
+class TestScenarioIdFormCheckCli(_ScenarioIdFormCheckCase):
+    """The command line: a hyphen-less VERIFICATION.md exits 1 and the JSON
+    detail on stdout carries the `scenario-id-form` code."""
+
+    def test_hyphenless_verification_md_exits_one_with_the_code_in_the_json(self):
+        self.write_plan()
+        self.write_verification(_scenario_verification_text("| TS3 | a |"))
+        result = self.run_cli_on(_planner_result_obj({"task0001": "tasks/task0001.md"}))
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        output = json.loads(result.stdout)
+        codes = [e["code"] for e in output["errors"]]
+        self.assertEqual(codes, [SCENARIO_ID_FORM])
+
+    def test_hyphenated_verification_md_exits_zero(self):
+        self.write_plan()
+        self.write_verification(_scenario_verification_text("| TS-3 | a |"))
+        result = self.run_cli_on(_planner_result_obj({"task0001": "tasks/task0001.md"}))
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()
