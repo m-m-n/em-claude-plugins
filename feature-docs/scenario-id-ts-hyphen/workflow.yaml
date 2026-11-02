@@ -90,7 +90,11 @@ workflow:
   status: completed
   completed_at_commit: 704e27ab240923c2525c46712ed44b9ec3b97ae5
 - id: verify
-  status: in_progress
+  status: completed
+  result: pass
+  failed_items: []
+  summary: "python3 -m unittest discover -s tests: 13932 tests OK (skipped=1). TS-1..TS-12 covered by passing tests; build/format/E2E not configured."
+  completed_at_commit: e24c756142cb38ae019c7b2075e47dc160871f79
 - id: retrospect
   status: pending
 tasks:
