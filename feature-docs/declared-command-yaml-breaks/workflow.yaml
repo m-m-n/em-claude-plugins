@@ -126,9 +126,9 @@ tasks:
     - NFR4
     - NFR5
     - NFR6
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/declared-command-yaml-breaks/task0001
   task0002:
     title: approval-unicode-whitespace の FR8 と TM-5 に対策と対象外を追記する
     plan: tasks/task0002.md
@@ -140,9 +140,9 @@ tasks:
     complexity: low
     requirements:
     - FR4
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/declared-command-yaml-breaks/task0002
 review:
   status: pending
 requirements:
