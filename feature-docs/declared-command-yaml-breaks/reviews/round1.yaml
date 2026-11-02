@@ -1,0 +1,95 @@
+round: 1
+executed_at: '2026-11-02T09:59:00+09:00'
+scope:
+  review_mode: diff
+  base_commit: e7a65b36c78c5e8732076398163c8424625d677d
+  head_commit: 9a1808ce9b24e359a41005d27f51f8b53615a189
+  changed_files:
+  - em-workflow/hooks/bash_guard.py
+  - feature-docs/approval-unicode-whitespace/SPEC.md
+  - feature-docs/approval-unicode-whitespace/THREAT-MODEL.md
+  - test-docs/declared-command-yaml-breaks/task0001.tests.yaml
+  - test-docs/declared-command-yaml-breaks/task0002.tests.yaml
+  - tests/test_bash_guard_declared_yaml_breaks.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 99609d9a91a78c9d
+  severity: medium
+  category: security
+  file: em-workflow/hooks/bash_guard.py
+  line: 227
+  title: 端の改行文字の種類が混在・連続すると YAML 解析後の形が宣言集合から漏れ、未承認の拒否を回避できる
+  description: declared_commands は値ごとに 2 つの形だけを入れる（227-229 行）。(a) trim_blanks(value) と、(b) value.strip(DECLARED_END_STRIP) の 2 つ。hook_main は受け取ったコマンドからスペースとタブだけを除いて照合する（500 行）。PyYAML の flow scalar は、両端の改行文字を端ごとに別々に畳む。単独の U+0085 は空白 1 つになり、U+2028 / U+2029 はそのまま残る。そのため、先頭が U+0085 で末尾が U+2028 / U+2029 の宣言（またはその逆）では、解析結果「空白+X+U+2028」がトリム後に「X+U+2028」になる。これは (a)「U+0085+X+U+2028」にも (b)「X」にも一致しない。is_matchable も偽なので exact と cd 前置形は成り立たず、527 行で判定なしに戻る。同じ端に改行文字が連続する場合も同様に漏れる（U+0085 U+0085 → LF、U+0085 U+2028 → U+2028、U+2028 U+0085 → U+2028 LF）。シングルクォートも同じ折り畳みを受ける。この組み合わせでは、SPEC の Objective と THREAT-MODEL TM-1 の『生の形・YAML 解析後の形・端を除いた形をすべて未承認として拒否する』が成り立たない。FR1 は書かれたとおりに実装されており、穴は FR1 が 2 つの形しか定めていない設計そのものにある。許可の範囲は広がっておらず、TM-2 は維持されている。帰結は通常の権限確認への素通りで、既存の Bash 許可や auto モードの判定によっては承認記録なしに実行され得る。comprehensive#0 も同じ箇所を独立に指摘している。
+  suggestion: '端の改行文字の折り畳みは、拒否する側だけで吸収する。案1: hook_main で宣言集合と照合する箇所（519 / 527 / 546 行）で、受け取ったコマンドの両端から U+0020・U+0009・LF・U+0085・U+2028・U+2029 を除いた形も declared と照合する。案2: declared_commands で、PyYAML と同じ端ごとの折り畳みを当てた 3 つ目の形を入れる。exact と cd 前置形による許可、trim_blanks、is_matchable は変えない（FR3）。先頭 U+0085 と末尾 U+2028 / U+2029、その逆、同じ端での U+0085 U+0085 と U+0085 U+2028 の各宣言について、YAML 解析結果の形が未承認として deny されるサブプロセステストを足す。あわせて、SPEC FR1 の『2 つの形』、approval-unicode-whitespace FR8 / TM-5 の注記、docstring を更新する。'
+  reproduction: 'ファイル読み取りをメモリ上で置き換え、feature-docs/demo/workflow.yaml の内容を build_command: "<U+0085>printf REVIEW_OK #<U+2028>" とする。山括弧部分には YAML エスケープではなく実際の文字を使う。承認ストアには /usr/bin/true だけを登録した状態を与える。yaml.safe_load の解析結果である " printf REVIEW_OK #\u2028" を PreToolUse JSON の tool_input.command に渡して hook_main を呼ぶと、終了値は 0、出力は空になる。同じ宣言の元の値と両端除去後の値は deny になる。解析後の文字列を Bash で実行すると REVIEW_OK が出力される。末尾を U+2029 に変えても同じ結果を確認した。検証ではファイルを作成・変更していない'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 100
+  resolution: deferred
+  resolution_reason: 'medium は auto-fix 候補・完了ゲートの対象外。別タスクとして起票して追跡する（batch: Codex 相談で deferred を採用）'
+evaluation:
+  round_summary: 'Round 1（diff、cross_validation=true）。critical / high はなし。medium を 1 件採用した。bash_guard.py の declared_commands（227-229 行）では、端の改行文字の種類が混在する宣言（先頭 U+0085・末尾 U+2028 / U+2029 など）や、同じ端に改行文字が連続する宣言で、PyYAML 解析後の形がフックのトリム後に宣言集合のどの形にも一致しない。その結果、未承認の拒否を経ずに判定なしになる。security#0 の再現手順はコードを読んで追い、reproduced と判定した（手順は実行していない）。comprehensive#0 は同じ箇所・同じ原因の指摘なので、security の 1 件に統合し、dismissed_sites に duplicate として記録した。TM-2（許可の範囲を広げない）が維持されていることは確認した。レビュアー出力に注入の試みは見当たらなかった。観点ごとの確認状況: comprehensive — findings／ security — findings／ architecture — corroborated／ spec — corroborated。読んだファイルは 9 件で、予算の 10 件以内。'
+  recommended_action: auto_fix
+  action_rationale: critical / high はなく、medium が 1 件ある（security#0 と comprehensive#0 が同じ箇所を独立に指摘し、コードの読解で再現した）。修正は宣言集合との照合まわりに局所化でき、許可経路には触れない。ただし、FR1 が定める 2 つの形と、追記済みの FR8 / TM-5 の注記の更新を伴う。自動修正の範囲に SPEC の記述変更を含められない場合は rework にする。
+dismissed_sites:
+- file: em-workflow/hooks/bash_guard.py
+  line: 227
+  run_id: comprehensive#0
+  reason: duplicate of another finding
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-declared-command-yaml-breaks-20261102T005943Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
