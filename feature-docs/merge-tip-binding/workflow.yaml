@@ -1,0 +1,237 @@
+schema_version: 1
+feature: merge-tip-binding
+created: '2026-11-03'
+base_branch: main
+goal: |
+  merge スキルで、ロック後の再判定と取り込む先端が事前判定の integration_tip に結び付いていない
+
+  ## 現象 (必須)
+
+  merge スキル（`/em-workflow:merge`）で、integration ブランチの先端の扱いに 2 つの隙間がある。
+
+  1. ロック取得後の再判定（手順 6 の 4、PR ルート）が、事前判定時の `integration_tip` を `merge-pr.py resolve --integration-tip` に渡している。ロック待ちの間に別の走行が base を取り込んで先端を進め、その先端で PR をマージしていると、resolve は none を返し、already_merged ではなく internal_error で終わる。
+  2. 手順 2 の preflight が判定した先端（`integration_tip`）と、手順 7・8 で取り込み・検証・マージする先端（worktree の HEAD → `head_sha`）が照合されていない。preflight の後に integration ブランチが進むと、FR4/FR5 の判定を経ていない先端が検証・マージされる。また手順 6.4 の「先端は手順 4 / 5.2 と同じ integration_tip」という記述は、ローカルルートの `merge-git.py merged`（その時点の refs/heads を読む）の挙動と食い違う。
+
+  ## 再現手順 (必須)
+
+  1. 1: `merge-pr.py` の `cmd_resolve` に MERGED・headRefOid=T2 の PR 応答を与え、`--integration-tip T1` で呼ぶと none、`T2` で呼ぶと merged になる
+  2. 2: preflight の後、手順 8 の前に integration ブランチへコミットを足すと、その先端が検証・マージされる（照合で止まらない）
+
+  ## 期待する挙動 (必須)
+
+  1. ロック取得後に integration ブランチの現在の先端を読み（検証した 40 桁の小文字 16 進だけを使う）、その値で再判定する
+  2. 取り込み前の worktree HEAD が preflight の `integration_tip` と一致することを確かめ、異なれば止める（fail-closed）。手順 6.4 の記述を実際の挙動に合わせる
+
+  ## 完了の定義 (必須)
+
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある
+
+  ## 該当箇所 (任意)
+
+  - `em-workflow/skills/merge/SKILL.md:216`（手順 6 の 4）
+  - `em-workflow/skills/merge/SKILL.md:279`、`SKILL.md:201`
+  - `em-workflow/scripts/merge-git.py:479-484`（integrate）、`merge-git.py:350-359`（merged）
+  - 詳細: integration ブランチ `em-workflow/unattended-merge-medium-fixes/integration` の `feature-docs/unattended-merge-medium-fixes/reviews/round1.yaml`（stable_id `08bb31da5c63385d`）と `round2.yaml`（stable_id `bbc1e5a40942e498`）
+
+  ## 実害・発生条件 (任意)
+
+  どちらも、同じ feature を並行して走らせるか、preflight の後に integration ブランチを動かす書き手がいるときだけ起きる。1 はマージ側には倒れない（internal_error で止まる）。2 は fail-closed に反する向きの隙間。
+parent_branch: em-workflow/merge-tip-binding/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.65
+      '2': 0.35
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.62
+      '2': 0.38
+      '3': 0.0
+  at: '2026-11-03T01:15:00+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 04b835ae44041769b329d0388215c476e96d652c
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI が無い。変更はスキル手順書・Python スクリプト・契約文書・テストだけ
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: completed
+  completed_at_commit: 58c281882651aa8cce1d0285afa9021b72bf6c8c
+- id: implement
+  status: completed
+  base_commit: 66d9b37690ee116d12a686756254df268f7978c5
+  completed_at_commit: 7a3fd2d3a08a686f54d8254f0eb3fe92d4a87c9f
+- id: review
+  status: completed
+  completed_at_commit: 206493fb7db2aaf7d57e78a38ade49852d2fc885
+- id: verify
+  status: completed
+  result: pass
+  failed_items: []
+  completed_at_commit: 71d67cf1506b02a7229fa1aeff255bb948a713d1
+- id: retrospect
+  status: completed
+  completed_at_commit: cd405ae87f566889987738ce796b160b20e16f77
+tasks:
+  task0001:
+    title: Bind the integration (step 8) to the expected head
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/merge-git.py
+    - em-workflow/skills/merge/SKILL.md
+    - em-workflow/references/merge-result.md
+    - tests/test_merge_git.py
+    - tests/test_merge_local_route.py
+    - tests/test_merge_skill_doc.py
+    - test-docs/merge-tip-binding/task0001.tests.yaml
+    skills: [backend-impl]
+    domains: [concurrency, input-handling, external-io, api-contract]
+    complexity: high
+    requirements: [FR2, FR3, FR4, FR6, NFR1, NFR2, NFR3, NFR4, NFR5, NFR6]
+    status: merged
+    branch: em-workflow/merge-tip-binding/task0001
+  task0002:
+    title: Re-decide after the lock at the current tip (step 6.4)
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/skills/merge/SKILL.md
+    - tests/test_merge_skill_doc.py
+    - test-docs/merge-tip-binding/task0002.tests.yaml
+    skills: []
+    domains: [concurrency, input-handling]
+    complexity: high
+    requirements: [FR1, FR5, FR6, NFR1, NFR2, NFR3, NFR4, NFR5, NFR6]
+    status: merged
+    branch: em-workflow/merge-tip-binding/task0002
+review:
+  status: completed
+  rounds_completed: 1
+  perspectives: [comprehensive, security, performance, architecture, spec]
+  residual_critical_high: 0
+  needs_rework: false
+  plan:
+    floor: [comprehensive, security, performance, architecture, spec]
+    discretionary: []
+    cross_validation: true
+requirements:
+  FR1:
+    title: PR ルートのロック後の再判定は、その時点の先端で行う
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0002]
+    tests: [TS1, TS2]
+  FR2:
+    title: merge-git.py integrate が期待する先端と照合する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS3, TS4]
+  FR3:
+    title: 手順 8 が期待する先端を渡し、不一致なら verification_failed で止まる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS4, TS5]
+  FR4:
+    title: 結果の値の契約に、手順 8 の不一致を足す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001]
+    tests: [TS6]
+  FR5:
+    title: 手順 6.4 と保持する値の記述を、実際の挙動に合わせる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0002]
+    tests: [TS7, TS9]
+  FR6:
+    title: 再発を検出するテスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS1, TS3, TS4, TS5, TS6, TS7, TS8, TS9]
+  NFR1:
+    title: fail-closed
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS1, TS3, TS4]
+  NFR2:
+    title: コマンド形
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS1, TS5, TS10]
+  NFR3:
+    title: 状態の持ち方
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS10]
+  NFR4:
+    title: テストの書き方
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS3, TS4, TS8]
+  NFR5:
+    title: 記載の秘匿
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS3, TS10]
+  NFR6:
+    title: version
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: [task0001, task0002]
+    tests: [TS11]
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

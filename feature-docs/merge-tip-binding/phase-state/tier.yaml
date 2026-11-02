@@ -1,0 +1,64 @@
+schema_version: 2
+feature: merge-tip-binding
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.35
+    confidence: 0.65
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.65
+      '2': 0.35
+      '3': 0.0
+  observed_at: '2026-11-03T01:15:00+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.38
+    confidence: 0.62
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.62
+      '2': 0.38
+      '3': 0.0
+  observed_at: '2026-11-03T01:15:00+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/skills/merge/SKILL.md
+  - tests/test_merge_skill_doc.py
+  changed_lines_approx: 100
+  new_functions_needed: 0
+  new_files_needed: []
+  new_dependencies_needed: []
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 6
+  body_change_kind: wording_or_rule_addition
+  change_containment: single_module
+  caller_and_dependency_count: 6
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: em-workflow/skills/merge/SKILL.md:216 はロック後も事前の integration_tip を渡し、同:223
+    は none を internal_error にする。em-workflow/scripts/merge-pr.py:521 は指定先端と異なるマージ済みPRを除外する。em-workflow/scripts/merge-git.py:481
+    はHEADと現在のブランチ先端を照合するが、事前の先端とは照合しない。tests/test_merge_skill_doc.py:1561 はロック前後の呼び出しの同一性を要求している。
+decided_at: '2026-11-03T01:15:00+09:00'

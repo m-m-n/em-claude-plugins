@@ -1,0 +1,134 @@
+task_id: task0002
+baseline_failures: []          # `python3 -m unittest discover -s tests` from the worktree root
+                                # before any file was touched: 13740 tests, all passing
+                                # (1 skipped).
+final_failures: []             # same command re-run after the SKILL.md and test changes and
+                                # after this record was written: 13773 tests, all passing
+                                # (1 skipped), so the set is empty and a subset of the
+                                # baseline. Afterwards only this comment changed; the record
+                                # check (tests.test_tests_yaml_id_resolution) was re-run and
+                                # passes.
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_merge_skill_doc.TestPostLockTipBinding.test_ac1_the_pr_route_reads_the_tip_between_the_wait_verify_and_the_resolve
+      - tests.test_merge_skill_doc.TestPostLockTipBinding.test_ac1_the_local_route_block_is_unchanged_and_precedes_the_pr_route_blocks
+      - tests.test_merge_skill_doc.TestPostLockMergedRedecision.test_ac4_the_redecision_forms_follow_the_wait_and_precede_step_7
+      - tests.test_merge_skill_doc.TestPostLockMergedRedecision.test_ac4_each_redecision_form_has_its_own_timeout_line
+    red_confirmed: true
+    red_reason: >-
+      Watched the two new tests fail against the SKILL.md as it was before the change.
+      The order test failed with "step 6 has no cd block in the order wait, merged, cd,
+      read, resolve" (and the same for read and resolve); the local-route test failed
+      with "unexpectedly None : no cd block after the merged block". The two existing
+      TestPostLockMergedRedecision tests listed here passed before and after by design:
+      they keep guarding the wait, merged, resolve order before step 7 and the
+      separate timeout lines, which the new blocks must not break.
+  AC-2:
+    tests:
+      - tests.test_merge_skill_doc.TestPostLockTipBinding.test_ac2_the_step_6_resolve_form_passes_the_locked_tip_and_is_otherwise_the_step_5_2_form
+      - tests.test_merge_skill_doc.TestPostLockMergedRedecision.test_ac4_the_redecision_forms_pass_the_options_of_steps_4_and_5_2
+      - tests.test_merge_skill_doc.TestPrDecisionBindings.test_ac6_every_resolve_form_in_the_skill_passes_an_integration_tip
+      - tests.test_merge_skill_doc.TestPrDecisionBindings.test_ac6_step_5_2_resolve_passes_the_integration_tip_from_preflight
+      - tests.test_merge_skill_doc.TestPrDecisionBindings.test_ac6_step_5_3_re_resolve_passes_the_integration_tip_from_preflight
+      - tests.test_merge_skill_doc.TestPrDecisionBindings.test_ac6_step_13_2_post_merge_re_resolve_passes_the_merged_head
+    red_confirmed: true
+    red_reason: >-
+      Watched the new test and the two rewritten tests fail against the SKILL.md as it
+      was before the change. The new test reported "the step 6 resolve form does not
+      pass --integration-tip <locked_tip>" and "still carries <integration_tip>"; the
+      rewritten option test failed on its first differing token ('<integration_tip>' !=
+      '<locked_tip>'); the rewritten three-form test failed with ['integration_tip',
+      'integration_tip', 'head_sha'] != ['integration_tip', 'locked_tip', 'head_sha'].
+      The step 5.2, 5.3 and 13.2 tests passed before and after by design: they pin
+      the forms that must keep their tips.
+  AC-3:
+    tests:
+      - tests.test_merge_skill_doc.TestPostLockTipBinding.test_ac3_item_4_states_the_read_value_rule_between_the_read_and_the_resolve
+      - tests.test_merge_skill_doc.TestPostLockTipBinding.test_ac3_the_rule_adds_no_outcome_bullet_and_no_second_script_failure_line
+      - tests.test_merge_skill_doc.TestPostLockMergedRedecision.test_ac4_each_outcome_is_handled_as_the_decision_table_says
+      - tests.test_merge_skill_doc.TestPostLockMergedRedecision.test_ac4_the_hold_task_is_stopped_before_every_terminal_the_redecision_reaches
+    red_confirmed: true
+    red_reason: >-
+      Watched the read-value rule test fail against the SKILL.md as it was before the
+      change: "item 4 does not say that `integration_tip` is not overwritten" and "item
+      4 does not hold exactly one line stating the 40-digit rule". The outcome-set and
+      single-script-failure-line tests passed before and after by design: they keep
+      the outcome bullets {merged, not_merged, open, stop, none} and the one
+      スクリプトの失敗 line fixed while the rule is added as prose.
+  AC-4:
+    tests:
+      - tests.test_merge_skill_doc.TestPostLockTipBinding.test_ac4_item_4_says_what_each_route_judges_and_drops_the_shared_tip_phrase
+    red_confirmed: true
+    red_reason: >-
+      Watched the test fail against the SKILL.md as it was before the change: item 4
+      still contained 手順 4 / 5.2 と同じ `integration_tip` and the --integration-tip
+      `integration_tip` instruction, and lacked both route statements (the
+      merge-git.py merged statement and the PR-route locked_tip statement).
+  AC-5:
+    tests:
+      - tests.test_merge_skill_doc.TestPostLockTipBinding.test_ac5_the_held_values_describe_integration_tip_and_locked_tip
+      - tests.test_merge_skill_doc.TestPostLockTipBinding.test_ac5_the_held_values_list_names_each_tip_once
+    red_confirmed: true
+    red_reason: >-
+      Watched both tests fail against the SKILL.md as it was before the change: the
+      integration_tip description named neither 手順 8 nor 上書きしない, the held values
+      had no `locked_tip` description, and the count of "`locked_tip`（" was "0 != 1".
+  AC-6:
+    tests:
+      - tests.test_merge_skill_doc.TestPostLockMergedRedecision.test_ac4_the_redecision_forms_pass_the_options_of_steps_4_and_5_2
+      - tests.test_merge_skill_doc.TestPrDecisionBindings.test_ac6_every_resolve_form_in_the_skill_passes_an_integration_tip
+      - tests.test_merge_skill_doc.TestPrDecisionBindings.test_ac6_the_matchers_fire_on_forged_forms
+      - tests.test_merge_skill_doc.TestPostLockMergedRedecision.test_ac4_the_outcome_matcher_fires_on_forged_text
+      - tests.test_merge_skill_doc.TestPostLockTipBinding.test_ac6_the_control_document_passes_every_matcher
+      - tests.test_merge_skill_doc.TestPostLockTipBinding.test_ac6_the_order_matcher_fires_when_the_read_block_is_missing
+      - tests.test_merge_skill_doc.TestPostLockTipBinding.test_ac6_the_order_matcher_fires_when_the_cd_block_is_missing
+      - tests.test_merge_skill_doc.TestPostLockTipBinding.test_ac6_the_order_matcher_fires_when_the_read_comes_before_the_wait_verify
+      - tests.test_merge_skill_doc.TestPostLockTipBinding.test_ac6_the_order_matcher_fires_when_the_read_comes_before_the_cd
+      - tests.test_merge_skill_doc.TestPostLockTipBinding.test_ac6_the_order_matcher_fires_when_the_read_comes_after_the_resolve
+      - tests.test_merge_skill_doc.TestPostLockTipBinding.test_ac6_the_order_matcher_fires_when_the_merged_block_follows_the_pr_route_blocks
+      - tests.test_merge_skill_doc.TestPostLockTipBinding.test_ac6_the_timeout_matcher_fires_when_a_block_shares_the_previous_timeout_line
+      - tests.test_merge_skill_doc.TestPostLockTipBinding.test_ac6_the_timeout_matcher_fires_on_a_timeout_above_600000
+      - tests.test_merge_skill_doc.TestPostLockTipBinding.test_ac6_the_read_form_matcher_fires_on_an_expansion_in_the_read_line
+      - tests.test_merge_skill_doc.TestPostLockTipBinding.test_ac6_the_resolve_matcher_fires_when_the_form_still_carries_the_preflight_tip
+      - tests.test_merge_skill_doc.TestPostLockTipBinding.test_ac6_the_resolve_matcher_fires_when_another_option_differs_from_step_5_2
+      - tests.test_merge_skill_doc.TestPostLockTipBinding.test_ac6_the_resolve_matcher_fires_when_locked_tip_reaches_another_command_form
+      - tests.test_merge_skill_doc.TestPostLockTipBinding.test_ac6_the_rule_matcher_fires_when_the_rule_is_missing
+      - tests.test_merge_skill_doc.TestPostLockTipBinding.test_ac6_the_rule_matcher_fires_when_the_failure_path_is_not_stated
+      - tests.test_merge_skill_doc.TestPostLockTipBinding.test_ac6_the_rule_matcher_fires_when_integration_tip_is_not_said_to_stay
+      - tests.test_merge_skill_doc.TestPostLockTipBinding.test_ac6_the_rule_matcher_fires_when_the_rule_reuses_the_script_failure_phrase
+      - tests.test_merge_skill_doc.TestPostLockTipBinding.test_ac6_the_rule_matcher_fires_when_the_rule_is_an_outcome_bullet
+      - tests.test_merge_skill_doc.TestPostLockTipBinding.test_ac6_the_rule_matcher_fires_when_the_rule_follows_the_resolve
+      - tests.test_merge_skill_doc.TestPostLockTipBinding.test_ac6_the_route_matcher_fires_when_item_4_keeps_the_old_phrase
+      - tests.test_merge_skill_doc.TestPostLockTipBinding.test_ac6_the_route_matcher_fires_when_only_one_route_is_described
+      - tests.test_merge_skill_doc.TestPostLockTipBinding.test_ac6_the_held_values_matcher_fires_without_locked_tip
+      - tests.test_merge_skill_doc.TestPostLockTipBinding.test_ac6_the_held_values_matcher_fires_when_integration_tip_is_not_tied_to_step_8
+      - tests.test_merge_skill_doc.TestPostLockTipBinding.test_ac6_the_held_values_matcher_fires_when_locked_tip_may_reach_another_step
+    red_confirmed: true
+    red_reason: >-
+      Watched the two rewritten tests (the option test and the three-form test) fail
+      against the SKILL.md as it was before the change, with the failures quoted under
+      AC-2. The forged-text matcher tests take a synthetic document built in the test,
+      so they do not depend on the SKILL.md and passed on their first run together
+      with the control document that every matcher accepts; each of them asserts that
+      its matcher reports the forged defect (no read block, the read before the
+      --wait verify, a resolve still carrying <integration_tip>, an item 4 still
+      containing the old phrase, a held-values list without locked_tip, and the
+      remaining variants), so a matcher that stopped firing fails its test. The
+      earlier forged-form detections (the matchers-fire test of the PR bindings and
+      the outcome-matcher test of the re-decision) are kept unchanged.
+  AC-7:
+    tests:
+      - tests.test_merge_pr.TestTask0010Bindings.test_task0010_ac4_a_merged_pr_at_the_integration_tip_returns_merged
+      - tests.test_merge_pr.TestTask0010Bindings.test_task0010_ac4_a_merged_pr_with_another_head_alone_gives_none
+      - tests.test_merge_pr.TestTask0010Bindings.test_task0010_ac4_the_tip_decides_not_the_pr_head_of_the_open_pr
+      - tests.test_merge_pr.TestTask0010Bindings.test_task0010_ac4_with_an_open_pr_as_well_the_open_pr_is_returned
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing
+      tests.test_merge_pr.TestTask0010Bindings task0010 AC-4 tests detect the
+      behaviour this criterion names (a MERGED PR whose head is T2 is merged with
+      --integration-tip T2 and none with T1); no red state occurred for this change
+      because em-workflow/scripts/merge-pr.py is not modified and the behaviour
+      pre-existed. The full suite (python3 -m unittest discover -s tests) is the
+      other half of the criterion and is recorded in final_failures.

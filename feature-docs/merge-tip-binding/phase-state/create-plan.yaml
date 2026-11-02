@@ -1,0 +1,62 @@
+schema_version: 1
+feature: merge-tip-binding
+phase: create-plan
+status: completed
+generation: 1
+base_revision: ba202f0ad5e981bd5b39da15c2cada50ecee592e
+last_input_digest: sha256:b519d382ac7229658ad73c03f489e3702d8ecebe4b30aa308b076b477380f455
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: completed
+  input_digest: sha256:b519d382ac7229658ad73c03f489e3702d8ecebe4b30aa308b076b477380f455
+  output_digest: sha256:c99914b734bd126c3ec6394a2997d3c05d1ea192e0e52c7724fcf8a9799fdd57
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/planner-contract.md: sha256:6476cc99ea8a1d2d4f376d1702bd636b1ab9898655397ec80ab1d6fb47cbe9e8
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
+    em-workflow/references/workflow-schema.md: sha256:3f14dea83919415634fac7006dd66c3f2c8b4a1b8b75c9889bcabc61072b36fe
+    em-workflow/skills/plan-writing/SKILL.md: sha256:880bd01ad6c60af5695495e0a6784de7fe98e1ea9463dc6703164f8ffffdbccb
+    feature-docs/merge-tip-binding/REQUIREMENTS.md: sha256:a5b2caf2b00755f83fd24da153f194daaf011a579de44073b7fa35f240271526
+    feature-docs/merge-tip-binding/SPEC.md: sha256:3b71093bc4f45c82d90954ed39c018ddcbb2dbb700e898f4cece089b14421a08
+    feature-docs/merge-tip-binding/workflow.yaml: sha256:0a2c20feffc8373f9100c2a2ffdfaa58686d33ac925b45a99fc6091355422d15
+  self_write_set:
+  - feature-docs/merge-tip-binding/IMPLEMENTATION.md
+  - feature-docs/merge-tip-binding/THREAT-MODEL.md
+  - feature-docs/merge-tip-binding/VERIFICATION.md
+  - feature-docs/merge-tip-binding/tasks/task0001.md
+  - feature-docs/merge-tip-binding/tasks/task0002.md
+  note: 'orchestrator dispatch defect: envelope workflow_blob was a placeholder string;
+    the orchestrator substituted the real blob id into the echoed input_revision and
+    base_workflow_blob. Task plans'' Files sections were corrected by the same run
+    after a task-plan-files validator rejection.'
+artifacts:
+- path: feature-docs/merge-tip-binding/IMPLEMENTATION.md
+  sha256: sha256:fce1206603646bd42b5500ceded159ac29c07fd4bf4a86712beba5c0b2891aad
+  produced_by: create-plan-run-0001
+- path: feature-docs/merge-tip-binding/THREAT-MODEL.md
+  sha256: sha256:9f835cfe4887eab29cc76877611e9109cac604091d5d02195ac39148732965e3
+  produced_by: create-plan-run-0001
+- path: feature-docs/merge-tip-binding/VERIFICATION.md
+  sha256: sha256:0029f92b445e02ec5e0828eab1c3544a3b7e0c8ae35c4c8fc740b969c05645d0
+  produced_by: create-plan-run-0001
+- path: feature-docs/merge-tip-binding/tasks/task0001.md
+  sha256: sha256:55f80b79d9d15efad3d0626ae274051ba951c5504bddc93eed70a2f3c018189a
+  produced_by: create-plan-run-0001
+- path: feature-docs/merge-tip-binding/tasks/task0002.md
+  sha256: sha256:db3d76522787b62bbb66c53f936b5cab2b49fb055a453d76f839a368d8a02c20
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: merge-tip-binding-p0001
+  status: applied
+  base_input_digest: sha256:b519d382ac7229658ad73c03f489e3702d8ecebe4b30aa308b076b477380f455
+  base_workflow_blob: 2814b666657ae290a43dd2c28fc58e23d36b0d6c
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

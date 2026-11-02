@@ -144,7 +144,7 @@ class LocalRouteBase(unittest.TestCase):
 
     # ---- fixture ----
 
-    def git(self, cwd, *args):
+    def git(self, cwd, *args, check=True):
         proc = subprocess.run(
             [REAL_GIT, "-C", str(cwd)] + list(args),
             env=self.env,
@@ -152,9 +152,9 @@ class LocalRouteBase(unittest.TestCase):
             capture_output=True,
             text=True,
         )
-        if proc.returncode != 0:
+        if check and proc.returncode != 0:
             self.fail("git %s failed: %s" % (" ".join(args), proc.stderr))
-        return proc.stdout.strip()
+        return proc.stdout.strip() if check else proc
 
     def commit_file(self, cwd, relpath, content, message):
         target = Path(cwd) / relpath
@@ -234,8 +234,12 @@ class LocalRouteBase(unittest.TestCase):
 
     # ---- the chain ----
 
-    def run_chain(self):
-        """Run every decision script of the local route; return the decisions."""
+    def integration_tip_now(self):
+        """The integration branch tip read with the test's own git."""
+        return self.git(self.root, "rev-parse", "--verify", "refs/heads/" + BRANCH)
+
+    def run_chain_before_integrate(self):
+        """route, merged and worktree-state of the local route."""
         steps = {}
         steps["route"] = self.merge_git("route", "--base", "main")
         self.assertEqual(steps["route"]["outcome"], "local")
@@ -246,10 +250,30 @@ class LocalRouteBase(unittest.TestCase):
         steps["state"] = self.merge_git("worktree-state", "--feature", FEATURE)
         self.assertEqual(steps["state"]["outcome"], "clean")
         self.assertEqual(steps["state"]["worktree_path"], str(self.worktree))
+        return steps
 
-        steps["integrate"] = self.merge_git(
-            "integrate", "--feature", FEATURE, "--base", "main"
+    def integrate_step(self, expected_head):
+        """The skill's step 8 call: the expected head is the judged tip."""
+        return self.merge_git(
+            "integrate",
+            "--feature",
+            FEATURE,
+            "--base",
+            "main",
+            "--expected-head",
+            expected_head,
         )
+
+    def run_chain(self, expected_head=None):
+        """Run every decision script of the local route; return the decisions.
+
+        `expected_head` is the integration tip taken before the chain started
+        (by merge-preflight.py, or by the test's own git when it is None)."""
+        if expected_head is None:
+            expected_head = self.integration_tip_now()
+        steps = self.run_chain_before_integrate()
+
+        steps["integrate"] = self.integrate_step(expected_head)
         self.assertEqual(steps["integrate"]["outcome"], "merged_clean")
         self.assertEqual(steps["integrate"]["integrated_base"], self.base_advance)
 
@@ -272,6 +296,22 @@ class LocalRouteBase(unittest.TestCase):
         """The skill's direct operations: main-tree merge, then worktree removal."""
         self.git(self.root, "merge", "--no-ff", "--no-edit", BRANCH)
         self.git(self.root, "worktree", "remove", str(self.worktree))
+
+    def assert_moved_branch_is_refused(self, expected_head, added):
+        """integrate with `expected_head` after `added` was committed inside the
+        integration worktree stops, and `added` never reaches the base branch."""
+        base_before = self.git(self.root, "rev-parse", "main")
+        data = self.integrate_step(expected_head)
+        self.assertEqual(data["outcome"], "stop", data)
+        self.assertEqual(data["reason"], "verification_failed", data)
+        self.assertEqual(data["detail"], "integration branch moved after preflight")
+        self.assertEqual(self.git(self.root, "rev-parse", "main"), base_before)
+        self.assertEqual(self.git(self.root, "rev-parse", BRANCH), added)
+        ancestor = self.git(
+            self.root, "merge-base", "--is-ancestor", added, "main", check=False
+        )
+        self.assertEqual(ancestor.returncode, 1, "the added commit is an ancestor of main")
+        self.assertEqual(self.git(self.root, "status", "--porcelain=v1"), "")
 
     def assert_final_state(self, integration_tip):
         parents = self.git(self.root, "rev-list", "--parents", "-n", "1", "main").split()
@@ -308,6 +348,23 @@ class LocalRouteCoreTests(LocalRouteBase):
         state = self.merge_git("worktree-state", "--feature", FEATURE)
         self.assertEqual(state["outcome"], "absent")
 
+    def test_ac4_core_case_a_commit_after_the_tip_was_taken_is_not_integrated(self):
+        tip = self.integration_tip_now()
+        self.assertEqual(tip, self.integration_tip_before)
+        self.run_chain_before_integrate()
+        added = self.commit_file(self.worktree, "src/late.txt", "late\n", "late commit")
+        self.assert_moved_branch_is_refused(tip, added)
+
+    def test_ac4_core_case_the_tip_taken_after_the_commit_integrates(self):
+        # The control of the test above: with the tip taken after the added
+        # commit the same integrate call merges, and the added commit lands.
+        self.run_chain_before_integrate()
+        added = self.commit_file(self.worktree, "src/late.txt", "late\n", "late commit")
+        data = self.integrate_step(self.integration_tip_now())
+        self.assertEqual(data["outcome"], "merged_clean", data)
+        self.emulate_skill_operations(data["head"])
+        self.git(self.root, "merge-base", "--is-ancestor", added, "main")
+
 
 @unittest.skipUnless(
     PREFLIGHT.is_file(),
@@ -329,10 +386,21 @@ class LocalRouteFullChainTests(LocalRouteBase):
         )
         self.assertEqual(preflight["worktree_path"], str(self.worktree))
 
-        steps = self.run_chain()
+        steps = self.run_chain(preflight["integration_tip"])
         self.assertEqual(steps["state"]["worktree_path"], preflight["worktree_path"])
         self.emulate_skill_operations(steps["integrate"]["head"])
         self.assert_final_state(steps["integrate"]["head"])
+
+    def test_ac4_full_chain_a_commit_after_preflight_is_not_integrated(self):
+        preflight = self.run_json(
+            PREFLIGHT, "--project-root", self.root, "--feature", FEATURE
+        )
+        self.assertEqual(preflight["outcome"], "proceed", preflight)
+        tip = preflight["integration_tip"]
+        self.assertEqual(tip, self.integration_tip_before)
+        self.run_chain_before_integrate()
+        added = self.commit_file(self.worktree, "src/late.txt", "late\n", "late commit")
+        self.assert_moved_branch_is_refused(tip, added)
 
 
 if __name__ == "__main__":
