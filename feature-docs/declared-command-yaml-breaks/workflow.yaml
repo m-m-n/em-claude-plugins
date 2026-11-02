@@ -105,7 +105,7 @@ workflow:
   result: pass
   failed_items: []
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: declared_commands に YAML 改行文字を端から除いた形を足し、回帰テストを追加する
