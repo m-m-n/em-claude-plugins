@@ -97,7 +97,7 @@ workflow:
   completed_at_commit: dff97f34511be907db37c927d660d71ef82e45d7
   base_commit: e7a65b36c78c5e8732076398163c8424625d677d
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
 - id: retrospect
@@ -146,6 +146,14 @@ tasks:
     branch: em-workflow/declared-command-yaml-breaks/task0002
 review:
   status: pending
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
 requirements:
   FR1:
     title: 宣言済みコマンドに 2 つ目の形を足す
