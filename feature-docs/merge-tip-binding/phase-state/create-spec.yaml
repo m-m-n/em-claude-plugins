@@ -5,19 +5,27 @@ status: in_progress
 generation: 1
 base_revision: 6122f1b1a9d26039f721a108b8289d179f648373
 last_input_digest: null
-active_request_id: create-spec-run-0001
+active_request_id: create-spec-run-0002
 packets: {}
 answers:
   create-spec.feature-identity:
     packet_id: null
-    answered_at: '2026-11-04T01:20:00+09:00'
+    answered_at: '2026-11-03T01:16:00+09:00'
     source: batch-decision-table
     answer_mode: single_select
     selected_option_ids:
     - derive_from_task_description
     freeform: null
     normalized_answer: 'feature name derived from the task description: merge-tip-binding'
-worker_runs: []
+worker_runs:
+- request_id: create-spec-run-0001
+  status: invalid_input
+  input_digest: sha256:a188947582b86beb0d2efadc069af7d1b6de0f466e33cc1c984350d123dad395
+  output_digest: null
+  dispatch_digest_inputs: null
+  self_write_set: []
+  note: 'orchestrator dispatch defect: task_description placeholder was not substituted;
+    re-dispatched with the input fixed'
 artifacts: []
 patches: []
 progress_fingerprint: null
