@@ -6,7 +6,7 @@ Subcommands (long options only; one JSON object on one stdout line):
   route          --project-root --base
   merged         --project-root --feature --base
   worktree-state --project-root --feature
-  integrate      --project-root --feature --base [--remote]
+  integrate      --project-root --feature --base --expected-head [--remote]
   base-check     --project-root --base [--remote] --integrated-base
                  --redo-count
   main-tree      --project-root --base
@@ -19,6 +19,12 @@ plus the subcommand-specific keys:
   worktree-state worktree_path
   integrate      integrated_base, head, conflicted_paths
   base-check     current_base
+
+`integrate` integrates only when the HEAD of the integration worktree equals
+`--expected-head` (40 lowercase hexadecimal characters, required for
+`integrate` and accepted by no other subcommand). A different HEAD stops with
+`verification_failed` and the detail `integration branch moved after
+preflight`, before any fetch or merge.
 
 Exit codes: 0 when a decision was produced (stop outcomes included), 2 for
 missing or malformed arguments, 1 for an internal failure.
@@ -481,6 +487,11 @@ def cmd_integrate(git, args, result):
     old_tip = git.resolve("HEAD", worktree)
     if old_tip is None or old_tip != git.resolve("refs/heads/" + branch, worktree):
         raise GitFailure("the integration worktree HEAD is not the integration branch tip")
+    # Bound to the judged tip: a commit added after the tip was read must never
+    # reach the base branch. Nothing has been fetched or merged yet, and `head`
+    # stays null on this stop.
+    if old_tip != args.expected_head:
+        raise Stop("verification_failed", "integration branch moved after preflight")
     result["head"] = old_tip
 
     if args.remote:
@@ -682,7 +693,7 @@ def build_parser():
     parser = argparse.ArgumentParser(prog="merge-git.py", allow_abbrev=False)
     sub = parser.add_subparsers(dest="command", required=True)
 
-    def add(name, feature=False, base=False, remote=False, check=False):
+    def add(name, feature=False, base=False, remote=False, check=False, expected=False):
         p = sub.add_parser(name, allow_abbrev=False)
         p.add_argument("--project-root", required=True)
         if feature:
@@ -691,6 +702,8 @@ def build_parser():
             p.add_argument("--base", required=True)
         if remote:
             p.add_argument("--remote")
+        if expected:
+            p.add_argument("--expected-head", required=True)
         if check:
             p.add_argument("--integrated-base", required=True)
             p.add_argument("--redo-count", required=True, type=int)
@@ -699,7 +712,7 @@ def build_parser():
     add("route", base=True)
     add("merged", feature=True, base=True)
     add("worktree-state", feature=True)
-    add("integrate", feature=True, base=True, remote=True)
+    add("integrate", feature=True, base=True, remote=True, expected=True)
     add("base-check", base=True, remote=True, check=True)
     add("main-tree", base=True)
     return parser
@@ -715,6 +728,8 @@ def validate_arguments(parser, args):
         parser.error("--base is not a valid branch name")
     if getattr(args, "remote", None) is not None and not valid_name(args.remote):
         parser.error("--remote is not a valid remote name")
+    if hasattr(args, "expected_head") and not valid_sha(args.expected_head):
+        parser.error("--expected-head is not a 40-character lowercase hexadecimal SHA")
     if hasattr(args, "integrated_base") and not valid_sha(args.integrated_base):
         parser.error("--integrated-base is not a 40-character lowercase hexadecimal SHA")
     if hasattr(args, "redo_count") and args.redo_count not in (0, 1, 2, 3):

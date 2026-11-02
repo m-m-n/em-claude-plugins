@@ -1419,10 +1419,12 @@ class TestLocalMergeBoundToHeadSha(SkillCase):
         self.assertRegex(rule[0], r"例外は.*手順 13\.3.*第 2 親")
 
     def test_ac2_the_verification_failed_row_lists_step_13_and_the_moved_branch_detail(self):
+        # merge-tip-binding task0001 AC-6: step 8 joins steps 10 and 13 as an
+        # origin of verification_failed; the step 13 detail is kept.
         cells = table_cells(self.text, "verification_failed")
         self.assertIsNotNone(cells, "no verification_failed row")
         steps = {step.strip() for step in cells[2].split(",")}
-        self.assertEqual(steps, {"10", "13"})
+        self.assertEqual(steps, {"8", "10", "13"})
         self.assertIn("integration branch moved after verification", cells[3])
 
     def test_ac1_the_shell_safe_matcher_fires_on_forged_forms(self):
@@ -1457,6 +1459,366 @@ class TestLocalMergeBoundToHeadSha(SkillCase):
         self.assertEqual(len(block_lines(blocks, lambda line: line == MERGE_FORM)), 1)
         self.assertIsNone(TIP_READ_RE.match("git rev-parse --verify HEAD"))
         self.assertIsNone(PARENTS_READ_RE.match("git log -n 1 --format=%P HEAD^"))
+
+
+# ---------------------------------------------------------------------------
+# merge-tip-binding task0001 (feature-docs/merge-tip-binding): the integration
+# of step 8 is bound to the expected head (FR3, FR4, NFR2, TM-1, TM-4)
+# ---------------------------------------------------------------------------
+
+INTEGRATE_PREFIX = "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/merge-git.py integrate "
+INTEGRATE_COMMON = '--project-root "<project_root>" --feature <feature> --base <base_branch>'
+EXPECTED_HEAD_RE = re.compile(r"(?:^|\s)--expected-head\s+(\S+)")
+EXPECTED_HEAD_VALUES = ["<integration_tip>", "<head_sha>"]
+MOVED_AFTER_PREFLIGHT = "integration branch moved after preflight"
+MOVED_AFTER_VERIFICATION = "integration branch moved after verification"
+HOME_OR_NOTION_RE = re.compile(r"/home/|/Users/|(?i:notion\.(so|site|com))")
+CONTRACT_CONDITION_RE = re.compile(r"HEAD before integration differs from the expected")
+
+
+def step8_integrate_blocks(text):
+    """The Bash blocks of step 8 whose command is a merge-git.py integrate
+    form. None when step 8 is absent."""
+    body = section(text, "8. ")
+    if body is None:
+        return None
+    return [b for b in bash_blocks(body) if b.body and b.body[0].startswith(INTEGRATE_PREFIX)]
+
+
+def line_before(body, block):
+    """The nearest non-blank line directly above the opening fence of `block`
+    in `body`. The closing fence of an earlier block counts as that line, so a
+    block cannot borrow the timeout line of the block before it."""
+    lines = body.split("\n")
+    for index in range(block.open_index - 1, -1, -1):
+        if lines[index].strip():
+            return lines[index].strip()
+    return ""
+
+
+def step8_problems(text):
+    """The ways step 8 departs from the expected-head binding (C1, C2): exactly
+    two integrate forms, passing `<integration_tip>` first and `<head_sha>`
+    after the redo, each with its own timeout line of at most 600000 and made
+    of literals, no `<locked_tip>`, and a stop bullet that names
+    `verification_failed` and step 14. An empty list means no departure."""
+    body = section(text, "8. ")
+    if body is None:
+        return ["no step 8"]
+    problems = []
+    blocks = step8_integrate_blocks(text)
+    if len(blocks) != 2:
+        problems.append("%d integrate forms in step 8, expected 2" % len(blocks))
+    everywhere = [f for f in command_forms(text) if f.startswith(INTEGRATE_PREFIX)]
+    if len(everywhere) != len(blocks):
+        problems.append("an integrate form outside step 8")
+    values = []
+    for block in blocks:
+        found = EXPECTED_HEAD_RE.findall(block.body[0])
+        values.append(found[0] if len(found) == 1 else None)
+        timeout = TIMEOUT_RE.search(line_before(body, block))
+        if timeout is None or not 0 < int(timeout.group(1)) <= 600000:
+            problems.append("an integrate form has no own timeout line of at most 600000")
+        if shell_unsafe(block.body[0].replace("${CLAUDE_PLUGIN_ROOT}", "ROOT")):
+            problems.append("an integrate form is not made of literals")
+    if values != EXPECTED_HEAD_VALUES:
+        problems.append("expected-head values %r, expected %r" % (values, EXPECTED_HEAD_VALUES))
+    if "locked_tip" in body:
+        problems.append("step 8 mentions locked_tip")
+    stop = outcome_lines(body).get("stop")
+    if stop is None:
+        problems.append("no stop bullet")
+    else:
+        for needle in ("`git_failed`", "`verification_failed`", "手順 14"):
+            if needle not in stop:
+                problems.append("the stop bullet lacks %s" % needle)
+    return problems
+
+
+def step12_redo_problems(text):
+    """The `redo` bullet of step 12 must send the run back to step 8 and name
+    the value the redo form passes."""
+    body = section(text, "12. ")
+    line = outcome_lines(body).get("redo") if body is not None else None
+    if line is None:
+        return ["no redo bullet in step 12"]
+    problems = ["the redo bullet lacks %s" % n for n in ("手順 8", "`head_sha`") if n not in line]
+    if "integration_tip" in line:
+        problems.append("the redo bullet names integration_tip")
+    return problems
+
+
+def verification_row_problems(cells):
+    """The verification_failed row of 結果の値: four cells, 手順 {8, 10, 13},
+    出どころ naming merge-git integrate, both moved-branch detail texts."""
+    if cells is None or len(cells) != 4:
+        return ["the verification_failed row does not have 4 cells"]
+    problems = []
+    steps = {step.strip() for step in cells[2].split(",")}
+    if steps != {"8", "10", "13"}:
+        problems.append("steps %s, expected 8, 10, 13" % sorted(steps))
+    if "merge-git integrate" not in cells[1]:
+        problems.append("the origin lacks merge-git integrate")
+    for expected in (MOVED_AFTER_PREFLIGHT, MOVED_AFTER_VERIFICATION):
+        if expected not in cells[3]:
+            problems.append("the detail lacks %r" % expected)
+    if HOME_OR_NOTION_RE.search(" ".join(cells)):
+        problems.append("the row carries a home path or a Notion URL")
+    return problems
+
+
+def contract_reason_rows(text):
+    """(code, cells) of every row of merge-result.md's Reason codes table."""
+    body = section(text, "Reason codes")
+    if body is None:
+        return None
+    rows = []
+    for line in body.split("\n"):
+        match = re.match(r"^\|\s*`([a-z_]+)`\s*\|", line)
+        if match:
+            rows.append((match.group(1), [c.strip() for c in line.strip().strip("|").split("|")]))
+    return rows
+
+
+def contract_row_problems(cells):
+    """The verification_failed row of merge-result.md: Condition states the
+    pre-integration HEAD mismatch, Emitted by names merge-git integrate."""
+    if cells is None or len(cells) != 3:
+        return ["the verification_failed row does not have 3 cells"]
+    problems = []
+    if not CONTRACT_CONDITION_RE.search(cells[1]):
+        problems.append("the Condition lacks the pre-integration HEAD mismatch")
+    if "merge-git integrate" not in cells[2]:
+        problems.append("Emitted by lacks merge-git integrate")
+    if HOME_OR_NOTION_RE.search(" ".join(cells)):
+        problems.append("the row carries a home path or a Notion URL")
+    return problems
+
+
+def forged_step8(forms, stop=None):
+    """A minimal step 8 whose Bash forms are `forms`, each with its own
+    timeout line."""
+    if stop is None:
+        stop = "- `stop`（`git_failed` / `verification_failed`）: 手順 14 で止めてから終端へ進む。"
+    lines = ["### 8. base の取り込み", ""]
+    for form in forms:
+        lines += ["Bash 呼び出し（timeout: 600000）:", "", "```bash", form, "```", ""]
+    lines += [stop, ""]
+    return "\n".join(lines)
+
+
+class TestIntegrationBoundToExpectedHead(SkillCase):
+    """AC-5, AC-6 and AC-7 of merge-tip-binding task0001 (FR3, FR4, NFR2, NFR5,
+    TM-1, TM-4).
+
+    Coverage: step 8 holds exactly two integrate forms, passing the preflight
+    `integration_tip` first and the verified `head_sha` after a redo, each with
+    its own timeout line, never `locked_tip`; the stop bullet ends
+    `verification_failed` through step 14; the step 12 redo bullet names the
+    second form's value; the verification_failed rows of the result-value table
+    and of merge-result.md carry the new origin; both tables keep their 28
+    codes. Every matcher is paired with a forged text on which it fires, and
+    with a valid forged text on which it stays silent. The script behaviour is
+    covered in test_merge_git.py and test_merge_local_route.py."""
+
+    FIRST = INTEGRATE_PREFIX + INTEGRATE_COMMON + " --expected-head <integration_tip>"
+    SECOND = INTEGRATE_PREFIX + INTEGRATE_COMMON + " --expected-head <head_sha>"
+
+    def step8(self):
+        return self.section("8. ")
+
+    def contract(self):
+        return CONTRACT_PATH.read_text(encoding="utf-8")
+
+    def test_ac5_step_8_holds_exactly_two_integrate_forms_passing_the_two_values_in_order(self):
+        self.assertEqual(step8_problems(self.text), [])
+        blocks = step8_integrate_blocks(self.text)
+        self.assertEqual(len(blocks), 2)
+        values = [EXPECTED_HEAD_RE.findall(b.body[0])[0] for b in blocks]
+        self.assertEqual(values, ["<integration_tip>", "<head_sha>"])
+        self.assertEqual([b.body[0] for b in blocks], [self.FIRST, self.SECOND])
+
+    def test_ac5_no_integrate_form_carries_locked_tip(self):
+        for form in command_forms(self.text):
+            if form.startswith(INTEGRATE_PREFIX):
+                self.assertNotIn("<locked_tip>", form)
+        self.assertNotIn("locked_tip", self.step8())
+
+    def test_ac5_each_integrate_form_has_its_own_timeout_line_of_at_most_600000(self):
+        blocks = step8_integrate_blocks(self.text)
+        self.assertEqual(len(blocks), 2)
+        for block in blocks:
+            lead = line_before(self.step8(), block)
+            match = TIMEOUT_RE.search(lead)
+            self.assertIsNotNone(match, lead)
+            self.assertLessEqual(int(match.group(1)), 600000)
+            self.assertGreater(int(match.group(1)), 0)
+        self.assertNotEqual(blocks[0].open_index, blocks[1].open_index)
+
+    def test_ac5_the_first_form_is_for_the_first_integration_and_the_second_for_the_redo_return(self):
+        lines = self.step8().split("\n")
+        opens = [
+            b.open_index
+            for b in bash_blocks(self.step8())
+            if b.body and b.body[0].startswith(INTEGRATE_PREFIX)
+        ]
+        self.assertEqual(len(opens), 2)
+        before_first = "\n".join(lines[: opens[0]])
+        between = "\n".join(lines[opens[0] : opens[1]])
+        self.assertIn("`integration_tip`", before_first)
+        self.assertIn("事前判定", before_first)
+        for needle in ("手順 12", "`redo`", "手順 9", "手順 10", "`head_sha`"):
+            self.assertIn(needle, between)
+
+    def test_ac5_the_remote_option_rule_covers_both_forms(self):
+        body = self.step8()
+        self.assertRegex(body, r"PR ルートでは、どちらの呼び出しでも末尾に `--remote <remote>` を付ける")
+        for block in step8_integrate_blocks(self.text):
+            self.assertNotIn("--remote", block.body[0])
+
+    def test_ac5_the_other_outcomes_of_step_8_are_unchanged(self):
+        lines = outcome_lines(self.step8())
+        self.assertEqual(set(lines), {"merged_clean", "conflict", "stop"})
+        for needle in ("`integrated_base`", "`head`", "`head_sha`", "手順 10"):
+            self.assertIn(needle, lines["merged_clean"])
+        for needle in ("`integrated_base`", "`conflicted_paths`", "手順 9"):
+            self.assertIn(needle, lines["conflict"])
+
+    def test_ac5_the_stop_bullet_names_verification_failed_and_step_14(self):
+        stop = outcome_lines(self.step8()).get("stop")
+        self.assertIsNotNone(stop)
+        for needle in ("`git_failed`", "`verification_failed`", "手順 14", "`reason`", "`detail`"):
+            self.assertIn(needle, stop)
+
+    def test_ac5_the_step_12_redo_bullet_points_back_to_step_8_with_head_sha(self):
+        self.assertEqual(step12_redo_problems(self.text), [])
+
+    def test_ac5_the_step_8_matchers_fire_on_forged_text(self):
+        def fires(text, label):
+            problems = step8_problems(text)
+            self.assertTrue(any(label in p for p in problems), (label, problems))
+
+        # The control: a valid minimal step 8 raises nothing.
+        self.assertEqual(step8_problems(forged_step8([self.FIRST, self.SECOND])), [])
+        # A single form without the option.
+        single = INTEGRATE_PREFIX + INTEGRATE_COMMON
+        fires(forged_step8([single]), "1 integrate forms in step 8")
+        fires(forged_step8([single]), "expected-head values")
+        # Two forms, one without the option.
+        fires(forged_step8([self.FIRST, single]), "expected-head values")
+        # A form carrying locked_tip.
+        locked = INTEGRATE_PREFIX + INTEGRATE_COMMON + " --expected-head <locked_tip>"
+        fires(forged_step8([self.FIRST, locked]), "expected-head values")
+        fires(forged_step8([self.FIRST, locked]), "mentions locked_tip")
+        # The two values in the wrong order, and one value twice.
+        fires(forged_step8([self.SECOND, self.FIRST]), "expected-head values")
+        fires(forged_step8([self.FIRST, self.FIRST]), "expected-head values")
+        # A third form.
+        fires(forged_step8([self.FIRST, self.SECOND, self.SECOND]), "3 integrate forms")
+        # A stop bullet without verification_failed, and without step 14.
+        fires(
+            forged_step8([self.FIRST, self.SECOND], "- `stop`（`git_failed`）: 手順 14 で止める。"),
+            "lacks `verification_failed`",
+        )
+        fires(
+            forged_step8(
+                [self.FIRST, self.SECOND],
+                "- `stop`（`git_failed` / `verification_failed`）: 終端へ進む。",
+            ),
+            "lacks 手順 14",
+        )
+        # A form without its own timeout line, and with one above 600000.
+        valid = forged_step8([self.FIRST, self.SECOND])
+        no_timeout = valid.replace(
+            "Bash 呼び出し（timeout: 600000）:\n\n```bash\n" + self.SECOND,
+            "```bash\n" + self.SECOND,
+        )
+        self.assertNotEqual(no_timeout, valid)
+        fires(no_timeout, "no own timeout line")
+        too_long = valid.replace("600000", "600001")
+        self.assertNotEqual(too_long, valid)
+        fires(too_long, "no own timeout line")
+        # A form that is not made of literals.
+        fires(
+            forged_step8([self.FIRST, self.SECOND.replace("<head_sha>", "$(git rev-parse HEAD)")]),
+            "not made of literals",
+        )
+        # An integrate form outside step 8.
+        outside = valid + "\n### 12. x\n\n```bash\n" + self.SECOND + "\n```\n"
+        fires(outside, "outside step 8")
+
+    def test_ac5_the_step_12_matcher_fires_on_forged_text(self):
+        good = "### 12. x\n\n- `redo`: 手順 8 へ戻る。`head_sha` を渡す。\n"
+        self.assertEqual(step12_redo_problems(good), [])
+        self.assertIn(
+            "the redo bullet lacks `head_sha`",
+            step12_redo_problems("### 12. x\n\n- `redo`: 手順 8 へ戻る。\n"),
+        )
+        self.assertIn(
+            "the redo bullet lacks 手順 8",
+            step12_redo_problems("### 12. x\n\n- `redo`: `head_sha` を渡す。\n"),
+        )
+        self.assertIn(
+            "the redo bullet names integration_tip",
+            step12_redo_problems(good.replace("を渡す", "と `integration_tip` を渡す")),
+        )
+        self.assertEqual(step12_redo_problems("### 12. x\n"), ["no redo bullet in step 12"])
+
+    def test_ac6_the_skill_row_lists_steps_8_10_13_the_new_origin_and_both_details(self):
+        cells = table_cells(self.text, "verification_failed")
+        self.assertEqual(verification_row_problems(cells), [])
+        self.assertEqual({s.strip() for s in cells[2].split(",")}, {"8", "10", "13"})
+        self.assertIn("merge-git integrate", cells[1])
+        self.assertIn(MOVED_AFTER_PREFLIGHT, cells[3])
+        self.assertIn(MOVED_AFTER_VERIFICATION, cells[3])
+        self.assertIn("`component.field`", cells[3])
+
+    def test_ac6_the_contract_row_states_the_pre_integration_mismatch_and_the_new_origin(self):
+        rows = contract_reason_rows(self.contract())
+        self.assertIsNotNone(rows)
+        found = [cells for code, cells in rows if code == "verification_failed"]
+        self.assertEqual(len(found), 1)
+        self.assertEqual(contract_row_problems(found[0]), [])
+        self.assertRegex(found[0][1], CONTRACT_CONDITION_RE)
+        self.assertIn("merge-git integrate", found[0][2])
+
+    def test_ac6_both_tables_still_hold_exactly_the_28_codes_once_each(self):
+        skill_codes = reason_table_codes(self.text)
+        self.assertEqual(sorted(skill_codes), sorted(REASON_CODES))
+        contract_codes = [code for code, _ in contract_reason_rows(self.contract())]
+        self.assertEqual(sorted(contract_codes), sorted(REASON_CODES))
+        self.assertEqual(len(REASON_CODES), 28)
+
+    def test_ac6_the_row_matchers_fire_on_forged_rows(self):
+        real = table_cells(self.text, "verification_failed")
+        self.assertEqual(verification_row_problems(real), [])
+
+        def fires(cells, label):
+            problems = verification_row_problems(cells)
+            self.assertTrue(any(label in p for p in problems), (label, problems))
+
+        # The row as it was before this change: steps {10, 13}.
+        fires([real[0], real[1], "10, 13", real[3]], "steps")
+        fires([real[0], real[1], "8, 10", real[3]], "steps")
+        fires([real[0], "このスキル", real[2], real[3]], "the origin")
+        fires([real[0], real[1], real[2], real[3].replace(MOVED_AFTER_PREFLIGHT, "x")], "the detail lacks")
+        fires([real[0], real[1], real[2], real[3].replace(MOVED_AFTER_VERIFICATION, "x")], "the detail lacks")
+        fires([real[0], real[1], real[2], real[3] + " /home/someone/x"], "home path")
+        fires(real[:3], "4 cells")
+        fires(None, "4 cells")
+
+        row = dict(contract_reason_rows(self.contract()))["verification_failed"]
+        self.assertEqual(contract_row_problems(row), [])
+
+        def contract_fires(cells, label):
+            problems = contract_row_problems(cells)
+            self.assertTrue(any(label in p for p in problems), (label, problems))
+
+        # The row without merge-git integrate, and without the condition.
+        contract_fires([row[0], row[1], "the skill"], "Emitted by lacks")
+        contract_fires([row[0], "A build, test or e2e command failed or timed out", row[2]], "Condition lacks")
+        contract_fires([row[0], row[1], row[2] + " /home/someone/x"], "home path")
+        contract_fires(row[:2], "3 cells")
 
 
 class TestStep10HeadCheckRunsInTheWorktree(SkillCase):
