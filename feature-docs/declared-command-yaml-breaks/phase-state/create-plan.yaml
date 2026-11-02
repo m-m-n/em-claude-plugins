@@ -1,7 +1,7 @@
 schema_version: 1
 feature: declared-command-yaml-breaks
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 4e941f1f907b000e8e58c8bed78175739c3f284a
 last_input_digest: sha256:64c158d6274c3121f8f07a97ddce657d1122da5c6745740e673d168e9ac2450b
