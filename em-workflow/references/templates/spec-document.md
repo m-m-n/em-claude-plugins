@@ -208,27 +208,27 @@ path that never materializes is not a violation.
 ## Test Scenarios
 
 ### Unit Tests
-- [ ] Test 1: {Description} - {Expected behavior}
-- [ ] Test 2: {Description} - {Expected behavior}
+- [ ] TS-1: {Description} - {Expected behavior}
+- [ ] TS-2: {Description} - {Expected behavior}
 
 ### Integration Tests
-- [ ] Test 1: {Description} - {Expected behavior}
-- [ ] Test 2: {Description} - {Expected behavior}
+- [ ] TS-3: {Description} - {Expected behavior}
+- [ ] TS-4: {Description} - {Expected behavior}
 
 ### E2E Tests
 **Existing E2E tests**: {Phase 0.3 detection result or "None"}
 **Run command**: {Detected command or "Not detected"}
 - [ ] Existing E2E tests pass without regression
-- [ ] Scenario 1: {User flow description}
-- [ ] Scenario 2: {User flow description}
+- [ ] TS-5: {User flow description}
+- [ ] TS-6: {User flow description}
 
 ### Edge Cases
-- [ ] Edge case 1: {Description and expected handling}
-- [ ] Edge case 2: {Description and expected handling}
+- [ ] TS-7: {Description and expected handling}
+- [ ] TS-8: {Description and expected handling}
 
 ### Performance Tests
-- [ ] Load test: {Scenario and acceptance criteria}
-- [ ] Stress test: {Scenario and acceptance criteria}
+- [ ] TS-9: Load test: {Scenario and acceptance criteria}
+- [ ] TS-10: Stress test: {Scenario and acceptance criteria}
 
 ## Security Considerations
 
