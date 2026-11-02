@@ -128,7 +128,7 @@ tasks:
     requirements:
     - FR1
     - NFR3
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/scenario-id-ts-hyphen/task0002
   task0003:
