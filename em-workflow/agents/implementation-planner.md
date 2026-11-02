@@ -241,6 +241,13 @@ success criteria, functional-requirements coverage, E2E / manual sections.
 This documents the INTEGRATED verification run by the verify phase — task-
 level acceptance criteria live in the task plans.
 
+A new VERIFICATION.md and every task plan this agent writes use the TS-n
+scenario ID form only, following the scenario ID rule in
+`skills/plan-writing/SKILL.md` (including its rule for a SPEC.md that uses
+the hyphen-less form). A hyphen-less scenario ID in either is rejected by
+`scripts/validate-worker-output.py`'s scenario-ID form check
+(`scenario-id-form`).
+
 When THREAT-MODEL.md's verdict is `threats-identified`, add one item per
 TM-n to the Performance / Security Verification section, keyed by the
 TM-n and stating how it is checked, and count each in the Verification
