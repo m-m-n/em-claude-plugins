@@ -167,6 +167,14 @@ tasks:
     branch: em-workflow/scenario-id-ts-hyphen/task0004
 review:
   status: pending
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
 requirements:
   FR1:
     title: spec-writer が SPEC.md に書くシナリオ ID を TS-n にする
