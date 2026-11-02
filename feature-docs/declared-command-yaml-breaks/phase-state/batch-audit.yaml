@@ -1,0 +1,20 @@
+schema_version: 1
+feature: declared-command-yaml-breaks
+records:
+- question_id: requirement.mitigation-choice
+  packet_id: null
+  answered_at: '2026-11-02T09:18:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - yaml_breaks_only
+  freeform: null
+  normalized_answer: declared_commands adds trim_blanks(value) and the value with
+    spaces, tabs, U+0085, U+2028 and U+2029 removed from both ends; str.strip() of
+    the whole value is not used
+  resolution_note: 'gate: create-spec.requirement-clarification; analyst assumption
+    A1 (strip_all) reviewed by orchestrator; codex_consulted: true (harness entry:
+    codex, 1 turn); Codex chose yaml_breaks_only; orchestrator mapped it to yaml_breaks_only
+    because both options close the attack scenario and yaml_breaks_only keeps the
+    U+00A0 decision of approval-unicode-whitespace FR8 and avoids false denies; opus_escalation:
+    not run'

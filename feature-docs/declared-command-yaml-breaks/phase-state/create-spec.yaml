@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 2140004fccb7d131aebebc02d21ea22c76667b0f
 last_input_digest: sha256:8fd8a9ba1bbabd627b3aa7f62941df04456b0f2d0c17ca6812e66f04aa36e69d
-active_request_id: create-spec-run-0001
+active_request_id: null
 packets: {}
 answers:
   create-spec.feature-identity:
@@ -17,11 +17,28 @@ answers:
     - derive_from_task_description
     freeform: null
     normalized_answer: 'feature name derived from the task description: declared-command-yaml-breaks'
+  requirement.mitigation-choice:
+    packet_id: null
+    answered_at: '2026-11-02T09:18:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - yaml_breaks_only
+    freeform: null
+    normalized_answer: declared_commands adds trim_blanks(value) and the value with
+      spaces, tabs, U+0085, U+2028 and U+2029 removed from both ends; str.strip()
+      of the whole value is not used
+    resolution_note: 'gate: create-spec.requirement-clarification; analyst assumption
+      A1 (strip_all) reviewed by orchestrator; codex_consulted: true (harness entry:
+      codex, 1 turn); Codex chose yaml_breaks_only; orchestrator mapped it to yaml_breaks_only
+      because both options close the attack scenario and yaml_breaks_only keeps the
+      U+00A0 decision of approval-unicode-whitespace FR8 and avoids false denies;
+      opus_escalation: not run'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:8fd8a9ba1bbabd627b3aa7f62941df04456b0f2d0c17ca6812e66f04aa36e69d
-  output_digest: null
+  output_digest: sha256:9307b2c1d5f070cf8a15c1eae39619ea2d6fb8fa00e88aaa22f64226627c74f6
   dispatch_digest_inputs:
     CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
     em-workflow/hooks/bash_guard.py: sha256:565113d4d4261577c0be3da7e09c81f176bf22fc40a024c2f1051aebec71edbe
@@ -34,6 +51,7 @@ worker_runs:
     tests/test_approval_trim_docs.py: sha256:ba214cbd2f09659fb95ede303061493e12492a2da12d2d33933647a2303fb23d
     tests/test_bash_guard_store_unicode_whitespace.py: sha256:44c81f104d3e601dcfeb56afe22c8be56f4f38396b6e9044e5e7a6615510d429
     tests/test_bash_guard_unicode_whitespace.py: sha256:201bad19a2b8a79bced9e0ac28e056fd20adf4b0084ebc65af2189c820bf1586
+  self_write_set: []
 artifacts: []
 patches: []
 progress_fingerprint: null
