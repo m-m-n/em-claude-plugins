@@ -1,0 +1,159 @@
+schema_version: 1
+feature: scenario-id-ts-hyphen
+created: '2026-11-03'
+base_branch: main
+goal: |
+  # em-workflow が新規に作る文書のシナリオ ID を TS-n に統一する
+
+  ## やりたいこと (必須)
+
+  em-workflow が新規に作る文書のシナリオ ID を `TS-n` 形式に統一する。
+
+  - spec-writer が SPEC.md に書くシナリオ ID を `TS-n` にする
+  - plan-writing の「`TSn` も正しい ID」を、既存文書を読むときだけの扱いにする
+  - 新規に書く VERIFICATION.md・tasks/*.md に `TSn` が含まれていたら、implementation-planner の出力検査で弾く
+  - 既存文書の読み取りは、今まで通り `TS-?\d+` で両方の形を受け付ける
+
+  ## 背景・なぜ (必須)
+
+  plan-writing は新規の VERIFICATION.md を `TS-n` で書くと定めているが、spec-writer は SPEC.md を `TSn` で書き、planner もそれに揃えて VERIFICATION.md を `TSn` で書いている。
+
+  事例: loop-develop の feature `auto-dispatch-not-started` で、SPEC.md と VERIFICATION.md が `TS1`〜`TS15` 形式で作られた。
+
+  ## 受け入れ条件 / 完了の定義 (必須)
+
+  - [ ] 新規に作られる SPEC.md・VERIFICATION.md・tasks/*.md のシナリオ ID が `TS-n` になる
+  - [ ] 新規の VERIFICATION.md・tasks/*.md に `TSn` が含まれる planner 出力が検査で弾かれる
+  - [ ] 既存の `TSn` 形式の文書を含むフィーチャーの読み取り・rework 検証が、今まで通り動く
+
+  ## スコープ外 (任意)
+
+  - 既存文書の `TSn` の書き換え
+
+  ## 制約・前提 (任意)
+
+  - 該当箇所（0.4.0）: `skills/plan-writing/SKILL.md:305-314`、`scripts/validate-worker-output.py:394-397`、spec-writer の SPEC.md テンプレート
+parent_branch: em-workflow/scenario-id-ts-hyphen/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.01
+      '1': 0.69
+      '2': 0.3
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.17
+      '2': 0.83
+      '3': 0.0
+  at: '2026-11-03T01:15:10+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 620484375526429703368c37b3b719d210549e46
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI の変更がない。エージェントの prompt、テンプレート、参照文書、検証スクリプト、テストの変更だけ
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+requirements:
+  FR1:
+    title: spec-writer が SPEC.md に書くシナリオ ID を TS-n にする
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: plan-writing の TSn 許容を既存文書の読み取りに限る
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: implementation-planner の出力検査で TSn を弾く
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: 既存文書の読み取りは両方の形を受け付け続ける
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: 検査の追加を文書に反映する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 既存テストの互換
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: sha256 ピンの更新
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: テストスイート全体の合格
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

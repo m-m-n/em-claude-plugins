@@ -1,7 +1,7 @@
 schema_version: 1
 feature: scenario-id-ts-hyphen
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: 6afcdc71d5e0d842434df6e6bc697785f286270d
 last_input_digest: sha256:fb05ce65748348f568994e8aa8d0abef19d3ac54b050874677b29d724b7665b2
