@@ -1,11 +1,11 @@
 schema_version: 1
 feature: merge-tip-binding
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: ba202f0ad5e981bd5b39da15c2cada50ecee592e
 last_input_digest: sha256:b519d382ac7229658ad73c03f489e3702d8ecebe4b30aa308b076b477380f455
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
