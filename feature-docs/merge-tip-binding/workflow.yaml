@@ -99,7 +99,8 @@ workflow:
   failed_items: []
   completed_at_commit: 71d67cf1506b02a7229fa1aeff255bb948a713d1
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: cd405ae87f566889987738ce796b160b20e16f77
 tasks:
   task0001:
     title: Bind the integration (step 8) to the expected head
