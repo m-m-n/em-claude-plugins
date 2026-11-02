@@ -57,6 +57,8 @@ Depth: deep (auth, input-handling)
 | Elevation of privilege | The same padding inside the remainder of the cd prefix form is trimmed away, so the cd prefix allow is given for a remainder Bash runs as something else (FR5; SPEC.md AC3, AC6) | TM-4 | The remainder is trimmed by spaces and tabs only; a non-matchable remainder is never a cd prefix candidate and is excluded | task0001 AC-4 | VERIFICATION.md, Performance / Security Verification, TM-4 |
 | Elevation of privilege | Declared-command extraction absorbs the padding, so a padded declared value is not recognised as declared, the hook gives no decision and the call falls through to the normal permission flow instead of the unapproved deny (FR8; SPEC.md AC2) | TM-5 | Key and value are separated by spaces and tabs only and the value is trimmed by spaces and tabs only; a padded value stays declared and the hook denies it as unapproved | task0001 AC-3 | VERIFICATION.md, Performance / Security Verification, TM-5 |
 
+Note on TM-5: `declared_commands` also puts into the declared set, in addition to the value trimmed of spaces and tabs, the value with every leading and trailing U+0020, U+0009, U+0085, U+2028 and U+2029 removed, when that result is not empty. Mismatches produced by YAML escape notation, by block scalars, and by characters inside the value are out of scope; such invocations reach the normal permission prompt.
+
 ### TB-3: approval-gate input and the stored approval set
 Crossing: command lines that the orchestrator passes on stdin to
 `bash_guard.py --record` / `--remove` (text derived from a

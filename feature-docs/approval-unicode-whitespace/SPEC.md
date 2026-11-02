@@ -25,6 +25,8 @@
 - **FR6:** 保存済みエントリ。`approved_for` は保存済みエントリからスペースとタブだけを除き、照合対象外のエントリを承認済みとして数えない。`--list` は照合対象外のエントリを出力しない。
 - **FR7:** `--record` / `--remove` の入力。`read_stdin_commands` は、stdin の各行から行末の LF をちょうど 1 つ除き、その後スペースとタブを除いて検証する。CR、U+000B、U+000C、U+00A0 は除かない。トリム後に空になる行は、現在と同じく読み飛ばす。1 回の入力に照合対象外の行が 1 つでもあれば、`--record` と `--remove` はどちらも拒否パターンと同じく stderr に報告して終了コード 1 で終わり、その入力からは何も保存せず、何も削除しない。
 - **FR8:** 宣言済みコマンドの抽出。`declared_commands` は `COMMAND_KEY_RE` の `\s` を `[ \t]` に変え、値からスペースとタブだけを除く。照合対象外の値も宣言済みの集合に含め、フックはそれを未承認として拒否する。
+    - `declared_commands` は、スペースとタブだけを除いた値に加えて、値の前後にある U+0020、U+0009、U+0085、U+2028、U+2029 をすべて除いた値も宣言済みの集合に含める。ただし、除いた結果が空のときは含めない。
+    - YAML のエスケープ表記、ブロックスカラー、値の内部の文字によって生じる不一致は対象外とする。そのような呼び出しは通常の許可確認に進む。
 - **FR9:** ドキュメント。次のトリムの記述を「スペースとタブだけを除く。それ以外の空白が前後にある値は承認しない」という内容に改める。`tests/test_cd_prefix_operator_exclusion_docs.py` が固定している文言は維持する。
     - `em-workflow/references/command-execution-protocol.md` の 'Trim surrounding whitespace; skip empty' / 'after trimming' / '(surrounding whitespace aside)'
     - bash_guard.py の docstring の 'surrounding blanks removed'
