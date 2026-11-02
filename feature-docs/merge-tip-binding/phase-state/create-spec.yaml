@@ -1,0 +1,47 @@
+schema_version: 1
+feature: merge-tip-binding
+phase: create-spec
+status: in_progress
+generation: 1
+base_revision: 6122f1b1a9d26039f721a108b8289d179f648373
+last_input_digest: null
+active_request_id: create-spec-run-0001
+packets: {}
+answers:
+  create-spec.feature-identity:
+    packet_id: null
+    answered_at: '2026-11-04T01:20:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - derive_from_task_description
+    freeform: null
+    normalized_answer: 'feature name derived from the task description: merge-tip-binding'
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache:
+  design_system_candidates:
+    resolved_at_generation: 1
+    paths: []
+    truncated: false
+  e2e:
+    resolved_at_generation: 1
+    paths: []
+  reference_scan_targets:
+    resolved_at_generation: 1
+    paths:
+    - em-workflow/skills/merge/SKILL.md
+    - em-workflow/scripts/merge-pr.py
+    - em-workflow/scripts/merge-git.py
+    - em-workflow/scripts/merge-preflight.py
+    - tests/test_merge_git.py
+    - tests/test_merge_local_route.py
+    - tests/test_merge_preflight.py
+    - tests/test_merge_pr.py
+    - tests/test_merge_skill_doc.py
+    - feature-docs/unattended-merge-medium-fixes/reviews/round1.yaml
+    - feature-docs/unattended-merge-medium-fixes/reviews/round2.yaml
+last_error: null
