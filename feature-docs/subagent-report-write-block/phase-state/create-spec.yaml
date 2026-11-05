@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 6944353e4b4b7c6b9a01e45e0931f75a33a6a6a0
 last_input_digest: sha256:ff7584dc54dc1109515c5f2f8949ec30d5697040a3cdb973057e60207b99152e
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -111,14 +111,23 @@ worker_runs:
     test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
   self_write_set: []
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:ff7584dc54dc1109515c5f2f8949ec30d5697040a3cdb973057e60207b99152e
-  output_digest: null
+  output_digest: sha256:4b7ff6485fd88c5bdf7eb71fb4343d9f339be6989f0f7d7f6dc482f88b3fb061
   dispatch_digest_inputs:
     em-workflow/references/contracts/spec-writer-contract.md: sha256:c66e457a4a68d860f757f9e6cae377b6918d29a3f3152d9a12fc92570303c5f2
     em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
     em-workflow/references/templates/spec-document.md: sha256:a5d0106c39a5df7dc2365357a9546588275ed6c7a1651c866e75fa327a7fa592
-artifacts: []
+  self_write_set:
+  - feature-docs/subagent-report-write-block/REQUIREMENTS.md
+  - feature-docs/subagent-report-write-block/SPEC.md
+artifacts:
+- path: feature-docs/subagent-report-write-block/REQUIREMENTS.md
+  sha256: sha256:0eb9a657510472b42de0805219ce0a2a9c6a61f519b07ad1f841b416cfd56c51
+  produced_by: create-spec-run-0003
+- path: feature-docs/subagent-report-write-block/SPEC.md
+  sha256: sha256:3f041f1f3268805fa7ee539295bae1bbe79f3e07e1b32470cf96e477d3cb870e
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
