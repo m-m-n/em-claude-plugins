@@ -8,14 +8,12 @@ records:
   answer_mode: select_or_freeform
   selected_option_ids:
   - plan_rule_only
-  freeform: '一致名を計画に載せない。別名で書いて改名する手順は入れない。追加要件: (a) 既存計画の最終パスを一致しない名前へ直す正式な手順を定める。tasks
-    の files、タスク本文、検証条件、テスト内の参照を揃え、修正の担当と許可条件を明示する。(b) 実装者が拒否を受けたら、対象パスと拒否文を添えて直ちに
-    status: failed を返し、改名や別ツールで回避しない。(c) 親は同じ原因の自動再試行をせず、原因の修正を再開条件にする。'
+  freeform: '一致名を計画に載せない。別名で書いて改名する手順は入れない。追加要件: (a) 既存計画の最終パスを一致しない名前へ直す正式な手順を定める。tasks の files、タスク本文、検証条件、テスト内の参照を揃え、修正の担当と許可条件を明示する。(b)
+    実装者が拒否を受けたら、対象パスと拒否文を添えて直ちに status: failed を返し、改名や別ツールで回避しない。(c) 親は同じ原因の自動再試行をせず、原因の修正を再開条件にする。'
   normalized_answer: plan_rule_only。Claude Code の Write の拒否は迂回しない。計画段の命名規則、既存計画の修正手順、拒否時の即時失敗と再試行の抑止を要件にする。
-  resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted:
-    true; harness: codex; turns: 1; opus_escalation: false; adopted plan_rule_only:
-    依頼が求めるのは成果物の取り込みと再開であり拒否の迂回ではない。拒否の趣旨を意図的に回避する 2 案は採らない。Codex も同じ結論で、既存計画の修正手順が今の契約に無いこと、batch
-    の再試行抑止が別途要ることを指摘した。'
+  resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted: true; harness: codex;
+    turns: 1; opus_escalation: false; adopted plan_rule_only: 依頼が求めるのは成果物の取り込みと再開であり拒否の迂回ではない。拒否の趣旨を意図的に回避する
+    2 案は採らない。Codex も同じ結論で、既存計画の修正手順が今の契約に無いこと、batch の再試行抑止が別途要ることを指摘した。'
 - question_id: requirement.plan-time-detection
   packet_id: create-spec-q0001
   answered_at: '2026-11-05T23:40:00+09:00'
@@ -25,8 +23,8 @@ records:
   - reject_new_files_in_validator
   freeform: null
   normalized_answer: reject_new_files_in_validator。ベース時点に存在しない一致名を検証で拒否する。既存ファイルの更新は通す。対象リポジトリと基準コミットを確定する入力の契約が要る。
-  resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted:
-    true; harness: codex; turns: 1; opus_escalation: false; 実装者の手順で受け止めない方針なので、文書テストだけでは計画の違反を止められない。全件拒否は既存ファイルの更新まで止める。'
+  resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted: true; harness: codex;
+    turns: 1; opus_escalation: false; 実装者の手順で受け止めない方針なので、文書テストだけでは計画の違反を止められない。全件拒否は既存ファイルの更新まで止める。'
 - question_id: requirement.resume-procedure-home
   packet_id: create-spec-q0001
   answered_at: '2026-11-05T23:40:00+09:00'
@@ -37,9 +35,8 @@ records:
   freeform: null
   normalized_answer: feature_docs_only。再開手順は SPEC に書く。web-sip-phone の実状態は未確認なので、手順はその確認を前提として書き、failed
     からの入口も明記する。
-  resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted:
-    true; harness: codex; turns: 1; opus_escalation: false; feature 固有の手順なので feature
-    の文書に置く。汎用の拒否時処理はプラグインの規則として別に定義する。'
+  resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted: true; harness: codex;
+    turns: 1; opus_escalation: false; feature 固有の手順なので feature の文書に置く。汎用の拒否時処理はプラグインの規則として別に定義する。'
 - question_id: implement.wake-decline
   packet_id: null
   answered_at: '2026-11-06T00:35:18+09:00'
@@ -48,7 +45,9 @@ records:
   selected_option_ids: []
   freeform: null
   normalized_answer: declined
-  resolution_note: "task_id: task0003; path: tests/test_scenario_id_planner_docs.py; missing part: identifier of the acceptance criterion or requirement that would otherwise be dropped (the deviation names the failing test but no AC-n or requirement id)"
+  resolution_note: 'task_id: task0003; path: tests/test_scenario_id_planner_docs.py; missing part: identifier
+    of the acceptance criterion or requirement that would otherwise be dropped (the deviation names the
+    failing test but no AC-n or requirement id)'
 - question_id: implement.wake-decline
   packet_id: null
   answered_at: '2026-11-06T00:44:54+09:00'
@@ -57,7 +56,9 @@ records:
   selected_option_ids: []
   freeform: null
   normalized_answer: declined
-  resolution_note: "task_id: task0006; path: tests/test_implement_routeback_gate.py; missing part: identifier of the acceptance criterion or requirement that would otherwise be dropped (the deviation names the pinned tests but no AC-n or requirement id)"
+  resolution_note: 'task_id: task0006; path: tests/test_implement_routeback_gate.py; missing part: identifier
+    of the acceptance criterion or requirement that would otherwise be dropped (the deviation names the
+    pinned tests but no AC-n or requirement id)'
 - question_id: implement.wake-decline
   packet_id: null
   answered_at: '2026-11-06T00:44:54+09:00'
@@ -66,7 +67,9 @@ records:
   selected_option_ids: []
   freeform: null
   normalized_answer: declined
-  resolution_note: "task_id: task0006; path: tests/test_recycled_task_id_consistency.py; missing part: identifier of the acceptance criterion or requirement that would otherwise be dropped (the deviation names the pinned tests but no AC-n or requirement id)"
+  resolution_note: 'task_id: task0006; path: tests/test_recycled_task_id_consistency.py; missing part:
+    identifier of the acceptance criterion or requirement that would otherwise be dropped (the deviation
+    names the pinned tests but no AC-n or requirement id)'
 - question_id: implement.wake-decline
   packet_id: null
   answered_at: '2026-11-06T00:44:54+09:00'
@@ -75,7 +78,9 @@ records:
   selected_option_ids: []
   freeform: null
   normalized_answer: declined
-  resolution_note: "task_id: task0006; path: tests/test_routeback_record_carve_out.py; missing part: identifier of the acceptance criterion or requirement that would otherwise be dropped (the deviation names the pinned tests but no AC-n or requirement id)"
+  resolution_note: 'task_id: task0006; path: tests/test_routeback_record_carve_out.py; missing part: identifier
+    of the acceptance criterion or requirement that would otherwise be dropped (the deviation names the
+    pinned tests but no AC-n or requirement id)'
 - question_id: implement.wake-decline
   packet_id: null
   answered_at: '2026-11-06T00:44:54+09:00'
@@ -84,7 +89,9 @@ records:
   selected_option_ids: []
   freeform: null
   normalized_answer: declined
-  resolution_note: "task_id: task0006; path: tests/test_routeback_reset_scope_consistency.py; missing part: identifier of the acceptance criterion or requirement that would otherwise be dropped (the deviation names the pinned tests but no AC-n or requirement id)"
+  resolution_note: 'task_id: task0006; path: tests/test_routeback_reset_scope_consistency.py; missing
+    part: identifier of the acceptance criterion or requirement that would otherwise be dropped (the deviation
+    names the pinned tests but no AC-n or requirement id)'
 - question_id: implement.wake-decline
   packet_id: null
   answered_at: '2026-11-06T00:44:54+09:00'
@@ -93,7 +100,9 @@ records:
   selected_option_ids: []
   freeform: null
   normalized_answer: declined
-  resolution_note: "task_id: task0006; path: tests/test_stale_launched_doc_contract.py; missing part: identifier of the acceptance criterion or requirement that would otherwise be dropped (the deviation names the pinned tests but no AC-n or requirement id)"
+  resolution_note: 'task_id: task0006; path: tests/test_stale_launched_doc_contract.py; missing part:
+    identifier of the acceptance criterion or requirement that would otherwise be dropped (the deviation
+    names the pinned tests but no AC-n or requirement id)'
 - question_id: implement.wake-decline
   packet_id: null
   answered_at: '2026-11-06T00:46:29+09:00'
@@ -102,7 +111,8 @@ records:
   selected_option_ids: []
   freeform: null
   normalized_answer: declined
-  resolution_note: "task_id: task0004; path: tests/test_scenario_id_planner_docs.py; missing part: how it fails without the path, as a named test (the deviation describes a pin but names no test)"
+  resolution_note: 'task_id: task0004; path: tests/test_scenario_id_planner_docs.py; missing part: how
+    it fails without the path, as a named test (the deviation describes a pin but names no test)'
 - question_id: implement.wake-decline
   packet_id: null
   answered_at: '2026-11-06T00:46:29+09:00'
@@ -111,7 +121,8 @@ records:
   selected_option_ids: []
   freeform: null
   normalized_answer: declined
-  resolution_note: "task_id: task0004; path: tests/test_gate_option_vocabulary.py; missing part: identifier of the acceptance criterion or requirement that would otherwise be dropped"
+  resolution_note: 'task_id: task0004; path: tests/test_gate_option_vocabulary.py; missing part: identifier
+    of the acceptance criterion or requirement that would otherwise be dropped'
 - question_id: implement.wake-decline
   packet_id: null
   answered_at: '2026-11-06T00:49:03+09:00'
@@ -120,7 +131,8 @@ records:
   selected_option_ids: []
   freeform: null
   normalized_answer: declined
-  resolution_note: "task_id: task0001; path: tests/test_gate_option_vocabulary.py; missing part: identifier of the acceptance criterion or requirement that would otherwise be dropped"
+  resolution_note: 'task_id: task0001; path: tests/test_gate_option_vocabulary.py; missing part: identifier
+    of the acceptance criterion or requirement that would otherwise be dropped'
 - question_id: implement.wake-decline
   packet_id: null
   answered_at: '2026-11-06T00:49:03+09:00'
@@ -129,7 +141,8 @@ records:
   selected_option_ids: []
   freeform: null
   normalized_answer: declined
-  resolution_note: "task_id: task0001; path: tests/test_rework_docs_only_validator_rules.py; missing part: identifier of the acceptance criterion or requirement that would otherwise be dropped"
+  resolution_note: 'task_id: task0001; path: tests/test_rework_docs_only_validator_rules.py; missing part:
+    identifier of the acceptance criterion or requirement that would otherwise be dropped'
 - question_id: implement.wake-decline
   packet_id: null
   answered_at: '2026-11-06T01:30:20+09:00'
@@ -138,4 +151,40 @@ records:
   selected_option_ids: []
   freeform: null
   normalized_answer: declined
-  resolution_note: "task_id: task0002; path: tests/test_gate_option_vocabulary.py; missing part: identifier of the acceptance criterion or requirement that would otherwise be dropped"
+  resolution_note: 'task_id: task0002; path: tests/test_gate_option_vocabulary.py; missing part: identifier
+    of the acceptance criterion or requirement that would otherwise be dropped'
+- question_id: review.security-codex-timeout
+  packet_id: null
+  answered_at: '2026-11-06T01:59:38+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  freeform: null
+  selected_option_ids:
+  - sec_claude_fallback
+  normalized_answer: sec_claude_fallback。セキュリティの Codex 実行を失敗として記録し、Claude レビュアーを 1 回走らせる。
+  resolution_note: 'gate: review.security-codex-timeout (unlisted); options not chosen: sec_letter, sec_chain_next;
+    codex_consulted: true; harness: codex; turns: 1; opus_escalation: false; deviation: review-phase.md
+    R2b の「スキーマ妥当なら完了」から外れる。ラッパーが exit 124 で空の結果を返したため、指摘なしの完了にすると偽の合格になる。chain の次は同じサイズ超過で飛ぶ。tests/・test-docs/・fixtures
+    は通読されていない。'
+- question_id: review.perspectives-too-large
+  packet_id: null
+  answered_at: '2026-11-06T01:59:38+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  freeform: null
+  selected_option_ids:
+  - skip_keep
+  normalized_answer: skip_keep。performance / architecture / spec は review_data_too_large のスキップのまま残し、未レビューとして開示する。
+  resolution_note: 'gate: review.perspectives-too-large (unlisted); options not chosen: skip_claude_fallback,
+    skip_narrow_rerun; codex_consulted: true; harness: codex; turns: 1; opus_escalation: false; review-protocol.md
+    の再試行不可の規定に従った。差分は 423 KB。この 3 観点は本ラウンドで未レビューで、unreviewed_perspectives の定義（Claude fallback 失敗後のみ）には当たらないため
+    perspective_runs と evaluation.round_summary で開示する。'
+- question_id: review.reviewer-input-form
+  packet_id: null
+  answered_at: '2026-11-06T01:59:38+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: null
+  normalized_answer: changed_files を一覧ファイルのパスで渡し、diff コマンドは個別パスの列挙でなく除外指定の形にした
+  resolution_note: 'deviation: review-phase.md R2 の入力ブロックは changed_files の本文埋め込みと個別パスの diff を定める。対象の集合は同じで、レビュー結果に差は出ない。'
