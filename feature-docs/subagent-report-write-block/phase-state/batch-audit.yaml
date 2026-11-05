@@ -23,7 +23,7 @@ records:
   answer_mode: single_select
   selected_option_ids:
   - reject_new_files_in_validator
-  freeform: ''
+  freeform: null
   normalized_answer: reject_new_files_in_validator。ベース時点に存在しない一致名を検証で拒否する。既存ファイルの更新は通す。対象リポジトリと基準コミットを確定する入力の契約が要る。
   resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted:
     true; harness: codex; turns: 1; opus_escalation: false; 実装者の手順で受け止めない方針なので、文書テストだけでは計画の違反を止められない。全件拒否は既存ファイルの更新まで止める。'
@@ -34,7 +34,7 @@ records:
   answer_mode: single_select
   selected_option_ids:
   - feature_docs_only
-  freeform: ''
+  freeform: null
   normalized_answer: feature_docs_only。再開手順は SPEC に書く。web-sip-phone の実状態は未確認なので、手順はその確認を前提として書き、failed
     からの入口も明記する。
   resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted:
