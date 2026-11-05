@@ -287,7 +287,7 @@ tasks:
     - FR6
     - FR9
     - NFR6
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/subagent-report-write-block/task0007
 review:
