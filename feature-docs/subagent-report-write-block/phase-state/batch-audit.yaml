@@ -40,3 +40,12 @@ records:
   resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted:
     true; harness: codex; turns: 1; opus_escalation: false; feature 固有の手順なので feature
     の文書に置く。汎用の拒否時処理はプラグインの規則として別に定義する。'
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-11-06T00:35:18+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: null
+  normalized_answer: declined
+  resolution_note: "task_id: task0003; path: tests/test_scenario_id_planner_docs.py; missing part: identifier of the acceptance criterion or requirement that would otherwise be dropped (the deviation names the failing test but no AC-n or requirement id)"
