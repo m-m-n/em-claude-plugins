@@ -130,3 +130,12 @@ records:
   freeform: null
   normalized_answer: declined
   resolution_note: "task_id: task0001; path: tests/test_rework_docs_only_validator_rules.py; missing part: identifier of the acceptance criterion or requirement that would otherwise be dropped"
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-11-06T01:30:20+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: null
+  normalized_answer: declined
+  resolution_note: "task_id: task0002; path: tests/test_gate_option_vocabulary.py; missing part: identifier of the acceptance criterion or requirement that would otherwise be dropped"
