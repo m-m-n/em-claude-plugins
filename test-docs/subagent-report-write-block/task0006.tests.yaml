@@ -1,0 +1,108 @@
+task_id: task0006
+# python3 -m unittest discover -s tests before any change in this worktree:
+# Ran 13996 tests, OK (skipped=1).
+baseline_failures: []
+# python3 -m unittest discover -s tests after the implementation and after this
+# record: no failure; subset of the baseline.
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_write_rejection_parent_docs.TestAC1MarkerRecordedInWakeCommit.test_step3_records_marker_in_notes_in_the_wake_commit
+      - tests.test_write_rejection_parent_docs.TestAC1MarkerRecordedInWakeCommit.test_marker_paragraph_is_inside_step3
+      - tests.test_write_rejection_parent_docs.TestAC1MarkerRecordedInWakeCommit.test_marker_is_written_only_in_the_wake_commit
+    red_confirmed: true
+    red_reason: >-
+      Run with the three reference documents restored to their state before
+      this task. The first test failed with "AssertionError:
+      '\"write_rejection\"' not found" in the Step I.2.b step 3 text, and the
+      other two failed because the Write-rejection marker paragraph did not
+      exist.
+  AC-2:
+    tests:
+      - tests.test_write_rejection_parent_docs.TestAC2HonoringConditions.test_honoring_conditions_are_stated
+      - tests.test_write_rejection_parent_docs.TestAC2HonoringConditions.test_absolute_path_is_not_honored_and_not_written
+      - tests.test_write_rejection_parent_docs.TestAC2HonoringConditions.test_the_file_name_rule_is_cited_not_restated
+    red_confirmed: true
+    red_reason: >-
+      Run with the three reference documents restored to their state before
+      this task. The honoring test failed with "AssertionError: '' is not
+      true : no honoring paragraph found", and the absolute-path ordering test
+      raised "ValueError: substring not found". The citation test passed
+      before and after by design: it guards that the three documents never
+      hold the regular expression of the file name rule.
+  AC-3:
+    tests:
+      - tests.test_write_rejection_parent_docs.TestAC3AC4AC5SameCauseParagraph.test_paragraph_states_suppression_resume_and_stop_report
+      - tests.test_write_rejection_parent_docs.TestAC3AC4AC5SameCauseParagraph.test_paragraph_is_inside_i2c
+      - tests.test_write_rejection_parent_docs.TestAC3AC4AC5SameCauseParagraph.test_paragraph_sits_after_the_batch_mode_paragraph
+      - tests.test_write_rejection_parent_docs.TestAC3AC4AC5SameCauseParagraph.test_batch_abort_does_not_write_a_task_status_or_notes_set
+    red_confirmed: true
+    red_reason: >-
+      Run with the three reference documents restored to their state before
+      this task. The paragraph test failed with "AssertionError: '' is not
+      true : no Same-cause write rejection paragraph", the inside-I.2.c test
+      failed with "'**Same-cause write rejection**' not found", the ordering
+      test raised "ValueError: substring not found", and the abort-write test
+      failed on the empty paragraph.
+  AC-4:
+    tests:
+      - tests.test_write_rejection_parent_docs.TestAC3AC4AC5SameCauseParagraph.test_paragraph_states_suppression_resume_and_stop_report
+    red_confirmed: true
+    red_reason: >-
+      Run with the three reference documents restored to their state before
+      this task. The test reads the resume-after-interruption sentences from
+      the same paragraph and failed with "AssertionError: '' is not true : no
+      Same-cause write rejection paragraph".
+  AC-5:
+    tests:
+      - tests.test_write_rejection_parent_docs.TestAC3AC4AC5SameCauseParagraph.test_paragraph_states_suppression_resume_and_stop_report
+      - tests.test_write_rejection_parent_docs.TestAC5BatchModeRow.test_row_states_the_write_rejection_handling
+      - tests.test_write_rejection_parent_docs.TestAC5StopBinding.test_paragraph_binds_the_stop_to_implement_second_failure
+      - tests.test_write_rejection_parent_docs.TestAC5StopBinding.test_paragraph_sits_after_the_precedence_paragraph
+      - tests.test_write_rejection_parent_docs.TestAC5StopBinding.test_paragraph_states_that_no_row_and_no_code_is_added
+    red_confirmed: true
+    red_reason: >-
+      Run with the three reference documents restored to their state before
+      this task. The row test failed with "AssertionError:
+      'report-name-write-rejected:' not found" in the implement.failed-task
+      row, the binding test failed with "'' is not true : no write-rejection
+      binding paragraph", the no-new-row test failed on the empty paragraph,
+      and the ordering test raised "ValueError: substring not found".
+  AC-6:
+    tests:
+      - tests.test_write_rejection_parent_docs.TestAC6ExistingHandlingKept.test_only_the_marked_failure_is_handled_differently
+      - tests.test_write_rejection_parent_docs.TestAC6ExistingHandlingKept.test_pinned_i2c_sentences_are_retained
+      - tests.test_write_rejection_parent_docs.TestAC6ExistingHandlingKept.test_step_i0_opening_and_resume_guard_bullets_are_retained
+      - tests.test_write_rejection_parent_docs.TestAC6ExistingHandlingKept.test_deliverables_hold_no_notion_url_or_home_path
+      - tests.test_write_rejection_parent_docs.TestAC5BatchModeRow.test_the_table_stays_at_ten_rows
+      - tests.test_write_rejection_parent_docs.TestAC5StopBinding.test_coverage_table_keeps_fourteen_rows
+    red_confirmed: true
+    red_reason: >-
+      Run with the three reference documents restored to their state before
+      this task, test_only_the_marked_failure_is_handled_differently failed
+      with "AssertionError: 'Every failure without the marker is handled as
+      before' not found". The other five tests are regression guards over
+      wording and table sizes this task must not change; they passed before
+      and after by design, and the existing pinned-wording modules of the
+      suite (tests.test_implement_routeback_gate,
+      tests.test_recycled_task_id_consistency,
+      tests.test_routeback_record_carve_out,
+      tests.test_routeback_reset_scope_consistency and
+      tests.test_stale_launched_doc_contract) cover the same pins. Those five
+      modules compared the whole tail of Step I.2.c, so the new paragraph
+      made six of their tests fail; each now compares everything before the
+      new paragraph, byte for byte, and leaves the paragraph itself to this
+      module. No red state occurred for the other guards.
+  AC-7:
+    tests:
+      - tests.test_write_rejection_parent_docs.TestAC7Restart.test_step_i0_treats_the_failed_entry_as_the_rework_route
+      - tests.test_write_rejection_parent_docs.TestAC7Restart.test_resume_guard_paragraph_states_the_restart
+      - tests.test_write_rejection_parent_docs.TestAC7Restart.test_restart_sentence_follows_the_abort_text_of_step_i0
+      - tests.test_write_rejection_parent_docs.TestAC7Restart.test_restart_paragraph_follows_the_resume_guard_bullets
+    red_confirmed: true
+    red_reason: >-
+      Run with the three reference documents restored to their state before
+      this task. The Step I.0 test and the Resume guard test failed with
+      "AssertionError: '`skills/develop/SKILL.md` Step A.6' not found", and
+      the two ordering tests raised "ValueError: substring not found".

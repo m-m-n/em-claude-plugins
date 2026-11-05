@@ -1144,8 +1144,18 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # and that pairs sharing a `to` are not affected. The numbered
     # application rules stay eighteen. Same rationale: refresh, don't
     # remove.
+    #
+    # Refreshed again by subagent-report-write-block/task0004 (FR4, FR5): the
+    # `tasks_patch` section gains the `path_corrections` field, the
+    # `replace_all` permission intro admits the correction entry, a sentence
+    # names that entry as the one state where a `failed` task is not a
+    # protocol error, the carried-verbatim text points at the new unnumbered
+    # `## Final-path correction` section (before `## Ownership boundary`).
+    # `All eighteen rules apply` and the existing protocol-error sentence are
+    # unchanged, and the numbered application rules stay eighteen. Same
+    # rationale: refresh, don't remove.
     WORKFLOW_PATCH_SHA256 = (
-        "9df879b81ea806447ea2da88ca26f96b282ee78da2e4b607aea3e7c8a657e5b9"
+        "cfab33e0df1a1d4eb97d651a8da006d4e7fcb6472d5b3756fa5eee76de229ce8"
     )
     # Updated by goal-vs-spec-divergence/task0016 (review round1 rework),
     # which the user's SPEC.md/REQUIREMENTS.md Declared Change Set extension
@@ -1349,17 +1359,18 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # PINNED_VALIDATOR_TEST_LINE below is unaffected and still asserted. Same
     # rationale: refresh, don't remove.
     #
-    # Refreshed again by subagent-report-write-block/task0002 (FR3, FR4, FR5,
-    # FR6): the validator gains the report-artifact-name helpers
-    # (`is_report_artifact_name`, `find_report_name_violations` and the base
-    # commit reads they use), the `path_corrections` field of
-    # `replace_planning` (shape, permission, conditions 1 to 5, application),
-    # the `--target-repo`, `--base-commit` and `--journal` arguments, and the
-    # carried-task report-name check under `--dry-run-apply`; `subprocess` is
-    # imported for the git reads. PINNED_VALIDATOR_TEST_LINE below is
-    # unaffected and still asserted. Same rationale: refresh, don't remove.
+    # Refreshed again by subagent-report-write-block/task0001 (FR2, FR3, FR4):
+    # `REPORT_ARTIFACT_NAME_RE`, `is_report_artifact_name`,
+    # `require_report_name_base`, `base_tree_entry` and
+    # `find_report_name_violations` are new, `validate_workflow_patch` and
+    # `validate_worker_result` take `target_repo` / `base_commit` and report
+    # `report-name-new-file` for a new file with a report artifact name, the
+    # CLI gains `--target-repo` / `--base-commit` (read only when such a name
+    # is present), and `main` turns an `ExecutionError` raised below the
+    # parser into exit 2. PINNED_VALIDATOR_TEST_LINE below is unaffected and
+    # still asserted. Same rationale: refresh, don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "bce8fc3e1ddb7e0a4782222be3293db80dec4b065174c38c219611a79c1adeb9"
+        "f0c94c9084b31193fc2ee09af3febe3d3d58603cb389a2bd4d1127be02e511c4"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-
@@ -1458,8 +1469,16 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # directory, and that an unreadable VERIFICATION.md is reported instead of
     # raising. PINNED_VALIDATOR_TEST_LINE below is unaffected and still
     # asserted. Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by subagent-report-write-block/task0001 (FR9): the
+    # fixture runner builds a disposable repository from a case's
+    # `base-tree.json` (`build_base_repo`, `build_case_args(..., scratch_dir)`)
+    # and passes `--target-repo` / `--base-commit`, and the corpus test gives
+    # each case a scratch directory. The three new report-name fixtures are
+    # exercised by it. PINNED_VALIDATOR_TEST_LINE below is unaffected and
+    # still asserted. Same rationale: refresh, don't remove.
     TEST_VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "563cfbeb63a421be2bf26b8ade38d9f5557670bb25df360ccb02f39d09faf0ff"
+        "e07203890d7a6509a12c154f01b21d740db86935501d7e5cd49e3d512a0cb8f2"
     )
     FIXTURE_SHA256 = (
         "c8414e673876bb05dc9d35c571b35e255a53c185586d7bc876edf5aadd1f05f5"

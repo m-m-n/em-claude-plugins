@@ -307,6 +307,17 @@ to every invariant that would be desirable:
   status only, and `rework-planner` output is not checked. The authoring rule
   is owned by `skills/plan-writing/SKILL.md` (its scenario ID rule) and is
   not restated here.
+- No new report-artifact name in the `files` of `tasks_patch.entries`: a name
+  that `skills/plan-writing/SKILL.md`'s `## Report Artifact Names` matches, and
+  that is not a regular file at the base commit, is reported with the error code
+  `report-name-new-file`. Under `--dry-run-apply` the check also covers the
+  `files` of carried tasks that are not `merged`. It needs `--target-repo` and
+  `--base-commit` only when such a name is present.
+- A patch carrying `tasks_patch.path_corrections` meets the conditions of
+  `references/workflow-patch.md`'s `## Final-path correction`, checked under
+  `--dry-run-apply` with `--journal` (the feature's `journal.jsonl`) added to
+  the invocation below; each condition is reported under its own code, from
+  `path-correction-in-flight` to `path-correction-content`.
 
 The following are named as planning invariants but are **not implemented
 by the script** — they remain human review only, with no automated gate
@@ -336,12 +347,22 @@ python3 scripts/validate-worker-output.py \
     --feature-dir {feature-docs/{feature}} \
     --phase-state {phase-state/create-plan.yaml} \
     --digest-source {digest-source.json} \
+    --target-repo {integration worktree} \
+    --base-commit {integration tip} \
     --dry-run-apply
 ```
 
 The `--digest-source` file holds the substituted digest_source that
 `scripts/self-write-digest.py` returned (section 8), never the unsubstituted
 digest_source recomputed from current state.
+
+`--target-repo` is the integration worktree. The orchestrator resolves
+`--base-commit`, the full commit ID of the tip of the integration branch
+(`em-workflow/{feature}/integration`), just before it validates, never from an
+earlier capture. The two values are read only when a patch holds a name that
+`## Report Artifact Names` of `skills/plan-writing/SKILL.md` matches; a patch
+with such a name and either value missing or unresolvable exits 2 and does not
+pass.
 
 `--input-envelope` is mandatory for `--kind worker-result` — the script
 exits 2 without it. `--workflow`, `--registries`, `--feature-dir` and
@@ -418,3 +439,40 @@ A feature's declared change set is derived — not authored.
   whenever the task set changes — re-planning, a rework append, or an
   implement wake that admitted a deviation — rather than being frozen at
   the first successful planning pass.
+
+## 13. Final-path correction dispatch
+
+Run from `skills/develop/SKILL.md`'s `## Step A.6: failed からの入口` when
+`scripts/report-name-entry.py` returns `dispatch`. The patch contract is
+`references/workflow-patch.md`'s `## Final-path correction`, cited here and not
+restated.
+
+**Pre-dispatch.** The clean-worktree precondition and the scope verification are
+those of section 2 (`references/phases/create-spec-phase.md`, "Scope
+verification"), unchanged.
+
+**Dispatch.** `Task(subagent_type="em-workflow:implementation-planner")` with
+`planning_inputs.path_correction` (resolved by the orchestrator from the entry
+script's violations: `targets`, each a `task_id` and an `old_path`), the
+`write_policy` of `references/contracts/planner-contract.md`, and `tasks/` in
+`allowed_write_roots`.
+
+**Record.** The run and the patch are recorded in
+`phase-state/create-plan.yaml` under a new `request_id` and the next unused
+`patch_id`. The `create-plan` step stays `completed`, so the Resume decision
+table does not re-enter this run; an interrupted correction restarts from
+Step A.6.
+
+**Validation.** The canonical invocation of section 9, plus `--journal` (the
+feature's `journal.jsonl`).
+
+**Failure outcome.** Any result other than `completed`, any validator exit other
+than 0, and any stale result ends the dispatch: the worker's writes are
+discarded and `workflow.yaml` is not changed.
+
+**Apply.** On a validated patch the artifact commit comes first. The
+orchestrator then applies the patch and the restoration of
+`skills/develop/SKILL.md`'s `## Step A.6: failed からの入口` in memory and
+writes `workflow.yaml` with one Write in one commit, after the artifact
+commit, so an interruption cannot leave corrected `files` with
+`implement: failed`.

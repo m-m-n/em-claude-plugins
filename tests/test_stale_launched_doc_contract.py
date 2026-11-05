@@ -91,9 +91,23 @@ def _caveat_section(text):
     return _slice(supporting_cast, "Stale-`launched` caveat", RESUME_HEADING)
 
 
+# task0006 (subagent-report-write-block) adds the "Same-cause write rejection"
+# paragraph after the batch-mode paragraph, as the last item of I.2.c. The
+# byte-identity pins below compare everything before that paragraph; the
+# paragraph itself is covered by tests/test_write_rejection_parent_docs.py.
+SAME_CAUSE_LABEL = "**Same-cause write rejection**"
+
+
+def _without_same_cause_paragraph(text):
+    """`text` cut at the Same-cause write rejection paragraph when present,
+    so the pinned text is compared on its own."""
+    cut = text.find(SAME_CAUSE_LABEL)
+    return text if cut == -1 else text[:cut]
+
+
 def _batch_paragraph(i2c_section_text):
     start = i2c_section_text.index(BATCH_PARAGRAPH_MARKER)
-    return i2c_section_text[start:].rstrip()
+    return _without_same_cause_paragraph(i2c_section_text[start:]).rstrip()
 
 
 # --- AC-1: six new reason codes, fixed order, both conjuncts, insufficiency

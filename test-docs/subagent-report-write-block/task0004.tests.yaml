@@ -1,0 +1,80 @@
+task_id: task0004
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 13996 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 14067 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_final_path_correction_docs.TestPatchFieldAndPermissionStates.test_tasks_patch_describes_the_field_and_its_shape
+      - tests.test_final_path_correction_docs.TestPatchFieldAndPermissionStates.test_section_states_the_field_shape_rules
+      - tests.test_final_path_correction_docs.TestPatchFieldAndPermissionStates.test_the_correction_entry_state
+      - tests.test_final_path_correction_docs.TestPatchFieldAndPermissionStates.test_the_replanning_path_state_includes_route_back
+      - tests.test_final_path_correction_docs.TestPatchFieldAndPermissionStates.test_the_initial_planning_path_state_is_rejected
+      - tests.test_final_path_correction_docs.TestPatchFieldAndPermissionStates.test_all_eighteen_rules_sentence_is_unchanged_and_there_are_eighteen
+      - tests.test_final_path_correction_docs.TestPatchFieldAndPermissionStates.test_protocol_error_sentence_is_unchanged_and_the_correction_entry_is_named
+      - tests.test_final_path_correction_docs.TestPatchFieldAndPermissionStates.test_exactly_two_paths_wording_admits_the_section
+      - tests.test_final_path_correction_docs.TestPatchFieldAndPermissionStates.test_verbatim_text_points_at_the_section
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_workflow_patch_md_byte_identical
+    red_confirmed: true
+    red_reason: "Run against the base revision of the four documents, the class errored in setUpClass with AssertionError: heading not found: '## Final-path correction', so none of its tests ran; the tasks_patch paragraph, the reworded two-paths intro and the correction-entry sentence did not exist. The retention tests (eighteen rules, the pinned protocol-error sentence) are in the same class and pass after the change. The existing test_workflow_patch_md_byte_identical was observed to fail after workflow-patch.md gained the section (sha256 mismatch against the base revision); its pin was refreshed to the new file, as that test's comments prescribe."
+  AC-2:
+    tests:
+      - tests.test_final_path_correction_docs.TestFinalPathCorrectionConditions.test_five_conditions_are_numbered_in_order
+      - tests.test_final_path_correction_docs.TestFinalPathCorrectionConditions.test_each_condition_carries_its_validator_code
+      - tests.test_final_path_correction_docs.TestFinalPathCorrectionConditions.test_condition_1_no_task_in_flight
+      - tests.test_final_path_correction_docs.TestFinalPathCorrectionConditions.test_condition_2_target_is_not_merged
+      - tests.test_final_path_correction_docs.TestFinalPathCorrectionConditions.test_condition_3_old_path
+      - tests.test_final_path_correction_docs.TestFinalPathCorrectionConditions.test_condition_4_new_path
+      - tests.test_final_path_correction_docs.TestFinalPathCorrectionConditions.test_condition_5_limited_to_path_strings
+      - tests.test_final_path_correction_docs.TestFinalPathCorrectionConditions.test_all_conditions_are_required_and_a_failing_correction_is_not_applied
+      - tests.test_final_path_correction_docs.TestFinalPathCorrectionConditions.test_base_inputs_are_stated
+      - tests.test_final_path_correction_docs.TestFinalPathCorrectionConditions.test_comparison_documents_and_normalization
+      - tests.test_final_path_correction_docs.TestFinalPathCorrectionConditions.test_comparison_set_exclusions
+    red_confirmed: true
+    red_reason: "Run against the base revision of the four documents, the class errored in setUpClass with AssertionError: heading not found: '## Final-path correction'; none of its tests ran."
+  AC-3:
+    tests:
+      - tests.test_final_path_correction_docs.TestFinalPathCorrectionOwnershipAndApplication.test_ownership
+      - tests.test_final_path_correction_docs.TestFinalPathCorrectionOwnershipAndApplication.test_references_in_tests
+      - tests.test_final_path_correction_docs.TestFinalPathCorrectionOwnershipAndApplication.test_application_effects
+      - tests.test_final_path_correction_docs.TestFinalPathCorrectionOwnershipAndApplication.test_applies_in_replanning_entered_through_route_back
+      - tests.test_final_path_correction_docs.TestFinalPathCorrectionOwnershipAndApplication.test_section_cites_the_naming_rule_without_restating_the_regex
+    red_confirmed: true
+    red_reason: "Run against the base revision of the four documents, the class errored in setUpClass with AssertionError: heading not found: '## Final-path correction'; none of its tests ran."
+  AC-4:
+    tests:
+      - tests.test_final_path_correction_docs.TestSchemaFailedEntryRestorationAndMarker.test_restoration_paragraph_names_the_second_write_site
+      - tests.test_final_path_correction_docs.TestSchemaFailedEntryRestorationAndMarker.test_restoration_paragraph_names_itself_as_the_exception
+      - tests.test_final_path_correction_docs.TestSchemaFailedEntryRestorationAndMarker.test_pinned_writer_and_lifecycle_sentences_are_unchanged
+      - tests.test_final_path_correction_docs.TestSchemaFailedEntryRestorationAndMarker.test_restoration_paragraph_sits_after_the_pinned_ones
+      - tests.test_final_path_correction_docs.TestSchemaFailedEntryRestorationAndMarker.test_restoration_paragraph_does_not_restate_the_classification
+      - tests.test_final_path_correction_docs.TestSchemaFailedEntryRestorationAndMarker.test_marker_section_is_between_the_record_section_and_sibling_artifacts
+      - tests.test_final_path_correction_docs.TestSchemaFailedEntryRestorationAndMarker.test_marker_section_defines_the_marker
+      - tests.test_final_path_correction_docs.TestSchemaFailedEntryRestorationAndMarker.test_notes_line_of_the_structure_points_at_the_marker_section
+      - tests.test_routeback_record_schema_patch.TestSectionNamesWriterLifecycleAndReaders.test_live_section_states_writer_lifecycle_and_readers
+    red_confirmed: true
+    red_reason: "Run against the base revision of the four documents, the new class errored in setUpClass with AssertionError: heading not found: '## `tasks.{T}.notes` marker'; none of its tests ran. The existing test_routeback_record_schema_patch test detects the pinned Writer and Lifecycle sentences of the record section and passes both before and after; no red state occurred for the unchanged-sentences half of this criterion."
+  AC-5:
+    tests:
+      - tests.test_final_path_correction_docs.TestValidatorCallSites.test_canonical_invocation_passes_the_two_base_values
+      - tests.test_final_path_correction_docs.TestValidatorCallSites.test_the_orchestrator_resolves_the_tip_just_before_validating
+      - tests.test_final_path_correction_docs.TestValidatorCallSites.test_the_two_values_are_read_only_for_a_matching_name
+      - tests.test_final_path_correction_docs.TestValidatorCallSites.test_section_9_lists_the_new_name_check
+      - tests.test_final_path_correction_docs.TestValidatorCallSites.test_section_9_lists_the_correction_checks
+      - tests.test_final_path_correction_docs.TestValidatorCallSites.test_rework_section_10_step_3_passes_the_two_values
+      - tests.test_final_path_correction_docs.TestValidatorCallSites.test_rework_section_12_lists_the_name_check
+      - tests.test_scenario_id_planner_docs.TestAC2FeatureDirParagraphAndUnchangedParts.test_canonical_invocation_block_unchanged
+      - tests.test_rework_docs_only_route_doc.TestFeatureDocsFilesRuleAndSection12.test_section_12_has_exactly_three_additional_bullets
+    red_confirmed: true
+    red_reason: "Run against the base revision of the four documents, the seven new tests failed: the canonical block held no --target-repo or --base-commit (AssertionError: '--target-repo {integration worktree}' not found), section 9 and Section 12 held no bullet naming report-name-new-file or tasks_patch.path_corrections, and Section 10 step 3 held no '--target-repo'. The existing test_canonical_invocation_block_unchanged was observed to fail after the canonical block gained the two lines (sha256 mismatch against the base revision's block); it now removes exactly those two lines before comparing, so the rest of the block stays pinned. The existing test_section_12_has_exactly_three_additional_bullets was observed to fail after Section 12 gained a bullet (AssertionError: 10 != 9); it now sets aside the one bullet naming report-name-new-file and still counts the docs-only route's three."
+  AC-6:
+    tests:
+      - tests.test_final_path_correction_docs.TestFinalPathCorrectionDispatchSection.test_section_is_the_last_one_and_follows_section_12
+      - tests.test_final_path_correction_docs.TestFinalPathCorrectionDispatchSection.test_it_names_where_it_is_run_from_and_cites_the_patch_contract
+      - tests.test_final_path_correction_docs.TestFinalPathCorrectionDispatchSection.test_pre_dispatch
+      - tests.test_final_path_correction_docs.TestFinalPathCorrectionDispatchSection.test_dispatch
+      - tests.test_final_path_correction_docs.TestFinalPathCorrectionDispatchSection.test_record_and_restart_rule
+      - tests.test_final_path_correction_docs.TestFinalPathCorrectionDispatchSection.test_validation
+      - tests.test_final_path_correction_docs.TestFinalPathCorrectionDispatchSection.test_failure_outcome
+      - tests.test_final_path_correction_docs.TestFinalPathCorrectionDispatchSection.test_apply
+    red_confirmed: true
+    red_reason: "Run against the base revision of the four documents, the class errored in setUpClass with AssertionError: heading not found: '## 13. Final-path correction dispatch'; none of its tests ran."

@@ -727,7 +727,12 @@ class TestFeatureDocsFilesRuleAndSection12(_DocTestCase):
                 self.assertIn(base, self.bullets)
 
     def test_section_12_has_exactly_three_additional_bullets(self):
-        self.assertEqual(len(self.bullets), len(BASE_SECTION_12_BULLETS) + 3)
+        # subagent-report-write-block/task0004 adds one further bullet, the
+        # new report-artifact name check (`report-name-new-file`). It is set
+        # aside here, so this test keeps counting the docs-only route's three
+        # bullets and a fourth docs-only bullet would still fail it.
+        others = [b for b in self.bullets if "`report-name-new-file`" not in b]
+        self.assertEqual(len(others), len(BASE_SECTION_12_BULLETS) + 3)
 
     def test_section_12_matcher_would_reject_the_base_bullet_list(self):
         # Non-vacuity proof: the six base bullets alone hold none of the three

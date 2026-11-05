@@ -111,6 +111,42 @@ worker's input.
   `skills/plan-writing/SKILL.md`'s "Plugin Version Handling" section and is
   not restated here.
 
+### path_correction (dispatch-resolved value)
+
+`planning_inputs.path_correction` is present on the final-path correction
+dispatch and null on every other dispatch. Like `plugin_versioning` it is a
+value, not a path: the orchestrator resolves it and places it in the
+dispatch, and the planner never discovers its content itself. When the
+orchestrator dispatches, and how it resolves the value, are owned by
+`references/phases/create-plan-phase.md`, section
+`## 13. Final-path correction dispatch`, and are not restated here.
+
+```yaml
+path_correction:                   # null on every other dispatch
+  targets:                         # one entry per task whose path is corrected
+    - task_id: task0004
+      old_path: <repository-relative path>
+```
+
+- **Shape**: `targets` is a list of mappings with exactly `task_id` and
+  `old_path`.
+- **Untrusted**: the value is untrusted input under
+  `references/contracts/worker-envelope.md`'s Untrusted-Input Handling
+  section, which this contract cites and does not restate. It carries only
+  task ids and project-relative paths.
+- **Digest**: when present it is a `value_inputs` member of this worker's
+  `input_digest`, as stated under `## digest_inputs` below.
+- **write_policy**: on this dispatch `write_policy.targets` has action
+  `replace_own` for IMPLEMENTATION.md, VERIFICATION.md and each target's task
+  plan.
+- **Output**: the `workflow_patch` is `replace_planning` carrying
+  `tasks_patch.path_corrections`, whose shape and permission conditions are
+  owned by `references/workflow-patch.md`, section
+  `## Final-path correction`. `payload.task_index` lists only `entries`, and
+  may be empty.
+- **Process**: what the planner does with the value is owned by
+  `agents/implementation-planner.md`, section `## Final-path correction`.
+
 ## Question packet bundling rule
 
 Questions covering TBD resolution, license conflict, and existing-file
@@ -146,8 +182,10 @@ contract declares — the planner does not expand it:
 The planner's `value_inputs` has one member, `plugin_versioning` (defined
 under "### plugin_versioning (dispatch-resolved value)" above), digested per
 `references/contracts/worker-envelope.md` rule R1's normalization of the
-value. `task_description` is not part of the planner's input; that belongs to
-requirements-analyst.
+value. `value_inputs` gains `planning_inputs.path_correction` as a member when
+it is present (defined under "### path_correction (dispatch-resolved value)"
+above), digested the same way. `task_description` is not part of the
+planner's input; that belongs to requirements-analyst.
 
 **`project.design_system.kind` exception** (design-input.md 5.4.5): when
 `kind: project_native`, `design-system/tokens.yaml` and
@@ -176,7 +214,9 @@ payload:
 ```
 
 The `completed` output is this triple: `written_artifacts`, `workflow_patch`
-and `payload.task_index`. The `workflow_patch` the planner returns uses
+and `payload.task_index`. On the final-path correction dispatch,
+`payload.task_index` follows the rule of "### path_correction
+(dispatch-resolved value)" above. The `workflow_patch` the planner returns uses
 `operation: replace_planning` (bound to `tasks_patch.mode: replace_all`,
 targeting the `create-plan` step); the operation's permission conditions,
 the `tasks_patch` entry shape, and the application rules are owned by
