@@ -113,7 +113,7 @@ workflow:
   completed_at_commit: be063ba5b57fcc1858da8e6da39c7a72eda8d6e8
   base_commit: d0be8deff3eebd2ae4db9230a67f3855d03a5046
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -296,6 +296,15 @@ review:
   rounds_completed: 0
   residual_critical_high: 0
   needs_rework: false
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - performance
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
 requirements:
   FR1:
     title: 計画の命名規則
