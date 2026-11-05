@@ -796,6 +796,20 @@ def _i2b_section(text):
     return text[start:end]
 
 
+# task0006 (subagent-report-write-block) adds the "Same-cause write rejection"
+# paragraph after the batch-mode paragraph, as the last item of I.2.c. The
+# byte-identity pins below compare everything before that paragraph; the
+# paragraph itself is covered by tests/test_write_rejection_parent_docs.py.
+SAME_CAUSE_LABEL = "**Same-cause write rejection**"
+
+
+def _without_same_cause_paragraph(text):
+    """`text` cut at the Same-cause write rejection paragraph when present,
+    so the pinned batch-mode paragraph is compared on its own."""
+    cut = text.find(SAME_CAUSE_LABEL)
+    return text if cut == -1 else text[:cut]
+
+
 def _i2c_section(text):
     start = text.index(I2C_HEADING)
     end = text.index(NEXT_SECTION_HEADING, start)
@@ -1317,7 +1331,7 @@ class TestI2cHeadingAndBatchModeParagraphByteIdentical(unittest.TestCase):
     def test_batch_mode_paragraph_is_byte_identical_tail(self):
         section = _i2c_section(self.text)
         start = section.index("Batch mode (`references/batch-mode.md`")
-        actual = section[start:]
+        actual = _without_same_cause_paragraph(section[start:])
         self.assertEqual(actual, PRE_CHANGE_BATCH_MODE_PARAGRAPH)
 
 
@@ -1367,7 +1381,7 @@ class TestBatchModeParagraphRestatesSC1Terminal(unittest.TestCase):
 
     def test_paragraph_still_final_content_before_supporting_cast(self):
         idx = self.text.index(NEXT_SECTION_HEADING)
-        tail_before_heading = self.text[:idx]
+        tail_before_heading = _without_same_cause_paragraph(self.text[:idx])
         # exactly one blank line separates the paragraph's end from the
         # next heading -- i.e. the raw text ends "...notes`.\n\n" right
         # before "### Supporting cast".

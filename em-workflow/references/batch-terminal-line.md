@@ -251,6 +251,15 @@ condition 3. This stop binds to the `stop-condition-3` row,
 this one stop only; it is not a general rule for other current-run routes
 that write `implement: failed` / `failed_kind: decision`.
 
+The batch abort that the Same-cause write rejection paragraph of Step I.2.c
+in `references/implement-phase.md` raises binds to the
+`implement-second-failure` row, `implement_task_failed`, though the task
+failed once: the stop is reached through the implement phase's own abort
+route, and that route needs no second failure. `detail` carries the
+target path and the rejection text, and `resume_conditions` carries the
+resume condition: complete the final-path correction by re-running develop
+naming the feature. The table above gains no row and no code.
+
 Exactly one documented `reason` code, `context_budget_reached`, has no
 stop point in the table above: it is reserved by the consumer and never
 emitted by em-workflow, so this asymmetry is intentional, not an
