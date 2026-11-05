@@ -1,7 +1,7 @@
 schema_version: 1
 feature: subagent-report-write-block
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 6944353e4b4b7c6b9a01e45e0931f75a33a6a6a0
 last_input_digest: sha256:ff7584dc54dc1109515c5f2f8949ec30d5697040a3cdb973057e60207b99152e
