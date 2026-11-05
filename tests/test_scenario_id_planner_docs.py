@@ -79,6 +79,14 @@ PHASE_NOT_IMPLEMENTED_SHA256 = (
 PHASE_CANONICAL_INVOCATION_SHA256 = (
     "dc78a4e1ba2488e8dff4af9a8112aa9b0d8d5dff2cb3fa76a4fc7b6e1964f4dc"
 )
+# task0004 of subagent-report-write-block adds exactly these two lines to the
+# canonical invocation (the base inputs of the validator). The pin above is
+# still the base revision's block: the test removes these two lines from the
+# live block before comparing, so everything else stays pinned.
+PHASE_CANONICAL_INVOCATION_ADDED_LINES = (
+    "    --target-repo {integration worktree} \\\n",
+    "    --base-commit {integration tip} \\\n",
+)
 PLANNER_GATE_VOCAB_SHA256 = (
     "ab908c0af5220c9436b225077c4ca2ddec3ecacb5ca52f5553ef228ec3da7ef8"
 )
@@ -465,6 +473,9 @@ class TestAC2FeatureDirParagraphAndUnchangedParts(unittest.TestCase):
 
     def test_canonical_invocation_block_unchanged(self):
         block = _between(self.sec9, CANONICAL_MARKER, DIGEST_SOURCE_MARKER)
+        for added in PHASE_CANONICAL_INVOCATION_ADDED_LINES:
+            self.assertEqual(block.count(added), 1, added)
+            block = block.replace(added, "")
         self.assertEqual(_sha256(block), PHASE_CANONICAL_INVOCATION_SHA256)
 
     # -- negative proofs ------------------------------------------------

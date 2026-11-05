@@ -1144,8 +1144,18 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # and that pairs sharing a `to` are not affected. The numbered
     # application rules stay eighteen. Same rationale: refresh, don't
     # remove.
+    #
+    # Refreshed again by subagent-report-write-block/task0004 (FR4, FR5): the
+    # `tasks_patch` section gains the `path_corrections` field, the
+    # `replace_all` permission intro admits the correction entry, a sentence
+    # names that entry as the one state where a `failed` task is not a
+    # protocol error, the carried-verbatim text points at the new unnumbered
+    # `## Final-path correction` section (before `## Ownership boundary`).
+    # `All eighteen rules apply` and the existing protocol-error sentence are
+    # unchanged, and the numbered application rules stay eighteen. Same
+    # rationale: refresh, don't remove.
     WORKFLOW_PATCH_SHA256 = (
-        "9df879b81ea806447ea2da88ca26f96b282ee78da2e4b607aea3e7c8a657e5b9"
+        "cfab33e0df1a1d4eb97d651a8da006d4e7fcb6472d5b3756fa5eee76de229ce8"
     )
     # Updated by goal-vs-spec-divergence/task0016 (review round1 rework),
     # which the user's SPEC.md/REQUIREMENTS.md Declared Change Set extension
