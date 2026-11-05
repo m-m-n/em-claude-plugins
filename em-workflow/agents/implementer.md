@@ -296,6 +296,7 @@ and branch on its exit code exactly as `worktree-task-workflow` specifies:
   "unconfirmed_reds": ["AC-3: <why the test could not be made to fail first>"],
   "deviations": ["<file outside expected_files + why>", "..."],
   "skills_loaded": ["em-workflow:backend-impl"],
+  "write_rejection": null | {"path": "<repository-relative path>", "rejection_text": "<text>"},
   "notes": "<short; on failure: what blocked you, conflicting files if any>"
 }
 ```
@@ -305,6 +306,32 @@ that breaks tests it did not inherit broken. `tests: "pass"` means "no
 regressions", not "the whole suite is green": a task that inherits a red
 baseline and adds nothing to it still reports `pass`, with the inherited
 failures visible in `baseline_failures`.
+
+`write_rejection` is `null` unless a Write was rejected as described in
+`## Write rejection`. Then it is a mapping of `path` (the target path,
+repository-relative, never absolute) and `rejection_text` (the rejection text
+as returned), and `status` is `failed`.
+
+## Write rejection
+
+When the Write tool returns the rejection text
+`Subagents should return findings as text, not write report files.`, stop work
+at once. Which file names trigger the rejection is defined in
+`em-workflow/skills/plan-writing/SKILL.md`, section `## Report Artifact Names`;
+you need only the trigger, the rejection text.
+
+- Return `status: failed` immediately, with the target path and the rejection
+  text in the `write_rejection` field of the Step 7 report. Do not run
+  `merge_script`.
+- Do not work around the rejection by any of these routes:
+  - renaming the file;
+  - writing the content under another name;
+  - creating the file with Edit;
+  - writing the file through Bash;
+  - asking the parent to write it.
+- The rule also applies to a Write rejection on a file that exists at the base
+  commit. A file with a matching name that exists there is updated with Edit
+  from the start, not by switching to Edit after a rejection.
 
 ## Hard constraints
 

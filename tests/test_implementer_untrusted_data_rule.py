@@ -88,6 +88,7 @@ EXPECTED_REPORT_KEYS = {
     "unconfirmed_reds",
     "deviations",
     "skills_loaded",
+    "write_rejection",
     "notes",
 }
 

@@ -1,0 +1,95 @@
+task_id: task0005
+# python3 -m unittest discover -s tests before any change in this worktree:
+# Ran 13996 tests, OK (skipped=1).
+baseline_failures: []
+# python3 -m unittest discover -s tests after the implementation and after this
+# record: no failure; subset of the baseline.
+final_failures: []
+# Guards that were green before the change and are not acceptance criteria of
+# their own: tests.test_write_rejection_implementer_docs.TestSectionsFound.test_extraction_fails_loudly_on_a_missing_heading,
+# TestNoRegexInDocuments (the detector self-checks and the negative check that
+# neither em-workflow/agents/implementer.md nor
+# em-workflow/skills/worktree-task-workflow/SKILL.md carries the file-name
+# regex), and TestStdlibOnly.
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_write_rejection_implementer_docs.TestAc1ImmediateFailure.test_trigger_is_the_write_rejection_text
+      - tests.test_write_rejection_implementer_docs.TestAc1ImmediateFailure.test_trigger_is_a_write_returning_the_text
+      - tests.test_write_rejection_implementer_docs.TestAc1ImmediateFailure.test_name_definition_is_cited_not_restated
+      - tests.test_write_rejection_implementer_docs.TestAc1ImmediateFailure.test_returns_status_failed_immediately
+      - tests.test_write_rejection_implementer_docs.TestAc1ImmediateFailure.test_stops_work_at_once
+      - tests.test_write_rejection_implementer_docs.TestAc1ImmediateFailure.test_merge_script_is_not_run
+    red_confirmed: true
+    red_reason: >-
+      Run before em-workflow/agents/implementer.md had the section. The class
+      setUpClass raised "AssertionError: no heading line containing '## Write
+      rejection' found in em-workflow/agents/implementer.md", so every test of
+      the class errored.
+  AC-2:
+    tests:
+      - tests.test_write_rejection_implementer_docs.TestAc2ReportField.test_report_block_has_write_rejection_as_a_top_level_key
+      - tests.test_write_rejection_implementer_docs.TestAc2ReportField.test_mapping_is_kept_on_one_line_with_path_and_rejection_text
+      - tests.test_write_rejection_implementer_docs.TestAc2ReportField.test_description_after_the_block_names_null_and_both_members
+      - tests.test_write_rejection_implementer_docs.TestAc2ReportField.test_description_says_path_is_repository_relative_never_absolute
+      - tests.test_write_rejection_implementer_docs.TestAc2ReportField.test_rule_section_names_the_report_field
+    red_confirmed: true
+    red_reason: >-
+      Run before the Step 7 block had the key. The key test failed with
+      "AssertionError: 'write_rejection' not found in {'merge_commit', 'notes',
+      ...}", the one-line mapping test with "AssertionError: 0 != 1", the two
+      description tests with "'`write_rejection`' not found" and
+      "'repository-relative' not found", and the rule-section test with "no
+      heading line containing '## Write rejection'".
+  AC-3:
+    tests:
+      - tests.test_write_rejection_implementer_docs.TestAc3BannedRoutes.test_lead_in_forbids_working_around_the_rejection
+      - tests.test_write_rejection_implementer_docs.TestAc3BannedRoutes.test_renaming_is_banned
+      - tests.test_write_rejection_implementer_docs.TestAc3BannedRoutes.test_writing_under_another_name_is_banned
+      - tests.test_write_rejection_implementer_docs.TestAc3BannedRoutes.test_creating_the_file_with_edit_is_banned
+      - tests.test_write_rejection_implementer_docs.TestAc3BannedRoutes.test_writing_through_bash_is_banned
+      - tests.test_write_rejection_implementer_docs.TestAc3BannedRoutes.test_asking_the_parent_to_write_it_is_banned
+    red_confirmed: true
+    red_reason: >-
+      Run before em-workflow/agents/implementer.md had the section. The class
+      setUpClass raised "AssertionError: no heading line containing '## Write
+      rejection' found in em-workflow/agents/implementer.md", so every test of
+      the class errored.
+  AC-4:
+    tests:
+      - tests.test_write_rejection_implementer_docs.TestAc4BaseCommitScope.test_rule_applies_to_a_file_that_exists_at_the_base_commit
+      - tests.test_write_rejection_implementer_docs.TestAc4BaseCommitScope.test_such_a_file_is_updated_with_edit_from_the_start
+      - tests.test_write_rejection_implementer_docs.TestAc4BaseCommitScope.test_edit_is_not_a_switch_after_a_rejection
+    red_confirmed: true
+    red_reason: >-
+      Run before em-workflow/agents/implementer.md had the section. The class
+      setUpClass raised "AssertionError: no heading line containing '## Write
+      rejection' found in em-workflow/agents/implementer.md", so every test of
+      the class errored.
+  AC-5:
+    tests:
+      - tests.test_write_rejection_implementer_docs.TestAc5WorktreeTaskWorkflow.test_trigger_is_the_write_rejection_text
+      - tests.test_write_rejection_implementer_docs.TestAc5WorktreeTaskWorkflow.test_states_the_immediate_failure
+      - tests.test_write_rejection_implementer_docs.TestAc5WorktreeTaskWorkflow.test_merge_script_is_not_run
+      - tests.test_write_rejection_implementer_docs.TestAc5WorktreeTaskWorkflow.test_reports_target_path_and_rejection_text
+      - tests.test_write_rejection_implementer_docs.TestAc5WorktreeTaskWorkflow.test_bans_each_workaround
+      - tests.test_write_rejection_implementer_docs.TestAc5WorktreeTaskWorkflow.test_cites_the_implementer_section_for_detail
+    red_confirmed: true
+    red_reason: >-
+      Run before em-workflow/skills/worktree-task-workflow/SKILL.md had the
+      section. The class setUpClass raised "AssertionError: no heading line
+      containing '## Write rejection' found in
+      em-workflow/skills/worktree-task-workflow/SKILL.md", so every test of the
+      class errored.
+  AC-6:
+    tests:
+      - tests.test_write_rejection_implementer_docs.TestAc6ExpectedReportKeys.test_expected_report_keys_hold_write_rejection
+      - tests.test_implementer_untrusted_data_rule.TestGuardNoReportFieldAdded.test_report_json_keys_are_unchanged
+    red_confirmed: true
+    red_reason: >-
+      The new key test failed before EXPECTED_REPORT_KEYS held the key, with
+      "AssertionError: 'write_rejection' not found in {'merge_commit', 'notes',
+      ...}". The existing report-key guard in
+      tests/test_implementer_untrusted_data_rule.py was green before the change
+      and its own red was not separately observed; it passes after the key is
+      in both the expected set and the Step 7 block.
