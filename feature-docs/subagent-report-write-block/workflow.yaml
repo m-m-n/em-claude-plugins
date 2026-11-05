@@ -217,6 +217,7 @@ tasks:
     - em-workflow/references/workflow-schema.md
     - em-workflow/references/phases/create-plan-phase.md
     - em-workflow/references/rework-task-synthesis.md
+    - tests/test_rework_docs_only_route_doc.py
     skills: []
     domains:
     - api-contract
@@ -227,7 +228,7 @@ tasks:
     - FR5
     - FR9
     - NFR6
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/subagent-report-write-block/task0004
   task0005:

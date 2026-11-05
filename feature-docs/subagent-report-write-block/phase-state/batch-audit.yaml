@@ -94,3 +94,21 @@ records:
   freeform: null
   normalized_answer: declined
   resolution_note: "task_id: task0006; path: tests/test_stale_launched_doc_contract.py; missing part: identifier of the acceptance criterion or requirement that would otherwise be dropped (the deviation names the pinned tests but no AC-n or requirement id)"
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-11-06T00:46:29+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: null
+  normalized_answer: declined
+  resolution_note: "task_id: task0004; path: tests/test_scenario_id_planner_docs.py; missing part: how it fails without the path, as a named test (the deviation describes a pin but names no test)"
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-11-06T00:46:29+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: null
+  normalized_answer: declined
+  resolution_note: "task_id: task0004; path: tests/test_gate_option_vocabulary.py; missing part: identifier of the acceptance criterion or requirement that would otherwise be dropped"
