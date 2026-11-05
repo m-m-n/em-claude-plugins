@@ -1369,8 +1369,17 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # is present), and `main` turns an `ExecutionError` raised below the
     # parser into exit 2. PINNED_VALIDATOR_TEST_LINE below is unaffected and
     # still asserted. Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by subagent-report-write-block/task0002 (FR3, FR5): the
+    # validator gains the `path_corrections` field of `replace_planning`
+    # (shape, permission, conditions 1 to 5 and the in-memory application),
+    # the `--journal` argument, and the report-name check on the carried
+    # tasks that are not merged under `--dry-run-apply`; the scenario-ID scan
+    # skips VERIFICATION.md for a patch that carries corrections.
+    # PINNED_VALIDATOR_TEST_LINE below is unaffected and still asserted. Same
+    # rationale: refresh, don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "f0c94c9084b31193fc2ee09af3febe3d3d58603cb389a2bd4d1127be02e511c4"
+        "e154f1fb09f8325624055c351a13a1f854ec61ceb646eb3e9332d2b584eac3ba"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-
