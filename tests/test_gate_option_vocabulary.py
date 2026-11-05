@@ -1348,8 +1348,18 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # `extract_verification_scenario_ids` and `_strip_noise` are unchanged.
     # PINNED_VALIDATOR_TEST_LINE below is unaffected and still asserted. Same
     # rationale: refresh, don't remove.
+    #
+    # Refreshed again by subagent-report-write-block/task0002 (FR3, FR4, FR5,
+    # FR6): the validator gains the report-artifact-name helpers
+    # (`is_report_artifact_name`, `find_report_name_violations` and the base
+    # commit reads they use), the `path_corrections` field of
+    # `replace_planning` (shape, permission, conditions 1 to 5, application),
+    # the `--target-repo`, `--base-commit` and `--journal` arguments, and the
+    # carried-task report-name check under `--dry-run-apply`; `subprocess` is
+    # imported for the git reads. PINNED_VALIDATOR_TEST_LINE below is
+    # unaffected and still asserted. Same rationale: refresh, don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "b29a553a532bec7148b02383983811f21a7a220289f4fdeac435d69a6dbdaf79"
+        "bce8fc3e1ddb7e0a4782222be3293db80dec4b065174c38c219611a79c1adeb9"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-
