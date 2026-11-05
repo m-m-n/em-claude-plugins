@@ -188,3 +188,18 @@ records:
   freeform: null
   normalized_answer: changed_files を一覧ファイルのパスで渡し、diff コマンドは個別パスの列挙でなく除外指定の形にした
   resolution_note: 'deviation: review-phase.md R2 の入力ブロックは changed_files の本文埋め込みと個別パスの diff を定める。対象の集合は同じで、レビュー結果に差は出ない。'
+- question_id: verify.reproduction-check
+  packet_id: null
+  answered_at: '2026-11-06T02:58:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 未実施のまま pass にも fail にもせず、使い捨てリポジトリで再現確認を実行した。
+  normalized_answer: 再現確認を部品単位で実行し、全項目が期待どおりだったので verify を pass にする。
+  resolution_note: 'gate: verify.reproduction-check (unlisted); options not chosen: pass_with_open_item,
+    fail_and_rework; codex_consulted: true; harness: codex; turns: 1; opus_escalation: false; Codex は
+    AC-2 の実機確認が無いまま pass にするのは誤認を招くとして fail を選んだ。その案の前提は再現確認を実行できないことだったが、実行できたので第 3
+    案を採った。結果: 新規 REPORT.md の計画は検証が exit 1、audit-report.md の計画は exit 0。サブエージェントの Write は audit-report.md
+    が成功、REPORT.md が拒否。audit-report.md は merge-task.sh で親ブランチへ fast-forward マージされた。範囲の制限:
+    /em-workflow:develop の通し実行ではなく、Write は general-purpose サブエージェントで実施した。検証スクリプトと merge-task.sh
+    は integration の版を直接実行した。'
