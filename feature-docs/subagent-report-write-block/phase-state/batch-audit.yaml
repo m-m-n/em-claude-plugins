@@ -1,0 +1,42 @@
+schema_version: 1
+feature: subagent-report-write-block
+records:
+- question_id: requirement.report-artifact-handling
+  packet_id: create-spec-q0001
+  answered_at: '2026-11-05T23:40:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: select_or_freeform
+  selected_option_ids:
+  - plan_rule_only
+  freeform: '一致名を計画に載せない。別名で書いて改名する手順は入れない。追加要件: (a) 既存計画の最終パスを一致しない名前へ直す正式な手順を定める。tasks
+    の files、タスク本文、検証条件、テスト内の参照を揃え、修正の担当と許可条件を明示する。(b) 実装者が拒否を受けたら、対象パスと拒否文を添えて直ちに
+    status: failed を返し、改名や別ツールで回避しない。(c) 親は同じ原因の自動再試行をせず、原因の修正を再開条件にする。'
+  normalized_answer: plan_rule_only。Claude Code の Write の拒否は迂回しない。計画段の命名規則、既存計画の修正手順、拒否時の即時失敗と再試行の抑止を要件にする。
+  resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted:
+    true; harness: codex; turns: 1; opus_escalation: false; adopted plan_rule_only:
+    依頼が求めるのは成果物の取り込みと再開であり拒否の迂回ではない。拒否の趣旨を意図的に回避する 2 案は採らない。Codex も同じ結論で、既存計画の修正手順が今の契約に無いこと、batch
+    の再試行抑止が別途要ることを指摘した。'
+- question_id: requirement.plan-time-detection
+  packet_id: create-spec-q0001
+  answered_at: '2026-11-05T23:40:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - reject_new_files_in_validator
+  freeform: ''
+  normalized_answer: reject_new_files_in_validator。ベース時点に存在しない一致名を検証で拒否する。既存ファイルの更新は通す。対象リポジトリと基準コミットを確定する入力の契約が要る。
+  resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted:
+    true; harness: codex; turns: 1; opus_escalation: false; 実装者の手順で受け止めない方針なので、文書テストだけでは計画の違反を止められない。全件拒否は既存ファイルの更新まで止める。'
+- question_id: requirement.resume-procedure-home
+  packet_id: create-spec-q0001
+  answered_at: '2026-11-05T23:40:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - feature_docs_only
+  freeform: ''
+  normalized_answer: feature_docs_only。再開手順は SPEC に書く。web-sip-phone の実状態は未確認なので、手順はその確認を前提として書き、failed
+    からの入口も明記する。
+  resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted:
+    true; harness: codex; turns: 1; opus_escalation: false; feature 固有の手順なので feature
+    の文書に置く。汎用の拒否時処理はプラグインの規則として別に定義する。'
