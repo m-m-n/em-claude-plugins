@@ -4,8 +4,8 @@ phase: create-spec
 status: dispatching
 generation: 1
 base_revision: 6944353e4b4b7c6b9a01e45e0931f75a33a6a6a0
-last_input_digest: sha256:7bd9357bb3c70ad3cc7fef7d87d0ed7e5742e600a18874268f8310db8a59fb1d
-active_request_id: create-spec-run-0002
+last_input_digest: sha256:ff7584dc54dc1109515c5f2f8949ec30d5697040a3cdb973057e60207b99152e
+active_request_id: create-spec-run-0003
 packets:
   create-spec-q0001:
     status: answered
@@ -89,9 +89,9 @@ worker_runs:
     test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
   self_write_set: []
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:7bd9357bb3c70ad3cc7fef7d87d0ed7e5742e600a18874268f8310db8a59fb1d
-  output_digest: null
+  output_digest: sha256:a62b2b3056d8adcdbce1d11a78779cd143d8543af33cfe983e481d280c6b2ec2
   dispatch_digest_inputs:
     CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
     em-workflow/agents/implementation-planner.md: sha256:0f5ef865c5109b49337738edc4a4f8ebf5e8cc878da1869a49883ee069de1aa6
@@ -109,6 +109,15 @@ worker_runs:
     em-workflow/skills/plan-writing/SKILL.md: sha256:7a86f383219d822ca512b2ed390a57167025ab62ea472beed99b8fc336d7a452
     em-workflow/skills/worktree-task-workflow/SKILL.md: sha256:d5aebf7c01b003aa239af94c3485ca48cd2bdce2e83d36ede9e1d715943bf5d5
     test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+  self_write_set: []
+- request_id: create-spec-run-0003
+  status: dispatched
+  input_digest: sha256:ff7584dc54dc1109515c5f2f8949ec30d5697040a3cdb973057e60207b99152e
+  output_digest: null
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/spec-writer-contract.md: sha256:c66e457a4a68d860f757f9e6cae377b6918d29a3f3152d9a12fc92570303c5f2
+    em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
+    em-workflow/references/templates/spec-document.md: sha256:a5d0106c39a5df7dc2365357a9546588275ed6c7a1651c866e75fa327a7fa592
 artifacts: []
 patches: []
 progress_fingerprint: null
