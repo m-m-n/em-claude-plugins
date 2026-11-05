@@ -153,9 +153,9 @@ tasks:
     - NFR4
     - NFR5
     - NFR6
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/subagent-report-write-block/task0001
   task0002:
     title: Final-path correction checks and the failed-entry judgment
     plan: tasks/task0002.md
@@ -183,9 +183,9 @@ tasks:
     - NFR4
     - NFR5
     - NFR6
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/subagent-report-write-block/task0002
   task0003:
     title: 'Planner documents: naming citation and correction duty'
     plan: tasks/task0003.md
@@ -205,9 +205,9 @@ tasks:
     - FR9
     - NFR3
     - NFR6
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/subagent-report-write-block/task0003
   task0004:
     title: Correction contract and validator call sites
     plan: tasks/task0004.md
@@ -227,9 +227,9 @@ tasks:
     - FR5
     - FR9
     - NFR6
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/subagent-report-write-block/task0004
   task0005:
     title: Implementer immediate failure on the Write rejection
     plan: tasks/task0005.md
@@ -247,9 +247,9 @@ tasks:
     - FR9
     - NFR1
     - NFR6
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/subagent-report-write-block/task0005
   task0006:
     title: Parent retry suppression and restart
     plan: tasks/task0006.md
@@ -268,9 +268,9 @@ tasks:
     - FR9
     - NFR2
     - NFR6
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/subagent-report-write-block/task0006
   task0007:
     title: develop entry from failed
     plan: tasks/task0007.md
