@@ -97,6 +97,18 @@ Every task you synthesize follows the "Plugin Version Handling" section of
 section works from. A task's rework origin is not an exception to that
 section. This file restates none of its rule text.
 
+## Plan file names
+
+File names in every task you synthesize follow
+`em-workflow/skills/plan-writing/SKILL.md`, section `## Report Artifact
+Names`, for tasks' `files`, task bodies, Acceptance Criteria and
+VERIFICATION.md. This file restates neither that rule nor the name pattern it
+defines.
+
+You never run the final-path correction: it belongs to implementation-planner
+(`em-workflow/agents/implementation-planner.md`, section `## Final-path
+correction`), and no `path_corrections` field is part of your patch.
+
 ## Coverage declaration (mandatory, machine-checked)
 
 Every synthesized task MUST have an entry in `payload.rework_index`:
