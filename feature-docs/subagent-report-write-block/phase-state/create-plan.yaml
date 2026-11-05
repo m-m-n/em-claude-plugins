@@ -1,0 +1,33 @@
+schema_version: 1
+feature: subagent-report-write-block
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 6e58415514ff11b5ef1ecb5618157200b0c7c8c6
+last_input_digest: sha256:dd344d5b4da9adbb9cee8b1c988e92de285ec3683a7637ae4b9c4eaed7bb3107
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:dd344d5b4da9adbb9cee8b1c988e92de285ec3683a7637ae4b9c4eaed7bb3107
+  output_digest: null
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/planner-contract.md: sha256:202a93701b412d2db24a3126eb328ffd4234dd9059dd3cb0c83dfe1a2b76b3ad
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
+    em-workflow/references/workflow-schema.md: sha256:3f14dea83919415634fac7006dd66c3f2c8b4a1b8b75c9889bcabc61072b36fe
+    em-workflow/skills/plan-writing/SKILL.md: sha256:7a86f383219d822ca512b2ed390a57167025ab62ea472beed99b8fc336d7a452
+    feature-docs/subagent-report-write-block/REQUIREMENTS.md: sha256:0eb9a657510472b42de0805219ce0a2a9c6a61f519b07ad1f841b416cfd56c51
+    feature-docs/subagent-report-write-block/SPEC.md: sha256:3f041f1f3268805fa7ee539295bae1bbe79f3e07e1b32470cf96e477d3cb870e
+    feature-docs/subagent-report-write-block/workflow.yaml: sha256:45e987081a70f6ea0080cf3f9aa4a2efd08a1606296e1504aebedf4b19d354d4
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
