@@ -1,0 +1,50 @@
+task_id: task0001
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> 13996 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation, pin refresh and this record: python3 -m unittest discover -s tests -> 14054 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_report_name_validation.TestReportArtifactNameConstant.test_ac1_constant_pattern_is_the_fr2_regex
+      - tests.test_report_name_validation.TestReportArtifactNameConstant.test_ac1_constant_is_compiled_case_insensitively
+      - tests.test_report_name_validation.TestReportArtifactNameConstant.test_ac1_plan_writing_regex_equals_the_constant_ts15
+      - tests.test_report_name_validation.TestIsReportArtifactName.test_ac1_matching_names
+      - tests.test_report_name_validation.TestIsReportArtifactName.test_ac1_non_matching_names
+      - tests.test_report_name_validation.TestIsReportArtifactName.test_ac1_any_other_input_is_false
+    red_confirmed: true
+    red_reason: "Run before the implementation existed: the constant and judgment tests errored with AttributeError (module has no attribute REPORT_ARTIFACT_NAME_RE / is_report_artifact_name); the TS-15 comparison failed with AssertionError: 0 != 1 : ## Report Artifact Names must hold exactly one regex literal, found []"
+  AC-2:
+    tests:
+      - tests.test_report_name_validation.TestReportArtifactNamesSection
+    red_confirmed: true
+    red_reason: "Run before the section existed: all seven failed because the section text was empty (AssertionError: 'final path segment' not found in '', Lists differ: [] != ['## Report Artifact Names'], and the checklist did not cite the section)"
+  AC-3:
+    tests:
+      - tests.test_report_name_validation.TestNewMatchingNameIsRejected
+      - tests.test_report_name_validation.TestFindViolationsContract.test_ac3_non_string_and_unsafe_entries_are_skipped
+      - tests.test_report_name_validation.TestFindViolationsContract.test_ac3_the_result_is_a_list_of_task_and_path_pairs
+    red_confirmed: true
+    red_reason: "Run before the implementation existed: every CLI case failed with AssertionError: 2 != 1 : expected exit 1, got 2 (or 2 != 0 for the passing names), the argument parser rejecting --target-repo / --base-commit as unrecognized arguments; the two direct tests errored with AttributeError (no attribute find_report_name_violations)"
+  AC-4:
+    tests:
+      - tests.test_report_name_validation.TestBaseCommitTreeEntry
+    red_confirmed: true
+    red_reason: "Run before the implementation existed: every case failed with AssertionError: 2 != 0 / 2 != 1 (unrecognized arguments --target-repo / --base-commit), including the directory and symlink cases that must be rejected as new"
+  AC-5:
+    tests:
+      - tests.test_report_name_validation.TestBaseInputs
+      - tests.test_report_name_validation.TestFindViolationsContract.test_ac5_the_inputs_are_read_only_when_a_matching_name_is_present
+      - tests.test_report_name_validation.TestFindViolationsContract.test_ac5_require_report_name_base_returns_nothing_on_success
+      - tests.test_report_name_validation.TestFindViolationsContract.test_ac5_require_report_name_base_raises_execution_error
+    red_confirmed: true
+    red_reason: "Run before the implementation existed: the missing-value cases failed with AssertionError: 0 != 2 (a matching name passed with no base input), the malformed-value and unresolvable-base cases failed on the argument parser's unrecognized arguments instead of the validator's execution error, and the direct tests errored with AttributeError (no attribute require_report_name_base). Two guard tests were already green before the implementation because the behavior they pin pre-existed (TS-7, a patch without a matching name passes with neither value; and a non-string or unsafe files entry does not make the base inputs mandatory); they stay as regression guards for NFR2"
+  AC-6:
+    tests:
+      - tests.test_report_name_validation.TestPathsAreLiteralText
+    red_confirmed: true
+    red_reason: "Run before the implementation existed: every case failed (unrecognized arguments --target-repo / --base-commit, and AttributeError for the direct base_tree_entry cases). After the implementation, a temporary mutation of base_tree_entry to a plain `git ls-tree <commit> -- <path>` lookup was observed to fail the pathspec-magic cases (:(top), :/, :(literal)); the mutation was discarded"
+  AC-7:
+    tests:
+      - tests.test_validate_worker_output.TestFixtureCorpusDataDriven.test_every_fixture_matches_its_declared_exit_code
+      - tests.test_report_name_validation.TestFixtures
+    red_confirmed: true
+    red_reason: "Run with the three fixtures and the runner's base-tree support in place but no validator change: the corpus test failed for all three new fixtures (AssertionError: 2 != 1 for the two invalid-report-name-new-file cases and 2 != 0 for valid-report-name-existing-file, the validator rejecting --target-repo / --base-commit); the reproduction-plan test and the declared-outcome test failed the same way. The two fixture-shape tests (input and base tree present, directory names) were green before the implementation because they read only the fixture files. The suite-wide outcome of this criterion is the python3 -m unittest discover -s tests run recorded in final_failures"

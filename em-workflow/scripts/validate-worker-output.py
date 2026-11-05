@@ -32,6 +32,7 @@ import json
 import os
 import re
 import stat
+import subprocess
 import sys
 from pathlib import Path
 
@@ -381,6 +382,226 @@ def path_is_contained_in_root(path, root):
     if not root_parts:
         return True
     return path_parts[: len(root_parts)] == root_parts and len(path_parts) > len(root_parts)
+
+
+# ---------------------------------------------------------------------------
+# Report artifact names (subagent-report-write-block/task0001, FR2 / FR3 / FR4)
+#
+# Claude Code rejects a subagent's Write by file name alone. A plan whose task
+# `files` hold a NEW file with such a name stops the implementation, so the
+# validator rejects it first. The pattern is implemented once, here. The
+# rule's prose (FR1, with the regex literal) is owned by
+# skills/plan-writing/SKILL.md, section "Report Artifact Names"; a test
+# compares that literal with REPORT_ARTIFACT_NAME_RE, and no other document
+# restates the regex.
+#
+# The base inputs (--target-repo, --base-commit) are read only after a
+# matching name is found. A path from `files` is untrusted: it never reaches
+# git as an argument. base_tree_entry walks the base commit's trees one level
+# at a time with `git ls-tree` on object IDs git itself printed, and compares
+# each name literally, so a path can neither act as an option, as pathspec
+# magic (`:(top)`, `*`) nor as a revision expression (`^{tree}`, `~1`, `@{0}`).
+# ---------------------------------------------------------------------------
+
+REPORT_ARTIFACT_NAME_RE = re.compile(r"^(REPORT|SUMMARY|FINDINGS|ANALYSIS).*\.md$", re.IGNORECASE)
+REPORT_NAME_ERROR_CODE = "report-name-new-file"
+
+# A full object ID of a SHA-1 (40) or SHA-256 (64) repository, lowercase.
+_FULL_HEX_ID_RE = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
+
+# Environment variables that select which repository, work tree, index or
+# object store git reads. They are dropped so `git -C <target repo>` can only
+# ever read the repository it was given.
+_GIT_REPOSITORY_ENV_VARS = (
+    "GIT_DIR",
+    "GIT_WORK_TREE",
+    "GIT_INDEX_FILE",
+    "GIT_OBJECT_DIRECTORY",
+    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+    "GIT_COMMON_DIR",
+    "GIT_NAMESPACE",
+    "GIT_PREFIX",
+    "GIT_QUARANTINE_PATH",
+    "GIT_CEILING_DIRECTORIES",
+    "GIT_DISCOVERY_ACROSS_FILESYSTEM",
+    "GIT_REPLACE_REF_BASE",
+    "GIT_NO_REPLACE_OBJECTS",
+    "GIT_GRAFT_FILE",
+    "GIT_SHALLOW_FILE",
+)
+
+_GIT_TIMEOUT_SECONDS = 120
+
+
+def is_report_artifact_name(path):
+    """FR2: True only for a string whose last normalized path segment
+    (path_segments: `\\` as `/`, empty and `.` segments dropped) is a report
+    artifact name. Only that segment is judged -- directory names never are --
+    and the whole segment must match: a trailing line break is not part of a
+    name the Write check sees. Any non-string input is False."""
+    if not isinstance(path, str):
+        return False
+    segments = path_segments(path)
+    if not segments:
+        return False
+    return REPORT_ARTIFACT_NAME_RE.fullmatch(segments[-1]) is not None
+
+
+def _git_environment():
+    return {k: v for k, v in os.environ.items() if k not in _GIT_REPOSITORY_ENV_VARS}
+
+
+def _run_git(target_repo, *args):
+    """Runs `git -C <target_repo> <args>` without a shell and returns the
+    completed process (bytes). A git that cannot be run is an execution
+    error, never a pass."""
+    try:
+        return subprocess.run(
+            ["git", "-C", str(target_repo), *args],
+            capture_output=True,
+            env=_git_environment(),
+            timeout=_GIT_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except (OSError, ValueError, subprocess.SubprocessError) as exc:
+        raise ExecutionError(f"cannot run git for the report-name base check: {exc}")
+
+
+def require_report_name_base(target_repo, base_commit):
+    """FR4 input check. Called only after a report artifact name was found.
+    Raises ExecutionError (exit 2) when a value is missing, the commit is not
+    a full lowercase hexadecimal ID (40 or 64 digits -- never a revision
+    expression, abbreviation or option), the repository is unusable, or the
+    commit does not resolve to a commit object in it. Returns nothing."""
+    if target_repo is None or str(target_repo) == "":
+        raise ExecutionError(
+            "--target-repo is required when a task's files hold a report artifact name "
+            "(skills/plan-writing/SKILL.md, Report Artifact Names)"
+        )
+    if base_commit is None or base_commit == "":
+        raise ExecutionError(
+            "--base-commit is required when a task's files hold a report artifact name "
+            "(skills/plan-writing/SKILL.md, Report Artifact Names)"
+        )
+    if not isinstance(base_commit, str) or _FULL_HEX_ID_RE.fullmatch(base_commit) is None:
+        raise ExecutionError(
+            "--base-commit must be a full lowercase hexadecimal commit ID (40 or 64 digits); "
+            "a branch name, abbreviation or revision expression is not accepted"
+        )
+    repo = Path(str(target_repo))
+    if not repo.is_dir():
+        raise ExecutionError(f"--target-repo {repo} is not a directory")
+    proc = _run_git(repo, "cat-file", "-t", base_commit)
+    if proc.returncode != 0 or proc.stdout.strip() != b"commit":
+        raise ExecutionError(
+            f"--base-commit {base_commit} does not resolve to a commit in --target-repo {repo}"
+        )
+
+
+def _list_git_tree(target_repo, tree_id):
+    """The entries of one tree object: {name (bytes): (mode, type, id)}.
+    `tree_id` is the verified base commit or an object ID git printed itself,
+    never text from a patch."""
+    if _FULL_HEX_ID_RE.fullmatch(tree_id) is None:
+        raise ExecutionError(f"refusing to list a tree that is not a full object ID: {tree_id!r}")
+    proc = _run_git(target_repo, "ls-tree", "-z", tree_id)
+    if proc.returncode != 0:
+        raise ExecutionError(f"git ls-tree failed for {tree_id} in --target-repo {target_repo}")
+    entries = {}
+    for record in proc.stdout.split(b"\0"):
+        if not record:
+            continue
+        meta, separator, name = record.partition(b"\t")
+        fields = meta.split(b" ")
+        if not separator or len(fields) != 3:
+            raise ExecutionError(f"unreadable git ls-tree record for {tree_id}")
+        entries[name] = (fields[0], fields[1], fields[2].decode("ascii", "replace"))
+    return entries
+
+
+def base_tree_entry(target_repo, base_commit, path):
+    """What `path` is at the base commit: "regular" (a non-symlink file),
+    "other" (a directory, symlink or submodule) or "absent".
+
+    Pre: the base passed require_report_name_base and the path passed
+    is_safe_relative_path (a path that did not is "absent"). The path is
+    normalized with path_segments and compared as literal text against the
+    names git lists; it is never passed to git (see the section comment
+    above). An intermediate entry that is not a directory, a symlink included,
+    makes the path absent."""
+    if not is_safe_relative_path(path):
+        return "absent"
+    segments = path_segments(path)
+    if not segments:
+        return "absent"
+    tree_id = base_commit
+    last = len(segments) - 1
+    for depth, segment in enumerate(segments):
+        try:
+            wanted = segment.encode("utf-8", "surrogateescape")
+        except UnicodeEncodeError:
+            return "absent"  # not representable as a git tree entry name
+        entry = _list_git_tree(target_repo, tree_id).get(wanted)
+        if entry is None:
+            return "absent"
+        mode, entry_type, entry_id = entry
+        if depth == last:
+            if entry_type == b"blob" and mode != b"120000":
+                return "regular"
+            return "other"
+        if entry_type != b"tree":
+            return "absent"
+        tree_id = entry_id
+    return "absent"  # pragma: no cover - the loop always returns
+
+
+def find_report_name_violations(files_by_task, target_repo, base_commit):
+    """FR3 judgment over a task-to-files mapping. Returns [(task_id, path)]
+    in task then file order, one pair per distinct violation.
+
+    Entries that are not strings, or are not safe relative paths, are skipped:
+    the entry validation reports them. The base inputs are read only when a
+    report artifact name is present. A matching name is a violation unless it
+    is a regular file at the base commit (an update, not a new file)."""
+    candidates = []
+    seen = set()
+    for task_id, files in files_by_task.items():
+        if not isinstance(files, (list, tuple)):
+            continue
+        for path in files:
+            if not isinstance(path, str) or not is_safe_relative_path(path):
+                continue
+            if not is_report_artifact_name(path):
+                continue
+            if (task_id, path) in seen:
+                continue
+            seen.add((task_id, path))
+            candidates.append((task_id, path))
+    if not candidates:
+        return []
+    require_report_name_base(target_repo, base_commit)
+    return [
+        (task_id, path)
+        for task_id, path in candidates
+        if base_tree_entry(target_repo, base_commit, path) != "regular"
+    ]
+
+
+def _report_name_errors(entries, target_repo, base_commit):
+    files_by_task = {
+        task_id: entry.get("files") for task_id, entry in entries.items() if isinstance(entry, dict)
+    }
+    return [
+        err(
+            REPORT_NAME_ERROR_CODE,
+            f"tasks_patch.entries[{task_id}].files entry {path!r} has a report artifact name and "
+            "is not a regular file at the base commit; a new file with such a name is rejected "
+            "by Claude Code's Write (skills/plan-writing/SKILL.md, Report Artifact Names)",
+            task_id=task_id,
+            path=path,
+        )
+        for task_id, path in find_report_name_violations(files_by_task, target_repo, base_commit)
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -1496,6 +1717,8 @@ def validate_workflow_patch(
     dry_run=False,
     feature_dir=None,
     envelope=None,
+    target_repo=None,
+    base_commit=None,
 ):
     if not isinstance(data, dict):
         return [err("structure", "workflow patch must be a mapping")]
@@ -1536,6 +1759,14 @@ def validate_workflow_patch(
         entries = {}
     for task_id, entry in entries.items():
         errors.extend(validate_task_entry(task_id, entry, mode, registries, workflow))
+
+    # Report artifact names (subagent-report-write-block/task0001, FR3):
+    # a new file with a matching name in any entry is rejected, for both
+    # operations, with and without --dry-run-apply, whatever the entry's plan
+    # (a TASK.md plan included). --target-repo / --base-commit are read only
+    # when a matching name is present (FR4); a failure to use them raises
+    # ExecutionError, which main() turns into exit 2.
+    errors.extend(_report_name_errors(entries, target_repo, base_commit))
 
     # Re-planning carry-over declaration (workflow-patch.md "Re-planning
     # task-id allocation"): tasks_patch.carried_task_ids -- structural shape
@@ -2162,6 +2393,8 @@ def validate_worker_result(
     baseline_dir=None,
     dry_run=False,
     gate_registry=None,
+    target_repo=None,
+    base_commit=None,
 ):
     if not isinstance(data, dict):
         return [err("structure", "worker result must be a mapping")]
@@ -2307,6 +2540,8 @@ def validate_worker_result(
                     dry_run=dry_run,
                     feature_dir=feature_dir,
                     envelope=envelope,
+                    target_repo=target_repo,
+                    base_commit=base_commit,
                 ),
                 "workflow_patch",
             )
@@ -3001,6 +3236,13 @@ def build_arg_parser():
     parser.add_argument("--feature-dir", type=Path, dest="feature_dir")
     parser.add_argument("--baseline-dir", type=Path, dest="baseline_dir")
     parser.add_argument("--dry-run-apply", action="store_true", dest="dry_run_apply")
+    # Report artifact names (FR4): the integration worktree and the full
+    # commit ID of the integration tip. Both are optional to the parser and
+    # read only when a task's files hold a report artifact name. Plain
+    # strings, so an empty value stays visible as empty rather than becoming
+    # the current directory.
+    parser.add_argument("--target-repo", dest="target_repo", default=None)
+    parser.add_argument("--base-commit", dest="base_commit", default=None)
     return parser
 
 
@@ -3084,6 +3326,8 @@ def main(argv=None):
                 baseline_dir=baseline_dir,
                 dry_run=args.dry_run_apply,
                 gate_registry=gate_registry,
+                target_repo=args.target_repo,
+                base_commit=args.base_commit,
             )
         elif args.kind == "question-packet":
             errors = validate_question_packet(data, gate_registry=gate_registry)
@@ -3099,12 +3343,19 @@ def main(argv=None):
                 dry_run=args.dry_run_apply,
                 feature_dir=feature_dir,
                 envelope=envelope,
+                target_repo=args.target_repo,
+                base_commit=args.base_commit,
             )
         elif args.kind == "phase-state":
             errors = validate_phase_state(data)
         else:  # pragma: no cover - argparse `choices` already prevents this
             print(f"execution error: unknown --kind {args.kind!r}", file=sys.stderr)
             return 2
+    except ExecutionError as exc:
+        # A declared execution error raised below the parser (for example the
+        # report-name base inputs): exit 2 with the message itself.
+        print(f"execution error: {exc}", file=sys.stderr)
+        return 2
     except Exception as exc:  # noqa: BLE001 -- last-resort exit-2 safety net
         print(f"execution error: unexpected exception during --kind {args.kind!r} validation: {exc}", file=sys.stderr)
         return 2
