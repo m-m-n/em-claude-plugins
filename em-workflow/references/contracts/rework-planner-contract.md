@@ -123,6 +123,20 @@ Every task rework-planner synthesizes — its `tasks/taskNNNN.md` plan and its
 that section works from. This contract restates none of that section's rule
 text.
 
+## Plan file names in synthesized tasks
+
+File names in every task rework-planner synthesizes follow
+`em-workflow/skills/plan-writing/SKILL.md`, section `## Report Artifact
+Names`, for tasks' `files`, task bodies, Acceptance Criteria and
+VERIFICATION.md. This contract restates neither that rule nor the name pattern
+it defines.
+
+The rework-planner never runs the final-path correction. That correction is
+implementation-planner's (`em-workflow/agents/implementation-planner.md`,
+section `## Final-path correction`), and its input
+(`planning_inputs.path_correction`) and patch field (`path_corrections`) are
+not part of this worker's input or patch.
+
 ## Document update scope table
 
 | Document | Update condition |

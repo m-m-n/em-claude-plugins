@@ -114,6 +114,7 @@ CONTRACT_H2_BASE = [
 CONTRACT_H3_BASE = [
     "### Minimal-tier `TASK.md` append (SC-3)",
     "### plugin_versioning (dispatch-resolved value)",
+    "### path_correction (dispatch-resolved value)",
 ]
 CONTRACT_GATE_IDS = frozenset(
     {

@@ -1,0 +1,66 @@
+task_id: task0003
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_report_name_planner_docs.TestAC1PlannerAgentsCiteTheNamingRule.test_each_agent_cites_report_artifact_names_for_the_four_subjects
+      - tests.test_report_name_planner_docs.TestAC1PlannerAgentsCiteTheNamingRule.test_neither_agent_contains_the_regular_expression
+    red_confirmed: true
+    red_reason: >-
+      Before the documents were edited, test_each_agent_cites_report_artifact_names_for_the_four_subjects
+      failed for both subTests with "implementation-planner.md does not cite ## Report Artifact Names"
+      and "rework-planner.md does not cite ## Report Artifact Names". The
+      test_neither_agent_contains_the_regular_expression test asserts an absence, so
+      it was already green before the edit and guards against a regression; the
+      red belongs to the citation test.
+  AC-2:
+    tests:
+      - tests.test_report_name_planner_docs.TestAC2ReworkPlannerDocuments.test_each_document_states_the_citation
+      - tests.test_report_name_planner_docs.TestAC2ReworkPlannerDocuments.test_each_document_states_rework_planner_does_not_run_the_correction
+      - tests.test_report_name_planner_docs.TestAC2ReworkPlannerDocuments.test_the_contract_does_not_contain_the_regular_expression
+    red_confirmed: true
+    red_reason: >-
+      Before the documents were edited, test_each_document_states_the_citation and
+      test_each_document_states_rework_planner_does_not_run_the_correction failed
+      for both rework-planner.md and rework-planner-contract.md ("[] is not true"
+      and "False is not true"). The no-regex test was already green (absence).
+  AC-3:
+    tests:
+      - tests.test_report_name_planner_docs.TestAC3AC4FinalPathCorrectionSection.test_process_routes_the_dispatch_to_the_section
+      - tests.test_report_name_planner_docs.TestAC3AC4FinalPathCorrectionSection.test_the_section_sits_outside_the_2a_section_and_the_route_line
+      - tests.test_report_name_planner_docs.TestAC3AC4FinalPathCorrectionSection.test_the_section_is_second_level_with_no_subheading
+      - tests.test_report_name_planner_docs.TestAC3AC4FinalPathCorrectionSection.test_trigger
+      - tests.test_report_name_planner_docs.TestAC3AC4FinalPathCorrectionSection.test_exception_to_the_2a_pass
+      - tests.test_report_name_planner_docs.TestAC3AC4FinalPathCorrectionSection.test_path_choice
+      - tests.test_report_name_planner_docs.TestAC3AC4FinalPathCorrectionSection.test_path_strings_only_limit
+      - tests.test_report_name_planner_docs.TestAC3AC4FinalPathCorrectionSection.test_patch_shape
+      - tests.test_report_name_planner_docs.TestAC3AC4FinalPathCorrectionSection.test_the_section_cites_the_owning_documents_and_has_no_regex
+    red_confirmed: true
+    red_reason: >-
+      Before the section existed, the class errored in setUpClass with
+      "AssertionError: expected exactly one heading line '## Final-path correction',
+      found 0", so none of its tests could pass.
+  AC-4:
+    tests:
+      - tests.test_report_name_planner_docs.TestAC3AC4FinalPathCorrectionSection.test_unmerged_and_merged_references_in_tests
+      - tests.test_report_name_planner_docs.TestAC3AC4FinalPathCorrectionSection.test_re_planning_pass
+    red_confirmed: true
+    red_reason: >-
+      Same setUpClass error as AC-3 ("expected exactly one heading line
+      '## Final-path correction', found 0") before the section existed.
+  AC-5:
+    tests:
+      - tests.test_report_name_planner_docs.TestAC5PlannerContract.test_subsection_defines_the_value_shape
+      - tests.test_report_name_planner_docs.TestAC5PlannerContract.test_subsection_is_a_third_level_heading_under_planning_inputs
+      - tests.test_report_name_planner_docs.TestAC5PlannerContract.test_value_inputs_gains_the_member_when_present
+      - tests.test_report_name_planner_docs.TestAC5PlannerContract.test_write_policy_targets_are_replace_own_on_this_dispatch
+      - tests.test_report_name_planner_docs.TestAC5PlannerContract.test_task_index_lists_only_entries_and_may_be_empty
+      - tests.test_report_name_planner_docs.TestAC5PlannerContract.test_the_contract_cites_the_patch_owner_and_has_no_regex
+    red_confirmed: true
+    red_reason: >-
+      Before the subsection existed, the class errored in setUpClass with
+      "AssertionError: expected exactly one heading line
+      '### path_correction (dispatch-resolved value)', found 0". The suite-wide
+      "discover passes" half of the criterion is the final full run recorded in
+      final_failures; it has no red of its own.
