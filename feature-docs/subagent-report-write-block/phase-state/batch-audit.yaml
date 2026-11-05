@@ -49,3 +49,48 @@ records:
   freeform: null
   normalized_answer: declined
   resolution_note: "task_id: task0003; path: tests/test_scenario_id_planner_docs.py; missing part: identifier of the acceptance criterion or requirement that would otherwise be dropped (the deviation names the failing test but no AC-n or requirement id)"
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-11-06T00:44:54+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: null
+  normalized_answer: declined
+  resolution_note: "task_id: task0006; path: tests/test_implement_routeback_gate.py; missing part: identifier of the acceptance criterion or requirement that would otherwise be dropped (the deviation names the pinned tests but no AC-n or requirement id)"
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-11-06T00:44:54+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: null
+  normalized_answer: declined
+  resolution_note: "task_id: task0006; path: tests/test_recycled_task_id_consistency.py; missing part: identifier of the acceptance criterion or requirement that would otherwise be dropped (the deviation names the pinned tests but no AC-n or requirement id)"
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-11-06T00:44:54+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: null
+  normalized_answer: declined
+  resolution_note: "task_id: task0006; path: tests/test_routeback_record_carve_out.py; missing part: identifier of the acceptance criterion or requirement that would otherwise be dropped (the deviation names the pinned tests but no AC-n or requirement id)"
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-11-06T00:44:54+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: null
+  normalized_answer: declined
+  resolution_note: "task_id: task0006; path: tests/test_routeback_reset_scope_consistency.py; missing part: identifier of the acceptance criterion or requirement that would otherwise be dropped (the deviation names the pinned tests but no AC-n or requirement id)"
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-11-06T00:44:54+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: null
+  normalized_answer: declined
+  resolution_note: "task_id: task0006; path: tests/test_stale_launched_doc_contract.py; missing part: identifier of the acceptance criterion or requirement that would otherwise be dropped (the deviation names the pinned tests but no AC-n or requirement id)"
