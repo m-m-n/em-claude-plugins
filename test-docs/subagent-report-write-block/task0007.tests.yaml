@@ -1,0 +1,83 @@
+task_id: task0007
+# python3 -m unittest discover -s tests before any change in this worktree:
+# Ran 14034 tests, OK (skipped=1).
+baseline_failures: []
+# python3 -m unittest discover -s tests after the implementation and after this
+# record: no failure; subset of the baseline.
+final_failures: []
+# Guards that were green before the change and are not acceptance criteria of
+# their own: tests.test_failed_entry_develop_docs.TestStepBPointer.test_block_numbered_steps_are_kept,
+# TestNoRestatedRule (the FR2 regex is absent from em-workflow/skills/develop/SKILL.md),
+# and TestSectionScopeNonVacuity (the section extraction fails loudly on a
+# document without the heading and stops at the Step B heading).
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_failed_entry_develop_docs.TestAC1Placement.test_headings_present_once_and_in_order
+      - tests.test_failed_entry_develop_docs.TestAC1Placement.test_states_judgment_at_start_of_rerun_naming_the_feature
+      - tests.test_failed_entry_develop_docs.TestAC1Placement.test_states_once_per_invocation
+      - tests.test_failed_entry_develop_docs.TestAC1Placement.test_states_existing_feature_branch_after_step_a5
+      - tests.test_failed_entry_develop_docs.TestAC1Placement.test_states_script_invocation_with_four_arguments
+      - tests.test_failed_entry_develop_docs.TestAC1Placement.test_states_full_commit_id_capture_of_integration_tip
+      - tests.test_failed_entry_develop_docs.TestAC1Placement.test_states_not_failed_goes_to_step_b
+      - tests.test_failed_entry_develop_docs.TestStepBPointer.test_block_points_at_step_a6
+    red_confirmed: true
+    red_reason: >-
+      Run before em-workflow/skills/develop/SKILL.md had the section. The class
+      setUpClass raised "AssertionError: expected exactly one '## Step A.6:
+      failed からの入口' heading, found 0", so every test of TestAC1Placement
+      errored. TestStepBPointer.test_block_points_at_step_a6 failed on its own
+      with "AssertionError: False is not true" because the Step B failed_kind
+      block had no pointer to Step A.6.
+  AC-2:
+    tests:
+      - tests.test_failed_entry_develop_docs.TestAC2NotTakenInsideFailedRun.test_states_step_b_never_enters_the_section
+      - tests.test_failed_entry_develop_docs.TestAC2NotTakenInsideFailedRun.test_states_not_taken_inside_the_failed_run
+    red_confirmed: true
+    red_reason: >-
+      Run before the section existed. The class setUpClass raised the same
+      "expected exactly one '## Step A.6: failed からの入口' heading, found 0"
+      AssertionError, so both tests errored.
+  AC-3:
+    tests:
+      - tests.test_failed_entry_develop_docs.TestAC3PrecedenceBatchNoGate.test_states_precedes_stop_condition_3_regardless_of_failed_kind
+      - tests.test_failed_entry_develop_docs.TestAC3PrecedenceBatchNoGate.test_states_batch_uses_the_same_entry
+      - tests.test_failed_entry_develop_docs.TestAC3PrecedenceBatchNoGate.test_states_no_new_gate
+      - tests.test_failed_entry_develop_docs.TestAC3PrecedenceBatchNoGate.test_states_dispatch_runs_section_13_of_create_plan_phase
+    red_confirmed: true
+    red_reason: >-
+      Run before the section existed. The class setUpClass raised the same
+      "expected exactly one '## Step A.6: failed からの入口' heading, found 0"
+      AssertionError, so every test of the class errored.
+  AC-4:
+    tests:
+      - tests.test_failed_entry_develop_docs.TestAC4NotMetFallsThroughToStopCondition3.test_states_none_blocked_and_nonzero_exit_leave_workflow_unchanged
+      - tests.test_failed_entry_develop_docs.TestAC4NotMetFallsThroughToStopCondition3.test_states_blocked_report_names_the_failed_condition
+      - tests.test_failed_entry_develop_docs.TestAC4NotMetFallsThroughToStopCondition3.test_states_rejected_correction_leaves_workflow_unchanged
+    red_confirmed: true
+    red_reason: >-
+      Run before the section existed. The class setUpClass raised the same
+      "expected exactly one '## Step A.6: failed からの入口' heading, found 0"
+      AssertionError, so every test of the class errored.
+  AC-5:
+    tests:
+      - tests.test_failed_entry_develop_docs.TestAC5RestorationOneWrite.test_states_each_restoration_item
+      - tests.test_failed_entry_develop_docs.TestAC5RestorationOneWrite.test_states_notes_cleared_by_patch_application
+      - tests.test_failed_entry_develop_docs.TestAC5RestorationOneWrite.test_states_restoration_covers_each_violation_task
+      - tests.test_failed_entry_develop_docs.TestAC5RestorationOneWrite.test_states_artifact_commit_then_one_write_and_one_commit
+      - tests.test_failed_entry_develop_docs.TestAC5RestorationOneWrite.test_artifact_commit_precedes_the_single_write
+    red_confirmed: true
+    red_reason: >-
+      Run before the section existed. The class setUpClass raised the same
+      "expected exactly one '## Step A.6: failed からの入口' heading, found 0"
+      AssertionError, so every test of the class errored.
+  AC-6:
+    tests:
+      - tests.test_failed_entry_develop_docs.TestAC6NothingElseTouched.test_states_target_worktree_and_branch_are_not_touched
+      - tests.test_failed_entry_develop_docs.TestAC6NothingElseTouched.test_states_merged_tasks_are_not_touched
+      - tests.test_failed_entry_develop_docs.TestAC6NothingElseTouched.test_states_uncommitted_changes_are_not_discarded
+    red_confirmed: true
+    red_reason: >-
+      Run before the section existed. The class setUpClass raised the same
+      "expected exactly one '## Step A.6: failed からの入口' heading, found 0"
+      AssertionError, so every test of the class errored.
