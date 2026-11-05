@@ -122,6 +122,9 @@ tasks:                             # written by implementation-planner; status b
     requirements: [FR1]            # SPEC.md requirement IDs this task implements
     status: pending                # pending | in_progress | merged | failed
     notes: null                    # set on failure (reason; feeds re-planning)
+                                   #   begins with `report-name-write-rejected:`
+                                   #   after a Write rejection (see
+                                   #   "## `tasks.{T}.notes` marker" below)
     branch: em-workflow/{feature}/task0001   # set by orchestrator at dispatch
     routeback_failed_journal_line: {line number}
                                    # OPTIONAL; written by the orchestrator at route-back,
@@ -412,6 +415,27 @@ later route-back of the same task. Nothing clears it. A re-planning
 **Readers.** I.2.a selection, I.2.b step 1 reconcile and
 `queue_stop_guard.py` read it. `references/implement-phase.md` owns how they
 use it and is not restated here.
+
+**Failed-entry restoration.** The restoration of
+`skills/develop/SKILL.md`'s `## Step A.6: failed からの入口` is the one other
+write site of this record, and it is the orchestrator's as well. It writes the
+same record, the line of the task's last `failed` journal event, under the
+Value, Line counting and Canonical form rules above, when that line is not
+null. This paragraph is the one exception to the **Writer** and **Lifecycle**
+statements above, which are stated for the route-back write set; it changes
+neither.
+
+## `tasks.{T}.notes` marker
+
+`tasks.{T}.notes` holds the failure reason (see the Full structure). One value
+shape is fixed: a task whose implementer reported a Write rejection of a
+report-artifact name carries a `notes` value that begins with the literal
+`report-name-write-rejected:`, followed by the target path and the rejection
+text. The target path is repository-relative. The orchestrator writes the
+marker only in the wake commit that records that failure;
+`references/implement-phase.md` owns how it is written and read. Applying a
+final-path correction to the task clears `notes` to null
+(`references/workflow-patch.md`, `## Final-path correction`).
 
 ## Sibling artifacts
 

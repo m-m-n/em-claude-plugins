@@ -72,10 +72,18 @@ below): it is empty or absent on the Initial-planning path and on
 `append`. `carried_task_ids` and `entries` are disjoint — a carried id's
 body is never re-supplied under `entries`.
 
+`tasks_patch.path_corrections` is present only on a `replace_planning` patch
+that corrects the final path of an existing plan (`## Final-path correction`,
+below): a non-empty list of mappings with exactly `task_id`, `old_path` and
+`new_path`, every `task_id` also listed in `carried_task_ids`. It is absent
+from every other patch.
+
 ### `replace_all` permission conditions
 
-`replace_all` is permitted through exactly two paths; a patch matching
-neither is rejected:
+`replace_all` is permitted through exactly two paths, and through the one
+further state that `## Final-path correction` (below) admits for a patch
+carrying `tasks_patch.path_corrections`; a patch matching none of these is
+rejected:
 
 - **Initial-planning path** — the `create-plan` step is `pending` (first
   planning pass), permitted only when:
@@ -128,7 +136,9 @@ neither is rejected:
 A `replace_all` received while any task is `in_progress` or `failed` is a
 protocol error on BOTH paths above. Neither this protocol-error rule nor
 the Initial-planning path's floor condition above changes as a result of
-the Re-planning path's widening.
+the Re-planning path's widening. The correction entry of `## Final-path
+correction` (below) is the one state in which a `failed` task is not a
+protocol error, and an `in_progress` task stays one there.
 
 ### Re-planning task-id allocation
 
@@ -157,6 +167,9 @@ in `carried_task_ids`, or naming a registered id under `entries`, is
 rejected. Because a carried id's record is copied verbatim, a `merged` task
 keeps its `status`, its `branch` and its `files` across the patch without
 either field entering the `preserve` vocabulary.
+
+The one exception to this verbatim copy is the final-path correction
+(`## Final-path correction`, below).
 
 The high-water mark is `max(carried_task_ids ∪ entries)`, still readable
 directly from the `workflow.yaml` the patch is applied to — any genuinely
@@ -369,6 +382,85 @@ success. The state reached after any number of resumptions is the same as
 the state reached by one uninterrupted run. Where `replan_authorized`
 lives is `references/phase-state.md`'s own definition — cited here, not
 restated.
+
+## Final-path correction
+
+A final-path correction changes the path of a file in an existing plan from a
+matching name to a name that does not match. A matching name is one that
+`skills/plan-writing/SKILL.md`, section `## Report Artifact Names`, defines;
+this document cites that section and does not restate it. The correction is
+carried by `tasks_patch.path_corrections`. It is the exception to copying a
+carried record verbatim (Re-planning task-id allocation, above), and it adds
+no application rule: the eighteen rules above apply to a patch carrying it as
+to any other.
+
+**Field.** `path_corrections` is a non-empty list of mappings with exactly
+`task_id`, `old_path` and `new_path`, on `replace_planning` only. Each
+`task_id` is listed in `carried_task_ids`, each (`task_id`, `old_path`) pair
+appears once, and `new_path` differs from `old_path`. The task a mapping's
+`task_id` names is its target task. A malformed field is rejected as
+`path-correction-shape`.
+
+**Permission states.**
+
+| State | Result |
+|---|---|
+| `create-plan` is `completed` and `implement` is `failed` (the correction entry) | Admitted. The carry-over and `preserve` obligations of the Re-planning path apply. A `failed` task is permitted; an `in_progress` task stays rejected as `replace-all-not-permitted`. `step_patches` must be empty, else `path-correction-step-patches` |
+| The Re-planning path, including re-planning entered through route back | Admitted under that path's existing rules |
+| The Initial-planning path | Rejected, `path-correction-not-permitted` |
+
+A `replace_all` without `path_corrections` behaves as before in every state.
+
+**Conditions.** All five are required; a correction that fails any condition
+is not applied: the patch is rejected with that condition's code and
+`workflow.yaml` is not changed. The checks read `workflow.yaml`, the feature's
+journal and the base commit. The repository is the integration worktree and
+the base commit is the full commit ID of the tip of the integration branch;
+the orchestrator resolves both before validation and passes them, with the
+journal, as `--target-repo`, `--base-commit` and `--journal`. A missing or
+unresolvable value is an execution error (exit 2), never a pass. A path has no
+entry at the base commit when the base tree holds nothing there, whether file,
+directory, symlink or submodule.
+
+1. `path-correction-in-flight` — No task is in flight: no task's `status` is
+   `in_progress` and no task's last journal event is `launched`.
+2. `path-correction-merged` — Neither the target task's `status` nor its last
+   journal event is `merged`.
+3. `path-correction-old-path` — `old_path` is in the target task's `files`, is
+   a matching name, and has no entry at the base commit.
+4. `path-correction-new-path` — `new_path` is not a matching name, passes the
+   project-relative check of application rule 7, and has no entry at the base
+   commit.
+5. `path-correction-content` — The change is limited to replacing path strings
+   and does not change the meaning of requirements or acceptance criteria, as
+   the comparison below decides.
+
+**Comparison for condition 5.** For IMPLEMENTATION.md, VERIFICATION.md and
+each target task's plan, take the version at the base commit and the current
+version, and apply one normalization to both: a single left-to-right pass that
+replaces each old path by its new path and each old file name by its new file
+name, longer match first. The two results must be equal, and the current
+version must not contain an old path. A document absent at the base commit is
+outside the set. New task plans under `entries` are outside the set.
+
+**Ownership.** `implementation-planner` corrects the plan documents and
+proposes `files` through `path_corrections`; the orchestrator applies the
+patch to `workflow.yaml`. The implementer and `rework-planner` do not correct
+the plan.
+
+**References in tests.** A reference is an occurrence of the old path in a test
+file. An unmerged reference is corrected by that task's implementer, following
+the corrected plan. A merged reference is corrected by a new task, registered
+under `entries` in the same correction.
+
+**Application.** In the in-memory application, a corrected task's `files`
+entry equal to `old_path` is replaced by `new_path` at the same list position,
+`notes` is set to null, and every other field is copied verbatim.
+
+**Where it applies.** On the correction entry (the permission states above)
+and in re-planning entered through route back. A re-planning `replace_all` that
+carries a task that is not `merged`, and whose `files` hold a matching name,
+corrects it through the same field.
 
 ## Ownership boundary
 
