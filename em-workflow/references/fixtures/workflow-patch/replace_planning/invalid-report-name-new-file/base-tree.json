@@ -1,0 +1,4 @@
+{
+  "README.md": "# example\n",
+  "src/api/register.go": "package api\n"
+}

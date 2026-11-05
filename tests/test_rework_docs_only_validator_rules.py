@@ -52,6 +52,7 @@ import ast
 import copy
 import importlib.util
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -677,9 +678,37 @@ def _companion_file(case_dir, stem):
     return None
 
 
-def _fixture_cli_args(kind, group, case_dir):
+def _build_base_repo(tree, repo_dir):
+    """The disposable repository a fixture's `base-tree.json` describes (a
+    mapping from repository-relative path to file text); returns its commit
+    ID. Identity is set per command; no git configuration is read."""
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+    env["GIT_CONFIG_GLOBAL"] = os.devnull
+    env["GIT_CONFIG_NOSYSTEM"] = "1"
+
+    def git(*args):
+        return subprocess.run(
+            ["git", "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid",
+             "-c", "commit.gpgsign=false", "-C", str(repo_dir), *args],
+            check=True, capture_output=True, text=True, env=env,
+        )
+
+    repo_dir.mkdir(parents=True, exist_ok=True)
+    git("init", "-q")
+    for rel_path, content in tree.items():
+        target = repo_dir / rel_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(content, encoding="utf-8")
+    git("add", "-A")
+    git("commit", "-q", "--allow-empty", "-m", "fixture base")
+    return git("rev-parse", "HEAD").stdout.strip()
+
+
+def _fixture_cli_args(kind, group, case_dir, scratch_dir=None):
     """The CLI arguments for one fixture case directory, wired the way the
-    fixture runner of tests/test_validate_worker_output.py wires them."""
+    fixture runner of tests/test_validate_worker_output.py wires them. A case
+    holding `base-tree.json` also needs `scratch_dir`, under which its
+    repository is built (`--target-repo` / `--base-commit`)."""
     args = [
         "--kind", kind,
         "--worker", _GROUP_WORKER.get(group, "implementation-planner"),
@@ -705,6 +734,12 @@ def _fixture_cli_args(kind, group, case_dir):
             args += [flag, str(case_dir / dirname)]
     if (case_dir / "DRY_RUN_APPLY").exists():
         args.append("--dry-run-apply")
+    base_tree = _companion_file(case_dir, "base-tree")
+    if base_tree is not None:
+        assert scratch_dir is not None, f"{case_dir} holds a base tree: pass scratch_dir"
+        repo_dir = Path(scratch_dir) / "base-repo"
+        base_commit = _build_base_repo(json.loads(base_tree.read_text(encoding="utf-8")), repo_dir)
+        args += ["--target-repo", str(repo_dir), "--base-commit", base_commit]
     return args
 
 
@@ -1037,8 +1072,11 @@ class TestDocsOnlyStepPatches(unittest.TestCase):
                     if not (case_dir.is_dir() and case_dir.name.startswith("valid-")):
                         continue
                     checked += 1
-                    with self.subTest(fixture=f"{kind}/{group_dir.name}/{case_dir.name}"):
-                        completed = run_cli(_fixture_cli_args(kind, group_dir.name, case_dir))
+                    with self.subTest(fixture=f"{kind}/{group_dir.name}/{case_dir.name}"), \
+                            tempfile.TemporaryDirectory() as scratch_dir:
+                        completed = run_cli(
+                            _fixture_cli_args(kind, group_dir.name, case_dir, scratch_dir=scratch_dir)
+                        )
                         self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
         self.assertGreater(checked, 0)
         self.assertTrue((FIXTURE_GROUP_DIR / "valid-docs-only-round").is_dir())

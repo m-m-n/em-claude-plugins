@@ -324,12 +324,55 @@ WORKER_FOR_GROUP = {
 }
 
 
-def build_case_args(kind, group, case_dir):
+def build_base_repo(tree, repo_dir):
+    """Builds the disposable repository a fixture case's `base-tree.json`
+    describes and returns its commit ID. `tree` maps a repository-relative
+    path to the file's text. The tree is data because a file whose name
+    matches the report-artifact rule cannot be written into this repository
+    by an implementer (subagent-report-write-block/task0001). The identity
+    is set on every command and no user or system git configuration is read."""
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+    env["GIT_CONFIG_GLOBAL"] = os.devnull
+    env["GIT_CONFIG_NOSYSTEM"] = "1"
+
+    def git(*args):
+        return subprocess.run(
+            [
+                "git",
+                "-c", "user.name=Fixture",
+                "-c", "user.email=fixture@example.invalid",
+                "-c", "commit.gpgsign=false",
+                "-C", str(repo_dir),
+                *args,
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+
+    repo_dir.mkdir(parents=True, exist_ok=True)
+    git("init", "-q")
+    for rel_path, content in tree.items():
+        target = repo_dir / rel_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(content, encoding="utf-8")
+    git("add", "-A")
+    git("commit", "-q", "--allow-empty", "-m", "fixture base")
+    return git("rev-parse", "HEAD").stdout.strip()
+
+
+def build_case_args(kind, group, case_dir, scratch_dir=None):
     """Builds the CLI argv for one fixture case directory, wiring every
     companion file/dir present by its fixed role name (see the fixtures
     directory docstring-equivalent in this module: input/envelope/packet/
     answers/workflow/digest-source/phase-state/registries/feature-dir/
-    baseline-dir/DRY_RUN_APPLY)."""
+    baseline-dir/DRY_RUN_APPLY).
+
+    A case directory holding `base-tree.json` (a mapping from repository-
+    relative path to file content) also gets a disposable repository built
+    under `scratch_dir`, and `--target-repo` / `--base-commit` pointing at
+    it."""
     input_path = _companion(case_dir, "input")
     assert input_path is not None, f"{case_dir} has no input.* file"
     worker = WORKER_FOR_GROUP.get(group, "implementation-planner")
@@ -358,6 +401,15 @@ def build_case_args(kind, group, case_dir):
 
     if (case_dir / "DRY_RUN_APPLY").exists():
         args.append("--dry-run-apply")
+
+    base_tree = _companion(case_dir, "base-tree")
+    if base_tree is not None:
+        assert scratch_dir is not None, (
+            f"{case_dir} holds a base tree: pass scratch_dir so its repository can be built"
+        )
+        repo_dir = Path(scratch_dir) / "base-repo"
+        base_commit = build_base_repo(json.loads(base_tree.read_text(encoding="utf-8")), repo_dir)
+        args += ["--target-repo", str(repo_dir), "--base-commit", base_commit]
 
     return args
 
@@ -607,9 +659,10 @@ class TestFixtureCorpusDataDriven(unittest.TestCase):
         cases = list(discover_fixture_cases())
         self.assertTrue(cases, "expected the fixture corpus to be non-empty")
         for kind, group, case_dir in cases:
-            with self.subTest(kind=kind, group=group, case=case_dir.name):
+            with self.subTest(kind=kind, group=group, case=case_dir.name), \
+                    tempfile.TemporaryDirectory() as scratch_dir:
                 expected = expected_exit_code(case_dir)
-                args = build_case_args(kind, group, case_dir)
+                args = build_case_args(kind, group, case_dir, scratch_dir=scratch_dir)
                 result = run_cli(args)
                 self.assertEqual(
                     result.returncode,

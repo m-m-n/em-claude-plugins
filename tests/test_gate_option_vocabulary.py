@@ -1348,8 +1348,19 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # `extract_verification_scenario_ids` and `_strip_noise` are unchanged.
     # PINNED_VALIDATOR_TEST_LINE below is unaffected and still asserted. Same
     # rationale: refresh, don't remove.
+    #
+    # Refreshed again by subagent-report-write-block/task0001 (FR2, FR3, FR4):
+    # `REPORT_ARTIFACT_NAME_RE`, `is_report_artifact_name`,
+    # `require_report_name_base`, `base_tree_entry` and
+    # `find_report_name_violations` are new, `validate_workflow_patch` and
+    # `validate_worker_result` take `target_repo` / `base_commit` and report
+    # `report-name-new-file` for a new file with a report artifact name, the
+    # CLI gains `--target-repo` / `--base-commit` (read only when such a name
+    # is present), and `main` turns an `ExecutionError` raised below the
+    # parser into exit 2. PINNED_VALIDATOR_TEST_LINE below is unaffected and
+    # still asserted. Same rationale: refresh, don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "b29a553a532bec7148b02383983811f21a7a220289f4fdeac435d69a6dbdaf79"
+        "f0c94c9084b31193fc2ee09af3febe3d3d58603cb389a2bd4d1127be02e511c4"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-
@@ -1448,8 +1459,16 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # directory, and that an unreadable VERIFICATION.md is reported instead of
     # raising. PINNED_VALIDATOR_TEST_LINE below is unaffected and still
     # asserted. Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by subagent-report-write-block/task0001 (FR9): the
+    # fixture runner builds a disposable repository from a case's
+    # `base-tree.json` (`build_base_repo`, `build_case_args(..., scratch_dir)`)
+    # and passes `--target-repo` / `--base-commit`, and the corpus test gives
+    # each case a scratch directory. The three new report-name fixtures are
+    # exercised by it. PINNED_VALIDATOR_TEST_LINE below is unaffected and
+    # still asserted. Same rationale: refresh, don't remove.
     TEST_VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "563cfbeb63a421be2bf26b8ade38d9f5557670bb25df360ccb02f39d09faf0ff"
+        "e07203890d7a6509a12c154f01b21d740db86935501d7e5cd49e3d512a0cb8f2"
     )
     FIXTURE_SHA256 = (
         "c8414e673876bb05dc9d35c571b35e255a53c185586d7bc876edf5aadd1f05f5"

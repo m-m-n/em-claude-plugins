@@ -320,6 +320,24 @@ Scenario IDs follow one rule, which stays outside the template block:
 - Scenario IDs are compared as literal strings, so `TS13` and `TS-13` are
   distinct IDs.
 
+## Report Artifact Names
+
+A report artifact is a file whose name matches the rule below. The rule is
+checked mechanically by `em-workflow/scripts/validate-worker-output.py`, which
+holds the same regex as `REPORT_ARTIFACT_NAME_RE` and rejects a new file with
+such a name in a workflow patch (error code `report-name-new-file`).
+
+- The name is judged on the final path segment only. The regex
+  `/^(REPORT|SUMMARY|FINDINGS|ANALYSIS).*\.md$/i` decides. Case is ignored.
+  Directory names are not judged.
+- A file with a matching name that does not exist at the base commit is not an
+  artifact of any task's `files`, a task body, an acceptance criterion or
+  VERIFICATION.md.
+- A report artifact takes a name that does not match.
+- A plan holds no step that writes under another name and then renames.
+- A task that updates a matching-name file that exists at the base commit
+  states in its body that the update is made with Edit.
+
 ## Pre-Save Self-Verification Checklist (MANDATORY)
 
 - [ ] No language-specific code blocks, library API calls, or snippets
@@ -349,3 +367,7 @@ Scenario IDs follow one rule, which stays outside the template block:
 - [ ] New VERIFICATION.md and every task plan use only TS-n scenario
       IDs, with no hyphen-less ID outside fenced code blocks and HTML
       comments.
+- [ ] No new file with a name matching `## Report Artifact Names` is an
+      artifact of any task's files, task body, acceptance criterion or
+      VERIFICATION.md, and a task updating an existing one states that the
+      update is made with Edit.
