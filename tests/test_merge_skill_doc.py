@@ -329,9 +329,13 @@ def prohibited_hits(form):
                 for a in args[1:]
             ):
                 hits.append("forced-worktree-removal")
-        if sub == "branch" and any(
-            a == "--delete" or re.fullmatch(r"-[A-Za-z]*[dD][A-Za-z]*", a)
-            for a in args
+        if (
+            sub == "branch"
+            and args != ["-d", "em-workflow/<feature>/integration"]
+            and any(
+                a == "--delete" or re.fullmatch(r"-[A-Za-z]*[dD][A-Za-z]*", a)
+                for a in args
+            )
         ):
             hits.append("branch-deletion")
         if sub in ("tag", "update-ref") and any(
@@ -659,6 +663,7 @@ class TestForbiddenForms(SkillCase):
             "git branch -D x": "branch-deletion",
             "git branch -d x": "branch-deletion",
             "git branch --delete x": "branch-deletion",
+            "git branch -D em-workflow/<feature>/integration": "branch-deletion",
             "git commit --no-verify -m x": "no-verify",
             "git commit -n -m x": "commit-bypass-or-amend",
             "git reset --hard HEAD": "reset",
@@ -671,6 +676,18 @@ class TestForbiddenForms(SkillCase):
         }
         for form, label in forged.items():
             self.assertIn(label, prohibited_hits(form), form)
+
+    def test_the_integration_branch_is_deleted_only_after_the_worktree_removal(self):
+        delete_form = "git branch -d em-workflow/<feature>/integration"
+        forms = [f for b in bash_blocks(self.text) for f in b.body]
+        self.assertEqual(forms.count(delete_form), 1)
+        cleanup = self.text[self.text.index("### 15. 後片付け") :]
+        self.assertLess(
+            cleanup.index('git worktree remove "<worktree_path>"'),
+            cleanup.index(delete_form),
+        )
+        self.assertIn("`worktree_removed` が true のときだけ", cleanup)
+        self.assertIn("リモートのブランチは消さない", cleanup)
 
     def test_ac3_every_foreground_bash_call_states_a_timeout_of_at_most_600_seconds(self):
         blocks = bash_blocks(self.text)
