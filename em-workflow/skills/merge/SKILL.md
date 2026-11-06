@@ -604,7 +604,7 @@ Bash 呼び出し（timeout: 60000）:
 cd "<project_root>"
 ```
 
-worktree が存在するときだけ、worktree だけを除去する（`--force` は付けない。ブランチは残す）。通常のマージの後は手順 7 で存在を確保済みなので、そのまま除去する。「マージ済みの経路」では、先に `worktree-state` で存在を確かめる。
+worktree が存在するときだけ、worktree を除去する（`--force` は付けない）。通常のマージの後は手順 7 で存在を確保済みなので、そのまま除去する。「マージ済みの経路」では、先に `worktree-state` で存在を確かめる。
 
 Bash 呼び出し（timeout: 120000）:
 
@@ -614,6 +614,16 @@ git worktree remove "<worktree_path>"
 
 - 除去できた、または最初から無かった（`absent`）: `worktree_removed` は true。
 - 除去に失敗しても、結果は `merged` / `already_merged` のまま。`worktree_removed` を false にし、`detail` に失敗の要点を書く。
+
+`worktree_removed` が true のときだけ、ローカルの integration ブランチを削除する。リモートのブランチは消さない。
+
+Bash 呼び出し（timeout: 60000）:
+
+```bash
+git branch -d em-workflow/<feature>/integration
+```
+
+- 削除に失敗しても、結果は変えず、`detail` にも書かない。`-d` が取り込み済みでないと判断したブランチを残すだけで、影響は無い。
 - マージの後（`merged`）と `already_merged` が決まった後は、後片付けのどんな失敗でも `not_merged` に変えない。
 
 ### 16. 結果の描画
@@ -725,7 +735,7 @@ git worktree remove "<worktree_path>"
 
 次はどの形でも実行しない。
 
-- force push、削除を伴う push、`--force` 付きの worktree 除去、ブランチの削除
+- force push、削除を伴う push、`--force` 付きの worktree 除去、手順 15 の integration ブランチの削除以外のブランチの削除
 - hook の迂回（`--no-verify` など）、hard reset、rebase
 - base ブランチへの直接のコミットや reset（手順 13.3 のローカルマージだけが例外）
 - `gh pr merge` への `--admin` / `--auto` / `--squash` / `--rebase` / `--delete-branch`
