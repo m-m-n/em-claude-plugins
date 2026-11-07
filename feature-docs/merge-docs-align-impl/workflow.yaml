@@ -160,8 +160,8 @@ tasks:
     status: merged
     branch: em-workflow/merge-docs-align-impl/task0002
 review:
-  status: pending
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
   plan:
     floor:
     - comprehensive
@@ -170,7 +170,11 @@ review:
     - architecture
     discretionary: []
     cross_validation: false
-  perspectives: {}
+  perspectives:
+  - comprehensive
+  - security
+  - spec
+  - architecture
   residual_critical_high: 0
   needs_rework: false
 requirements:
