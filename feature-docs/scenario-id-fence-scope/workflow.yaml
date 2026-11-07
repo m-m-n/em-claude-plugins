@@ -125,9 +125,15 @@ tasks:
     branch: em-workflow/scenario-id-fence-scope/task0001
     notes: null
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
-  plan: null
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - spec
+    discretionary: []
+    cross_validation: false
   perspectives: {}
   residual_critical_high: 0
   needs_rework: false
