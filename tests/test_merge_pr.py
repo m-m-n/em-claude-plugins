@@ -20,8 +20,15 @@ task0003 of feature-docs/unattended-merge-medium-fixes (TestTask0003*) makes the
 repository identifier host-qualified: `repo` compares the host as well as
 owner/name and reports HOST/OWNER/NAME, and `resolve` / `state` accept that form
 (or the legacy OWNER/NAME) and pass it to gh verbatim.
+
+feature-docs/merge-pr-test-git-env-isolation: MergePrTestCase.setUp builds its
+environments without any GIT_ variable inherited from the invoking process (inside
+a git hook, for one), so the fixture-building git calls and the merge-pr.py child
+only ever touch the test's temporary directory; TestGitEnvIsolation detects a loss
+of that isolation.
 """
 
+import contextlib
 import json
 import os
 import shutil
@@ -31,6 +38,7 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
+from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = REPO_ROOT / "em-workflow" / "scripts" / "merge-pr.py"
@@ -217,6 +225,12 @@ class MergePrTestCase(unittest.TestCase):
             path.chmod(0o755)
 
         self.env = dict(os.environ)
+        # GIT_ variables inherited from the invoking process (inside a git hook,
+        # for one) would redirect the git calls below to a repository outside
+        # this test's temporary directory.
+        for key in list(self.env):
+            if key.startswith("GIT_"):
+                del self.env[key]
         for key in ("GH_REPO", "GH_TOKEN", "GITHUB_TOKEN", "EM_WORKFLOW_MERGE_PR_GH_TIMEOUT"):
             self.env.pop(key, None)
         self.env.update(
@@ -224,6 +238,7 @@ class MergePrTestCase(unittest.TestCase):
                 "PATH": str(self.bin_dir) + os.pathsep + os.environ.get("PATH", ""),
                 "HOME": str(self.tmp / "home"),
                 "GIT_CONFIG_NOSYSTEM": "1",
+                "GIT_CONFIG_GLOBAL": os.devnull,
                 "GH_STUB_DIR": str(self.stub_dir),
                 "PYTHONDONTWRITEBYTECODE": "1",
             }
@@ -1389,6 +1404,286 @@ class TestOperationBoundary(MergePrTestCase):
         source = SCRIPT.read_text()
         for needle in ('"create"', '"merge"', '"edit"', '"close"', '"comment"', '"api"', "--method"):
             self.assertNotIn(needle, source)
+
+
+# ---------------------------------------------------------------------------------
+# merge-pr-test-git-env-isolation: MergePrTestCase.setUp ignores inherited GIT_ variables
+# ---------------------------------------------------------------------------------
+
+
+def differing_keys(a, b):
+    """Sorted names whose value differs between two environments (never the values)."""
+    return sorted(k for k in set(a) | set(b) if a.get(k) != b.get(k))
+
+
+class TestGitEnvIsolation(unittest.TestCase):
+    """MergePrTestCase.setUp builds its environments without inherited GIT_ variables.
+
+    Each check drives a separate MergePrTestCase instance (setUp, then its
+    registered cleanups) inside this process, under a process environment that
+    carries GIT_ variables.  This test case never runs MergePrTestCase's fixture
+    for itself and never starts the suite as a subprocess.
+
+    This test case writes only inside its own temporary directory: the decoy
+    repositories live there, every path it injects points there, and every git
+    call it makes uses an environment of its own (no GIT_ variable inherited,
+    no system configuration, global configuration pinned to os.devnull) and
+    names its repository explicitly.  The process environment is changed only
+    inside mock.patch.dict scopes and compared with its state before the test
+    when the test ends.
+    """
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.tmp = Path(os.path.realpath(self._tmp.name))
+        (self.tmp / "home").mkdir()
+        self.process_env_before = dict(os.environ)
+        self.addCleanup(self.assert_process_environment_restored)
+
+        self.git_env = dict(os.environ)
+        for key in list(self.git_env):
+            if key.startswith("GIT_"):
+                del self.git_env[key]
+        self.git_env.update(
+            {
+                "HOME": str(self.tmp / "home"),
+                "GIT_CONFIG_NOSYSTEM": "1",
+                "GIT_CONFIG_GLOBAL": os.devnull,
+                "GIT_TERMINAL_PROMPT": "0",
+            }
+        )
+        # Only the call that records a decoy's one commit gets an identity, so
+        # the decoy's local configuration never holds one.
+        self.identity_env = dict(self.git_env)
+        self.identity_env.update(
+            {
+                "GIT_AUTHOR_NAME": "Decoy",
+                "GIT_AUTHOR_EMAIL": "decoy@example.invalid",
+                "GIT_COMMITTER_NAME": "Decoy",
+                "GIT_COMMITTER_EMAIL": "decoy@example.invalid",
+            }
+        )
+
+    def assert_process_environment_restored(self):
+        # Names only: a failure message must not print the values of the
+        # environment (it can hold credentials).
+        changed = differing_keys(dict(os.environ), self.process_env_before)
+        self.assertEqual(changed, [], "the process environment was not restored")
+
+    # -- own git calls ---------------------------------------------------------------
+
+    def git(self, repo, *args, env=None, check=True):
+        return subprocess.run(
+            [REAL_GIT, "--git-dir=%s" % (repo / ".git"), "--work-tree=%s" % repo] + list(args),
+            env=self.git_env if env is None else env,
+            cwd=str(self.tmp),
+            capture_output=True,
+            text=True,
+            check=check,
+        )
+
+    def make_repository(self, name):
+        """A repository with exactly one commit and no user.* / commit.gpgsign entry."""
+        repo = self.tmp / name
+        self.assertTrue(repo.is_relative_to(self.tmp))
+        repo.mkdir()
+        subprocess.run(
+            [REAL_GIT, "init", "-q", "-b", BASE, str(repo)],
+            env=self.git_env, cwd=str(self.tmp), capture_output=True, text=True, check=True,
+        )
+        self.git(repo, "commit", "-q", "--allow-empty", "-m", name, env=self.identity_env)
+        config = self.git(repo, "config", "--local", "--list").stdout
+        for key in ("user.name", "user.email", "commit.gpgsign"):
+            self.assertNotIn(key, config)
+        return repo
+
+    def snapshot(self, repo):
+        return {
+            "refs": self.git(repo, "for-each-ref", "--format=%(refname) %(objectname)").stdout,
+            "head": self.git(repo, "rev-parse", "HEAD").stdout,
+            "branch": self.git(repo, "symbolic-ref", "HEAD").stdout,
+            "commits": self.git(repo, "rev-list", "--count", "--all").stdout,
+            "config": self.git(repo, "config", "--local", "--list").stdout,
+        }
+
+    # -- driving MergePrTestCase ------------------------------------------------------
+
+    @contextlib.contextmanager
+    def scoped_environment(self, injected):
+        """The process environment without any GIT_ variable, plus `injected`.
+
+        Restored when the scope ends, also when an assertion inside it fails.
+        """
+        with mock.patch.dict(os.environ):
+            for key in [k for k in os.environ if k.startswith("GIT_")]:
+                del os.environ[key]
+            os.environ.update(injected)
+            yield
+
+    def drive(self, injected, inspect):
+        """setUp, `inspect(instance)` and the cleanups of a fresh MergePrTestCase,
+        run inside a scoped environment that carries `injected`.  The cleanups run
+        even when setUp or `inspect` raises.  Returns what `inspect` returned."""
+        driven = MergePrTestCase()
+        with self.scoped_environment(injected):
+            try:
+                driven.setUp()
+                seen = inspect(driven)
+            finally:
+                cleaned = driven.doCleanups()
+        self.assertTrue(cleaned, "the cleanups of the driven instance failed")
+        return seen
+
+    def injected_git_variables(self):
+        """Every injected path points inside this test's own temporary directory."""
+        work_tree = self.tmp / "injected-work-tree"
+        work_tree.mkdir()
+        return {
+            "GIT_DIR": str(self.tmp / "injected-git-dir"),
+            "GIT_WORK_TREE": str(work_tree),
+            "GIT_INDEX_FILE": str(self.tmp / "injected-index"),
+            "GIT_CONFIG_GLOBAL": str(self.tmp / "injected-global-config"),
+            "GIT_CONFIG_PARAMETERS": "'injected.key=1'",
+        }
+
+    @staticmethod
+    def environments(driven):
+        return {
+            "env": dict(driven.env),
+            "real_env": dict(driven.real_env),
+            "bin_dir": str(driven.bin_dir),
+            "home": str(driven.tmp / "home"),
+            "stub_dir": str(driven.stub_dir),
+        }
+
+    @staticmethod
+    def git_keys(env):
+        return {key for key in env if key.startswith("GIT_")}
+
+    # -- the decoy-repository check ---------------------------------------------------
+
+    def run_decoy_flow(self):
+        decoy = self.make_repository("decoy")
+        before = self.snapshot(decoy)
+        injected = {
+            "GIT_DIR": str(decoy / ".git"),
+            "GIT_WORK_TREE": str(decoy),
+            "GIT_INDEX_FILE": str(decoy / ".git" / "index"),
+        }
+
+        def fixture_has_initial_commit(driven):
+            # Read with this test's own environment: the driven instance's git
+            # helper would still point at the decoy before the fix.
+            proc = self.git(driven.root, "log", "--format=%s", check=False)
+            return proc.returncode == 0 and "initial" in proc.stdout.splitlines()
+
+        has_initial = self.drive(injected, fixture_has_initial_commit)
+        after = self.snapshot(decoy)
+        for name in before:
+            self.assertEqual(after[name], before[name], "the decoy's %s changed" % name)
+        for key in ("user.name", "user.email", "commit.gpgsign"):
+            self.assertNotIn(key, after["config"])
+        self.assertEqual(after["commits"].strip(), "1")
+        self.assertTrue(has_initial, "no 'initial' commit in the fixture repository")
+
+    def test_ac3_setup_and_cleanups_leave_the_decoy_repository_unchanged(self):
+        self.run_decoy_flow()
+
+    # -- AC-1, AC-2: the environments setUp builds ------------------------------------
+
+    def test_ac1_inherited_git_variables_are_in_neither_environment(self):
+        seen = self.drive(self.injected_git_variables(), self.environments)
+        expected = {"GIT_CONFIG_NOSYSTEM", "GIT_CONFIG_GLOBAL"}
+        self.assertEqual(self.git_keys(seen["env"]), expected)
+        self.assertEqual(self.git_keys(seen["real_env"]), expected)
+
+    def test_ac1_the_removal_condition_is_the_git_prefix_alone(self):
+        kept = {
+            "XDG_CONFIG_HOME": str(self.tmp / "xdg"),
+            "EM_WORKFLOW_APPROVALS": "approvals",
+            "GITHUB_ACTIONS": "true",
+            "MY_GIT_SETTING": "x",
+        }
+        removed = {"GIT_TRACE": "0", "GIT_EDITOR": "true", "GIT_UNLISTED_EXAMPLE": "x"}
+        seen = self.drive(dict(removed, **kept), self.environments)
+        for env in (seen["env"], seen["real_env"]):
+            for key in removed:
+                self.assertFalse(key in env, "%s is in the environment" % key)
+            for key, value in kept.items():
+                self.assertEqual(env.get(key), value)
+
+    def test_ac2_git_config_global_is_pinned_to_devnull_over_an_inherited_value(self):
+        seen = self.drive(self.injected_git_variables(), self.environments)
+        for env in (seen["env"], seen["real_env"]):
+            self.assertEqual(env.get("GIT_CONFIG_GLOBAL"), os.devnull)
+            self.assertEqual(env.get("GIT_CONFIG_NOSYSTEM"), "1")
+
+    def test_ac2_git_config_global_is_devnull_when_none_was_inherited(self):
+        seen = self.drive({}, self.environments)
+        for env in (seen["env"], seen["real_env"]):
+            self.assertEqual(env.get("GIT_CONFIG_GLOBAL"), os.devnull)
+            self.assertEqual(env.get("GIT_CONFIG_NOSYSTEM"), "1")
+
+    # -- AC-6: what setUp kept ----------------------------------------------------------
+
+    def test_ac6_the_existing_environment_handling_is_kept(self):
+        removed = {
+            "GH_REPO": "someone/else",
+            "GH_TOKEN": "token",
+            "GITHUB_TOKEN": "token",
+            "EM_WORKFLOW_MERGE_PR_GH_TIMEOUT": "1",
+        }
+        injected = dict(self.injected_git_variables(), **removed)
+        process_path = os.environ.get("PATH", "")
+        seen = self.drive(injected, self.environments)
+        env, real_env = seen["env"], seen["real_env"]
+        for key in removed:
+            self.assertFalse(key in env, "%s is in the environment" % key)
+        self.assertEqual(env["PATH"], seen["bin_dir"] + os.pathsep + process_path)
+        self.assertEqual(env["HOME"], seen["home"])
+        self.assertEqual(env["GH_STUB_DIR"], seen["stub_dir"])
+        self.assertEqual(env["GIT_CONFIG_NOSYSTEM"], "1")
+        self.assertEqual(env["PYTHONDONTWRITEBYTECODE"], "1")
+        self.assertEqual(real_env["PATH"], process_path)
+        self.assertEqual(
+            differing_keys(
+                {k: v for k, v in real_env.items() if k != "PATH"},
+                {k: v for k, v in env.items() if k != "PATH"},
+            ),
+            [],
+        )
+
+    # -- AC-5: this test case's own isolation ----------------------------------------------
+
+    def test_ac5_the_process_environment_is_restored_after_a_scoped_change(self):
+        self.drive(self.injected_git_variables(), self.environments)
+        self.assert_process_environment_restored()
+
+    def test_ac5_the_environment_is_restored_and_the_cleanups_run_when_the_check_fails(self):
+        driven_tmp = []
+
+        def failing_check(driven):
+            driven_tmp.append(driven.tmp)
+            self.fail("a check inside the scope failed")
+
+        with self.assertRaises(AssertionError):
+            self.drive(self.injected_git_variables(), failing_check)
+        self.assert_process_environment_restored()
+        self.assertEqual(len(driven_tmp), 1)
+        self.assertFalse(driven_tmp[0].exists(), "the driven instance's cleanups did not run")
+
+    def test_ac5_an_outer_git_dir_cannot_redirect_this_test_cases_own_git_calls(self):
+        outer = self.make_repository("outer")
+        before = self.snapshot(outer)
+        outer_variables = {
+            "GIT_DIR": str(outer / ".git"),
+            "GIT_WORK_TREE": str(outer),
+            "GIT_INDEX_FILE": str(outer / ".git" / "index"),
+        }
+        with self.scoped_environment(outer_variables):
+            self.run_decoy_flow()
+        self.assertEqual(self.snapshot(outer), before, "the outer repository was written to")
 
 
 if __name__ == "__main__":
