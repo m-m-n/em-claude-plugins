@@ -1,0 +1,105 @@
+round: 1
+executed_at: "2026-11-08T00:39:16+09:00"
+scope:
+  review_mode: diff
+  base_commit: 7f45acbf9607525e84dcb62855b5de98d9556d3c
+  head_commit: 5b5fc78bc131caa2159bcd6054f0a6cf32d0da52
+  changed_files:
+  - test-docs/scripts-test-bytecode-suppression/task0001.tests.yaml
+  - test-docs/scripts-test-bytecode-suppression/task0002.tests.yaml
+  - test-docs/scripts-test-bytecode-suppression/task0003.tests.yaml
+  - test-docs/scripts-test-bytecode-suppression/task0004.tests.yaml
+  - tests/test_bytecode_free_loads_other_scripts.py
+  - tests/test_bytecode_free_loads_scan_dependencies.py
+  - tests/test_bytecode_free_loads_validator.py
+  - tests/test_check_plugin_invariants.py
+  - tests/test_classification_audit_retention.py
+  - tests/test_decide_tier_final_score.py
+  - tests/test_digest_contract_alignment.py
+  - tests/test_final_path_correction.py
+  - tests/test_gate_option_vocabulary.py
+  - tests/test_gate_outcome_packet_lifecycle.py
+  - tests/test_journal_append_failed.py
+  - tests/test_merge_ci_wait.py
+  - tests/test_recover_orphaned_task.py
+  - tests/test_replanning_carry_over.py
+  - tests/test_replanning_producer_alignment.py
+  - tests/test_report_name_entry.py
+  - tests/test_report_name_validation.py
+  - tests/test_reproduction_output_contract.py
+  - tests/test_requirements_tests_replace.py
+  - tests/test_review_coverage.py
+  - tests/test_review_shards.py
+  - tests/test_rework_docs_only_validator_rules.py
+  - tests/test_routeback_record_schema_patch.py
+  - tests/test_sca_absolute_executable_resolution.py
+  - tests/test_sca_child_env_path_filtering.py
+  - tests/test_sca_file_tasks_oserror.py
+  - tests/test_sca_file_tasks_unexpected_exceptions.py
+  - tests/test_sca_finding_title_roundtrip.py
+  - tests/test_sca_go_govulncheck_real_output.py
+  - tests/test_sca_listing_undecodable_output.py
+  - tests/test_sca_per_project_scan_binding.py
+  - tests/test_sca_pip_lockfile_audit.py
+  - tests/test_sca_run_scan_plan_units.py
+  - tests/test_sca_scan_execution.py
+  - tests/test_sca_scan_invocation.py
+  - tests/test_sca_scan_job_grouping.py
+  - tests/test_sca_scan_normalization.py
+  - tests/test_sca_scan_unchanged_surfaces.py
+  - tests/test_sca_scanner_project_config_isolation.py
+  - tests/test_sca_task_filing.py
+  - tests/test_scan_dependencies_cargo_directness.py
+  - tests/test_scan_dependencies_pip_directness.py
+  - tests/test_scan_dependencies_pyproject_directness.py
+  - tests/test_self_write_digest.py
+  - tests/test_self_write_digest_docs.py
+  - tests/test_self_write_digest_wiring.py
+  - tests/test_spec_change_gate_binding.py
+  - tests/test_spec_change_replan_authorization.py
+  - tests/test_stale_launched_recovery_chain.py
+  - tests/test_tier_evaluator_contract.py
+  - tests/test_tier_phase_preconditions.py
+  - tests/test_tier_rework_path.py
+  - tests/test_tier_rules.py
+  - tests/test_tier_rules_buckets_codex_facts.py
+  - tests/test_tier_task_document_plan.py
+  - tests/test_validate_worker_output.py
+  - tests/test_worker_digest_results.py
+plan:
+  floor: [comprehensive, security, performance, spec]
+  discretionary: []
+  cross_validation: false
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings: []
+evaluation:
+  round_summary: "round 1（diff モード、cross_validation=false）。4 観点の reviewer はどれも指摘 0 件で返し、critical/high の指摘は無かった。reviewer 出力にプロンプトインジェクションの試みは無かった。評価者は予算上限の 10 ファイル（SPEC.md、tests/test_report_name_entry.py、新規の 3 つの tests/test_bytecode_free_loads_*.py、tests/test_routeback_record_schema_patch.py・tests/test_self_write_digest.py・tests/test_merge_ci_wait.py・tests/test_gate_outcome_packet_lifecycle.py・tests/test_sca_scan_execution.py の差分）を読んだ。どの読み込み箇所も元の値を保存して True にし、finally で戻す形で exec_module を包んでいた。run_entry は sys.executable の直後に -B を付けて起動し、os.environ には触れていない。em-workflow/・em-review/・.claude-plugin/ の下に変更が無いことを差分メタデータで確かめた（NFR1）。残りの約 51 ファイルは一つずつは読んでいない。未検証の点: tests/test_gate_option_vocabulary.py は変更されているが、3 つのプローブ表のどれにも載っておらず、読み込み箇所にプローブ検査が無い可能性がある（読む予算が尽きて未確認）。観点ごとの確認状況: comprehensive / security / performance / spec いずれも corroborated。"
+  recommended_action: "complete"
+  action_rationale: "どの観点の reviewer も指摘は 0 件。評価者が予算内で独自に読んだ範囲でも medium 以上の問題は見つからなかった。唯一の未検証点（tests/test_gate_option_vocabulary.py がプローブ表に載っていない）はテストの網羅に関する点で、正しさの欠陥は示されていない。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-scripts-test-bytecode-suppression-20261107T153857Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
