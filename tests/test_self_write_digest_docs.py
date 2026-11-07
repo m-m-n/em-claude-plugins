@@ -92,6 +92,8 @@ MATRIX = {
         NOT_MEMBER,
     ),
     "target `preserve`": (NOT_MEMBER, NOT_MEMBER, NOT_MEMBER),
+    # Refreshed by plan-feature-docs-route/task0003: the seventh action's row.
+    "target `amend_other_feature`": (NOT_MEMBER, "member", NOT_MEMBER),
     "not a target, inside an `allowed_write_roots` entry": (
         "member",
         NOT_MEMBER,
@@ -421,8 +423,10 @@ class TestRuleR1SelfWriteRule(unittest.TestCase):
 
     def test_ac1_actions_meaning_is_cited_not_restated(self):
         block = self.flat["Self-write set"]
+        # Refreshed by plan-feature-docs-route/task0003: the action table's
+        # heading is count-free.
         self.assertIn(
-            '`references/contracts/spec-writer-contract.md` ("The six `write_policy` actions")',
+            '`references/contracts/spec-writer-contract.md` ("The `write_policy` actions")',
             block,
         )
 
@@ -890,8 +894,10 @@ class TestUnchangedStructure(unittest.TestCase):
 
     def test_ac6_opening_sentence_about_write_policy_structure_is_kept(self):
         text = _normalize_ws(_read(ENVELOPE_PATH))
+        # Refreshed by plan-feature-docs-route/task0003: "its six actions" is
+        # now count-free ("its actions").
         self.assertIn(
-            "This document does not restate `write_policy`'s internal structure (its six actions, "
+            "This document does not restate `write_policy`'s internal structure (its actions, "
             "its per-target digest-expectation requirement, or the split between existing-file "
             "protection and new-file `allowed_write_roots`) — that is owned by design-input.md "
             "5.4.2 and the per-worker contracts.",
@@ -900,9 +906,11 @@ class TestUnchangedStructure(unittest.TestCase):
 
     def test_ac6_r1_names_the_actions_only_to_say_which_kinds_count(self):
         text = _normalize_ws(_read(ENVELOPE_PATH))
+        # Refreshed by plan-feature-docs-route/task0003: "six actions" is now
+        # count-free ("actions").
         self.assertRegex(
             text,
-            r"Rule R1's self-write rule \(below\) names `write_policy`'s six actions only to "
+            r"Rule R1's self-write rule \(below\) names `write_policy`'s actions only to "
             r"say which observed change kinds make a path a self-write",
         )
 

@@ -345,6 +345,11 @@ def _assert_ac5_pointer(test, text):
 
 
 ACTION_ROW_RE = re.compile(r"^\| `([a-z_]+)` \|", re.MULTILINE)
+# Refreshed by plan-feature-docs-route/task0003: `amend_other_feature` is the
+# seventh `write_policy` action, and the action table's heading is count-free
+# ("The `write_policy` actions"). The names `_assert_ac5_six_actions` and
+# `test_ac5_six_actions_unchanged` are kept because test-docs records cite
+# them; they now pin the seven-action set.
 EXPECTED_ACTIONS = {
     "create",
     "replace_own",
@@ -352,18 +357,19 @@ EXPECTED_ACTIONS = {
     "preserve",
     "extend_only",
     "regenerate",
+    "amend_other_feature",
 }
 
 
 def _assert_ac5_six_actions(test, text):
     table_section = _extract_section(
         text,
-        "### The six `write_policy` actions",
+        "### The `write_policy` actions",
         "**`regenerate` requires",
     )
     rows = ACTION_ROW_RE.findall(table_section)
     test.assertEqual(set(rows), EXPECTED_ACTIONS)
-    test.assertEqual(len(rows), 6)
+    test.assertEqual(len(rows), 7)
 
 
 class TestSpecWriterContractAC5(unittest.TestCase):
@@ -395,11 +401,15 @@ class TestSpecWriterContractAC5(unittest.TestCase):
         self.assertIn("design-system/tokens.yaml", self.FORGED_NO_POINTER)
 
     def test_forged_seventh_action_is_rejected(self):
+        # Refreshed by plan-feature-docs-route/task0003: the heading is now
+        # count-free, and the forged row is an eighth action (the real table
+        # holds seven). The test name is kept because a test-docs record
+        # cites it.
         mutated = self.text.replace(
-            "### The six `write_policy` actions\n\n"
+            "### The `write_policy` actions\n\n"
             "| action | `expect_digest` | worker behaviour |\n"
             "|---|---|---|\n",
-            "### The six `write_policy` actions\n\n"
+            "### The `write_policy` actions\n\n"
             "| action | `expect_digest` | worker behaviour |\n"
             "|---|---|---|\n"
             "| `phantom_action` | required | A forged seventh action. |\n",

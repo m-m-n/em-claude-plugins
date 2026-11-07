@@ -88,13 +88,13 @@ immediately before the dispatch. Nothing else runs between the verification
 and the dispatch.
 
 Targets: every `write_policy.targets` entry whose action requires
-`expect_digest` (`references/contracts/spec-writer-contract.md`, "The six
+`expect_digest` (`references/contracts/spec-writer-contract.md`, "The
 `write_policy` actions"). The `expect_digest` values themselves come from the
 same calculation, run at action-decision time ("How the orchestrator chooses
 each target's action before dispatch" in the same contract).
 
 Zero targets: the orchestrator counts the targets first, by the requirement
-that `references/contracts/spec-writer-contract.md` ("The six `write_policy`
+that `references/contracts/spec-writer-contract.md` ("The `write_policy`
 actions") assigns to each action. When zero targets require `expect_digest`,
 `Calculation` is not run, the verification succeeds (it is not a mismatch),
 and the dispatch proceeds. The zero case covers an empty `targets` list and
