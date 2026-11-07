@@ -4,15 +4,36 @@ phase: create-spec
 status: dispatching
 generation: 1
 base_revision: 86847f0a9d019f96baa6696cc9ffb9e5b11037a7
-last_input_digest: sha256:3b714b8bcf1ff7ab8218b2a1a9ba90a298bd6ba65d90e318fc6a54204e56c93c
-active_request_id: create-spec-run-0001
+last_input_digest: sha256:e48e8ae37d18aaf406409daaf192174110929816ee3adce278aad7521af092e5
+active_request_id: create-spec-run-0002
 packets: {}
-answers: {}
+answers:
+  design-step.decision:
+    packet_id: null
+    answered_at: '2026-11-07T18:40:08+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 推奨に従う（design step は skip）
+    resolution_note: batch-policies.yaml create-spec.design-step -> decide_autonomously
+  create-spec.design-system:
+    packet_id: null
+    answered_at: '2026-11-07T18:40:08+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - top_candidate_or_none
+    freeform: null
+    normalized_answer: project_native（em-workflow/references/templates/design-tokens.yaml）
+    resolution_note: batch-policies.yaml create-spec.design-system -> top_candidate_or_none;
+      candidate present -> project_native
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:3b714b8bcf1ff7ab8218b2a1a9ba90a298bd6ba65d90e318fc6a54204e56c93c
-  output_digest: null
+  output_digest: sha256:46e808b0b290749d39f753a6eefc97501911f277abc09e6baff82024ef43883a
   dispatch_digest_inputs:
     CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
     em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
@@ -20,6 +41,14 @@ worker_runs:
     test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
     tests/test_merge_pr.py: sha256:e31d30b03e28f2daf36a324f2519818254b8357bee3089b5220c40e94c29097e
     tests/test_merge_preflight.py: sha256:a6b89bae56feec3977cbb9d537d551be80816a6cc1092dc0cc4770173c194cc7
+  self_write_set: []
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:e48e8ae37d18aaf406409daaf192174110929816ee3adce278aad7521af092e5
+  output_digest: null
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/spec-writer-contract.md: sha256:c66e457a4a68d860f757f9e6cae377b6918d29a3f3152d9a12fc92570303c5f2
+    em-workflow/references/templates/spec-document.md: sha256:a5d0106c39a5df7dc2365357a9546588275ed6c7a1651c866e75fa327a7fa592
 artifacts: []
 patches: []
 progress_fingerprint: null
