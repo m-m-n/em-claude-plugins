@@ -1,18 +1,18 @@
 schema_version: 1
 feature: plan-feature-docs-route
 phase: create-plan
-status: dispatched
+status: applying_patch
 generation: 1
 base_revision: d9606a34bfe0943f17ac1854d0772a066c3dfab4
 last_input_digest: sha256:809adb33365e32e14b5c1b1454125207884f3a46b8bc2946b417682c02224164
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:809adb33365e32e14b5c1b1454125207884f3a46b8bc2946b417682c02224164
-  output_digest: null
+  output_digest: sha256:73cba4b03932c8d42bd725719d23818a7ab87768a23485e3e0ecaf5098d14213
   dispatch_digest_inputs:
     em-workflow/references/contracts/planner-contract.md: sha256:6253ad93ad99c87daec151b2da071a950ebaa615b5e438adfc2951f7dba2fb05
     em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
@@ -25,8 +25,61 @@ worker_runs:
     feature-docs/plan-feature-docs-route/REQUIREMENTS.md: sha256:f530a56f1e3926ea0e224a431b9937530d44560551b53a1661a62e6b7b7a089f
     feature-docs/plan-feature-docs-route/SPEC.md: sha256:c2331d36f4978398751e593c035ee381a8f1fbb6bdf43f7ea1cce1bb726aaa29
     feature-docs/plan-feature-docs-route/workflow.yaml: sha256:28841e14912ad0a05e5a606bc098167730f98335dcccc5a9ecb7d9afa0edf95c
-artifacts: []
-patches: []
+  self_write_set:
+  - feature-docs/plan-feature-docs-route/IMPLEMENTATION.md
+  - feature-docs/plan-feature-docs-route/THREAT-MODEL.md
+  - feature-docs/plan-feature-docs-route/VERIFICATION.md
+  - feature-docs/plan-feature-docs-route/tasks/task0001.md
+  - feature-docs/plan-feature-docs-route/tasks/task0002.md
+  - feature-docs/plan-feature-docs-route/tasks/task0003.md
+  - feature-docs/plan-feature-docs-route/tasks/task0004.md
+  - feature-docs/plan-feature-docs-route/tasks/task0005.md
+  - feature-docs/plan-feature-docs-route/tasks/task0006.md
+  - feature-docs/plan-feature-docs-route/tasks/task0007.md
+  - feature-docs/plan-feature-docs-route/tasks/task0008.md
+  - feature-docs/plan-feature-docs-route/tasks/task0009.md
+artifacts:
+- path: feature-docs/plan-feature-docs-route/IMPLEMENTATION.md
+  sha256: sha256:87bd590579955c7dac3352d897dd964400caf0ca7d352c0fe8c5538139a4bd75
+  produced_by: create-plan-run-0001
+- path: feature-docs/plan-feature-docs-route/VERIFICATION.md
+  sha256: sha256:71872275512b5b5ad3a6319fe9afe4fb244b01d72ea3f9d47345f2b79c7255e9
+  produced_by: create-plan-run-0001
+- path: feature-docs/plan-feature-docs-route/THREAT-MODEL.md
+  sha256: sha256:4922f208373a6916684400bd1d1ee55c1d68c0f71a2fce4c729b39a9ed0b7c6e
+  produced_by: create-plan-run-0001
+- path: feature-docs/plan-feature-docs-route/tasks/task0001.md
+  sha256: sha256:0e12285e8a57780511b3e34b077d1174e6e730e2e13c604f57c7b79d694e86f3
+  produced_by: create-plan-run-0001
+- path: feature-docs/plan-feature-docs-route/tasks/task0002.md
+  sha256: sha256:3d34c16b22176067a8d1e935ff58dc18e3415a4aed33a144a8b5cfbb47ac2e9f
+  produced_by: create-plan-run-0001
+- path: feature-docs/plan-feature-docs-route/tasks/task0003.md
+  sha256: sha256:ce88f4576b8e5e641d7d71109e33a8dc16a648c359ef7ae8fd55eee0b5483f43
+  produced_by: create-plan-run-0001
+- path: feature-docs/plan-feature-docs-route/tasks/task0004.md
+  sha256: sha256:d77d46c54f5d69fd2411d6f21756d4c767dd4e41f22fda6659280e52255aeebb
+  produced_by: create-plan-run-0001
+- path: feature-docs/plan-feature-docs-route/tasks/task0005.md
+  sha256: sha256:5fa2307aab7218249fda5d04352507f734a0071a9b38db976f24259545dc93f2
+  produced_by: create-plan-run-0001
+- path: feature-docs/plan-feature-docs-route/tasks/task0006.md
+  sha256: sha256:6297ece3cab935c6efa305758a93f3a14f6be52a7c2bf19040127cad99512347
+  produced_by: create-plan-run-0001
+- path: feature-docs/plan-feature-docs-route/tasks/task0007.md
+  sha256: sha256:119bd4561a76a4d3b66e813b768ef665eab4bd669e759f518cdd71492869d6ab
+  produced_by: create-plan-run-0001
+- path: feature-docs/plan-feature-docs-route/tasks/task0008.md
+  sha256: sha256:0fca871d647894e5f89127a4cd0aaf4d0bc8921abf2e497d3e3a3b9b92b68991
+  produced_by: create-plan-run-0001
+- path: feature-docs/plan-feature-docs-route/tasks/task0009.md
+  sha256: sha256:2e52058b1155cf253ff44d9f3f816a04a2cc0f4774013bba28bfd4609435df78
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: create-plan-p0001
+  status: validated
+  base_input_digest: sha256:809adb33365e32e14b5c1b1454125207884f3a46b8bc2946b417682c02224164
+  base_workflow_blob: 13439723bc03a34d67a47cc64bd7c978782d58c0
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
