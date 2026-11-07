@@ -129,7 +129,7 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/merge-pr-test-git-env-isolation/task0001
 review:
