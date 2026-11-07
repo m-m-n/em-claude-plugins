@@ -1,0 +1,42 @@
+task_id: task0004
+baseline_failures: []          # 4a at the base commit, before any change: python3 -m unittest discover -s tests -> Ran 15037 tests, OK (skipped=1)
+final_failures: []             # re-executed after the implementation and after this record was written: python3 -m unittest discover -s tests -> Ran 15049 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_report_name_entry.TestValidatorLoadWritesNoBytecode.test_ac1_flag_is_true_while_the_module_body_runs
+    red_confirmed: true
+    red_reason: "Run with the new test classes present and the loader and the run_entry argument list as at the base commit: test_ac1_flag_is_true_while_the_module_body_runs failed for starting=False with AssertionError: False is not True (the probe body saw the flag unchanged)."
+  AC-2:
+    tests:
+      - tests.test_report_name_entry.TestValidatorLoadWritesNoBytecode.test_ac2_flag_is_true_while_a_raising_body_runs_and_its_error_reaches_the_caller
+      - tests.test_report_name_entry.TestValidatorLoadWritesNoBytecode.test_ac2_flag_holds_the_starting_value_after_a_normal_return
+      - tests.test_report_name_entry.TestValidatorLoadWritesNoBytecode.test_ac2_flag_holds_the_starting_value_after_the_body_raises
+    red_confirmed: true
+    red_reason: "Run before the loader change: test_ac2_flag_is_true_while_a_raising_body_runs_and_its_error_reaches_the_caller failed for starting=False with AssertionError: 'probe body raised; flag=False' != 'probe body raised; flag=True'. The other two tests passed before the change (the unsuppressed loader never touched the flag, so the starting value trivially came back); they guard the restore on both exits once the loader sets the flag."
+  AC-3:
+    tests:
+      - tests.test_report_name_entry.TestValidatorLoadWritesNoBytecode.test_ac3_the_probe_directory_holds_no_pycache_after_the_loads
+      - tests.test_report_name_entry.TestValidatorLoadWritesNoBytecode.test_ac3_the_scripts_listing_is_unchanged_by_the_loads
+    red_confirmed: true
+    red_reason: "Run before the loader change: test_ac3_the_probe_directory_holds_no_pycache_after_the_loads failed with AssertionError: Lists differ: [PosixPath('<probe dir>/__pycache__')] != [] (a load with the flag False wrote bytecode next to the probe). test_ac3_the_scripts_listing_is_unchanged_by_the_loads passed before the change, because the probe load never touches em-workflow/scripts/; it guards that no probe path leaks there."
+  AC-4:
+    tests:
+      - tests.test_report_name_entry.TestEntryLaunchWritesNoBytecode.test_ac4_the_default_script_is_launched_with_b_after_the_interpreter
+      - tests.test_report_name_entry.TestEntryLaunchWritesNoBytecode.test_ac4_an_explicit_script_is_launched_with_b_after_the_interpreter
+    red_confirmed: true
+    red_reason: "Run before the run_entry change: both tests failed with AssertionError: Lists differ on args[:3] (element 1 was the script path where '-B' was expected), for the default script and for the explicit script path."
+  AC-5:
+    tests:
+      - tests.test_report_name_entry.TestEntryLaunchWritesNoBytecode.test_ac5_a_sibling_copy_run_through_run_entry_leaves_no_pycache
+    red_confirmed: true
+    red_reason: "Run before the run_entry change: test_ac5_a_sibling_copy_run_through_run_entry_leaves_no_pycache failed with AssertionError: Lists differ: [PosixPath('<temporary dir>/copy/__pycache__')] != [] (the launched copy wrote the validator copy's bytecode beside it). The shell running the tests did not set PYTHONDONTWRITEBYTECODE."
+  AC-6:
+    tests:
+      - tests.test_report_name_entry.TestEntryLaunchWritesNoBytecode.test_ac6_the_process_environment_is_identical_before_and_after_run_entry
+    red_confirmed: false
+    red_reason: "The environment half passed before the change: run_entry never wrote os.environ at the base commit either, so the test guards NFR2 against a fix that would set PYTHONDONTWRITEBYTECODE in the process. The run-alone half is a command, not a test ID: python3 -m unittest tests.test_report_name_entry from the repository root, starting with no em-workflow/scripts/__pycache__. With the loader change absent, that run left em-workflow/scripts/__pycache__/validate-worker-output.cpython-314.pyc (the module-level VWO load); with the change present, 59 tests passed and em-workflow/scripts/ held no __pycache__."
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: "No executable check can be made to fail for this criterion. A search of tests/ by repository-relative path (tests/test_report_name_entry.py) and by basename (test_report_name_entry) found only the test-docs records of earlier features; no test reads this file's imports, its diff or its file scope. It is checked by the full suite (python3 -m unittest discover -s tests) plus a review of the diff: only tests/test_report_name_entry.py changed besides this record, the only new import is unittest.mock, the queue_stop_guard.py load is untouched, and no existing assertion changed."
