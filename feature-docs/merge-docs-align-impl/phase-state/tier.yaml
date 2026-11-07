@@ -1,0 +1,57 @@
+schema_version: 2
+feature: merge-docs-align-impl
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 0.93
+    confidence: 0.89
+    probabilities:
+      '0': 0.09
+      '1': 0.89
+      '2': 0.02
+      '3': 0.0
+    expectation_clear: 0.92
+  observed_at: '2026-11-07T14:40:14+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.01
+    confidence: 0.97
+    probabilities:
+      '0': 0.01
+      '1': 0.97
+      '2': 0.02
+      '3': 0.0
+    expectation_clear: 0.91
+  observed_at: '2026-11-07T14:42:33+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/references/merge-result.md
+  - em-workflow/skills/merge/SKILL.md
+  - em-workflow/README.md
+  - tests/test_merge_skill_doc.py
+  - tests/test_destructive_guard_merge_allow.py
+  changed_lines_approx: 40
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 5
+  body_change_kind: wording_or_rule_addition
+  change_containment: multiple_modules
+  caller_and_dependency_count: 0
+  changes_external_contract: false
+  changes_behavior: false
+  evidence: HEAD=c2d17c79c、ファイル変更なし、テスト未実行。em-workflow/references/merge-result.md:95
+    は取り込み前のHEAD不一致を記載済みだが、em-workflow/skills/merge/SKILL.md:428 の未コミット変更・検証後HEAD不一致と同:552
+    のブランチ移動を含まない。merge-result.md:103 は SKILL.md:364 のcommit失敗と同:428、同:552 のgit読み取り失敗を列挙していない。merge-result.md:85
+    は em-workflow/scripts/merge-pr.py:415、同:421 の不正なホストを含まない。SKILL.md:691 に独立した28コード表があり、同:721
+    は手順10を欠く。em-workflow/README.md:134 は登録済み・唯一の文という条件を明記せず、後続区間の通常判定を記載する。実装条件は em-workflow/hooks/merge_pr_allow.py:55、同:91
+    にある。既存テストは tests/test_merge_skill_doc.py:1793、tests/test_destructive_guard_merge_allow.py:468
+    にあるが、前者は取り込み前HEAD不一致、後者は2語の存在だけを確認する。登録・単独文の動作テストは同:591、同:603、同:811 にある。行数・追加テスト数は既存テストを拡張する場合の概算で、出力形式・コード集合・実行条件の変更は対象に含まれない
+decided_at: '2026-11-07T14:42:40+09:00'
