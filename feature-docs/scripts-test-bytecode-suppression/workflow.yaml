@@ -190,7 +190,7 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: in_progress
+    status: merged
     notes: 'batch-retry-consumed: failed (orphaned)'
     branch: em-workflow/scripts-test-bytecode-suppression/task0003
   task0004:
