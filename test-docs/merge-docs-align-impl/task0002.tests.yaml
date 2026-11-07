@@ -1,0 +1,87 @@
+task_id: task0002
+# python3 -m unittest discover -s tests before any change in this worktree:
+# Ran 13997 tests, OK (skipped=1).
+baseline_failures: []
+# python3 -m unittest discover -s tests after the implementation and after this
+# record: no failure; subset of the baseline.
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_merge_allow.TestMergeDocsAlignReadmeRow.test_ac1_the_row_states_both_conditions
+      - tests.test_destructive_guard_merge_allow.TestMergeDocsAlignReadmeRow.test_ac1_ac2_ac3_ac4_the_row_has_every_term_and_no_removed_sentence
+      - tests.test_destructive_guard_merge_allow.TestMergeDocsAlignReadmeRow.test_ac1_ac2_a_forged_row_missing_one_term_fires
+    red_confirmed: true
+    red_reason: >-
+      Run against the README row as it was before the change. The row had
+      neither condition term, so the first test failed with "AssertionError:
+      '正規形がコマンドの中で唯一の文であること' not found in" the row (and the
+      same for condition (b)), the second failed with "Lists differ" naming
+      five problems, and the third failed at its assertNotEqual because
+      removing an absent term left the row unchanged.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_merge_allow.TestMergeDocsAlignReadmeRow.test_ac2_the_row_states_what_another_statement_does
+      - tests.test_destructive_guard_merge_allow.TestMergeDocsAlignReadmeRow.test_ac1_ac2_a_forged_row_missing_one_term_fires
+    red_confirmed: true
+    red_reason: >-
+      Run against the README row as it was before the change. The first test
+      failed with "AssertionError: '同じコマンドに別の文が前か後にあると例外は成り立たず'
+      not found in" the row and the same for the deny term; the second failed
+      at its assertNotEqual for the same two terms.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_merge_allow.TestMergeDocsAlignReadmeRow.test_ac3_the_row_does_not_keep_the_removed_sentence
+      - tests.test_destructive_guard_merge_allow.TestMergeDocsAlignReadmeRow.test_ac3_a_forged_row_keeping_the_original_sentence_fires
+    red_confirmed: true
+    red_reason: >-
+      Run against the README row as it was before the change. The first test
+      failed because the row still held 同じコマンドの後続の区間も通常どおり判定する,
+      and the second failed with "Lists differ" because the row lacked the
+      condition terms besides keeping the sentence. The control
+      test_ac3_the_row_before_the_change_fires_on_every_check builds the old
+      row as text and passed before and after; it shows the matcher fires on
+      the original wording.
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_merge_allow.TestMergeDocsAlignReadmeRow.test_ac4_the_row_is_one_line_starting_with_the_guard_cell
+      - tests.test_destructive_guard_merge_allow.TestMergeDocsAlignReadmeRow.test_ac4_the_row_keeps_the_terms_the_other_tests_pin
+      - tests.test_destructive_guard_merge_allow.TestMergeDocsAlignReadmeRow.test_ac4_a_forged_row_missing_a_kept_term_fires
+      - tests.test_destructive_guard_merge_allow.TestAC6ExistingCasesAndDocs.test_ac6_readme_row_describes_the_limited_allow
+    red_confirmed: false
+    red_reason: >-
+      The row was already one line starting with hooks/destructive-guard.py and
+      already held gh pr merge and integration worktree, so these checks passed
+      before the change; a dedicated new red state is out of scope, but the
+      existing test_ac6_readme_row_describes_the_limited_allow detects the same
+      behavior (one row, gh pr merge, integration worktree); no red state
+      occurred for this change.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_merge_allow.TestTask0012AC4SoleStatement.test_ac4_a_harmless_statement_after_the_merge_asks
+      - tests.test_destructive_guard_merge_allow.TestTask0012AC4SoleStatement.test_ac4_a_harmless_statement_before_the_merge_asks
+      - tests.test_destructive_guard_merge_allow.TestAC3LaterSegmentsAreStillJudged.test_ac3_a_harmless_segment_makes_the_merge_ask
+      - tests.test_destructive_guard_merge_allow.TestTask0012AC4SoleStatement.test_ac4_a_force_push_after_the_merge_gets_its_own_decision
+      - tests.test_destructive_guard_merge_allow.TestTask0012AC3UnregisteredDirectory.test_ac3_a_plain_directory_of_the_same_shape_asks
+    red_confirmed: false
+    red_reason: >-
+      The three behaviors the row claims pre-exist in the guard and already had
+      cases in this file: the canonical form plus a harmless statement (after
+      or before) is ask, and deny in batch; a deny in another statement gives
+      that verdict; an unregistered working directory is ask. They passed
+      before the change and no guard code changes, so no red state occurred
+      for this change. The added class imports nothing beyond the standard
+      library modules the file already used (unittest and its siblings).
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      The outcome is the project test command passing over the whole suite,
+      together with a scan that no file under em-workflow/hooks/ or
+      em-workflow/scripts/ differs and that the changed files hold no Notion
+      URL and no home-directory path. The suite run is not a test that can be
+      made to fail first, and a search of tests/ by the repository-relative
+      paths and the basenames of the changed files (README.md,
+      test_destructive_guard_merge_allow.py) found no test that scans those
+      files for a Notion URL or a home path. The suite run and the diff scan
+      were done by hand after the implementation.
