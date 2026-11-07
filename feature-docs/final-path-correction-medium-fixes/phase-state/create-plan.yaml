@@ -33,10 +33,23 @@ worker_runs:
   - feature-docs/final-path-correction-medium-fixes/tasks/task0002.md
   - feature-docs/final-path-correction-medium-fixes/tasks/task0003.md
 artifacts:
-- path: feature-docs/final-path-correction-medium-fixes/IMPLEMENTATION.md feature-docs/final-path-correction-medium-fixes/THREAT-MODEL.md
-    feature-docs/final-path-correction-medium-fixes/VERIFICATION.md feature-docs/final-path-correction-medium-fixes/tasks/task0001.md
-    feature-docs/final-path-correction-medium-fixes/tasks/task0002.md feature-docs/final-path-correction-medium-fixes/tasks/task0003.md
-  sha256: null
+- path: feature-docs/final-path-correction-medium-fixes/IMPLEMENTATION.md
+  sha256: sha256:d106b358261ce4b5010776f2301491e23656784df807d6b3e29ea0c3aa8dcc62
+  produced_by: create-plan-run-0001
+- path: feature-docs/final-path-correction-medium-fixes/THREAT-MODEL.md
+  sha256: sha256:8c9034fd7c9af801283c73b653f4c951a891af6b2f5dfd8a98115c651e4fb098
+  produced_by: create-plan-run-0001
+- path: feature-docs/final-path-correction-medium-fixes/VERIFICATION.md
+  sha256: sha256:927c285761f291537df21c7e77edb420b88bd1850e44dd537bcc78979816a91f
+  produced_by: create-plan-run-0001
+- path: feature-docs/final-path-correction-medium-fixes/tasks/task0001.md
+  sha256: sha256:9d2a36b81a35732d1e3413fd70546b1a70db423f9dc6b9792cd794bc09b89314
+  produced_by: create-plan-run-0001
+- path: feature-docs/final-path-correction-medium-fixes/tasks/task0002.md
+  sha256: sha256:e4e5c89fcdf3c58a79c389b1c5c6cd80e89f11c8834a99fd812c9fa014f30000
+  produced_by: create-plan-run-0001
+- path: feature-docs/final-path-correction-medium-fixes/tasks/task0003.md
+  sha256: sha256:605663eca902d0373300e66c5ef10b85408bfb43f77121701ce4eb2ecbe60dc5
   produced_by: create-plan-run-0001
 patches:
 - patch_id: create-plan-p0001
