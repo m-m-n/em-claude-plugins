@@ -1,7 +1,7 @@
 schema_version: 1
 feature: merge-docs-align-impl
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: ''
 last_input_digest: sha256:f813d544be28f5ea48d7867c6a56665766114b81065729403ba50d18bfd574ca
