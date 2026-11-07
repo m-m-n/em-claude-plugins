@@ -88,9 +88,11 @@ workflow:
   status: completed
   completed_at_commit: e2b8246bc67c9f5c119dab0cee011ac0b95f1056
 - id: verify
-  status: in_progress
-  result: null
+  status: completed
+  result: pass
   failed_items: []
+  summary: 'python3 -m unittest discover -s tests: 15603 tests OK (skipped=1); check-plugin-invariants.py: all PASS; manual items 1-3 confirmed (no version change, shared names consistent)'
+  completed_at_commit: 85f21b004963b22f6f5daf842c33140c929520af
 - id: retrospect
   status: pending
 tasks:
