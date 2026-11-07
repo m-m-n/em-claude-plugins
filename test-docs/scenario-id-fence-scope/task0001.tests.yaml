@@ -1,0 +1,71 @@
+task_id: task0001
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> 14568 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation, pin refresh and this record: python3 -m unittest discover -s tests -> 14605 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_validate_worker_output.TestScenarioIdFenceScopeFinder.test_ac1_id_inside_a_backtick_block_is_not_reported
+      - tests.test_validate_worker_output.TestScenarioIdFenceScopeFinder.test_ac1_id_after_the_fence_characters_of_a_backtick_opening_line_is_not_reported
+      - tests.test_validate_worker_output.TestScenarioIdFenceScopeFinder.test_ac1_id_inside_a_tilde_block_is_not_reported
+      - tests.test_validate_worker_output.TestScenarioIdFenceScopeFinder.test_ac1_id_after_the_fence_characters_of_a_tilde_opening_line_is_not_reported
+      - tests.test_validate_worker_output.TestScenarioIdFenceScopeFinder.test_ac1_tilde_opening_line_with_text_after_the_run_opens_a_block
+      - tests.test_validate_worker_output.TestScenarioIdFenceScopeFinder.test_ac1_blocks_whose_lines_start_with_spaces_or_tabs_are_excluded
+      - tests.test_validate_worker_output.TestScenarioIdFenceScopeFinder.test_ac1_an_indented_opening_line_with_text_excludes_the_text_too
+      - tests.test_validate_worker_output.TestScenarioIdFenceScopeFinder.test_a_fence_after_a_list_marker_is_not_an_opening_line
+      - tests.test_validate_worker_output.TestScenarioIdFenceScopeFinder.test_a_fence_after_a_quote_marker_is_not_an_opening_line
+    red_confirmed: true
+    red_reason: "Run before the implementation: the tilde cases failed with AssertionError: Items in the first set but not the second: 'TS3' (an ID in a tilde block, or after the tilde run on its opening line, was reported), in the spaces-and-tabs test for every tilde subcase, and the list-marker and quote-marker tests failed because the ID inside the marked fence was not reported. The two backtick-only cases (test_ac1_id_inside_a_backtick_block_is_not_reported, test_ac1_id_after_the_fence_characters_of_a_backtick_opening_line_is_not_reported) passed before the change because the old range already removed backtick blocks; they are guards."
+  AC-2:
+    tests:
+      - tests.test_validate_worker_output.TestScenarioIdFenceScopeFinder.test_ac2_id_between_inline_triple_backticks_in_a_sentence_is_reported
+      - tests.test_validate_worker_output.TestScenarioIdFenceScopeFinder.test_ac2_id_between_triple_backticks_on_a_line_that_starts_with_them_is_reported
+      - tests.test_validate_worker_output.TestScenarioIdFenceScopeFinder.test_ac2_a_line_of_triple_backticks_with_more_backticks_later_is_not_an_opening_line
+    red_confirmed: true
+    red_reason: "Run before the implementation: all three failed with AssertionError: Items in the second set but not the first: 'TS3' (the old range removed ```TS3``` with the inline triple backticks, so the ID was not reported)"
+  AC-3:
+    tests:
+      - tests.test_validate_worker_output.TestScenarioIdFenceScopeFinder.test_ac3_id_after_a_longer_closing_run_is_reported
+      - tests.test_validate_worker_output.TestScenarioIdFenceScopeFinder.test_ac3_id_after_a_closing_run_followed_by_spaces_and_tabs_is_reported
+      - tests.test_validate_worker_output.TestScenarioIdFenceScopeFinder.test_ac3_id_after_a_shorter_run_does_not_close_the_block
+      - tests.test_validate_worker_output.TestScenarioIdFenceScopeFinder.test_ac3_id_after_a_run_of_the_other_character_does_not_close_the_block
+      - tests.test_validate_worker_output.TestScenarioIdFenceScopeFinder.test_ac3_id_after_a_run_followed_by_other_characters_does_not_close_the_block
+      - tests.test_validate_worker_output.TestScenarioIdFenceScopeFinder.test_ac3_unclosed_opening_line_excludes_everything_from_it_to_the_end
+      - tests.test_validate_worker_output.TestScenarioIdFenceScopeFinder.test_ac3_a_block_of_one_character_is_not_closed_by_a_line_of_the_other
+      - tests.test_validate_worker_output.TestScenarioIdFenceScopeFinder.test_ac3_lines_are_split_on_the_line_feed_only
+    red_confirmed: true
+    red_reason: "Run before the implementation: the tests failed with AssertionError: Items in the first set but not the second (or the reverse) -- the tilde subcases of the longer-run and trailing-spaces tests, every subcase of the shorter-run, other-character, other-characters-after-run, unclosed-opening-line and line-feed-only tests (the old range closed a block at the first later triple backticks and left an unclosed block in place), and the mixed tilde/backtick test."
+  AC-4:
+    tests:
+      - tests.test_validate_worker_output.TestScenarioIdFenceScopeFinder.test_ac4_id_inside_an_html_comment_is_not_reported
+      - tests.test_validate_worker_output.TestScenarioIdFenceScopeFinder.test_ac4_a_comment_opener_inside_a_block_has_no_effect_outside_it
+      - tests.test_validate_worker_output.TestScenarioIdFenceScopeFinder.test_ac4_an_opening_shaped_line_inside_a_comment_still_opens_a_block
+      - tests.test_validate_worker_output.TestScenarioIdFenceScopeFinder.test_ac4_ids_right_before_and_right_after_a_block_are_reported
+      - tests.test_validate_worker_output.TestScenarioIdFenceScopeFinder.test_ac4_id_right_after_a_block_at_the_start_of_the_document_is_reported
+      - tests.test_validate_worker_output.TestScenarioIdFenceScopeFinder.test_ac4_the_line_after_a_block_is_judged_against_a_line_feed
+      - tests.test_validate_worker_output.TestScenarioIdFenceScopeFinder.test_ac4_crlf_document_excludes_the_block_and_reports_the_next_line
+      - tests.test_validate_worker_output.TestScenarioIdFenceScopeFinder.test_ac4_degenerate_inputs_return_a_set_without_raising
+      - tests.test_validate_worker_output.TestScenarioIdFenceScopeFinder.test_the_preceding_character_test_is_unchanged_outside_blocks
+    red_confirmed: true
+    red_reason: "Run before the implementation: test_ac4_a_comment_opener_inside_a_block_has_no_effect_outside_it, test_ac4_an_opening_shaped_line_inside_a_comment_still_opens_a_block, the tilde subcase of test_ac4_crlf_document_excludes_the_block_and_reports_the_next_line and the ```TS3 and ~~~ TS3 subcases of test_ac4_degenerate_inputs_return_a_set_without_raising failed with AssertionError: Items in the first set but not the second. The other tests (HTML comment, IDs before and after a block, start of the document, line-feed judgement, preceding-character test, and the remaining degenerate and CRLF subcases) passed before the change because the old range already behaved that way for those inputs; they guard the behavior the new scan must keep."
+  AC-5:
+    tests:
+      - tests.test_validate_worker_output.TestScenarioIdFenceScopeReadSideUnchanged.test_ac5_strip_noise_keeps_a_tilde_block_and_removes_inline_triple_backticks
+      - tests.test_validate_worker_output.TestScenarioIdFenceScopeReadSideUnchanged.test_ac5_extraction_reads_the_tilde_block_and_not_the_inline_triple_backticks
+      - tests.test_validate_worker_output.TestScenarioIdFenceScopeReadSideUnchanged.test_ac5_the_fence_and_id_patterns_are_unchanged
+      - tests.test_validate_worker_output.TestHyphenlessScenarioIdFinder.test_read_grammar_and_extraction_are_unchanged
+      - tests.test_validate_worker_output.TestScenarioIdExtractionAcceptsBothForms
+    red_confirmed: false
+    red_reason: "The criterion states behavior that stays as it is: `_strip_noise`, `_FENCE_RE`, `_TS_ID_RE` and `extract_verification_scenario_ids` are not edited, so no red state can occur for it. The three new tests and the existing tests listed above passed before the implementation and pass after it; they detect a change to that behavior. The contrast test TestScenarioIdFenceScopeReadSideUnchanged.test_ac5_the_check_reports_the_opposite_ids (the check reports the ID between inline triple backticks and not the one in the tilde block) failed before the implementation but is not what this criterion states."
+  AC-6:
+    tests:
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckFenceScope.test_ac6_an_id_in_a_tilde_block_yields_no_error_in_either_document
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckFenceScope.test_ac6_an_id_between_inline_triple_backticks_in_verification_md_yields_an_error
+      - tests.test_validate_worker_output.TestScenarioIdFormCheckFenceScope.test_ac6_an_id_between_inline_triple_backticks_in_a_plan_yields_an_error
+    red_confirmed: true
+    red_reason: "Run before the implementation: the tilde test failed with a scenario-id-form error where none was expected, and both inline-triple-backtick tests failed with AssertionError: 0 != 1 : [] (no scenario-id-form error was produced)"
+  AC-7:
+    tests:
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_test_validate_worker_output_py_byte_identical
+    red_confirmed: true
+    red_reason: "With the final files and the two constants set back to their previous digests (826a8047... and e0720389...), both tests failed with AssertionError (the digest of the file differs from the pin); the refreshed constants make them pass. The full suite run after the refresh is the final_failures run."

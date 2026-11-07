@@ -1399,8 +1399,18 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # skips VERIFICATION.md only on the correction entry. PINNED_VALIDATOR_TEST_LINE
     # below is unaffected and still asserted. Same rationale: refresh, don't
     # remove.
+    #
+    # Refreshed again by scenario-id-fence-scope/task0001 (FR1 to FR5):
+    # `find_hyphenless_scenario_ids` no longer calls `_strip_noise`; the new
+    # `_drop_fenced_blocks` excludes the line-start fenced blocks (backtick or
+    # tilde, an unclosed one to the end of the text) and the HTML comments are
+    # removed after it, so an ID in a tilde block is not reported and an ID
+    # between inline triple backticks is. `_strip_noise`, `_FENCE_RE`,
+    # `_TS_ID_RE` and `extract_verification_scenario_ids` are unchanged.
+    # PINNED_VALIDATOR_TEST_LINE below is unaffected and still asserted. Same
+    # rationale: refresh, don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "826a80471d09dfb1a0d934e23b6728a9b3d534f50f39e20bae2972651184cfbe"
+        "2e7a97b983c06dce938c478e2af4b909cc20bd0ae3047ca08da3406f51c001fc"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-
@@ -1507,8 +1517,17 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # each case a scratch directory. The three new report-name fixtures are
     # exercised by it. PINNED_VALIDATOR_TEST_LINE below is unaffected and
     # still asserted. Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by scenario-id-fence-scope/task0001 (FR7):
+    # TestScenarioIdFenceScopeFinder, TestScenarioIdFenceScopeReadSideUnchanged
+    # and TestScenarioIdFormCheckFenceScope are new, pinning the code range the
+    # `scenario-id-form` check leaves out: a line-start block fenced by
+    # backticks or tildes and an HTML comment are skipped, an ID between inline
+    # triple backticks is reported, and the read side keeps its own range.
+    # PINNED_VALIDATOR_TEST_LINE below is unaffected and still asserted. Same
+    # rationale: refresh, don't remove.
     TEST_VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "e07203890d7a6509a12c154f01b21d740db86935501d7e5cd49e3d512a0cb8f2"
+        "a3cf9384db7416b6f55007e901564cc609fa5ea152d109b2d2bc0a7571333032"
     )
     FIXTURE_SHA256 = (
         "c8414e673876bb05dc9d35c571b35e255a53c185586d7bc876edf5aadd1f05f5"
