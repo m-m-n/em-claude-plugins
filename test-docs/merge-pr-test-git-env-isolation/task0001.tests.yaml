@@ -1,0 +1,102 @@
+task_id: task0001
+# python3 -m unittest discover -s tests before any change: Ran 14605 tests,
+# OK (skipped=1).
+baseline_failures: []
+# python3 -m unittest discover -s tests after the implementation and after
+# this record was written: no failure; subset of the baseline.
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_merge_pr.TestGitEnvIsolation.test_ac1_inherited_git_variables_are_in_neither_environment
+      - tests.test_merge_pr.TestGitEnvIsolation.test_ac1_the_removal_condition_is_the_git_prefix_alone
+    red_confirmed: true
+    red_reason: >-
+      Run against MergePrTestCase.setUp as it was before this task, the first
+      failed with "AssertionError: Items in the first set but not the second:
+      'GIT_CONFIG_PARAMETERS' 'GIT_INDEX_FILE' 'GIT_WORK_TREE' 'GIT_DIR'"
+      (the injected variables were still in self.env), the second with
+      "AssertionError: True is not false : GIT_TRACE is in the environment".
+  AC-2:
+    tests:
+      - tests.test_merge_pr.TestGitEnvIsolation.test_ac2_git_config_global_is_pinned_to_devnull_over_an_inherited_value
+      - tests.test_merge_pr.TestGitEnvIsolation.test_ac2_git_config_global_is_devnull_when_none_was_inherited
+    red_confirmed: true
+    red_reason: >-
+      Run against the unmodified setUp, the first failed with "AssertionError:
+      '<own temporary directory>/injected-global-config' != '/dev/null'" (the
+      inherited GIT_CONFIG_GLOBAL survived) and the second with
+      "AssertionError: None != '/dev/null'" (setUp did not set the variable).
+  AC-3:
+    tests:
+      - tests.test_merge_pr.TestGitEnvIsolation.test_ac3_setup_and_cleanups_leave_the_decoy_repository_unchanged
+    red_confirmed: true
+    red_reason: >-
+      Run against the unmodified setUp, with GIT_DIR, GIT_WORK_TREE and
+      GIT_INDEX_FILE pointing at the decoy, setUp wrote into the decoy: the
+      test failed with "AssertionError: 'refs/heads/main <new id>' !=
+      'refs/heads/main <recorded id>' : the decoy's refs changed". The decoy
+      lives in the test's own temporary directory, so nothing outside it was
+      written. The check that the fixture repository has an 'initial' commit
+      is also false in that state (the fixture directory is not a repository,
+      git exits 128), but the decoy comparison fails first.
+  AC-4:
+    tests:
+      - tests.test_merge_pr.TestGitEnvIsolation.test_ac1_inherited_git_variables_are_in_neither_environment
+      - tests.test_merge_pr.TestGitEnvIsolation.test_ac1_the_removal_condition_is_the_git_prefix_alone
+      - tests.test_merge_pr.TestGitEnvIsolation.test_ac2_git_config_global_is_pinned_to_devnull_over_an_inherited_value
+      - tests.test_merge_pr.TestGitEnvIsolation.test_ac2_git_config_global_is_devnull_when_none_was_inherited
+      - tests.test_merge_pr.TestGitEnvIsolation.test_ac3_setup_and_cleanups_leave_the_decoy_repository_unchanged
+      - tests.test_merge_pr.TestGitEnvIsolation.test_ac5_an_outer_git_dir_cannot_redirect_this_test_cases_own_git_calls
+    red_confirmed: true
+    red_reason: >-
+      Red observation: with the new TestGitEnvIsolation class added and
+      MergePrTestCase.setUp untouched, python3 -m unittest
+      tests.test_merge_pr.TestGitEnvIsolation ran 9 tests and failed 6
+      (the six listed; FAILED (failures=6)). Green observation: after the
+      setUp change the same class passes (9 tests OK), python3 -m unittest
+      tests.test_merge_pr passes (Ran 104 tests, OK), and the same module run
+      with GIT_DIR, GIT_WORK_TREE and GIT_INDEX_FILE pointing at a separate
+      repository left that repository's refs and local configuration
+      unchanged.
+  AC-5:
+    tests:
+      - tests.test_merge_pr.TestGitEnvIsolation.test_ac5_the_process_environment_is_restored_after_a_scoped_change
+      - tests.test_merge_pr.TestGitEnvIsolation.test_ac5_the_environment_is_restored_and_the_cleanups_run_when_the_check_fails
+      - tests.test_merge_pr.TestGitEnvIsolation.test_ac5_an_outer_git_dir_cannot_redirect_this_test_cases_own_git_calls
+    red_confirmed: false
+    red_reason: >-
+      These checks verify properties of the new regression test case itself
+      (scoped environment change, cleanups, explicit git environment), so no
+      earlier state of that code exists to fail. The first two passed on their
+      first run. The third failed on its first run, but with the decoy
+      comparison of AC-3, not with the outer repository changing, so it is not
+      a red for AC-5. Detection was checked instead by mutating a scratch copy
+      of the test module: leaving the process environment unrestored made
+      both restoration tests and the outer-repository test fail; letting the
+      test case's own git calls inherit the process environment made the
+      outer-repository test fail; skipping the driven cleanups made the
+      cleanup test fail.
+  AC-6:
+    tests:
+      - tests.test_merge_pr.TestGitEnvIsolation.test_ac6_the_existing_environment_handling_is_kept
+    red_confirmed: false
+    red_reason: >-
+      The behaviour is preserved, not added: the test passed on its first run
+      against the unmodified setUp and still passes after the change. The
+      full-module criterion (python3 -m unittest tests.test_merge_pr passes
+      with no GIT_ variable in the environment) is covered by the existing
+      tests of tests/test_merge_pr.py, which ran 104 tests OK after the
+      change; no red state occurred for it.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      The criterion constrains the task's diff (only tests/test_merge_pr.py
+      and this record; nothing under em-workflow/; standard library only; no
+      network, no real ~/.claude), and no executable check can fail for it.
+      Searched tests/ by repository-relative path and by basename
+      (tests/test_merge_pr.py, test_merge_pr.py, test_merge_pr): the only hit
+      outside the module is a docstring in tests/test_merge_skill_doc.py, which
+      reads nothing from it. Checked with git diff --name-only against the
+      parent branch instead.
