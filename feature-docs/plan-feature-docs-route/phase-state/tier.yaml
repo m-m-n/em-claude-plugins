@@ -1,0 +1,81 @@
+schema_version: 2
+feature: plan-feature-docs-route
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.89
+    confidence: 0.82
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+    probabilities:
+      '0': 0.01
+      '1': 0.13
+      '2': 0.83
+      '3': 0.03
+  observed_at: '2026-11-07T22:12:13+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 2.02
+    confidence: 0.98
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.0
+      '2': 0.98
+      '3': 0.02
+  observed_at: '2026-11-07T22:12:13+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/agents/implementation-planner.md
+  - em-workflow/skills/plan-writing/SKILL.md
+  - em-workflow/references/contracts/planner-contract.md
+  - em-workflow/references/phases/create-plan-phase.md
+  - em-workflow/references/workflow-patch.md
+  - em-workflow/skills/develop/SKILL.md
+  - em-workflow/scripts/validate-worker-output.py
+  - em-workflow/scripts/report-name-entry.py
+  - tests/test_rework_docs_only_validator_rules.py
+  - tests/test_worker_contracts_planning.py
+  - tests/test_phase_protocols.py
+  - tests/test_report_name_entry.py
+  - tests/test_final_path_correction.py
+  changed_lines_approx: 400
+  new_functions_needed: 0
+  new_files_needed: []
+  new_dependencies_needed: []
+  covering_tests_exist: true
+  spillover_modules:
+  - em-workflow/skills/develop/SKILL.md
+  - em-workflow/scripts/report-name-entry.py
+  - em-workflow/references/contracts/planner-contract.md
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 12
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  caller_and_dependency_count: 5
+  changes_external_contract: true
+  changes_behavior: true
+  evidence:
+  - em-workflow/agents/implementer.md:338 と em-workflow/skills/worktree-task-workflow/SKILL.md:17 は、全 worktree で feature-docs/** の変更を禁止している
+  - em-workflow/agents/implementation-planner.md:208 と em-workflow/skills/plan-writing/SKILL.md:68 は、変更予定ファイルを files に含める規則を定めている
+  - em-workflow/scripts/validate-worker-output.py:2469 の feature-docs 拒否は append に限定され、replace_all には適用されない
+  - tests/test_rework_docs_only_validator_rules.py:332 は replace_planning で feature-docs を許可する現行動作を確認している。同ファイル:296 の既存7テストは実行して成功した
+  - em-workflow/references/rework-task-synthesis.md:19 の入口は review・verify の4経路で、同ファイル:216 の文書修正対象は当該 feature の VERIFICATION.md・IMPLEMENTATION.md・既存タスク文書に限定されている
+  - em-workflow/references/contracts/planner-contract.md:44 は既存の書き込み対象を列挙し、同ファイル:169 は入力ダイジェストの対象を列挙している。他の feature の修正文書を扱う契約の整備が必要になる
+  - em-workflow/scripts/validate-worker-output.py:3547 は、書き込み対象にも許可ディレクトリにも含まれない成果物を拒否する
+  - em-workflow/skills/develop/SKILL.md:375 の失敗後入口はレポート名の訂正が対象で、em-workflow/scripts/report-name-entry.py:141 もレポート名違反がなければ入口を選択しない
+  - em-workflow/references/workflow-patch.md:156 は既存タスクの files をそのまま引き継ぐ。例外は同ファイル:388 のファイル名訂正で、同ファイル:429 は旧パスがレポート名に一致することを要求する
+  - em-workflow/scripts/validate-worker-output.py:2698・2843・3132・3572・4501 に、validate_task_entry・validate_workflow_patch・_validate_dry_run_apply・apply_patch への直接呼び出しが計5箇所ある
+  - em-workflow/scripts/validate-worker-output.py:2425・3182 と em-workflow/scripts/report-name-entry.py:128 に既存の検証・適用・再開判定関数がある。追加関数・追加ファイルを0とする数値、変更行数と追加テスト件数は、既存箇所を拡張する場合の概算であり、実装は行っていない
+decided_at: '2026-11-07T22:12:13+09:00'
