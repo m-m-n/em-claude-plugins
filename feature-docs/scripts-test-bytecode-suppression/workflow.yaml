@@ -79,7 +79,8 @@ workflow:
   failed_items: []
   completed_at_commit: b0f8e9475f831de4c97507babb8e23c79ebf2d6a
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: 8467c8bf815541c8d5ff9f890766e0f9979efd1c
 tasks:
   task0001:
     title: Bytecode-free scan-dependencies.py loads in tests
