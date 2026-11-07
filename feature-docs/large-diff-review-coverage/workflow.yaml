@@ -108,7 +108,7 @@ workflow:
     Manual 2: not walked by hand; the Phase R2 / R2b / R5 / R6 rules are
       covered by the text-inspection tests (TS-7)
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: Codex reviewer timeout and non-JSON skip handling in both plugins
