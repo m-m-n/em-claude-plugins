@@ -3,7 +3,7 @@ feature: verification-md-regular-file-read
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: 5a2097fa068bd8329a58d7e3b09a927a25f39b09
+base_revision: bb1a20c6457b1995ad3ce84e7608da210f82956b
 last_input_digest: sha256:df154f6b3eb7bb8d2b404b8bbb0c20f46e7e72a166cf3186b8f6310e8f2872c3
 active_request_id: create-spec-run-0002
 packets: {}
@@ -35,9 +35,15 @@ worker_runs:
   output_digest: sha256:8c0ce946cb8865b4862b6a8a3c70dc972f8f00c9128e633f0266f10fe8f1ce2e
   self_write_set: []
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:df154f6b3eb7bb8d2b404b8bbb0c20f46e7e72a166cf3186b8f6310e8f2872c3
-artifacts: []
+  output_digest: sha256:2bcc7aee40de44b67450b650dd02baa0a987070cab697115ebbe77f68db81b56
+  self_write_set:
+  - feature-docs/verification-md-regular-file-read/SPEC.md
+artifacts:
+- path: feature-docs/verification-md-regular-file-read/SPEC.md
+  sha256: sha256:a0391b296ff62605b2b1ab20e6142ad423ce47dac149fc61ccc51b0c510cedef
+  produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
