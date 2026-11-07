@@ -10,16 +10,23 @@ goal: '# merge-result.md の reason code の条件と README の destructive-gua
   merge まわりの文書を実装に合わせる。
 
 
-  1. `em-workflow/references/merge-result.md` の Reason codes 表の条件を、SKILL での実際の発生箇所に合わせる（`verification_failed`、`git_failed`、`remote_unresolved`）。SKILL.md 側の表は SSOT を引用する形に寄せる。
+  1. `em-workflow/references/merge-result.md` の Reason codes 表の条件を、SKILL での実際の発生箇所に合わせる（`verification_failed`、`git_failed`、`remote_unresolved`）。SKILL.md
+  側の表は SSOT を引用する形に寄せる。
 
-  2. `em-workflow/README.md` の hook 表の destructive-guard 行に、`gh pr merge` の例外が成り立つ条件を書き足す（正規形がコマンドの中で唯一の文であること、作業ディレクトリが登録済みの integration worktree か、その配下であること）。
+  2. `em-workflow/README.md` の hook 表の destructive-guard 行に、`gh pr merge` の例外が成り立つ条件を書き足す（正規形がコマンドの中で唯一の文であること、作業ディレクトリが登録済みの
+  integration worktree か、その配下であること）。
 
 
   ## 背景・なぜ
 
-  - merge-result.md は reason code 表の唯一の持ち主だと宣言しているが、`verification_failed` の条件はコマンドの失敗か timeout だけで、SKILL は手順 10 の未コミット変更・HEAD 不一致や手順 13.3 の integration ブランチ移動でも出す。`git_failed` も手順 9 の commit 失敗や手順 10・13.3 の git status / rev-parse 失敗を含まない。`remote_unresolved` にはホストの形が不正な場合が無い。dispatcher が契約文書をもとに reason を解釈すると、再試行で収まる競合をテスト失敗と読み違える。
+  - merge-result.md は reason code 表の唯一の持ち主だと宣言しているが、`verification_failed` の条件はコマンドの失敗か
+  timeout だけで、SKILL は手順 10 の未コミット変更・HEAD 不一致や手順 13.3 の integration ブランチ移動でも出す。`git_failed`
+  も手順 9 の commit 失敗や手順 10・13.3 の git status / rev-parse 失敗を含まない。`remote_unresolved`
+  にはホストの形が不正な場合が無い。dispatcher が契約文書をもとに reason を解釈すると、再試行で収まる競合をテスト失敗と読み違える。
 
-  - README は「同じコマンドの後続の区間も通常どおり判定する」と書いており、正規形に後ろの区間が付いても許可が残るように読める。実装（`merge_pr_allow.py` の `keeps_exception`）は単独の文を求めるため、`gh pr merge ... && echo done` は ask になり、無人実行では deny で止まる。
+  - README は「同じコマンドの後続の区間も通常どおり判定する」と書いており、正規形に後ろの区間が付いても許可が残るように読める。実装（`merge_pr_allow.py`
+  の `keeps_exception`）は単独の文を求めるため、`gh pr merge ... && echo done` は ask になり、無人実行では
+  deny で止まる。
 
 
   ## 受け入れ条件 / 完了の定義
@@ -38,7 +45,10 @@ goal: '# merge-result.md の reason code の条件と README の destructive-gua
 
   ## 制約・前提
 
-  - 詳細: integration ブランチ `em-workflow/unattended-merge-medium-fixes/integration` の `feature-docs/unattended-merge-medium-fixes/reviews/round2.yaml`（stable_id `22317f774603b30b`）。README の件は round3 の evaluator が挙げたもの（evaluator の返却が不完全だったため round3.yaml の findings には載っていない。round_summary に記載）
+  - 詳細: integration ブランチ `em-workflow/unattended-merge-medium-fixes/integration` の
+  `feature-docs/unattended-merge-medium-fixes/reviews/round2.yaml`（stable_id `22317f774603b30b`）。README
+  の件は round3 の evaluator が挙げたもの（evaluator の返却が不完全だったため round3.yaml の findings には載っていない。round_summary
+  に記載）
 
   - 該当箇所: `em-workflow/references/merge-result.md:95`、`merge-result.md:85`、`merge-result.md:103`、`em-workflow/README.md:134`
 
@@ -103,7 +113,48 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Align reason code conditions and the merge skill result table
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/references/merge-result.md
+    - em-workflow/skills/merge/SKILL.md
+    - tests/test_merge_skill_doc.py
+    skills: []
+    domains:
+    - api-contract
+    complexity: medium
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR6
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    status: pending
+  task0002:
+    title: State the gh pr merge exception conditions in the README
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/README.md
+    - tests/test_destructive_guard_merge_allow.py
+    skills: []
+    domains:
+    - config-infra
+    complexity: low
+    requirements:
+    - FR5
+    - FR6
+    - NFR1
+    - NFR2
+    - NFR4
+    - NFR5
+    status: pending
 review:
   status: pending
   rounds_completed: 0
@@ -117,7 +168,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-2
   FR2:
@@ -125,7 +177,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-2
     - TS-3
@@ -134,7 +187,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-2
   FR4:
@@ -142,7 +196,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-4
@@ -151,7 +206,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0002
     tests:
     - TS-5
   FR6:
@@ -159,7 +215,9 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
     tests:
     - TS-1
     - TS-2
@@ -171,7 +229,9 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
     tests:
     - TS-1
     - TS-4
@@ -180,7 +240,9 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
     tests:
     - TS-1
     - TS-2
@@ -192,16 +254,20 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-4
+    - TS-2
   NFR4:
     title: テストの規約
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
     tests:
     - TS-1
     - TS-2
@@ -213,7 +279,9 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
     tests: []
 batch:
   review_rework_count: 0
