@@ -1,0 +1,337 @@
+schema_version: 1
+feature: scripts-test-bytecode-suppression
+created: '2026-11-07'
+base_branch: main
+goal: |
+  # テスト全体実行で em-workflow/scripts/__pycache__ にバイトコードが書かれる
+
+  種別: 改善
+
+  ## やりたいこと
+  `python3 -m unittest discover -s tests` の全体実行で、`em-workflow/scripts/` 配下に `__pycache__` が生成されないようにする。
+
+  ## 背景・なぜ
+  全体実行の後、`em-workflow/scripts/__pycache__` が生成される。`em-workflow/scripts/` 配下のスクリプトを読み込む一部のテストモジュールが原因。プラグイン配下は配布物にそのままコピーされる。
+  hook-test-bytecode-suppression（`em-workflow/hooks/` 配下のみが対象）の実装中に見つけた範囲外の課題。
+
+  ## 受け入れ条件 / 完了の定義
+  - 全体実行の後、`em-workflow/scripts/` 配下に `__pycache__` ができない
+  - 既存テストはすべて通る
+parent_branch: em-workflow/scripts-test-bytecode-suppression/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.06
+      '1': 0.76
+      '2': 0.17
+      '3': 0.01
+    description_plus_code:
+      '0': 0.0
+      '1': 0.17
+      '2': 0.77
+      '3': 0.06
+  at: '2026-11-07T21:23:46+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: b2e25b097f2cd314f30a702fcf1e1a6c7b3b1476
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: テストコードだけの変更で、画面・UI・視覚的な成果物が無い。
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: completed
+  completed_at_commit: 1d7e7535a089e276a0f7ff67a8ba415ef8325842
+- id: implement
+  status: completed
+  base_commit: 7f45acbf9607525e84dcb62855b5de98d9556d3c
+  completed_at_commit: c495382310183071ecdb403c9685def743f960e4
+- id: review
+  status: completed
+  completed_at_commit: 5b5fc78bc131caa2159bcd6054f0a6cf32d0da52
+- id: verify
+  status: completed
+  result: pass
+  failed_items: []
+  completed_at_commit: b0f8e9475f831de4c97507babb8e23c79ebf2d6a
+- id: retrospect
+  status: completed
+  completed_at_commit: 8467c8bf815541c8d5ff9f890766e0f9979efd1c
+tasks:
+  task0001:
+    title: Bytecode-free scan-dependencies.py loads in tests
+    plan: tasks/task0001.md
+    files:
+    - tests/test_bytecode_free_loads_scan_dependencies.py
+    - tests/test_sca_file_tasks_unexpected_exceptions.py
+    - tests/test_sca_listing_undecodable_output.py
+    - tests/test_sca_pip_lockfile_audit.py
+    - tests/test_scan_dependencies_cargo_directness.py
+    - tests/test_sca_absolute_executable_resolution.py
+    - tests/test_sca_file_tasks_oserror.py
+    - tests/test_scan_dependencies_pyproject_directness.py
+    - tests/test_sca_child_env_path_filtering.py
+    - tests/test_sca_go_govulncheck_real_output.py
+    - tests/test_sca_scanner_project_config_isolation.py
+    - tests/test_sca_scan_job_grouping.py
+    - tests/test_sca_task_filing.py
+    - tests/test_sca_run_scan_plan_units.py
+    - tests/test_sca_scan_unchanged_surfaces.py
+    - tests/test_sca_per_project_scan_binding.py
+    - tests/test_reproduction_output_contract.py
+    - tests/test_sca_scan_execution.py
+    - tests/test_scan_dependencies_pip_directness.py
+    - tests/test_sca_scan_invocation.py
+    - tests/test_sca_finding_title_roundtrip.py
+    - tests/test_sca_scan_normalization.py
+    skills:
+    - infra-impl
+    domains:
+    - config-infra
+    - external-io
+    complexity: medium
+    requirements:
+    - FR1
+    - FR3
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: merged
+    notes: 'batch-retry-consumed: failed (implementer stopped without a merged event)'
+    branch: em-workflow/scripts-test-bytecode-suppression/task0001
+  task0002:
+    title: Bytecode-free validate-worker-output.py loads in tests
+    plan: tasks/task0002.md
+    files:
+    - tests/test_bytecode_free_loads_validator.py
+    - tests/test_digest_contract_alignment.py
+    - tests/test_requirements_tests_replace.py
+    - tests/test_replanning_producer_alignment.py
+    - tests/test_final_path_correction.py
+    - tests/test_routeback_record_schema_patch.py
+    - tests/test_report_name_validation.py
+    - tests/test_validate_worker_output.py
+    - tests/test_spec_change_gate_binding.py
+    - tests/test_tier_rework_path.py
+    - tests/test_replanning_carry_over.py
+    - tests/test_spec_change_replan_authorization.py
+    - tests/test_classification_audit_retention.py
+    - tests/test_tier_task_document_plan.py
+    - tests/test_tier_phase_preconditions.py
+    - tests/test_rework_docs_only_validator_rules.py
+    - tests/test_gate_outcome_packet_lifecycle.py
+    - tests/test_gate_option_vocabulary.py
+    skills:
+    - infra-impl
+    domains:
+    - config-infra
+    - external-io
+    complexity: medium
+    requirements:
+    - FR1
+    - FR3
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: merged
+    notes: 'batch-retry-consumed: failed (orphaned)'
+    branch: em-workflow/scripts-test-bytecode-suppression/task0002
+  task0003:
+    title: Bytecode-free loads of the remaining em-workflow scripts in tests
+    plan: tasks/task0003.md
+    files:
+    - tests/test_bytecode_free_loads_other_scripts.py
+    - tests/test_tier_evaluator_contract.py
+    - tests/test_tier_rules_buckets_codex_facts.py
+    - tests/test_decide_tier_final_score.py
+    - tests/test_tier_rules.py
+    - tests/test_check_plugin_invariants.py
+    - tests/test_self_write_digest_wiring.py
+    - tests/test_self_write_digest_docs.py
+    - tests/test_worker_digest_results.py
+    - tests/test_recover_orphaned_task.py
+    - tests/test_stale_launched_recovery_chain.py
+    - tests/test_journal_append_failed.py
+    - tests/test_review_shards.py
+    - tests/test_review_coverage.py
+    - tests/test_self_write_digest.py
+    - tests/test_merge_ci_wait.py
+    skills:
+    - infra-impl
+    domains:
+    - config-infra
+    - external-io
+    complexity: medium
+    requirements:
+    - FR1
+    - FR3
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: merged
+    notes: 'batch-retry-consumed: failed (orphaned)'
+    branch: em-workflow/scripts-test-bytecode-suppression/task0003
+  task0004:
+    title: Bytecode-free report-name-entry.py tests (in-process load and child launch)
+    plan: tasks/task0004.md
+    files:
+    - tests/test_report_name_entry.py
+    skills:
+    - infra-impl
+    domains:
+    - config-infra
+    - external-io
+    complexity: low
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: merged
+    notes: 'batch-retry-consumed: failed (orphaned)'
+    branch: em-workflow/scripts-test-bytecode-suppression/task0004
+review:
+  status: completed
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - performance
+    - spec
+    discretionary: []
+    cross_validation: false
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - performance
+  - spec
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: テストのプロセス内読み込みでバイトコードを書かない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+  FR2:
+    title: 子プロセスが兄弟スクリプトを読み込む経路でバイトコードを書かない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0004
+    tests:
+    - TS-1
+    - TS-4
+  FR3:
+    title: 他モジュールが漏らすフラグに頼らない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+  NFR1:
+    title: em-workflow/scripts/ 配下のスクリプト本体を変更しない（変更は tests/ に限る）
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS-5
+  NFR2:
+    title: プロセス全体の os.environ を書き換えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS-6
+  NFR3:
+    title: テストコードは標準ライブラリだけを使う
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS-7
+  NFR4:
+    title: 既存テストの検証内容を変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS-1
+    - TS-8
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

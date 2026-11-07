@@ -1,0 +1,48 @@
+task_id: task0002
+baseline_failures: []          # 4a, on the clean base commit: python3 -m unittest discover -s tests -> Ran 15037 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 15047 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_bytecode_free_loads_validator.TestBytecodeFreeLoadsOfValidator.test_ac1_recording_probe_sees_flag_true
+    red_confirmed: true
+    red_reason: "Against the unchanged loaders, the test failed in all 16 rows for the starting value False: AssertionError: False is not True (the probe body recorded the flag as False). The 16 subtests for the starting value True passed before the change, because the flag was already True."
+  AC-2:
+    tests:
+      - tests.test_bytecode_free_loads_validator.TestBytecodeFreeLoadsOfValidator.test_ac2_flag_equals_starting_value_after_normal_return
+    red_confirmed: false
+    red_reason: "Passed against the unchanged loaders, because they never touched the flag, so it trivially equalled the starting value; the test pins the restore behavior the change must keep. It was observed to discriminate by a temporary mutation of the row 7 loader (the restore line removed): the test failed for row 7 with the starting value False, with the flag left at True. The loader was restored afterwards."
+  AC-3:
+    tests:
+      - tests.test_bytecode_free_loads_validator.TestBytecodeFreeLoadsOfValidator.test_ac3_raising_probe_error_reaches_caller_with_flag_true_in_body
+      - tests.test_bytecode_free_loads_validator.TestBytecodeFreeLoadsOfValidator.test_ac3_flag_equals_starting_value_after_raising_probe
+    red_confirmed: true
+    red_reason: "Against the unchanged loaders, test_ac3_raising_probe_error_reaches_caller_with_flag_true_in_body failed in all 16 rows for the starting value False: AssertionError: 'probe body ran with dont_write_bytecode=False' != 'probe body ran with dont_write_bytecode=True'. test_ac3_flag_equals_starting_value_after_raising_probe passed before the change (the loaders never touched the flag); it was observed to discriminate by a temporary mutation of the row 3 loader (restore only on a normal return, without try/finally): it failed for row 3 with the starting value False. The loader was restored afterwards."
+  AC-4:
+    tests:
+      - tests.test_bytecode_free_loads_validator.TestBytecodeFreeLoadsOfValidator.test_ac4_normal_return_leaves_no_pycache_in_probe_directory
+      - tests.test_bytecode_free_loads_validator.TestBytecodeFreeLoadsOfValidator.test_ac4_raising_probe_leaves_no_pycache_in_probe_directory
+      - tests.test_bytecode_free_loads_validator.TestBytecodeFreeLoadsOfValidator.test_ac4_scripts_directory_listing_unchanged_after_every_probe_run
+      - tests.test_bytecode_free_loads_validator.TestBytecodeFreeLoadsOfValidator.test_ac4_site_table_has_exactly_sixteen_distinct_rows
+      - tests.test_bytecode_free_loads_validator.TestBytecodeFreeLoadsOfValidator.test_ac4_every_loader_and_redirect_attribute_exists_on_loaded_target
+    red_confirmed: true
+    red_reason: "Against the unchanged loaders, the two probe-directory tests failed in all 16 rows for the starting value False: AssertionError: Lists differ: ['__pycache__'] != [] (rows 1-15) and ['em-workflow/scripts/__pycache__'] != [] (row 16, under the test-owned temporary root); the em-workflow/scripts/ directory itself gained no __pycache__ during the red run. The listing, row-count and attribute-existence tests passed before the change because they check preconditions that already held; they were observed to discriminate by in-process mutations of the table: a loader name or a redirect attribute that the target lacks made the attribute test fail, and a 15-row table made the row-count test fail."
+  AC-5:
+    tests: []
+    red_confirmed: true
+    red_reason: "Executable check is the command-level listing of __pycache__ under em-workflow/scripts/ after running each module alone (python3 -m unittest tests.<module>, one after another, from the repository root, starting with no em-workflow/scripts/__pycache__); no test selects it. Search of tests/ by path and basename: the references to the 16 module names found (comments, record lists) and the __pycache__ checks found (hook, merge-preflight and codex tests) do not examine the validator's bytecode, so no existing test covers it. Observed before the change, with the 16 loaders restored to the base commit: every one of the 16 modules left em-workflow/scripts/__pycache__ (including the three that load during tests, rows 1, 3 and 14), and its tests passed. After the change, each of the 16 modules run alone left no __pycache__ under em-workflow/scripts/ and its tests passed."
+  AC-6:
+    tests:
+      - tests.test_bytecode_free_loads_validator.TestBytecodeFreeLoadsOfValidator.test_ac4_every_loader_and_redirect_attribute_exists_on_loaded_target
+      - tests.test_bytecode_free_loads_validator.TestBytecodeFreeLoadsOfValidator.test_ac1_recording_probe_sees_flag_true
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_test_validate_worker_output_py_byte_identical
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope; the listed probe tests detect a renamed or removed loader and a loader that no longer returns the loaded module object, and the existing tests of the 16 modules (unchanged, 15037 base tests all passing) detect any change of tested behavior; no red state occurred for this change. The loader name, parameters, spec module name and return value are verified by the diff review. The last listed test pins the SHA-256 of tests/test_validate_worker_output.py; it failed in the first full run after the row 7 loader edit (the file's bytes changed by design) and its pin was refreshed in tests/test_gate_option_vocabulary.py, as that pin's comments prescribe for every change to the file; no assertion was removed or loosened. That is the only failure the first full run showed, and it is not a red observed before the implementation."
+  AC-7:
+    tests:
+      - tests.test_routeback_record_schema_patch.TestModuleImportsOnlyStandardLibrary.test_module_uses_only_standard_library_imports
+      - tests.test_tier_rework_path.TestOwnModuleStdlibOnly.test_only_standard_library_imports
+      - tests.test_requirements_tests_replace.TestOwnModuleStdlibOnly.test_this_module_imports_only_the_standard_library
+      - tests.test_rework_docs_only_validator_rules.TestStandardLibraryOnly.test_ac7_this_module_imports_only_standard_library_modules
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope; the existing import checks listed here detect a non-standard-library or unlisted import in their own module (the routeback module's list does not allow sys, so its loader reaches sys through importlib.import_module); they passed before and after the change, so no red state occurred. The file scope and the absence of os.environ writes are verified by the diff review."

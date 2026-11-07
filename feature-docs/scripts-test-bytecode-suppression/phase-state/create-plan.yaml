@@ -1,0 +1,66 @@
+schema_version: 1
+feature: scripts-test-bytecode-suppression
+phase: create-plan
+status: completed
+generation: 1
+base_revision: 1d7e7535a089e276a0f7ff67a8ba415ef8325842
+last_input_digest: sha256:4ed00a1c1acad06ef92f2362becb42d7002df402a52e0c42b228d1d9c04e5bca
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: completed
+  input_digest: sha256:4ed00a1c1acad06ef92f2362becb42d7002df402a52e0c42b228d1d9c04e5bca
+  output_digest: sha256:c23639d0498ada3c065c3c37ec723edfd4266bca7961213fed2f708957393dcb
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/planner-contract.md: sha256:6253ad93ad99c87daec151b2da071a950ebaa615b5e438adfc2951f7dba2fb05
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
+    em-workflow/references/workflow-schema.md: sha256:5db914a170c0bd97886671160a2c3498127ffd83f0814bc8fb67407f4dc563ee
+    em-workflow/skills/plan-writing/SKILL.md: sha256:364f9dfc8244f9fe9e52999dfb93cf675d4b0602279d0a6bdf6f70c1dc186b87
+    feature-docs/scripts-test-bytecode-suppression/REQUIREMENTS.md: sha256:9986bb46cc2d2f6a3a27a825cf4a1d855c0753186225cb28a04ef066f8acc431
+    feature-docs/scripts-test-bytecode-suppression/SPEC.md: sha256:97b7b32ac1a8ca1eed554ff77fc026c8303ad15556d87447bdc20da55a6e2728
+    feature-docs/scripts-test-bytecode-suppression/workflow.yaml: sha256:013566863596dec7c2c4a94ef7e8addc06b660ee57b982a9abbc75f2de5e7bb1
+  self_write_set:
+  - feature-docs/scripts-test-bytecode-suppression/IMPLEMENTATION.md
+  - feature-docs/scripts-test-bytecode-suppression/THREAT-MODEL.md
+  - feature-docs/scripts-test-bytecode-suppression/VERIFICATION.md
+  - feature-docs/scripts-test-bytecode-suppression/tasks/task0001.md
+  - feature-docs/scripts-test-bytecode-suppression/tasks/task0002.md
+  - feature-docs/scripts-test-bytecode-suppression/tasks/task0003.md
+  - feature-docs/scripts-test-bytecode-suppression/tasks/task0004.md
+artifacts:
+- path: feature-docs/scripts-test-bytecode-suppression/IMPLEMENTATION.md
+  sha256: sha256:182e0492c5a59627396cf528a08c54807ba2fe32fceb8b59d9ae1b6aeab00c18
+  produced_by: create-plan-run-0001
+- path: feature-docs/scripts-test-bytecode-suppression/THREAT-MODEL.md
+  sha256: sha256:ab239cf98897c86ab71551b24b48384833208e6c447d6ffe32ae4e61c71455cd
+  produced_by: create-plan-run-0001
+- path: feature-docs/scripts-test-bytecode-suppression/VERIFICATION.md
+  sha256: sha256:ff0554ccad79f2b09574788a295c7b3c0686fe1ebc2808abaf15b32c65c1da1a
+  produced_by: create-plan-run-0001
+- path: feature-docs/scripts-test-bytecode-suppression/tasks/task0001.md
+  sha256: sha256:9e22281e126a70ea966ab3fe1d7e21886a1ad360fe349d0d2e96646ecc5e0863
+  produced_by: create-plan-run-0001
+- path: feature-docs/scripts-test-bytecode-suppression/tasks/task0002.md
+  sha256: sha256:c0794c11e02bbf5a8b22e20b45b2c60ec9b8c8027bed37900472e6a5ec0f0958
+  produced_by: create-plan-run-0001
+- path: feature-docs/scripts-test-bytecode-suppression/tasks/task0003.md
+  sha256: sha256:93bf59f581bf037f48aa38e21229aed08474af416527bbb18869d2cadc8b0e7e
+  produced_by: create-plan-run-0001
+- path: feature-docs/scripts-test-bytecode-suppression/tasks/task0004.md
+  sha256: sha256:8a242247edec3eda96f265962ab3fcba0eee8cd68050cd0b6dadb48fce7f7616
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: create-plan-p0001
+  status: applied
+  base_input_digest: sha256:4ed00a1c1acad06ef92f2362becb42d7002df402a52e0c42b228d1d9c04e5bca
+  base_workflow_blob: 270d9d10d28ac99032a3750afd7a244110e3f2b6
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: 'create-plan-run-0001: planner reported one glob of other features'' feature-docs file listing (contents not read); outside the envelope''s read restriction, no effect on outputs'

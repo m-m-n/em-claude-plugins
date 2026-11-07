@@ -1,0 +1,142 @@
+schema_version: 1
+feature: scripts-test-bytecode-suppression
+phase: create-spec
+status: completed
+generation: 1
+base_revision: 5c0f0bf02371ed7b2f5e53fcc99190019b5ec477
+last_input_digest: sha256:89fd98f097e28d513db88e5332e7ae394c1240548f79be2dcae7952b112c8649
+active_request_id: null
+packets: {}
+answers:
+  create-spec.feature-identity:
+    packet_id: null
+    answered_at: '2026-11-07T21:25:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - derive_from_task_description
+    freeform: null
+    normalized_answer: 'feature name derived from the task description: scripts-test-bytecode-suppression'
+  create-spec.design-step:
+    packet_id: null
+    answered_at: '2026-11-07T21:33:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design step skipped per requirements-analyst recommendation
+  create-spec.design-system:
+    packet_id: null
+    answered_at: '2026-11-07T21:33:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - top_candidate_or_none
+    freeform: null
+    normalized_answer: 'kind: none (zero candidates, design skipped)'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: completed
+  input_digest: sha256:794e9524e619826ffa3b474045889ede96b3f73a5dcb838313a9fc00b343ad0b
+  dispatch_digest_inputs:
+    .claude/rules/core-plugin-structure.md: sha256:62e2ad8531369d37f83ad5458d3f5077b4ca3edf7584ecba83b4be044909fd56
+    .claude/rules/hook-tests.md: sha256:2ae9d862d09c554e2f88d864896d09b89676f7ce567b7f3c098a89e610ffea9b
+    .gitignore: sha256:9ce2c0d99fe23b6c290581d178802555262777eff7cb3afe5c919e7c53a880f9
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
+    em-workflow/scripts/artifact-digest.py: sha256:344333dccc8ad41a19467eae6b54a6ca2866a00d6a6c1fd9ca7277e980bbbf54
+    em-workflow/scripts/check-plugin-invariants.py: sha256:6f520911bc098d1bb8150be4ce97539feb3250cf279bd5c394b5015abbd50241
+    em-workflow/scripts/decide-tier.py: sha256:42bf19d14b58dc22841378e5de9da55c0267d9cac7ca5cc04b7dac2083d33077
+    em-workflow/scripts/journal-append-failed.py: sha256:ae6ea9238f427a31fb49b0f91ccff894a73837d3075c8364d54a30c75bfb9803
+    em-workflow/scripts/recover-orphaned-task.py: sha256:60f5d2178e76e820586163a52ad0f46b57f359cda525c688081cd52d794c29ff
+    em-workflow/scripts/report-name-entry.py: sha256:3efb0b7b304cc8ddc94156744ece46d79f364738facd085c79019c69d4c7e657
+    em-workflow/scripts/review-coverage.py: sha256:8e2f1486c1c0038a1727cd04da4bd83512fb49d0ad0f21f1ac8317d9f19f2895
+    em-workflow/scripts/review-shards.py: sha256:ccb4443a4890382ed639178bbf1e9f29a3ebfe0bee97611dc6e8075ef08ccb32
+    em-workflow/scripts/scan-dependencies.py: sha256:b84f58c3dc4e66ff697f5c53de600aa4e8ecda2acae21b08cb70fcd50531e415
+    em-workflow/scripts/self-write-digest.py: sha256:4d19ad6e76085cf1964d7f1f7a828f11e4ca030cd392af7c0c114dff3c95a87e
+    em-workflow/scripts/validate-worker-output.py: sha256:2e7a97b983c06dce938c478e2af4b909cc20bd0ae3047ca08da3406f51c001fc
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+    tests/test_artifact_digest_script.py: sha256:6b2965a96ecf9abe878a850eff602350c916eb5cb148731d5be8afd26d06900a
+    tests/test_check_plugin_invariants.py: sha256:35b31e481577a6260e9b08cf4c18e58b7c83d1993f708326ce6e5a4e4fbb941a
+    tests/test_classification_audit_retention.py: sha256:968e232e87088eac85a142d299e0edf0eeb818388faf0b071230adeb7398e21b
+    tests/test_codex_hook_tty_reaper.py: sha256:613b8ffb00626f967e1b67010da71c2a0e0a81cf23f73c5920cfedd2984d0c1b
+    tests/test_decide_tier_final_score.py: sha256:e6e7fc0b643a9f213ae3cdc54977795268dd6b88de82677d4a29de49e1fd5a63
+    tests/test_destructive_guard_extglob_units.py: sha256:ef20c900568add095457f403b877c60f4041f42c1e04d808ed82b886bb6f4ecb
+    tests/test_digest_contract_alignment.py: sha256:c19c3f21a0cb078fd9e88e90908b897ea06eefcd6f6e694fd7a1bdccf78d5f7f
+    tests/test_final_path_correction.py: sha256:fe5098ccd364f33aa3a2e10b26d41549569ffa68bfa4126a669afc1a8d438161
+    tests/test_gate_outcome_packet_lifecycle.py: sha256:274b26b164560c092997d1b4fbf4b1586196467c3a5c02a0caadfbe0ef0a7b77
+    tests/test_journal_append_failed.py: sha256:2cb1904e464500cea2336cf37817f39a7400611b026d6a73f53fe1c0f7a0f019
+    tests/test_merge_ci_wait.py: sha256:a7379ac2ce8406c4f3200f2af8b13e4c35a9a52d1de04270d9e8f77228b085d6
+    tests/test_merge_preflight.py: sha256:a6b89bae56feec3977cbb9d537d551be80816a6cc1092dc0cc4770173c194cc7
+    tests/test_recover_orphaned_task.py: sha256:ff1d97ece0df8ff0f9ba97c477e71cdba15e9b0e86cbeeb5557b1e9572ebb000
+    tests/test_replanning_carry_over.py: sha256:6d4dfba9253ec1b1acbb138cf44483aa48219293a5f693eebb2c26219fe452c5
+    tests/test_replanning_producer_alignment.py: sha256:17c3aceca1cf3d9cef54d5d72b505acca5289a822b5c1219f88d3ed96c393d96
+    tests/test_report_name_entry.py: sha256:d47ad7f3914542b34b734482d8dfc26465befaf956da49c652f927e7b9b9bf64
+    tests/test_report_name_validation.py: sha256:27b3a5b9b771eb34f5c097b0f7aafd1c059c0d40deff634cfe1b4a8ca9e5dcf2
+    tests/test_reproduction_output_contract.py: sha256:642b5799c2d7fa47bc4040049b107a8e23c870a0b046d61f5da0646314afef91
+    tests/test_requirements_tests_replace.py: sha256:26e468ae90d61f531c862d682d777b76dd26877c86c8a7a3ee4e6f98b6dbd272
+    tests/test_review_coverage.py: sha256:9d45c2fc64eb535a90960f90c6386d8c34241cefd562acb39abd9195e0d269ee
+    tests/test_review_shards.py: sha256:ff99c49dc24021d402726d64cdfb61403abd4a1f312e1dd9234598ba4e612bba
+    tests/test_rework_docs_only_validator_rules.py: sha256:0e5f0e5524c9013a2bf205f8563e2949e4cdbd34a49f989a23ace209afd21d45
+    tests/test_routeback_record_schema_patch.py: sha256:bfc2c260480119ac68465796c0742b625add99fa8c580903982e2f2fac145da2
+    tests/test_sca_absolute_executable_resolution.py: sha256:8d3f1fe2317a5c2a5f79054b4d625690bdfd35c5bf2acfc6271f394f3d1fbbbf
+    tests/test_sca_child_env_path_filtering.py: sha256:b119356cf9ef70e02e30d3e999472a4827114cc3f15c12a8adb4a386c3f1dfc7
+    tests/test_sca_file_tasks_oserror.py: sha256:720532d6c9ff8237b7f616846fe65b86c3cc9328e923d58cb5f7f7c502e78bd4
+    tests/test_sca_file_tasks_unexpected_exceptions.py: sha256:2dea5ce05e1322c00757bd4147ab277594038119d7dca37728e406493d2b15ec
+    tests/test_sca_finding_title_roundtrip.py: sha256:17295e48907a915554f6b68098c8969fb830603702d19955307a0cc2c8d2d878
+    tests/test_sca_go_govulncheck_real_output.py: sha256:5ec83f0052468a8da56cd8325ad74c9dfb11ea7fb84fd956e5c96a1a591a8c85
+    tests/test_sca_go_replace_direct_deps.py: sha256:ac9f168a4960be80530d2ebb009a081e5610a0d285e36bad4dfe21029824b95c
+    tests/test_sca_listing_undecodable_output.py: sha256:75b92b34294ee5a33578eeff3f1594d921063e221db32a964cf54d36feb3e198
+    tests/test_sca_per_project_scan_binding.py: sha256:77e8489ddf461e284c64ee835b5f0d235344ac5477d6cb58071ead9bfb8c8c6e
+    tests/test_sca_pip_lockfile_audit.py: sha256:6d9babcd7e88c82062992bbe5d219137f1587fec2b8d96650bf78630420e907a
+    tests/test_sca_run_scan_plan_units.py: sha256:12bf927209ca9f094c06f4b875e3bc9eae8fa45777e7cf71ac42fd73480ce9c3
+    tests/test_sca_scan_execution.py: sha256:3fac1799085e0b2cf9b812e2f9db25c54b8325dd1eb689c6c55caa6db4a1849c
+    tests/test_sca_scan_invocation.py: sha256:4ec9c37d4946353e58ecab0cc5df27e42d792b9cde146740c8f7d6a172f6bd42
+    tests/test_sca_scan_job_grouping.py: sha256:58e20bf651879ba82c9ecc2653bd5a32de19a979cbbf271a2ae29f1828aa144b
+    tests/test_sca_scan_normalization.py: sha256:81925c810f074357c074448e43def67ca427fcb3c188016c69ddcb976444c597
+    tests/test_sca_scan_unchanged_surfaces.py: sha256:b010d355671a34113bca49a212454bb1a213e39b698774000bf7edb2ef7d5e1e
+    tests/test_sca_scanner_project_config_isolation.py: sha256:8e626d9bed4c21e683ff2fa6b34614249c0d77519b74b6d6d3394f0a98b8327d
+    tests/test_sca_task_filing.py: sha256:6f69caaa1132ff412f170db35768242c90b0543744f7b74352cc0f7041dc8d2e
+    tests/test_scan_dependencies_cargo_directness.py: sha256:ae15b98f1553e6086bd42fba444ad8fa2737b3ed36cdf63d4c3b74fb5cdc7d7a
+    tests/test_scan_dependencies_pip_directness.py: sha256:93b0189d14476c7736d1df7fbc456861557ee0329ecf1a29b273167eec7646fa
+    tests/test_scan_dependencies_pyproject_directness.py: sha256:488f1b58ef00ff0fd657925fa43873641051c338fc69c8da700f2f7912da38fe
+    tests/test_self_write_digest.py: sha256:ec0d30ba295d716fd597cca056f4f69f8e02e9df7bc5d9a76d79e787698542f8
+    tests/test_self_write_digest_docs.py: sha256:32f068c95ea184b1f37ec6aeb056e7ce2136094aa0ba6e9c33be4ae02c55945e
+    tests/test_self_write_digest_wiring.py: sha256:f277a9f2c89eb60ccd02f3f67c2315fd16d01a198006b4331534b1694a74f851
+    tests/test_spec_change_gate_binding.py: sha256:ab95295e948d7fe03fa3eb0882ed8a8e47423eea0c24c9b8c7fd37b283ad9be8
+    tests/test_spec_change_replan_authorization.py: sha256:58912f493c624f66277fc36e43e8ea543a0e1494c5cf8fb5cbc3f20814191c86
+    tests/test_stale_launched_recovery_chain.py: sha256:366225b9a644275bf79e0334ab252b77cc0f9c7b021e34654c3c36e096f38d1c
+    tests/test_tier_evaluator_contract.py: sha256:3973f00fa43115928b90d708112626dcb37cda4926f020df2a58ec0a79f595f1
+    tests/test_tier_phase_preconditions.py: sha256:8a74302bf2ad433877158ed19746f31619223e3f020917c9bb09500e77814c0e
+    tests/test_tier_rework_path.py: sha256:480c5465838f0eb9ae23634a4859ce126547ecb88874151ec1c261357166e3bf
+    tests/test_tier_rules.py: sha256:c3c9a31ade765f281a5b26c52e447dcffdf440d23d90b70f3ab813370be70c26
+    tests/test_tier_rules_buckets_codex_facts.py: sha256:233ec8d3086cfc3b2b15da3e9accaaa8aad5d83181ebceae16a75c6277554aac
+    tests/test_tier_task_document_plan.py: sha256:57063b8244b43eb0f2af33201ecb998bf671a82d680674fc95981f38d25f90c1
+    tests/test_validate_worker_output.py: sha256:a3cf9384db7416b6f55007e901564cc609fa5ea152d109b2d2bc0a7571333032
+    tests/test_worker_digest_results.py: sha256:bca7a5b27aed2b848fa53861936c206c22b43ddaddda5235b8028acd9efce751
+  output_digest: sha256:4e973eafa0aef9df71ab244d84f8f96c00b6ad41398f04d6efcc593a4617faca
+  self_write_set: []
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:89fd98f097e28d513db88e5332e7ae394c1240548f79be2dcae7952b112c8649
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/spec-writer-contract.md: sha256:c66e457a4a68d860f757f9e6cae377b6918d29a3f3152d9a12fc92570303c5f2
+    em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
+    em-workflow/references/templates/spec-document.md: sha256:a5d0106c39a5df7dc2365357a9546588275ed6c7a1651c866e75fa327a7fa592
+  output_digest: sha256:7ec0a8e28c15c629537b1362ccb89a5b9ff280a942debcda8d80f9cc18b6fb8a
+  self_write_set:
+  - feature-docs/scripts-test-bytecode-suppression/REQUIREMENTS.md
+  - feature-docs/scripts-test-bytecode-suppression/SPEC.md
+artifacts:
+- path: feature-docs/scripts-test-bytecode-suppression/REQUIREMENTS.md
+  sha256: sha256:9986bb46cc2d2f6a3a27a825cf4a1d855c0753186225cb28a04ef066f8acc431
+  produced_by: create-spec-run-0002
+- path: feature-docs/scripts-test-bytecode-suppression/SPEC.md
+  sha256: sha256:97b7b32ac1a8ca1eed554ff77fc026c8303ad15556d87447bdc20da55a6e2728
+  produced_by: create-spec-run-0002
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

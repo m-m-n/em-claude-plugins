@@ -44,7 +44,12 @@ def load_checker_module():
         "_check_plugin_invariants_for_worker_digest_results", CHECKER_PATH
     )
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    previous = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = previous
     return module
 
 
