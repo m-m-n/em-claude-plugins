@@ -1,16 +1,16 @@
 schema_version: 1
 feature: scenario-id-fence-scope
 phase: create-plan
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: 0075eb7c9eeb35b2b1c9a10b560b8249abddcee9
 last_input_digest: sha256:7c19055a46ddbabf6e2cbd9e8142831a93ca0fbef008ecf1ef0bc5a869e61835
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:7c19055a46ddbabf6e2cbd9e8142831a93ca0fbef008ecf1ef0bc5a869e61835
   dispatch_digest_inputs:
     em-workflow/references/contracts/planner-contract.md: sha256:6253ad93ad99c87daec151b2da071a950ebaa615b5e438adfc2951f7dba2fb05
@@ -23,8 +23,26 @@ worker_runs:
     em-workflow/skills/plan-writing/SKILL.md: sha256:364f9dfc8244f9fe9e52999dfb93cf675d4b0602279d0a6bdf6f70c1dc186b87
     feature-docs/scenario-id-fence-scope/SPEC.md: sha256:503d3437175bbaf11715dc0b0124fb6feba3ad4edade12b5417718d2b0b041a5
     feature-docs/scenario-id-fence-scope/workflow.yaml: sha256:5a2fdfab2901ac1108d3c5c6d126969222656a814437661dd3e0098fc2d83dd2
-artifacts: []
-patches: []
+  output_digest: sha256:9b84833f8a425f0681cdac58db520128b9462dddd18a7722c0204061fe99560b
+  self_write_set:
+  - feature-docs/scenario-id-fence-scope/THREAT-MODEL.md
+  - feature-docs/scenario-id-fence-scope/VERIFICATION.md
+  - feature-docs/scenario-id-fence-scope/tasks/task0001.md
+artifacts:
+- path: feature-docs/scenario-id-fence-scope/VERIFICATION.md
+  sha256: sha256:494b4a061fbab5bbfba4a2b55be33c45ab7e5b5eb2b863010acceca66501254c
+  produced_by: create-plan-run-0001
+- path: feature-docs/scenario-id-fence-scope/THREAT-MODEL.md
+  sha256: sha256:d9db65cef14203c1c3767791543c3f004e95da0c31a3720c69a0c0c46614c4ab
+  produced_by: create-plan-run-0001
+- path: feature-docs/scenario-id-fence-scope/tasks/task0001.md
+  sha256: sha256:15e60240aab0e1e51f18545d146e1e5f37433a34f28ce710a82daedccc372a0e
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: scenario-id-fence-scope-plan-p0001
+  status: validated
+  base_input_digest: sha256:7c19055a46ddbabf6e2cbd9e8142831a93ca0fbef008ecf1ef0bc5a869e61835
+  base_workflow_blob: b16aa2362b5b26b56f10268547410ff8341c294a
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
