@@ -3,16 +3,16 @@ feature: merge-docs-align-impl
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: ace9b8f72310686812e82b16bf64155d5450a8e2
-last_input_digest: sha256:156a9f73ff3c5708bffdf8f3bd777472844272617be5a2c5a35a5afe9c9c189c
-active_request_id: create-spec-run-0001
+base_revision: 0bab3741bb7360751b99be8684f37c9ee04667ee
+last_input_digest: sha256:215768a67477f7d4cba0b57675b5f9c9aa28239b005107f70f8fb4ba3842a487
+active_request_id: create-spec-run-0002
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:156a9f73ff3c5708bffdf8f3bd777472844272617be5a2c5a35a5afe9c9c189c
-  output_digest: null
+  output_digest: sha256:a09c2564df57c583b51425425d93a0a13059393988dc28978b2cf8450c22a0dd
   dispatch_digest_inputs:
     CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
     em-workflow/README.md: sha256:ad17deb2b788441758de76b7573771b0fab155518e5240e641e6ee2607f85413
@@ -25,6 +25,14 @@ worker_runs:
     test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
     tests/test_destructive_guard_merge_allow.py: sha256:1ac243748e9bce21e660c50a62b45969a16e2644fedfe74a5c364a2d814f5b89
     tests/test_merge_skill_doc.py: sha256:d8e7801e52b4518b837d5bc8a600d66ec4a9f98578771f0ce5e0244c0cbbd3c5
+  self_write_set: []
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:215768a67477f7d4cba0b57675b5f9c9aa28239b005107f70f8fb4ba3842a487
+  output_digest: null
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/spec-writer-contract.md: sha256:c66e457a4a68d860f757f9e6cae377b6918d29a3f3152d9a12fc92570303c5f2
+    em-workflow/references/templates/spec-document.md: sha256:a5d0106c39a5df7dc2365357a9546588275ed6c7a1651c866e75fa327a7fa592
 artifacts: []
 patches: []
 progress_fingerprint: null

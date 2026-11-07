@@ -1,0 +1,48 @@
+schema_version: 1
+feature: merge-docs-align-impl
+records:
+- question_id: create-spec.skill-table-citation
+  packet_id: null
+  answered_at: '2026-11-07T14:58:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 結果の値の 28 行の表と 4 列を残し、条件の持ち主が merge-result.md だと書く
+  normalized_answer: 結果の値の 28 行の表と 4 列を残し、条件の持ち主が merge-result.md だと書く
+  resolution_note: 'gate: 利用者の指示による不明点の相談; options: 表を残して引用を足す / 表を消す / detail 列を消す;
+    choice: 表を残して引用を足す; Codex consulted: yes; Opus escalation: no; 論点: 表は条件ではなく出どころ・手順・detail
+    の対応表で、既存テストが 28 行と 4 セルを固定している'
+- question_id: create-spec.condition-step-numbers
+  packet_id: null
+  answered_at: '2026-11-07T14:58:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: merge-result.md の Condition は操作の言葉で書き、手順番号は SKILL.md だけが持つ
+  normalized_answer: merge-result.md の Condition は操作の言葉で書き、手順番号は SKILL.md だけが持つ
+  resolution_note: 'gate: 利用者の指示による不明点の相談; options: 操作の言葉のみ / 手順番号も書く; choice: 操作の言葉のみ;
+    Codex consulted: yes; Opus escalation: no; 論点: 受け入れ条件が求めるのは条件の網羅で、番号の転載ではない'
+- question_id: create-spec.readme-condition-scope
+  packet_id: null
+  answered_at: '2026-11-07T14:58:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: README は依頼の 2 条件だけを書き、「後続の区間も通常どおり判定する」を置き換える
+  normalized_answer: README は依頼の 2 条件だけを書き、「後続の区間も通常どおり判定する」を置き換える
+  resolution_note: 'gate: 利用者の指示による不明点の相談; options: 2 条件のみ / 詳細も書く; choice: 2 条件のみ;
+    Codex consulted: yes; Opus escalation: no; 論点: 他の文が付くと例外が消える実装に合わせる'
+- question_id: create-spec.reason-code-coverage
+  packet_id: null
+  answered_at: '2026-11-07T14:58:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: git_failed の条件と手順列を merge-git の全サブコマンドへ広げ、remote_unresolved に含めない経路を明記し、verification_failed
+    の期待値にやり直し時の head_sha を足す
+  normalized_answer: git_failed の条件と手順列を merge-git の全サブコマンドへ広げ、remote_unresolved に含めない経路を明記し、verification_failed
+    の期待値にやり直し時の head_sha を足す
+  resolution_note: 'gate: 利用者の指示による不明点の相談; options: 調査結果の一覧のまま / Codex の指摘を反映; choice:
+    Codex の指摘を反映; Codex consulted: yes; Opus escalation: no; 論点: merge-git.py は GitFailure
+    を全サブコマンドで git_failed の stop にし、SKILL の呼び出しの規則が stop をそのまま結果にする。オーケストレーターが merge-git.py
+    と SKILL.md を読んで確認した。手順 13.3 の main-tree だけは個別規則で main_tree_not_ready になる'
