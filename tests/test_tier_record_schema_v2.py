@@ -485,8 +485,12 @@ class TestRetrospectTierDecisionBlock(unittest.TestCase):
 # Refreshed by task0005 of large-diff-review-coverage (FR4, FR8, FR12-FR15):
 # Phase R3b gained the rescue-run finding rule, Phase R4 the per-loop shards
 # and the loop run_id, and Phase R5 the coverage record fields.
+# Refreshed by task0004 of large-diff-review-coverage (FR3, FR5-FR11): Phase
+# R2 gained the review-input measurement, the per-shard dispatch and the run_id
+# grammar; Phase R2b gained the per-shard walk, the `review_data_too_large`
+# row, the litellm empty-result exception and the spec rescue order.
 REVIEW_PHASE_SHA256 = (
-    "c4346eab5eacb94ed1a9c36ee0ffc9db4d9ea0f7d7f55ce09ce25be6cddd8f9d"
+    "6a41babfd141432eba61fb28d7cf0a8dd5892926fcc973e525d1a5c85195b5ff"
 )
 REVIEW_RULES_SHA256 = (
     "56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931"

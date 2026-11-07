@@ -1,6 +1,10 @@
 task_id: task0004
-baseline_failures: []          # python3 -m unittest discover -s tests before any edit: 14568 tests, OK (skipped=1)
-final_failures: []             # python3 -m unittest discover -s tests re-run after the implementation and this record: OK
+# Refreshed after merging the parent into the task branch (parent-side adoption of the review-phase digest pin):
+# the suite run right after the adoption held one failure, the pin that the merged review-phase.md no longer matched.
+baseline_failures:
+  - test_tier_record_schema_v2.TestReviewDocumentsUntouched.test_review_phase_md_unchanged
+# python3 -m unittest discover -s tests re-run after the re-implementation (digest pin refreshed): OK
+final_failures: []
 acceptance_tests:
   AC-1:
     tests:
