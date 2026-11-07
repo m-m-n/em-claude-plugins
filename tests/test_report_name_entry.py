@@ -38,6 +38,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = REPO_ROOT / "em-workflow" / "scripts"
@@ -48,7 +49,12 @@ VALIDATOR_PATH = SCRIPTS / "validate-worker-output.py"
 def _load_validator():
     spec = importlib.util.spec_from_file_location("validate_worker_output", VALIDATOR_PATH)
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    previous = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = previous
     return module
 
 
@@ -138,7 +144,7 @@ class EntryCase(unittest.TestCase):
         return values
 
     def run_entry(self, omit=None, script=ENTRY_PATH, **override):
-        args = [sys.executable, str(script)]
+        args = [sys.executable, "-B", str(script)]
         for flag, value in self.arguments(**override).items():
             if flag != omit:
                 args += [flag, value]
@@ -768,6 +774,175 @@ class TestJournalReplay(unittest.TestCase):
             b'{"task":"task0001","event":"merged"}'
         )
         self.assertEqual(VWO.journal_last_events(self.path), guard.read_journal(str(self.path)))
+
+
+class TestValidatorLoadWritesNoBytecode(unittest.TestCase):
+    """AC-1, AC-2, AC-3 (scripts-test-bytecode-suppression task0004; FR1, FR3):
+    `_load_validator()` turns bytecode writing off only while the module body
+    runs, and puts the caller's value back on every exit.
+
+    The tests aim the loader at a probe module in a test-owned temporary
+    directory (this module's VALIDATOR_PATH is replaced for the duration of one
+    call), so a broken loader can never write under `em-workflow/`. Every test
+    sets the starting value of `sys.dont_write_bytecode` itself: in a whole run
+    the inherited value is already True, and a test that inherited it would
+    pass against a loader that never restored the flag."""
+
+    PROBE_RECORDS_FLAG = "import sys\nFLAG_SEEN_BY_BODY = sys.dont_write_bytecode\n"
+    PROBE_RAISES = (
+        "import sys\n"
+        "raise RuntimeError('probe body raised; flag=%r' % sys.dont_write_bytecode)\n"
+    )
+
+    @staticmethod
+    def scripts_listing():
+        return sorted(
+            str((Path(directory) / name).relative_to(SCRIPTS))
+            for directory, dirs, files in os.walk(SCRIPTS)
+            for name in dirs + files
+        )
+
+    @classmethod
+    def setUpClass(cls):
+        cls.scripts_before = cls.scripts_listing()
+
+    @classmethod
+    def tearDownClass(cls):
+        after = cls.scripts_listing()
+        if after != cls.scripts_before:
+            raise AssertionError(
+                "the listing of em-workflow/scripts/ changed while the probe tests ran: "
+                f"added {sorted(set(after) - set(cls.scripts_before))}, "
+                f"removed {sorted(set(cls.scripts_before) - set(after))}"
+            )
+
+    def setUp(self):
+        # Registered first, so the value the test found comes back whether the
+        # test passes, fails or errors.
+        self.addCleanup(setattr, sys, "dont_write_bytecode", sys.dont_write_bytecode)
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.probe_dir = Path(tmp.name)
+
+    def load_probe(self, source, starting):
+        """`_load_validator()` aimed at a probe with `sys.dont_write_bytecode`
+        set to `starting` just before the call."""
+        path = self.probe_dir / "probe_validator.py"
+        path.write_text(source, encoding="utf-8")
+        sys.dont_write_bytecode = starting
+        with mock.patch.object(sys.modules[__name__], "VALIDATOR_PATH", path):
+            return _load_validator()
+
+    def test_ac1_flag_is_true_while_the_module_body_runs(self):
+        for starting in (False, True):
+            with self.subTest(starting=starting):
+                module = self.load_probe(self.PROBE_RECORDS_FLAG, starting)
+                self.assertIs(module.FLAG_SEEN_BY_BODY, True)
+
+    def test_ac2_flag_holds_the_starting_value_after_a_normal_return(self):
+        for starting in (False, True):
+            with self.subTest(starting=starting):
+                self.load_probe(self.PROBE_RECORDS_FLAG, starting)
+                self.assertIs(sys.dont_write_bytecode, starting)
+
+    def test_ac2_flag_is_true_while_a_raising_body_runs_and_its_error_reaches_the_caller(self):
+        for starting in (False, True):
+            with self.subTest(starting=starting):
+                with self.assertRaises(RuntimeError) as caught:
+                    self.load_probe(self.PROBE_RAISES, starting)
+                self.assertEqual(str(caught.exception), "probe body raised; flag=True")
+
+    def test_ac2_flag_holds_the_starting_value_after_the_body_raises(self):
+        for starting in (False, True):
+            with self.subTest(starting=starting):
+                with self.assertRaises(RuntimeError):
+                    self.load_probe(self.PROBE_RAISES, starting)
+                self.assertIs(sys.dont_write_bytecode, starting)
+
+    def test_ac3_the_probe_directory_holds_no_pycache_after_the_loads(self):
+        for starting in (False, True):
+            for source in (self.PROBE_RECORDS_FLAG, self.PROBE_RAISES):
+                with self.subTest(starting=starting, raises=source is self.PROBE_RAISES):
+                    try:
+                        self.load_probe(source, starting)
+                    except RuntimeError:
+                        pass
+        self.assertEqual(list(self.probe_dir.rglob("__pycache__")), [])
+
+    def test_ac3_the_scripts_listing_is_unchanged_by_the_loads(self):
+        for starting in (False, True):
+            self.load_probe(self.PROBE_RECORDS_FLAG, starting)
+        self.assertEqual(self.scripts_listing(), self.scripts_before)
+
+    def test_the_loader_keeps_its_module_name_and_reads_the_path_when_it_runs(self):
+        module = self.load_probe(self.PROBE_RECORDS_FLAG, False)
+        self.assertEqual(module.__name__, "validate_worker_output")
+        self.assertEqual(Path(module.__file__), self.probe_dir / "probe_validator.py")
+
+
+class TestEntryLaunchWritesNoBytecode(EntryCase):
+    """AC-4, AC-5, AC-6 (scripts-test-bytecode-suppression task0004; FR2, FR3,
+    NFR2): the child process `run_entry` launches carries the interpreter's
+    `-B` option, so the sibling `validate-worker-output.py` that the launched
+    script loads writes no bytecode.
+
+    The behavioral check runs a copy of the script in a test-owned temporary
+    directory, so a launch without the option can never write under
+    `em-workflow/`."""
+
+    def setUp(self):
+        super().setUp()
+        self.write_workflow(make_workflow())
+
+    def sibling_copy(self):
+        copy_dir = self.tmp / "copy"
+        copy_dir.mkdir()
+        shutil.copy(ENTRY_PATH, copy_dir / ENTRY_PATH.name)
+        shutil.copy(VALIDATOR_PATH, copy_dir / VALIDATOR_PATH.name)
+        return copy_dir / ENTRY_PATH.name
+
+    def intercepted_launch(self, **kwargs):
+        """The (argument list, options) `run_entry` hands to the process
+        launch, for this one call; nothing is launched."""
+        calls = []
+
+        def fake_run(args, **options):
+            calls.append((list(args), options))
+            return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+
+        with mock.patch.object(subprocess, "run", fake_run):
+            self.run_entry(**kwargs)
+        self.assertEqual(len(calls), 1)
+        return calls[0]
+
+    def flattened_arguments(self):
+        return [item for flag, value in self.arguments().items() for item in (flag, value)]
+
+    def test_ac4_the_default_script_is_launched_with_b_after_the_interpreter(self):
+        args, options = self.intercepted_launch()
+        self.assertEqual(args[:3], [sys.executable, "-B", str(ENTRY_PATH)])
+        self.assertEqual(args[3:], self.flattened_arguments())
+        self.assertEqual(options["env"], _git_env())
+
+    def test_ac4_an_explicit_script_is_launched_with_b_after_the_interpreter(self):
+        script = self.tmp / "elsewhere" / "report-name-entry.py"
+        args, options = self.intercepted_launch(script=script)
+        self.assertEqual(args[:3], [sys.executable, "-B", str(script)])
+        self.assertEqual(args[3:], self.flattened_arguments())
+        self.assertEqual(options["env"], _git_env())
+
+    def test_ac5_a_sibling_copy_run_through_run_entry_leaves_no_pycache(self):
+        script = self.sibling_copy()
+        result = self.run_entry(script=script)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(list(script.parent.rglob("__pycache__")), [])
+
+    def test_ac6_the_process_environment_is_identical_before_and_after_run_entry(self):
+        script = self.sibling_copy()
+        before = dict(os.environ)
+        result = self.run_entry(script=script)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(dict(os.environ), before)
 
 
 if __name__ == "__main__":
