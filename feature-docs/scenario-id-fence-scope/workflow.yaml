@@ -120,7 +120,7 @@ tasks:
     - FR7
     - FR8
     - NFR1
-    status: in_progress
+    status: merged
     branch: em-workflow/scenario-id-fence-scope/task0001
     notes: null
 review:
