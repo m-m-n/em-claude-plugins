@@ -4,7 +4,7 @@ phase: rework
 status: in_progress
 generation: 1
 base_revision: da31d8b11e925147122756df95d9055d6811f708
-last_input_digest: sha256:1c2da07351cc2f4306df001bfee77e73f860fa8d3fdcf23545fe117c9e6c8d8e
+last_input_digest: sha256:18805a9f2d4bab8aad907301b21b5562e285e4efed6e6a2ba4b9fdb43d8970cd
 active_request_id: rework-run-0002
 packets: {}
 answers: {}
@@ -37,7 +37,7 @@ worker_runs:
     outputs reverted'
 - request_id: rework-run-0002
   status: dispatched
-  input_digest: sha256:1c2da07351cc2f4306df001bfee77e73f860fa8d3fdcf23545fe117c9e6c8d8e
+  input_digest: sha256:18805a9f2d4bab8aad907301b21b5562e285e4efed6e6a2ba4b9fdb43d8970cd
   dispatch_digest_inputs:
     em-workflow/references/contracts/rework-planner-contract.md: sha256:5856d1d386002d2c68cec28475a3a56a09a4cde73cdc737e01b6f708960151b9
     em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
