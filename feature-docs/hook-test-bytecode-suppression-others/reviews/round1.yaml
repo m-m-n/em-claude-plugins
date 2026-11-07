@@ -1,0 +1,80 @@
+round: 1
+executed_at: '2026-11-07T22:09:31+09:00'
+scope:
+  review_mode: diff
+  base_commit: 55efe18044c017a68c4bffac7d9c2cd5a99e8e25
+  head_commit: 989c181ed3e10fc8a9c253823215d26cf312f591
+  changed_files:
+  - test-docs/hook-test-bytecode-suppression-others/task0001.tests.yaml
+  - test-docs/hook-test-bytecode-suppression-others/task0002.tests.yaml
+  - tests/test_consultation_harness_chain.py
+  - tests/test_failed_run_cleanup_guard.py
+  - tests/test_hooks_registration.py
+  - tests/test_muse_guard.py
+  - tests/test_queue_failure_net_cross_hook.py
+  - tests/test_queue_stop_guard.py
+  - tests/test_queue_stop_guard_routeback_record.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - spec
+  discretionary: []
+  cross_validation: false
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings: []
+evaluation:
+  round_summary: 'ラウンド1: 3観点（comprehensive#0 / security#0 / spec#0）はどれも中程度以上の指摘を返していない。評価者自身が読んで確かめた結果も同じで、記録すべき指摘は無い。FR1
+    の 7 つの読み込み関数は、呼び出し元の値を保存し、True に設定し、try で exec_module を呼び、finally で値を戻す形になっており
+    SPEC A1 と一致する。追加テストは開始値 False / True を両方設定し、addCleanup で元の値に戻している（TS-3、EC1）。EC2・A4・A5
+    も確認済み。注入の試みは無い。spec#0 は LiteLLM のモデル呼び出しが飛ばされたためレビューを直接行ったと自己申告している。観点ごと: comprehensive
+    — corroborated（test-docs の 2 つの tests.yaml は読み取り予算外で未読）。security — corroborated。spec
+    — corroborated。未確認: queue_stop_guard / queue_failure_net / queue_launch_guard
+    / queue_agent_index / muse_guard が関数内で同じディレクトリのモジュールを遅れて import するか。AC-1 / TS-1
+    の実行で確かめる範囲。'
+  recommended_action: complete
+  action_rationale: 3観点とも中程度以上の指摘が無い。評価者自身の確認でも、SPEC が求めるすべての読み込み箇所で、保存・設定・try・finally
+    の形が正しく入っている。
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-hook-test-bytecode-suppression-others-20261107T130912Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

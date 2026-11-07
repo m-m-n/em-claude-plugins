@@ -91,7 +91,8 @@ workflow:
   completed_at_commit: d2d1187e80019cbfae24e9259be844eee8e220fa
   base_commit: 55efe18044c017a68c4bffac7d9c2cd5a99e8e25
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 989c181ed3e10fc8a9c253823215d26cf312f591
 - id: verify
   status: pending
   result: null
@@ -139,7 +140,14 @@ tasks:
     branch: em-workflow/hook-test-bytecode-suppression-others/task0002
     notes: null
 review:
-  status: pending
+  status: completed
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - spec
+  residual_critical_high: 0
+  needs_rework: false
   plan:
     floor:
     - comprehensive
