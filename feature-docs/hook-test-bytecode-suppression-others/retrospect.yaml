@@ -1,0 +1,37 @@
+feature: hook-test-bytecode-suppression-others
+collected_at: "2026-11-07T22:30:00+09:00"
+session_ids: [01a1b62b-1535-763b-b8e5-9cafd8b333d9.jsonl]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の読みが bucket 2（新しいロジック・複数モジュール）に confidence 0.73 で寄り、full に決まった"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.29, confidence: 0.67}
+        observed_at: "2026-11-07T21:13:00+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.73, confidence: 0.73}
+        observed_at: "2026-11-07T21:19:30+09:00"
+    pre_survey_estimate:
+      changed_lines_approx: 51
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: false
+      work_still_required: true
+      test_change_kind: extend_existing_one_to_one
+      added_test_cases_approx: 0
+      body_change_kind: new_logic
+      change_containment: multiple_modules
+      caller_and_dependency_count: 14
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "事前調査は変更行数を約 51 行、追加テストケース 0 と見積もったが、実装では読み込み関数の保存・復元を確かめるテストが各モジュールに追加され、task0001 だけで 566 行の追加になった"
