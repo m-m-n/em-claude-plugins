@@ -117,8 +117,8 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: failed
-    notes: null
+    status: in_progress
+    notes: 'batch-retry-consumed: failed (implementer stopped without a merged event)'
     branch: em-workflow/scripts-test-bytecode-suppression/task0001
   task0002:
     title: Bytecode-free validate-worker-output.py loads in tests
@@ -154,8 +154,8 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: failed
-    notes: null
+    status: in_progress
+    notes: 'batch-retry-consumed: failed (orphaned)'
     branch: em-workflow/scripts-test-bytecode-suppression/task0002
   task0003:
     title: Bytecode-free loads of the remaining em-workflow scripts in tests
@@ -190,8 +190,8 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: failed
-    notes: null
+    status: in_progress
+    notes: 'batch-retry-consumed: failed (orphaned)'
     branch: em-workflow/scripts-test-bytecode-suppression/task0003
   task0004:
     title: Bytecode-free report-name-entry.py tests (in-process load and child launch)
@@ -212,8 +212,8 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: failed
-    notes: null
+    status: in_progress
+    notes: 'batch-retry-consumed: failed (orphaned)'
     branch: em-workflow/scripts-test-bytecode-suppression/task0004
 review:
   status: pending
