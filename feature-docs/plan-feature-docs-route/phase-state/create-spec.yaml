@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 9be2207e84f439971a8d23b33c49791576f0459d
 last_input_digest: sha256:8e46ce6c6ec18407aaa144d4e70404d2f49826c95d685724cde46118d400b4da
-active_request_id: create-spec-run-0004
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -100,9 +100,19 @@ worker_runs:
   output_digest: sha256:b8fb11ff2d0fc9846ffbbd80a5129ddb2709bc5934d4434756e28cd34ac03e97
   self_write_set: []
 - request_id: create-spec-run-0004
-  status: dispatched
+  status: completed
   input_digest: sha256:8e46ce6c6ec18407aaa144d4e70404d2f49826c95d685724cde46118d400b4da
-artifacts: []
+  output_digest: sha256:2bf4170b09ab4e7a5a6174c8c190ad8efc53c7b6f6bca21bd479757dbdf68b9c
+  self_write_set:
+  - feature-docs/plan-feature-docs-route/REQUIREMENTS.md
+  - feature-docs/plan-feature-docs-route/SPEC.md
+artifacts:
+- path: feature-docs/plan-feature-docs-route/REQUIREMENTS.md
+  sha256: sha256:f530a56f1e3926ea0e224a431b9937530d44560551b53a1661a62e6b7b7a089f
+  produced_by: create-spec-run-0004
+- path: feature-docs/plan-feature-docs-route/SPEC.md
+  sha256: sha256:c2331d36f4978398751e593c035ee381a8f1fbb6bdf43f7ea1cce1bb726aaa29
+  produced_by: create-spec-run-0004
 patches: []
 progress_fingerprint: sha256:349cca34fc640b9f9825db73b0c02795b77b59a56ad4091e6d265e9efb62a691
 stale_redispatch_count: 0
