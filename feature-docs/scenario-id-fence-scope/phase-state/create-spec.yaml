@@ -4,15 +4,84 @@ phase: create-spec
 status: dispatching
 generation: 1
 base_revision: ec5d343cdfeef6d07385c2be916999007fe59cbc
-last_input_digest: sha256:8281852102edc10e11cd775188caf79fcccbd392e842eb0e7a0d6b955166fa1a
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+last_input_digest: sha256:cea99b555a6b87cfe065ae64f99af7e9f85773e900b167632cd434d9b5cb3e4f
+active_request_id: create-spec-run-0002
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-11-07T17:28:00+09:00'
+    questions:
+    - question_id: requirement.fence-scope.alternative
+      status: answered
+    - question_id: requirement.fence-scope.unterminated
+      status: answered
+    - question_id: requirement.fence-scope.indentation
+      status: answered
+    - question_id: design-step.recommendation
+      status: answered
+answers:
+  requirement.fence-scope.alternative:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-07T17:33:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - narrow-validator-scan
+    freeform: null
+    normalized_answer: 検査側を直す。find_hyphenless_scenario_ids だけが行頭の ``` / ~~~ ブロックを除外し、_strip_noise
+      は変えない。
+    resolution_note: Codex 1 ターン目で採用。行内の抜け道を塞ぎ、文書の語を維持する。
+  requirement.fence-scope.unterminated:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-07T17:33:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - exclude-to-eof
+    freeform: null
+    normalized_answer: 閉じていない行頭の囲みは文書末尾まで除外する。
+    resolution_note: Codex 2 ターンとも exclude-to-eof。ワーカーの暫定案 scan-unterminated の反論（閉じ忘れで以降の
+      ID が検査を抜ける）を提示しても維持。文書の語の字義と揃える利点を優先し、リスクは仮定として記録。
+  requirement.fence-scope.indentation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-07T17:33:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - allow-leading-whitespace
+    freeform: null
+    normalized_answer: 行の先頭の空白に続く囲みも認める。
+    resolution_note: Codex 1 ターン目で採用。箇条書き内のブロックの現状の除外を維持する。
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-07T17:33:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design step を skip する。
+    resolution_note: batch-policies の create-spec.design-step。
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:8281852102edc10e11cd775188caf79fcccbd392e842eb0e7a0d6b955166fa1a
   dispatch_digest_inputs: {}
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:cea99b555a6b87cfe065ae64f99af7e9f85773e900b167632cd434d9b5cb3e4f
+  dispatch_digest_inputs:
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
+    em-workflow/references/contracts/planner-contract.md: sha256:6253ad93ad99c87daec151b2da071a950ebaa615b5e438adfc2951f7dba2fb05
+    em-workflow/references/phases/create-plan-phase.md: sha256:9d4d1b25053c60fdc71f1b90c0e0114c5b1450bc232954edc0eaa8a3d31039ca
+    em-workflow/scripts/validate-worker-output.py: sha256:826a80471d09dfb1a0d934e23b6728a9b3d534f50f39e20bae2972651184cfbe
+    em-workflow/skills/plan-writing/SKILL.md: sha256:364f9dfc8244f9fe9e52999dfb93cf675d4b0602279d0a6bdf6f70c1dc186b87
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+    tests/test_gate_option_vocabulary.py: sha256:6aa0157ae9258cd164f9750f98eb1ad6e927114dc58110e773b87f29127ad5c5
+    tests/test_scenario_id_plan_writing_rule.py: sha256:c13f5c9bee67c0f46b110f48fae92eec930a0ebb789e79b1a73a2fef5bcf2cad
+    tests/test_scenario_id_planner_docs.py: sha256:7941695eb5ecd4f27c0b011b20a557d0549d0bf88100c8cdc1c738ef9478b49c
+    tests/test_validate_worker_output.py: sha256:e07203890d7a6509a12c154f01b21d740db86935501d7e5cd49e3d512a0cb8f2
 artifacts: []
 patches: []
 progress_fingerprint: null
