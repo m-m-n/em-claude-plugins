@@ -134,7 +134,8 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
+    branch: em-workflow/final-path-correction-medium-fixes/task0001
     notes: null
   task0002:
     title: Entry script targets every violating task
@@ -152,7 +153,8 @@ tasks:
     - FR8
     - NFR2
     - NFR4
-    status: pending
+    status: in_progress
+    branch: em-workflow/final-path-correction-medium-fixes/task0002
     notes: null
   task0003:
     title: Correction rules in the owning documents
@@ -171,7 +173,8 @@ tasks:
     requirements:
     - FR8
     - NFR4
-    status: pending
+    status: in_progress
+    branch: em-workflow/final-path-correction-medium-fixes/task0003
     notes: null
 review:
   status: pending
