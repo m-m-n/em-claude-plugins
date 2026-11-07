@@ -3,9 +3,9 @@ feature: large-diff-review-coverage
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: 1645fdaba2163143e75e50adcbb2a6efab8c71b1
-last_input_digest: sha256:78138a0a60272bc8b7c37785d3033341da27de0469081acf022c35466350652c
-active_request_id: create-spec-run-0002
+base_revision: c2dfca6df7e4ff3c89030d66b9659296d0dc5ed9
+last_input_digest: sha256:0ff538740248857b1a3329fa611f92b3fd08da40be4fd342d71a50bcf4ba7b69
+active_request_id: create-spec-run-0003
 packets:
   create-spec-q0001:
     status: answered
@@ -140,9 +140,9 @@ worker_runs:
   input_digest: sha256:847c4916d4d860997c2a1b9e87d9e2af9704904aa8ea5d4f4f7d25fbbda2e6c2
   output_digest: null
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:78138a0a60272bc8b7c37785d3033341da27de0469081acf022c35466350652c
-  output_digest: null
+  output_digest: sha256:c1386fd066007d53e16a814e0f7fac4e219328c1d4cd63ad6b93558c40ad6ee9
   dispatch_digest_inputs:
     CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
     em-review/agents/codex-reviewer.md: sha256:c22c4c2344550ab73a6144d6e94d60a49907181331fcf966505cea1f5236b98e
@@ -165,6 +165,14 @@ worker_runs:
     tests/test_reproduction_reviewer_instructions.py: sha256:318484ac4409505b1497db94bcb028cc91f3d3c7f3b0323ffe4ddd2cd9b2807a
     tests/test_review_phase_llm_led.py: sha256:8bd8728a07722e16b4bf76664172409036ad3a3b142bdec73030444589ba6bba
     tests/test_reviewer_roles_protocol.py: sha256:f236f4e39bd8a764d4f8ce6285c559a4281d7688ab87a65185c24200e14d3017
+- request_id: create-spec-run-0003
+  status: dispatched
+  input_digest: sha256:0ff538740248857b1a3329fa611f92b3fd08da40be4fd342d71a50bcf4ba7b69
+  output_digest: null
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/spec-writer-contract.md: sha256:c66e457a4a68d860f757f9e6cae377b6918d29a3f3152d9a12fc92570303c5f2
+    em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
+    em-workflow/references/templates/spec-document.md: sha256:a5d0106c39a5df7dc2365357a9546588275ed6c7a1651c866e75fa327a7fa592
 artifacts: []
 patches: []
 progress_fingerprint: null
