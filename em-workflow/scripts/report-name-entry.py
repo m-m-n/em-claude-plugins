@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""report-name-entry.py -- the FR6 judgment of subagent-report-write-block:
+"""report-name-entry.py -- the FR6 judgment of subagent-report-write-block,
+as aligned with the validator by FR4 of final-path-correction-medium-fixes:
 at the start of a develop re-run that names the feature, decide whether the
 final-path correction procedure (references/workflow-patch.md,
 "Final-path correction") is entered from `implement: failed`.
@@ -22,6 +23,15 @@ Prints one JSON object on stdout:
 - `blocked`: violations exist and one of conditions 1 to 3 fails; `errors`
   carries the validator's error for each failing condition.
 
+The targets are decided in two steps (FR4):
+
+1. The `none` decision looks at the violations of the failed tasks alone. No
+   violation there is `none`, whatever the other tasks hold.
+2. Otherwise `violations` is recomputed over every task whose status is not
+   `merged`, in the order of the workflow's task mapping and then file order,
+   and conditions 1 to 3 are judged on that whole list. A task that has not
+   failed is listed with the failed ones.
+
 Exit codes: 0 for all three outcomes, 2 for an execution error (a missing
 argument, an unreadable workflow or journal, a base commit that does not
 resolve when a matching name makes the base necessary). The messages of an
@@ -32,7 +42,8 @@ and conditions 1 to 3 (FR5) are the ones of `validate-worker-output.py`,
 loaded here as this file's sibling, so each has one implementation.
 `failed_journal_line` is the 1-based physical line of the task's last
 `failed` journal event (the value `routeback_failed_journal_line` records),
-or null when the task has none.
+or null when the task has none; an element for a task with no failed journal
+event (an unstarted task, for one) carries null.
 """
 
 import argparse
@@ -96,6 +107,24 @@ def failed_tasks(workflow, last_events):
     return found
 
 
+def unmerged_files_by_task(workflow):
+    """{task_id: files} for every task whose status is not `merged`, in the
+    order of the workflow's task mapping. A `files` value that is not a list
+    reads as no files."""
+    tasks = workflow.get("tasks")
+    if not isinstance(tasks, dict):
+        return {}
+    files_by_task = {}
+    for task_id, record in tasks.items():
+        if not isinstance(task_id, str) or not isinstance(record, dict):
+            continue
+        if record.get("status") == "merged":
+            continue
+        files = record.get("files")
+        files_by_task[task_id] = files if isinstance(files, list) else []
+    return files_by_task
+
+
 def judge(vwo, workflow, journal, target_repo, base_commit):
     result = {"entry": "none", "violations": [], "errors": []}
     implement = vwo.workflow_find_step(workflow, "implement")
@@ -103,15 +132,21 @@ def judge(vwo, workflow, journal, target_repo, base_commit):
         return result
 
     last_events, last_failed_lines = vwo.read_journal_events(journal)
-    files_by_task = {}
+    failed_files_by_task = {}
     for task_id, record in failed_tasks(workflow, last_events).items():
         files = record.get("files")
-        files_by_task[task_id] = files if isinstance(files, list) else []
+        failed_files_by_task[task_id] = files if isinstance(files, list) else []
 
-    violations = vwo.find_report_name_violations(files_by_task, target_repo, base_commit)
-    if not violations:
+    # Step 1 (FR4): the `none` decision is the failed tasks' violations alone.
+    if not vwo.find_report_name_violations(failed_files_by_task, target_repo, base_commit):
         return result
 
+    # Step 2 (FR4): the targets are the violations of every task that is not
+    # merged, the failed ones included, so a patch that corrects them all
+    # leaves no carried task with a violation.
+    violations = vwo.find_report_name_violations(
+        unmerged_files_by_task(workflow), target_repo, base_commit
+    )
     result["violations"] = [
         {
             "task_id": task_id,
