@@ -1,20 +1,102 @@
 schema_version: 1
 feature: plan-feature-docs-route
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
-base_revision: f25c6d9769a6e440c8d6454cb56a993d4f1a8b0f
+base_revision: 9be2207e84f439971a8d23b33c49791576f0459d
 last_input_digest: sha256:41214ba113dad5295706e187cb19b793cf237f6b84d3b95022eec34e3db0cfc2
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-11-07T22:24:06+09:00'
+    questions:
+    - question_id: route.other-feature-docs
+      status: answered
+    - question_id: scope.writable-feature-docs
+      status: answered
+    - question_id: validation.replace-planning
+      status: answered
+    - question_id: resume.failed-entry
+      status: answered
+    - question_id: versioning.em-workflow
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+answers:
+  route.other-feature-docs:
+    packet_id: create-spec-q0001
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - planner_at_create_plan
+    freeform: null
+    normalized_answer: 'create-plan で計画担当が直す: implementation-planner が create-plan の中で他 feature の文書を自分で直し、結果の中で宣言する（rework-planner の文書のみ経路と同じ考え方）。既存ファイルに書くには事前に宣言された write_policy の targets が要るので、書く対象の渡し方（2 段階の dispatch など）は SPEC で決める。'
+    source: batch-codex-consultation
+    answered_at: '2026-11-07T22:23:52+09:00'
+    resolution_note: 'batch-policies.yaml create-spec.requirement-clarification: codex_consultation (harness entry: codex, 1 turn). Codex suggested planner_at_create_plan; orchestrator judged it maps to the option and adopted it. Codex rationale: 計画担当が文書を直接訂正する既存方式にそろえられ、implement の担当振り分けやタスク種別の追加を避けられる（em-workflow/references/rework-task-synthesis.md:227、em-workflow/references/rework-task-synthesis.md:237）。対象を先に洗い出し、統括担当が個別の write_policy.targets と expect_digest を設定してから再依頼する二段階方式を推奨する（em-workflow/references/contracts/planner-contract.md:44、em-workflow/references/contracts/spec-writer-contract.md:48）。文書訂正は create-plan 完了前に済ませ、訂正内容と written_artifacts を返し、検証・状態更新・コミットは既存どおり統括担当が行う（em-workflow/references/rework-task-synthesis.md:244、em-workflow/references/phases/create-plan-phase.md:34）。 Codex notes: 他 feature 文書への自動訂正権限は、対象を限定して契約に明記する必要がある。現在の replace_own は自身の同一フェーズ出力、replace_authorized はユーザー承認済みの上書きを意味するため、そのまま無条件に流用しない（em-workflow/references/contracts/spec-writer-contract.md:72）。既存の artifact-overwrite
+      を流用するだけでは、batch の preserve_and_reuse が文書を保護して blocked に至り得る（em-workflow/references/batch-policies.yaml:34）。 / 文書訂正の対象と結果を再開後も読める形で保持し、対象文書を入力ダイジェストと自己書き込みの照合にも含めることを推奨する。入力集合は担当ごとの契約で定義されるため、targets の追加だけでは不十分になる（em-workflow/references/contracts/worker-envelope.md:175、em-workflow/references/contracts/worker-envelope.md:205）。 / 他 feature 文書を tasks.*.files から外した後も、その訂正宣言を変更集合の導出元へ含める必要がある。現在の導出元と自 feature 向けの既定範囲だけでは、他 feature 文書の変更が検証時の包含条件から漏れる（em-workflow/references/phases/create-plan-phase.md:414、em-workflow/references/templates/spec-document.md:183、em-workflow/references/templates/spec-document.md:201）。 / 再開時は失敗タスクで入口を判定した後、訂正対象を未マージの全タスクから収集する既存方式にそろえることを推奨する（em-workflow/scripts/report-name-entry.py:140、em-workflow/scripts/report-name-entry.py:144）。ただし、文書経路への移管は既存文書にも必要なので、最終パス訂正の「旧パスが基準コミットに存在しない」という条件は共用しない（em-workflow/references/workflow-patch.md:429）。実装担当の feature-docs/** 変更禁止は維持する（em-workflow/skills/worktree-task-workflow/SKILL.md:17）。'
+  scope.writable-feature-docs:
+    packet_id: create-spec-q0001
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - other_feature_docs_except_state
+    freeform: null
+    normalized_answer: '他 feature の文書だけ: feature-docs/{他 feature}/ 配下の Markdown 文書を対象にする。workflow.yaml・phase-state/**・tasks/**・design/mockups/ と feature-docs/LESSONS.md は対象外。'
+    source: batch-codex-consultation
+    answered_at: '2026-11-07T22:23:52+09:00'
+    resolution_note: 'batch-policies.yaml create-spec.requirement-clarification: codex_consultation (harness entry: codex, 1 turn). Codex suggested other_feature_docs_except_state; orchestrator judged it maps to the option and adopted it. Codex rationale: 他 feature の Markdown 文書を対象候補とし、workflow.yaml・phase-state/**・tasks/**・design/mockups/・feature-docs/LESSONS.md は除外することを推奨する。workflow.yaml は統括担当だけが書く状態ファイルであり、phase-state は実行履歴を、tasks は実装指示を保持するため、この境界を維持する（em-workflow/references/workflow-schema.md:3、em-workflow/references/workflow-schema.md:9、em-workflow/references/phase-state.md:3、em-workflow/skills/plan-writing/SKILL.md:62）。THREAT-MODEL.md 以外の文書訂正にも対応しつつ、書き込み権限は必要なファイルだけ個別に列挙する（em-workflow/references/contracts/spec-writer-contract.md:38）。'
+  validation.replace-planning:
+    packet_id: create-spec-q0001
+    answer_mode: single_select
+    selected_option_ids:
+    - rule_and_validator
+    freeform: null
+    normalized_answer: '規則と検証の両方: 計画担当の規則に書いたうえで、validate-worker-output.py でも replace_planning の entries を弾く。テスト test_ac1_replace_planning_entries_are_not_checked の期待値を反転させる。'
+    source: batch-codex-consultation
+    answered_at: '2026-11-07T22:23:52+09:00'
+    resolution_note: 'batch-policies.yaml create-spec.requirement-clarification: codex_consultation (harness entry: codex, 1 turn). Codex suggested rule_and_validator; orchestrator judged it maps to the option and adopted it. Codex rationale: 現行の禁止検査は append 専用なので、規則の追記に加えて replace_planning の entries[].files も機械的に拒否することを推奨する（em-workflow/scripts/validate-worker-output.py:2469）。既存のパス正規化と先頭区画の判定を共用し、replace_planning の除外を固定しているテストの期待値も変更する（em-workflow/scripts/validate-worker-output.py:2480、tests/test_rework_docs_only_validator_rules.py:332）。禁止対象は実装対象を示す files に限定し、計画書の所在を示す plan は引き続き許可する（em-workflow/references/phases/create-plan-phase.md:102）。'
+  resume.failed-entry:
+    packet_id: create-spec-q0001
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - extend_failed_entry
+    freeform: null
+    normalized_answer: 'failed からの入口を広げる: Step A.6 の failed からの入口を広げる。未マージの失敗タスクの files に feature-docs/** があれば、計画の訂正（そのパスを files から外し、文書は新しい経路で直す）を dispatch し、implement とそのタスクを pending に戻す。対話実行でも batch 実行でも同じ入口を使う。'
+    source: batch-codex-consultation
+    answered_at: '2026-11-07T22:23:52+09:00'
+    resolution_note: 'batch-policies.yaml create-spec.requirement-clarification: codex_consultation (harness entry: codex, 1 turn). Codex suggested extend_failed_entry; orchestrator judged it maps to the option and adopted it. Codex rationale: 停止条件の評価より前に訂正でき、対話実行と batch 実行で入口を共用する既存構造を維持できる（em-workflow/skills/develop/SKILL.md:401、em-workflow/skills/develop/SKILL.md:406）。通常の replace_all は failed を拒否し、引き継ぐタスクの files も変更しないため、文書経路への移管だけを許す限定的な例外を契約と検証処理に追加する必要がある（em-workflow/references/workflow-patch.md:136、em-workflow/references/workflow-patch.md:154）。文書の訂正と計画の整合を検証した後、implement と対象タスクを pending に戻し、failed_kind・notes の解消と routeback_failed_journal_line の記録も引き継ぐことで、過去の失敗履歴による再停止を防ぐ（em-workflow/skills/develop/SKILL.md:413、em-workflow/references/implement-phase.md:263）。進行中のタスクがない条件と、マージ済みタスク・既存作業ツリーを保護する条件は維持する（em-workflow/references/workflow-patch.md:425、em-workflow/skills/develop/SKILL.md:432）。'
+  versioning.em-workflow:
+    packet_id: create-spec-q0001
+    answer_mode: single_select
+    selected_option_ids:
+    - patch_by_actions
+    freeform: null
+    normalized_answer: 'Actions に任せる: version には触らない。main への push で Actions が patch を上げる。'
+    source: batch-codex-consultation
+    answered_at: '2026-11-07T22:23:52+09:00'
+    resolution_note: 'batch-policies.yaml create-spec.requirement-clarification: codex_consultation (harness entry: codex, 1 turn). Codex suggested patch_by_actions; orchestrator judged it maps to the option and adopted it. Codex rationale: 今回は、禁止されている文書変更を実装担当へ割り当ててしまう不整合の修正として扱い、patch の自動更新に任せることを推奨する（em-workflow/agents/implementer.md:338、em-workflow/scripts/validate-worker-output.py:2469）。リポジトリの規則は通常の変更で version を編集せず、main への push 時に Actions が patch を上げる方式であり、計画作成規則もこの方式に対応している（.claude/rules/core-plugin-version-bump.md:3、.claude/rules/core-plugin-version-bump.md:11、em-workflow/skills/plan-writing/SKILL.md:151）。'
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design step を skip する（requirements-analyst の推奨を採用）
+    source: batch-decision-table
+    answered_at: '2026-11-07T22:23:52+09:00'
+    resolution_note: 'batch-policies.yaml create-spec.design-step: select decide_autonomously'
 worker_runs:
-  - request_id: create-spec-run-0001
-    status: dispatched
-    input_digest: sha256:41214ba113dad5295706e187cb19b793cf237f6b84d3b95022eec34e3db0cfc2
+- request_id: create-spec-run-0001
+  status: failed
+  input_digest: sha256:41214ba113dad5295706e187cb19b793cf237f6b84d3b95022eec34e3db0cfc2
+  output_digest: sha256:d52f630657614c2549ee3099397ee8ebabbba8cfd73c4e2ba860910cc0c1de66
+- request_id: create-spec-run-0002
+  status: needs_user_input
+  input_digest: sha256:41214ba113dad5295706e187cb19b793cf237f6b84d3b95022eec34e3db0cfc2
+  output_digest: sha256:7aba26570ed347df44c94b4ea48be1f98633b6075a3808f1b3b2ed16b2bd8074
 artifacts: []
 patches: []
-progress_fingerprint: null
+progress_fingerprint: sha256:349cca34fc640b9f9825db73b0c02795b77b59a56ad4091e6d265e9efb62a691
 stale_redispatch_count: 0
 resolved_input_cache: {}
-last_error: null
+last_error: 'create-spec-run-0001: layer-2 validation error (gate_id create-spec.design-step missing option decide_autonomously); re-dispatched as run-0002'
