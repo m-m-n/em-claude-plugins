@@ -1,0 +1,296 @@
+schema_version: 1
+feature: large-diff-review-coverage
+created: '2026-11-07'
+base_branch: main
+goal: |
+  em-workflow のレビューで、大きな差分だと観点が未実施のまま指摘なしとして完了する
+
+  ## 現象 (必須)
+
+  差分が大きいと em-workflow のレビューが一部の観点を実施しないまま完了する。feature subagent-report-write-block（差分 423 KB）で次の 2 つが同時に起きた。
+
+  1. Codex のレビュアーが 540 秒でタイムアウト（exit 124）すると、findings: []、skipped: false の結果を返す。スキーマには合うので、手順どおりなら「指摘なしで完了」になる
+  2. litellm のレビュアーは入力が 300,000 文字を超えると review_data_too_large でスキップする。この理由は再試行不可で Claude の代替も走らないので、performance / architecture / spec の 3 観点が誰にも見られないままレビューが完了する。unreviewed_perspectives にも載らない
+
+  ## 再現手順 (必須)
+
+  1. 差分が 300,000 文字を超える feature で review フェーズを実行する
+  2. performance / architecture / spec が review_data_too_large でスキップされ、residual が 0 ならレビューは完了する
+  3. Codex が 540 秒以内に終わらない観点は空の結果になる
+
+  ## 期待する挙動 (必須)
+
+  実施できなかった観点が「指摘なし」と区別され、差分を分割するなどして 3 観点も実施される。
+
+  ## 完了の定義 (必須)
+
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある
+
+  ## 該当箇所 (任意)
+
+  - em-workflow/agents/codex-reviewer.md（タイムアウトの扱い）
+  - em-workflow/references/review-phase.md（Phase R2b、unreviewed_perspectives）
+  - em-workflow/references/review-protocol.md（review_data_too_large）
+
+  ## 実害・発生条件 (任意)
+
+  今回は Codex のタイムアウトを失敗として扱い Claude レビュアーで代替した。3 観点は未実施のまま。
+parent_branch: em-workflow/large-diff-review-coverage/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.26
+      '2': 0.72
+      '3': 0.02
+    description_plus_code:
+      '0': 0.0
+      '1': 0.0
+      '2': 0.99
+      '3': 0.01
+  at: '2026-11-07T17:25:01+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: d0c187dae7fa5c8c3d206a94f43b610e3e22b884
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI の変更が無い
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: Codex タイムアウトの区別
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+  FR2:
+    title: Codex の non-JSON の区別
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+  FR3:
+    title: litellm の空結果の区別
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-2
+  FR4:
+    title: 未実施の開示
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+  FR5:
+    title: レビュー入力のサイズ計測
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-3
+  FR6:
+    title: ファイル単位のシャード分割
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-3
+  FR7:
+    title: dispatch 上限
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-4
+  FR8:
+    title: run_id
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-6
+  FR9:
+    title: シャード単位の chain walk
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-6
+  FR10:
+    title: review_data_too_large の経路
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-7
+  FR11:
+    title: spec 観点の全差分優先
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-7
+  FR12:
+    title: 救済 run の未実装指摘
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-7
+  FR13:
+    title: 部分実施の記録
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+  FR14:
+    title: R4 再レビューの網羅
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+  FR15:
+    title: 完了と報告
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-7
+  FR16:
+    title: evaluator への受け渡し
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-7
+  FR17:
+    title: em-review の揃え
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+  FR18:
+    title: 再発検出テスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 上限以下の round の互換性
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-8
+  NFR2:
+    title: vertex-review の非変更
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: orchestrator の context
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: 決定性
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: レビュアーのインターフェース
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-8
+  NFR6:
+    title: テストの制約
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
