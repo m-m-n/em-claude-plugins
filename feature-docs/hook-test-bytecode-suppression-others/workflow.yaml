@@ -116,7 +116,8 @@ tasks:
     - FR2
     - NFR1
     - NFR2
-    status: pending
+    status: in_progress
+    branch: em-workflow/hook-test-bytecode-suppression-others/task0001
     notes: null
   task0002:
     title: Suppress bytecode in the two muse_guard loaders
@@ -133,7 +134,8 @@ tasks:
     - FR2
     - NFR1
     - NFR2
-    status: pending
+    status: in_progress
+    branch: em-workflow/hook-test-bytecode-suppression-others/task0002
     notes: null
 review:
   status: pending
