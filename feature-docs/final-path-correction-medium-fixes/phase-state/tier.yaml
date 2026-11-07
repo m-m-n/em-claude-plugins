@@ -1,0 +1,97 @@
+schema_version: 2
+feature: final-path-correction-medium-fixes
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.82
+    confidence: 0.82
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.18
+      '2': 0.82
+      '3': 0.0
+  observed_at: '2026-11-07T15:10:03+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.98
+    confidence: 0.96
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.03
+      '2': 0.96
+      '3': 0.01
+  observed_at: '2026-11-07T15:15:57+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/scripts/validate-worker-output.py
+  - em-workflow/scripts/report-name-entry.py
+  - em-workflow/references/workflow-patch.md
+  - em-workflow/agents/implementation-planner.md
+  - tests/test_final_path_correction.py
+  - tests/test_report_name_entry.py
+  - tests/test_final_path_correction_docs.py
+  changed_lines_approx: 0
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules:
+  - em-workflow/references/phases/create-plan-phase.md
+  - em-workflow/skills/develop/SKILL.md
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 7
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  caller_and_dependency_count: 4
+  changes_external_contract: true
+  changes_behavior: true
+  findings_status:
+    73c084892e91326c:
+      status: still_present
+      evidence: 'main@6a7565611902 の validate-worker-output.py:2534 に制限がなく、入出力をメモリ化した
+        dry-run はエラーなしで、適用結果に新規タスクと status: excluded が入った；調査中の変更は0行で、修正行数は未見積'
+    7dad93fa93454f47:
+      status: still_present
+      evidence: validate-worker-output.py:1677 の検査は文章を含む new_path を許し、受け入れ条件にその文章を含めたメモリ上の
+        dry-run もエラーなしだった
+    041b04abfc9d5b87:
+      status: still_present
+      evidence: validate-worker-output.py:1820 の比較集合は訂正対象の計画に限られ、対象外の pending タスクの受け入れ条件を変更したメモリ上の
+        dry-run はエラーなしだった
+    4409a460572aac40:
+      status: still_present
+      evidence: report-name-entry.py:107 は失敗タスクだけを対象とし、メモリ上の確認でも task0001 だけで dispatch
+        された後、未起動 task0002 の report-name-new-file で訂正が拒否された
+    dc9fcac543811a2d:
+      status: still_present
+      evidence: validate-worker-output.py:2632 は再計画にも条件5を適用し、メモリ上の再計画で本文更新は path-correction-content、訂正省略は
+        report-name-new-file、タスク省略は replace-all-drops-task になった
+    a848a53b57fb0188:
+      status: still_present
+      evidence: validate-worker-output.py:1726 は複数の新名に対応する旧ファイル名を正規化せず、メモリ上で REPORT.md
+        を各タスクの one.md／two.md に訂正すると両計画が path-correction-content になった
+    25461d162dc42425:
+      status: still_present
+      evidence: validate-worker-output.py:1744 は完全な旧パスだけを残存として記録し、メモリ上では裸の REPORT.md
+        を残してもエラーなしで、適用後の入口判定は none になった；既存テスト:681 も通過を固定している
+decided_at: '2026-11-07T15:16:07+09:00'

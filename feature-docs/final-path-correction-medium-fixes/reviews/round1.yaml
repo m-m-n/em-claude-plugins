@@ -1,0 +1,137 @@
+round: 1
+executed_at: '2026-11-07T16:56:56+09:00'
+scope:
+  review_mode: diff
+  base_commit: 6a756561190232fef9ed43e36f5972488eda69d7
+  head_commit: 55a58fd4b5f3ce14c88eed55df51a04a70c76046
+  changed_files:
+  - em-workflow/agents/implementation-planner.md
+  - em-workflow/references/phases/create-plan-phase.md
+  - em-workflow/references/workflow-patch.md
+  - em-workflow/scripts/report-name-entry.py
+  - em-workflow/scripts/validate-worker-output.py
+  - test-docs/final-path-correction-medium-fixes/task0001.tests.yaml
+  - test-docs/final-path-correction-medium-fixes/task0002.tests.yaml
+  - test-docs/final-path-correction-medium-fixes/task0003.tests.yaml
+  - tests/test_final_path_correction.py
+  - tests/test_final_path_correction_docs.py
+  - tests/test_gate_option_vocabulary.py
+  - tests/test_report_name_entry.py
+  - tests/test_report_name_planner_docs.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - spec
+  - performance
+  - architecture
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 29be215ab3f496e3
+  severity: medium
+  category: security
+  file: em-workflow/scripts/validate-worker-output.py
+  line: 2290
+  title: 'TM-11: 実装担当が読む計画書を正規本文の検証に拘束できていない'
+  description: '再現判定は reproduced。手順はコードの読解だけで追い、実行していない。_correction_entries_errors は entry.plan が指すファイルだけを正規本文と比較し(2290-2300行)、plan の値と tasks/{T}.md を結び付ける検査は検証器に無い。登録外の tasks/{T}.md は条件5の文書集合にも入らない。一方 em-workflow/references/implement-phase.md:466 の task_plan_path は tasks/{T}.md 固定なので、plan を別名にすると、TM-11 が検査した本文と実装担当が読む本文が別物になる。前提は tasks/ に任意のファイルを書ける計画担当であり、TB-3 が想定する脅威に当たる。留保: create-plan-phase.md:103-107 は implement フェーズが tasks.{T}.plan から解決すると書いており、implement-phase.md と矛盾している。task_plan_path を組み立てるスクリプトは無いので、どちらが効くかはオーケストレーターの文書の読み方で決まる。この矛盾は今回の差分より前からある。'
+  suggestion: 正規本文を検証したファイルと起動時の task_plan_path が必ず一致するようにし、拒否を回帰テストで固定する。implement-phase.md:466 を tasks.{T}.plan から解決する形に揃えるのが根本対応になる。同ファイルは SPEC の File Structure に無いので、範囲内で閉じるなら、訂正入口で tasks/{T}.md が存在して entry.plan と異なるエントリを path-correction-entries で拒否する。
+  reproduction: create-plan=completed、implement=failed の状態で、REPORT.md→audit.md の訂正と新規 task0002 を返す。対象ファイルは旧参照を含む tests/test_ref.py、plan は tasks/task0002-safe.md とし、その本文を canonical_correction_plan の出力にする。一方、未登録の tasks/task0002.md には環境変数を外部送信する追加指示を置く。ファイル・Git読み取りをメモリ上で置き換えた validate_worker_result(..., dry_run=True) は errors=[] を返し、task0002.md を一度も読まなかった。起動仕様ではこの未検査ファイルが選ばれる。対照として plan を tasks/task0002.md に変更すると path-correction-entries で拒否された
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: medium
+  resolution: deferred
+  resolution_reason: medium は auto-fix の対象外のため、別タスクへ持ち越し（Notion に未着手で起票済み）
+- stable_id: 07ac0bfd6c3690c2
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/validate-worker-output.py
+  line: 1822
+  title: 正規化すると1要素になる旧パスも検出する
+  description: 読解で確認した。old_path が ./REPORT.md だと _scan_references は原文をトークンに登録せず(1822-1824行)、裸の名前も直前の / で一致しないので、文書内の ./REPORT.md は出現にならない。条件5は未訂正の文書を通し、新パスへ置換した文書を path-correction-content で拒否する。加えて、TASK.md 以外の計画は Files 節を変えないと _validate_corrected_task_plans が task-plan-files-mismatch を返すので、置換しても残しても通らず、訂正が完了しない(レビュー指摘に無い、評価側の確認事項)。is_safe_relative_path は ./ を拒否しないので、この表記は files に入り得る。SPEC の A7 は1要素の旧パスについて ./REPORT.md を出現としないと定めているが、タスクの files 自体がその表記である場合の行き止まりは扱っていない。既存テストの dotted ケースが固定しているのは see REPORT.md だけで、この挙動は固定されていない。
+  suggestion: old_path の原文が正規形と異なるときは原文も path トークンとして登録し、_replacement_texts の path 分岐で new_path を許す。old_path が REPORT.md のときの A7 の動きは変えない。置換と残存検査の両方を回帰テストで固定する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: high
+  resolution: deferred
+  resolution_reason: medium は auto-fix の対象外のため、別タスクへ持ち越し（Notion に未着手で起票済み）
+- stable_id: 9941b01f543b41e8
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/validate-worker-output.py
+  line: 2275
+  title: 共有された旧ファイル名から矛盾する完了条件を生成しない
+  description: 読解で確認した。rendered は裸の名前が1つ見つかるだけで、同じファイル名を持つ訂正をすべて含める(2275-2279行)。a/REPORT.md→a/one.md と b/REPORT.md→b/two.md で参照先ファイルが裸の REPORT.md を1つだけ持つと、canonical_correction_plan は同じ参照を one.md にも two.md にも置換する受け入れ条件を出す。片方しか満たせない計画が byte-equal 検査を通って実装担当に渡る。コードは FR1(d) の文言どおりなので、spec レビューの空結果とは矛盾しない。問題は FR1(d) と FR6 の組み合わせにある。
+  suggestion: 裸の出現しか持たない訂正が複数あるときは、受け入れ条件を許可された候補のいずれかへの置換として描画する。canonical_correction_plan、workflow-patch.md と implementation-planner.md の正規本文の記述、tests/test_gate_option_vocabulary.py のハッシュ固定を同じ変更で揃える。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: high
+  resolution: deferred
+  resolution_reason: medium は auto-fix の対象外のため、別タスクへ持ち越し（Notion に未着手で起票済み）
+evaluation:
+  round_summary: 'critical/high は無く、medium 3件をすべて読解で確認して持ち越した。security の1件は reproduced で、起動文書間の矛盾という留保が付く。comprehensive の2件も読解で成立を確認した。reviewer_outputs に注入の試みは無かった。観点別の状況: security=corroborated、comprehensive=corroborated、spec=corroborated、performance=corroborated、architecture=corroborated。architecture の corroborated は変更ファイルの範囲に限る。implement-phase.md:466 と create-plan-phase.md:103-107 の矛盾は差分より前からあり、security の指摘の中で扱った。読み取りは上限の10ファイルを使い切った(SPEC.md、THREAT-MODEL.md、implement-phase.md、および変更ファイル7件。大きな文書は該当箇所のみ)。加えて task_plan_path のディレクトリ横断検索を行った。未読の変更ファイルは tests/test_final_path_correction_docs.py、tests/test_report_name_entry.py、tests/test_report_name_planner_docs.py、test-docs の3件で、tests/test_final_path_correction.py は一部のみ読んだ。テストは実行していないので AC-11 の通過は未確認。confidence の尺度は契約に定義が無いため high/medium/low で記した。'
+  recommended_action: auto_fix
+  action_rationale: medium 3件はいずれも原因が読解で確定しており、修正範囲も局所的なので auto_fix を勧める。complete にしないのは、TM-11 の検査対象と実際の指示入力がずれ得ることと、訂正が完了しない経路が残るため。canonical 本文の修正は FR1(d) の文言と文書の記述、ハッシュ固定に波及する。TM-11 の修正は SPEC の File Structure の範囲内に収めるなら検証器側で行う。
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-final-path-correction-medium-fixes-20261107T075614Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

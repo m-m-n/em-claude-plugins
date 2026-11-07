@@ -1408,22 +1408,47 @@ def validate_answers_list(data, packet=None):
 
 
 # ---------------------------------------------------------------------------
-# Final-path correction (subagent-report-write-block, FR5 / FR6)
+# Final-path correction (subagent-report-write-block, FR5 / FR6;
+# final-path-correction-medium-fixes, FR1 to FR3, FR5 to FR7 and FR9)
 #
 # `tasks_patch.path_corrections` is the one exception to the verbatim copy of
 # a carried task's record (references/workflow-patch.md, "Final-path
-# correction", owns the contract; IMPLEMENTATION.md D1 to D3 and D8 own the
-# bindings). The structural shape is checked with and without
-# --dry-run-apply; the permission state, the five conditions and the
-# in-memory application are checked under --dry-run-apply.
+# correction", owns the contract; IMPLEMENTATION.md D1 to D3 and D8 of
+# subagent-report-write-block and D2 to D7 of
+# final-path-correction-medium-fixes own the bindings). A correction changes
+# paths and nothing else, so the validation passes no other change:
+#
+# - The structural shape is checked with and without --dry-run-apply.
+# - Under --dry-run-apply a patch with corrections is in one path state
+#   (`correction_path_state`): the correction entry, the Re-planning path, or
+#   any other state, which is rejected as `path-correction-not-permitted` and
+#   judged by condition 5 in its strictest form.
+# - Conditions 1 to 5 run in every state. Condition 4 includes the form check
+#   of `new_path` (FR2). Condition 5 compares positionally on the correction
+#   entry and covers every plan of workflow.yaml (FR3, FR6, FR9); on the
+#   Re-planning path only its left-behind check runs (FR5). A bare old file
+#   name left behind is rejected (FR7); the scanner is the only definition of
+#   an occurrence.
+# - On the correction entry only, `tasks_patch.entries` and `requirements_patch`
+#   are limited (FR1), after condition 5 and outside the five numbered
+#   conditions.
+# - The in-memory application and the plan Files-section agreement follow.
 # ---------------------------------------------------------------------------
 
 JOURNAL_KNOWN_EVENTS = ("launched", "merged", "failed")
 
 PATH_CORRECTION_KEYS = frozenset({"task_id", "old_path", "new_path"})
 
-# The documents condition 5 compares besides the target tasks' plans.
+# The documents condition 5 compares besides the plans of workflow.yaml.
 PATH_CORRECTION_DOCUMENTS = ("IMPLEMENTATION.md", "VERIFICATION.md")
+
+# The path states of a patch with corrections (IMPLEMENTATION.md D2).
+PATH_STATE_CORRECTION_ENTRY = "correction-entry"
+PATH_STATE_REPLANNING = "replanning"
+PATH_STATE_OTHER = "other"
+
+PATH_CORRECTION_ENTRIES_CODE = "path-correction-entries"
+PATH_CORRECTION_REQUIREMENTS_CODE = "path-correction-requirements"
 
 
 def read_journal_events(journal_path):
@@ -1483,6 +1508,43 @@ def _tasks_of(workflow):
 def _path_corrections_field(patch):
     tasks_patch = patch.get("tasks_patch") if isinstance(patch, dict) else None
     return tasks_patch.get("path_corrections") if isinstance(tasks_patch, dict) else None
+
+
+def _on_correction_entry(workflow, patch):
+    """True when `patch` carries a non-empty `tasks_patch.path_corrections`
+    and `workflow` is on the correction entry (IMPLEMENTATION.md D2):
+    create-plan `completed` and implement `failed`. False without a workflow
+    mapping."""
+    if not isinstance(workflow, dict) or not patch_has_path_corrections(patch):
+        return False
+    create_plan = workflow_find_step(workflow, "create-plan")
+    implement = workflow_find_step(workflow, "implement")
+    return (
+        (create_plan.get("status") if create_plan else None) == "completed"
+        and (implement.get("status") if implement else None) == "failed"
+    )
+
+
+def correction_path_state(workflow, patch, phase_state=None, feature_dir=None):
+    """The path state of a patch (IMPLEMENTATION.md D2), decided from
+    workflow.yaml and the phase state whatever `tasks_patch.mode` holds: None
+    for a patch without corrections; otherwise exactly one of
+    `PATH_STATE_CORRECTION_ENTRY` (create-plan `completed` and implement
+    `failed`), `PATH_STATE_REPLANNING` (create-plan `needs_update`, or
+    `pending` on a SPEC-change re-entry) and `PATH_STATE_OTHER`. The last is
+    rejected as `path-correction-not-permitted`; condition 5 judges it as the
+    correction entry, the strictest form, and the FR1 limits do not run."""
+    if not patch_has_path_corrections(patch):
+        return None
+    if _on_correction_entry(workflow, patch):
+        return PATH_STATE_CORRECTION_ENTRY
+    create_plan = workflow_find_step(workflow, "create-plan")
+    status = create_plan.get("status") if create_plan else None
+    if status == "needs_update" or (
+        status == "pending" and workflow_replace_all_spec_change_reentry(workflow, phase_state, feature_dir)
+    ):
+        return PATH_STATE_REPLANNING
+    return PATH_STATE_OTHER
 
 
 def patch_has_path_corrections(patch):
@@ -1548,11 +1610,6 @@ def _well_formed_path_corrections(patch):
     if not patch_has_path_corrections(patch) or path_correction_shape_errors(patch):
         return []
     return [dict(item) for item in _path_corrections_field(patch)]
-
-
-def _correction_file_name(path):
-    segments = path_segments(path)
-    return segments[-1] if segments else ""
 
 
 def _apply_path_corrections(tasks, corrections):
@@ -1674,9 +1731,29 @@ def path_correction_precondition_errors(workflow, corrections, last_events, targ
     return errors
 
 
+# The form of a new_path (FR2): Unicode word characters, `.`, `/` and `-`.
+_CORRECTION_PATH_FORM_RE = re.compile(r"[\w./-]+")
+
+
+def path_correction_form_ok(path):
+    """FR2, the form check of a path that a correction writes into
+    workflow.yaml or a plan: True only when all three clauses hold. The whole
+    string matches `[\\w./-]+` (so a trailing line break fails); it equals its
+    normalized form `'/'.join(path_segments(path))` (so `.`, `./`, `a//b.md`,
+    `a/./b.md` and a trailing `/` fail); and its first segment does not start
+    with `-`. Pure: a non-string is False."""
+    if not isinstance(path, str) or _CORRECTION_PATH_FORM_RE.fullmatch(path) is None:
+        return False
+    segments = path_segments(path)
+    return bool(segments) and "/".join(segments) == path and not segments[0].startswith("-")
+
+
 def _path_correction_new_path_errors(corrections, target_repo, base_commit):
     """FR5 condition 4 (`path-correction-new-path`): `new_path` does not match
-    FR2, passes `is_safe_relative_path`, and is `absent` at the base commit."""
+    FR2, passes `is_safe_relative_path`, passes the form check
+    `path_correction_form_ok` (FR2 of final-path-correction-medium-fixes, after
+    the safe-path check and before the base lookup), and is `absent` at the
+    base commit."""
     errors = []
     base_checked = False
     for correction in corrections:
@@ -1685,6 +1762,11 @@ def _path_correction_new_path_errors(corrections, target_repo, base_commit):
             reason = "has a name that still matches the report artifact rule"
         elif not is_safe_relative_path(new_path):
             reason = "is not a safe project-relative path"
+        elif not path_correction_form_ok(new_path):
+            reason = (
+                "does not have the path form (Unicode word characters, '.', '/' and '-' only, "
+                "equal to its normalized form, first segment not starting with '-')"
+            )
         else:
             if not base_checked:
                 require_report_name_base(target_repo, base_commit)
@@ -1703,49 +1785,129 @@ def _path_correction_new_path_errors(corrections, target_repo, base_commit):
     return errors
 
 
-def _correction_normalizer(corrections):
-    """The normalization of IMPLEMENTATION.md D3 as (pattern, mapping,
-    old_paths): one left-to-right pass replaces each old path by its new path
-    and each old file name by its new file name, the longer match first. The
-    new paths and new file names are matched too and map to themselves, so a
-    new name that contains an old name is never replaced again. A bare old
-    file name that two corrections move to different new names is ambiguous
-    and is left alone."""
-    mapping = {}
-    old_paths = set()
-    bare = {}
-    for c in corrections:
-        old_path, new_path = c["old_path"], c["new_path"]
-        old_name, new_name = _correction_file_name(old_path), _correction_file_name(new_path)
-        mapping[new_path] = new_path
+# ---------------------------------------------------------------------------
+# Reference occurrences (IMPLEMENTATION.md D3, FR7) and the positional
+# comparison (D4, FR6)
+# ---------------------------------------------------------------------------
+
+# FR7: a bare old file name is not preceded by an ASCII letter, digit, `_`,
+# `-`, `.`, `/` or `\`, and not followed by an ASCII letter, digit, `_`, `-`,
+# `/` or `\`, or by `.` plus one of letter, digit, `_`, `-`. An old path of
+# several segments keeps the same boundary, except that a preceding `./`
+# lifts the one before the token.
+_NOT_PRECEDED_BY_NAME_CHAR = r"(?<![A-Za-z0-9_\-./\\])"
+_PRECEDED_BY_DOT_SLASH = r"(?<=\./)"
+_NOT_FOLLOWED_BY_NAME_CHAR = r"(?![A-Za-z0-9_\-/\\]|\.[A-Za-z0-9_\-])"
+
+
+def _correction_file_name(path):
+    segments = path_segments(path)
+    return segments[-1] if segments else ""
+
+
+def _scan_references(text, corrections):
+    """The reference occurrences of IMPLEMENTATION.md D3 in `text`: a list of
+    `(start, end, token, kind)` in text order, never overlapping. `kind` is
+    "path" for an old path of several segments and "bare" for a bare old file
+    name; a one-segment old path, judged after `path_segments`, is matched
+    only as a bare name. The scan runs left to right and at one position the
+    longer token wins. This is the only definition of an occurrence: the
+    comparison, the left-behind check and the entries limit all use it, and
+    none of them searches for substrings. Pure."""
+    path_tokens, bare_names = set(), set()
+    for correction in corrections:
+        segments = path_segments(correction["old_path"])
+        if not segments:
+            continue
+        bare_names.add(segments[-1])
+        if len(segments) > 1:
+            path_tokens.add(correction["old_path"])
+    alternatives = []
+    for token in sorted(path_tokens | bare_names, key=lambda t: (-len(t), t)):
+        before = (
+            f"(?:{_NOT_PRECEDED_BY_NAME_CHAR}|{_PRECEDED_BY_DOT_SLASH})"
+            if token in path_tokens
+            else _NOT_PRECEDED_BY_NAME_CHAR
+        )
+        alternatives.append(f"{before}{re.escape(token)}{_NOT_FOLLOWED_BY_NAME_CHAR}")
+    if not alternatives:
+        return []
+    pattern = re.compile("|".join(alternatives))
+    return [
+        (m.start(), m.end(), m.group(0), "path" if m.group(0) in path_tokens else "bare")
+        for m in pattern.finditer(text)
+    ]
+
+
+def _replacement_texts(token, kind, corrections, preferred):
+    """The permitted replacements of one occurrence (IMPLEMENTATION.md D4),
+    without the old text, which the comparison always permits. An old path of
+    several segments permits only its own `new_path`. A bare old file name
+    permits the new file names of the corrections of `preferred` (the
+    corrections of the target tasks using the document) that hold it, and when
+    there are none those of all corrections of the patch that hold it; for a
+    one-segment old path the `new_path` of each selected correction whose old
+    path is that one segment is added, because a plan's Files section holds
+    the full `new_path`."""
+    if kind == "path":
+        return {c["new_path"] for c in corrections if c["old_path"] == token}
+    holders = [c for c in preferred if _correction_file_name(c["old_path"]) == token] or [
+        c for c in corrections if _correction_file_name(c["old_path"]) == token
+    ]
+    texts = set()
+    for c in holders:
+        new_name = _correction_file_name(c["new_path"])
         if new_name:
-            mapping[new_name] = new_name
-        if old_name:
-            bare.setdefault(old_name, set()).add(new_name or new_path)
-    for old_name, new_names in bare.items():
-        if len(new_names) == 1:
-            mapping[old_name] = next(iter(new_names))
-    for c in corrections:
-        mapping[c["old_path"]] = c["new_path"]
-        old_paths.add(c["old_path"])
-    tokens = sorted(mapping, key=lambda token: (-len(token), token))
-    pattern = re.compile("|".join(re.escape(token) for token in tokens))
-    return pattern, mapping, old_paths
+            texts.add(new_name)
+        if len(path_segments(c["old_path"])) == 1:
+            texts.add(c["new_path"])
+    return texts
 
 
-def _normalize_path_strings(text, normalizer):
-    """(normalized text, old paths found) for one document; the second value
-    is meaningful for the current version of the document."""
-    pattern, mapping, old_paths = normalizer
-    left_behind = []
+def _positional_match(base_text, current_text, occurrences, permitted):
+    """True when `current_text` can be read as the literal runs of `base_text`
+    in order, each occurrence holding one member of its permitted set (the old
+    text itself always among them), consuming the whole current text.
+    `occurrences` are the `_scan_references` tuples of the base text and
+    `permitted[i]` is the set of replacement texts of occurrence i.
+    Replacements are literal and the current text is never rescanned. Permitted
+    texts may be prefixes of each other, so the search keeps, per occurrence,
+    the set of current positions it can have reached: a pair (occurrence index,
+    position) is visited once, and the cost is bounded by the number of such
+    pairs, never exponential."""
+    literals = []
+    position = 0
+    for start, end, _token, _kind in occurrences:
+        literals.append(base_text[position:start])
+        position = end
+    literals.append(base_text[position:])
+    if not current_text.startswith(literals[0]):
+        return False
+    reachable = {len(literals[0])}
+    for index, (start, end, _token, _kind) in enumerate(occurrences):
+        candidates = set(permitted[index])
+        candidates.add(base_text[start:end])
+        following = literals[index + 1]
+        advanced = set()
+        for here in reachable:
+            for text in candidates:
+                if current_text.startswith(text, here):
+                    after = here + len(text)
+                    if current_text.startswith(following, after):
+                        advanced.add(after + len(following))
+        if not advanced:
+            return False
+        reachable = advanced
+    return len(current_text) in reachable
 
-    def replace(match):
-        token = match.group(0)
-        if token in old_paths:
-            left_behind.append(token)
-        return mapping[token]
 
-    return pattern.sub(replace, text), left_behind
+def _left_behind_references(text, corrections):
+    """(old paths, bare old file names) that occur in `text`, each sorted and
+    without repeats, by the occurrences of `_scan_references`."""
+    paths, names = set(), set()
+    for _start, _end, token, kind in _scan_references(text, corrections):
+        (paths if kind == "path" else names).add(token)
+    return sorted(paths), sorted(names)
 
 
 def _regular_blob_id(target_repo, base_commit, path):
@@ -1806,59 +1968,348 @@ def _feature_dir_in_repository(feature_dir, target_repo):
     return list(relative.parts)
 
 
-def _path_correction_content_errors(workflow, corrections, feature_dir, target_repo, base_commit):
-    """FR5 condition 5 (`path-correction-content`), IMPLEMENTATION.md D3: for
-    IMPLEMENTATION.md, VERIFICATION.md and the plan of each target task, the
-    version at the base commit and the current version, both normalized, must
-    be equal, and the current version must not contain an old path. A
-    document absent at the base commit is outside the set."""
+def _read_current_document(feature_dir, document):
+    """Reads one document of the feature directory for condition 5 and the
+    plan check of an entry: (text, None, None) for a readable regular file,
+    (None, True, None) for a file that does not exist, and
+    (None, False, message) for anything that cannot be read or compared (an
+    unsafe path, a symlink segment, a file that is not regular, over the
+    read limit or not UTF-8)."""
+    current_path, path_error = _resolve_contained_relative_path(feature_dir, document)
+    if path_error is not None:
+        return None, False, f"cannot be read: {path_error}"
+    text, reason = _read_document_for_scenario_scan(current_path)
+    if reason is None:
+        return text, False, None
+    if reason == _SCAN_ABSENT:
+        return None, True, None
+    return None, False, f"cannot be compared with the base commit: {_scenario_scan_reason_text(reason)}"
+
+
+def _task_is_merged(tasks, last_events, task_id):
+    record = tasks.get(task_id)
+    status = record.get("status") if isinstance(record, dict) else None
+    return status == "merged" or (last_events.get(task_id) or (None,))[0] == "merged"
+
+
+def _path_correction_content_errors(
+    workflow, corrections, feature_dir, target_repo, base_commit, path_state, last_events
+):
+    """FR5 condition 5 (`path-correction-content`) with the refinements of
+    final-path-correction-medium-fixes (FR3, FR5 to FR7, FR9), IMPLEMENTATION.md
+    D3 to D5. `path_state` is `correction_path_state`'s result and
+    `last_events` the journal's `journal_last_events`.
+
+    On the correction entry (and in any other state, judged as the strictest
+    form) the documents are IMPLEMENTATION.md, VERIFICATION.md and the plan of
+    every task of workflow.yaml, keyed by their normalized path so that a
+    document used by several tasks is checked once. A document takes the first
+    class that fits:
+
+    - merged plan (a user task's status or last journal event is `merged`):
+      byte-equal to the base commit, no left-behind check; this holds for a
+      plan shared with a target and takes precedence over its replacement;
+    - target plan (a user is a target of the patch): positional comparison
+      (FR6) and the left-behind check (FR7);
+    - shared document (IMPLEMENTATION.md, VERIFICATION.md): as a target plan;
+    - non-target plan: positional comparison, an old reference may remain.
+
+    For every class: no entry at the base commit and present now is rejected
+    (FR9); no entry at the base commit and absent now is not an error; an
+    entry at the base commit and absent now is rejected; a document that is
+    not regular at the base commit or cannot be read now is rejected. A new
+    task's plan under `tasks_patch.entries` is in none of the classes unless
+    its normalized path equals one of those documents.
+
+    On the Re-planning path (FR5) only IMPLEMENTATION.md, VERIFICATION.md and
+    the target plans are read, the base commit is not compared, only the
+    left-behind check runs, and a document that does not exist now is not an
+    error.
+
+    The left-behind check rejects an old path (message "old path") and a bare
+    old file name (message "bare old file name") in the current text, by the
+    occurrences of `_scan_references`; a comparison failure is a separate
+    error on the same document."""
     errors = []
     feature_dir = Path(feature_dir)
     feature_segments = _feature_dir_in_repository(feature_dir, target_repo)
-    normalizer = _correction_normalizer(corrections)
-
-    documents = list(PATH_CORRECTION_DOCUMENTS)
+    replanning = path_state == PATH_STATE_REPLANNING
     tasks = _tasks_of(workflow)
-    for correction in corrections:
-        record = tasks.get(correction["task_id"])
+    last_events = last_events or {}
+    target_ids = {correction["task_id"] for correction in corrections}
+
+    documents = {}  # normalized path -> {"name": spelling, "users": [task ids]}
+
+    def add_document(spelling, task_id=None):
+        entry = documents.setdefault("/".join(path_segments(spelling)), {"name": spelling, "users": []})
+        if task_id is not None:
+            entry["users"].append(task_id)
+
+    for shared_document in PATH_CORRECTION_DOCUMENTS:
+        add_document(shared_document)
+    for task_id, record in tasks.items():
+        if replanning and task_id not in target_ids:
+            continue
         plan = record.get("plan") if isinstance(record, dict) else None
-        if isinstance(plan, str) and plan and plan not in documents:
-            documents.append(plan)
+        if isinstance(plan, str) and plan:
+            add_document(plan, task_id)
 
     def content_error(document, message):
         errors.append(
             err("path-correction-content", f"{document}: {message}", document=document)
         )
 
-    for document in documents:
+    def left_behind_errors(document, text):
+        paths, names = _left_behind_references(text, corrections)
+        if paths:
+            content_error(document, f"still contains the old path {paths}")
+        if names:
+            content_error(document, f"still contains the bare old file name {names}")
+
+    for key, info in documents.items():
+        document, users = info["name"], info["users"]
+        target_users = [task_id for task_id in users if task_id in target_ids]
+        shared = key in PATH_CORRECTION_DOCUMENTS
         if not is_safe_relative_path(document):
             content_error(document, "is not a safe project-relative path")
             continue
+
+        if replanning:
+            current_text, absent, problem = _read_current_document(feature_dir, document)
+            if problem is not None:
+                content_error(document, problem)
+            elif not absent:
+                left_behind_errors(document, current_text)
+            continue
+
+        if any(_task_is_merged(tasks, last_events, task_id) for task_id in users):
+            document_class = "merged"
+        elif target_users:
+            document_class = "target"
+        elif shared:
+            document_class = "shared"
+        else:
+            document_class = "non-target"
+
         base_path = "/".join(feature_segments + path_segments(document))
-        base_text, reason = _read_base_document(target_repo, base_commit, base_path)
-        if reason == _SCAN_ABSENT:
+        base_text, base_reason = _read_base_document(target_repo, base_commit, base_path)
+        if base_reason is not None and base_reason != _SCAN_ABSENT:
+            content_error(document, f"cannot be compared with the base commit: {_scenario_scan_reason_text(base_reason)}")
             continue
-        if reason is not None:
-            content_error(document, f"cannot be compared with the base commit: {_scenario_scan_reason_text(reason)}")
+        current_text, absent, problem = _read_current_document(feature_dir, document)
+        if base_reason == _SCAN_ABSENT:
+            if problem is not None:
+                content_error(document, problem)
+            elif not absent:
+                content_error(
+                    document,
+                    "has no entry at the base commit but exists now; a plan document is not created "
+                    "on the correction entry",
+                )
             continue
-        current_path, path_error = _resolve_contained_relative_path(feature_dir, document)
-        if path_error is not None:
-            content_error(document, f"cannot be read: {path_error}")
-            continue
-        current_text, reason = _read_document_for_scenario_scan(current_path)
-        if reason == _SCAN_ABSENT:
+        if absent:
             content_error(document, "exists at the base commit but is missing now")
             continue
-        if reason is not None:
-            content_error(document, f"cannot be compared with the base commit: {_scenario_scan_reason_text(reason)}")
+        if problem is not None:
+            content_error(document, problem)
             continue
-        normalized_base, _ = _normalize_path_strings(base_text, normalizer)
-        normalized_current, left_behind = _normalize_path_strings(current_text, normalizer)
-        if left_behind:
-            content_error(document, f"still contains the old path {sorted(set(left_behind))}")
-        if normalized_base != normalized_current:
+
+        if document_class == "merged":
+            if current_text != base_text:
+                content_error(
+                    document,
+                    "is the plan of a merged task and differs from the base commit; it must stay byte-equal",
+                )
+            continue
+        occurrences = _scan_references(base_text, corrections)
+        preferred = [c for c in corrections if c["task_id"] in target_users]
+        permitted = [_replacement_texts(token, kind, corrections, preferred) for _s, _e, token, kind in occurrences]
+        if not _positional_match(base_text, current_text, occurrences, permitted):
             content_error(document, "differs from the base commit by more than the path replacement")
+        if document_class in ("target", "shared"):
+            left_behind_errors(document, current_text)
     return errors
+
+
+def _entry_file_reason_text(reason):
+    if reason == _SCAN_ABSENT:
+        return "it is absent at the base commit"
+    return _scenario_scan_reason_text(reason)
+
+
+def canonical_correction_plan(task_id, files, corrections):
+    """The canonical plan text of a new task that corrects references
+    (IMPLEMENTATION.md D6, FR1 (d)): UTF-8 with LF line ends and a final LF.
+    A title, the Files section with one bullet per file in `files` order, and
+    one acceptance criterion per element of `corrections` (the corrections
+    with an occurrence in those files at the base commit, in `path_corrections`
+    order) stating that the old reference is replaced by the new one. This is
+    the one function that renders it. Pre: every rendered string passed
+    `path_correction_form_ok`. Post: the exact text of D6."""
+    lines = [
+        f"# Task Plan: {task_id} - correct path references",
+        "",
+        "## Scope",
+        "",
+        "### Files to Modify",
+    ]
+    lines.extend(f"- `{file}` - correct the old references" for file in files)
+    lines.extend(["", "## Acceptance Criteria (MANDATORY)", ""])
+    for number, correction in enumerate(corrections, start=1):
+        old_name = _correction_file_name(correction["old_path"])
+        new_name = _correction_file_name(correction["new_path"])
+        lines.append(
+            f"- [ ] AC-{number}: `{correction['old_path']}` is replaced by `{correction['new_path']}`, "
+            f"and the bare `{old_name}` by `{new_name}`."
+        )
+    return "\n".join(lines) + "\n"
+
+
+def _correction_requirements_errors(workflow, patch):
+    """FR1 (a): `requirements_patch` on the correction entry is rejected with
+    `path-correction-requirements` unless it is null or has no entries, or
+    every item names a requirement already in workflow.yaml and its `set`
+    holds only `tasks_append` whose values are all ids under
+    `tasks_patch.entries`. A malformed item is a rejection, not a pass."""
+    requirements_patch = patch.get("requirements_patch")
+    if requirements_patch is None:
+        return []
+
+    def reject(message):
+        return err(PATH_CORRECTION_REQUIREMENTS_CODE, f"requirements_patch: {message}")
+
+    if not isinstance(requirements_patch, dict):
+        return [reject("must be a mapping")]
+    items = requirements_patch.get("entries")
+    if not items:
+        return []
+    if not isinstance(items, dict):
+        return [reject("entries must be a mapping")]
+    entries = (patch.get("tasks_patch") or {}).get("entries")
+    entry_ids = set(entries) if isinstance(entries, dict) else set()
+    known = workflow_requirement_ids(workflow)
+    errors = []
+    for fr_id, item in items.items():
+        if fr_id not in known:
+            errors.append(reject(f"{fr_id!r} is not a requirement already in workflow.yaml"))
+            continue
+        set_block = item.get("set") if isinstance(item, dict) else None
+        if not isinstance(set_block, dict) or set(set_block) != {"tasks_append"}:
+            errors.append(reject(f"entries[{fr_id}] may hold only a set with tasks_append"))
+            continue
+        values = set_block["tasks_append"]
+        if not isinstance(values, list) or any(not isinstance(v, str) or v not in entry_ids for v in values):
+            errors.append(reject(f"entries[{fr_id}].set.tasks_append may name only ids under tasks_patch.entries"))
+    return errors
+
+
+def _correction_entries_errors(corrections, patch, feature_dir, target_repo, base_commit):
+    """FR1 (b) to (d): each item of `tasks_patch.entries` on the correction
+    entry is rejected with `path-correction-entries`, one error per rejected
+    reason naming the task and the file, unless
+
+    - its `files` is non-empty and every file passes the FR2 form check
+      (`path_correction_form_ok`, applied before anything is read or
+      rendered), is a regular text file at the base commit within the read
+      limit (read only through `_read_base_document`), and holds an
+      occurrence of an old path or a bare old file name of the patch's
+      corrections (`_scan_references`);
+    - every old_path and new_path rendered into its plan passes the form
+      check; and
+    - its plan, read as a current document of condition 5 is, is byte-equal to
+      `canonical_correction_plan` of the task id, its files and the
+      corrections that have an occurrence in those files. This holds for a
+      TASK.md plan too.
+
+    The plan check runs only once every file passed."""
+    entries = (patch.get("tasks_patch") or {}).get("entries") or {}
+    if not entries:
+        return []
+    errors = []
+
+    def reject(task_id, message, path=None):
+        extra = {"task_id": task_id}
+        if path is not None:
+            extra["path"] = path
+        errors.append(err(PATH_CORRECTION_ENTRIES_CODE, f"tasks_patch.entries[{task_id}]: {message}", **extra))
+
+    if not isinstance(entries, dict):
+        errors.append(err(PATH_CORRECTION_ENTRIES_CODE, "tasks_patch.entries must be a mapping"))
+        return errors
+    for task_id, entry in entries.items():
+        if not isinstance(entry, dict):
+            reject(task_id, "must be a mapping")
+            continue
+        files = entry.get("files")
+        if not isinstance(files, list) or not files:
+            reject(task_id, "files must be a non-empty list of the files that hold an old reference")
+            continue
+        files_ok = True
+        found_paths, found_names = set(), set()
+        for file in files:
+            if not isinstance(file, str) or not is_safe_relative_path(file) or not path_correction_form_ok(file):
+                reject(
+                    task_id,
+                    f"file {file!r} does not have the file form (Unicode word characters, '.', '/' and '-' "
+                    "only, equal to its normalized form, first segment not starting with '-')",
+                    file if isinstance(file, str) else None,
+                )
+                files_ok = False
+                continue
+            text, reason = _read_base_document(target_repo, base_commit, file)
+            if reason is not None:
+                reject(task_id, f"file {file!r} is not a regular text file at the base commit: "
+                       f"{_entry_file_reason_text(reason)}", file)
+                files_ok = False
+                continue
+            occurrences = _scan_references(text, corrections)
+            if not occurrences:
+                reject(task_id, f"file {file!r} holds no old path and no bare old file name", file)
+                files_ok = False
+                continue
+            for _start, _end, token, kind in occurrences:
+                (found_paths if kind == "path" else found_names).add(token)
+        if not files_ok:
+            continue
+
+        rendered = [
+            c for c in corrections
+            if (len(path_segments(c["old_path"])) > 1 and c["old_path"] in found_paths)
+            or _correction_file_name(c["old_path"]) in found_names
+        ]
+        renderable = True
+        for c in rendered:
+            for key in ("old_path", "new_path"):
+                if not path_correction_form_ok(c[key]):
+                    reject(task_id, f"the {key} {c[key]!r} of a correction cannot be rendered into the "
+                           "plan: it does not have the path form")
+                    renderable = False
+        if not renderable:
+            continue
+
+        plan = entry.get("plan")
+        if not isinstance(plan, str) or not plan:
+            reject(task_id, "plan must be a non-empty path")
+            continue
+        text, absent, problem = _read_current_document(Path(feature_dir), plan)
+        if absent:
+            reject(task_id, f"plan {plan!r} does not exist", plan)
+        elif problem is not None:
+            reject(task_id, f"plan {plan!r} {problem}", plan)
+        elif text != canonical_correction_plan(task_id, files, rendered):
+            reject(task_id, f"plan {plan!r} differs from the canonical correction plan", plan)
+    return errors
+
+
+def _correction_entry_limit_errors(workflow, corrections, patch, feature_dir, target_repo, base_commit):
+    """The FR1 limits, run on the correction entry only (the Re-planning path
+    and every other state are not limited), after condition 5 and outside the
+    five numbered conditions: `path-correction-requirements` for
+    `requirements_patch` and `path-correction-entries` for
+    `tasks_patch.entries`."""
+    return _correction_requirements_errors(workflow, patch) + _correction_entries_errors(
+        corrections, patch, feature_dir, target_repo, base_commit
+    )
 
 
 def _carried_report_name_errors(workflow, new_workflow, patch, target_repo, base_commit):
@@ -2445,6 +2896,11 @@ def _validate_dry_run_apply(
         errors.append(err("dry-run-apply", "--workflow is required for --dry-run-apply"))
         return errors
 
+    # Final-path correction (IMPLEMENTATION.md D2): the path state is decided
+    # here, before the replace_all branch, so the corrections block below can
+    # read it whatever `tasks_patch.mode` holds.
+    path_state = correction_path_state(workflow, data, phase_state, feature_dir)
+
     # Rule 3: all `expected` values must match current state. A step_patches
     # that is not a list, or an element that is not a mapping, is reported by
     # the structural layer and has no `expected` to compare here.
@@ -2515,14 +2971,10 @@ def _validate_dry_run_apply(
         # one is not) and step_patches must be empty.
         implement_step = workflow_find_step(workflow, "implement")
         implement_status = implement_step.get("status") if implement_step else None
-        has_corrections = patch_has_path_corrections(data)
-        correction_entry = has_corrections and current_status == "completed" and implement_status == "failed"
+        has_corrections = path_state is not None
+        correction_entry = path_state == PATH_STATE_CORRECTION_ENTRY
         if has_corrections:
-            replanning_state = current_status in ("pending", "needs_update") and (
-                current_status == "needs_update"
-                or workflow_replace_all_spec_change_reentry(workflow, phase_state, feature_dir)
-            )
-            if not (correction_entry or replanning_state):
+            if path_state == PATH_STATE_OTHER:
                 errors.append(
                     err(
                         "path-correction-not-permitted",
@@ -2629,16 +3081,24 @@ def _validate_dry_run_apply(
     # Final-path correction conditions 1 to 5 (FR5), one error code each, in
     # that order. The inputs were checked above; every read of the journal,
     # the base commit and the documents happens here, without a shell.
+    # Condition 5 reads the path state; the FR1 limits on tasks_patch.entries
+    # and requirements_patch follow it, outside the numbered conditions, on
+    # the correction entry only.
     if corrections:
+        last_events = journal_last_events(journal)
         errors.extend(
-            path_correction_precondition_errors(
-                workflow, corrections, journal_last_events(journal), target_repo, base_commit
-            )
+            path_correction_precondition_errors(workflow, corrections, last_events, target_repo, base_commit)
         )
         errors.extend(_path_correction_new_path_errors(corrections, target_repo, base_commit))
         errors.extend(
-            _path_correction_content_errors(workflow, corrections, feature_dir, target_repo, base_commit)
+            _path_correction_content_errors(
+                workflow, corrections, feature_dir, target_repo, base_commit, path_state, last_events
+            )
         )
+        if path_state == PATH_STATE_CORRECTION_ENTRY:
+            errors.extend(
+                _correction_entry_limit_errors(workflow, corrections, data, feature_dir, target_repo, base_commit)
+            )
 
     # Rule 4: append must not overwrite existing task IDs, and
     # expected_next_task_id must match the actual next id.
@@ -3133,7 +3593,7 @@ def validate_worker_result(
     # is checked (IMPLEMENTATION.md D1); rework-planner output and every other
     # status or worker are left alone.
     if worker == "implementation-planner" and status == "completed" and feature_dir is not None:
-        errors.extend(_validate_scenario_id_form(workflow_patch, feature_dir))
+        errors.extend(_validate_scenario_id_form(workflow_patch, feature_dir, workflow))
 
     # --- rework_index coverage (5.4.4) ---
     if worker == "rework-planner" and status == "completed":
@@ -3261,9 +3721,12 @@ def _task_plan_document_errors(task_id, plan_rel, files_declared, feature_dir, *
 
 
 def _validate_corrected_task_plans(workflow_patch, feature_dir, workflow):
-    """FR5 plan agreement: for each task a final-path correction corrects,
-    its plan's Files sections against its files after the correction, as for
-    an entry (`task-plan-files-mismatch`). Needs the current workflow.yaml
+    """FR5 plan agreement: for each plan used by a task a final-path
+    correction corrects, the plan's Files sections against the files of those
+    tasks after the correction, as for an entry (`task-plan-files-mismatch`).
+    The target tasks are grouped by normalized plan and each plan is checked
+    once, against the union of its tasks' files (FR6); a plan used by one
+    target behaves as for that task alone. Needs the current workflow.yaml
     (the carried record is not in the patch) and the feature directory."""
     errors = []
     corrections = _well_formed_path_corrections(workflow_patch)
@@ -3276,15 +3739,23 @@ def _validate_corrected_task_plans(workflow_patch, feature_dir, workflow):
         if isinstance(record, dict):
             corrected[correction["task_id"]] = copy.deepcopy(record)
     _apply_path_corrections(corrected, corrections)
+    plans = {}  # normalized plan path -> {"plan": spelling, "task_ids": [...], "files": set}
     for task_id, record in corrected.items():
         plan_rel = record.get("plan")
         if not plan_rel or not isinstance(plan_rel, str):
             continue
+        group = plans.setdefault(
+            "/".join(path_segments(plan_rel)), {"plan": plan_rel, "task_ids": [], "files": set()}
+        )
+        group["task_ids"].append(task_id)
         files = record.get("files")
-        files_declared = {f for f in files if isinstance(f, str)} if isinstance(files, list) else set()
+        if isinstance(files, list):
+            group["files"] |= {f for f in files if isinstance(f, str)}
+    for group in plans.values():
         errors.extend(
             _task_plan_document_errors(
-                task_id, plan_rel, files_declared, feature_dir, require_acceptance_criteria=False
+                ", ".join(group["task_ids"]), group["plan"], group["files"], feature_dir,
+                require_acceptance_criteria=False,
             )
         )
     return errors
@@ -3436,7 +3907,7 @@ def _hyphenless_ids_message(subject, ids):
     )
 
 
-def _validate_scenario_id_form(workflow_patch, feature_dir):
+def _validate_scenario_id_form(workflow_patch, feature_dir, workflow=None):
     """The scenario-ID form check for one `completed` implementation-planner
     result (Shared Components, "Scenario-ID form check contract"). Returns a
     list of `scenario-id-form` errors, possibly empty, and never raises for
@@ -3446,10 +3917,15 @@ def _validate_scenario_id_form(workflow_patch, feature_dir):
     Target (a): VERIFICATION.md directly under `feature_dir` -- absent is not
     an error (the minimal tier writes none); a symlink, a non-regular file, a
     file over `MAX_PLAN_READ_BYTES` or a file that is not UTF-8 gives one
-    error naming the reason and is not scanned. A patch with a non-empty
-    `tasks_patch.path_corrections` skips this target only
-    (subagent-report-write-block IMPLEMENTATION.md D8): the correction may
-    change nothing but path strings, so the document is not re-scanned.
+    error naming the reason and is not scanned. This target is skipped only
+    when `workflow` is given and the patch is on the correction entry
+    (non-empty `tasks_patch.path_corrections`, create-plan `completed`,
+    implement `failed`; subagent-report-write-block IMPLEMENTATION.md D8 and
+    final-path-correction-medium-fixes FR5): the correction may change
+    nothing but path strings there, so the document is not re-scanned. A
+    correction patch on the Re-planning path, one in any other state, and one
+    validated without a workflow (`workflow` None, the two-argument call)
+    scan it.
 
     Target (b): the plan of every `tasks_patch.entries` item whose final path
     segment is not `TASK.md`. A plan is read only when it passes the checks
@@ -3459,8 +3935,8 @@ def _validate_scenario_id_form(workflow_patch, feature_dir):
     errors = []
     feature_dir = Path(feature_dir)
 
-    if patch_has_path_corrections(workflow_patch):
-        text, reason = None, _SCAN_ABSENT  # D8: the VERIFICATION.md target is skipped
+    if workflow is not None and _on_correction_entry(workflow, workflow_patch):
+        text, reason = None, _SCAN_ABSENT  # D8, FR5: the VERIFICATION.md target is skipped
     else:
         text, reason = _read_document_for_scenario_scan(feature_dir / VERIFICATION_DOCUMENT_FILE_NAME)
     if reason is None:

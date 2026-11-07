@@ -26,6 +26,23 @@ Convention: standard library `unittest` only; every assertion reads the
 section it concerns (never the whole document) on whitespace-normalized
 text; every new-wording matcher has a negative proof against a synthetic
 pre-change wording. No test writes under `em-workflow/`.
+
+final-path-correction-medium-fixes/task0003 (FR8) adds the pins of the
+corrected rules (AC-1 to AC-5 of that task; the tests are named for them):
+
+- `TestMediumFixesConditionWording` -- condition 4 states the `new_path` form
+  (FR2) and condition 5 the Re-planning residual (FR5); the five conditions
+  stay five.
+- `TestMediumFixesComparisonRules` -- the positional comparison (FR6), the
+  occurrence rule and the left-behind check (FR7), the permitted
+  replacements, the document classes (FR3), the absent-document rules
+  (FR9) and condition 5 on the Re-planning path (FR5).
+- `TestMediumFixesLimitsOutsideTheConditions` -- the FR1 limits and their two
+  codes stand outside the five numbered conditions.
+- `TestMediumFixesRetainedWording` -- the pinned phrases stay, and no
+  sentence says that both versions are normalized to one text.
+- `TestValidatorCallSites.test_section_9_lists_the_two_new_codes` -- section
+  9 of create-plan-phase.md lists the two new codes.
 """
 
 import re
@@ -104,6 +121,193 @@ CONDITION_CODES = (
     "path-correction-old-path",
     "path-correction-new-path",
     "path-correction-content",
+)
+
+# -- final-path-correction-medium-fixes/task0003: pre-change wording ---------
+# The text of the section before this feature, kept as samples so that every
+# new matcher below has a negative proof (a matcher that the old wording also
+# satisfies proves nothing).
+
+OLD_CONDITION_4 = (
+    "`path-correction-new-path` \u2014 `new_path` is not a matching name, passes "
+    "the project-relative check of application rule 7, and has no entry at the "
+    "base commit."
+)
+OLD_CONDITION_5 = (
+    "`path-correction-content` \u2014 The change is limited to replacing path "
+    "strings and does not change the meaning of requirements or acceptance "
+    "criteria, as the comparison below decides."
+)
+OLD_COMPARISON = (
+    "**Comparison for condition 5.** For IMPLEMENTATION.md, VERIFICATION.md and "
+    "each target task's plan, take the version at the base commit and the "
+    "current version, and apply one normalization to both: a single "
+    "left-to-right pass that replaces each old path by its new path and each "
+    "old file name by its new file name, longer match first. The two results "
+    "must be equal, and the current version must not contain an old path. A "
+    "document absent at the base commit is outside the set. New task plans "
+    "under `entries` are outside the set."
+)
+
+# Phrases that stay in the section and remain true of the positional
+# comparison (task0003 Design).
+RETAINED_COMPARISON_PHRASES = (
+    "IMPLEMENTATION.md, VERIFICATION.md and each target task's plan",
+    "the version at the base commit and the current version",
+    "a single left-to-right pass",
+    "replaces each old path by its new path",
+    "each old file name by its new file name",
+    "longer match first",
+    "The two results must be equal",
+    "the current version must not contain an old path",
+    "New task plans under `entries` are outside the set",
+)
+
+# -- final-path-correction-medium-fixes/task0003: new wording ----------------
+
+CONDITION_4_FORM_NEEDLES = (
+    "`new_path` is not a matching name",
+    "application rule 7",
+    "no entry at the base commit",
+    "fully matches `[\\w./-]+`",
+    "Unicode word characters",
+    "its normalized form",
+    "`path_segments`",
+    "`.`, `./`, `a//b.md`, `a/./b.md` and a trailing `/` are rejected",
+    "first segment does not start with `-`",
+)
+CONDITION_5_REPLANNING_NEEDLES = (
+    "limited to replacing path strings",
+    "does not change the meaning of requirements or acceptance criteria",
+    "On the Re-planning path the comparison does not run",
+    "requires only that no old path and no bare old file name remain",
+)
+POSITIONAL_NEEDLES = (
+    "compare them positionally",
+    "a single left-to-right pass over the base version",
+    "longer match first",
+    "A replacement is literal and is never rescanned",
+    "only at an occurrence may the current version differ from the base version",
+    "the old text or a permitted replacement",
+    "one old file name may map to different new names",
+    "`a/REPORT.md` corrected to `a/enabled`",
+    "`b/REPORT.md` corrected to `b/disabled`",
+    "changing `Authentication is enabled` to `Authentication is disabled` is rejected",
+)
+LEFT_BEHIND_NEEDLES = (
+    "must not contain an old path or a bare old file name as an occurrence",
+)
+OCCURRENCE_NEEDLES = (
+    "The scan runs left to right",
+    "the longer token wins",
+    "occurrences never overlap",
+    "an old path of several segments or a bare old file name",
+    "literal, case-sensitive file name",
+    "not preceded by an ASCII letter, digit, `_`, `-`, `.`, `/` or `\\`",
+    "not followed by an ASCII letter, digit, `_`, `-`, `/` or `\\`, or by `.` "
+    "plus one of letter, digit, `_`, `-`",
+    "a preceding `./`",
+    "still counts",
+    "A one-segment old path, judged after `path_segments`, is matched only as "
+    "a bare name",
+    "`existing/REPORT.md`, `PREREPORT.md` and `REPORT.md.bak` are neither "
+    "replaced nor flagged",
+    "rewriting them fails the comparison",
+    "`existing/a/REPORT.md` and `a/release-REPORT.md`",
+)
+PERMITTED_NEEDLES = (
+    "The old text itself is always permitted at an occurrence",
+    "That correction's `new_path`",
+    "The new file names of the corrections of the target tasks using that plan "
+    "that hold this old file name",
+    "when there are none, those of all corrections of the patch that hold it",
+    "The new file names of all corrections of the patch that hold it",
+    "plus the `new_path` of each selected correction whose old path is that one "
+    "segment",
+    "the candidates are the union of those tasks' corrections",
+    "Files sections are checked against the union of those tasks' files",
+)
+CLASS_RULE_NEEDLES = (
+    "the plan of every task in `workflow.yaml` that is not a target of the patch, "
+    "whatever its status",
+    "the first class that fits",
+    "A plan used by a target task and by a merged task is a merged plan",
+    "A merged plan that differs from the base commit is rejected as "
+    "`path-correction-content` naming the document",
+    "takes precedence over any replacement a target task would need",
+    "In a non-target plan an old reference may remain",
+    "replacing it with a permitted replacement is allowed, not required",
+    "nothing else may change",
+)
+CLASS_ROWS = (
+    # label, comparison, left-behind check
+    ("Merged plan", "Byte-equal", "No"),
+    ("Target plan", "Positional", "Yes"),
+    ("Shared document", "Positional", "Yes"),
+    ("Non-target plan", "Positional", "No"),
+)
+EXISTENCE_NEEDLES = (
+    "A document with no entry at the base commit and present now is rejected as "
+    "`path-correction-content`",
+    "A document with no entry at the base commit and absent now has nothing to "
+    "compare, and is not an error",
+    "A document with an entry at the base commit and absent now is rejected",
+    "A document that is not a regular file at the base commit, or cannot be read "
+    "now, is rejected",
+    "The one exception to the first of these rules is the plan of a new task "
+    "under `entries`",
+    "when its path is none of those documents and collides with none of them "
+    "after path normalization (`./` and repeated separators removed)",
+    "Where a path is both, the constraint on the existing document wins",
+)
+REPLANNING_NEEDLES = (
+    "The Re-planning path is `create-plan` `needs_update`, or `pending` on a "
+    "SPEC-change re-entry",
+    "the comparison above does not run",
+    "the body of the documents may change",
+    "hold no old path and no bare old file name as an occurrence",
+    "only these documents are read",
+    "a document that does not exist now is not an error",
+    "Conditions 1 to 4 and the agreement of a plan's Files section with `files` "
+    "stay",
+    "applies only on the correction entry",
+    "a correction patch on the Re-planning path, or one validated without "
+    "`workflow.yaml`, scans VERIFICATION.md",
+    "any other state is already rejected as `path-correction-not-permitted`",
+)
+LIMIT_CODES = ("path-correction-requirements", "path-correction-entries")
+SECTION_9_NEW_CODE_NEEDLES = (
+    "`path-correction-in-flight`",
+    "`path-correction-content`",
+    "`path-correction-requirements`",
+    "`path-correction-entries`",
+    "`requirements_patch`",
+    "`tasks_patch.entries`",
+)
+OLD_SECTION_9_CORRECTION_BULLET = (
+    "- A patch carrying `tasks_patch.path_corrections` meets the conditions of\n"
+    "  `references/workflow-patch.md`'s `## Final-path correction`, checked under\n"
+    "  `--dry-run-apply` with `--journal` (the feature's `journal.jsonl`) added to\n"
+    "  the invocation below; each condition is reported under its own code, from\n"
+    "  `path-correction-in-flight` to `path-correction-content`.\n"
+)
+LIMITS_NEEDLES = (
+    "`path-correction-requirements`",
+    "`path-correction-entries`",
+    "outside the five numbered conditions",
+    "`requirements_patch` is null or has no entries",
+    "every item names a requirement already in `workflow.yaml`",
+    "its `set` holds only `tasks_append` whose values are all ids under "
+    "`tasks_patch.entries`",
+    "non-empty `files`",
+    "regular file at the base commit",
+    "holds an old path or a bare old file name of the patch's corrections",
+    "cannot be read as text within the existing read limit",
+    "passes the form check of condition 4",
+    "byte-equal to the canonical text",
+    "a title, the Files section, and one acceptance criterion",
+    "a plan named TASK.md included",
+    "The Re-planning path is not limited",
 )
 
 
@@ -594,15 +798,23 @@ class TestFinalPathCorrectionConditions(unittest.TestCase):
         )
 
     def test_comparison_set_exclusions(self):
+        # FR9 reverses the old pin: a document absent at the base commit is no
+        # longer outside the set on the correction entry.
         self.assertEqual(
             _missing(
                 self.comparison,
-                (
-                    "A document absent at the base commit is outside the set",
-                    "New task plans under `entries` are outside the set",
-                ),
+                ("New task plans under `entries` are outside the set",),
             ),
             [],
+        )
+        self.assertNotIn(
+            "A document absent at the base commit is outside the set",
+            _norm(self.comparison),
+        )
+        # Negative proof: the pre-change wording does hold the sentence.
+        self.assertIn(
+            "A document absent at the base commit is outside the set",
+            _norm(OLD_COMPARISON),
         )
 
     def test_negative_a_document_without_the_section_fails_the_locator(self):
@@ -896,6 +1108,19 @@ class TestValidatorCallSites(unittest.TestCase):
             [],
         )
 
+    def test_section_9_lists_the_two_new_codes(self):
+        # AC-4 of final-path-correction-medium-fixes/task0003 (FR8).
+        hits = [b for b in _bullets(self.implemented) if "`tasks_patch.path_corrections`" in b]
+        self.assertEqual(len(hits), 1, hits)
+        self.assertEqual(_missing(hits[0], SECTION_9_NEW_CODE_NEEDLES), [])
+
+    def test_negative_pre_change_section_9_bullet_lacks_the_two_codes(self):
+        old = _bullets(OLD_SECTION_9_CORRECTION_BULLET)
+        self.assertEqual(len(old), 1)
+        self.assertNotEqual(_missing(old[0], SECTION_9_NEW_CODE_NEEDLES), [])
+        for code in ("`path-correction-in-flight`", "`path-correction-content`"):
+            self.assertIn(code, old[0])
+
     def test_existing_section_9_bullets_are_kept(self):
         self.assertEqual(
             _missing(
@@ -1089,6 +1314,246 @@ class TestFinalPathCorrectionDispatchSection(unittest.TestCase):
         para = _paragraph_with(self.section, "**Failure outcome.**")
         forged = para.replace("the worker's writes are discarded", "the worker's writes are kept")
         self.assertNotEqual(_missing(forged, ("the worker's writes are discarded",)), [])
+
+
+# ---------------------------------------------------------------------------
+# final-path-correction-medium-fixes/task0003 (FR8): the corrected rules
+# ---------------------------------------------------------------------------
+
+
+def _row_cells(text, label):
+    """The cells of the one table row of `text` whose first cell is `label`."""
+    rows = [l for l in text.splitlines() if l.startswith("| %s |" % label)]
+    if len(rows) != 1:
+        raise AssertionError("expected one row for %r, found %d" % (label, len(rows)))
+    return [c.strip() for c in rows[0].strip().strip("|").split("|")]
+
+
+def _one_text_claims(text):
+    """The sentences that claim both versions are normalized to one text."""
+    return [
+        sentence
+        for sentence in re.split(r"(?<=[.:;])\s+", _norm(text))
+        if re.search(r"normaliz", sentence, re.I)
+        and re.search(r"\bboth\b|one text", sentence, re.I)
+    ]
+
+
+def _labelled_text(section, label, next_label):
+    return _between(section, label, next_label)
+
+
+class TestMediumFixesConditionWording(unittest.TestCase):
+    """AC-1 and AC-2 of task0003: conditions 4 and 5 (FR2, FR5, TS-13)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.section = _correction_section()
+        cls.conditions = _between(cls.section, "**Conditions.**", "**Comparison")
+        cls.items = _numbered_items(cls.conditions)
+
+    def test_condition_4_states_the_new_path_form(self):
+        self.assertEqual(_missing(self.items[4], CONDITION_4_FORM_NEEDLES), [])
+
+    def test_condition_5_states_the_replanning_residual(self):
+        self.assertEqual(_missing(self.items[5], CONDITION_5_REPLANNING_NEEDLES), [])
+
+    def test_the_numbered_conditions_stay_five_and_carry_their_codes(self):
+        self.assertEqual(sorted(self.items), [1, 2, 3, 4, 5])
+        for number, code in enumerate(CONDITION_CODES, start=1):
+            self.assertTrue(self.items[number].startswith("`%s`" % code))
+
+    def test_the_conditions_do_not_carry_the_two_new_codes(self):
+        for code in LIMIT_CODES:
+            self.assertNotIn(code, self.conditions)
+
+    # -- negative proofs ----------------------------------------------------
+
+    def test_negative_pre_change_condition_4_is_rejected_by_the_matcher(self):
+        self.assertNotEqual(_missing(OLD_CONDITION_4, CONDITION_4_FORM_NEEDLES), [])
+
+    def test_negative_pre_change_condition_5_is_rejected_by_the_matcher(self):
+        self.assertNotEqual(_missing(OLD_CONDITION_5, CONDITION_5_REPLANNING_NEEDLES), [])
+
+    def test_negative_a_form_rule_without_the_first_segment_clause_is_rejected(self):
+        forged = _norm(self.items[4]).replace(
+            "first segment does not start with `-`", "first segment is free"
+        )
+        self.assertNotEqual(_missing(forged, CONDITION_4_FORM_NEEDLES), [])
+
+
+class TestMediumFixesComparisonRules(unittest.TestCase):
+    """AC-1 of task0003: FR3, FR5, FR6, FR7 and FR9 in the comparison text."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.section = _correction_section()
+        cls.comparison = _between(cls.section, "**Comparison", "**Occurrences.**")
+        cls.occurrences = _between(cls.section, "**Occurrences.**", "**Permitted replacements.**")
+        cls.permitted = _between(cls.section, "**Permitted replacements.**", "**Document classes.**")
+        cls.classes = _between(
+            cls.section, "**Document classes.**", "**Condition 5 on the Re-planning path.**"
+        )
+        cls.replanning = _between(
+            cls.section, "**Condition 5 on the Re-planning path.**", "**Limits on entries"
+        )
+
+    # FR6
+    def test_the_comparison_is_positional(self):
+        self.assertEqual(_missing(self.comparison, POSITIONAL_NEEDLES), [])
+
+    def test_the_comparison_states_the_left_behind_check(self):
+        self.assertEqual(_missing(self.comparison, LEFT_BEHIND_NEEDLES), [])
+
+    def test_the_permitted_replacements_follow_the_document_and_the_occurrence(self):
+        self.assertEqual(_missing(self.permitted, PERMITTED_NEEDLES), [])
+        for label, needle in (
+            ("Old path of several segments", "That correction's `new_path`"),
+            ("Bare old file name", "target tasks using that plan"),
+            ("One-segment old path", "plus the `new_path`"),
+        ):
+            rows = [l for l in self.permitted.splitlines() if l.startswith("| %s |" % label)]
+            self.assertTrue(rows, label)
+            self.assertTrue(any(needle in r for r in rows), (label, rows))
+
+    # FR7
+    def test_the_occurrence_rule_and_its_boundaries(self):
+        self.assertEqual(_missing(self.occurrences, OCCURRENCE_NEEDLES), [])
+
+    # FR3
+    def test_the_document_classes(self):
+        self.assertEqual(_missing(self.classes, CLASS_RULE_NEEDLES), [])
+        for label, comparison, left_behind in CLASS_ROWS:
+            cells = _row_cells(self.classes, label)
+            self.assertEqual((cells[2], cells[3]), (comparison, left_behind), label)
+
+    def test_the_class_rows_name_their_documents(self):
+        merged = _row_cells(self.classes, "Merged plan")[1]
+        self.assertTrue(_has(merged, "`status` or last journal event is `merged`"), merged)
+        self.assertIn("a plan shared with a target task included", merged)
+        self.assertIn("target task", _row_cells(self.classes, "Target plan")[1])
+        shared = _row_cells(self.classes, "Shared document")[1]
+        self.assertTrue(_has(shared, "IMPLEMENTATION.md", "VERIFICATION.md"))
+        self.assertIn("any other task in `workflow.yaml`", _row_cells(self.classes, "Non-target plan")[1])
+
+    # FR9
+    def test_the_absent_document_rules_and_the_new_plan_exception(self):
+        self.assertEqual(_missing(self.classes, EXISTENCE_NEEDLES), [])
+
+    def test_a_document_absent_at_the_base_commit_is_no_longer_outside_the_set(self):
+        self.assertNotIn(
+            "A document absent at the base commit is outside the set", _norm(self.section)
+        )
+
+    # FR5
+    def test_condition_5_on_the_replanning_path(self):
+        self.assertEqual(_missing(self.replanning, REPLANNING_NEEDLES), [])
+
+    # -- negative proofs ----------------------------------------------------
+
+    def test_negative_pre_change_comparison_is_rejected_by_every_matcher(self):
+        for needles in (
+            POSITIONAL_NEEDLES,
+            LEFT_BEHIND_NEEDLES,
+            OCCURRENCE_NEEDLES,
+            PERMITTED_NEEDLES,
+            CLASS_RULE_NEEDLES,
+            EXISTENCE_NEEDLES,
+            REPLANNING_NEEDLES,
+        ):
+            self.assertNotEqual(_missing(OLD_COMPARISON, needles), [], needles[0])
+
+    def test_negative_a_row_locator_rejects_a_missing_or_duplicated_row(self):
+        with self.assertRaises(AssertionError):
+            _row_cells("| Target plan | a | Positional | Yes |\n", "Merged plan")
+        with self.assertRaises(AssertionError):
+            _row_cells("| Target plan | a |\n| Target plan | b |\n", "Target plan")
+
+    def test_negative_a_wrong_class_row_is_detected(self):
+        forged = "| Merged plan | a plan | Positional | Yes |\n"
+        cells = _row_cells(forged, "Merged plan")
+        self.assertNotEqual((cells[2], cells[3]), ("Byte-equal", "No"))
+
+
+class TestMediumFixesLimitsOutsideTheConditions(unittest.TestCase):
+    """AC-2 of task0003: the FR1 limits and their two codes (TS-13)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.section = _correction_section()
+        cls.limits = _between(cls.section, "**Limits on entries", "**Ownership.**")
+        cls.conditions = _between(cls.section, "**Conditions.**", "**Comparison")
+
+    def test_the_limits_state_both_codes_and_the_fr1_rules(self):
+        self.assertEqual(_missing(self.limits, LIMITS_NEEDLES), [])
+
+    def test_each_code_names_its_own_field(self):
+        flat = _norm(self.limits)
+        requirements = flat[flat.index("`path-correction-requirements`") :]
+        entries = flat[flat.index("`path-correction-entries`") :]
+        self.assertLess(
+            requirements.index("`requirements_patch`"),
+            requirements.index("`path-correction-entries`"),
+        )
+        self.assertIn("`tasks_patch.entries`", entries)
+
+    def test_the_limits_sit_between_the_comparison_and_ownership(self):
+        positions = [
+            self.section.index(marker)
+            for marker in ("**Conditions.**", "**Comparison", "**Limits on entries", "**Ownership.**")
+        ]
+        self.assertEqual(positions, sorted(positions))
+
+    def test_the_limits_add_no_numbered_item(self):
+        self.assertEqual(_numbered_items(self.limits), {})
+        self.assertEqual(sorted(_numbered_items(self.conditions)), [1, 2, 3, 4, 5])
+
+    # -- negative proofs ----------------------------------------------------
+
+    def test_negative_a_section_without_the_limits_is_rejected(self):
+        old_tail = _norm(OLD_COMPARISON) + " **Ownership.** x"
+        self.assertNotEqual(_missing(old_tail, LIMITS_NEEDLES), [])
+        with self.assertRaises(ValueError):
+            _between(OLD_COMPARISON + " **Ownership.** x", "**Limits on entries", "**Ownership.**")
+
+    def test_negative_a_limit_text_that_drops_a_code_is_rejected(self):
+        forged = _norm(self.limits).replace("`path-correction-entries`", "`path-correction-x`")
+        self.assertNotEqual(_missing(forged, LIMITS_NEEDLES), [])
+
+
+class TestMediumFixesRetainedWording(unittest.TestCase):
+    """AC-5 of task0003: the pinned phrases stay."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.section = _correction_section()
+
+    def test_every_retained_phrase_is_still_present(self):
+        self.assertEqual(_missing(self.section, RETAINED_COMPARISON_PHRASES), [])
+
+    def test_no_sentence_says_both_versions_are_normalized_to_one_text(self):
+        self.assertEqual(_one_text_claims(self.section), [])
+
+    def test_the_section_markers_stay(self):
+        for marker in ("**Comparison", "**Conditions.**", "**Ownership.**"):
+            self.assertEqual(self.section.count(marker), 1, marker)
+        self.assertLess(self.section.index("**Conditions.**"), self.section.index("**Comparison"))
+        self.assertLess(self.section.index("**Comparison"), self.section.index("**Ownership.**"))
+
+    def test_negative_the_one_text_matcher_catches_the_pre_change_sentence(self):
+        self.assertNotEqual(_one_text_claims(OLD_COMPARISON), [])
+        self.assertEqual(
+            _one_text_claims(
+                "The pass compares positionally. Paths are compared after "
+                "`path_segments` normalization."
+            ),
+            [],
+        )
+
+    def test_negative_a_section_without_a_phrase_is_detected(self):
+        forged = _norm(self.section).replace("longer match first", "shorter match first")
+        self.assertEqual(_missing(forged, ("longer match first",)), ["longer match first"])
+        self.assertNotEqual(_missing(forged, RETAINED_COMPARISON_PHRASES), [])
 
 
 # ---------------------------------------------------------------------------

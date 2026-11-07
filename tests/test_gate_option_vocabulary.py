@@ -1154,8 +1154,17 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # `All eighteen rules apply` and the existing protocol-error sentence are
     # unchanged, and the numbered application rules stay eighteen. Same
     # rationale: refresh, don't remove.
+    #
+    # Refreshed again by final-path-correction-medium-fixes/task0003 (FR8):
+    # the `## Final-path correction` section states the `new_path` form in
+    # condition 4, the Re-planning residual in condition 5, the positional
+    # comparison with its occurrence rule, permitted replacements and
+    # document classes, the absent-document rules, and the FR1 limits with
+    # their two codes outside the five numbered conditions. The numbered
+    # application rules stay eighteen and the section still has five numbered
+    # conditions. Same rationale: refresh, don't remove.
     WORKFLOW_PATCH_SHA256 = (
-        "cfab33e0df1a1d4eb97d651a8da006d4e7fcb6472d5b3756fa5eee76de229ce8"
+        "ea99b215bec30133878058542a5d09937078706cca3f794cccd23aa036a0c667"
     )
     # Updated by goal-vs-spec-divergence/task0016 (review round1 rework),
     # which the user's SPEC.md/REQUIREMENTS.md Declared Change Set extension
@@ -1378,8 +1387,20 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # skips VERIFICATION.md for a patch that carries corrections.
     # PINNED_VALIDATOR_TEST_LINE below is unaffected and still asserted. Same
     # rationale: refresh, don't remove.
+    #
+    # Refreshed again by final-path-correction-medium-fixes/task0001 (FR1 to
+    # FR3, FR5 to FR7, FR9): a final-path correction passes only when it
+    # changes paths and nothing else. The validator gains the path state, the
+    # form check of new_path, the reference scanner and the positional
+    # comparison of condition 5 (non-target plans, created documents, the
+    # Re-planning path), the limits on tasks_patch.entries and
+    # requirements_patch on the correction entry with the canonical plan text,
+    # and the plan-agreement check per shared plan; the scenario-ID scan
+    # skips VERIFICATION.md only on the correction entry. PINNED_VALIDATOR_TEST_LINE
+    # below is unaffected and still asserted. Same rationale: refresh, don't
+    # remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "e154f1fb09f8325624055c351a13a1f854ec61ceb646eb3e9332d2b584eac3ba"
+        "826a80471d09dfb1a0d934e23b6728a9b3d534f50f39e20bae2972651184cfbe"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-
