@@ -1,0 +1,44 @@
+feature: large-diff-review-coverage
+collected_at: "2026-11-07T20:15:00+09:00"
+session_ids: [01a1b5b6-19bf-7580-9ee8-d281f879fc42.jsonl]
+signals:
+  review_critical_high: []
+  conflict_reworks:
+    - {task: task0004, retries: 2}
+    - {task: task0006, retries: 1}
+  file_prediction_misses:
+    - {task: task0001, files: [test-docs/llm-led-review/task0004.tests.yaml]}
+    - {task: task0004, files: [tests/test_tier_record_schema_v2.py]}
+    - {task: task0006, files: [tests/test_tier_record_schema_v2.py]}
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の読みが bucket 2（新しいロジック・複数モジュール・外部契約の変更）に confidence 0.99 で寄り、full に決まった"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.76, confidence: 0.72}
+        observed_at: "2026-11-07T17:23:00+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 2.01, confidence: 0.99}
+        observed_at: "2026-11-07T17:25:00+09:00"
+    pre_survey_estimate:
+      changed_lines_approx: 200
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: true
+      work_still_required: true
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 8
+      body_change_kind: new_logic
+      change_containment: multiple_modules
+      caller_and_dependency_count: 8
+      changes_external_contract: true
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "事前調査は new_files_needed: 0 と見積もったが、実装では review-shards.py / review-coverage.py の 2 スクリプトと複数のテストファイルが新設された"
+  - "review round 1 の medium 7 件は auto-fix の候補ゲート外で unresolved のまま残った"
+  - "task0004 は parent-side adoption を 2 回経た（review-phase.md を 3 タスクが共有したため）"
