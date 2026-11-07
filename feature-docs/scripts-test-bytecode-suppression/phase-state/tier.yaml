@@ -1,0 +1,251 @@
+schema_version: 2
+feature: scripts-test-bytecode-suppression
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.14
+    confidence: 0.75
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.06
+      '1': 0.76
+      '2': 0.17
+      '3': 0.01
+  observed_at: '2026-11-07T21:20:00+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.89
+    confidence: 0.77
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.17
+      '2': 0.77
+      '3': 0.06
+  observed_at: '2026-11-07T21:23:46+09:00'
+pre_survey_estimate:
+  files_expected:
+  - tests/test_check_plugin_invariants.py
+  - tests/test_classification_audit_retention.py
+  - tests/test_decide_tier_final_score.py
+  - tests/test_digest_contract_alignment.py
+  - tests/test_final_path_correction.py
+  - tests/test_gate_outcome_packet_lifecycle.py
+  - tests/test_journal_append_failed.py
+  - tests/test_recover_orphaned_task.py
+  - tests/test_replanning_carry_over.py
+  - tests/test_replanning_producer_alignment.py
+  - tests/test_report_name_entry.py
+  - tests/test_report_name_validation.py
+  - tests/test_reproduction_output_contract.py
+  - tests/test_requirements_tests_replace.py
+  - tests/test_review_coverage.py
+  - tests/test_review_shards.py
+  - tests/test_rework_docs_only_validator_rules.py
+  - tests/test_routeback_record_schema_patch.py
+  - tests/test_sca_absolute_executable_resolution.py
+  - tests/test_sca_child_env_path_filtering.py
+  - tests/test_sca_file_tasks_oserror.py
+  - tests/test_sca_file_tasks_unexpected_exceptions.py
+  - tests/test_sca_finding_title_roundtrip.py
+  - tests/test_sca_go_govulncheck_real_output.py
+  - tests/test_sca_listing_undecodable_output.py
+  - tests/test_sca_per_project_scan_binding.py
+  - tests/test_sca_pip_lockfile_audit.py
+  - tests/test_sca_run_scan_plan_units.py
+  - tests/test_sca_scan_execution.py
+  - tests/test_sca_scan_invocation.py
+  - tests/test_sca_scan_job_grouping.py
+  - tests/test_sca_scan_normalization.py
+  - tests/test_sca_scan_unchanged_surfaces.py
+  - tests/test_sca_scanner_project_config_isolation.py
+  - tests/test_sca_task_filing.py
+  - tests/test_scan_dependencies_cargo_directness.py
+  - tests/test_scan_dependencies_pip_directness.py
+  - tests/test_scan_dependencies_pyproject_directness.py
+  - tests/test_self_write_digest.py
+  - tests/test_self_write_digest_docs.py
+  - tests/test_self_write_digest_wiring.py
+  - tests/test_spec_change_gate_binding.py
+  - tests/test_spec_change_replan_authorization.py
+  - tests/test_stale_launched_recovery_chain.py
+  - tests/test_tier_evaluator_contract.py
+  - tests/test_tier_phase_preconditions.py
+  - tests/test_tier_rework_path.py
+  - tests/test_tier_rules.py
+  - tests/test_tier_rules_buckets_codex_facts.py
+  - tests/test_tier_task_document_plan.py
+  - tests/test_validate_worker_output.py
+  - tests/test_worker_digest_results.py
+  changed_lines_approx: 450
+  new_functions_needed: 2
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules:
+  - em-workflow/scripts/check-plugin-invariants.py
+  - em-workflow/scripts/validate-worker-output.py
+  - em-workflow/scripts/decide-tier.py
+  - em-workflow/scripts/journal-append-failed.py
+  - em-workflow/scripts/recover-orphaned-task.py
+  - em-workflow/scripts/scan-dependencies.py
+  - em-workflow/scripts/review-coverage.py
+  - em-workflow/scripts/review-shards.py
+  - em-workflow/scripts/self-write-digest.py
+  - em-workflow/scripts/report-name-entry.py
+  - tests/test_sca_go_replace_direct_deps.py
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 2
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  caller_and_dependency_count: 63
+  changes_external_contract: false
+  changes_behavior: true
+  evidence:
+  - 'tests/test_check_plugin_invariants.py:78: check-plugin-invariants.py を importlib
+    の exec_module で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_classification_audit_retention.py:54: validate-worker-output.py を
+    exec_module で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_decide_tier_final_score.py:97: decide-tier.py を exec_module で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_digest_contract_alignment.py:196: validate-worker-output.py を exec_module
+    で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_final_path_correction.py:62: validate-worker-output.py を exec_module
+    で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_gate_outcome_packet_lifecycle.py:58: validate-worker-output.py を exec_module
+    で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_journal_append_failed.py:53: journal-append-failed.py を exec_module
+    で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_recover_orphaned_task.py:152: recover-orphaned-task.py を exec_module
+    で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_replanning_carry_over.py:77: validate-worker-output.py を exec_module
+    で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_replanning_producer_alignment.py:156: validate-worker-output.py を
+    exec_module で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_report_name_entry.py:51: validate-worker-output.py を exec_module で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_report_name_validation.py:56: validate-worker-output.py を exec_module
+    で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_reproduction_output_contract.py:504: scan-dependencies.py を exec_module
+    で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_requirements_tests_replace.py:55: validate-worker-output.py を exec_module
+    で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_review_coverage.py:95: review-coverage.py を初回呼び出し時に exec_module で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_review_shards.py:69: review-shards.py を exec_module で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_rework_docs_only_validator_rules.py:73: validate-worker-output.py
+    を exec_module で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_routeback_record_schema_patch.py:281: validate-worker-output.py を
+    exec_module で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_sca_absolute_executable_resolution.py:67: scan-dependencies.py を exec_module
+    で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_sca_child_env_path_filtering.py:69: scan-dependencies.py を exec_module
+    で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_sca_file_tasks_oserror.py:75: scan-dependencies.py を exec_module で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_sca_file_tasks_unexpected_exceptions.py:65: scan-dependencies.py を
+    exec_module で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_sca_finding_title_roundtrip.py:63: scan-dependencies.py を exec_module
+    で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_sca_go_govulncheck_real_output.py:53: scan-dependencies.py を exec_module
+    で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_sca_listing_undecodable_output.py:62: scan-dependencies.py を exec_module
+    で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_sca_per_project_scan_binding.py:82: scan-dependencies.py を exec_module
+    で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_sca_pip_lockfile_audit.py:61: scan-dependencies.py を exec_module で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_sca_run_scan_plan_units.py:70: scan-dependencies.py を exec_module
+    で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_sca_scan_execution.py:66: scan-dependencies.py を exec_module で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_sca_scan_invocation.py:83: scan-dependencies.py を exec_module で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_sca_scan_job_grouping.py:78: scan-dependencies.py を exec_module で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_sca_scan_normalization.py:92: scan-dependencies.py を exec_module で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_sca_scan_unchanged_surfaces.py:67: scan-dependencies.py を exec_module
+    で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_sca_scanner_project_config_isolation.py:68: scan-dependencies.py を
+    exec_module で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_sca_task_filing.py:77: scan-dependencies.py を exec_module で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_scan_dependencies_cargo_directness.py:50: scan-dependencies.py を exec_module
+    で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_scan_dependencies_pip_directness.py:55: scan-dependencies.py を exec_module
+    で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_scan_dependencies_pyproject_directness.py:53: scan-dependencies.py
+    を exec_module で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_self_write_digest.py:112: self-write-digest.py を初回呼び出し時に exec_module
+    で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_self_write_digest.py:134: validate-worker-output.py も別の読み込み関数から exec_module
+    で読み込み、この関数内にもバイトコード抑制設定がない'
+  - 'tests/test_self_write_digest_docs.py:157: check-plugin-invariants.py を exec_module
+    で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_self_write_digest_wiring.py:480: check-plugin-invariants.py を exec_module
+    で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_spec_change_gate_binding.py:54: validate-worker-output.py を exec_module
+    で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_spec_change_replan_authorization.py:121: validate-worker-output.py
+    を exec_module で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_stale_launched_recovery_chain.py:131: recover-orphaned-task.py を exec_module
+    で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_tier_evaluator_contract.py:66: decide-tier.py を exec_module で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_tier_phase_preconditions.py:81: validate-worker-output.py を exec_module
+    で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_tier_rework_path.py:52: validate-worker-output.py を exec_module で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_tier_rules.py:77: decide-tier.py を exec_module で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_tier_rules_buckets_codex_facts.py:93: decide-tier.py を exec_module
+    で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_tier_task_document_plan.py:74: validate-worker-output.py を exec_module
+    で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_validate_worker_output.py:294: validate-worker-output.py を exec_module
+    で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_worker_digest_results.py:47: check-plugin-invariants.py を exec_module
+    で読み込み、読み込み関数内にバイトコード抑制設定がない'
+  - 'tests/test_sca_go_replace_direct_deps.py:46: test_sca_go_govulncheck_real_output.py
+    を抑制設定なしで読み込み、同ファイルの57行目にある SCAN = _load_script() を介して scan-dependencies.py を間接的に読み込む'
+  - 'tests/test_report_name_entry.py:141: run_entry は -B を指定せず、sys.executable で report-name-entry.py
+    を子プロセスとして起動する'
+  - 'tests/test_report_name_entry.py:60: 子プロセスに渡す _git_env は GIT_ で始まる環境変数を除去して設定を追加するが、PYTHONDONTWRITEBYTECODE
+    は設定しない'
+  - 'em-workflow/scripts/report-name-entry.py:64: load_validator は隣の validate-worker-output.py
+    を exec_module で読み込み、バイトコード抑制設定を行わない'
+  - 'em-workflow/scripts/report-name-entry.py:174: main から load_validator が呼ばれるため、テストの子プロセスにも検証スクリプトの読み込み経路がある'
+  - 'tests/test_merge_ci_wait.py:50: モジュールのトップレベルで sys.dont_write_bytecode = True
+    を設定し、元の値を保存・復元していない'
+  - 'tests/test_check_plugin_invariants.py:82: トップレベルで load_script_module を呼び出す'
+  - 'tests/test_classification_audit_retention.py:58: トップレベルで _load_module を呼び出す'
+  - 'tests/test_decide_tier_final_score.py:101: トップレベルで load_decide_tier_module を呼び出す'
+  - 'tests/test_final_path_correction.py:66: トップレベルで _load_module を呼び出す'
+  - 'tests/test_gate_outcome_packet_lifecycle.py:62: トップレベルで _load_validator_module
+    を呼び出す'
+  - 'tests/test_codex_hook_tty_reaper.py:165: scripts 配下の対象を読み込む際に sys.dont_write_bytecode
+    を保存して True にし、finally で復元している'
+  - 'tests/test_codex_hook_tty_reaper.py:262: 既存のキャッシュ検査は codex-hook-tty-reaper に一致するファイルを対象としている'
+  - 'tests/test_merge_preflight.py:1707: 既存のキャッシュ検査は merge*preflight* に一致するファイルを対象としている'
+  - 'tests/test_merge_result.py:116: merge-result.py はソースを compile と exec で実行しており、importlib
+    のファイル読み込みを使用していない'
+  - 'tests/test_codex_hook_interactive_guard.py:3184: 対象スクリプトはソースを compile と exec
+    で実行している'
+  - 'tests/test_artifact_digest_script.py:904: artifact-digest.py を runpy.run_path
+    で実行する経路があるが、sys.dont_write_bytecode の設定はない'
+  - 'tests/test_artifact_digest_script.py:640: 子プロセス用の実行コードにも artifact-digest.py を
+    runpy.run_path で実行する経路がある'
+  - 'em-workflow/scripts/artifact-digest.py:62: import 文で読み込む対象は errno、hashlib、json、os、stat、sys
+    であり、隣のスクリプトを読み込む処理はない'
+  - 'tests/test_destructive_guard_extglob_units.py:82: 既存のフック読み込みでは sys.dont_write_bytecode
+    の保存、抑制、finally による復元が実装されている'
+  - '.gitignore:28: __pycache__/ が無視対象として指定されている'
+  - 'test/README.md:18: 全体実行コマンドは python3 -m unittest discover -s tests と記載されている。本調査ではファイルの作成・変更・削除とテスト実行を行っておらず、現在の
+    HEAD における全テストの成否とキャッシュ新規生成の再現は未確認'
+decided_at: '2026-11-07T21:23:46+09:00'
