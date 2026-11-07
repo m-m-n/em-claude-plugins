@@ -321,9 +321,15 @@ review:
     - spec
     discretionary: []
     cross_validation: true
-  rounds_completed: 0
-  residual_critical_high: 0
-  needs_rework: false
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  residual_critical_high: 1
+  needs_rework: true
 requirements:
   FR1:
     title: 計画担当の割り当て規則
