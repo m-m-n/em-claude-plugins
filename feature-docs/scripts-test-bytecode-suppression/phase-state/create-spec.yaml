@@ -1,7 +1,7 @@
 schema_version: 1
 feature: scripts-test-bytecode-suppression
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: 5c0f0bf02371ed7b2f5e53fcc99190019b5ec477
 last_input_digest: sha256:89fd98f097e28d513db88e5332e7ae394c1240548f79be2dcae7952b112c8649
