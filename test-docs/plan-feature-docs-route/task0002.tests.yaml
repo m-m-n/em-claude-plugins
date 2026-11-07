@@ -1,0 +1,82 @@
+task_id: task0002
+# Full suite (python3 -m unittest discover -s tests) run before any edit:
+# 15037 tests, OK, 1 skipped, no failure.
+baseline_failures: []
+# Full suite (python3 -m unittest discover -s tests) re-executed after the
+# implementation and after this record was written (the record is itself
+# checked by tests.test_tests_yaml_id_resolution): no failure.
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_other_feature_docs_planner_contract.TestAC1TwoStageRoute.test_section_is_an_h2_between_scope_assumption_and_scenario_id_form
+      - tests.test_other_feature_docs_planner_contract.TestAC1TwoStageRoute.test_section_has_no_subheading
+      - tests.test_other_feature_docs_planner_contract.TestAC1TwoStageRoute.test_request_result_shape_and_admission
+      - tests.test_other_feature_docs_planner_contract.TestAC1TwoStageRoute.test_grant_and_re_dispatch
+      - tests.test_other_feature_docs_planner_contract.TestAC1TwoStageRoute.test_fix_declaration_and_its_equality_with_the_grants
+      - tests.test_other_feature_docs_planner_contract.TestAC1TwoStageRoute.test_validation_workflow_update_and_commit_stay_with_the_orchestrator
+      - tests.test_other_feature_docs_planner_contract.TestAC1TwoStageRoute.test_the_fix_record_and_change_set_are_cited_not_restated
+      - tests.test_other_feature_docs_planner_contract.TestAC1TwoStageRoute.test_the_action_is_cited_from_the_spec_writer_contract
+      - tests.test_other_feature_docs_planner_contract.TestAC1MatcherProofs
+    red_confirmed: true
+    red_reason: "Against the unedited planner-contract.md the module's setUpClass failed with \"expected exactly one heading line '## Other-feature documents', found 0\", so every live-document test of the class errored; the matcher-proof class ran green against in-test samples (it does not read the contract)."
+  AC-2:
+    tests:
+      - tests.test_other_feature_docs_planner_contract.TestAC2ScopeRule.test_four_conditions
+      - tests.test_other_feature_docs_planner_contract.TestAC2ScopeRule.test_out_of_scope_paths_are_named
+      - tests.test_other_feature_docs_planner_contract.TestAC2ScopeRule.test_out_of_scope_path_is_never_granted_or_written_and_blocked_names_it
+      - tests.test_other_feature_docs_planner_contract.TestAC2ScopeRule.test_the_three_codes_are_named
+      - tests.test_other_feature_docs_planner_contract.TestAC2MatcherProofs
+    red_confirmed: true
+    red_reason: "Against the unedited planner-contract.md the module's setUpClass failed with \"expected exactly one heading line '## Other-feature documents', found 0\", so every live-document test of the class errored; the matcher-proof class ran green against in-test samples (it does not read the contract)."
+  AC-3:
+    tests:
+      - tests.test_other_feature_docs_planner_contract.TestAC3UntrustedAndRedaction.test_untrusted_content_and_redaction_are_cited
+      - tests.test_other_feature_docs_planner_contract.TestAC3UntrustedAndRedaction.test_section_does_not_restate_redaction
+      - tests.test_other_feature_docs_planner_contract.TestAC3MatcherProofs
+    red_confirmed: true
+    red_reason: "Against the unedited planner-contract.md the module's setUpClass failed with \"expected exactly one heading line '## Other-feature documents', found 0\", so every live-document test of the class errored; the matcher-proof class ran green against in-test samples (it does not read the contract)."
+  AC-4:
+    tests:
+      - tests.test_other_feature_docs_planner_contract.TestAC4CorrectionSubsection.test_heading_is_an_h3_between_path_correction_and_bundling_rule
+      - tests.test_other_feature_docs_planner_contract.TestAC4CorrectionSubsection.test_subsection_states_every_element
+      - tests.test_other_feature_docs_planner_contract.TestAC4CorrectionSubsection.test_planning_inputs_yaml_block_gains_one_commented_line
+      - tests.test_other_feature_docs_planner_contract.TestAC4CorrectionSubsection.test_path_correction_subsection_keeps_its_bullets
+      - tests.test_other_feature_docs_planner_contract.TestAC4MatcherProofs
+    red_confirmed: true
+    red_reason: "Against the unedited planner-contract.md the class's setUpClass failed with \"expected exactly one heading line '### feature_docs_correction (dispatch-resolved value)', found 0\", so every live-document test of the class errored; the matcher-proof class ran green against in-test samples."
+  AC-5:
+    tests:
+      - tests.test_other_feature_docs_planner_contract.TestAC5DigestInputs.test_each_amend_other_feature_target_is_a_listed_member
+      - tests.test_other_feature_docs_planner_contract.TestAC5DigestInputs.test_value_inputs_gains_the_correction_value_when_present
+      - tests.test_other_feature_docs_planner_contract.TestAC5DigestInputs.test_overlap_paragraph_names_the_targets_and_keeps_its_four_spans
+      - tests.test_other_feature_docs_planner_contract.TestAC5DigestInputs.test_digest_sentences_of_the_new_text_name_the_orchestrator_or_are_negated
+      - tests.test_other_feature_docs_planner_contract.TestAC5DigestInputs.test_overlap_matcher_accepts_the_good_sample
+      - tests.test_other_feature_docs_planner_contract.TestAC5DigestInputs.test_overlap_matcher_rejects_an_extra_path_like_span
+      - tests.test_other_feature_docs_planner_contract.TestAC5DigestInputs.test_overlap_matcher_rejects_a_missing_span
+      - tests.test_other_feature_docs_planner_contract.TestAC5DigestInputs.test_overlap_matcher_rejects_a_sample_that_does_not_name_the_targets
+      - tests.test_other_feature_docs_planner_contract.TestAC5DigestInputs.test_overlap_matcher_rejects_a_changed_first_word
+      - tests.test_other_feature_docs_planner_contract.TestAC5DigestInputs.test_overlap_matcher_rejects_another_action_or_a_change_kind
+      - tests.test_other_feature_docs_planner_contract.TestAC5DigestInputs.test_value_inputs_matcher_accepts_and_rejects_samples
+      - tests.test_other_feature_docs_planner_contract.TestAC5DigestInputs.test_member_bullet_matcher_accepts_and_rejects_samples
+    red_confirmed: true
+    red_reason: "Against the unedited planner-contract.md the three digest_inputs tests failed: the member-bullet test with \"expected exactly one bullet listing each `amend_other_feature` target, found 0\", the value_inputs test with \"no sentence says `value_inputs` gains `feature_docs_correction` when present\", and the overlap test with \"the paragraph does not name `amend_other_feature`\"; the digest-sentence test failed on the missing new sections. The negative-proof tests of the class were green (they use in-test samples)."
+  AC-6:
+    tests:
+      - tests.test_other_feature_docs_planner_contract.TestAC6WritePolicyPayloadAndPins.test_no_six_actions_wording_anywhere_in_the_contract
+      - tests.test_other_feature_docs_planner_contract.TestAC6WritePolicyPayloadAndPins.test_the_envelope_status_count_is_not_an_actions_count
+      - tests.test_other_feature_docs_planner_contract.TestAC6WritePolicyPayloadAndPins.test_write_policy_paragraph_says_the_targets_appear_only_after_a_request
+      - tests.test_other_feature_docs_planner_contract.TestAC6WritePolicyPayloadAndPins.test_completed_payload_names_the_request_result_and_the_fix_declaration
+      - tests.test_other_feature_docs_planner_contract.TestAC6WritePolicyPayloadAndPins.test_scenario_id_test_pins_are_refreshed_with_a_comment_naming_this_task
+      - tests.test_other_feature_docs_planner_contract.TestAC6WritePolicyPayloadAndPins.test_the_refreshed_pins_follow_the_live_contract_headings
+      - tests.test_other_feature_docs_planner_contract.TestAC6WritePolicyPayloadAndPins.test_six_actions_matcher_flags_the_old_wordings_and_spares_the_status_count
+      - tests.test_other_feature_docs_planner_contract.TestAC6WritePolicyPayloadAndPins.test_write_policy_matchers_accept_and_reject_samples
+      - tests.test_other_feature_docs_planner_contract.TestAC6WritePolicyPayloadAndPins.test_payload_matcher_accepts_the_good_sample_and_rejects_a_missing_element
+      - tests.test_other_feature_docs_planner_contract.TestAC6WritePolicyPayloadAndPins.test_pin_matcher_accepts_the_good_sample_and_rejects_a_stale_pin
+      - tests.test_scenario_id_planner_docs.TestAC5ContractSection.test_existing_headings_unchanged_apart_from_the_new_section
+    red_confirmed: true
+    red_reason: "Against the unedited files the live tests failed: the six-actions test with \"Lists differ: ['six actions'] != []\", the write_policy test with \"expected exactly one sentence saying `amend_other_feature` targets appear only after a request, found 0\", the payload test with \"the section does not name `other_feature_doc_fixes`\", and the two pin tests with \"CONTRACT_H2_BASE lacks '## Other-feature documents'\". After the contract was edited and before the pin lists were refreshed, the existing tests.test_scenario_id_planner_docs heading-pin test failed with a 'Lists differ' heading mismatch; the refresh turned it green. The status-count guard and the matcher-proof tests were green from the start."
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: "AC-7 is the outcome of the whole-suite command (python3 -m unittest discover -s tests) with no existing assertion removed or weakened; no single check exists that can fail before the change. A dedicated new module is out of scope, but the existing tests that read planner-contract.md (tests.test_scenario_id_planner_docs, tests.test_report_name_planner_docs, tests.test_self_write_digest_docs, tests.test_threat_model_planner_contract, tests.test_worker_contracts_planning, tests.test_plan_version_planner_dispatch) detect a changed pinned phrase, heading list or overlap paragraph; no pre-implementation red state occurred for this criterion. The suite was 15037 tests OK before the change and the same run is repeated after it (see final_failures)."

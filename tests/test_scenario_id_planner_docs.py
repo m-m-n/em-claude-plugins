@@ -108,6 +108,10 @@ PLANNER_STEP_HEADINGS = [
 
 # The contract's headings before this task, in order. The one section this
 # task adds is the only heading allowed on top of these.
+# Refreshed by plan-feature-docs-route/task0002: the contract gained the H2
+# `## Other-feature documents` (after `## Scope & concurrency assumption`) and
+# the H3 `### feature_docs_correction (dispatch-resolved value)` (after the
+# `path_correction` subsection). The earlier headings and their order are kept.
 CONTRACT_H2_BASE = [
     "## Responsibility",
     "## Additional input: `planning_inputs`",
@@ -117,12 +121,14 @@ CONTRACT_H2_BASE = [
     "## Prohibited fields",
     "## Task decomposition, complexity and domains vocabulary",
     "## Scope & concurrency assumption",
+    "## Other-feature documents",
     "## Gate option vocabulary",
 ]
 CONTRACT_H3_BASE = [
     "### Minimal-tier `TASK.md` append (SC-3)",
     "### plugin_versioning (dispatch-resolved value)",
     "### path_correction (dispatch-resolved value)",
+    "### feature_docs_correction (dispatch-resolved value)",
 ]
 CONTRACT_GATE_IDS = frozenset(
     {
