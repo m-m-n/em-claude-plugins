@@ -1,0 +1,102 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_reviewer_skip_handling.TestStep6ExitCode124Rule.test_ac1_first_rule_returns_timeout_object_on_exit_124
+      - tests.test_codex_reviewer_skip_handling.TestStep6ExitCode124Rule.test_ac1_exit_124_rule_precedes_the_parse_rule
+      - tests.test_codex_reviewer_skip_handling.TestMatchersRejectForgedTexts.test_parse_first_order_is_rejected
+      - tests.test_codex_reviewer_skip_handling.TestMatchersRejectForgedTexts.test_exit_124_rule_placed_last_is_rejected
+      - tests.test_codex_reviewer_skip_handling.TestMatchersRejectForgedTexts.test_exit_124_rule_that_reads_output_text_is_rejected
+      - tests.test_codex_reviewer_skip_handling.TestMatchersRejectForgedTexts.test_exit_124_rule_that_keeps_partial_findings_is_rejected
+      - tests.test_codex_reviewer_skip_handling.TestMatchersRejectForgedTexts.test_timeout_object_that_is_not_a_skip_is_rejected
+    red_confirmed: true
+    red_reason: >-
+      Run against the pre-change codex-reviewer agents of both plugins, every
+      listed test failed: the first-rule check ("the first rule of Step 6
+      does not return exactly the timeout skip object") and the order check
+      ("timeout object: expected exactly one occurrence in Step 6, found 0").
+      The negative proofs failed because they first require the matcher to
+      accept the real text.
+  AC-2:
+    tests:
+      - tests.test_codex_reviewer_skip_handling.TestStep6NonJsonRule.test_ac2_non_json_returns_skip_object_and_old_object_is_gone
+      - tests.test_codex_reviewer_skip_handling.TestMatchersRejectForgedTexts.test_old_non_json_object_is_rejected
+    red_confirmed: true
+    red_reason: >-
+      Run against the pre-change agents, both plugins failed with "the old
+      non-JSON object is still present"; the negative proof failed for the
+      same reason because the real text was not accepted first.
+  AC-3:
+    tests:
+      - tests.test_codex_reviewer_skip_handling.TestStep6RateLimitAndModelRules.test_ac3_rules_keep_objects_and_follow_exit_124_and_parse
+      - tests.test_codex_reviewer_skip_handling.TestStep6RateLimitAndModelRules.test_step6_text_is_identical_in_both_agents
+      - tests.test_codex_reviewer_skip_handling.TestMatchersRejectForgedTexts.test_rate_limit_rule_not_limited_to_a_failed_parse_is_rejected
+    red_confirmed: true
+    red_reason: >-
+      Run against the pre-change agents, test_ac3_rules_keep_objects_and_follow_exit_124_and_parse
+      and the rate-limit negative proof failed in both plugins with "timeout
+      object: expected exactly one occurrence in Step 6, found 0". The
+      byte-identical objects and the "only when the parse fails" wording
+      pre-existed and are held by the same test. The Step 6 parity test was
+      already green before the edit and is kept as a guard.
+  AC-4:
+    tests:
+      - tests.test_codex_reviewer_skip_handling.TestEmWorkflowProtocolSkipSemantics.test_ac4_harness_unavailable_names_timeout_and_non_json
+      - tests.test_codex_reviewer_skip_handling.TestEmWorkflowProtocolSkipSemantics.test_ac4_four_retryable_values_with_scratchpad_non_retryable
+      - tests.test_codex_reviewer_skip_handling.TestMatchersRejectForgedTexts.test_three_value_em_workflow_retryable_set_is_rejected
+      - tests.test_codex_reviewer_skip_handling.TestMatchersRejectForgedTexts.test_protocol_without_timeout_and_non_json_cases_is_rejected
+    red_confirmed: true
+    red_reason: >-
+      Run against the pre-change em-workflow review-protocol.md: "the
+      `harness_unavailable` bullet does not name 'timeout'" and "the
+      retryable-set statement says 'three' values, expected 'four'". Both
+      negative proofs failed because the real text was not accepted first.
+  AC-5:
+    tests:
+      - tests.test_codex_reviewer_skip_handling.TestEmReviewProtocolSkipSemantics.test_ac5_harness_unavailable_names_timeout_and_non_json
+      - tests.test_codex_reviewer_skip_handling.TestEmReviewProtocolSkipSemantics.test_ac5_three_retryable_values_with_review_data_too_large_non_retryable
+      - tests.test_codex_reviewer_skip_handling.TestEmReviewProtocolSkipSemantics.test_ac5_no_em_review_file_mentions_shards_or_a_dispatch_cap
+      - tests.test_codex_reviewer_skip_handling.TestMatchersRejectForgedTexts.test_four_value_em_review_retryable_set_is_rejected
+      - tests.test_codex_reviewer_skip_handling.TestMatchersRejectForgedTexts.test_shard_and_dispatch_cap_mentions_are_found
+    red_confirmed: true
+    red_reason: >-
+      Run against the pre-change em-review review-protocol.md, the timeout
+      and non-JSON check failed with "the `harness_unavailable` bullet does
+      not name 'timeout'", and the four-value negative proof failed because
+      the real text was not accepted first. The three-value set and the
+      absence of shard and dispatch-cap mentions pre-existed, so the
+      three-value test, the shard and dispatch-cap scan and the matcher
+      self-check were already green and guard that the edit keeps them.
+  AC-6:
+    tests:
+      - tests.test_reviewer_roles_protocol.TestFrozenSkipReasonStrings.test_exactly_four_retryable_reasons_named
+      - tests.test_reviewer_roles_protocol.TestFrozenSkipReasonStrings.test_non_retryable_skip_reasons_statement_present
+      - tests.test_reviewer_roles_protocol.TestCodexReviewerAgentPrimaryRoleStatement.test_steps_including_scratchpad_discipline_section_verbatim
+      - tests.test_reproduction_reviewer_instructions.TestCodexReviewerBriefs.test_ac5_unchanged_ranges_are_byte_identical
+    red_confirmed: true
+    red_reason: >-
+      The two retryable-set pins, run with their updated assertions against
+      the pre-change review-protocol.md, failed ("These four `skip_reason`
+      values are the **retryable** set" not found; "`scratchpad_unavailable`,
+      like every value outside the four above, is NOT retryable" not found).
+      After the document edits and before the digests were recomputed, the
+      codex-reviewer steps digest and both tail digests failed with "section
+      byte content changed". The full suite passes with no failure absent from
+      the empty baseline.
+  AC-7:
+    tests:
+      - tests.test_codex_reviewer_skip_handling.TestMatchersRejectForgedTexts.test_parse_first_order_is_rejected
+      - tests.test_codex_reviewer_skip_handling.TestMatchersRejectForgedTexts.test_old_non_json_object_is_rejected
+      - tests.test_codex_reviewer_skip_handling.TestMatchersRejectForgedTexts.test_three_value_em_workflow_retryable_set_is_rejected
+      - tests.test_codex_reviewer_skip_handling.TestStep6ExitCode124Rule.test_ac1_exit_124_rule_precedes_the_parse_rule
+    red_confirmed: true
+    red_reason: >-
+      The final module was run against the pre-change documents of both
+      plugins: 17 of its 21 tests failed (every Step 6 check, the timeout and
+      non-JSON checks of both protocols, the em-workflow four-value check, and
+      every negative proof, each of which first requires the matcher to accept
+      the real text). The 4 that passed are the em-review three-value test,
+      the shard and dispatch-cap scan, the Step 6 parity test and the
+      shard-term matcher self-check.

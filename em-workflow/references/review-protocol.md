@@ -242,8 +242,9 @@ Every skip object sets `skip_reason` to a short machine-stable
 - **Spec perspective** with no readable SPEC.md:
   `{"findings": [], "summary": "skipped: no SPEC.md found", "skipped": true, "skip_reason": "no_spec", "source": "<source>"}`
 - **A harness reviewer (codex / litellm)** when its harness cannot be reached at all
-  (codex: wrapper script or CLI missing, or the supplied `model`
-  unsupported; litellm: proxy down, `-p litellm`
+  (codex: wrapper script or CLI missing, the supplied `model`
+  unsupported, a timeout (wrapper exit code 124), or output that is not
+  parseable JSON; litellm: proxy down, `-p litellm`
   profile broken, `model` absent or unknown):
   `{"findings": [], "summary": "skipped: codex-cli unavailable", "skipped": true, "skip_reason": "harness_unavailable", "source": "codex"}`
 - **A harness reviewer (codex / litellm)** when the upstream reports a rate limit
@@ -252,8 +253,13 @@ Every skip object sets `skip_reason` to a short machine-stable
 - **litellm reviewer** when the harness budget is spent (LiteLLM's monthly
   virtual-key cap — surfaces as 400/401 `ExceededBudget`):
   `{"findings": [], "summary": "skipped: litellm budget exhausted", "skipped": true, "skip_reason": "budget_exhausted", "source": "litellm"}`
+- **litellm reviewer** when the assembled prompt still exceeds the model's
+  context after dropping investigation files and whole-file contents:
+  `skip_reason: "review_data_too_large"` — sending a truncated diff would
+  read as a clean review. The chain walk advances to the next entry of a
+  different harness; an exhausted chain gets the Claude fallback.
 
-  These three `skip_reason` values are the **retryable** set: the review
+  These four `skip_reason` values are the **retryable** set: the review
   phase's Phase R2b walks the perspective's fallback chain on exactly these
   strings, and on nothing else. Emit them verbatim.
 - **Any reviewer** with unresolved protocol/schema/skill (Step 0):
@@ -261,14 +267,9 @@ Every skip object sets `skip_reason` to a short machine-stable
   (`"skill_unresolved"` / `"schema_unresolved"` for the other two gates).
 - **A harness reviewer (codex / litellm)** that cannot allocate its own scratchpad temp
   files: `skip_reason: "scratchpad_unavailable"`.
-- **litellm reviewer** when the assembled prompt still exceeds the model's
-  context after dropping investigation files and whole-file contents:
-  `skip_reason: "review_data_too_large"` — sending a truncated diff would
-  read as a clean review.
 
-  These last two are NOT retryable, like every value outside the three above:
-  the next entry in the chain would hit the same local failure or be handed
-  the same oversized data.
+  `scratchpad_unavailable`, like every value outside the four above, is NOT
+  retryable: the next entry in the chain would hit the same local failure.
 
 The orchestrator treats `skipped: true` as a non-failure and renders
 `⏭️ SKIPPED (理由)`.
