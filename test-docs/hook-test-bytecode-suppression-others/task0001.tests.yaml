@@ -1,0 +1,52 @@
+task_id: task0001
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 15037 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 15070 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_queue_stop_guard.TestHookLoadWritesNoBytecode.test_ac1_flag_is_true_while_the_module_body_runs
+      - tests.test_queue_stop_guard.TestHookLoadWritesNoBytecode.test_ac1_no_bytecode_is_written_for_the_loaded_file
+      - tests.test_queue_stop_guard.TestHookLoadWritesNoBytecode.test_ac1_flag_is_true_while_a_raising_body_runs
+      - tests.test_queue_stop_guard_routeback_record.TestHookLoadWritesNoBytecode.test_ac1_flag_is_true_while_the_module_body_runs
+      - tests.test_queue_stop_guard_routeback_record.TestHookLoadWritesNoBytecode.test_ac1_no_bytecode_is_written_for_the_loaded_file
+      - tests.test_queue_stop_guard_routeback_record.TestHookLoadWritesNoBytecode.test_ac1_flag_is_true_while_a_raising_body_runs
+      - tests.test_failed_run_cleanup_guard.TestHookLoadWritesNoBytecode.test_ac1_flag_is_true_while_the_module_body_runs
+      - tests.test_failed_run_cleanup_guard.TestHookLoadWritesNoBytecode.test_ac1_flag_is_true_while_the_body_runs_behind_run_hook_in_process
+      - tests.test_failed_run_cleanup_guard.TestHookLoadWritesNoBytecode.test_ac1_no_bytecode_is_written_for_the_loaded_file
+      - tests.test_failed_run_cleanup_guard.TestHookLoadWritesNoBytecode.test_ac1_flag_is_true_while_a_raising_body_runs
+      - tests.test_hooks_registration.TestHookLoadWritesNoBytecode.test_ac1_flag_is_true_while_the_module_body_runs
+      - tests.test_hooks_registration.TestHookLoadWritesNoBytecode.test_ac1_no_bytecode_is_written_for_the_loaded_file
+      - tests.test_hooks_registration.TestHookLoadWritesNoBytecode.test_ac1_flag_is_true_while_a_raising_body_runs
+      - tests.test_queue_failure_net_cross_hook.TestHookLoadWritesNoBytecode.test_ac1_flag_is_true_while_the_module_body_runs
+      - tests.test_queue_failure_net_cross_hook.TestHookLoadWritesNoBytecode.test_ac1_no_bytecode_is_written_for_the_loaded_file
+      - tests.test_queue_failure_net_cross_hook.TestHookLoadWritesNoBytecode.test_ac1_flag_is_true_while_a_raising_body_runs
+    red_confirmed: true
+    red_reason: "Against each of the five unchanged loading sites, three tests failed in every module (four in test_failed_run_cleanup_guard, which adds the run_hook_in_process route), all in the starting=False case: AssertionError: False is not True (the probe body recorded the flag as False); AssertionError: 'probe body raised; flag=False' != 'probe body raised; flag=True'; AssertionError: Lists differ ['<tmp>/__pycache__', '<tmp>/__pycache__/probe_hook.cpython-314.pyc'] != [] (the unsuppressed load wrote a cache file beside the probe); and, for run_hook_in_process, AssertionError: Tuples differ: ('False\\n', 0) != ('True\\n', 0). The starting=True subtests passed before the change, because the flag was already True."
+  AC-2:
+    tests:
+      - tests.test_queue_stop_guard.TestHookLoadWritesNoBytecode.test_ac2_flag_holds_the_starting_value_after_a_normal_return
+      - tests.test_queue_stop_guard_routeback_record.TestHookLoadWritesNoBytecode.test_ac2_flag_holds_the_starting_value_after_a_normal_return
+      - tests.test_failed_run_cleanup_guard.TestHookLoadWritesNoBytecode.test_ac2_flag_holds_the_starting_value_after_a_normal_return
+      - tests.test_failed_run_cleanup_guard.TestHookLoadWritesNoBytecode.test_ac2_flag_holds_the_starting_value_after_run_hook_in_process
+      - tests.test_hooks_registration.TestHookLoadWritesNoBytecode.test_ac2_flag_holds_the_starting_value_after_a_normal_return
+      - tests.test_queue_failure_net_cross_hook.TestHookLoadWritesNoBytecode.test_ac2_flag_holds_the_starting_value_after_a_normal_return
+    red_confirmed: false
+    red_reason: "All passed against the unchanged loaders, because nothing changed the flag yet; they pin the restore behavior the change must keep. They were observed to discriminate by a temporary mutation of each loader (the restore line replaced by pass): the tests of this criterion failed in every module with the flag left at True for starting=False; the loaders were restored afterwards."
+  AC-3:
+    tests:
+      - tests.test_queue_stop_guard.TestHookLoadWritesNoBytecode.test_ac3_exception_propagates_and_flag_holds_the_starting_value
+      - tests.test_queue_stop_guard_routeback_record.TestHookLoadWritesNoBytecode.test_ac3_exception_propagates_and_flag_holds_the_starting_value
+      - tests.test_failed_run_cleanup_guard.TestHookLoadWritesNoBytecode.test_ac3_exception_propagates_and_flag_holds_the_starting_value
+      - tests.test_hooks_registration.TestHookLoadWritesNoBytecode.test_ac3_exception_propagates_and_flag_holds_the_starting_value
+      - tests.test_queue_failure_net_cross_hook.TestHookLoadWritesNoBytecode.test_ac3_exception_propagates_and_flag_holds_the_starting_value
+    red_confirmed: false
+    red_reason: "All passed against the unchanged loaders, because an exception already propagated and nothing changed the flag yet; they pin the propagation and restore behavior the change must keep. They were observed to discriminate by the same temporary mutation of each loader (the restore line replaced by pass): all five failed with the flag left at True for starting=False; the loaders were restored afterwards. That the exception is raised while the flag is on is covered by the AC-1 raising-body tests, which were red."
+  AC-4:
+    tests: []
+    red_confirmed: true
+    red_reason: "Executable check is the command-level listing of __pycache__ beneath em-workflow/hooks/ and em-review/hooks/ after python3 -m unittest tests.<module>; no test selects it. Search of tests/ by path and basename: test_destructive_guard_merge_allow.py asserts on __pycache__ only in a synthetic copy and for merge_pr_allow*, and no other module reads a cache of the loaded hooks, so no existing test covers it. Observed before the change, from a start with no __pycache__ beneath either hook directory and PYTHONDONTWRITEBYTECODE and PYTHONPYCACHEPREFIX unset: the unchanged version of each of the five modules (HEAD copy run as a scratch module under tests/, removed afterwards), run alone, left em-workflow/hooks/__pycache__ holding queue_stop_guard.cpython-314.pyc (test_queue_stop_guard, test_queue_stop_guard_routeback_record), failed-run-cleanup-guard.cpython-314.pyc (test_failed_run_cleanup_guard), queue_agent_index, queue_failure_net and queue_launch_guard (test_hooks_registration), queue_failure_net and queue_launch_guard (test_queue_failure_net_cross_hook). After the change, the five modules run alone, one after another from that clean state, each exited 0 and left no __pycache__ beneath em-workflow/hooks/ or em-review/hooks/; the in-process main() call of run_hook_in_process and the child-interpreter hook runs wrote nothing, so neither the main() window nor the child-interpreter flag was needed."
+  AC-5:
+    tests:
+      - tests.test_queue_stop_guard_routeback_record.TestModuleImportsStdlibOnly.test_only_stdlib_imports
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing tests.test_queue_stop_guard_routeback_record.TestModuleImportsStdlibOnly.test_only_stdlib_imports detects a non-standard-library import in its own module, and test_queue_stop_guard.TestQueueStopGuardStdlibOnly covers the hook rather than the test module; no red state occurred for this change. The remaining parts are exit-code and diff-scope results that already held before the change: python3 -m unittest discover -s tests exits 0 (15070 tests OK) and the added imports in the five modules (os, sys, unittest.mock) are standard library; the change set is the five listed test modules plus this record, with no file under em-workflow/ or em-review/ changed."

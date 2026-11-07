@@ -98,10 +98,13 @@ the PreToolUse `Write|Edit|MultiEdit` matcher, after
 
 import importlib.util
 import json
+import os
 import re
+import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 PLUGIN_ROOT = Path(__file__).resolve().parent.parent / "em-workflow"
 HOOKS_JSON_PATH = PLUGIN_ROOT / "hooks" / "hooks.json"
@@ -834,11 +837,20 @@ def load_hook_module(filename):
     like the header regex are bound) but never `main()` -- that only runs
     under `if __name__ == "__main__":`, and the module name used here is
     never `"__main__"`.
+
+    The module body runs with bytecode writing off, so the load leaves no
+    `__pycache__` next to the hook; the caller's `sys.dont_write_bytecode` is
+    put back on every exit, a raising body included.
     """
     path = HOOKS_DIR / filename
     spec = importlib.util.spec_from_file_location(f"_hook_under_test_{filename}", path)
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    previous = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = previous
     return module
 
 
@@ -899,6 +911,90 @@ class TestTaskAssignmentHeaderPatternIsIdentical(unittest.TestCase):
                     regex.search("# Task assignment\n"),
                     f"{filename} wrongly rejects the launch guard's single-space spelling",
                 )
+
+
+class TestHookLoadWritesNoBytecode(unittest.TestCase):
+    """AC-1, AC-2, AC-3 (hook-test-bytecode-suppression-others task0001; FR1,
+    FR2): load_hook_module() turns bytecode writing off only while the hook
+    module body runs, and puts the caller's value back on every exit.
+
+    The tests aim the loader at a probe module in a test-owned temporary
+    directory (the module's HOOKS_DIR constant is replaced for the duration of
+    one call), so a broken loader can never write under `em-workflow/`. Every
+    test sets the starting value of `sys.dont_write_bytecode` itself: in a
+    whole run the inherited value is already True, and a test that inherited
+    it would pass against a loader that never restored the flag."""
+
+    PROBE_NAME = "probe_hook.py"
+    PROBE_RECORDS_FLAG = "import sys\nFLAG_SEEN_BY_BODY = sys.dont_write_bytecode\n"
+    PROBE_RAISES = (
+        "import sys\n"
+        "raise RuntimeError('probe body raised; flag=%r' % sys.dont_write_bytecode)\n"
+    )
+
+    def setUp(self):
+        # Registered first, so the value the test found comes back whether the
+        # test passes, fails or errors.
+        self.addCleanup(setattr, sys, "dont_write_bytecode", sys.dont_write_bytecode)
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.tmpdir = tmp.name
+
+    def load_probe(self, source, starting):
+        """load_hook_module() aimed at a probe with `sys.dont_write_bytecode`
+        set to `starting` just before the call."""
+        (Path(self.tmpdir) / self.PROBE_NAME).write_text(source, encoding="utf-8")
+        sys.dont_write_bytecode = starting
+        with mock.patch.object(sys.modules[__name__], "HOOKS_DIR", Path(self.tmpdir)):
+            return load_hook_module(self.PROBE_NAME)
+
+    def cache_entries(self):
+        return sorted(
+            os.path.join(directory, name)
+            for directory, dirs, files in os.walk(self.tmpdir)
+            for name in dirs + files
+            if name == "__pycache__" or name.endswith(".pyc")
+        )
+
+    def test_ac1_flag_is_true_while_the_module_body_runs(self):
+        for starting in (False, True):
+            with self.subTest(starting=starting):
+                module = self.load_probe(self.PROBE_RECORDS_FLAG, starting)
+                self.assertIs(module.FLAG_SEEN_BY_BODY, True)
+
+    def test_ac1_no_bytecode_is_written_for_the_loaded_file(self):
+        self.load_probe(self.PROBE_RECORDS_FLAG, False)
+        self.assertEqual(self.cache_entries(), [])
+
+    def test_ac1_flag_is_true_while_a_raising_body_runs(self):
+        for starting in (False, True):
+            with self.subTest(starting=starting):
+                with self.assertRaises(RuntimeError) as caught:
+                    self.load_probe(self.PROBE_RAISES, starting)
+                self.assertEqual(
+                    str(caught.exception), "probe body raised; flag=True"
+                )
+
+    def test_ac2_flag_holds_the_starting_value_after_a_normal_return(self):
+        for starting in (False, True):
+            with self.subTest(starting=starting):
+                self.load_probe(self.PROBE_RECORDS_FLAG, starting)
+                self.assertIs(sys.dont_write_bytecode, starting)
+
+    def test_ac3_exception_propagates_and_flag_holds_the_starting_value(self):
+        for starting in (False, True):
+            with self.subTest(starting=starting):
+                with self.assertRaises(RuntimeError):
+                    self.load_probe(self.PROBE_RAISES, starting)
+                self.assertIs(sys.dont_write_bytecode, starting)
+
+    def test_the_module_returned_is_the_one_executed_from_the_given_path(self):
+        module = self.load_probe(self.PROBE_RECORDS_FLAG, False)
+        self.assertEqual(
+            os.path.realpath(module.__file__),
+            os.path.realpath(os.path.join(self.tmpdir, self.PROBE_NAME)),
+        )
+        self.assertEqual(module.__name__, "_hook_under_test_" + self.PROBE_NAME)
 
 
 if __name__ == "__main__":
