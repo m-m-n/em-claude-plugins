@@ -1,0 +1,61 @@
+schema_version: 2
+feature: merge-pr-test-git-env-isolation
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.0
+    confidence: 1.0
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 1.0
+      '2': 0.0
+      '3': 0.0
+  observed_at: '2026-11-07T18:37:17+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.02
+    confidence: 0.98
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.98
+      '2': 0.02
+      '3': 0.0
+  observed_at: '2026-11-07T18:37:17+09:00'
+pre_survey_estimate:
+  files_expected:
+  - tests/test_merge_pr.py
+  changed_lines_approx: 45
+  new_functions_needed: 1
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 1
+  body_change_kind: new_logic
+  change_containment: single_module
+  caller_and_dependency_count: 10
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: HEADのtests/test_merge_pr.py:219-233はGIT_*を保持し、GIT_CONFIG_GLOBALを固定していない。235-239行のconfig・commitは、その環境を使うgit補助関数を呼ぶ。tests/test_merge_preflight.py:153-160には全GIT_*除去とos.devnull指定がある。setUpの環境分離を検証する既存テストはない。接続数は継承9クラスとgit補助関数1。行数・追加関数数は回帰テスト1件を加える場合の概算。ファイル変更・テスト実行は行っていない
+decided_at: '2026-11-07T18:37:17+09:00'
