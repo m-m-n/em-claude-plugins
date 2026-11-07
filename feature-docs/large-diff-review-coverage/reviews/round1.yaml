@@ -1,0 +1,264 @@
+round: 1
+executed_at: '2026-11-07T20:20:00+09:00'
+scope:
+  review_mode: diff
+  base_commit: 400bb009516bc9923d9186b44998ebcf0b4a614c
+  head_commit: 218de7fcee37c2c5f2153874dc0c547e12acfcaa
+  changed_files:
+  - em-review/agents/codex-reviewer.md
+  - em-review/references/review-protocol.md
+  - em-workflow/README.md
+  - em-workflow/agents/codex-reviewer.md
+  - em-workflow/agents/review-evaluator.md
+  - em-workflow/references/batch-mode.md
+  - em-workflow/references/review-evaluation-contract.md
+  - em-workflow/references/review-phase.md
+  - em-workflow/references/review-protocol.md
+  - em-workflow/scripts/review-coverage.py
+  - em-workflow/scripts/review-shards.py
+  - test-docs/large-diff-review-coverage/task0001.tests.yaml
+  - test-docs/large-diff-review-coverage/task0002.tests.yaml
+  - test-docs/large-diff-review-coverage/task0003.tests.yaml
+  - test-docs/large-diff-review-coverage/task0004.tests.yaml
+  - test-docs/large-diff-review-coverage/task0005.tests.yaml
+  - test-docs/large-diff-review-coverage/task0006.tests.yaml
+  - test-docs/llm-led-review/task0004.tests.yaml
+  - tests/test_batch_quiet_output_audit_persistence.py
+  - tests/test_batch_quiet_output_audit_record_contract.py
+  - tests/test_batch_quiet_output_discipline.py
+  - tests/test_codex_reviewer_skip_handling.py
+  - tests/test_reproduction_reviewer_instructions.py
+  - tests/test_review_coverage.py
+  - tests/test_review_coverage_disclosure.py
+  - tests/test_review_phase_coverage_record.py
+  - tests/test_review_phase_llm_led.py
+  - tests/test_review_phase_shard_dispatch.py
+  - tests/test_review_shards.py
+  - tests/test_reviewer_roles_protocol.py
+  - tests/test_sca_triage_receipt_partial_failure.py
+  - tests/test_tier_record_schema_v2.py
+  - tests/test_wrapper_fallback_doc_realignment.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: review_data_too_large
+- run_id: performance#fallback
+  perspective: performance
+  role: fallback
+  source: claude
+  status: completed
+  note: 'batch: review_data_too_large を chain 消尽と同様に扱い Claude 代替を実行（batch-audit.yaml review.codex.large-diff-routing）'
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: review_data_too_large
+- run_id: architecture#fallback
+  perspective: architecture
+  role: fallback
+  source: claude
+  status: completed
+  note: 'batch: review_data_too_large を chain 消尽と同様に扱い Claude 代替を実行（batch-audit.yaml review.codex.large-diff-routing）'
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: review_data_too_large
+- run_id: spec#fallback
+  perspective: spec
+  role: fallback
+  source: claude
+  status: completed
+  note: 'batch: review_data_too_large を chain 消尽と同様に扱い Claude 代替を実行（batch-audit.yaml review.codex.large-diff-routing）'
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 95bfe4616c09d694
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/review-phase.md
+  line: 261
+  title: シャードの diff_cmd_quoted が literal pathspec でなく、計測した範囲と reviewer が取得する範囲がずれ得る
+  description: 'review-shards.py は `--literal-pathspecs` 付きで 1 ファイルずつ計測する（review-shards.py 131-139 行）。一方、シャードの `diff_cmd_quoted` は Phase R0 step 3 と同じ形（48 行: `git -C {project_root} diff {base_commit} --
+    <quoted paths>`）で組み立てると定めており（261-263 行）、`--literal-pathspecs` を含まない。R0 step 3 の検証は先頭 `-`・改行・CR・NUL・symlink しか拒否しないので、`*`・`?`・`[` を含む名前や `:` で始まる名前（例 `:!foo`、`:(exclude)a.txt`）は検証を通り、reviewer 側では Git
+    の glob / magic pathspec として解釈される。glob は他シャードや excess シャードのファイルまで差分に引き込み、計測上 200,000 文字以下のシャードが膨らんで review_data_too_large の skip を招き得る。exclude magic はそのファイル自身を差分から外すため、run が completed になっても当該ファイルは reviewer
+    に見えていないのに、review-coverage.py の coverage は reviewed と数える。この機能が塞ごうとしている「未レビューをクリーンと誤認する」経路が残る。printf %q はシェル向けの引用であり、Git の pathspec 解釈は防がない。R0 の形自体は既存だが、シャード化でその影響が計測とカバレッジの整合に及ぶようになった。'
+  suggestion: Phase R0 step 3 の develop-駆動・standalone 両方のコマンド形に `--literal-pathspecs`（`git -C {project_root} --literal-pathspecs diff ...` / `git --literal-pathspecs diff HEAD -- ...`）を加え、シャード用も同じ形にする。codex-reviewer
+    など diff_cmd_quoted の形を検査・固定しているテストやエージェント記述があれば合わせて直す。glob 文字や `:` 始まりの名前を含む一時リポジトリで、計測対象と取得対象が一致することをテストで確かめる。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: medium のため auto-fix の候補ゲート外。残件として記録
+- stable_id: f2082ec775d1cd14
+  severity: medium
+  category: security
+  file: em-workflow/scripts/review-shards.py
+  line: 140
+  title: 計測の git diff が設定済みの clean フィルターを起動する（既存の露出と同じ範囲）
+  description: 再現手順を読解で追跡し、仕組みは reproduced と判断した。count_diff（462-468 行）は作業ツリーに対して `git diff <diff_base> -- <path>` を実行し、GIT_DIFF_OPTIONS（140-150 行）と GIT_PREFIX（131-139 行）は ext-diff・textconv・fsmonitor を止めるが、`filter.<driver>.clean`
+    / `.process` は止めない。Git は stat が一致しない作業ツリーのファイルを差分のために読むとき clean フィルターを通すので、手順どおりの設定なら tools/clean.sh が走る。ただし重大度は high から medium に下げた。起動されるコマンドは Git 設定（コミットできない側）に依存し、`.gitattributes` だけではコマンドを定義できない。その前提が成り立つ環境では、同じ作業ツリーに対する同じ形の
+    `git diff` を Phase R0 step 3 の diff_cmd_quoted（review-phase.md 48 行）として全 reviewer が既に実行しており、利用者の `git status` / `git add` でも同じフィルターが走る。develop-駆動では implementer がその worktree で任意のコマンドとテストを実行している。review-shards.py
+    は新しい実行経路も権限境界の越境も加えていない。
+  suggestion: 対処するなら review-shards.py だけでなく diff_cmd_quoted と揃えて扱う。develop-駆動（変更がすべてコミット済み）では tree 同士の比較（`git diff <base_commit> HEAD -- <path>`）にすれば作業ツリーを読まないのでフィルターは起動しない。standalone は作業ツリーとの比較が必須なので、既知の制約として
+    review-phase.md か脅威モデルに記載する。
+  reproduction: 検証用リポジトリで `.gitattributes` に `sample.txt filter=probe`、Git 設定に `filter.probe.clean=sh tools/clean.sh` を設定し、正常なファイルをコミットする。その後 tools/clean.sh を `touch probe-ran; cat` に変更し、sample.txt も変更する。このリポジトリを
+    project_root とし、review_mode="diff"、diff_base="HEAD"、changed_files=["sample.txt","tools/clean.sh"]、perspective_count=1 の入力で review-shards.py を実行する。count_diff → git diff → clean フィルターの経路でスクリプトが実行され、probe-ran
+    が作成されることで確認できる。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 70
+  resolution: unresolved
+  resolution_reason: medium のため auto-fix の候補ゲート外。残件として記録
+- stable_id: af149198cb49f1ae
+  severity: medium
+  category: architecture
+  file: em-workflow/scripts/review-coverage.py
+  line: 132
+  title: litellm の failed 判定に使う 2 つの summary が、litellm reviewer が従う protocol に載っていない
+  description: LITELLM_EMPTY_SUMMARIES（132-135 行）は SPEC FR3 の固定文字列と一致し、classify_results は完全一致で failed を返す。em-workflow の review-protocol.md と review-phase.md を検索しても `litellm model output truncated` / `litellm
+    returned non-JSON output` は現れない。生産側は vertex-review プラグイン（project_root の外、NFR2 で変更不可）にしか無く、この文字列契約は SPEC とスクリプト定数にしか残らない。生産側の文言が変われば判定は黙って外れ、切り詰めや非 JSON の litellm 結果が completed の空レビューに戻る。テストはスクリプト内の定数しか確かめないため検出できない。生産側の
+    vertex-reviewer.md は読み取り範囲外のため未確認。
+  suggestion: em-workflow/references/review-protocol.md の Skip Semantics の litellm reviewer の項に、この 2 つの summary を machine-stable な固定値として明記し（vertex-review の変更は不要）、protocol 側の記述とスクリプト定数の一致をテストで固定する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - claude:architecture
+  confidence: 65
+  resolution: unresolved
+  resolution_reason: medium のため auto-fix の候補ゲート外。残件として記録
+- stable_id: bfd5e4e15259133d
+  severity: medium
+  category: architecture
+  file: em-workflow/references/review-phase.md
+  line: 538
+  title: R3a の coverage 2 フィールドを「R5 と同じ list」と書きながら、入力は loop-0 の pass だけ
+  description: 538-549 行は unreviewed_perspectives / partially_reviewed_perspectives を `the same list Phase R5 records at the round-record root` としつつ、loop-0 の pass だけで計算すると定める。Phase R5（1079-1085 行）は Phase
+    R4 の全 loop の pass と再レビュー行を加えて再計算するので、auto-fix loop があると値が食い違う。R5 側に独立した計算手順が明記されているため実害の可能性は低いが、SSOT 内で「同一」と書く記述は R3a の値を R5 に写す誤読を招く。
+  suggestion: R3a の文言を「Phase R5 と同じ coverage operation を、この時点の loop-0 pass だけを入力に実行した値。R5 は Phase R4 の pass を加えて再計算するため、auto-fix loop があると異なり得る」に改め、この文言を固定しているテストのフレーズも合わせる。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - claude:architecture
+  confidence: 70
+  resolution: unresolved
+  resolution_reason: medium のため auto-fix の候補ゲート外。残件として記録
+- stable_id: c8470ba9e0b9f7c2
+  severity: medium
+  category: performance
+  file: em-workflow/references/review-phase.md
+  line: 987
+  title: 分割パスの R4 再レビューが、修正ファイルを含まないシャードまで毎 loop 再ディスパッチする
+  description: 987-999 行は productive loop ごとにシャードを作り直し、dispatched_shards 全体を全観点で再レビューする。review-coverage.py の compute_coverage（is_reviewed、492-494 行）は最終変更 loop 以降の completed run があれば reviewed と数えるので、fixed_files
+    を含まないシャードの再レビューはカバレッジを増やさない。ただし「productive loop 後に全 reviewer を再実行する」は既存規則（1001 行）の素直な拡張で、SPEC FR7 も「Phase R4 re-review applies the same cap separately per loop」と loop ごとの全シャード再ディスパッチを想定している。修正の波及（collateral
+    impact）を見る目的もあるため、設計上のトレードオフとして見ており、自動修正の対象とは考えない。
+  suggestion: コストを抑えるなら、分割パスの再レビューを fixed_files を含むシャード（必要なら前 loop の指摘箇所のファイルを含むシャード）に限り、他は前の pass の completed run をカバレッジとして使う。SPEC FR7 / 既存の全再実行規則との関係を明記した上で判断する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - claude:performance
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: medium のため auto-fix の候補ゲート外。残件として記録
+- stable_id: 04fdd2f28f303eb8
+  severity: medium
+  category: performance
+  file: em-workflow/references/review-phase.md
+  line: 493
+  title: loop 0 で spec の全 diff 経路が失敗しても、R4 の各 loop で同じ経路を最初からやり直す
+  description: 494 行以降の spec order and rescue runs は、全 diff 経路（R2 先頭エントリ → R2b の hop → Claude fallback）がすべて completed なしで終わったときだけ rescue を始めると定め、992 行で R4 再レビューにもそのまま適用する。分割パスでは全 diff は定義上 200,000 文字を超え、修正でほとんど変わらないため、loop
+    0 と同じ失敗を各 loop で繰り返し、逐次 hop の待ち時間とトークンを消費する可能性が高い。SPEC FR11 の手順どおりの動作であり、設計上のトレードオフとして見ている。
+  suggestion: 同じ round の loop 0 で spec の全 diff 経路が rescue に落ちた場合、後続 loop では全 diff 経路を省いて rescue から始める規則を検討する（SPEC FR11 との整合を明記する）。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - claude:performance
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: medium のため auto-fix の候補ゲート外。残件として記録
+- stable_id: 91168e802ecf8e92
+  severity: medium
+  category: spec
+  file: test-docs/llm-led-review/task0004.tests.yaml
+  line: 29
+  title: 別機能のテスト記録の変更が SPEC の Declared Change Set から外れている
+  description: SPEC の Declared Change Set（151-184 行）は、検証時の実変更集合が workflow.yaml の各タスクの files と 2 つの既定エントリ（feature-docs/large-diff-review-coverage/**、test-docs/large-diff-review-coverage/**）に含まれることを求める。workflow.yaml
+    の files（102-245 行）に test-docs/llm-led-review/task0004.tests.yaml は無く、llm-led-review / test-docs を含む行も無い。この変更（29 行）は tests/test_reviewer_roles_protocol.py のメソッド名を test_exactly_three_retryable_reasons_named
+    から test_exactly_four_retryable_reasons_named に改名したことに追随したもので、このままでは検証時の包含チェックに反する。
+  suggestion: (a) tests/test_reviewer_roles_protocol.py のメソッド名を元の test_exactly_three_retryable_reasons_named に戻してアサーションだけ 4 値に更新し、test-docs/llm-led-review/task0004.tests.yaml の変更を取り消す。または (b) workflow.yaml
+    の task0001 の files に test-docs/llm-led-review/task0004.tests.yaml を追加する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - claude:spec
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: medium のため auto-fix の候補ゲート外。残件として記録
+evaluation:
+  round_summary: 'round 1 は 5 観点（comprehensive・security・performance・architecture・spec）が completed。performance・architecture・spec の litellm primary は review_data_too_large で skip し、Claude fallback が completed。reviewer
+    が報告した critical/high は security#0 の 1 件（review-shards.py:140、clean フィルター起動）のみ。再現手順を読解で追跡して仕組みは reproduced と判断し findings に残したが、Git 設定依存で、全 reviewer の diff_cmd_quoted と利用者の git 操作が既に同じフィルターを起動するため新しい露出ではなく、medium
+    に下げた。findings は全 7 件で、すべて medium。cross_validation が true のため全指摘を読解で確認した。reviewer 出力に指示の注入は見当たらなかった。観点別の独自確認: comprehensive=corroborated、security=corroborated（重大度は high から medium に変更）、performance=corroborated（2
+    件とも SPEC FR7・FR11 に沿った設計上のトレードオフ）、architecture=corroborated、spec=corroborated。読み取り予算 10 ファイルを使い切った。'
+  recommended_action: complete
+  action_rationale: 評価後の critical/high は 0 件で、auto-fix の候補ゲートに入る指摘は無い。そのため complete を推奨する。ただし spec の Declared Change Set 外の変更（medium）は verify の包含チェックで失敗するため、verify の前に解消することを勧める。literal pathspec の不一致（medium）は、この機能のカバレッジ判定を誤らせ得るため優先度が高い。
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-large-diff-review-coverage-20261107T110128Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
