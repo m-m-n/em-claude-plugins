@@ -1410,17 +1410,22 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # PINNED_VALIDATOR_TEST_LINE below is unaffected and still asserted. Same
     # rationale: refresh, don't remove.
     #
-    # Refreshed again by plan-feature-docs-route/task0006 (FR8, FR9): the
-    # validator gains the `tasks_patch.feature_docs_removals` field of
-    # `replace_planning` (shape, permission on the correction entry, the
-    # `feature_docs_removal_precondition_errors` function the new entry script
-    # shares, the limits, the in-memory application, `-incomplete` and the
-    # plan agreement) and its `--workflow`, `--journal` and `--feature-dir`
-    # inputs under `--dry-run-apply`; a permitted correction is outside the
-    # report-name check on carried tasks. PINNED_VALIDATOR_TEST_LINE below is
-    # unaffected and still asserted. Same rationale: refresh, don't remove.
+    # Refreshed again by plan-feature-docs-route/task0005 (FR3 to FR7): the
+    # validator gains the other-feature document route. `WRITE_POLICY_ACTIONS`
+    # gains `amend_other_feature`, the scope predicate
+    # `other_feature_doc_in_scope` implements the one scope rule, and the
+    # three codes `other-feature-doc-scope`, `other-feature-doc-request` and
+    # `other-feature-doc-fix` check the action's admission, the stage-1
+    # request result, the equality of the declared fixes with the written
+    # grants, and the shape of the create-plan phase-state's
+    # `other_feature_doc_fixes` list. The envelope's write_policy targets are
+    # now read through one tolerant helper, so a malformed target is reported
+    # instead of raised. The new checks are tested in
+    # tests/test_other_feature_docs_validator.py; PINNED_VALIDATOR_TEST_LINE
+    # below is unaffected and still asserted. Same rationale: refresh, don't
+    # remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "7b74f2c12629ae38b720698e4223b9c280ff26c301b5229c58e54ee09acec09c"
+        "c4e9165c80fa9ada5715b1f149777e98221a16d9bda8a89362808148c137bd4f"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-

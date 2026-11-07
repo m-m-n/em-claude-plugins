@@ -13,7 +13,7 @@ worker's `payload` shape is defined in that worker's own contract,
 `references/contracts/*-contract.md`.
 
 This document does not restate `write_policy`'s internal structure (its
-six actions, its per-target digest-expectation requirement, or the split
+actions, its per-target digest-expectation requirement, or the split
 between existing-file protection and new-file `allowed_write_roots`) —
 that is owned by design-input.md 5.4.2 and the per-worker contracts. It
 also does not restate the workflow patch's operations or fields
@@ -21,7 +21,7 @@ also does not restate the workflow patch's operations or fields
 persistence schema (`references/phase-state.md`, design-input.md 5.6); the
 envelope's `workflow_patch` output field and `prior_packets` input field
 are pointers into those SSOTs, not copies of them. Rule R1's self-write
-rule (below) names `write_policy`'s six actions only to say which observed
+rule (below) names `write_policy`'s actions only to say which observed
 change kinds make a path a self-write; what each action lets the worker do
 stays with the owners named above.
 
@@ -213,7 +213,7 @@ verification: `created` (absent at the pre-dispatch snapshot, present
 now), `modified` (present at both, with changed content, mode or file
 kind) and `deleted` (present at the snapshot, absent now). What each
 action means is owned by `references/contracts/spec-writer-contract.md`
-("The six `write_policy` actions"); this table says only which kinds count
+("The `write_policy` actions"); this table says only which kinds count
 as a self-write:
 
 | Covering entry | `created` | `modified` | `deleted` |
@@ -224,6 +224,7 @@ as a self-write:
 | target `extend_only` | not a member | member | not a member |
 | target `regenerate` | not a member | member only when its `source` is a member | not a member |
 | target `preserve` | not a member | not a member | not a member |
+| target `amend_other_feature` | not a member | member | not a member |
 | not a target, inside an `allowed_write_roots` entry | member | not a member | not a member |
 | neither | not a member | not a member | not a member |
 

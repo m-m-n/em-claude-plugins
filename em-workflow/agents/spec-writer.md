@@ -49,11 +49,11 @@ requirements-analyst.
 
 Before writing anything, resolve each target's `action` in
 `write_policy.targets` exactly as
-`references/contracts/spec-writer-contract.md` defines — the six actions
-(`create` / `replace_own` / `replace_authorized` / `preserve` /
-`extend_only` / `regenerate`), and the split between `targets` (protection
-for already-known paths) and `allowed_write_roots` (permission to create
-under a directory). Do not restate that model here; follow it. In
+`references/contracts/spec-writer-contract.md` defines — the actions this
+worker receives (`create` / `replace_own` / `replace_authorized` /
+`preserve` / `extend_only` / `regenerate`), and the split between `targets`
+(protection for already-known paths) and `allowed_write_roots` (permission
+to create under a directory). Do not restate that model here; follow it. In
 particular:
 
 - **Do not compute or re-verify digests.** The orchestrator verifies
