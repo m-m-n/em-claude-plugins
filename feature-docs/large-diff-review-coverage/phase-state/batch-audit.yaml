@@ -1,0 +1,42 @@
+schema_version: 1
+feature: large-diff-review-coverage
+records:
+- question_id: create-spec.command-approval
+  packet_id: null
+  answered_at: '2026-11-07T18:10:00+09:00'
+  source: batch-decision-table
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: python3 -m unittest discover -s tests
+  normalized_answer: 既に承認済み
+  resolution_note: 'gate: create-spec.command-approval; 未承認コマンドなし、自動記録は 0 件'
+- question_id: create-spec.codex.spec-shard
+  packet_id: null
+  answered_at: '2026-11-07T18:10:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: spec は全差分優先、全経路失敗時のみシャード救済。救済 run の未実装系指摘は未検証で residual 外
+  normalized_answer: spec は全差分優先、全経路失敗時のみシャード救済。救済 run の未実装系指摘は未検証で residual 外
+  resolution_note: 'user-directed Codex consultation, turns: 2, harness entry: codex;
+    1 回目は全差分のみ、2 回目で折衷案。evaluator は 10 ファイル制限と R4 で動かない点で弱い'
+- question_id: create-spec.codex.shard-cap
+  packet_id: null
+  answered_at: '2026-11-07T18:10:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 1 ラウンド 24 primary dispatch、観点均等割、超過は開示
+  normalized_answer: 1 ラウンド 24 primary dispatch、観点均等割、超過は開示
+  resolution_note: 'user-directed Codex consultation, turns: 2, harness entry: codex;
+    Codex は再試行・R4 込みと優先順配分を提案。計算を単純にするため primary のみの均等割へ変更（Claude 判断）'
+- question_id: create-spec.codex.timeout-precedence
+  packet_id: null
+  answered_at: '2026-11-07T18:10:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: exit 124 は JSON パースより先に判定、harness_unavailable、途中の指摘は保持しない
+  normalized_answer: exit 124 は JSON パースより先に判定、harness_unavailable、途中の指摘は保持しない
+  resolution_note: 'user-directed Codex consultation, turns: 2, harness entry: codex;
+    Codex は新理由 timeout と指摘保持を提案。保持は R2b の置換規則変更が要り、見送り（Claude 判断）'

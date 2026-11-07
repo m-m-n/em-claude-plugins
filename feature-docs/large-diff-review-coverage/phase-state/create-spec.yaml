@@ -1,11 +1,11 @@
 schema_version: 1
 feature: large-diff-review-coverage
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: c2dfca6df7e4ff3c89030d66b9659296d0dc5ed9
 last_input_digest: sha256:0ff538740248857b1a3329fa611f92b3fd08da40be4fd342d71a50bcf4ba7b69
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -166,14 +166,21 @@ worker_runs:
     tests/test_review_phase_llm_led.py: sha256:8bd8728a07722e16b4bf76664172409036ad3a3b142bdec73030444589ba6bba
     tests/test_reviewer_roles_protocol.py: sha256:f236f4e39bd8a764d4f8ce6285c559a4281d7688ab87a65185c24200e14d3017
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:0ff538740248857b1a3329fa611f92b3fd08da40be4fd342d71a50bcf4ba7b69
-  output_digest: null
+  output_digest: sha256:876af527f779aa3828d313542105d224d7ae61ca77c4f723cb8e80cb6550a0c4
   dispatch_digest_inputs:
     em-workflow/references/contracts/spec-writer-contract.md: sha256:c66e457a4a68d860f757f9e6cae377b6918d29a3f3152d9a12fc92570303c5f2
     em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
     em-workflow/references/templates/spec-document.md: sha256:a5d0106c39a5df7dc2365357a9546588275ed6c7a1651c866e75fa327a7fa592
-artifacts: []
+  self_write_set: []
+artifacts:
+- path: feature-docs/large-diff-review-coverage/REQUIREMENTS.md
+  sha256: sha256:a009cd9d7573c0277d3936531d3b50bbec7b1f99955dc05c0f726698f6b2a03c
+  produced_by: create-spec-run-0003
+- path: feature-docs/large-diff-review-coverage/SPEC.md
+  sha256: sha256:8b5e62196a6ad8d7ed50f7e41a28fb60f505f92ce6f11e8898b9213949d7ce81
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
