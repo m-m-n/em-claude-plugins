@@ -81,7 +81,7 @@ workflow:
   status: completed
   completed_at_commit: 221f633692a5babb745a167ca788d982b0555ff2
 - id: implement
-  status: completed
+  status: pending
   base_commit: 7f45acbf9607525e84dcb62855b5de98d9556d3c
   completed_at_commit: 2d8f8ec2041ae6cf87396b6078f5529883004675
 - id: review
@@ -310,6 +310,28 @@ tasks:
     status: merged
     notes: null
     branch: em-workflow/plan-feature-docs-route/task0009
+  task0010:
+    title: Step A.6 restoration written once, in the last correction's Write
+    plan: tasks/task0010.md
+    files:
+    - em-workflow/skills/develop/SKILL.md
+    - tests/test_feature_docs_entry_develop_docs.py
+    skills: []
+    domains:
+    - data-persistence
+    - api-contract
+    complexity: high
+    requirements:
+    - FR8
+    - FR9
+    - NFR3
+    status: pending
+    notes: null
+    provenance:
+      source: review
+      source_ids:
+      - 39b64a741a70ebad
+      review_round: 1
 review:
   status: pending
   plan:
@@ -427,6 +449,7 @@ requirements:
     - task0006
     - task0007
     - task0008
+    - task0010
     tests:
     - TS-6
     - TS-7
@@ -440,6 +463,7 @@ requirements:
     - task0006
     - task0007
     - task0008
+    - task0010
     tests:
     - TS-6
     - TS-7
@@ -490,6 +514,7 @@ requirements:
     - task0007
     - task0008
     - task0009
+    - task0010
     tests:
     - TS-9
   NFR4:
