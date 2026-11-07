@@ -88,3 +88,15 @@ records:
   resolution_note: 'task_id: task0004; deviation path tests/test_tier_record_schema_v2.py
     not auto-added to files; missing evidence part: the identifier of an existing AC-n or
     requirement id that would otherwise be dropped (path shape and observable outcome were given)'
+- question_id: review.codex.large-diff-routing
+  packet_id: null
+  answered_at: '2026-11-07T20:00:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'B: review_data_too_large または Codex タイムアウトで完了しない観点は、chain 消尽と同様に Claude 代替レビュアーを 1 回出す'
+  normalized_answer: 'B: review_data_too_large または Codex タイムアウトで完了しない観点は、chain 消尽と同様に Claude 代替レビュアーを 1 回出す'
+  resolution_note: 'user-directed Codex consultation, turns: 1, harness entry: codex; Opus escalation: not run;
+    差分は約 430,000 バイト。導入済みの手順では review_data_too_large は再試行不可で代替も出ず、3 観点が未実施のまま開示もされない。
+    選択肢: A 手順どおり / B 代替レビュアーで補う / C 統合ブランチの分割手順で自己レビュー / D 先に codex へ回す。
+    Codex は B を選択（未導入コードに依存しない、逸脱と未実施を記録できる）。完了しない観点は unreviewed_perspectives に載せる'

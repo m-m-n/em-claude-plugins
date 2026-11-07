@@ -90,7 +90,7 @@ workflow:
   completed_at_commit: a62d61a446077a5f8978d737420c513a0de542d9
   base_commit: 400bb009516bc9923d9186b44998ebcf0b4a614c
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
 - id: retrospect
@@ -255,10 +255,19 @@ tasks:
     branch: em-workflow/large-diff-review-coverage/task0006
     notes: null
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
   residual_critical_high: 0
   needs_rework: false
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - performance
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
 requirements:
   FR1:
     title: Codex タイムアウトの区別
