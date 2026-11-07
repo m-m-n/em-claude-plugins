@@ -1410,18 +1410,22 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # PINNED_VALIDATOR_TEST_LINE below is unaffected and still asserted. Same
     # rationale: refresh, don't remove.
     #
-    # Refreshed again by plan-feature-docs-route/task0004 (FR2, NFR2):
-    # `validate_task_entry` rejects a `replace_all` task entry (a
-    # `replace_planning` patch's `tasks_patch.entries` item) whose `files`
-    # reach `feature-docs/**`, with the new code `plan-task-feature-docs`:
-    # one error per offending path, a non-string element and a non-list
-    # `files` left to the existing `files` code, carried tasks never checked.
-    # The `append` branch and its `rework-task-feature-docs` code are
-    # unchanged, and the stale comment saying replace_planning entries are
-    # never checked is corrected. PINNED_VALIDATOR_TEST_LINE below is
-    # unaffected and still asserted. Same rationale: refresh, don't remove.
+    # Refreshed again by plan-feature-docs-route/task0005 (FR3 to FR7): the
+    # validator gains the other-feature document route. `WRITE_POLICY_ACTIONS`
+    # gains `amend_other_feature`, the scope predicate
+    # `other_feature_doc_in_scope` implements the one scope rule, and the
+    # three codes `other-feature-doc-scope`, `other-feature-doc-request` and
+    # `other-feature-doc-fix` check the action's admission, the stage-1
+    # request result, the equality of the declared fixes with the written
+    # grants, and the shape of the create-plan phase-state's
+    # `other_feature_doc_fixes` list. The envelope's write_policy targets are
+    # now read through one tolerant helper, so a malformed target is reported
+    # instead of raised. The new checks are tested in
+    # tests/test_other_feature_docs_validator.py; PINNED_VALIDATOR_TEST_LINE
+    # below is unaffected and still asserted. Same rationale: refresh, don't
+    # remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "e49cf2fa5bdfbbdc5c6d344ccf6e6adf3f9d9d237574dbf61ee97cb6bc8ccbf6"
+        "c4e9165c80fa9ada5715b1f149777e98221a16d9bda8a89362808148c137bd4f"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-
