@@ -250,7 +250,7 @@ tasks:
     - FR15
     - FR16
     - FR18
-    status: in_progress
+    status: merged
     branch: em-workflow/large-diff-review-coverage/task0006
     notes: null
 review:
