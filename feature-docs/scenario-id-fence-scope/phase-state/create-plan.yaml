@@ -1,7 +1,7 @@
 schema_version: 1
 feature: scenario-id-fence-scope
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 0075eb7c9eeb35b2b1c9a10b560b8249abddcee9
 last_input_digest: sha256:7c19055a46ddbabf6e2cbd9e8142831a93ca0fbef008ecf1ef0bc5a869e61835
@@ -40,7 +40,7 @@ artifacts:
   produced_by: create-plan-run-0001
 patches:
 - patch_id: scenario-id-fence-scope-plan-p0001
-  status: validated
+  status: applied
   base_input_digest: sha256:7c19055a46ddbabf6e2cbd9e8142831a93ca0fbef008ecf1ef0bc5a869e61835
   base_workflow_blob: b16aa2362b5b26b56f10268547410ff8341c294a
 progress_fingerprint: null
