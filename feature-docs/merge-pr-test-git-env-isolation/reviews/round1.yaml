@@ -1,0 +1,72 @@
+round: 1
+executed_at: '2026-11-07T19:23:26+09:00'
+scope:
+  review_mode: diff
+  base_commit: 242456532b5f645f5ede6d999a4ef305b4120974
+  head_commit: 1b64d19b3b2719a602be76b237d4c5a408a2f99e
+  changed_files:
+  - test-docs/merge-pr-test-git-env-isolation/task0001.tests.yaml
+  - tests/test_merge_pr.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - spec
+  discretionary: []
+  cross_validation: false
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings: []
+evaluation:
+  round_summary: 'round 1 (diff)。4 観点の reviewer はすべて findings 0 件だった。評価者自身の読解でも、重大度 medium 以上の問題は見つからなかった。MergePrTestCase.setUp は os.environ のコピーから GIT_ で始まるキーを tests/test_merge_preflight.py と同じ形 (list(env) を走査して key.startswith("GIT_") を削除) で取り除く。そのうえで GIT_CONFIG_NOSYSTEM の隣に GIT_CONFIG_GLOBAL=os.devnull を足し、real_env は env から PATH だけを差し替えて作る。既存の GH_* 等の削除と既存の値も変わっていない (FR1/FR2/FR4)。TestGitEnvIsolation が os.environ を変えるのは mock.patch.dict の範囲内だけで、自前の git 呼び出しには GIT_ を除いた環境を使い、--git-dir/--work-tree も明示している。駆動したインスタンスの doCleanups は finally で必ず実行され、プロセス環境が元に戻ったこともクリーンアップで確かめている (FR3/NFR3)。base からの変更は tests/test_merge_pr.py と test-docs/・feature-docs/ 配下の記録だけで、em-workflow/ は変わっていない (NFR1)。追加の import は contextlib と unittest.mock だけで、どちらも標準ライブラリ (NFR2)。報告の閾値に届かない観察が 2 点ある。(1) test_ac5_an_outer_git_dir_cannot_redirect_this_test_cases_own_git_calls は、setUp が self.git_env を作った後で外側の GIT_ 変数を入れる。このため、self.git_env の GIT_ 削除そのものが壊れても検出できない。検出できるのは env の明示指定が抜けた場合だけで、これは task0001.md の設計どおり。(2) drive() は結果オブジェクトを持たないインスタンスで
+    doCleanups を呼ぶため、クリーンアップが失敗したときの例外の中身が失われ、''the cleanups of the driven instance failed'' という文言だけが残る。どちらも low 相当なので findings には入れていない。reviewer 出力に注入の試みは無かった。テストは実行しておらず、記録にある実行結果は照合していない。観点ごとの確認状況: security: corroborated / comprehensive: corroborated / performance: corroborated / spec: corroborated。読んだもの: 差分 (tests/test_merge_pr.py と test-docs/merge-pr-test-git-env-isolation/task0001.tests.yaml)、tests/test_merge_pr.py の MergePrTestCase 周辺、feature-docs/merge-pr-test-git-env-isolation/SPEC.md、feature-docs/merge-pr-test-git-env-isolation/tasks/task0001.md、tests/test_merge_preflight.py (grep)。10 ファイルの予算内に収まっている。'
+  recommended_action: complete
+  action_rationale: どの観点からも medium 以上の指摘は無かった。評価者が独立に読んだ結果でも、SPEC の FR1〜FR4・NFR1〜NFR4 と task0001 の AC-1〜AC-7 に対する欠落や不具合は見つからなかった。修正も追加のラウンドも要らない。
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-merge-pr-test-git-env-isolation-20261107T102100Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
