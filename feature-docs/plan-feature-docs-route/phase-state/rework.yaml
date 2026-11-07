@@ -1,0 +1,38 @@
+schema_version: 1
+feature: plan-feature-docs-route
+phase: rework
+status: in_progress
+generation: 1
+base_revision: da31d8b11e925147122756df95d9055d6811f708
+last_input_digest: sha256:f004122c50d50e79a65152405d06f32f9ffd4f59f638a0bf598ced85bf0c7f87
+active_request_id: rework-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: rework-run-0001
+  status: dispatched
+  input_digest: sha256:f004122c50d50e79a65152405d06f32f9ffd4f59f638a0bf598ced85bf0c7f87
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/rework-planner-contract.md: sha256:5856d1d386002d2c68cec28475a3a56a09a4cde73cdc737e01b6f708960151b9
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/plan-feature-docs-route/IMPLEMENTATION.md: sha256:87bd590579955c7dac3352d897dd964400caf0ca7d352c0fe8c5538139a4bd75
+    feature-docs/plan-feature-docs-route/SPEC.md: sha256:c2331d36f4978398751e593c035ee381a8f1fbb6bdf43f7ea1cce1bb726aaa29
+    feature-docs/plan-feature-docs-route/VERIFICATION.md: sha256:71872275512b5b5ad3a6319fe9afe4fb244b01d72ea3f9d47345f2b79c7255e9
+    feature-docs/plan-feature-docs-route/tasks/task0001.md: sha256:0e12285e8a57780511b3e34b077d1174e6e730e2e13c604f57c7b79d694e86f3
+    feature-docs/plan-feature-docs-route/tasks/task0002.md: sha256:3d34c16b22176067a8d1e935ff58dc18e3415a4aed33a144a8b5cfbb47ac2e9f
+    feature-docs/plan-feature-docs-route/tasks/task0003.md: sha256:ce88f4576b8e5e641d7d71109e33a8dc16a648c359ef7ae8fd55eee0b5483f43
+    feature-docs/plan-feature-docs-route/tasks/task0004.md: sha256:d77d46c54f5d69fd2411d6f21756d4c767dd4e41f22fda6659280e52255aeebb
+    feature-docs/plan-feature-docs-route/tasks/task0005.md: sha256:5fa2307aab7218249fda5d04352507f734a0071a9b38db976f24259545dc93f2
+    feature-docs/plan-feature-docs-route/tasks/task0006.md: sha256:6297ece3cab935c6efa305758a93f3a14f6be52a7c2bf19040127cad99512347
+    feature-docs/plan-feature-docs-route/tasks/task0007.md: sha256:119bd4561a76a4d3b66e813b768ef665eab4bd669e759f518cdd71492869d6ab
+    feature-docs/plan-feature-docs-route/tasks/task0008.md: sha256:0fca871d647894e5f89127a4cd0aaf4d0bc8921abf2e497d3e3a3b9b92b68991
+    feature-docs/plan-feature-docs-route/tasks/task0009.md: sha256:2e52058b1155cf253ff44d9f3f816a04a2cc0f4774013bba28bfd4609435df78
+    feature-docs/plan-feature-docs-route/workflow.yaml: sha256:f308ff28648cce2c8e98885199a66fd82f9b9c600db439289053e3db804c0a54
+artifacts: []
+patches: []
+stale_redispatch_count: 0
+last_error: null
