@@ -1,6 +1,7 @@
 task_id: task0006
-baseline_failures: []          # python3 -m unittest discover -s tests before any edit: 14568 tests OK (skipped=1)
-final_failures: []             # re-executed after the last edit: python3 -m unittest discover -s tests (14637 tests OK, skipped=1) and check-plugin-invariants.py . (exit 0)
+baseline_failures:             # re-measured after merging the parent into the task branch (parent-side adoption of tests/test_tier_record_schema_v2.py): python3 -m unittest discover -s tests, 14906 tests, 1 failure; before the first merge attempt the baseline was empty (14568 tests OK, skipped=1)
+  - tests.test_tier_record_schema_v2.TestReviewDocumentsUntouched.test_review_phase_md_unchanged
+final_failures: []             # re-executed after the last edit: python3 -m unittest discover -s tests on the branch merged with the parent (14906 tests OK, skipped=1) and check-plugin-invariants.py . (exit 0)
 acceptance_tests:
   AC-1:
     tests:
