@@ -1,0 +1,20 @@
+schema_version: 1
+feature: hook-test-bytecode-suppression-others
+phase: create-spec
+status: in_progress
+generation: 1
+base_revision: 0516197daa51e6c257064923fcd80f1df1e1b6df
+last_input_digest: null
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:e8e74185fc698ef13843b8427dd651499ad27e61e89a15b6aeb6d1c5528181c6
+  output_digest: null
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
