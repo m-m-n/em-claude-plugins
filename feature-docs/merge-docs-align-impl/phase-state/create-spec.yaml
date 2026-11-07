@@ -1,11 +1,11 @@
 schema_version: 1
 feature: merge-docs-align-impl
 phase: create-spec
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: 0bab3741bb7360751b99be8684f37c9ee04667ee
 last_input_digest: sha256:215768a67477f7d4cba0b57675b5f9c9aa28239b005107f70f8fb4ba3842a487
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -27,13 +27,18 @@ worker_runs:
     tests/test_merge_skill_doc.py: sha256:d8e7801e52b4518b837d5bc8a600d66ec4a9f98578771f0ce5e0244c0cbbd3c5
   self_write_set: []
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:215768a67477f7d4cba0b57675b5f9c9aa28239b005107f70f8fb4ba3842a487
-  output_digest: null
+  output_digest: sha256:a1f4ece3bae8046d3dfe347dd0239893942c887c1737eb2c302b4607804f8090
   dispatch_digest_inputs:
     em-workflow/references/contracts/spec-writer-contract.md: sha256:c66e457a4a68d860f757f9e6cae377b6918d29a3f3152d9a12fc92570303c5f2
     em-workflow/references/templates/spec-document.md: sha256:a5d0106c39a5df7dc2365357a9546588275ed6c7a1651c866e75fa327a7fa592
-artifacts: []
+  self_write_set:
+  - feature-docs/merge-docs-align-impl/SPEC.md
+artifacts:
+- path: feature-docs/merge-docs-align-impl/SPEC.md
+  sha256: sha256:f4f8c0d95ce406ea9d7c64a321174fd6f31bce1942699cd86b3a5ef73940644a
+  produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
