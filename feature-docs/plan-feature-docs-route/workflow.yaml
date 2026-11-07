@@ -260,8 +260,9 @@ tasks:
     - FR9
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
     notes: null
+    branch: em-workflow/plan-feature-docs-route/task0007
   task0008:
     title: Step A.6 feature-docs judgment and the correction dispatch
     plan: tasks/task0008.md
@@ -279,8 +280,9 @@ tasks:
     - FR9
     - NFR1
     - NFR3
-    status: pending
+    status: in_progress
     notes: null
+    branch: em-workflow/plan-feature-docs-route/task0008
   task0009:
     title: create-plan grants, fix recording and the declared change set
     plan: tasks/task0009.md
@@ -304,8 +306,9 @@ tasks:
     - NFR1
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
     notes: null
+    branch: em-workflow/plan-feature-docs-route/task0009
 review:
   status: pending
   rounds_completed: 0
