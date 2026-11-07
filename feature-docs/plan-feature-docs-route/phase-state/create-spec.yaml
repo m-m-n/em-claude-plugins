@@ -1,7 +1,7 @@
 schema_version: 1
 feature: plan-feature-docs-route
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 9be2207e84f439971a8d23b33c49791576f0459d
 last_input_digest: sha256:8e46ce6c6ec18407aaa144d4e70404d2f49826c95d685724cde46118d400b4da
