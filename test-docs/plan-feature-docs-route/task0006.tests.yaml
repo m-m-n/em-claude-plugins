@@ -1,6 +1,7 @@
 task_id: task0006
-baseline_failures: []          # 4a before any change: python3 -m unittest discover -s tests -> Ran 15037 tests, OK (skipped=1)
-final_failures: []             # re-executed after the implementation and after this record was written: python3 -m unittest discover -s tests -> OK (skipped=1); see the commit that carries this record
+baseline_failures:             # 4a before any change: python3 -m unittest discover -s tests -> Ran 15037 tests, OK (skipped=1). Refreshed after parent-side adoption (task0001, task0002, task0003 and task0005 had merged): the same command on the adoption commit ran 15393 tests and failed in the one test below only, because the byte pin the adopted parent carries is the digest of the parent's validator and the merged validator also holds this task's edit; nothing else was inherited red
+  - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical
+final_failures: []             # re-executed after the re-implementation on the updated parent and after this record was written: python3 -m unittest discover -s tests -> OK (skipped=1)
 acceptance_tests:
   AC-1:
     tests:
@@ -43,4 +44,4 @@ acceptance_tests:
     tests:
       - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical
     red_confirmed: true
-    red_reason: "After the validator change and before the refresh, python3 -m unittest discover -s tests -p test_gate_option_vocabulary.py failed in test_validate_worker_output_py_byte_identical with AssertionError (the digest of the changed validator against the pinned 2e7a97b9...). The pin was refreshed with a comment naming plan-feature-docs-route/task0006 (a comment cannot be asserted by a test; it was checked by reading), and the full suite command passes."
+    red_reason: "After the validator change and before the refresh, python3 -m unittest discover -s tests -p test_gate_option_vocabulary.py failed in test_validate_worker_output_py_byte_identical with AssertionError (the digest of the changed validator against the pinned 2e7a97b9...). The pin was refreshed with a comment naming plan-feature-docs-route/task0006 (a comment cannot be asserted by a test; it was checked by reading). After the parent-side adoption the same test failed again against the merged validator (the baseline above) until the re-implementation refreshed the pin to the digest of the merged validator, and the full suite command passes."
