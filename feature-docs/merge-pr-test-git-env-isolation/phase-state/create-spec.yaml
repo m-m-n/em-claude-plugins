@@ -1,7 +1,7 @@
 schema_version: 1
 feature: merge-pr-test-git-env-isolation
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 86847f0a9d019f96baa6696cc9ffb9e5b11037a7
 last_input_digest: sha256:e48e8ae37d18aaf406409daaf192174110929816ee3adce278aad7521af092e5
