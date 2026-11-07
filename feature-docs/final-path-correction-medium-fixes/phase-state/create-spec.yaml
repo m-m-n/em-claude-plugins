@@ -1,7 +1,7 @@
 schema_version: 1
 feature: final-path-correction-medium-fixes
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 084b76d1004787639661e6ce1bbb47656436d930
 last_input_digest: sha256:1137c053cdc681f346c752a300cc55a4bab3ee18b4aac602bf0433c0fff267d9

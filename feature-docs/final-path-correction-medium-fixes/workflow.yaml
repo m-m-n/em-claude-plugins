@@ -1,0 +1,214 @@
+schema_version: 1
+feature: final-path-correction-medium-fixes
+created: '2026-11-07'
+base_branch: main
+goal: |
+  em-workflow の最終パス訂正の検証で、レビューに残った medium 指摘 7 件を直す
+
+  ## 現象 (必須)
+
+  em-workflow の feature `subagent-report-write-block` のレビュー 1 回目で、最終パスの訂正まわりに medium の指摘が 7 件残った。medium は自動修正の対象外なので、どれも未修正のまま統合ブランチ `em-workflow/subagent-report-write-block/integration` にある。
+
+  セキュリティ（訂正の検証をすり抜ける）:
+
+  1. 訂正入口のパッチが `entries` と `requirements_patch` を制限なく通す。path_corrections と同じパッチで新規タスクの追加と要件の `status: excluded` ができる（`em-workflow/scripts/validate-worker-output.py:2534`、stable_id `73c084892e91326c`）
+  2. `new_path` に任意の文章を入れると条件 5 の比較を通る。受け入れ条件へ指示を足せる（同 `:1686`、stable_id `7dad93fa93454f47`）
+  3. 条件 5 が対象外タスクの計画を比較しない。tasks/ への書き込み権限より比較範囲が狭い（同 `:1820`、stable_id `041b04abfc9d5b87`）
+
+  動作（訂正手順が完走しない・抜ける）:
+
+  1. 未起動タスクにも違反があると、失敗タスクだけ訂正しても検証で却下され再開できない（`em-workflow/scripts/report-name-entry.py:107`、stable_id `4409a460572aac40`）
+  2. 再計画パスでは条件 5 が本文の更新まで拒否し、違反を持つタスクを運べない（`validate-worker-output.py:2632`、stable_id `dc9fcac543811a2d`。Evaluator の読解による指摘で未実行）
+  3. 同じ旧ファイル名を別々の新名へ訂正すると正しい文書が拒否される（同 `:1725`、stable_id `a848a53b57fb0188`）
+  4. 旧ファイル名だけの参照が残っても訂正済みとして通る（同 `:1742`、stable_id `25461d162dc42425`）
+
+  ## 再現手順 (必須)
+
+  1. 統合ブランチの `feature-docs/subagent-report-write-block/reviews/round1.yaml` を読む。各指摘の description と reproduction に再現の入力がある
+  2. 1〜3 は `tests/test_final_path_correction.py` の DemoRepo / make_workflow / make_patch で組み立て、`validate_worker_result` を dry_run で実行するとエラーなしで通る
+
+  ## 期待する挙動 (必須)
+
+  訂正の検証がパス以外の変更を通さず、REPORT 系の名前を持つ計画の訂正が、複数タスク・再計画を含めて完走する。
+
+  ## 完了の定義 (必須)
+
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある
+
+  ## 該当箇所 (任意)
+
+  - `em-workflow/scripts/validate-worker-output.py`
+  - `em-workflow/scripts/report-name-entry.py`
+  - `em-workflow/references/workflow-patch.md`
+  - `tests/test_final_path_correction.py`（現在の挙動を固定しているテストがある）
+
+  ## 実害・発生条件 (任意)
+
+  統合ブランチの PR がマージされたあとに main へ入る。修正は PR のマージ前後どちらでもよい。
+parent_branch: em-workflow/final-path-correction-medium-fixes/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.18
+      '2': 0.82
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.03
+      '2': 0.96
+      '3': 0.01
+  at: '2026-11-07T15:16:07+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 3f6aea9ac3c86909828473b85faa96921b79f8d2
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI を含まない
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: 6a756561190232fef9ed43e36f5972488eda69d7
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: Limit entries and requirements_patch on the correction entry
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: Restrict the form of new_path
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: Compare the plans of non-target tasks on the correction entry
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: Align the entry's targets with the validator
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: Limit condition 5's comparison to outside the Re-planning path
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: Compare positionally, so one old file name may map to different new names
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: Reject a bare old file name left behind
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: State the rules in the owning documents
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR9:
+    title: Reject plan documents created on the correction entry
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: Unchanged behavior outside corrections
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: Fail closed
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: Literal paths
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: No new gate
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
