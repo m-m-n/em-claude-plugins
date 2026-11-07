@@ -55,7 +55,7 @@ file — no separate grant is needed.
 write_policy:
   targets:
     - path: feature-docs/example/REQUIREMENTS.md
-      action: create                # create | replace_own | replace_authorized | preserve | extend_only | regenerate
+      action: create                # create | replace_own | replace_authorized | preserve | extend_only | regenerate | amend_other_feature
       expect_digest: null            # action-dependent, see table below
       authorization: null
     - path: feature-docs/example/SPEC.md
@@ -64,7 +64,7 @@ write_policy:
       authorization: null
 ```
 
-### The six `write_policy` actions
+### The `write_policy` actions
 
 | action | `expect_digest` | worker behaviour |
 |---|---|---|
@@ -74,6 +74,10 @@ write_policy:
 | `preserve` | required | Read-only: the worker must not write this path, only use its content as input. |
 | `extend_only` | required | The worker may add new keys but must not modify or remove any existing key. |
 | `regenerate` | required | The worker may overwrite this path only if the dispatch also changed its declared `source` file in the same dispatch; if `source` was not changed, the worker must not write this path either. |
+| `amend_other_feature` | required (the digest the orchestrator recorded for the path at dispatch) | The worker may modify the content of the existing file; it must not create, delete or change the file kind. Valid only on implementation-planner dispatches of create-plan. Its scope is cited from `references/contracts/planner-contract.md`, `## Other-feature documents`. |
+
+The `amend_other_feature` route reuses neither `replace_own`,
+`replace_authorized` nor the artifact-overwrite batch policy.
 
 ### Who verifies `expect_digest`
 

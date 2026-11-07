@@ -10,7 +10,7 @@ allocation, metadata derivation, the `rework_index` coverage rules, state
 transition ordering, the eleven invariants) is owned by
 `references/rework-task-synthesis.md`; this contract states the
 rework-planner's dispatch input/output around that shape without restating
-its content. The common `write_policy` field's path-level model (the six
+its content. The common `write_policy` field's path-level model (the
 actions, the `targets` / `allowed_write_roots` split, `expect_digest`
 requirements) is owned by `references/contracts/spec-writer-contract.md`
 and is cited by path below, not restated.

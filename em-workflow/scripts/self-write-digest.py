@@ -38,9 +38,9 @@ Member shapes:
   write_policy    the dispatch envelope's `write_policy` object; only its
                   `targets` list is read, each entry with `path`, `action`
                   (`create`, `replace_own`, `replace_authorized`,
-                  `extend_only`, `regenerate` or `preserve`) and `source`
-                  (required when the action is `regenerate`); no target
-                  path is repeated.
+                  `extend_only`, `regenerate`, `preserve` or
+                  `amend_other_feature`) and `source` (required when the
+                  action is `regenerate`); no target path is repeated.
   allowed_write_roots
                   the envelope's top-level list of strings. Roots and paths
                   are compared lexically, segment by segment; no path is
@@ -97,6 +97,7 @@ ACTIONS = frozenset(
         "extend_only",
         "regenerate",
         "preserve",
+        "amend_other_feature",
     }
 )
 KINDS = frozenset({"created", "modified", "deleted"})
@@ -110,6 +111,7 @@ TARGET_ADMITTED_KINDS = {
     "replace_authorized": frozenset({"modified"}),
     "extend_only": frozenset({"modified"}),
     "preserve": frozenset(),
+    "amend_other_feature": frozenset({"modified"}),
 }
 ROOT_ADMITTED_KINDS = frozenset({"created"})
 
