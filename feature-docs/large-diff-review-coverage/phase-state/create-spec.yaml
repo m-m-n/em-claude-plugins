@@ -3,15 +3,145 @@ feature: large-diff-review-coverage
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: a1898c6a983ef5e2ca2ba482f5eec8c0f087686c
-last_input_digest: sha256:847c4916d4d860997c2a1b9e87d9e2af9704904aa8ea5d4f4f7d25fbbda2e6c2
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+base_revision: 1645fdaba2163143e75e50adcbb2a6efab8c71b1
+last_input_digest: sha256:78138a0a60272bc8b7c37785d3033341da27de0469081acf022c35466350652c
+active_request_id: create-spec-run-0002
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-11-07T17:32:00+09:00'
+    questions:
+    - question_id: requirement.split-strategy
+      status: answered
+    - question_id: requirement.split-limit
+      status: answered
+    - question_id: requirement.too-large-route
+      status: answered
+    - question_id: requirement.false-clean-scope
+      status: answered
+    - question_id: requirement.unreviewed-completion
+      status: answered
+    - question_id: requirement.unreviewed-record-shape
+      status: answered
+    - question_id: requirement.spec-shard-handling
+      status: answered
+    - question_id: requirement.em-review-scope
+      status: answered
+    - question_id: requirement.shard-cap
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+answers:
+  requirement.split-strategy:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-07T17:50:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - file_shards_all
+    freeform: null
+    normalized_answer: file_shards_all（spec は下記の例外）
+    resolution_note: Codex 2 ターン相談。Codex 一致。Codex にも時間切れがあり LiteLLM 限定では残る
+  requirement.split-limit:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-07T17:50:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - limit_200k
+    freeform: null
+    normalized_answer: limit_200k。540 秒内の完了保証ではない初期値
+    resolution_note: Codex 一致。組み立て後の超過は too-large-route で扱う
+  requirement.too-large-route:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-07T17:50:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - advance_other_harness
+    freeform: null
+    normalized_answer: advance_other_harness
+    resolution_note: Codex 一致。プロンプト上限と Codex の自己取得の上限は別物
+  requirement.false-clean-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-07T17:50:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - all_harnesses
+    freeform: null
+    normalized_answer: all_harnesses。外部プラグインの判定は「実行元が litellm・findings 空・summary 完全一致」に限定
+    resolution_note: Codex 一致 + 判定条件の絞り込みを採用
+  requirement.unreviewed-completion:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-07T17:50:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - disclose_and_report
+    freeform: null
+    normalized_answer: disclose_and_report
+    resolution_note: Codex 一致
+  requirement.unreviewed-record-shape:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-07T17:50:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - sibling_field
+    freeform: null
+    normalized_answer: sibling_field。両フィールドとも最終報告に含める
+    resolution_note: Codex 一致
+  requirement.spec-shard-handling:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-07T17:50:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: []
+    freeform: spec は分割せず全差分で先に実行し（muse-spark は超過、Codex の自己取得、Claude fallback の順）、全経路が失敗したときだけシャード単位で実行する。この救済
+      run の「未実装」系指摘は未検証として auto-fix と residual から除外し、R4 や評価失敗時も維持する。spec は一部実施として開示する
+    normalized_answer: 'spec_hybrid: 全差分優先 + シャード救済（未実装指摘は未検証で residual 外）'
+    resolution_note: Codex turn2 の案 C を採用。evaluator_verifies は 10 ファイル制限と R4 で evaluator
+      が動かない点で弱く、spec_whole_diff_self_fetch は失敗時に spec が丸ごと未実施になる
+  requirement.em-review-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-07T17:50:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - codex_reviewer_parity
+    freeform: null
+    normalized_answer: codex_reviewer_parity
+    resolution_note: Codex 一致
+  requirement.shard-cap:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-07T17:50:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: []
+    freeform: 上限あり。1 ラウンドの primary reviewer dispatch を 24 件までにする。観点あたりのシャード数は floor(24
+      / 選択観点数)、超過シャードは決定的に未実施として開示する。再試行・Claude fallback は数えない。R4 の再レビューはループごとに同じ上限を別に適用する
+    normalized_answer: 'cap_with_disclosure: 1 ラウンド 24 primary dispatch、観点均等割'
+    resolution_note: Codex は再試行・R4 込み 24 回と優先順の循環配分を提案。方向は採用し、計算を単純にするため primary dispatch
+      のみを数える均等割へ変更（Claude 判断）
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-07T17:50:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design step は skip（UI 変更なし）
+    resolution_note: policy select
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:847c4916d4d860997c2a1b9e87d9e2af9704904aa8ea5d4f4f7d25fbbda2e6c2
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:78138a0a60272bc8b7c37785d3033341da27de0469081acf022c35466350652c
   output_digest: null
   dispatch_digest_inputs:
     CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
