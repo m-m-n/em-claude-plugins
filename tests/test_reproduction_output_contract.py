@@ -36,6 +36,7 @@ import copy
 import importlib.util
 import json
 import re
+import sys
 import unittest
 from pathlib import Path
 
@@ -501,7 +502,12 @@ class TestProtocolAssertionsCatchForgery(unittest.TestCase):
 def _load_scanner():
     spec = importlib.util.spec_from_file_location("scan_dependencies", SCAN_SCRIPT_PATH)
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    previous = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = previous
     return module
 
 

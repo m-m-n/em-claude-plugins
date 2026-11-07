@@ -1,0 +1,69 @@
+task_id: task0001
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests on the clean base checkout -> Ran 15037 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 15050 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_bytecode_free_loads_scan_dependencies.TestScanDependenciesLoadersWriteNoBytecode.test_o1_ac1_flag_is_true_while_the_module_body_runs
+    red_confirmed: true
+    red_reason: "Against the 21 unchanged loaders, the test failed in all 21 starting=False subtests: AssertionError: False is not True (the probe body recorded the flag as False). The starting=True subtests passed before the change, because the flag was already True."
+  AC-2:
+    tests:
+      - tests.test_bytecode_free_loads_scan_dependencies.TestScanDependenciesLoadersWriteNoBytecode.test_o2_ac2_flag_holds_the_starting_value_after_a_normal_return
+    red_confirmed: false
+    red_reason: "Passed against the unchanged loaders, because nothing changed the flag yet; it pins the restore behavior the change must keep. It was observed to discriminate by a temporary mutation of all 21 loaders (the restore line removed, finally: pass): the test failed in all 21 starting=False subtests with AssertionError: True is not False; the loaders were restored afterwards."
+  AC-3:
+    tests:
+      - tests.test_bytecode_free_loads_scan_dependencies.TestScanDependenciesLoadersWriteNoBytecode.test_o3_ac3_a_raising_body_reaches_the_caller_with_the_flag_true
+      - tests.test_bytecode_free_loads_scan_dependencies.TestScanDependenciesLoadersWriteNoBytecode.test_o3_ac3_flag_holds_the_starting_value_after_the_body_raises
+    red_confirmed: true
+    red_reason: "Against the 21 unchanged loaders, the first test failed in all 21 starting=False subtests: AssertionError: 'probe body raised; flag=False' != 'probe body raised; flag=True'. The second test (flag restored after the raise) passed before the change, because nothing changed the flag yet; it was observed to discriminate by two temporary mutations of all 21 loaders (restore line removed; restore only on a normal return, without try/finally): it failed in all 21 starting=False subtests with AssertionError: True is not False in both; the loaders were restored afterwards."
+  AC-4:
+    tests:
+      - tests.test_bytecode_free_loads_scan_dependencies.TestScanDependenciesLoadersWriteNoBytecode.test_o4_ac4_the_probe_directory_holds_no_pycache_after_either_probe
+      - tests.test_bytecode_free_loads_scan_dependencies.TestScanDependenciesLoadersWriteNoBytecode.test_o4_ac4_the_scripts_listing_is_unchanged_since_before_the_loads
+      - tests.test_bytecode_free_loads_scan_dependencies.TestScanDependenciesLoadersWriteNoBytecode.test_o4_ac4_the_site_table_has_exactly_the_planned_rows
+      - tests.test_bytecode_free_loads_scan_dependencies.TestScanDependenciesLoadersWriteNoBytecode.test_o4_ac4_every_loader_and_path_constant_exists_on_its_loaded_target
+      - tests.test_bytecode_free_loads_scan_dependencies.TestMissingAttributesAreReported.test_a_complete_target_reports_nothing
+      - tests.test_bytecode_free_loads_scan_dependencies.TestMissingAttributesAreReported.test_a_missing_loader_is_named
+      - tests.test_bytecode_free_loads_scan_dependencies.TestMissingAttributesAreReported.test_a_loader_that_is_not_callable_is_named
+      - tests.test_bytecode_free_loads_scan_dependencies.TestMissingAttributesAreReported.test_a_missing_path_constant_is_named
+    red_confirmed: true
+    red_reason: "Against the 21 unchanged loaders, the probe-directory test failed in 42 subtests (21 rows x probe bodies that record and that raise, starting=False): AssertionError: '__pycache__' unexpectedly found in ['__pycache__', 'probe_scan_dependencies.py']. The probe cache appeared in the probe's own temporary directory; the listing of em-workflow/scripts/ stayed unchanged during the red run. The listing, row-count and attribute tests pass before and after the change, because they pin the probe module's own table and guards; the four TestMissingAttributesAreReported tests show a missing loader, a non-callable loader and a missing path constant are named by the guard."
+  AC-5:
+    tests: []
+    red_confirmed: true
+    red_reason: "Executable check is the command-level listing of __pycache__ under em-workflow/scripts/ after running each module alone, no test selects it. Search of tests/ by path (em-workflow/scripts/scan-dependencies.py) and basename (scan-dependencies.py): the modules that mention the script do not mention __pycache__ or dont_write_bytecode at the base commit, so no existing test covers the real script's bytecode. Observed before the change, from a start with no em-workflow/scripts/__pycache__ (trashed between runs), one module at a time from the repository root with python3 -m unittest tests.<module>: each of the 22 modules (the 21 modified ones and test_sca_go_replace_direct_deps) left em-workflow/scripts/__pycache__/scan-dependencies.cpython-314.pyc. After the change, the same 22 runs plus the probe module left no em-workflow/scripts/__pycache__, and each module's test count equals the count before the change and every run is OK."
+  AC-6:
+    tests:
+      - tests.test_sca_file_tasks_unexpected_exceptions
+      - tests.test_sca_listing_undecodable_output
+      - tests.test_sca_pip_lockfile_audit
+      - tests.test_scan_dependencies_cargo_directness
+      - tests.test_sca_absolute_executable_resolution
+      - tests.test_sca_file_tasks_oserror
+      - tests.test_scan_dependencies_pyproject_directness
+      - tests.test_sca_child_env_path_filtering
+      - tests.test_sca_go_govulncheck_real_output
+      - tests.test_sca_scanner_project_config_isolation
+      - tests.test_sca_scan_job_grouping
+      - tests.test_sca_task_filing
+      - tests.test_sca_run_scan_plan_units
+      - tests.test_sca_scan_unchanged_surfaces
+      - tests.test_sca_per_project_scan_binding
+      - tests.test_reproduction_output_contract
+      - tests.test_sca_scan_execution
+      - tests.test_scan_dependencies_pip_directness
+      - tests.test_sca_scan_invocation
+      - tests.test_sca_finding_title_roundtrip
+      - tests.test_sca_scan_normalization
+      - tests.test_sca_go_replace_direct_deps
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing 22 modules detect a changed loader behavior or tested behavior; no red state occurred for this change: each passed before the change (run alone, same test counts) and after it, and python3 -m unittest discover -s tests passes (Ran 15037 tests OK before, 15050 after, the 13 added tests being the 12 of the probe module and the generated test for this record). The loader names, parameters, defaults, spec module names and return values are unchanged in the diff, which touches only the loader bodies and one added import sys."
+  AC-7:
+    tests:
+      - tests.test_sca_axis_skill_and_version.TestScaTestModulesImportOnlyStdlib.test_every_sca_module_imports_only_stdlib
+      - tests.test_sca_run_scan_plan_units.TestTheModulesImportOnlyTheStandardLibrary.test_imports_are_standard_library_only
+      - tests.test_sca_scan_job_grouping.TestOwnImportsAreStandardLibraryOnly.test_only_standard_library_imports
+    red_confirmed: false
+    red_reason: "The three existing import checks passed before and after the change; no red state occurred. The file-scope part (the diff touches only the Scope files and this record) and the os.environ part (no write, delete or patch of os.environ in the diff or in the probe module) are verified by reading the diff: git diff --name-only lists exactly the 21 modified modules, the new probe module is the only added file besides this record, the only import added is import sys in test_reproduction_output_contract.py, and the probe module imports importlib.util, os, sys, tempfile, types, unittest, pathlib and unittest.mock."
