@@ -113,7 +113,8 @@ workflow:
   summary: 'python3 -m unittest discover -s tests: 14615 tests OK (skipped=1). TS-1..TS-3, AC1..AC4, TM-1..TM-3 pass. M1: tests.test_merge_pr with GIT_DIR/GIT_WORK_TREE pointing at a decoy repository: 104 tests OK, decoy refs/HEAD/local config unchanged. M2: diff from base_commit names only tests/test_merge_pr.py, test-docs/ and feature-docs/ paths of this feature.'
   completed_at_commit: 6fcbb82a4df908a3d9a82b44f401a6ff9c5f80ba
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: 527a58f2b863f691541ceb88dd2c6af382d82fcf
 tasks:
   task0001:
     title: Isolate MergePrTestCase from inherited GIT_ variables
