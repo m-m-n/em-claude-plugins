@@ -1,7 +1,7 @@
 schema_version: 1
 feature: hook-test-bytecode-suppression-others
 phase: create-plan
-status: in_progress
+status: completed
 generation: 1
 base_revision: c925189b1f9108321146a1d186b8ba1241d51899
 last_input_digest: sha256:68f7da38eb1e5513788a4c7299f8dcc5c9849ef7971222cf4c8c1787ca6e81cd
