@@ -1,0 +1,12 @@
+schema_version: 1
+feature: hook-test-bytecode-suppression-others
+records:
+- question_id: create-spec.command-approval
+  packet_id: null
+  answered_at: '2026-11-07T21:40:00+09:00'
+  source: batch-decision-table
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: python3 -m unittest discover -s tests
+  normalized_answer: 既に承認済み
+  resolution_note: 'gate: create-spec.command-approval; 未承認コマンドなし、自動記録は 0 件'
