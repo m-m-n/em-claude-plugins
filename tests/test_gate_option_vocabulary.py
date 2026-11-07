@@ -1163,8 +1163,19 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # their two codes outside the five numbered conditions. The numbered
     # application rules stay eighteen and the section still has five numbered
     # conditions. Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by plan-feature-docs-route/task0007 (FR8, FR9): the
+    # `tasks_patch` section gains the `tasks_patch.feature_docs_removals`
+    # field, the `replace_all` permission intro and the correction-entry
+    # sentence name the new `## Feature-docs correction` section, the
+    # verbatim-copy pointer names both corrections, and the new section sits
+    # between `## Interrupted authorization-spend recovery` and
+    # `## Final-path correction`. The numbered application rules stay
+    # eighteen, `## Final-path correction` stays directly before
+    # `## Ownership boundary`, and the protocol-error sentence is
+    # unchanged. Same rationale: refresh, don't remove.
     WORKFLOW_PATCH_SHA256 = (
-        "ea99b215bec30133878058542a5d09937078706cca3f794cccd23aa036a0c667"
+        "b2502b4348774853bb8c85f1da614823c64e8e66ce2a1e90196a451ac8f0b166"
     )
     # Updated by goal-vs-spec-divergence/task0016 (review round1 rework),
     # which the user's SPEC.md/REQUIREMENTS.md Declared Change Set extension

@@ -78,12 +78,20 @@ below): a non-empty list of mappings with exactly `task_id`, `old_path` and
 `new_path`, every `task_id` also listed in `carried_task_ids`. It is absent
 from every other patch.
 
+`tasks_patch.feature_docs_removals` is present only on a `replace_planning`
+patch that removes feature-docs paths from an existing plan
+(`## Feature-docs correction`, below): a non-empty list of mappings with
+exactly `task_id` and `path`, every `task_id` also listed in
+`carried_task_ids`. It is absent from every other patch, and it is never
+together with `path_corrections`.
+
 ### `replace_all` permission conditions
 
 `replace_all` is permitted through exactly two paths, and through the one
 further state that `## Final-path correction` (below) admits for a patch
-carrying `tasks_patch.path_corrections`; a patch matching none of these is
-rejected:
+carrying `tasks_patch.path_corrections` and that `## Feature-docs correction`
+(below) admits for a patch carrying `tasks_patch.feature_docs_removals`; a
+patch matching none of these is rejected:
 
 - **Initial-planning path** — the `create-plan` step is `pending` (first
   planning pass), permitted only when:
@@ -137,8 +145,9 @@ A `replace_all` received while any task is `in_progress` or `failed` is a
 protocol error on BOTH paths above. Neither this protocol-error rule nor
 the Initial-planning path's floor condition above changes as a result of
 the Re-planning path's widening. The correction entry of `## Final-path
-correction` (below) is the one state in which a `failed` task is not a
-protocol error, and an `in_progress` task stays one there.
+correction` (below), which `## Feature-docs correction` (below) shares, is the
+one state in which a `failed` task is not a protocol error, and an
+`in_progress` task stays one there.
 
 ### Re-planning task-id allocation
 
@@ -168,8 +177,9 @@ rejected. Because a carried id's record is copied verbatim, a `merged` task
 keeps its `status`, its `branch` and its `files` across the patch without
 either field entering the `preserve` vocabulary.
 
-The one exception to this verbatim copy is the final-path correction
-(`## Final-path correction`, below).
+The two exceptions to this verbatim copy are the final-path correction
+(`## Final-path correction`, below) and the feature-docs correction
+(`## Feature-docs correction`, below).
 
 The high-water mark is `max(carried_task_ids ∪ entries)`, still readable
 directly from the `workflow.yaml` the patch is applied to — any genuinely
@@ -382,6 +392,82 @@ success. The state reached after any number of resumptions is the same as
 the state reached by one uninterrupted run. Where `replan_authorized`
 lives is `references/phase-state.md`'s own definition — cited here, not
 restated.
+
+## Feature-docs correction
+
+A feature-docs correction removes feature-docs paths from the `files` of the
+tasks of an existing plan. What a feature-docs path is, is defined by
+`skills/plan-writing/SKILL.md`, section `## Feature-docs Files`; this document
+cites that section and does not restate it. The correction is carried by
+`tasks_patch.feature_docs_removals`. It is an exception to copying a carried
+record verbatim (Re-planning task-id allocation, above), like
+`## Final-path correction` (below), and it adds no application rule: the
+eighteen rules above apply to a patch carrying it as to any other.
+
+**Field.** `feature_docs_removals` is a non-empty list of mappings with exactly
+`task_id` and `path`, on `replace_planning` only. Each `task_id` is listed in
+`carried_task_ids`, each (`task_id`, `path`) pair appears once, and the field
+is never together with `path_corrections`. The task a mapping's `task_id`
+names is its target task. A malformed field, a `task_id` that is unknown or not
+in `carried_task_ids`, a duplicate pair, use together with `path_corrections`
+and use on `append_rework` are rejected as `feature-docs-removal-shape`.
+
+**Permission states.**
+
+| State | Result |
+|---|---|
+| `create-plan` is `completed` and `implement` is `failed` (the correction entry) | Admitted. The carry-over and `preserve` obligations of the Re-planning path apply. A `failed` task is permitted; an `in_progress` task stays rejected as `replace-all-not-permitted`. The limits below apply |
+| The Re-planning path | Rejected, `feature-docs-removal-not-permitted` |
+| The Initial-planning path | Rejected, `feature-docs-removal-not-permitted` |
+| Any other state | Rejected, `feature-docs-removal-not-permitted` |
+
+**Conditions.** All five are required; a removal that fails any condition is
+not applied: the patch is rejected with that condition's code and
+`workflow.yaml` is not changed. The checks read `workflow.yaml` and the
+feature's journal.
+
+- `feature-docs-removal-in-flight` — No task is in flight: no task's `status`
+  is `in_progress` and no task's last journal event is `launched`.
+- `feature-docs-removal-merged` — Neither the target task's `status` nor its
+  last journal event is `merged`.
+- `feature-docs-removal-path` — `path` is a feature-docs path and is in the
+  target task's `files`.
+- `feature-docs-removal-empty-files` — The target task's `files` is not empty
+  once the removals for it are applied.
+- `feature-docs-removal-incomplete` — After the patch, no task that is not
+  `merged` holds a feature-docs path in its `files`.
+
+**Limits.** On the correction entry, a patch carrying `feature_docs_removals`
+is limited in three more fields, under the one code
+`feature-docs-removal-limits`, outside the five conditions. `step_patches` is
+empty, `tasks_patch.entries` is empty, and `requirements_patch` is null or has
+no entries.
+
+**Inputs.** Under `--dry-run-apply`, a patch carrying `feature_docs_removals`
+needs `--workflow`, `--journal` and `--feature-dir`: the checks read
+`workflow.yaml` and the feature's journal, and the plan agreement below reads
+the target tasks' plans. A missing input is an execution error (exit 2), never
+a pass.
+
+**Application.** In the in-memory application, every occurrence of `path` is
+removed from the target task's `files` and `notes` is set to null. Every other
+field of the target and every other record is copied verbatim.
+
+**Plan agreement.** Each target task's plan has Files sections that equal the
+task's `files` after the removal, as for an entry; a plan that disagrees is
+rejected as `task-plan-files-mismatch`.
+
+**Ownership.** `implementation-planner` corrects the plan documents and
+proposes the removals through `feature_docs_removals`; the orchestrator applies
+the patch to `workflow.yaml`. The implementer and `rework-planner` do not.
+
+**Restoration and ordering.** Restoring the failed feature after the patch is
+applied, and the order of this correction and `## Final-path correction`, are
+owned by `skills/develop/SKILL.md`'s `## Step A.6: failed からの入口`, and are
+not restated here.
+
+A `replace_all` without `feature_docs_removals` behaves as before in every
+state.
 
 ## Final-path correction
 
