@@ -91,9 +91,48 @@ workflow:
   status: pending
 - id: verify
   status: pending
+  result: null
+  failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Suppress bytecode in the five em-workflow hook loaders
+    plan: tasks/task0001.md
+    files:
+    - tests/test_queue_stop_guard.py
+    - tests/test_queue_stop_guard_routeback_record.py
+    - tests/test_failed_run_cleanup_guard.py
+    - tests/test_hooks_registration.py
+    - tests/test_queue_failure_net_cross_hook.py
+    skills: []
+    domains:
+    - config-infra
+    complexity: medium
+    requirements:
+    - FR1
+    - FR2
+    - NFR1
+    - NFR2
+    status: pending
+    notes: null
+  task0002:
+    title: Suppress bytecode in the two muse_guard loaders
+    plan: tasks/task0002.md
+    files:
+    - tests/test_muse_guard.py
+    - tests/test_consultation_harness_chain.py
+    skills: []
+    domains:
+    - config-infra
+    complexity: low
+    requirements:
+    - FR1
+    - FR2
+    - NFR1
+    - NFR2
+    status: pending
+    notes: null
 review:
   status: pending
 requirements:
@@ -102,7 +141,9 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
     tests:
     - TS-1
   FR2:
@@ -110,7 +151,9 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
     tests:
     - TS-1
     - TS-3
@@ -119,7 +162,9 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
     tests:
     - TS-2
   NFR2:
@@ -127,7 +172,9 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
     tests:
     - TS-2
 batch:
