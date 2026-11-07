@@ -47,6 +47,15 @@ assertions adjusted in TestDirectCommandForms and TestPrDecisionBindings):
 - AC-6 (FR5): `repo` is the host-qualified `HOST/OWNER/NAME` and every later
   `--repo` receives it as is.
 
+Covers merge-docs-align-impl task0001 Acceptance Criteria
+(feature-docs/merge-docs-align-impl/tasks/task0001.md; the class
+TestDocsAlignWithEmissionSites): the 手順 column of the result-value table
+against the steps that write verification_failed, git_failed and
+remote_unresolved; the terms of every lettered item in the three Condition
+cells of merge-result.md and the failures kept out of them; the ownership
+sentence and the shape of the result-value table; the paths kept out of
+git_failed in the skill.
+
 Method: whitespace-preserving text slices, presence assertions on stable
 tokens (reason codes, script names, command forms) and a few short phrases.
 Every absence assertion is paired with a forged-text case proving its matcher
@@ -55,6 +64,7 @@ write guards on it under CLAUDE_BATCH. Standard library only; nothing here
 imports a script of the plugin or writes a bytecode cache.
 """
 
+import ast
 import json
 import os
 import re
@@ -2568,6 +2578,661 @@ class TestHostQualifiedRepository(SkillCase):
             "python3 x.py resolve --repo-name <repo>",
         ):
             self.assertIsNone(REPO_OPTION_RE.search(forged), forged)
+
+
+
+# ---------------------------------------------------------------------------
+# merge-docs-align-impl task0001 (feature-docs/merge-docs-align-impl): the
+# Condition cells of merge-result.md and the result-value table of the skill
+# agree with the emission sites in the skill (FR1 to FR4, FR6, NFR1 to NFR5)
+# ---------------------------------------------------------------------------
+
+STEP_HEADING_RE = re.compile(r"^#{2,3}\s+(\d+)\.\s")
+STEP_NUMBER_RE = re.compile(r"(?i)\bsteps?\s+\d|手順\s*\d")
+OWNER_STATEMENT_RE = re.compile(r"条件の正本は、`references/merge-result\.md` の Reason codes")
+
+# The 手順 column the result-value table carries for each of the three codes.
+STEP_COLUMNS = {
+    "verification_failed": {8, 10, 13},
+    "git_failed": {3, 4, 6, 7, 8, 9, 10, 12, 13},
+    "remote_unresolved": {3, 5},
+}
+# Steps that call merge-git.py and pass its stop straight to the result.
+GIT_FAILED_PASS_THROUGH = {3, 4, 6, 7, 8, 9, 12}
+
+# The terms each lettered item of FR1 to FR3 leaves in its Condition cell. A
+# cell is complete when every term is present; the items are the lettered
+# conditions of the SPEC, the first two of remote_unresolved are the existing
+# conditions.
+CONDITION_TERMS = {
+    "verification_failed": {
+        "a": ("test or e2e command", "failed or timed out"),
+        "b": ("HEAD before integration differs from the expected", "on a retry"),
+        "c": ("uncommitted changes",),
+        "d": ("HEAD differs from the verified",),
+        "e": ("immediately before the local merge", "tip of the integration branch"),
+    },
+    "git_failed": {
+        "a": (
+            "launch failure",
+            "script-wide time limit",
+            "ancestor",
+            "worktree list",
+            "git-path",
+            "fetch",
+            "non-conflict merge",
+            "base-check",
+        ),
+        "b": ("git worktree add",),
+        "c": ("git merge --abort", "merge_in_progress", "unattributable"),
+        "d": ("neither clean nor stop",),
+        "e": ("conflict-resolution", "git commit"),
+        "f": ("git status", "git rev-parse HEAD"),
+        "g": ("of the integration tip", "before the local merge"),
+    },
+    "remote_unresolved": {
+        "existing-1": ("No remote can be chosen",),
+        "existing-2": ("remote name is unsafe",),
+        "a": ("remote does not exist",),
+        "b": ("default repository cannot be determined",),
+        "c": ("remote side", "default side", "malformed"),
+        "d": ("differ in host or owner/name", "case-insensitive"),
+    },
+}
+
+CONDITION_EMITTED_BY = {
+    "verification_failed": "the skill, merge-git integrate",
+    "remote_unresolved": "merge-git route, merge-pr repo",
+}
+
+# Failures the SPEC keeps out of a code, each as (label, matcher, a forged
+# phrase only an author naming that failure would write). The matchers avoid
+# the words the positive items share with them: `git merge --abort` and
+# `git rev-parse` (git_failed), "No remote can be chosen" (remote_unresolved).
+EXCLUDED_CONDITIONS = {
+    "git_failed": (
+        ("step 2 preflight failure", re.compile(r"(?i)preflight"), "a git failure while reading the preflight"),
+        (
+            "tip read on the PR route",
+            re.compile(r"(?i)\bPR route\b|locked.tip"),
+            "reading the tip on the PR route failed",
+        ),
+        (
+            "post-commit rev-parse",
+            re.compile(r"(?i)post-commit|invalid value"),
+            "an invalid value from the post-commit rev-parse",
+        ),
+        (
+            "main-tree not ready",
+            re.compile(r"main_tree_not_ready|main working tree|\bnot ready\b"),
+            "the main working tree is not ready",
+        ),
+        (
+            "abort after a merge failure",
+            re.compile(r"(?i)after a merge failure|merge_failed"),
+            "git merge --abort failing after a merge failure",
+        ),
+        (
+            "failure after a successful merge",
+            re.compile(r"(?i)after a successful merge|clean-?up|already_merged"),
+            "a read after a successful merge failed",
+        ),
+    ),
+    "remote_unresolved": (
+        ("zero remotes", re.compile(r"(?i)\b(zero|no) remotes\b|local route"), "there are zero remotes"),
+        (
+            "gh query output not JSON",
+            re.compile(r"(?i)\bnot (valid )?JSON\b|invalid JSON"),
+            "the gh default repository query output is not JSON",
+        ),
+        (
+            "url missing or not a string",
+            re.compile(r"(?i)`url`|not a string|\bmissing\b"),
+            "`url` is missing or not a string",
+        ),
+    ),
+}
+
+# Where the skill keeps the excluded paths out of git_failed (FR2, TS-3): the
+# step, a phrase that finds the line, the text the line must carry (a code, or
+# the phrase that lets a failed abort pass) and a label.
+EXCLUDED_PATH_LINES = (
+    (2, "git が失敗したら", "`internal_error`", "a git failure in step 2"),
+    (6, "git が失敗したとき", "`internal_error`", "the tip read on the PR route in step 6"),
+    (9, "出力が 40 桁の小文字 16 進でなければ", "`internal_error`", "the post-commit rev-parse in step 9"),
+    (13, "`ready` でなければ", "`main_tree_not_ready`", "main-tree in step 13"),
+    (13, "進行中のマージを中断してから", "`merge_failed`", "a merge failure in step 13"),
+    (13, "中断が失敗しても", "構わない", "a failed abort after a merge failure in step 13"),
+)
+# Steps that never write git_failed: every git failure there is internal_error.
+STEPS_WITHOUT_GIT_FAILED = (2, 6)
+
+VERIFICATION_DETAIL_TERMS = ("未コミットの変更", "HEAD が検証前の `head_sha` と異なる")
+
+# Forbidden strings are built from parts so that this file carries neither.
+FORGED_HOME = "/" + "home" + "/someone/x"
+FORGED_NOTION = "https://www." + "notion" + ".so/page"
+
+
+def step_bodies(text):
+    """{step number: body} for the numbered step headings (`## 1.` and `### 2.`
+    to `### 16.`). A body runs from its heading up to the next heading of any
+    level, so the 結果の値 section is never part of a step body, and a
+    sub-step such as 13.3 belongs to its parent step."""
+    bodies = {}
+    current = None
+    in_fence = False
+    for line in text.split("\n"):
+        if FENCE_RE.match(line):
+            in_fence = not in_fence
+        elif not in_fence and HEADING_RE.match(line):
+            match = STEP_HEADING_RE.match(line)
+            current = int(match.group(1)) if match else None
+            if current is not None:
+                bodies[current] = []
+            continue
+        if current is not None:
+            bodies[current].append(line)
+    return {number: "\n".join(lines) for number, lines in bodies.items()}
+
+
+def step_column(cell):
+    """The set of steps a 手順 cell lists; a sub-step such as 13.3 counts as
+    13. A token that is not a step number is kept as text, so a comparison
+    with the pinned set fails."""
+    steps = set()
+    for token in cell.split(","):
+        token = token.strip()
+        match = re.fullmatch(r"(\d+)(?:\.\d+)?", token)
+        steps.add(int(match.group(1)) if match else token)
+    return steps
+
+
+def _step_key(step):
+    return (isinstance(step, str), step)
+
+
+def step_column_problems(text):
+    """The ways the 手順 column of verification_failed, git_failed and
+    remote_unresolved departs from the steps of the skill that write the code
+    (TS-1). An empty list means no departure."""
+    bodies = step_bodies(text)
+    problems = []
+    for code, pinned in STEP_COLUMNS.items():
+        cells = table_cells(text, code)
+        if cells is None or len(cells) != 4:
+            problems.append("the %s row does not have 4 cells" % code)
+            continue
+        column = step_column(cells[2])
+        writing = {number for number, body in bodies.items() if "`%s`" % code in body}
+        if code == "git_failed":
+            if not writing <= column:
+                problems.append(
+                    "git_failed is written in steps %s that the column lacks"
+                    % sorted(writing - column)
+                )
+            for number in sorted(GIT_FAILED_PASS_THROUGH - column):
+                problems.append("the git_failed column lacks the pass-through step %d" % number)
+            for number in sorted(GIT_FAILED_PASS_THROUGH):
+                if "merge-git" not in bodies.get(number, ""):
+                    problems.append("pass-through step %d does not name merge-git" % number)
+        elif writing != column:
+            problems.append(
+                "%s is written in steps %s but the column lists %s"
+                % (code, sorted(writing), sorted(column, key=_step_key))
+            )
+        if column != pinned:
+            problems.append(
+                "the %s column is %s, expected %s"
+                % (code, sorted(column, key=_step_key), sorted(pinned))
+            )
+    return problems
+
+
+def contract_cells(text, code):
+    """The cells of the single Reason codes row of `code` in merge-result.md;
+    None when the row is absent or listed more than once."""
+    rows = contract_reason_rows(text)
+    if rows is None:
+        return None
+    found = [cells for row_code, cells in rows if row_code == code]
+    return found[0] if len(found) == 1 else None
+
+
+def condition_problems(code, cells):
+    """The ways a Condition row departs from FR1 to FR3 (TS-2): it has 3
+    cells, every term of every lettered item is present, no step number is
+    written, none of the excluded failures is named, Emitted by is the
+    pinned one and the row carries no home path and no Notion URL."""
+    if cells is None or len(cells) != 3:
+        return ["the %s row does not have 3 cells" % code]
+    condition = cells[1]
+    problems = []
+    for item, terms in CONDITION_TERMS[code].items():
+        for term in terms:
+            if term not in condition:
+                problems.append("%s item (%s) lacks %r" % (code, item, term))
+    if STEP_NUMBER_RE.search(condition):
+        problems.append("the %s Condition carries a step number" % code)
+    for label, matcher, _ in EXCLUDED_CONDITIONS.get(code, ()):
+        if matcher.search(condition):
+            problems.append("the %s Condition names an excluded failure: %s" % (code, label))
+    emitted_by = CONDITION_EMITTED_BY.get(code)
+    if emitted_by is not None and cells[2] != emitted_by:
+        problems.append("the %s Emitted by is not %r" % (code, emitted_by))
+    if HOME_OR_NOTION_RE.search(" ".join(cells)):
+        problems.append("the %s row carries a home path or a Notion URL" % code)
+    return problems
+
+
+def result_table_problems(text):
+    """The ways the result-value table departs from its shape (FR4, NFR1,
+    NFR3): a header and every code row of exactly 4 cells, and the 28 codes
+    each exactly once."""
+    body = section(text, "結果の値")
+    if body is None:
+        return ["no 結果の値 section"]
+    problems = []
+    header = [line for line in body.split("\n") if re.match(r"^\|\s*reason\s*\|", line)]
+    if len(header) != 1 or len(header[0].strip().strip("|").split("|")) != 4:
+        problems.append("the table header does not have 4 columns")
+    codes = []
+    for line in body.split("\n"):
+        match = re.match(r"^\|\s*`([a-z_]+)`\s*\|", line)
+        if match:
+            codes.append(match.group(1))
+            cells = line.strip().strip("|").split("|")
+            if len(cells) != 4:
+                problems.append("the %s row does not have 4 cells" % match.group(1))
+    if sorted(codes) != sorted(REASON_CODES):
+        problems.append("the table does not hold the 28 codes exactly once each")
+    return problems
+
+
+def owner_problems(text):
+    """The 結果の値 section names Reason codes in references/merge-result.md as
+    the owner of the conditions, in the prose above its table (TS-4)."""
+    body = section(text, "結果の値")
+    if body is None:
+        return ["no 結果の値 section"]
+    prose = []
+    for line in body.split("\n"):
+        if line.startswith("|"):
+            break
+        prose.append(line)
+    if not OWNER_STATEMENT_RE.search("\n".join(prose)):
+        return ["the 結果の値 section does not name Reason codes in references/merge-result.md as the owner"]
+    return []
+
+
+def verification_detail_problems(cells):
+    """The detail of the verification_failed row gains the step 10 uncommitted
+    changes and HEAD mismatch (FR4)."""
+    if cells is None or len(cells) != 4:
+        return ["the verification_failed row does not have 4 cells"]
+    return [
+        "the detail lacks %r" % term for term in VERIFICATION_DETAIL_TERMS if term not in cells[3]
+    ]
+
+
+def excluded_path_problems(text):
+    """The paths FR2 keeps out of git_failed stay as they are (TS-3): each
+    located line writes its own code and not git_failed, and steps 2 and 6
+    never write git_failed."""
+    bodies = step_bodies(text)
+    problems = []
+    for number, locator, code, label in EXCLUDED_PATH_LINES:
+        lines = [line for line in bodies.get(number, "").split("\n") if locator in line]
+        if not lines:
+            problems.append("no line for %s" % label)
+            continue
+        for line in lines:
+            if code not in line:
+                problems.append("%s does not write %s" % (label, code))
+            if "`git_failed`" in line:
+                problems.append("%s writes git_failed" % label)
+    for number in STEPS_WITHOUT_GIT_FAILED:
+        if "`git_failed`" in bodies.get(number, ""):
+            problems.append("step %d writes git_failed" % number)
+    return problems
+
+
+def non_stdlib_imports(source):
+    """Top-level module names a Python source imports that are not in the
+    standard library."""
+    names = set()
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.Import):
+            names.update(alias.name.split(".")[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+            names.add(node.module.split(".")[0])
+    return sorted(name for name in names if name not in sys.stdlib_module_names)
+
+
+def replace_in_step(text, number, old, new):
+    """`text` with `old` replaced by `new` inside the body of step `number`
+    only."""
+    body = section(text, "%d. " % number)
+    assert body is not None and old in body, (number, old)
+    return text.replace(body, body.replace(old, new))
+
+
+class TestDocsAlignWithEmissionSites(SkillCase):
+    """AC-1 to AC-7 of merge-docs-align-impl task0001 (FR1 to FR4, FR6, NFR1 to
+    NFR5; TS-1 to TS-4).
+
+    Coverage: the 手順 column of the result-value table against the steps of
+    the skill that write verification_failed, git_failed and remote_unresolved;
+    the terms of every lettered item in the three Condition cells of
+    merge-result.md; the failures kept out of git_failed and remote_unresolved;
+    the ownership sentence and the shape of the result-value table; the
+    excluded paths in the skill. Every absence assertion is paired with a
+    forged text on which its matcher fires, and with the real text on which it
+    stays silent."""
+
+    def contract(self):
+        return CONTRACT_PATH.read_text(encoding="utf-8")
+
+    # -- TS-1: the 手順 column ------------------------------------------------
+
+    def test_ac5_the_step_columns_agree_with_the_steps_that_write_each_code(self):
+        self.assertEqual(step_column_problems(self.text), [])
+
+    def test_ac5_the_git_failed_row_lists_exactly_steps_3_4_6_7_8_9_10_12_13(self):
+        cells = table_cells(self.text, "git_failed")
+        self.assertEqual(len(cells), 4)
+        self.assertEqual(step_column(cells[2]), {3, 4, 6, 7, 8, 9, 10, 12, 13})
+
+    def test_ac5_the_pass_through_steps_each_name_merge_git(self):
+        bodies = step_bodies(self.text)
+        for number in sorted(GIT_FAILED_PASS_THROUGH):
+            self.assertIn("merge-git", bodies[number], number)
+
+    def test_ac5_the_steps_writing_each_code_are_read_from_the_step_bodies(self):
+        bodies = step_bodies(self.text)
+        self.assertEqual(sorted(bodies), list(range(1, 17)))
+        written = {
+            code: {n for n, body in bodies.items() if "`%s`" % code in body}
+            for code in STEP_COLUMNS
+        }
+        self.assertEqual(written["verification_failed"], {8, 10, 13})
+        self.assertEqual(written["remote_unresolved"], {3, 5})
+        self.assertEqual(written["git_failed"], {7, 8, 9, 10, 12, 13})
+        # The result-value table is not a step body: it lists every code.
+        for body in bodies.values():
+            self.assertNotIn("| `invalid_arguments` |", body)
+
+    def test_ac5_the_step_column_matcher_fires_on_forged_text(self):
+        self.assertEqual(step_column_problems(self.text), [])
+
+        def fires(text, label):
+            self.assertNotEqual(text, self.text)
+            problems = step_column_problems(text)
+            self.assertTrue(any(label in p for p in problems), (label, problems))
+
+        row = table_cells(self.text, "git_failed")
+        line = "| `git_failed` | %s | %s | %s |" % (row[1], row[2], row[3])
+        self.assertIn(line, self.text)
+
+        def with_git_failed_steps(steps):
+            return self.text.replace(line, "| `git_failed` | %s | %s | %s |" % (row[1], steps, row[3]))
+
+        # The row as it was before this change: 3, 4, 6 and 10 are missing.
+        fires(with_git_failed_steps("7, 8, 9, 12, 13"), "lacks the pass-through step 3")
+        fires(with_git_failed_steps("7, 8, 9, 12, 13"), "lacks the pass-through step 4")
+        fires(with_git_failed_steps("7, 8, 9, 12, 13"), "lacks the pass-through step 6")
+        fires(with_git_failed_steps("7, 8, 9, 12, 13"), "written in steps [10]")
+        fires(with_git_failed_steps("3, 4, 6, 7, 8, 9, 12, 13"), "written in steps [10]")
+        # A step the column lists beyond the pinned set.
+        fires(with_git_failed_steps("3, 4, 5, 6, 7, 8, 9, 10, 12, 13"), "the git_failed column is")
+        # A sub-step counts as its parent step, a non-number does not.
+        self.assertEqual(
+            step_column_problems(with_git_failed_steps("3, 4, 6, 7, 8, 9, 10, 12, 13.3")), []
+        )
+        fires(with_git_failed_steps("3, 4, 6, 7, 8, 9, 10, 12, どこでも"), "the git_failed column is")
+        # The other two codes: a missing step, and an extra step.
+        for code, steps, forged in (
+            ("verification_failed", "8, 10, 13", "8, 13"),
+            ("verification_failed", "8, 10, 13", "8, 10, 12, 13"),
+            ("remote_unresolved", "3, 5", "3"),
+            ("remote_unresolved", "3, 5", "3, 5, 6"),
+        ):
+            cells = table_cells(self.text, code)
+            self.assertEqual(cells[2], steps)
+            original = "| `%s` | %s | %s | %s |" % (code, cells[1], cells[2], cells[3])
+            self.assertIn(original, self.text)
+            fires(
+                self.text.replace(original, "| `%s` | %s | %s | %s |" % (code, cells[1], forged, cells[3])),
+                "the column lists",
+            )
+        # A code written in a step the column lacks.
+        fires(
+            self.text.replace(
+                "### 12. base の移動確認\n", "### 12. base の移動確認\n\n`verification_failed`\n", 1
+            ),
+            "verification_failed is written in steps [8, 10, 12, 13]",
+        )
+        fires(
+            self.text.replace("### 4. ローカルルートの確認\n", "### 4. ローカルルートの確認\n\n`remote_unresolved`\n", 1),
+            "remote_unresolved is written in steps [3, 4, 5]",
+        )
+        # A pass-through step that no longer names merge-git.
+        fires(replace_in_step(self.text, 4, "merge-git", "x"), "pass-through step 4 does not name merge-git")
+        # A row of the wrong shape.
+        fires(self.text.replace(line, line + " extra |"), "the git_failed row does not have 4 cells")
+
+    # -- TS-2: the Condition cells --------------------------------------------
+
+    def test_ac1_the_verification_failed_condition_states_items_a_to_e(self):
+        cells = contract_cells(self.contract(), "verification_failed")
+        self.assertEqual(condition_problems("verification_failed", cells), [])
+        self.assertIn("HEAD before integration differs from the expected", cells[1])
+        self.assertEqual(cells[2], "the skill, merge-git integrate")
+
+    def test_ac2_the_git_failed_condition_states_items_a_to_g_and_no_excluded_failure(self):
+        cells = contract_cells(self.contract(), "git_failed")
+        self.assertEqual(condition_problems("git_failed", cells), [])
+
+    def test_ac3_the_remote_unresolved_condition_states_the_existing_and_new_items(self):
+        cells = contract_cells(self.contract(), "remote_unresolved")
+        self.assertEqual(condition_problems("remote_unresolved", cells), [])
+        self.assertEqual(cells[2], "merge-git route, merge-pr repo")
+
+    def test_ac1_the_condition_matcher_fires_when_a_term_of_an_item_is_removed(self):
+        for code, items in CONDITION_TERMS.items():
+            cells = contract_cells(self.contract(), code)
+            self.assertEqual(condition_problems(code, cells), [])
+            for item, terms in items.items():
+                for term in terms:
+                    forged = [cells[0], cells[1].replace(term, ""), cells[2]]
+                    self.assertNotEqual(forged[1], cells[1], (code, item, term))
+                    self.assertIn(
+                        "%s item (%s) lacks %r" % (code, item, term),
+                        condition_problems(code, forged),
+                    )
+
+    def test_ac1_the_condition_matcher_fires_on_a_step_number_and_stays_silent_without_one(self):
+        for code in CONDITION_TERMS:
+            cells = contract_cells(self.contract(), code)
+            self.assertIsNone(STEP_NUMBER_RE.search(cells[1]), code)
+            for forged_text in (" (step 10)", " (steps 7, 9)", "（手順 8）"):
+                forged = [cells[0], cells[1] + forged_text, cells[2]]
+                self.assertIn(
+                    "the %s Condition carries a step number" % code,
+                    condition_problems(code, forged),
+                    (code, forged_text),
+                )
+
+    def test_ac2_the_excluded_failure_matchers_fire_on_forged_text(self):
+        for code, excluded in EXCLUDED_CONDITIONS.items():
+            cells = contract_cells(self.contract(), code)
+            for label, matcher, sample in excluded:
+                self.assertIsNone(matcher.search(cells[1]), (code, label))
+                self.assertIsNotNone(matcher.search(sample), (code, label))
+                forged = [cells[0], cells[1] + "; " + sample, cells[2]]
+                self.assertIn(
+                    "the %s Condition names an excluded failure: %s" % (code, label),
+                    condition_problems(code, forged),
+                )
+
+    def test_ac2_the_shared_words_of_the_positive_items_do_not_fire_an_excluded_matcher(self):
+        # git merge --abort, git rev-parse and "No remote can be chosen" are
+        # words of the positive items and of the excluded failures alike.
+        for text in (
+            "`git merge --abort` failed for a merge_in_progress worktree",
+            "`git rev-parse` of the integration tip failed immediately before the local merge",
+            "`git rev-parse HEAD` failed after verification",
+            "main-tree",
+        ):
+            for matcher in (m for _, m, _ in EXCLUDED_CONDITIONS["git_failed"]):
+                self.assertIsNone(matcher.search(text), (text, matcher.pattern))
+        for text in ("No remote can be chosen", "the remote does not exist"):
+            for matcher in (m for _, m, _ in EXCLUDED_CONDITIONS["remote_unresolved"]):
+                self.assertIsNone(matcher.search(text), (text, matcher.pattern))
+
+    def test_ac1_the_condition_matcher_fires_on_a_wrong_emitted_by_and_a_wrong_shape(self):
+        for code, emitted_by in CONDITION_EMITTED_BY.items():
+            cells = contract_cells(self.contract(), code)
+            self.assertEqual(cells[2], emitted_by)
+            forged = [cells[0], cells[1], "the skill"]
+            self.assertIn("the %s Emitted by is not %r" % (code, emitted_by), condition_problems(code, forged))
+        for code in CONDITION_TERMS:
+            cells = contract_cells(self.contract(), code)
+            self.assertEqual(len(cells), 3)
+            self.assertEqual(condition_problems(code, cells[:2]), ["the %s row does not have 3 cells" % code])
+            # A pipe in a cell body makes a fourth cell.
+            self.assertEqual(
+                condition_problems(code, cells + ["x"]), ["the %s row does not have 3 cells" % code]
+            )
+            self.assertEqual(condition_problems(code, None), ["the %s row does not have 3 cells" % code])
+            for forbidden in (FORGED_HOME, FORGED_NOTION):
+                forged = [cells[0], cells[1] + " " + forbidden, cells[2]]
+                self.assertIn(
+                    "the %s row carries a home path or a Notion URL" % code,
+                    condition_problems(code, forged),
+                )
+
+    def test_ac4_the_contract_rows_keep_3_cells_with_no_pipe_in_a_cell_body(self):
+        rows = contract_reason_rows(self.contract())
+        self.assertEqual(sorted(code for code, _ in rows), sorted(REASON_CODES))
+        for code, cells in rows:
+            self.assertEqual(len(cells), 3, code)
+            for cell in cells:
+                self.assertNotIn("|", cell)
+
+    # -- TS-4: the owner sentence and the table shape -------------------------
+
+    def test_ac4_the_results_section_names_merge_result_md_as_the_owner_of_the_conditions(self):
+        self.assertEqual(owner_problems(self.text), [])
+        body = self.section("結果の値")
+        self.assertIn("`references/merge-result.md`", body)
+        self.assertIn("Reason codes", body)
+
+    def test_ac4_the_owner_matcher_fires_on_forged_text(self):
+        sentence = "各 reason の条件の正本は、`references/merge-result.md` の Reason codes。"
+        self.assertIn(sentence, self.text)
+        without = self.text.replace(sentence, "")
+        self.assertEqual(
+            owner_problems(without),
+            ["the 結果の値 section does not name Reason codes in references/merge-result.md as the owner"],
+        )
+        # The path mentioned elsewhere in the skill does not stand in for it.
+        self.assertIn("references/merge-result.md", without)
+        for other in (
+            "各 reason の条件の正本は、`references/other.md` の Reason codes。",
+            "各 reason の条件の正本は、`references/merge-result.md` の Field values。",
+            "`references/merge-result.md` を参照する。",
+        ):
+            self.assertEqual(len(owner_problems(self.text.replace(sentence, other))), 1, other)
+        self.assertEqual(owner_problems(self.text.replace("## 結果の値", "## 値")), ["no 結果の値 section"])
+
+    def test_ac4_the_result_table_keeps_4_columns_and_the_28_codes_exactly_once(self):
+        self.assertEqual(result_table_problems(self.text), [])
+        codes = reason_table_codes(self.text)
+        self.assertEqual(len(codes), 28)
+        self.assertEqual(sorted(codes), sorted(REASON_CODES))
+
+    def test_ac4_the_result_table_matcher_fires_on_forged_text(self):
+        row = table_cells(self.text, "git_failed")
+        line = "| `git_failed` | %s | %s | %s |" % (row[1], row[2], row[3])
+        self.assertIn(line, self.text)
+
+        def fires(text, label):
+            self.assertNotEqual(text, self.text)
+            problems = result_table_problems(text)
+            self.assertTrue(any(label in p for p in problems), (label, problems))
+
+        # A condition column added, and a pipe in a cell body.
+        fires(self.text.replace(line, line + " 条件 |"), "the git_failed row does not have 4 cells")
+        fires(self.text.replace(line, line.replace(row[3], row[3] + " a|b")), "the git_failed row does not have 4 cells")
+        # A row removed, and a row listed twice.
+        fires(self.text.replace(line + "\n", ""), "28 codes")
+        fires(self.text.replace(line + "\n", line + "\n" + line + "\n"), "28 codes")
+        # A header with a column dropped.
+        header = [l for l in self.section("結果の値").split("\n") if l.startswith("| reason")][0]
+        fires(self.text.replace(header, "| reason | 出どころ | 手順 |"), "the table header")
+
+    # -- FR4: the verification_failed row -------------------------------------
+
+    def test_ac5_the_verification_failed_detail_gains_the_step_10_mismatches(self):
+        cells = table_cells(self.text, "verification_failed")
+        self.assertEqual(verification_detail_problems(cells), [])
+        self.assertEqual(verification_row_problems(cells), [])
+        self.assertEqual(step_column(cells[2]), {8, 10, 13})
+        self.assertIn("merge-git integrate", cells[1])
+        for pinned in ("`component.field`", MOVED_AFTER_PREFLIGHT, MOVED_AFTER_VERIFICATION):
+            self.assertIn(pinned, cells[3])
+
+    def test_ac5_the_verification_detail_matcher_fires_on_forged_rows(self):
+        cells = table_cells(self.text, "verification_failed")
+        for term in VERIFICATION_DETAIL_TERMS:
+            forged = cells[:3] + [cells[3].replace(term, "")]
+            self.assertNotEqual(forged[3], cells[3])
+            self.assertIn("the detail lacks %r" % term, verification_detail_problems(forged))
+        self.assertEqual(
+            verification_detail_problems(cells[:3]),
+            ["the verification_failed row does not have 4 cells"],
+        )
+
+    # -- TS-3: the excluded paths ---------------------------------------------
+
+    def test_ac6_the_excluded_paths_stay_internal_error_main_tree_not_ready_and_merge_failed(self):
+        self.assertEqual(excluded_path_problems(self.text), [])
+
+    def test_ac6_the_excluded_path_matcher_fires_on_forged_text(self):
+        for number, locator, code, label in EXCLUDED_PATH_LINES:
+            lines = [l for l in step_bodies(self.text)[number].split("\n") if locator in l]
+            self.assertEqual(len(lines), 1, label)
+            line = lines[0]
+            # The line writes git_failed instead of its own code.
+            forged = self.text.replace(line, line.replace(code, "`git_failed`"))
+            self.assertNotEqual(forged, self.text)
+            problems = excluded_path_problems(forged)
+            self.assertIn("%s writes git_failed" % label, problems)
+            self.assertIn("%s does not write %s" % (label, code), problems)
+            # The line is gone.
+            self.assertIn("no line for %s" % label, excluded_path_problems(self.text.replace(line, "")))
+        for number in STEPS_WITHOUT_GIT_FAILED:
+            forged = replace_in_step(self.text, number, "\n\n", "\n\n`git_failed`\n\n")
+            self.assertIn("step %d writes git_failed" % number, excluded_path_problems(forged))
+
+    # -- NFR4, NFR5 -----------------------------------------------------------
+
+    def test_ac7_this_test_module_imports_only_the_standard_library(self):
+        source = Path(__file__).read_text(encoding="utf-8")
+        self.assertEqual(non_stdlib_imports(source), [])
+
+    def test_ac7_the_import_matcher_fires_on_forged_source(self):
+        self.assertEqual(non_stdlib_imports("import json\nfrom pathlib import Path\n"), [])
+        self.assertEqual(non_stdlib_imports("import pytest\n"), ["pytest"])
+        self.assertEqual(non_stdlib_imports("from yaml import safe_load\n"), ["yaml"])
+        self.assertEqual(non_stdlib_imports("import os\nimport requests.adapters\n"), ["requests"])
+
+    def test_ac7_the_changed_documents_carry_no_home_path_and_no_notion_url(self):
+        for text in (self.text, self.contract()):
+            self.assertIsNone(HOME_OR_NOTION_RE.search(text))
+        for forbidden in (FORGED_HOME, FORGED_NOTION):
+            self.assertIsNotNone(HOME_OR_NOTION_RE.search(self.text + "\n" + forbidden))
 
 
 if __name__ == "__main__":
