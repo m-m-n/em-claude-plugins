@@ -14,6 +14,9 @@ Covers task0008 Acceptance Criteria
   `failed_kind` is, in interactive and batch runs, with no gate and no
   question.
 - AC-3 (FR9): `TestAC3RestorationSplit` -- the D9 split of the restoration.
+  task0010 (plan-feature-docs-route, review round 1) revises that split: a
+  correction that is not the last writes its patch only, and every
+  restoration item goes into the last correction's one Write.
 - AC-4: `TestAC4UnresolvedJudgment` -- an unresolved judgment leaves
   `workflow.yaml` unchanged for that judgment, stop condition 3 fires, and
   the report names each unresolved judgment's failed conditions.
@@ -263,31 +266,119 @@ def dispatch_item_defects(item):
     )
 
 
+# The split text task0010 replaces: it wrote each correction's task-level items
+# in that correction's own Write. Kept as a fixture so the negative proofs show
+# that split_defects rejects it.
+PRE_CHANGE_SPLIT_REGION = """**復元の分割**は、1 回の評価の中で書き込みをどう配分するかを決める。
+
+- タスクの項目（`tasks.{T}.status` と `tasks.{T}.routeback_failed_journal_line`）は、
+  訂正ごとに、その訂正の対象について書く。最終パスの訂正の対象は `violations`、
+  feature-docs の訂正の対象は `targets` である。その訂正のパッチと一緒に、
+  その訂正の成果物のコミットの後の 1 回の Write と 1 回のコミットで書く。
+- step の項目（`implement` と `failed_kind`）は、評価の最後の訂正の Write に入れる。
+  ただし、未解決の判定が 1 つもないときに限る。未解決の判定は、`blocked` になった
+  判定、終了コードが 0 以外だった判定、検証済みのパッチを得ないまま終わった判定。
+- feature-docs の訂正は、`final_path_remaining` が false のとき最後の訂正になる。
+  true のときは、8. のとおり捕捉し直した先端で最終パスの判定が続き、`implement` が
+  `failed` のままその判定が `dispatch` を返せば、その訂正が最後の訂正になる。
+- 捕捉し直した先端での最終パスの判定が `none` を返したときは、step の項目だけを
+  1 回の Write と 1 回のコミットで書く。
+
+訂正と訂正の間で中断した場合、次の起動は feature-docs の判定が `none` を返し、
+最終パスの判定に進む。13 節の Apply 段落は、各 Write がパッチと復元を一緒に書くので
+そのまま成り立つ。
+
+"""
+
+# The per-correction task-level wording the pre-change split used. The section
+# between the Step A.6 heading and the Step B heading no longer holds it.
+STALE_PER_CORRECTION_PHRASES = (
+    "訂正ごとに、その訂正の対象について書く",
+    "その訂正のパッチと一緒に",
+    "その訂正の成果物のコミットの後の 1 回の Write と 1 回のコミットで書く",
+)
+
+PRE_CHANGE_ITEM_9 = (
+    "9. 検証済みのパッチを得たときは、成果物のコミットを作った後、パッチと復元を\n"
+    "   1 回の Write と 1 回のコミットで書く。コミットは\n"
+    "   `${CLAUDE_PLUGIN_ROOT}/scripts/commit-docs.sh` で行う。評価が終わったら\n"
+    "   Step B へ進む。"
+)
+
+
 def split_defects(block):
-    """The D9 restoration split."""
+    """The D9 restoration split, as revised by task0010."""
     return _missing_ws(
         block,
         (
-            # task-level items: per correction, with its patch
+            # a correction that is not the last writes its patch only
+            "評価の最後でない訂正の Write は、その訂正のパッチだけを書く",
+            "対象の `tasks.{T}.status` は `failed` のままにし",
+            "`tasks.{T}.routeback_failed_journal_line` は書かない",
+            "journal に `failed` のイベントがあるかどうかにかかわらず",
+            # every restoration item: the last correction's one Write, only
+            # when nothing is unresolved
+            "復元の項目はすべて、評価の最後の訂正の Write に、まとめて入れる",
+            "ただし、未解決の判定が 1 つもないときに限る",
+            # task-level items: the targets of every correction
             "タスクの項目",
-            "訂正ごとに、その訂正の対象について書く",
+            "評価のすべての訂正の対象について書く",
             "最終パスの訂正の対象は `violations`",
             "feature-docs の訂正の対象は `targets`",
-            "その訂正のパッチと一緒に",
-            "その訂正の成果物のコミットの後の 1 回の Write と 1 回のコミットで書く",
-            # step-level items: last correction, only when nothing is unresolved
-            "step の項目（`implement` と `failed_kind`）",
-            "評価の最後の訂正の Write に入れる",
-            "未解決の判定が 1 つもないときに限る",
+            # step-level items: the same Write
+            "step の項目（`implement` と `failed_kind`）も同じ Write に入れる",
+            # unresolved judgment: nothing is written
             "`blocked` になった判定",
             "終了コードが 0 以外だった判定",
             "検証済みのパッチを得ないまま終わった判定",
+            "未解決の判定があるときは、タスクの項目も step の項目も、復元の項目を 1 つも書かない",
             # the final_path_remaining rule
             "`final_path_remaining` が false のとき最後の訂正になる",
             "true のときは",
             "捕捉し直した先端で最終パスの判定が続き",
-            # the step-level items written alone
-            "`none` を返したときは、step の項目だけを 1 回の Write と 1 回のコミットで書く",
+            # the none case: feature-docs targets and step-level items together
+            "`none` を返したときは、feature-docs の訂正の対象のタスクの項目と step の項目を、"
+            "まとめて 1 回の Write と 1 回のコミットで書く",
+        ),
+    )
+
+
+def interruption_defects(block):
+    """The paragraph on an interruption between corrections, or on an
+    unresolved final-path correction."""
+    return _missing_ws(
+        block,
+        (
+            "訂正と訂正の間で中断した場合",
+            "最終パスの訂正が未解決で終わった場合",
+            "対象のタスクはどれも `status` が `failed` のまま",
+            "`implement` も `failed` のまま",
+            "feature-docs の判定が `none` を返し",
+            "評価は最終パスの判定に進む",
+            "最終パスの判定は、それらのタスクを失敗したタスクとして選ぶ",
+            "その評価の復元は、その評価自身の訂正の対象について書く",
+            "13 節の Apply 段落",
+            "最終パスの訂正が常にその評価の最後の訂正",
+        ),
+    )
+
+
+def stale_split_defects(text):
+    """The per-correction task-level wording of the pre-change split that
+    `text` still holds."""
+    return [p for p in STALE_PER_CORRECTION_PHRASES if _contains(text, p)]
+
+
+def item_9_defects(item):
+    """List item 9: the pinned sentence plus the patch-only statement."""
+    return _missing_ws(
+        item,
+        (
+            "成果物のコミットを作った後",
+            "パッチと復元を 1 回の Write と 1 回のコミットで書く",
+            "Write が運ぶ復元は、下記の復元の分割がその Write に割り当てるものである",
+            "評価の最後でない訂正の Write は、パッチだけを運ぶ",
+            "`${CLAUDE_PLUGIN_ROOT}/scripts/commit-docs.sh`",
         ),
     )
 
@@ -564,16 +655,77 @@ class TestAC3RestorationSplit(_SkillTestCase):
         )
 
     def test_the_split_names_the_interruption_between_corrections(self):
+        # AC-4 (FR8, TS-12): the targets keep status failed, the feature-docs
+        # judgment returns none, the final-path judgment still selects them.
+        self.assertEqual(interruption_defects(self.block), [])
+
+    def test_the_non_last_write_carries_the_patch_only(self):
+        # AC-1 (FR9).
+        bullet = _block_with(
+            self.block,
+            "評価の最後でない訂正の Write は、その訂正のパッチだけを書く",
+        )
         self.assertEqual(
             _missing_ws(
-                self.block,
+                bullet,
                 (
-                    "訂正と訂正の間で中断した場合",
-                    "feature-docs の判定が `none` を返し",
+                    "対象の `tasks.{T}.status` は `failed` のままにし",
+                    "`tasks.{T}.routeback_failed_journal_line` は書かない",
                 ),
             ),
             [],
         )
+
+    def test_every_restoration_item_goes_into_the_last_correction_write(self):
+        # AC-2 (FR9, TS-8): both targets lists, the step-level items, the
+        # unresolved condition and the nothing-written rule.
+        bullet = _block_with(
+            self.block,
+            "復元の項目はすべて、評価の最後の訂正の Write に、まとめて入れる",
+        )
+        self.assertEqual(
+            _missing_ws(
+                bullet,
+                (
+                    "ただし、未解決の判定が 1 つもないときに限る",
+                    "評価のすべての訂正の対象について書く",
+                    "最終パスの訂正の対象は `violations`",
+                    "feature-docs の訂正の対象は `targets`",
+                    "step の項目（`implement` と `failed_kind`）も同じ Write に入れる",
+                ),
+            ),
+            [],
+        )
+        self.assertTrue(
+            _contains(
+                self.block,
+                "未解決の判定があるときは、タスクの項目も step の項目も、復元の項目を 1 つも書かない",
+            )
+        )
+
+    def test_the_none_case_writes_the_feature_docs_targets_with_the_step_items(self):
+        # AC-3 (FR9).
+        bullet = _block_with(self.block, "`none` を返したときは")
+        self.assertEqual(
+            _missing_ws(
+                bullet,
+                (
+                    "捕捉し直した先端での最終パスの判定が `none` を返したときは",
+                    "feature-docs の訂正の対象のタスクの項目と step の項目を、"
+                    "まとめて 1 回の Write と 1 回のコミットで書く",
+                ),
+            ),
+            [],
+        )
+
+    def test_item_9_keeps_its_pinned_sentence_and_states_the_patch_only_write(self):
+        # AC-5.
+        item = _block_with(self.section, "成果物のコミットを作った後")
+        self.assertEqual(item_9_defects(item), [])
+
+    def test_the_section_no_longer_writes_each_corrections_task_items_with_its_patch(self):
+        # AC-5: a negative assertion on the section text.
+        self.assertEqual(stale_split_defects(self.section), [])
 
     def test_the_restoration_list_names_both_targets_lists(self):
         item = _block_with(self.section, "**復元**は")
@@ -593,7 +745,9 @@ class TestAC3RestorationSplit(_SkillTestCase):
         forged = _replace_flexible(
             self.block, "ただし、未解決の判定が 1 つもないときに限る。", ""
         )
-        self.assertIn("未解決の判定が 1 つもないときに限る", split_defects(forged))
+        self.assertIn(
+            "ただし、未解決の判定が 1 つもないときに限る", split_defects(forged)
+        )
 
     def test_negative_a_split_without_the_final_path_remaining_rule_is_rejected(self):
         forged = self.block.replace("`final_path_remaining`", "`@@`")
@@ -603,9 +757,153 @@ class TestAC3RestorationSplit(_SkillTestCase):
             split_defects(forged),
         )
 
-    def test_negative_a_split_without_the_alone_case_is_rejected(self):
-        forged = _replace_flexible(self.block, "step の項目だけを", "")
-        self.assertNotEqual(split_defects(forged), [])
+    def test_negative_a_split_without_the_none_case_is_rejected(self):
+        forged = _replace_flexible(
+            self.block,
+            "feature-docs の訂正の対象のタスクの項目と step の項目を、まとめて",
+            "",
+        )
+        self.assertIn(
+            "`none` を返したときは、feature-docs の訂正の対象のタスクの項目と step の項目を、"
+            "まとめて 1 回の Write と 1 回のコミットで書く",
+            split_defects(forged),
+        )
+
+    def test_negative_a_copy_whose_non_last_write_still_writes_task_items_is_rejected(self):
+        # The patch-only statement removed: the non-last Write is left free to
+        # write the task-level items.
+        forged = _replace_flexible(
+            self.block,
+            "評価の最後でない訂正の Write は、その訂正のパッチだけを書く。",
+            "",
+        )
+        self.assertNotEqual(forged, self.block)
+        self.assertIn(
+            "評価の最後でない訂正の Write は、その訂正のパッチだけを書く",
+            split_defects(forged),
+        )
+
+    def test_negative_a_copy_that_writes_the_journal_line_in_the_non_last_write_is_rejected(self):
+        forged = _replace_flexible(
+            self.block,
+            "`tasks.{T}.routeback_failed_journal_line` は書かない",
+            "`tasks.{T}.routeback_failed_journal_line` も書く",
+        )
+        self.assertIn(
+            "`tasks.{T}.routeback_failed_journal_line` は書かない",
+            split_defects(forged),
+        )
+
+    def test_negative_a_copy_that_sets_the_targets_pending_in_the_non_last_write_is_rejected(self):
+        forged = _replace_flexible(
+            self.block,
+            "対象の `tasks.{T}.status` は `failed` のままにし",
+            "対象の `tasks.{T}.status` を `pending` にし",
+        )
+        self.assertIn(
+            "対象の `tasks.{T}.status` は `failed` のままにし",
+            split_defects(forged),
+        )
+
+    def test_negative_a_copy_without_the_nothing_written_rule_is_rejected(self):
+        forged = _replace_flexible(
+            self.block,
+            "未解決の判定があるときは、タスクの項目も step の項目も、復元の項目を 1 つも書かない。",
+            "",
+        )
+        self.assertIn(
+            "未解決の判定があるときは、タスクの項目も step の項目も、復元の項目を 1 つも書かない",
+            split_defects(forged),
+        )
+
+    def test_negative_a_copy_without_the_last_write_rule_is_rejected(self):
+        forged = _replace_flexible(
+            self.block,
+            "復元の項目はすべて、評価の最後の訂正の Write に、まとめて入れる",
+            "復元の項目は、訂正ごとに書く",
+        )
+        self.assertIn(
+            "復元の項目はすべて、評価の最後の訂正の Write に、まとめて入れる",
+            split_defects(forged),
+        )
+
+    def test_negative_the_pre_change_split_text_is_rejected(self):
+        defects = split_defects(PRE_CHANGE_SPLIT_REGION)
+        self.assertNotEqual(defects, [])
+        for phrase in (
+            "評価の最後でない訂正の Write は、その訂正のパッチだけを書く",
+            "復元の項目はすべて、評価の最後の訂正の Write に、まとめて入れる",
+            "評価のすべての訂正の対象について書く",
+            "未解決の判定があるときは、タスクの項目も step の項目も、復元の項目を 1 つも書かない",
+            "`none` を返したときは、feature-docs の訂正の対象のタスクの項目と step の項目を、"
+            "まとめて 1 回の Write と 1 回のコミットで書く",
+        ):
+            self.assertIn(phrase, defects)
+
+    def test_negative_the_pre_change_text_holds_the_stale_per_correction_wording(self):
+        self.assertEqual(
+            stale_split_defects(PRE_CHANGE_SPLIT_REGION),
+            list(STALE_PER_CORRECTION_PHRASES),
+        )
+
+    def test_negative_the_pre_change_interruption_paragraph_is_rejected(self):
+        defects = interruption_defects(PRE_CHANGE_SPLIT_REGION)
+        self.assertIn("対象のタスクはどれも `status` が `failed` のまま", defects)
+        self.assertIn(
+            "最終パスの判定は、それらのタスクを失敗したタスクとして選ぶ", defects
+        )
+        self.assertIn("最終パスの訂正が未解決で終わった場合", defects)
+
+    def test_negative_an_interruption_paragraph_without_the_failed_selection_is_rejected(self):
+        forged = _replace_flexible(
+            self.block,
+            "最終パスの判定は、それらのタスクを失敗したタスクとして選ぶ。",
+            "",
+        )
+        self.assertIn(
+            "最終パスの判定は、それらのタスクを失敗したタスクとして選ぶ",
+            interruption_defects(forged),
+        )
+
+    def test_negative_an_interruption_paragraph_without_the_kept_status_is_rejected(self):
+        forged = _replace_flexible(
+            self.block,
+            "対象のタスクはどれも `status` が `failed` のままで、",
+            "",
+        )
+        self.assertIn(
+            "対象のタスクはどれも `status` が `failed` のまま",
+            interruption_defects(forged),
+        )
+
+    def test_negative_item_9_without_the_patch_only_statement_is_rejected(self):
+        item = _block_with(self.section, "成果物のコミットを作った後")
+        forged = _replace_flexible(
+            item,
+            "評価の最後でない訂正の Write は、パッチだけを運ぶ。",
+            "",
+        )
+        self.assertIn(
+            "評価の最後でない訂正の Write は、パッチだけを運ぶ", item_9_defects(forged)
+        )
+
+    def test_negative_the_pre_change_item_9_is_rejected(self):
+        defects = item_9_defects(PRE_CHANGE_ITEM_9)
+        self.assertIn(
+            "評価の最後でない訂正の Write は、パッチだけを運ぶ", defects
+        )
+        self.assertIn(
+            "Write が運ぶ復元は、下記の復元の分割がその Write に割り当てるものである",
+            defects,
+        )
+        # The pinned sentence itself was already there before the change.
+        self.assertNotIn("パッチと復元を 1 回の Write と 1 回のコミットで書く", defects)
+
+    def test_negative_a_section_that_gains_the_stale_wording_is_rejected(self):
+        forged = self.section + "\n" + "その訂正のパッチと一緒に書く。\n"
+        self.assertEqual(
+            stale_split_defects(forged), ["その訂正のパッチと一緒に"]
+        )
 
 
 class TestAC4UnresolvedJudgment(_SkillTestCase):

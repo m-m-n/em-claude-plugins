@@ -1,0 +1,104 @@
+task_id: task0010
+# Full suite (python3 -m unittest discover -s tests) run before any edit:
+# 15584 tests, OK, 1 skipped, no failure.
+baseline_failures: []
+# Full suite (python3 -m unittest discover -s tests) re-executed after the
+# implementation and after this record was written (the record is itself
+# checked by tests.test_tests_yaml_id_resolution): no failure.
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_feature_docs_entry_develop_docs.TestAC3RestorationSplit.test_the_non_last_write_carries_the_patch_only
+      - tests.test_feature_docs_entry_develop_docs.TestAC3RestorationSplit.test_the_split_states_every_d9_point
+      - tests.test_feature_docs_entry_develop_docs.TestAC3RestorationSplit.test_negative_a_copy_whose_non_last_write_still_writes_task_items_is_rejected
+      - tests.test_feature_docs_entry_develop_docs.TestAC3RestorationSplit.test_negative_a_copy_that_writes_the_journal_line_in_the_non_last_write_is_rejected
+      - tests.test_feature_docs_entry_develop_docs.TestAC3RestorationSplit.test_negative_a_copy_that_sets_the_targets_pending_in_the_non_last_write_is_rejected
+    red_confirmed: true
+    red_reason: >-
+      Against the unedited develop SKILL.md, test_the_non_last_write_carries_the_patch_only
+      failed with "no block holds ('評価の最後でない訂正の Write は、その訂正のパッチだけを書く',)",
+      and the three negative proofs of the class errored with "phrase to mutate not
+      found" (the split wrote each correction's task-level items with that
+      correction's own patch and held none of the patch-only sentences).
+  AC-2:
+    tests:
+      - tests.test_feature_docs_entry_develop_docs.TestAC3RestorationSplit.test_every_restoration_item_goes_into_the_last_correction_write
+      - tests.test_feature_docs_entry_develop_docs.TestAC3RestorationSplit.test_the_split_states_every_d9_point
+      - tests.test_feature_docs_entry_develop_docs.TestAC3RestorationSplit.test_negative_a_copy_without_the_last_write_rule_is_rejected
+      - tests.test_feature_docs_entry_develop_docs.TestAC3RestorationSplit.test_negative_a_copy_without_the_nothing_written_rule_is_rejected
+      - tests.test_feature_docs_entry_develop_docs.TestAC3RestorationSplit.test_negative_a_split_without_the_unresolved_condition_is_rejected
+    red_confirmed: true
+    red_reason: >-
+      Against the unedited SKILL.md test_every_restoration_item_goes_into_the_last_correction_write
+      failed with "no block holds ('復元の項目はすべて、評価の最後の訂正の Write に、まとめて入れる',)",
+      and test_negative_a_copy_without_the_last_write_rule_is_rejected and
+      test_negative_a_copy_without_the_nothing_written_rule_is_rejected errored with
+      "phrase to mutate not found". test_negative_a_split_without_the_unresolved_condition_is_rejected
+      is the pre-existing proof of the unresolved condition, kept on the revised
+      phrase; it has no red of its own.
+  AC-3:
+    tests:
+      - tests.test_feature_docs_entry_develop_docs.TestAC3RestorationSplit.test_the_none_case_writes_the_feature_docs_targets_with_the_step_items
+      - tests.test_feature_docs_entry_develop_docs.TestAC3RestorationSplit.test_negative_a_split_without_the_none_case_is_rejected
+      - tests.test_feature_docs_entry_develop_docs.TestAC3RestorationSplit.test_negative_a_split_without_the_final_path_remaining_rule_is_rejected
+    red_confirmed: true
+    red_reason: >-
+      Against the unedited SKILL.md test_the_none_case_writes_the_feature_docs_targets_with_the_step_items
+      failed (the none case wrote only the step-level items, so the phrase
+      "feature-docs の訂正の対象のタスクの項目と step の項目を、まとめて" was missing) and
+      test_negative_a_split_without_the_none_case_is_rejected errored with
+      "phrase to mutate not found". The final_path_remaining half of the criterion is
+      retained wording: test_negative_a_split_without_the_final_path_remaining_rule_is_rejected
+      was green before the edit and stays green, with no red state for it.
+  AC-4:
+    tests:
+      - tests.test_feature_docs_entry_develop_docs.TestAC3RestorationSplit.test_the_split_names_the_interruption_between_corrections
+      - tests.test_feature_docs_entry_develop_docs.TestAC3RestorationSplit.test_negative_an_interruption_paragraph_without_the_failed_selection_is_rejected
+      - tests.test_feature_docs_entry_develop_docs.TestAC3RestorationSplit.test_negative_an_interruption_paragraph_without_the_kept_status_is_rejected
+      - tests.test_feature_docs_entry_develop_docs.TestAC3RestorationSplit.test_negative_the_pre_change_interruption_paragraph_is_rejected
+    red_confirmed: true
+    red_reason: >-
+      Against the unedited SKILL.md test_the_split_names_the_interruption_between_corrections
+      failed with seven missing phrases (the first being
+      '最終パスの訂正が未解決で終わった場合' and '対象のタスクはどれも `status` が `failed` のまま'),
+      and the two live-text negative proofs errored with "phrase to mutate not found".
+      test_negative_the_pre_change_interruption_paragraph_is_rejected runs on the
+      fixture string, so it passes both before and after the edit.
+  AC-5:
+    tests:
+      - tests.test_feature_docs_entry_develop_docs.TestAC3RestorationSplit.test_item_9_keeps_its_pinned_sentence_and_states_the_patch_only_write
+      - tests.test_feature_docs_entry_develop_docs.TestAC3RestorationSplit.test_the_section_no_longer_writes_each_corrections_task_items_with_its_patch
+      - tests.test_feature_docs_entry_develop_docs.TestAC3RestorationSplit.test_negative_item_9_without_the_patch_only_statement_is_rejected
+      - tests.test_feature_docs_entry_develop_docs.TestAC3RestorationSplit.test_negative_a_section_that_gains_the_stale_wording_is_rejected
+      - tests.test_feature_docs_entry_develop_docs.TestAC3RestorationSplit.test_negative_the_pre_change_item_9_is_rejected
+      - tests.test_failed_entry_develop_docs.TestAC5RestorationOneWrite
+    red_confirmed: true
+    red_reason: >-
+      Against the unedited SKILL.md test_item_9_keeps_its_pinned_sentence_and_states_the_patch_only_write
+      failed (item 9 held neither "Write が運ぶ復元は、下記の復元の分割がその Write に割り当てるものである"
+      nor the patch-only sentence) and
+      test_the_section_no_longer_writes_each_corrections_task_items_with_its_patch failed
+      because the section still held all three pre-change phrases
+      ('訂正ごとに、その訂正の対象について書く', 'その訂正のパッチと一緒に' and the commit phrase).
+      tests.test_failed_entry_develop_docs.TestAC5RestorationOneWrite pins the retained
+      list item 9 and restoration phrases; it was green before the edit and stays
+      green, so it went through no red state.
+  AC-6:
+    tests:
+      - tests.test_feature_docs_entry_develop_docs.TestAC3RestorationSplit.test_the_split_states_every_d9_point
+      - tests.test_feature_docs_entry_develop_docs.TestAC3RestorationSplit.test_negative_the_pre_change_split_text_is_rejected
+      - tests.test_feature_docs_entry_develop_docs.TestAC3RestorationSplit.test_negative_the_pre_change_text_holds_the_stale_per_correction_wording
+      - tests.test_feature_docs_entry_develop_docs.TestAC3RestorationSplit.test_negative_a_split_without_the_none_case_is_rejected
+      - tests.test_feature_docs_entry_develop_docs.TestAC3RestorationSplit.test_negative_a_copy_whose_non_last_write_still_writes_task_items_is_rejected
+      - tests.test_failed_entry_develop_docs
+    red_confirmed: true
+    red_reason: >-
+      Against the unedited SKILL.md test_the_split_states_every_d9_point failed with
+      nine missing phrases of the revised split, and the live-text negative proofs
+      listed under AC-1 to AC-4 errored with "phrase to mutate not found". The
+      fixture-based proofs (test_negative_the_pre_change_split_text_is_rejected and
+      test_negative_the_pre_change_text_holds_the_stale_per_correction_wording) assert
+      on the pre-change split text kept as a fixture string, so they pass before and
+      after the edit by construction. tests.test_failed_entry_develop_docs is
+      unchanged and was green before the edit and stays green.
