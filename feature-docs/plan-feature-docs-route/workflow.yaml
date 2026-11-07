@@ -114,8 +114,9 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
     notes: null
+    branch: em-workflow/plan-feature-docs-route/task0001
   task0002:
     title: Planner contract for other-feature documents and the correction input
     plan: tasks/task0002.md
@@ -138,8 +139,9 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
     notes: null
+    branch: em-workflow/plan-feature-docs-route/task0002
   task0003:
     title: The amend_other_feature write_policy action
     plan: tasks/task0003.md
@@ -166,8 +168,9 @@ tasks:
     - FR6
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
     notes: null
+    branch: em-workflow/plan-feature-docs-route/task0003
   task0004:
     title: Validator rejects feature-docs paths in replace_planning entries
     plan: tasks/task0004.md
@@ -186,8 +189,9 @@ tasks:
     - FR2
     - NFR2
     - NFR3
-    status: pending
+    status: in_progress
     notes: null
+    branch: em-workflow/plan-feature-docs-route/task0004
   task0005:
     title: Validator checks for other-feature document requests, grants and fixes
     plan: tasks/task0005.md
@@ -211,8 +215,9 @@ tasks:
     - FR7
     - NFR2
     - NFR3
-    status: pending
+    status: in_progress
     notes: null
+    branch: em-workflow/plan-feature-docs-route/task0005
   task0006:
     title: Feature-docs correction entry script and removal patch validation
     plan: tasks/task0006.md
@@ -235,8 +240,9 @@ tasks:
     - FR9
     - NFR2
     - NFR3
-    status: pending
+    status: in_progress
     notes: null
+    branch: em-workflow/plan-feature-docs-route/task0006
   task0007:
     title: workflow-patch contract for the feature-docs correction
     plan: tasks/task0007.md
