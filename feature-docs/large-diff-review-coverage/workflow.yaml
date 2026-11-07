@@ -209,6 +209,7 @@ tasks:
     - tests/test_review_phase_coverage_record.py
     - em-workflow/references/review-phase.md
     - tests/test_review_phase_llm_led.py
+    - tests/test_tier_record_schema_v2.py
     skills: []
     domains:
     - input-handling
@@ -224,7 +225,7 @@ tasks:
     - FR14
     - FR15
     - FR18
-    status: in_progress
+    status: merged
     branch: em-workflow/large-diff-review-coverage/task0005
     notes: null
   task0006:
