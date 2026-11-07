@@ -67,7 +67,7 @@ workflow:
   status: pending
 - id: implement
   status: pending
-  base_commit: 7f45acbf951d6b54bdcdb21a4a5c30b2e4d4e0a5
+  base_commit: 7f45acbf9607525e84dcb62855b5de98d9556d3c
 - id: review
   status: pending
 - id: verify
