@@ -51,3 +51,14 @@ records:
   normalized_answer: 訂正入口で基準に無い計画文書の新規作成を拒否する
   resolution_note: 'user-directed Codex consultation, turns: 2, harness entry: codex;
     Codex の指摘を採用。例外は既存文書と重ならない新規タスク専用の計画だけ'
+- question_id: create-plan.codex.non-target-write-permission
+  packet_id: null
+  answered_at: '2026-11-07T16:00:31+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: write_policy の権限は広げない。非対象計画は targets に無ければ編集しない。権限拡大は別タスクにする
+  normalized_answer: write_policy の権限は広げない。非対象計画は targets に無ければ編集しない。権限拡大は別タスクにする
+  resolution_note: 'user-directed Codex consultation, turns: 1, harness entry: codex;
+    Codex の案 B を採用。FR3 と A2 が古い参照の残存を許すので訂正は完走し、検証をすり抜ける経路も増えない。planner の未解決事項だったので、同じ
+    run 内で IMPLEMENTATION.md の D8 と task0003 の AC-3 へ反映した'
