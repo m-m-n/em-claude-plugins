@@ -1,0 +1,33 @@
+schema_version: 1
+feature: merge-pr-test-git-env-isolation
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 8e7242376534835f4824f6e81fb0f6a97c433e94
+last_input_digest: sha256:ba3379993cdc58473422fcf98345cb0d66b14795a0a327701ad158221bd9c8dd
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:ba3379993cdc58473422fcf98345cb0d66b14795a0a327701ad158221bd9c8dd
+  output_digest: null
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/planner-contract.md: sha256:6253ad93ad99c87daec151b2da071a950ebaa615b5e438adfc2951f7dba2fb05
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/design-tokens.yaml: sha256:ee02e7a3fb8574f782b42324ffe63b0c3f58d4247102d0d0b8482899993730ba
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
+    em-workflow/references/workflow-schema.md: sha256:5db914a170c0bd97886671160a2c3498127ffd83f0814bc8fb67407f4dc563ee
+    em-workflow/skills/plan-writing/SKILL.md: sha256:364f9dfc8244f9fe9e52999dfb93cf675d4b0602279d0a6bdf6f70c1dc186b87
+    feature-docs/merge-pr-test-git-env-isolation/SPEC.md: sha256:c27b0b67c37af00c743fafa9ec036c41afa9886b2a83c5b875e7a9ac61d04c27
+    feature-docs/merge-pr-test-git-env-isolation/workflow.yaml: sha256:e4caf10c2069d20a6571ffcac60cc957327cfd05b8272c678da08706f152bfaa
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
