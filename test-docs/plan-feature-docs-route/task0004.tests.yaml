@@ -1,6 +1,8 @@
 task_id: task0004
-baseline_failures: []          # before any edit: python3 -m unittest discover -s tests -> Ran 15037 tests, OK (skipped=1), no failing test
-final_failures: []             # re-executed after the implementation, the record and the byte-pin refresh: python3 -m unittest discover -s tests -> Ran 15068 tests, OK (skipped=1), no failing test
+baseline_failures:         # refreshed after the parent-side adoption (merge of the parent branch into this task branch): python3 -m unittest discover -s tests -> Ran 15278 tests, FAILED (failures=2, skipped=1). Both failures are caused by this task's own validator edit, which merged cleanly, meeting the adopted parent version of the pin module (the pin and the refresh comment of this task were gone); neither is inherited from the parent. The first baseline run, before any edit, was Ran 15037 tests, OK (skipped=1), no failing test
+  - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical
+  - tests.test_plan_task_feature_docs_validator.TestValidatorBytePinRefreshComment.test_ac7_the_pin_is_preceded_by_a_refresh_comment_naming_this_task
+final_failures: []             # re-executed after the re-implementation on the updated parent (pin comment and digest recomputed for the merged validator): python3 -m unittest discover -s tests -> Ran 15278 tests, OK (skipped=1), no failing test
 acceptance_tests:
   AC-1:
     tests:
