@@ -33,6 +33,7 @@ packets:
       status: answered
 answers:
   requirement.split-strategy:
+    question_id: requirement.split-strategy
     packet_id: create-spec-q0001
     answered_at: '2026-11-07T17:50:00+09:00'
     source: batch-codex-consultation
@@ -43,6 +44,7 @@ answers:
     normalized_answer: file_shards_all（spec は下記の例外）
     resolution_note: Codex 2 ターン相談。Codex 一致。Codex にも時間切れがあり LiteLLM 限定では残る
   requirement.split-limit:
+    question_id: requirement.split-limit
     packet_id: create-spec-q0001
     answered_at: '2026-11-07T17:50:00+09:00'
     source: batch-codex-consultation
@@ -53,6 +55,7 @@ answers:
     normalized_answer: limit_200k。540 秒内の完了保証ではない初期値
     resolution_note: Codex 一致。組み立て後の超過は too-large-route で扱う
   requirement.too-large-route:
+    question_id: requirement.too-large-route
     packet_id: create-spec-q0001
     answered_at: '2026-11-07T17:50:00+09:00'
     source: batch-codex-consultation
@@ -63,6 +66,7 @@ answers:
     normalized_answer: advance_other_harness
     resolution_note: Codex 一致。プロンプト上限と Codex の自己取得の上限は別物
   requirement.false-clean-scope:
+    question_id: requirement.false-clean-scope
     packet_id: create-spec-q0001
     answered_at: '2026-11-07T17:50:00+09:00'
     source: batch-codex-consultation
@@ -73,6 +77,7 @@ answers:
     normalized_answer: all_harnesses。外部プラグインの判定は「実行元が litellm・findings 空・summary 完全一致」に限定
     resolution_note: Codex 一致 + 判定条件の絞り込みを採用
   requirement.unreviewed-completion:
+    question_id: requirement.unreviewed-completion
     packet_id: create-spec-q0001
     answered_at: '2026-11-07T17:50:00+09:00'
     source: batch-codex-consultation
@@ -83,6 +88,7 @@ answers:
     normalized_answer: disclose_and_report
     resolution_note: Codex 一致
   requirement.unreviewed-record-shape:
+    question_id: requirement.unreviewed-record-shape
     packet_id: create-spec-q0001
     answered_at: '2026-11-07T17:50:00+09:00'
     source: batch-codex-consultation
@@ -93,6 +99,7 @@ answers:
     normalized_answer: sibling_field。両フィールドとも最終報告に含める
     resolution_note: Codex 一致
   requirement.spec-shard-handling:
+    question_id: requirement.spec-shard-handling
     packet_id: create-spec-q0001
     answered_at: '2026-11-07T17:50:00+09:00'
     source: batch-codex-consultation
@@ -104,6 +111,7 @@ answers:
     resolution_note: Codex turn2 の案 C を採用。evaluator_verifies は 10 ファイル制限と R4 で evaluator
       が動かない点で弱く、spec_whole_diff_self_fetch は失敗時に spec が丸ごと未実施になる
   requirement.em-review-scope:
+    question_id: requirement.em-review-scope
     packet_id: create-spec-q0001
     answered_at: '2026-11-07T17:50:00+09:00'
     source: batch-codex-consultation
@@ -114,6 +122,7 @@ answers:
     normalized_answer: codex_reviewer_parity
     resolution_note: Codex 一致
   requirement.shard-cap:
+    question_id: requirement.shard-cap
     packet_id: create-spec-q0001
     answered_at: '2026-11-07T17:50:00+09:00'
     source: batch-codex-consultation
@@ -125,6 +134,7 @@ answers:
     resolution_note: Codex は再試行・R4 込み 24 回と優先順の循環配分を提案。方向は採用し、計算を単純にするため primary dispatch
       のみを数える均等割へ変更（Claude 判断）
   design-step.decision:
+    question_id: design-step.decision
     packet_id: create-spec-q0001
     answered_at: '2026-11-07T17:50:00+09:00'
     source: batch-decision-table
