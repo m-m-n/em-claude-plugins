@@ -1,0 +1,48 @@
+task_id: task0007
+# Full suite (python3 -m unittest discover -s tests) run before any edit:
+# 15247 tests, OK, 1 skipped, no failure.
+baseline_failures: []
+# Full suite (python3 -m unittest discover -s tests) re-executed after the
+# implementation and after this record was written (the record is itself
+# checked by tests.test_tests_yaml_id_resolution): no failure.
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_feature_docs_correction_patch_docs.TestTasksPatchFieldParagraph
+    red_confirmed: true
+    red_reason: "Against the unedited workflow-patch.md test_the_lead_defines_the_field failed with \"Lists differ: ['no paragraph of the tasks_patch lead defines `tasks_patch.feature_docs_removals`'] != []\", and the two negative-proof tests that start from the live field paragraph errored because no such paragraph existed."
+  AC-2:
+    tests:
+      - tests.test_feature_docs_correction_patch_docs.TestPermissionSentences
+    red_confirmed: true
+    red_reason: "Against the unedited workflow-patch.md test_the_intro_keeps_its_phrases_and_names_the_new_section failed with \"intro lacks '`## Feature-docs correction`' ...\" and test_the_correction_entry_sentence_names_both_sections failed with \"sentence lacks '`## Feature-docs correction`'\". The byte-identical protocol-error check and the pinned-phrase checks were green from the start, as the text they pin is unchanged."
+  AC-3:
+    tests:
+      - tests.test_feature_docs_correction_patch_docs.TestVerbatimPointer
+    red_confirmed: true
+    red_reason: "Against the unedited workflow-patch.md test_the_pointer_names_both_corrections failed with \"sentence lacks '`## Feature-docs correction`'\"."
+  AC-4:
+    tests:
+      - tests.test_feature_docs_correction_patch_docs.TestSectionPlacement
+      - tests.test_feature_docs_correction_patch_docs.TestSectionPermissionTable
+      - tests.test_feature_docs_correction_patch_docs.TestSectionCodes
+      - tests.test_feature_docs_correction_patch_docs.TestSectionInputsApplicationAndOwnership
+    red_confirmed: true
+    red_reason: "Against the unedited workflow-patch.md test_one_h2_between_recovery_and_final_path_correction failed with \"Lists differ: [\\\"'## Feature-docs correction' appears 0 times\\\"] != []\", and the setUpClass of the three section classes errored with \"heading not found: '## Feature-docs correction'\"."
+  AC-5:
+    tests:
+      - tests.test_feature_docs_correction_patch_docs.TestRulesAndPins
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_workflow_patch_md_byte_identical
+    red_confirmed: true
+    red_reason: "Against the unedited tests/test_gate_option_vocabulary.py test_the_pin_comment_names_this_task failed with \"the comment above the pin does not start with 'Refreshed again by plan-feature-docs-route/task0007'\". The rule-count and adjacency checks of the class were green from the start because they pin text this task keeps; their negative proofs (a nineteenth rule, the new section moved after the final-path section) show those checks can fail. The byte pin test_workflow_patch_md_byte_identical was not observed failing before the digest was refreshed."
+  AC-6:
+    tests:
+      - tests.test_workflow_patch_doc.TestApplicationRules
+      - tests.test_workflow_patch_doc.TestReplaceAllPermissionConditionsPinned
+      - tests.test_workflow_patch_doc.TestUnchangedHalvesStatedExplicitly
+      - tests.test_workflow_patch_doc.TestReplanningTaskIdAllocationRule
+      - tests.test_final_path_correction_docs.TestPatchFieldAndPermissionStates
+      - tests.test_requirements_tests_replace.TestWorkflowPatchDocumentsTestsReplace
+    red_confirmed: false
+    red_reason: "AC-6 is the outcome of the whole-suite command (python3 -m unittest discover -s tests) with no existing assertion removed or weakened; no single check exists that can fail before the change. A dedicated new module is out of scope, but the existing tests that read workflow-patch.md (tests.test_workflow_patch_doc, tests.test_final_path_correction_docs, tests.test_requirements_tests_replace and the byte pin of tests.test_gate_option_vocabulary) detect a changed pinned phrase, a changed rule count or heading order and a changed digest; no red state occurred for this change. The suite was 15247 tests OK before the change and the same run is repeated after it (see final_failures)."

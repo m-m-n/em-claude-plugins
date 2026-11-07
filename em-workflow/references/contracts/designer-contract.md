@@ -4,7 +4,7 @@ Input/output contract for the `designer` worker. Renders design-input.md
 5.4.5 and 4.2. This document adds only designer-specific content; the
 common dispatch envelope is defined once in
 `references/contracts/worker-envelope.md` and is not restated here. The
-path-level write-policy model (the six actions, the `targets` /
+path-level write-policy model (the actions, the `targets` /
 `allowed_write_roots` split, `expect_digest` requirements) is owned by
 `references/contracts/spec-writer-contract.md` and is cited by path below,
 not restated.

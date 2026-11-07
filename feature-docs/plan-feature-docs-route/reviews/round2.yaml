@@ -1,0 +1,276 @@
+round: 2
+executed_at: '2026-11-08T02:17:19+09:00'
+scope:
+  review_mode: diff
+  base_commit: 7f45acbf9607525e84dcb62855b5de98d9556d3c
+  head_commit: 9580e239047e811aee4fd83840769313c0cc87e4
+  changed_files:
+  - em-workflow/agents/implementation-planner.md
+  - em-workflow/agents/spec-writer.md
+  - em-workflow/references/artifact-digest.md
+  - em-workflow/references/contracts/designer-contract.md
+  - em-workflow/references/contracts/planner-contract.md
+  - em-workflow/references/contracts/rework-planner-contract.md
+  - em-workflow/references/contracts/spec-writer-contract.md
+  - em-workflow/references/contracts/worker-envelope.md
+  - em-workflow/references/phase-state.md
+  - em-workflow/references/phases/create-plan-phase.md
+  - em-workflow/references/workflow-patch.md
+  - em-workflow/scripts/feature-docs-entry.py
+  - em-workflow/scripts/self-write-digest.py
+  - em-workflow/scripts/validate-worker-output.py
+  - em-workflow/skills/develop/SKILL.md
+  - em-workflow/skills/plan-writing/SKILL.md
+  - test-docs/plan-feature-docs-route/task0001.tests.yaml
+  - test-docs/plan-feature-docs-route/task0002.tests.yaml
+  - test-docs/plan-feature-docs-route/task0003.tests.yaml
+  - test-docs/plan-feature-docs-route/task0004.tests.yaml
+  - test-docs/plan-feature-docs-route/task0005.tests.yaml
+  - test-docs/plan-feature-docs-route/task0006.tests.yaml
+  - test-docs/plan-feature-docs-route/task0007.tests.yaml
+  - test-docs/plan-feature-docs-route/task0008.tests.yaml
+  - test-docs/plan-feature-docs-route/task0009.tests.yaml
+  - test-docs/plan-feature-docs-route/task0010.tests.yaml
+  - tests/test_amend_other_feature_action.py
+  - tests/test_feature_docs_correction_patch_docs.py
+  - tests/test_feature_docs_entry.py
+  - tests/test_feature_docs_entry_develop_docs.py
+  - tests/test_feature_docs_planner_rules_docs.py
+  - tests/test_feature_docs_removal_validator.py
+  - tests/test_gate_option_vocabulary.py
+  - tests/test_other_feature_docs_create_plan_docs.py
+  - tests/test_other_feature_docs_planner_contract.py
+  - tests/test_other_feature_docs_validator.py
+  - tests/test_plan_task_feature_docs_validator.py
+  - tests/test_rework_docs_only_validator_rules.py
+  - tests/test_scenario_id_planner_docs.py
+  - tests/test_self_write_digest.py
+  - tests/test_self_write_digest_docs.py
+  - tests/test_threat_model_planner_contract.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+passes:
+- loop: 0
+  fixed_files: []
+  manifest:
+    limit: 200000
+    total_chars: 597781
+    split: true
+    shard_cap: 4
+    dispatched_shards:
+    - 1
+    - 2
+    - 3
+    - 4
+    excess_shards: []
+perspective_runs:
+- run_id: security@s1#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: security@s2#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: security@s3#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: security@s4#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: comprehensive@s1#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: failed
+- run_id: comprehensive@s2#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: comprehensive@s3#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: comprehensive@s4#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: comprehensive@s1#fallback
+  perspective: comprehensive
+  role: fallback
+  source: claude
+  status: completed
+- run_id: performance@s1#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: performance@s2#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: performance@s3#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: performance@s4#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: architecture@s1#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: architecture@s2#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: architecture@s3#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: architecture@s4#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: review_data_too_large
+- run_id: spec#1
+  perspective: spec
+  role: primary
+  source: codex
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: e3e5a734e331965a
+  severity: high
+  category: spec
+  file: em-workflow/skills/develop/SKILL.md
+  line: 478
+  title: 評価をまたぐと、前の訂正の対象タスクが復元されず failed のまま残る（FR9 の復元漏れ）
+  description: task0010 で、評価の最後でない訂正の Write はパッチだけを書くようになった（460〜463 行）。復元はすべて、未解決の判定が無いときに限り、最後の Write に入る（464〜471 行）。1 回の評価の中ではこれで正しく動く。ただ、評価をまたぐと次の穴が残る。例として、失敗したタスク A の files に feature-docs のパスだけがあり、失敗したタスク B に REPORT.md（最終パスの違反）がある場合を考える。feature-docs の訂正の Write（パッチのみ）の後に中断するか、最終パスの訂正が未解決で終わると（471 行により復元は 1 つも書かれない）、次の起動はこう進む。(1) feature-docs-entry.py は、失敗したタスクに feature-docs のパスが残っていないので none を返す（117〜118 行）。(2) 最終パスの判定の violations は要素ごとに path を持つので（SKILL.md 407 行）、違反が無い A は挙がらない。(3) 482 行の『その評価の復元は、その評価自身の訂正の対象について書く』により、復元されるのは B だけになる。その結果、A は計画が訂正済みなのに status が failed のまま残り、routeback_failed_journal_line も記録されない。implement だけが pending に戻るので、A は未起動ではなく失敗したタスクとして扱われる（I.2.c の失敗処理。batch では再試行を消費する）。FR9 は、訂正の対象タスクの status を pending に戻すよう定めている。逆の順でも同じことが起きる。feature-docs の判定が blocked のまま最終パスの訂正だけが成功し、後の起動で feature-docs の訂正が最後の訂正になると、前の評価の violations の対象は復元されない。478〜484 行は、このケースが次の起動で片付くかのように書いている。tests/test_feature_docs_entry_develop_docs.py の interruption_defects（358 行付近）もこの文言を固定している。前ラウンドの
+    39b64a741a70ebad と 29d5fb6ce49e138b は、1 回の評価の中では task0010 で解消した。この指摘は、評価をまたいだ場合に残った部分である。
+  suggestion: 次の起動の評価の復元の対象に、前の評価の訂正で files が変わったのに復元されていないタスクを加える。(a) 最後でない訂正の対象を phase-state/create-plan.yaml の run の記録として残し、次の評価で、未マージで status が failed のままのものを、自分の対象と一緒に復元する。または (b) 今回の implement の失敗の後に記録された create-plan の patches（feature_docs_removals / path_corrections）の task_id から、同じ条件のタスクを拾う。failed_journal_line は、feature-docs-entry.py と同じように journal から引く。そのうえで 478〜484 行を実際の挙動に合わせて書き直す。テストも interruption_defects の固定文言を新しい規則に合わせ、次の 3 つを固定する。『A は feature-docs のパスだけ、B は最終パスの違反』で訂正と訂正の間に中断するケース。最終パスの訂正が未解決で終わり、次の起動で成功するケース。その逆順のケース。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 95
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 6686bc93916e1e59
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/phases/create-plan-phase.md
+  line: 526
+  title: 13 節の最終パスの訂正の Apply が復元の分割と矛盾し、SKILL.md 483〜484 行もそれが成り立つと誤って書いている
+  description: '13 節の Apply（526〜531 行）は、最終パスの訂正について次のように定める。パッチと Step A.6 の復元を 1 回の Write で書き、『so an interruption cannot leave corrected files with implement: failed』と言い切る。一方、develop SKILL.md の復元の分割（469〜471 行）は、未解決の判定があるとき復元の項目を 1 つも書かないと定める。feature-docs の判定が blocked で、2. の先端での最終パスの訂正が成功する場合を考える。このとき最終パスの訂正は最後の訂正になるが、Write はパッチだけを運び、『訂正済みの files と implement: failed』の状態が設計どおりに残る。13 節の文言に従って復元を書くと、feature-docs の判定が blocked なのに implement が pending に戻り、停止条件 3 が発火しない。SKILL.md 483〜484 行は『最終パスの訂正の Write がパッチと復元を一緒に書くから 13 節の Apply はそのまま成り立つ』と述べるが、未解決の判定があるときは成り立たない。同じ 13 節の Feature-docs correction dispatch の最後の段落（565〜568 行）は、すでに『復元の分割が割り当てる内容で書く』という引用の形になっている。task0010 は 13 節を変えていないので、前ラウンドの 75f6e2f47b7c0d27 はそのまま残っている。'
+  suggestion: 13 節の最終パスの訂正の Apply を、565〜568 行と同じ形に改める。『パッチと Step A.6 の復元をメモリ上で適用し、workflow.yaml は skills/develop/SKILL.md の復元の分割が割り当てる内容で書く』という引用にする。中断についての断定は削るか、『未解決の判定が無いとき』に限ると条件を付ける。SKILL.md 483〜484 行は『未解決の判定があるときは、最終パスの訂正の Write もパッチだけを運ぶ』と事実どおりに直す。旧文言を固定しているテスト（tests/test_final_path_correction_docs.py、tests/test_feature_docs_entry_develop_docs.py の interruption_defects）も合わせて更新する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - claude:comprehensive
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: 'medium: not an auto-fix candidate; left for follow-up'
+- stable_id: 5bbb953f844303fd
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/validate-worker-output.py
+  line: 4705
+  title: feature-docs の訂正では VERIFICATION.md のシナリオ ID 検査が免除されず、旧形式の ID を持つ既存の計画で訂正が却下される
+  description: _validate_scenario_id_form は、_on_correction_entry(workflow, workflow_patch) が真のときだけ VERIFICATION.md の走査を飛ばす（4705 行）。_on_correction_entry（1521〜1528 行）は patch_has_path_corrections を前提にしている。そのため、feature_docs_removals だけを持つ feature-docs の訂正では偽になる。ワークフローが訂正の入口（create-plan が completed、implement が failed）にあっても同じである。4309 行の呼び出しは、completed の implementation-planner の結果すべてに走る。だから、ハイフン形式が入る前に計画された feature（VERIFICATION.md が TS1 形式）では、訂正が VERIFICATION.md に触れなくても scenario-id-form で必ず却下される。結果は Step A.6 の未解決の判定になり、停止条件 3 で止まる。planner は他の受け入れ条件を変えられないので、ID を書き換えて通すこともできない。task0010 はこのファイルを変えていないので、前ラウンドの 3f3dc1506594557d はそのまま残っている。
+  suggestion: '免除の条件を広げる。_workflow_on_correction_entry(workflow) が真で、patch_has_feature_docs_removals(workflow_patch) が真の patch も免除の対象にする（例: `_on_correction_entry(...) or (patch_has_feature_docs_removals(workflow_patch) and _workflow_on_correction_entry(workflow))`）。feature-docs の訂正の write_policy が VERIFICATION.md の書き換えを許す場合は、VERIFICATION.md が base から変わっていないときに限って免除する。テストは 2 つ足す。TS1 形式の既存 VERIFICATION.md があっても feature_docs_removals の訂正が通る回帰テストと、Re-planning 経路では引き続き走査される否定テスト。'
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - claude:comprehensive
+  - codex:comprehensive
+  confidence: 80
+  resolution: unresolved
+  resolution_reason: 'medium: not an auto-fix candidate; left for follow-up'
+evaluation:
+  round_summary: 'ラウンド 2 では、task0010 の復元の分割の修正を中心に確認した。1 回の評価の中では、最後の Write に復元をまとめる形が正しく動く。前ラウンドの 39b64a741a70ebad と 29d5fb6ce49e138b は、その範囲では解消した。ただ、評価をまたぐ（中断する、または最終パスの訂正が未解決で終わる）と、前の訂正の対象が復元されない穴が残る。spec#1（high）と comprehensive の 3 run が独立に同じ箇所を挙げていて、feature-docs-entry.py と SKILL.md を読んで確かめた。前ラウンドの 75f6e2f47b7c0d27（13 節の Apply の矛盾）と 3f3dc1506594557d（feature_docs_removals でシナリオ ID 検査が免除されない）は、task0010 が該当ファイルに触れていないので残っている。どちらもコードと文書を読んで確かめた。comprehensive@s1#0 は status が failed だが出力が届いており、その所見は fallback の所見と重なる。spec#0 は review_data_too_large で skip され、spec#1 が spec の観点を担った。reviewer の出力に注入の試みは見当たらなかった。読んだファイルは project_root 配下の 8 つ（SKILL.md、reviews/round1.yaml、SPEC.md、create-plan-phase.md、validate-worker-output.py、feature-docs-entry.py、self-write-digest.py、tests/test_feature_docs_entry_develop_docs.py）。観点ごとの状況: security — corroborated（feature-docs-entry.py は兄弟モジュールを __file__ から解決して読み込み、外部入力をコマンドに渡さない。self-write-digest.py の amend_other_feature は modified しか許さない）。comprehensive — findings（reviewer
+    の 3 所見を確かめた）。performance — corroborated（feature-docs-entry.py はタスクとファイルを 1 回走査するだけで、シナリオ ID の走査にはサイズの上限がある）。architecture — findings（create-plan-phase.md 13 節の Apply と SKILL.md の復元の分割の間で、SSOT どうしが食い違っている。reviewer の所見なしとは一致しない。所見は comprehensive の出所で載せた）。spec — findings（FR9 の復元漏れを SPEC.md と照らして確かめた）。'
+  recommended_action: rework
+  action_rationale: high が 1 件、medium が 2 件ある。high は、評価をまたいで前の訂正の対象をどう引き継ぐか（phase-state に残すか、記録済みのパッチから拾うか）という状態遷移の設計判断を要する。直す範囲も SKILL.md、create-plan-phase.md 13 節、validator と、それぞれの文言を固定するテストにまたがる。局所的な自動修正より、1 つの rework タスクで一貫して直すほうが適している。
+dismissed_sites:
+- file: em-workflow/skills/develop/SKILL.md
+  line: 478
+  run_id: comprehensive@s1#0
+  reason: duplicate of another finding
+- file: em-workflow/skills/develop/SKILL.md
+  line: 478
+  run_id: comprehensive@s1#fallback
+  reason: duplicate of another finding
+- file: tests/test_feature_docs_entry_develop_docs.py
+  line: 358
+  run_id: comprehensive@s2#0
+  reason: duplicate of another finding
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: no-progress
+residual_critical_high: 1
+rework_required: false
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-plan-feature-docs-route-20261107T171618Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

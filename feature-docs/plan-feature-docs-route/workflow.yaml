@@ -1,0 +1,562 @@
+schema_version: 1
+feature: plan-feature-docs-route
+created: '2026-11-07'
+base_branch: main
+goal: |
+  # em-workflow の create-plan が実装担当のタスクに feature-docs/** を割り当て、実装担当の規則と食い違って implement が止まる
+
+  種別: 改善
+
+  ## やりたいこと (必須)
+
+  em-workflow の create-plan で、実装担当（implementer）のタスクに `feature-docs/**` のファイルを割り当てないようにする。他の feature の文書（THREAT-MODEL.md など）を直す必要がある計画では、実装担当以外の経路で直せるようにする。
+
+  ## 背景・なぜ (必須)
+
+  - web-sip-phone の feature `busy-reject-name-and-tm-ac`（2026-11-07）で、implementation-planner が task0001 に Go の改名と `feature-docs/call-end-history/THREAT-MODEL.md` の TM-5・TM-8 の修正を 1 タスクで割り当てた
+  - 実装担当の規則（`agents/implementer.md` と `skills/worktree-task-workflow/SKILL.md` の「Never modify `feature-docs/**`」）に従って、実装担当は 2 回とも改名だけ終えてマージせずに止まった。batch の自動再試行 1 回を消費して、implement が `failed`（`failed_kind: decision`）で停止した
+  - 文書のみの経路（`rework-task-synthesis.md`・`rework-planner`）は review / verify の rework にしかなく、create-plan の計画には無い。Step A.6 の失敗からの入口も最終パスの訂正（レポート名）だけが対象で、この失敗は扱えない
+  - 同じリポジトリの過去の feature（busy-reject-history-guard 2026-10-28、db-parent-dir-swap-guard 2026-10-31、cancel-wording-spec-align 2026-11-05、expires-reject-slot-doc-align 2026-11-06）でも、計画が他の feature の `feature-docs/` 配下をタスクの files に入れており、これらは implement が completed になっている。計画と実装担当の規則が食い違っていて、結果が実装担当の判断次第になっている
+
+  ## 受け入れ条件 / 完了の定義 (必須)
+
+  - [ ] create-plan が実装担当のタスクの files に `feature-docs/**` を入れない（または入れた計画を検証で弾く）
+  - [ ] 他の feature の `feature-docs/` 配下の文書修正を含む計画を、実装担当以外の経路で最後まで実行できる
+  - [ ] web-sip-phone の busy-reject-name-and-tm-ac を再開したとき、THREAT-MODEL.md の修正で implement が止まらない
+
+  ## スコープ外 (任意)
+
+  web-sip-phone 側のコードと文書の修正。
+
+  ## 制約・前提 (任意)
+
+  web-sip-phone の「486 拒否の履歴記録停止の残件: newSIPStackWithHistory の名前と call-end-history THREAT-MODEL の TM-5・TM-8 の AC 引用を直す」タスクがこのタスクの完了を待っている。
+parent_branch: em-workflow/plan-feature-docs-route/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.01
+      '1': 0.13
+      '2': 0.83
+      '3': 0.03
+    description_plus_code:
+      '0': 0.0
+      '1': 0.0
+      '2': 0.98
+      '3': 0.02
+  at: '2026-11-07T22:12:13+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 7a36f7ada26ae988868db98a1a60a2d843ff1895
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI の無いプラグインで、規則・スクリプト・テストだけの変更のため
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: completed
+  completed_at_commit: 221f633692a5babb745a167ca788d982b0555ff2
+- id: implement
+  status: completed
+  base_commit: 7f45acbf9607525e84dcb62855b5de98d9556d3c
+  completed_at_commit: 850269c82d10a99332999d76a454856368703815
+- id: review
+  status: completed
+  completed_at_commit: e2b8246bc67c9f5c119dab0cee011ac0b95f1056
+- id: verify
+  status: completed
+  result: pass
+  failed_items: []
+  summary: 'python3 -m unittest discover -s tests: 15603 tests OK (skipped=1); check-plugin-invariants.py: all PASS; manual items 1-3 confirmed (no version change, shared names consistent)'
+  completed_at_commit: 85f21b004963b22f6f5daf842c33140c929520af
+- id: retrospect
+  status: completed
+  completed_at_commit: 61fcfa8b475f13ad0a23de186445381fee56eda8
+tasks:
+  task0001:
+    title: Planner rules for feature-docs files and other-feature documents
+    plan: tasks/task0001.md
+    files:
+    - tests/test_feature_docs_planner_rules_docs.py
+    - em-workflow/skills/plan-writing/SKILL.md
+    - em-workflow/agents/implementation-planner.md
+    - tests/test_report_name_planner_docs.py
+    skills: []
+    domains:
+    - api-contract
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR3
+    - FR4
+    - FR8
+    - FR10
+    - NFR3
+    - NFR4
+    - NFR5
+    status: merged
+    notes: null
+    branch: em-workflow/plan-feature-docs-route/task0001
+  task0002:
+    title: Planner contract for other-feature documents and the correction input
+    plan: tasks/task0002.md
+    files:
+    - tests/test_other_feature_docs_planner_contract.py
+    - em-workflow/references/contracts/planner-contract.md
+    - tests/test_scenario_id_planner_docs.py
+    skills: []
+    domains:
+    - api-contract
+    - auth
+    - input-handling
+    complexity: high
+    requirements:
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR8
+    - NFR3
+    - NFR4
+    - NFR5
+    status: merged
+    notes: null
+    branch: em-workflow/plan-feature-docs-route/task0002
+  task0003:
+    title: The amend_other_feature write_policy action
+    plan: tasks/task0003.md
+    files:
+    - tests/test_amend_other_feature_action.py
+    - em-workflow/references/contracts/spec-writer-contract.md
+    - em-workflow/references/contracts/worker-envelope.md
+    - em-workflow/references/contracts/designer-contract.md
+    - em-workflow/references/contracts/rework-planner-contract.md
+    - em-workflow/agents/spec-writer.md
+    - em-workflow/references/artifact-digest.md
+    - em-workflow/scripts/self-write-digest.py
+    - tests/test_threat_model_planner_contract.py
+    - tests/test_self_write_digest_docs.py
+    - tests/test_self_write_digest.py
+    skills:
+    - backend-impl
+    domains:
+    - api-contract
+    - auth
+    complexity: high
+    requirements:
+    - FR4
+    - FR6
+    - NFR3
+    - NFR4
+    status: merged
+    notes: null
+    branch: em-workflow/plan-feature-docs-route/task0003
+  task0004:
+    title: Validator rejects feature-docs paths in replace_planning entries
+    plan: tasks/task0004.md
+    files:
+    - tests/test_plan_task_feature_docs_validator.py
+    - em-workflow/scripts/validate-worker-output.py
+    - tests/test_rework_docs_only_validator_rules.py
+    - tests/test_gate_option_vocabulary.py
+    skills:
+    - backend-impl
+    domains:
+    - api-contract
+    - input-handling
+    complexity: medium
+    requirements:
+    - FR2
+    - NFR2
+    - NFR3
+    status: merged
+    notes: null
+    branch: em-workflow/plan-feature-docs-route/task0004
+  task0005:
+    title: Validator checks for other-feature document requests, grants and fixes
+    plan: tasks/task0005.md
+    files:
+    - tests/test_other_feature_docs_validator.py
+    - em-workflow/scripts/validate-worker-output.py
+    - tests/test_gate_option_vocabulary.py
+    skills:
+    - backend-impl
+    domains:
+    - api-contract
+    - auth
+    - input-handling
+    - data-persistence
+    complexity: high
+    requirements:
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - NFR2
+    - NFR3
+    status: merged
+    notes: null
+    branch: em-workflow/plan-feature-docs-route/task0005
+  task0006:
+    title: Feature-docs correction entry script and removal patch validation
+    plan: tasks/task0006.md
+    files:
+    - em-workflow/scripts/feature-docs-entry.py
+    - tests/test_feature_docs_entry.py
+    - tests/test_feature_docs_removal_validator.py
+    - em-workflow/scripts/validate-worker-output.py
+    - tests/test_gate_option_vocabulary.py
+    skills:
+    - backend-impl
+    domains:
+    - api-contract
+    - data-persistence
+    - input-handling
+    - external-io
+    complexity: high
+    requirements:
+    - FR8
+    - FR9
+    - NFR2
+    - NFR3
+    status: merged
+    notes: null
+    branch: em-workflow/plan-feature-docs-route/task0006
+  task0007:
+    title: workflow-patch contract for the feature-docs correction
+    plan: tasks/task0007.md
+    files:
+    - tests/test_feature_docs_correction_patch_docs.py
+    - em-workflow/references/workflow-patch.md
+    - tests/test_gate_option_vocabulary.py
+    skills: []
+    domains:
+    - api-contract
+    - data-persistence
+    complexity: high
+    requirements:
+    - FR8
+    - FR9
+    - NFR3
+    - NFR4
+    status: merged
+    notes: null
+    branch: em-workflow/plan-feature-docs-route/task0007
+  task0008:
+    title: Step A.6 feature-docs judgment and the correction dispatch
+    plan: tasks/task0008.md
+    files:
+    - tests/test_feature_docs_entry_develop_docs.py
+    - em-workflow/skills/develop/SKILL.md
+    - em-workflow/references/phases/create-plan-phase.md
+    skills: []
+    domains:
+    - api-contract
+    - data-persistence
+    complexity: high
+    requirements:
+    - FR8
+    - FR9
+    - NFR1
+    - NFR3
+    status: merged
+    notes: null
+    branch: em-workflow/plan-feature-docs-route/task0008
+  task0009:
+    title: create-plan grants, fix recording and the declared change set
+    plan: tasks/task0009.md
+    files:
+    - tests/test_other_feature_docs_create_plan_docs.py
+    - em-workflow/references/phases/create-plan-phase.md
+    - em-workflow/references/phase-state.md
+    - tests/test_change_set_derivation.py
+    skills: []
+    domains:
+    - api-contract
+    - auth
+    - data-persistence
+    complexity: high
+    requirements:
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - NFR1
+    - NFR3
+    - NFR4
+    status: merged
+    notes: null
+    branch: em-workflow/plan-feature-docs-route/task0009
+  task0010:
+    title: Step A.6 restoration written once, in the last correction's Write
+    plan: tasks/task0010.md
+    files:
+    - em-workflow/skills/develop/SKILL.md
+    - tests/test_feature_docs_entry_develop_docs.py
+    skills: []
+    domains:
+    - data-persistence
+    - api-contract
+    complexity: high
+    requirements:
+    - FR8
+    - FR9
+    - NFR3
+    status: merged
+    notes: null
+    branch: em-workflow/plan-feature-docs-route/task0010
+    provenance:
+      source: review
+      source_ids:
+      - 39b64a741a70ebad
+      review_round: 1
+review:
+  status: completed
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - performance
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
+  rounds_completed: 2
+  perspectives:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  residual_critical_high: 1
+  needs_rework: false
+requirements:
+  FR1:
+    title: 計画担当の割り当て規則
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-5
+  FR2:
+    title: replace_planning の検証
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0004
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+  FR3:
+    title: 他 feature の文書を create-plan で直す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0005
+    - task0009
+    tests:
+    - TS-5
+    - TS-10
+  FR4:
+    title: 2 段階の dispatch と明示の書き込み許可
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0005
+    - task0009
+    tests:
+    - TS-5
+    - TS-10
+    - TS-11
+  FR5:
+    title: 書き込み範囲の制限
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0002
+    - task0005
+    - task0009
+    tests:
+    - TS-5
+    - TS-10
+  FR6:
+    title: 入力ダイジェストと自己書き込みの照合
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0002
+    - task0003
+    - task0005
+    - task0009
+    tests:
+    - TS-5
+    - TS-11
+  FR7:
+    title: 宣言済み変更集合に含める
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0005
+    - task0009
+    tests:
+    - TS-5
+    - TS-10
+  FR8:
+    title: failed からの入口の拡張
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0006
+    - task0007
+    - task0008
+    - task0010
+    tests:
+    - TS-6
+    - TS-7
+    - TS-12
+  FR9:
+    title: 再開時の復帰
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0006
+    - task0007
+    - task0008
+    - task0010
+    tests:
+    - TS-6
+    - TS-7
+    - TS-8
+    - TS-12
+  FR10:
+    title: 実装担当の規則を維持
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-5
+  NFR1:
+    title: 新しい gate と質問を足さない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0008
+    - task0009
+    tests:
+    - TS-12
+  NFR2:
+    title: 形の崩れた入力の扱い
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0004
+    - task0005
+    - task0006
+    tests:
+    - TS-9
+  NFR3:
+    title: テストの依存
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    - task0006
+    - task0007
+    - task0008
+    - task0009
+    - task0010
+    tests:
+    - TS-9
+  NFR4:
+    title: 規則の SSOT
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0007
+    - task0009
+    tests:
+    - TS-5
+  NFR5:
+    title: 信頼できない入力と秘匿
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-5
+  NFR6:
+    title: version の扱い
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 1
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

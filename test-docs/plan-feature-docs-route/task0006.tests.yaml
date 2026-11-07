@@ -1,0 +1,47 @@
+task_id: task0006
+baseline_failures:             # 4a before any change: python3 -m unittest discover -s tests -> Ran 15037 tests, OK (skipped=1). Refreshed after parent-side adoption (task0001, task0002, task0003, task0004, task0005, task0007, task0008 and task0009 had merged): the same command on the adoption commit ran 15584 tests and failed in the one test below only, because the byte pin the adopted parent carries is the digest of the parent's validator and the merged validator also holds this task's edit; nothing else was inherited red
+  - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical
+final_failures: []             # re-executed after the re-implementation on the updated parent and after this record was written: python3 -m unittest discover -s tests -> OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_feature_docs_entry.TestDispatchTargets
+    red_confirmed: true
+    red_reason: "Run before em-workflow/scripts/feature-docs-entry.py existed: every dispatch test failed with AssertionError 2 != 0 (the interpreter could not open the script: No such file or directory). The listed class covers the first two unmerged tasks in workflow then file order with task_id, path and failed_journal_line, the merged task's path left out, and a target path that exists at the base commit still listed."
+  AC-2:
+    tests:
+      - tests.test_feature_docs_entry.TestNeverDispatch
+    red_confirmed: true
+    red_reason: "Run before the script existed: every none and blocked test failed with AssertionError 2 != 0 (the interpreter could not open the script). The class covers none when implement is not failed, none when only merged tasks hold feature-docs paths, blocked naming the in-flight condition (status in_progress and last journal event launched), blocked naming the task whose files would be empty, and blocked on a merged last journal event."
+  AC-3:
+    tests:
+      - tests.test_feature_docs_entry.TestOutputContract
+      - tests.test_report_name_entry
+    red_confirmed: true
+    red_reason: "Run before the script existed: the output-key test failed for each of none, dispatch and blocked with AssertionError 2 != 0, and the final_path_remaining tests failed the same way. The existing tests.test_report_name_entry module (unchanged by this task, which does not edit report-name-entry.py) passed before and after, and test_ac3_report_name_entry_is_not_changed_by_this_script passed before the script existed; both are controls that carry no red of their own. The exit code 0 for all three outcomes is asserted in the red tests through the run helper."
+  AC-4:
+    tests:
+      - tests.test_feature_docs_entry.TestMalformedInput
+    red_confirmed: true
+    red_reason: "Run before the script existed and after each exit-2 test was given a control run on a well-formed workflow (the first version of those tests passed for the wrong reason, because a missing script also exits 2): invalid YAML, a non-mapping workflow, a missing workflow file, an unreadable journal and each missing argument now failed with AssertionError 2 != 0 at the control. The files-that-is-not-a-list, non-string element, malformed tasks and task-record tests failed with AssertionError 2 != 0 as well."
+  AC-5:
+    tests:
+      - tests.test_feature_docs_removal_validator.TestShape
+      - tests.test_feature_docs_removal_validator.TestPermission
+      - tests.test_feature_docs_removal_validator.TestPreconditions
+      - tests.test_feature_docs_removal_validator.TestPassingCase
+    red_confirmed: true
+    red_reason: "Run against the validator before the change: each malformed-field case of test_malformed_fields_are_feature_docs_removal_shape failed with AssertionError ('feature-docs-removal-shape' not found), test_use_on_append_rework_is_rejected found only ['docs-only-step-patches'], the not-permitted tests found no error at all for the Initial-planning, Re-planning and SPEC-change re-entry states and only ['replace-all-not-permitted'] for the other states, the in-flight, merged, path, empty-files, incomplete and limits tests failed with AssertionError (their code not found, or the lists empty), and test_the_precondition_function_takes_the_workflow_removals_and_last_events errored with AttributeError (module has no attribute 'feature_docs_removal_precondition_errors'). A failed target accepted: test_a_valid_patch_on_the_correction_entry_passes failed with 'replace-all-not-permitted' before the change. The in_progress task is rejected: test_an_in_progress_task_is_rejected_on_the_correction_entry failed (no feature-docs-removal-in-flight). Controls that passed before the change and carry no red of their own: test_the_correction_entry_is_permitted, test_each_code_is_absent_from_the_passing_case, test_a_merged_task_that_is_not_a_target_does_not_matter, test_incomplete_leaves_a_merged_task_alone, test_empty_files_is_judged_after_every_path_named_for_the_target, test_limits_admit_a_null_or_entryless_requirements_patch, test_null_and_absent_are_the_same, test_the_structural_check_passes_without_dry_run and test_a_patch_without_the_field_is_unchanged_in_every_state."
+  AC-6:
+    tests:
+      - tests.test_feature_docs_removal_validator.TestApplication
+      - tests.test_feature_docs_removal_validator.TestPlanAgreement
+      - tests.test_feature_docs_removal_validator.TestRequiredInputs
+      - tests.test_feature_docs_removal_validator.TestReportNameStaysOutOfTheCorrection
+    red_confirmed: true
+    red_reason: "Run against the validator before the change: test_every_occurrence_of_the_path_leaves_files_and_notes_becomes_null failed with AssertionError (Lists differ: the carried record was copied verbatim, files still held the feature-docs path), the plan-agreement tests failed with AssertionError (Lists differ: [] != ['task-plan-files-mismatch']), test_a_missing_input_is_an_execution_error and the command-line test failed because a valid patch was rejected with 'replace-all-not-permitted' before the change. Controls that passed before the change and carry no red of their own: test_merged_records_are_the_same_as_before, test_the_other_fields_of_a_target_are_unchanged, test_the_input_workflow_is_not_changed, test_the_task_order_and_the_other_sections_are_kept, test_a_target_that_is_not_in_the_workflow_is_skipped, test_a_path_the_task_does_not_hold_leaves_files_unchanged, test_plans_that_agree_with_the_corrected_files_pass, test_the_agreement_needs_the_workflow_and_the_field, test_the_plan_of_a_task_that_is_not_a_target_is_not_read and test_a_patch_without_the_field_does_not_need_the_inputs. TestReportNameStaysOutOfTheCorrection was written after the implementation (the decision that a permitted correction is outside the carried report-name check follows SPEC A4) and was not watched red."
+  AC-7:
+    tests:
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical
+    red_confirmed: true
+    red_reason: "After the validator change and before the refresh, python3 -m unittest discover -s tests -p test_gate_option_vocabulary.py failed in test_validate_worker_output_py_byte_identical with AssertionError (the digest of the changed validator against the pinned 2e7a97b9...). The pin was refreshed with a comment naming plan-feature-docs-route/task0006 (a comment cannot be asserted by a test; it was checked by reading). After the parent-side adoption the same test failed again against the merged validator (the baseline above) until the re-implementation refreshed the pin to the digest of the merged validator, and the full suite command passes."
