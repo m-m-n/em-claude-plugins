@@ -1,0 +1,207 @@
+schema_version: 1
+feature: verification-md-regular-file-read
+created: '2026-11-08'
+base_branch: main
+goal: '# validate-worker-output.py で通常ファイルでない VERIFICATION.md を読むと検証が止まる（is_file() 確認の消失による後退）
+
+
+  Notion タスク: <notion-url> （種別: バグ）
+
+
+  ## 現象 (必須)
+
+
+  `em-workflow/scripts/validate-worker-output.py` の `_load_scenario_ids` は、VERIFICATION.md を `path.read_text()` でそのまま読む。以前あった `is_file()` の確認が無くなったため、VERIFICATION.md が通常ファイルでない（FIFO、`/dev/zero` へのシンボリックリンク等）と、読み込みが返らず検証が止まる。上限なしで読み続けるため、巨大な入力でもメモリを使い切り得る。
+
+
+  rework-docs-only-medium-fixes（PR #55）のレビュー round 1 で medium として残った指摘（stable_id `58060ec00a7b29e6`、TM-5）。push 時の自動セキュリティレビューでも同じ箇所が指摘された。
+
+
+  ## 再現手順 (必須)
+
+
+  1. feature-dir の VERIFICATION.md を FIFO（`mkfifo`）か `/dev/zero` へのシンボリックリンクに置き換える
+
+  2. 文書のみの回の rework-planner 出力を、その feature-dir / baseline-dir を渡して `validate-worker-output.py` で検証する
+
+
+  ## 期待する挙動 (必須)
+
+
+  通常ファイルでない VERIFICATION.md は読まずに「読めない」として扱い、検証は止まらずに拒否（fail-closed）で終わる。
+
+
+  ## 完了の定義 (必須)
+
+
+  - [ ] 再現手順で現象が起きない
+
+  - [ ] 再発を検出するテストがある
+
+
+  ## 該当箇所 (任意)
+
+
+  - `em-workflow/scripts/validate-worker-output.py` の `_load_scenario_ids`
+
+  - 自動レビューの修正案: `os.open(path, O_RDONLY | O_NONBLOCK | O_NOFOLLOW)` で開いて `os.fstat` + `stat.S_ISREG` を確かめ、それ以外は `("unreadable", "not a regular file")` を返す。読み込みはバイト上限付きにしてから UTF-8 で decode する。FIFO と `/dev/zero` リンクのテストをサブプロセスのタイムアウト付きで足す
+
+
+  ## 実害・発生条件 (任意)
+
+
+  worker 出力の検証が返らず、無人実行が止まる。VERIFICATION.md が通常ファイルでないときだけ起きる。
+
+
+  ## 追加指示（起動時）
+
+
+  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作成する。integration ブランチはローカル・リモート両方に残す（base_branch へ自動マージしない）
+
+  - 不明点は Codex に相談し、相対的に良いと判断した選択肢を採用する
+
+  - その議論内容を Notion に記録する
+
+  '
+parent_branch: em-workflow/verification-md-regular-file-read/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+  - basis: description_only
+    probabilities:
+      '0': 0.0
+      '1': 0.9
+      '2': 0.09
+      '3': 0.01
+  - basis: description_plus_code
+    probabilities:
+      '0': 0.0
+      '1': 0.86
+      '2': 0.14
+      '3': 0.0
+  at: '2026-11-08T01:58:13+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: 8e63c714c54edcb2d4ed0a48016029c34c3e38b1
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'UI の無いバグ修正。変更は検証スクリプト内の関数 1 つとテストに収まる（design-step 推奨: skipped。tier reduced でも design は削減対象）'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: ebaa56f600441995c581a834ed973a6a429543eb
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: 通常ファイルでない VERIFICATION.md は開いて読まない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+  FR2:
+    title: バイト上限付きで読んでから UTF-8 でデコードする
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+  FR3:
+    title: 既存の戻り値と拒否の振る舞いを保つ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-6
+  FR4:
+    title: 再発を検出するテスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-5
+  NFR1:
+    title: 標準ライブラリのみ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: テストが後退時に負荷をかけ続けない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+  NFR3:
+    title: version を触らない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
