@@ -77,3 +77,14 @@ records:
   resolution_note: 'task_id: task0006; deviation path tests/test_tier_record_schema_v2.py
     not auto-added to files; missing evidence part: the identifier of an existing AC-n or
     requirement id that would otherwise be dropped (path shape and observable outcome were given)'
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-11-07T19:25:00+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'declined: tests/test_tier_record_schema_v2.py'
+  normalized_answer: 'declined: tests/test_tier_record_schema_v2.py'
+  resolution_note: 'task_id: task0004; deviation path tests/test_tier_record_schema_v2.py
+    not auto-added to files; missing evidence part: the identifier of an existing AC-n or
+    requirement id that would otherwise be dropped (path shape and observable outcome were given)'
