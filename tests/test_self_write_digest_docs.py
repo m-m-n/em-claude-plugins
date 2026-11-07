@@ -48,6 +48,7 @@ Standard library only.
 
 import importlib.util
 import re
+import sys
 import unittest
 from pathlib import Path
 
@@ -154,7 +155,12 @@ def _load_checker():
         "_check_plugin_invariants_for_self_write_docs", CHECKER_PATH
     )
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    previous = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = previous
     return module
 
 

@@ -92,7 +92,12 @@ def script_module():
             "review_coverage_under_test", SCRIPT
         )
         module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+        previous = sys.dont_write_bytecode
+        sys.dont_write_bytecode = True
+        try:
+            spec.loader.exec_module(module)
+        finally:
+            sys.dont_write_bytecode = previous
         _LOADED = module
     return _LOADED
 
