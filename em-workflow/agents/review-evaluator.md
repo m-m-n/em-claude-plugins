@@ -68,8 +68,10 @@ corroborated that perspective's reviewer output — including an empty
 findings set — or surfaced findings of your own. Report this per the
 contract's Output Object section; this agent file does not name the field
 it goes in (the contract is the single source of truth for your output
-shape, per Step 0 above). This duty does not authorize a second reviewer
-dispatch: you are re-reading the same `changed_files` you were already
+shape, per Step 0 above). A perspective listed in
+`partially_reviewed_perspectives` is inspected like any other; its unreviewed
+files may be among the files you read. This duty does not authorize a second
+reviewer dispatch: you are re-reading the same `changed_files` you were already
 handed, within the contract's Read-Only Constraint budget.
 
 ## Read-only constraint

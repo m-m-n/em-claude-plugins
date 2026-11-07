@@ -290,8 +290,12 @@ class TestAC2SurvivingClausesAndCountsUnchanged(unittest.TestCase):
         # sca-file-tasks-robustness task0003 AC-7: the incomplete triage
         # filing adds one row, moving the count from seven to eight in
         # place.
+        # large-diff-review-coverage task0006 AC-5: the unreviewed and
+        # partially reviewed perspectives add one more row, moving the count
+        # from eight to nine in place (the method name is kept: other
+        # records name this test ID).
         section = _sections(_read(BATCH_MODE_PATH))["Batch quiet output"]
-        self.assertEqual(len(_table_rows(section)), 8)
+        self.assertEqual(len(_table_rows(section)), 9)
 
 
 # ---------------------------------------------------------------------------

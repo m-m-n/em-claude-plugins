@@ -485,8 +485,12 @@ class TestRetrospectTierDecisionBlock(unittest.TestCase):
 # Refreshed by task0005 of large-diff-review-coverage (FR4, FR8, FR12-FR15):
 # Phase R3b gained the rescue-run finding rule, Phase R4 the per-loop shards
 # and the loop run_id, and Phase R5 the coverage record fields.
+# Refreshed by task0006 of large-diff-review-coverage (FR15, FR16): Phase
+# R3a's input block gained the two coverage fields and the Independent
+# Inspection Duty exemption split, and Phase R6 gained the coverage
+# disclosure paragraph.
 REVIEW_PHASE_SHA256 = (
-    "c4346eab5eacb94ed1a9c36ee0ffc9db4d9ea0f7d7f55ce09ce25be6cddd8f9d"
+    "06f1a9a73a5416e2a9aa6606e9df1d6177e46de6740202f0273267fac19e1937"
 )
 REVIEW_RULES_SHA256 = (
     "56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931"
