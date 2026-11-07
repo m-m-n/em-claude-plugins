@@ -1,0 +1,124 @@
+round: 1
+executed_at: '2026-11-07T15:35:56+09:00'
+scope:
+  review_mode: diff
+  base_commit: c2d17c79c03cff2be36bd7162aceb328b10a727d
+  head_commit: c0a2df78ffd0d619c91d675a5b7ac5dc31ae3645
+  changed_files:
+  - em-workflow/README.md
+  - em-workflow/references/merge-result.md
+  - em-workflow/skills/merge/SKILL.md
+  - test-docs/merge-docs-align-impl/task0001.tests.yaml
+  - test-docs/merge-docs-align-impl/task0002.tests.yaml
+  - tests/test_destructive_guard_merge_allow.py
+  - tests/test_merge_skill_doc.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - spec
+  - architecture
+  discretionary: []
+  cross_validation: false
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: d0840c3f2e7572ea
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/merge-result.md
+  line: 103
+  title: git_failed Condition closes the merge-git emission list and omits integrate stops
+  description: FR2 (a) は開いた書き方だが、Condition は `stopped as git_failed after a git command failure, a launch
+    failure, a timeout or reaching the script-wide time limit, in ...` と閉じた列挙になり、integrate は `running
+    fetch or a non-conflict merge` だけになっている。em-workflow/scripts/merge-git.py の cmd_integrate には、worktree
+    状態が clean でない Stop、HEAD が integration ブランチの先端でない、ローカルに base が無い、祖先判定の merge-base 失敗、マージ結果の親が想定と違う、unmerged_paths
+    の git diff 失敗、コンフリクト中に先端が変わった、という列挙外の git_failed の経路が残る。手順 12 の redo から手順 8 へ戻る経路で worktree 状態の Stop
+    に到達しうるが、その detail は Reason codes のどの条件にも対応しない。
+  suggestion: 'git_failed の Condition を閉じた列挙から開いた形に直す（例: `a merge-git subcommand stopped as git_failed,
+    including after a git command failure, ...`）。integrate については事前確認（worktree 状態・HEAD と先端の一致）、base 先端の読み取りと祖先判定、マージ結果の確認も挙げる。CONDITION_TERMS
+    の既存の語は残し、追記した語を足す。'
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - claude:evaluator
+  confidence: 70
+  resolution: unresolved
+  resolution_reason: medium のため Phase R4 の自動修正の対象外。別タスクとして起票する
+- stable_id: ca58a8940266e6b3
+  severity: medium
+  category: spec
+  file: tests/test_merge_skill_doc.py
+  line: 2617
+  title: CONDITION_TERMS leaves route and main-tree of git_failed item (a) unpinned
+  description: FR6 (b) と TS-2 は Condition セルが各条件の語を含み、1 条件を除いた偽造行で検査が発火することを求める。CONDITION_TERMS の git_failed
+    item (a) は 8 語だけで、FR2 (a) の route、main-tree、merged の先端読み取り、worktree-state の status、git コマンドの失敗、timeout
+    が入っていない。セルから `route reading remote or config` や `main-tree` を消してもテストは緑のまま。
+  suggestion: CONDITION_TERMS の git_failed item (a) に `route reading remote or config`、`main-tree`、`reading
+    the tip`、`running worktree list, git-path or status`、`git command failure`、`a timeout` を足す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - claude:evaluator
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: medium のため Phase R4 の自動修正の対象外。別タスクとして起票する
+evaluation:
+  round_summary: 'round 1。全 4 run が findings 空で完了し、critical/high の報告は無し。evaluator の読解で medium が 2 件（どちらも
+    evaluator 起源）。injection の試みは無し。comprehensive#0 = findings（git_failed の Condition が integrate の経路を閉じた列挙で落としている）。security#0
+    = corroborated（差分は文書とテストのみで信頼境界が無い）。spec#0 = findings（FR6 (b) の語の網羅に抜け）。architecture#0 = corroborated（条件の正本を
+    merge-result.md に置き SKILL.md は引用する形、hooks/ と scripts/ は未変更）。範囲の限界: 読取り予算 10 ファイルを使い切った。destructive-guard.py
+    と merge_pr_allow.py は読んでおらず、README 行の挙動の主張は test_destructive_guard_merge_allow.py の既存テストの内容で確かめた。テストは実行していない。medium
+    未満の所見: tests/test_merge_skill_doc.py:3115 の assertNotIn("|", cell) は | で分割した後のセルを見るため発火しえない。実際の検知は同じテストの
+    len(cells) == 3 が担う。'
+  recommended_action: complete
+  action_rationale: critical/high が 0 件で、完了ゲートを妨げる指摘は無い。2 件の medium は自動修正の対象にならないが小さく、本 feature の目的に直接かかわるので、マージ前に人が判断するのがよい。
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-merge-docs-align-impl-20261107T063556Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
