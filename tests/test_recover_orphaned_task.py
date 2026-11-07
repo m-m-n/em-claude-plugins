@@ -149,7 +149,12 @@ SCRIPT_PATH = REPO_ROOT / "em-workflow" / "scripts" / "recover-orphaned-task.py"
 def _load_module():
     spec = importlib.util.spec_from_file_location("recover_orphaned_task", SCRIPT_PATH)
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    previous = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = previous
     return module
 
 

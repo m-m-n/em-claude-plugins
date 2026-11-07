@@ -63,7 +63,12 @@ def load_decide_tier_module():
         "_decide_tier_under_test_contract", DECIDE_TIER_SCRIPT
     )
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    previous = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = previous
     return module
 
 

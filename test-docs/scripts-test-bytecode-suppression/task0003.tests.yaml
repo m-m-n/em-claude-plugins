@@ -1,0 +1,62 @@
+task_id: task0003
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 15037 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and with this record in place: python3 -m unittest discover -s tests -> Ran 15057 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_bytecode_free_loads_other_scripts.TestLoaderObservations.test_ac1_o1_flag_is_true_while_the_module_body_runs
+    red_confirmed: true
+    red_reason: "Against the unchanged loaders, the test failed in the starting=False subtest of rows 1 to 16: AssertionError: False is not True (the probe body recorded the flag as False). Row 17 (already suppressed) and every starting=True subtest passed before the change, because the inherited flag was already True there."
+  AC-2:
+    tests:
+      - tests.test_bytecode_free_loads_other_scripts.TestLoaderObservations.test_ac2_o2_flag_holds_the_starting_value_after_a_normal_return
+    red_confirmed: false
+    red_reason: "Passed against the unchanged loaders, because nothing set the flag yet; it pins the restore the change must provide. Observed to discriminate by a temporary mutation of the row 4 loader (the restore line replaced by pass): the test failed for row 4, starting=False, with the flag left at True; the loader was restored afterwards."
+  AC-3:
+    tests:
+      - tests.test_bytecode_free_loads_other_scripts.TestLoaderObservations.test_ac3_o3_a_raising_body_reaches_the_caller_with_the_flag_true
+      - tests.test_bytecode_free_loads_other_scripts.TestLoaderObservations.test_ac3_o3_flag_holds_the_starting_value_after_the_body_raises
+    red_confirmed: true
+    red_reason: "Against the unchanged loaders, the first test failed in the starting=False subtest of rows 1 to 16: AssertionError: 'probe body raised; flag=False' != 'probe body raised; flag=True'. The second test passed before the change (nothing set the flag yet) and was observed to discriminate by the same temporary row 4 mutation as AC-2: it failed for row 4, starting=False; the loader was restored afterwards."
+  AC-4:
+    tests:
+      - tests.test_bytecode_free_loads_other_scripts.TestLoaderObservations.test_ac4_o4_probe_directory_holds_no_pycache
+      - tests.test_bytecode_free_loads_other_scripts.TestLoaderObservations.test_ac4_o4_scripts_directory_is_unchanged_by_the_loader_calls
+      - tests.test_bytecode_free_loads_other_scripts.TestLoaderObservations.test_ac4_o4_memoizing_loader_cache_holds_the_prior_value_after_the_call
+      - tests.test_bytecode_free_loads_other_scripts.TestLoaderObservations.test_ac4_o4_the_redirect_lasts_one_call_only
+      - tests.test_bytecode_free_loads_other_scripts.TestLoaderObservations.test_ac4_o4_a_string_path_constant_is_replaced_by_a_plain_string
+      - tests.test_bytecode_free_loads_other_scripts.TestSiteTable
+    red_confirmed: true
+    red_reason: "Against the unchanged loaders, test_ac4_o4_probe_directory_holds_no_pycache failed in 32 subtests (rows 1 to 16, starting=False, both probe bodies): AssertionError: Lists differ: ['<probe dir>/__pycache__'] != []. The other tests of this criterion (scripts directory unchanged, memoizing cache restored, redirect lasts one call, string path constant, the TestSiteTable row-count and attribute checks including the stand-in checks that a missing loader, path constant, cache or path argument is reported) passed before the change; they pin the probe harness and the table. Loading the targets under a forced-True flag kept em-workflow/scripts/ untouched in the red run."
+  AC-5:
+    tests:
+      - tests.test_codex_hook_tty_reaper.TestCopies.test_ac1_loading_a_copy_leaves_no_bytecode_cache_in_a_plugin_directory
+    red_confirmed: true
+    red_reason: "The executable check is the command-level run of each module on its own, looking at em-workflow/scripts/ afterwards; no test selects it (a unit test that loads a real script with suppression off would write under em-workflow/ exactly when it fails). Search of tests/ by path and basename: the only existing test that reads a script's own bytecode cache for one of these sites is the TestCopies test listed, which covers row 17 (tests/test_codex_hook_tty_reaper.py, already suppressed; no red state occurred for it); the other hits (test_merge_preflight.py, test_codex_hook_interactive_guard.py) concern scripts outside this task. Observed before the loader edits, each module run alone with python3 -m unittest tests.<module> from a start with no em-workflow/scripts/__pycache__: test_tier_evaluator_contract, test_tier_rules_buckets_codex_facts, test_decide_tier_final_score and test_tier_rules left decide-tier.cpython-314.pyc; test_check_plugin_invariants, test_self_write_digest_wiring, test_self_write_digest_docs and test_worker_digest_results left check-plugin-invariants.cpython-314.pyc; test_recover_orphaned_task and test_stale_launched_recovery_chain left recover-orphaned-task.cpython-314.pyc; test_journal_append_failed left journal-append-failed.cpython-314.pyc; test_review_shards left review-shards.cpython-314.pyc; test_review_coverage left review-coverage.cpython-314.pyc; test_self_write_digest left self-write-digest.cpython-314.pyc and validate-worker-output.cpython-314.pyc. test_merge_ci_wait (it sets the flag True at module level) and test_codex_hook_tty_reaper (already suppressed) left nothing even before the change. After the edits, the same 16 runs, in the same order, each exited 0 and left no em-workflow/scripts/__pycache__."
+  AC-6:
+    tests:
+      - tests.test_tier_evaluator_contract
+      - tests.test_tier_rules_buckets_codex_facts
+      - tests.test_decide_tier_final_score
+      - tests.test_tier_rules
+      - tests.test_check_plugin_invariants
+      - tests.test_self_write_digest_wiring
+      - tests.test_self_write_digest_docs
+      - tests.test_worker_digest_results
+      - tests.test_recover_orphaned_task
+      - tests.test_stale_launched_recovery_chain
+      - tests.test_journal_append_failed
+      - tests.test_review_shards
+      - tests.test_review_coverage
+      - tests.test_self_write_digest
+      - tests.test_merge_ci_wait
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing tests of the 15 edited modules detect any change of tested behavior (each loader is called by them at import time or in their tests); no red state occurred for this change. The loader names, parameters, spec module names, memoization and return values are checked by the diff, which touches only the loader bodies (plus import sys in two modules); the module-level flag assignment in tests/test_merge_ci_wait.py is untouched. python3 -m unittest discover -s tests passes."
+  AC-7:
+    tests:
+      - tests.test_decide_tier_final_score.TestThisModuleImportsOnlyTheStandardLibrary.test_only_standard_library_imports
+      - tests.test_tier_rules_buckets_codex_facts.TestThisModuleImportsOnlyTheStandardLibrary.test_only_standard_library_imports
+      - tests.test_worker_digest_results.TestThisFileKeepsToTheStandardLibraryAndNoDispatchReference.test_imports_are_standard_library_only
+      - tests.test_stale_launched_recovery_chain.TestStandardLibraryOnlyImports
+    red_confirmed: false
+    red_reason: "The listed existing checks parse the edited modules' own imports and passed before and after the change (the only import added is sys, in test_self_write_digest_wiring.py and test_self_write_digest_docs.py). The remaining parts, the diff touching only the 15 listed modules plus the new probe module and this record, and no write to os.environ (the diff and the probe module contain no use of it), are diff-review checks with no executable check that can be made to fail, so no red state occurred."
