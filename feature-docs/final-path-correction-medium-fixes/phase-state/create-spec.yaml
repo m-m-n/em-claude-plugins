@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 084b76d1004787639661e6ce1bbb47656436d930
 last_input_digest: sha256:1137c053cdc681f346c752a300cc55a4bab3ee18b4aac602bf0433c0fff267d9
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -33,14 +33,21 @@ worker_runs:
     tests/test_report_name_validation.py: sha256:27b3a5b9b771eb34f5c097b0f7aafd1c059c0d40deff634cfe1b4a8ca9e5dcf2
   self_write_set: []
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:1137c053cdc681f346c752a300cc55a4bab3ee18b4aac602bf0433c0fff267d9
   output_digest: null
   dispatch_digest_inputs:
     em-workflow/references/contracts/spec-writer-contract.md: sha256:c66e457a4a68d860f757f9e6cae377b6918d29a3f3152d9a12fc92570303c5f2
     em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
     em-workflow/references/templates/spec-document.md: sha256:a5d0106c39a5df7dc2365357a9546588275ed6c7a1651c866e75fa327a7fa592
-artifacts: []
+  self_write_set: []
+artifacts:
+- path: feature-docs/final-path-correction-medium-fixes/REQUIREMENTS.md
+  sha256: sha256:bb27ce0b396c97e64a2714bfb246837d1b6a15f08178accb0ee0dd82c0f42950
+  produced_by: create-spec-run-0002
+- path: feature-docs/final-path-correction-medium-fixes/SPEC.md
+  sha256: sha256:b04aae0b87419d8c83bb3ea43af7183ff12f91682d6c8168a897fb25aafd0e7a
+  produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
