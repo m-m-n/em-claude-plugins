@@ -3806,6 +3806,11 @@ def _validate_task_plans_against_patch(workflow_patch, feature_dir, workflow=Non
 # plans the patch names. The read side -- `_TS_ID_RE`,
 # `extract_verification_scenario_ids`, `_strip_noise` -- is not touched: both
 # forms stay readable (FR4).
+#
+# scenario-id-fence-scope/task0001: the check leaves out line-start fenced
+# blocks (backtick or tilde) and HTML comments, not what `_strip_noise` removes.
+# So an ID in a tilde block is read but not reported, and an ID between inline
+# triple backticks is reported but not read (SPEC A7).
 # ---------------------------------------------------------------------------
 
 SCENARIO_ID_FORM_ERROR_CODE = "scenario-id-form"
@@ -3820,19 +3825,65 @@ _SCAN_NOT_UTF8 = "not-utf8"
 _SCAN_UNREADABLE = "unreadable"
 
 
+# A line that opens a fenced block: optional leading spaces and tabs, then a
+# run of three or more backticks or tildes (the whole run is the opening
+# length). What follows the run is checked by `_drop_fenced_blocks`.
+_BLOCK_OPENING_LINE_RE = re.compile(r"[ \t]*(`{3,}|~{3,})(.*)\Z", re.DOTALL)
+
+
+def _is_block_closing_line(line, fence_char, fence_length):
+    """True when `line` closes a block opened by a run of `fence_length`
+    `fence_char`: optional leading spaces and tabs, a run of `fence_char` at
+    least that long, then only spaces and tabs."""
+    body = line.lstrip(" \t")
+    run = len(body) - len(body.lstrip(fence_char))
+    return run >= fence_length and not body[run:].strip(" \t")
+
+
+def _drop_fenced_blocks(text):
+    """Removes the line-start fenced blocks of `text`, each as whole lines
+    from its opening line through its closing line (an unclosed block runs to
+    the end of the text), and returns the kept lines joined by line feeds.
+    Lines are split on the line feed only; a trailing carriage return is part
+    of the line end when a line is judged. A backtick opening line holds no
+    backtick after its run; a tilde opening line has no such limit."""
+    kept = []
+    fence_char = None
+    fence_length = 0
+    for raw_line in text.split("\n"):
+        line = raw_line[:-1] if raw_line.endswith("\r") else raw_line
+        if fence_char is not None:
+            if _is_block_closing_line(line, fence_char, fence_length):
+                fence_char = None
+            continue
+        opening = _BLOCK_OPENING_LINE_RE.match(line)
+        if opening is not None:
+            run, rest = opening.group(1), opening.group(2)
+            if run[0] == "~" or "`" not in rest:
+                fence_char = run[0]
+                fence_length = len(run)
+                continue
+        kept.append(raw_line)
+    return "\n".join(kept)
+
+
 def find_hyphenless_scenario_ids(text):
     """Hyphen-less ID detection rule (IMPLEMENTATION.md Shared Components,
-    SPEC A1, A2). `text` first passes through `_strip_noise` (fenced code
-    blocks and HTML comments are removed; inline code spans are NOT, so
-    wrapping an ID in backticks does not hide it). Of the matches of the read
-    grammar `_TS_ID_RE`, the ones counted are those that contain no hyphen
-    and whose immediately preceding character is not an ASCII letter or an
-    ASCII digit (so `XTS1` and `UTS46` are not scenario IDs). A match at the
-    very start of the text has no preceding character and counts; a
-    non-ASCII preceding character, such as Japanese text, does not stop a
-    match from counting. Returns the set of matched literal strings. Pure:
-    no file access."""
-    stripped = _strip_noise(text)
+    scenario-id-fence-scope SPEC FR1 to FR5). The text that is scanned is what
+    remains of `text` after the line-start fenced blocks (backtick or tilde,
+    see `_drop_fenced_blocks`) and then the HTML comments are removed, in that
+    order, as `_strip_noise` does. `_strip_noise` itself is not called, so
+    the range differs from the read side: a tilde block is excluded here, and
+    triple backticks inside a line are not a block, so an ID between them is
+    scanned, as is an inline code span with single backticks. Of the matches
+    of the read grammar `_TS_ID_RE`, the ones counted are those that contain
+    no hyphen and whose immediately preceding character is not an ASCII
+    letter or an ASCII digit (so `XTS1` and `UTS46` are not scenario IDs). A
+    match at the very start of the text has no preceding character and
+    counts; a non-ASCII preceding character, such as Japanese text, does not
+    stop a match from counting. Returns the set of matched literal strings.
+    Pure: no file access, and no exception for any string."""
+    stripped = _HTML_COMMENT_RE.sub("", _drop_fenced_blocks(text))
     found = set()
     for match in _TS_ID_RE.finditer(stripped):
         token = match.group(0)

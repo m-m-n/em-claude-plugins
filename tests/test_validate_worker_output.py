@@ -3492,6 +3492,225 @@ class TestHyphenlessScenarioIdFinder(unittest.TestCase):
         )
 
 
+# ---------------------------------------------------------------------------
+# scenario-id-fence-scope / task0001: the code range the scenario-ID form check
+# leaves out is the line-start fenced blocks (backtick or tilde) and HTML
+# comments. Inline triple backticks are not a block, so an ID between them is
+# reported. AC-n in the test names are the task plan's acceptance criteria;
+# TS-n in the docstrings are the SPEC's test scenarios.
+#
+# Hyphen-less IDs are test data built here, as in the classes above.
+# ---------------------------------------------------------------------------
+
+
+class TestScenarioIdFenceScopeFinder(unittest.TestCase):
+    """AC-1 to AC-4: `find_hyphenless_scenario_ids` as a pure function of text."""
+
+    def ids(self, text):
+        return VWO.find_hyphenless_scenario_ids(text)
+
+    # -- AC-1 (TS-1, TS-2, TS-5) ------------------------------------------
+
+    def test_ac1_id_inside_a_backtick_block_is_not_reported(self):
+        self.assertEqual(self.ids("```\nTS3\n```\n"), set())
+
+    def test_ac1_id_after_the_fence_characters_of_a_backtick_opening_line_is_not_reported(self):
+        for text in ("```TS3 note\nbody\n```\n", "```python TS3\nbody\n```\n"):
+            with self.subTest(text=text):
+                self.assertEqual(self.ids(text), set())
+
+    def test_ac1_id_inside_a_tilde_block_is_not_reported(self):
+        self.assertEqual(self.ids("~~~\nTS3\n~~~\n"), set())
+
+    def test_ac1_id_after_the_fence_characters_of_a_tilde_opening_line_is_not_reported(self):
+        for text in ("~~~TS3\nbody\n~~~\n", "~~~ TS3 ~~~ for details\nbody\n~~~\n"):
+            with self.subTest(text=text):
+                self.assertEqual(self.ids(text), set())
+
+    def test_ac1_tilde_opening_line_with_text_after_the_run_opens_a_block(self):
+        # SPEC A4: the rest of a tilde opening line is unrestricted, so the
+        # whole line is an opening line and, unclosed, runs to the end.
+        self.assertEqual(self.ids("~~~TS3~~~ for details.\nTS4\n"), set())
+
+    def test_ac1_blocks_whose_lines_start_with_spaces_or_tabs_are_excluded(self):
+        for indent in ("  ", "\t", " \t ", " " * 8):
+            for fence in ("```", "~~~"):
+                text = f"{indent}{fence}\nTS3\n{indent}{fence}\nafter\n"
+                with self.subTest(indent=indent, fence=fence):
+                    self.assertEqual(self.ids(text), set())
+
+    def test_ac1_an_indented_opening_line_with_text_excludes_the_text_too(self):
+        self.assertEqual(self.ids("\t  ~~~ TS3\nbody\n  ~~~\n"), set())
+
+    # -- AC-2 (TS-3, TS-4) ------------------------------------------------
+
+    def test_ac2_id_between_inline_triple_backticks_in_a_sentence_is_reported(self):
+        self.assertEqual(self.ids("See ```TS3``` for details.\n"), {"TS3"})
+
+    def test_ac2_id_between_triple_backticks_on_a_line_that_starts_with_them_is_reported(self):
+        self.assertEqual(self.ids("```TS3``` for details.\n"), {"TS3"})
+
+    def test_ac2_a_line_of_triple_backticks_with_more_backticks_later_is_not_an_opening_line(self):
+        # FR5: nothing after such a line is swallowed.
+        self.assertEqual(self.ids("```TS3```\nTS4\n"), {"TS3", "TS4"})
+        self.assertEqual(self.ids("```TS3`\nTS4\n"), {"TS3", "TS4"})
+
+    # -- AC-3 (TS-6, TS-7, TS-8) ------------------------------------------
+
+    def test_ac3_id_after_a_longer_closing_run_is_reported(self):
+        for text in ("```\nTS1\n````\nTS2\n", "~~~\nTS1\n~~~~~\nTS2\n"):
+            with self.subTest(text=text):
+                self.assertEqual(self.ids(text), {"TS2"})
+
+    def test_ac3_id_after_a_closing_run_followed_by_spaces_and_tabs_is_reported(self):
+        for text in ("```\nTS1\n``` \t \nTS2\n", "~~~\nTS1\n~~~\t\nTS2\n"):
+            with self.subTest(text=text):
+                self.assertEqual(self.ids(text), {"TS2"})
+
+    def test_ac3_id_after_a_shorter_run_does_not_close_the_block(self):
+        for text in ("````\nTS1\n```\nTS2\n", "~~~~\nTS1\n~~~\nTS2\n"):
+            with self.subTest(text=text):
+                self.assertEqual(self.ids(text), set())
+
+    def test_ac3_id_after_a_run_of_the_other_character_does_not_close_the_block(self):
+        for text in ("```\nTS1\n~~~\nTS2\n", "~~~\nTS1\n```\nTS2\n"):
+            with self.subTest(text=text):
+                self.assertEqual(self.ids(text), set())
+
+    def test_ac3_id_after_a_run_followed_by_other_characters_does_not_close_the_block(self):
+        for text in ("```\nTS1\n```x\nTS2\n", "~~~\nTS1\n~~~ text\nTS2\n", "```\nTS1\n``` ```\nTS2\n"):
+            with self.subTest(text=text):
+                self.assertEqual(self.ids(text), set())
+
+    def test_ac3_unclosed_opening_line_excludes_everything_from_it_to_the_end(self):
+        for text in ("TS1\n```\nTS2\n", "TS1\n~~~\nTS2\n", "TS1\n```TS3\nTS2\n"):
+            with self.subTest(text=text):
+                self.assertEqual(self.ids(text), {"TS1"})
+
+    def test_ac3_a_block_of_one_character_is_not_closed_by_a_line_of_the_other(self):
+        # Backtick lines inside a tilde block are block content; the block
+        # ends only at the tilde line, and the line after it is checked again.
+        self.assertEqual(self.ids("~~~\n```\nTS1\n~~~\nTS2\n"), {"TS2"})
+
+    def test_ac3_lines_are_split_on_the_line_feed_only(self):
+        # `str.splitlines` would also split at these characters and so close
+        # the block at the third line.
+        for separator in ("\u2028", "\u2029", "\x0b", "\x0c", "\x85", "\x1c"):
+            text = f"```\nTS1\n```{separator}TS2\nTS3\n"
+            with self.subTest(separator=repr(separator)):
+                self.assertEqual(self.ids(text), set())
+
+    # -- AC-4 (TS-9, TS-10, TS-11, NFR1) ----------------------------------
+
+    def test_ac4_id_inside_an_html_comment_is_not_reported(self):
+        self.assertEqual(self.ids("a <!-- TS3 --> b"), set())
+        self.assertEqual(self.ids("<!--\nTS3\n-->\nTS4\n"), {"TS4"})
+
+    def test_ac4_a_comment_opener_inside_a_block_has_no_effect_outside_it(self):
+        self.assertEqual(self.ids("```\n<!--\n```\nTS4\n"), {"TS4"})
+        self.assertEqual(self.ids("~~~\n<!--\n~~~\nTS4\n-->\n"), {"TS4"})
+
+    def test_ac4_an_opening_shaped_line_inside_a_comment_still_opens_a_block(self):
+        # SPEC A5: blocks go first, then comments, as in `_strip_noise`.
+        self.assertEqual(self.ids("<!--\n```\n-->\nTS5\n"), set())
+
+    def test_ac4_ids_right_before_and_right_after_a_block_are_reported(self):
+        self.assertEqual(self.ids("TS1\n```\nx\n```\nTS2\n"), {"TS1", "TS2"})
+        self.assertEqual(self.ids("TS1\n~~~\nx\n~~~\nTS2\n"), {"TS1", "TS2"})
+
+    def test_ac4_id_right_after_a_block_at_the_start_of_the_document_is_reported(self):
+        self.assertEqual(self.ids("```\nx\n```\nTS2\n"), {"TS2"})
+        self.assertEqual(self.ids("~~~\nx\n~~~\nTS2\n"), {"TS2"})
+
+    def test_ac4_the_line_after_a_block_is_judged_against_a_line_feed(self):
+        # SPEC A11: the character before the kept line is a line feed, not
+        # the last letter of an earlier kept line, so `abc` does not hide TS2.
+        self.assertEqual(self.ids("abc\n```\nx\n```\nTS2\n"), {"TS2"})
+        self.assertEqual(self.ids("abc\n```TS1\nx\n```\nTS2\n"), {"TS2"})
+
+    def test_ac4_crlf_document_excludes_the_block_and_reports_the_next_line(self):
+        for text in (
+            "```\r\nTS1\r\n```\r\nTS2\r\n",
+            "~~~\r\nTS1\r\n~~~\r\nTS2\r\n",
+            "```TS3\r\nTS1\r\n```\r\nTS2\r\n",
+            "  ```\r\nTS1\r\n  ```  \r\nTS2\r\n",
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(self.ids(text), {"TS2"})
+
+    def test_ac4_degenerate_inputs_return_a_set_without_raising(self):
+        for text in ("", "\n", "\r", "\r\n", "```", "~~~", "```TS3", "~~~ TS3", "  ~~~ ", "```\r"):
+            with self.subTest(text=text):
+                result = self.ids(text)
+                self.assertIsInstance(result, set)
+                self.assertEqual(result, set())
+
+    # -- beyond the scenarios: SPEC A10 -----------------------------------
+
+    def test_a_fence_after_a_list_marker_is_not_an_opening_line(self):
+        # The indented closing-shaped line is itself an opening line, so the
+        # ID before it is checked and what follows is excluded.
+        self.assertEqual(self.ids("- ```\n  TS3\n  ```\nTS4\n"), {"TS3"})
+
+    def test_a_fence_after_a_quote_marker_is_not_an_opening_line(self):
+        self.assertEqual(self.ids("> ```\n> TS3\n> ```\n"), {"TS3"})
+
+    def test_the_preceding_character_test_is_unchanged_outside_blocks(self):
+        self.assertEqual(self.ids("```\nx\n```\nXTS1 and (TS2)\n"), {"TS2"})
+
+
+class TestScenarioIdFenceScopeReadSideUnchanged(unittest.TestCase):
+    """AC-5 (TS-12): the read side keeps its range, which differs on purpose
+    from the check's (SPEC A7)."""
+
+    TEXT = (
+        "### Test Scenarios from SPEC.md\n\n"
+        "~~~\n| TS3 | in a tilde block |\n~~~\n\n"
+        "See ```TS4``` for details.\n"
+    )
+
+    def test_ac5_strip_noise_keeps_a_tilde_block_and_removes_inline_triple_backticks(self):
+        self.assertEqual(
+            VWO._strip_noise("~~~\nTS3\n~~~\nSee ```TS4``` here.\n"),
+            "~~~\nTS3\n~~~\nSee  here.\n",
+        )
+
+    def test_ac5_extraction_reads_the_tilde_block_and_not_the_inline_triple_backticks(self):
+        self.assertEqual(VWO.extract_verification_scenario_ids(self.TEXT), {"TS3"})
+
+    def test_ac5_the_check_reports_the_opposite_ids(self):
+        self.assertEqual(VWO.find_hyphenless_scenario_ids(self.TEXT), {"TS4"})
+
+    def test_ac5_the_fence_and_id_patterns_are_unchanged(self):
+        self.assertEqual(VWO._FENCE_RE.pattern, r"```.*?```")
+        self.assertEqual(VWO._FENCE_RE.flags & re.DOTALL, re.DOTALL)
+        self.assertEqual(VWO._TS_ID_RE.pattern, r"TS-?\d+")
+
+
+class TestScenarioIdFormCheckFenceScope(_ScenarioIdFormCheckCase):
+    """AC-6 (TS-13): the range reaches the check on a completed planner result."""
+
+    def test_ac6_an_id_in_a_tilde_block_yields_no_error_in_either_document(self):
+        self.write_plan(extra="\n~~~\nTS7\n~~~\n")
+        self.write_verification(_scenario_verification_text("~~~", "| TS3 | a |", "~~~"))
+        self.assertEqual(self.validate(), [])
+
+    def test_ac6_an_id_between_inline_triple_backticks_in_verification_md_yields_an_error(self):
+        self.write_plan()
+        self.write_verification(_scenario_verification_text("See ```TS3``` for details."))
+        found = self.form_errors(self.validate())
+        self.assertEqual(len(found), 1, found)
+        self.assertIn("VERIFICATION.md", found[0]["message"])
+        self.assertIn("TS3", found[0]["message"])
+
+    def test_ac6_an_id_between_inline_triple_backticks_in_a_plan_yields_an_error(self):
+        self.write_plan(extra="See ```TS7``` for details.")
+        found = self.form_errors(self.validate())
+        self.assertEqual(len(found), 1, found)
+        self.assertIn("tasks/task0001.md", found[0]["message"])
+        self.assertIn("TS7", found[0]["message"])
+
+
 class TestScenarioIdFormCheckOnVerification(_ScenarioIdFormCheckCase):
     """AC-1 and the VERIFICATION.md half of AC-3."""
 
