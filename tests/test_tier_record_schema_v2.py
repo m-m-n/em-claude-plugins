@@ -489,8 +489,12 @@ class TestRetrospectTierDecisionBlock(unittest.TestCase):
 # R3a's input block gained the two coverage fields and the Independent
 # Inspection Duty exemption split, and Phase R6 gained the coverage
 # disclosure paragraph.
+# Refreshed by task0004 of large-diff-review-coverage (FR3, FR5-FR11): Phase
+# R2 gained the review-input measurement, the per-shard dispatch and the run_id
+# grammar; Phase R2b gained the per-shard walk, the `review_data_too_large`
+# row, the litellm empty-result exception and the spec rescue order.
 REVIEW_PHASE_SHA256 = (
-    "06f1a9a73a5416e2a9aa6606e9df1d6177e46de6740202f0273267fac19e1937"
+    "4992622bbbbabef9fd9b8513b6f61db2ceca7e62fce4d25b0f76d390c0c56a82"
 )
 REVIEW_RULES_SHA256 = (
     "56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931"
