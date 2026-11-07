@@ -1,6 +1,6 @@
 task_id: task0006
 baseline_failures: []          # python3 -m unittest discover -s tests before any edit: 14568 tests OK (skipped=1)
-final_failures: []             # re-executed after the last edit: python3 -m unittest discover -s tests (pending count) and check-plugin-invariants.py . (exit 0)
+final_failures: []             # re-executed after the last edit: python3 -m unittest discover -s tests (14637 tests OK, skipped=1) and check-plugin-invariants.py . (exit 0)
 acceptance_tests:
   AC-1:
     tests:
