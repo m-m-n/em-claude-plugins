@@ -1,5 +1,5 @@
 task_id: task0006
-baseline_failures:             # 4a before any change: python3 -m unittest discover -s tests -> Ran 15037 tests, OK (skipped=1). Refreshed after parent-side adoption (task0001, task0002, task0003 and task0005 had merged): the same command on the adoption commit ran 15393 tests and failed in the one test below only, because the byte pin the adopted parent carries is the digest of the parent's validator and the merged validator also holds this task's edit; nothing else was inherited red
+baseline_failures:             # 4a before any change: python3 -m unittest discover -s tests -> Ran 15037 tests, OK (skipped=1). Refreshed after parent-side adoption (task0001, task0002, task0003, task0004, task0005, task0007, task0008 and task0009 had merged): the same command on the adoption commit ran 15584 tests and failed in the one test below only, because the byte pin the adopted parent carries is the digest of the parent's validator and the merged validator also holds this task's edit; nothing else was inherited red
   - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical
 final_failures: []             # re-executed after the re-implementation on the updated parent and after this record was written: python3 -m unittest discover -s tests -> OK (skipped=1)
 acceptance_tests:
