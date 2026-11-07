@@ -1,0 +1,117 @@
+task_id: task0003
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 14381 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 14429 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_final_path_correction_docs.TestMediumFixesConditionWording.test_condition_4_states_the_new_path_form
+      - tests.test_final_path_correction_docs.TestMediumFixesConditionWording.test_condition_5_states_the_replanning_residual
+      - tests.test_final_path_correction_docs.TestMediumFixesComparisonRules.test_the_comparison_is_positional
+      - tests.test_final_path_correction_docs.TestMediumFixesComparisonRules.test_the_comparison_states_the_left_behind_check
+      - tests.test_final_path_correction_docs.TestMediumFixesComparisonRules.test_the_permitted_replacements_follow_the_document_and_the_occurrence
+      - tests.test_final_path_correction_docs.TestMediumFixesComparisonRules.test_the_occurrence_rule_and_its_boundaries
+      - tests.test_final_path_correction_docs.TestMediumFixesComparisonRules.test_the_document_classes
+      - tests.test_final_path_correction_docs.TestMediumFixesComparisonRules.test_the_class_rows_name_their_documents
+      - tests.test_final_path_correction_docs.TestMediumFixesComparisonRules.test_the_absent_document_rules_and_the_new_plan_exception
+      - tests.test_final_path_correction_docs.TestMediumFixesComparisonRules.test_a_document_absent_at_the_base_commit_is_no_longer_outside_the_set
+      - tests.test_final_path_correction_docs.TestMediumFixesComparisonRules.test_condition_5_on_the_replanning_path
+      - tests.test_final_path_correction_docs.TestFinalPathCorrectionConditions.test_comparison_set_exclusions
+    red_confirmed: true
+    red_reason: >-
+      Run against the four documents before they were edited, the tests added to
+      TestMediumFixesConditionWording failed with missing-needle lists
+      (test_condition_4_states_the_new_path_form lacked the form clauses,
+      test_condition_5_states_the_replanning_residual lacked the Re-planning
+      residual), TestMediumFixesComparisonRules errored in setUpClass with
+      "ValueError: substring not found" (the "**Occurrences.**" marker did not
+      exist, so none of its tests ran), and the reversed pin
+      TestFinalPathCorrectionConditions.test_comparison_set_exclusions failed with
+      "'A document absent at the base commit is outside the set' unexpectedly
+      found". The retained-phrase checks in the same section are green before and
+      after by design (AC-5).
+  AC-2:
+    tests:
+      - tests.test_final_path_correction_docs.TestMediumFixesLimitsOutsideTheConditions.test_the_limits_state_both_codes_and_the_fr1_rules
+      - tests.test_final_path_correction_docs.TestMediumFixesLimitsOutsideTheConditions.test_each_code_names_its_own_field
+      - tests.test_final_path_correction_docs.TestMediumFixesLimitsOutsideTheConditions.test_the_limits_sit_between_the_comparison_and_ownership
+      - tests.test_final_path_correction_docs.TestMediumFixesLimitsOutsideTheConditions.test_the_limits_add_no_numbered_item
+      - tests.test_final_path_correction_docs.TestMediumFixesConditionWording.test_the_numbered_conditions_stay_five_and_carry_their_codes
+      - tests.test_final_path_correction_docs.TestMediumFixesConditionWording.test_the_conditions_do_not_carry_the_two_new_codes
+      - tests.test_final_path_correction_docs.TestFinalPathCorrectionConditions.test_five_conditions_are_numbered_in_order
+    red_confirmed: true
+    red_reason: >-
+      Run against the documents before they were edited, the
+      TestMediumFixesLimitsOutsideTheConditions class errored in setUpClass with
+      "ValueError: substring not found" (the "**Limits on entries" marker did not
+      exist), so none of its tests ran. The two "numbered conditions stay five" /
+      "conditions do not carry the new codes" tests and the existing
+      test_five_conditions_are_numbered_in_order were already green and guard that
+      the limits are not added as a sixth numbered condition.
+  AC-3:
+    tests:
+      - tests.test_report_name_planner_docs.TestAC3MediumFixesPlannerRules.test_the_new_path_form_is_stated
+      - tests.test_report_name_planner_docs.TestAC3MediumFixesPlannerRules.test_only_references_are_replaced_in_an_unmerged_non_target_plan
+      - tests.test_report_name_planner_docs.TestAC3MediumFixesPlannerRules.test_the_d8_condition_ties_the_replacement_to_write_policy_targets
+      - tests.test_report_name_planner_docs.TestAC3MediumFixesPlannerRules.test_a_shared_bare_name_is_replaced_by_the_right_new_name
+      - tests.test_report_name_planner_docs.TestAC3MediumFixesPlannerRules.test_entries_and_requirements_patch_are_limited
+      - tests.test_report_name_planner_docs.TestAC3MediumFixesPlannerRules.test_the_canonical_plan_is_exact_text
+      - tests.test_report_name_planner_docs.TestAC3MediumFixesPlannerRules.test_the_canonical_plan_lines_match_d6
+      - tests.test_report_name_planner_docs.TestAC3MediumFixesPlannerRules.test_the_canonical_plan_lines_state_their_repetition
+      - tests.test_report_name_planner_docs.TestAC3MediumFixesPlannerRules.test_the_canonical_plan_is_not_a_subheading_or_a_fenced_heading
+      - tests.test_report_name_planner_docs.TestAC3MediumFixesPlannerRules.test_a_re_planning_pass_may_change_the_body_but_leaves_no_old_name
+      - tests.test_report_name_planner_docs.TestAC3AC4FinalPathCorrectionSection.test_the_section_is_second_level_with_no_subheading
+    red_confirmed: true
+    red_reason: >-
+      Run against implementation-planner.md before it was edited, the new
+      TestAC3MediumFixesPlannerRules tests failed: the path-form, other-plans,
+      shared-bare-name, entries-and-requirements, canonical-intro, D6-line and
+      re-planning-body tests with "False is not true" (or a missing-line list),
+      and the D8-condition and canonical-repetition tests errored (the bullet and
+      the numbered list did not exist). The existing
+      test_the_section_is_second_level_with_no_subheading is green before and
+      after and guards that the section gains no sub-heading.
+  AC-4:
+    tests:
+      - tests.test_final_path_correction_docs.TestValidatorCallSites.test_section_9_lists_the_two_new_codes
+      - tests.test_final_path_correction_docs.TestValidatorCallSites.test_section_9_lists_the_correction_checks
+    red_confirmed: true
+    red_reason: >-
+      Run against create-plan-phase.md before it was edited,
+      test_section_9_lists_the_two_new_codes failed with the missing list
+      ['`path-correction-requirements`', '`path-correction-entries`',
+      '`requirements_patch`', '`tasks_patch.entries`']. The existing
+      test_section_9_lists_the_correction_checks stays green and guards that the
+      bullet keeps path-correction-in-flight and path-correction-content.
+  AC-5:
+    tests:
+      - tests.test_final_path_correction_docs.TestMediumFixesRetainedWording.test_every_retained_phrase_is_still_present
+      - tests.test_final_path_correction_docs.TestMediumFixesRetainedWording.test_no_sentence_says_both_versions_are_normalized_to_one_text
+      - tests.test_final_path_correction_docs.TestMediumFixesRetainedWording.test_the_section_markers_stay
+      - tests.test_final_path_correction_docs.TestMediumFixesRetainedWording.test_negative_the_one_text_matcher_catches_the_pre_change_sentence
+      - tests.test_final_path_correction_docs.TestMediumFixesRetainedWording.test_negative_a_section_without_a_phrase_is_detected
+      - tests.test_final_path_correction_docs.TestMediumFixesConditionWording.test_negative_pre_change_condition_4_is_rejected_by_the_matcher
+      - tests.test_final_path_correction_docs.TestMediumFixesConditionWording.test_negative_pre_change_condition_5_is_rejected_by_the_matcher
+      - tests.test_final_path_correction_docs.TestMediumFixesComparisonRules.test_negative_pre_change_comparison_is_rejected_by_every_matcher
+      - tests.test_final_path_correction_docs.TestMediumFixesLimitsOutsideTheConditions.test_negative_a_section_without_the_limits_is_rejected
+      - tests.test_final_path_correction_docs.TestValidatorCallSites.test_negative_pre_change_section_9_bullet_lacks_the_two_codes
+      - tests.test_report_name_planner_docs.TestAC3MediumFixesPlannerRules.test_negative_the_section_before_the_change_fails_every_new_matcher
+    red_confirmed: true
+    red_reason: >-
+      The check that the comparison no longer says both versions are normalized to
+      one text was observed to fail before the edit:
+      test_no_sentence_says_both_versions_are_normalized_to_one_text found the
+      pre-change sentence "apply one normalization to both". The retained-phrase
+      and section-marker tests are green before and after by design, since they
+      guard retention. The negative proofs run each new matcher against a
+      synthetic pre-change sample and require it to report missing wording; they
+      were written together with the matchers and pass against the live text.
+  AC-6:
+    tests:
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_workflow_patch_md_byte_identical
+    red_confirmed: true
+    red_reason: >-
+      After workflow-patch.md was edited and before its pin was refreshed, the
+      full suite run failed only in test_workflow_patch_md_byte_identical with a
+      sha256 mismatch (ea99b215... against the pinned cfab33e0...). The pin was
+      then refreshed in place with a "Refreshed again by" comment, as the last
+      edit, and the suite was run again.

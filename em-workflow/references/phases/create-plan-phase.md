@@ -317,7 +317,10 @@ to every invariant that would be desirable:
   `references/workflow-patch.md`'s `## Final-path correction`, checked under
   `--dry-run-apply` with `--journal` (the feature's `journal.jsonl`) added to
   the invocation below; each condition is reported under its own code, from
-  `path-correction-in-flight` to `path-correction-content`.
+  `path-correction-in-flight` to `path-correction-content`. Two limits outside
+  those conditions are reported under their own codes:
+  `path-correction-requirements` for `requirements_patch` and
+  `path-correction-entries` for the items of `tasks_patch.entries`.
 
 The following are named as planning invariants but are **not implemented
 by the script** — they remain human review only, with no automated gate

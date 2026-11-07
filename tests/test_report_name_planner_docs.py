@@ -28,6 +28,17 @@ matcher below is exercised against in-test samples in both directions.
 
 The deliverables are Markdown documents, so verification is textual and
 anchored on pinned headings, field names and key literals.
+
+final-path-correction-medium-fixes/task0003 (FR8, AC-3) adds
+`TestAC3MediumFixesPlannerRules`: `## Final-path correction` also states the
+`new_path` form, that only references may be replaced in an unmerged
+non-target plan (and only when `write_policy.targets` lists it) and that a
+merged task's plan is not edited, which new name replaces a shared bare
+name, what `entries` and `requirements_patch` may hold, the canonical plan of
+a new task line by line, and that on a re-planning pass the body may change
+and no old path or bare old file name may remain. The section still has no
+sub-heading. Each matcher has a negative proof against the section as it
+stood before.
 """
 
 import re
@@ -448,6 +459,239 @@ class TestAC3AC4FinalPathCorrectionSection(unittest.TestCase):
     def test_phrase_matcher_rejects_a_missing_phrase_and_survives_wrapping(self):
         self.assertTrue(states_that("a very\nlong phrase", "very long phrase"))
         self.assertFalse(states_that("a very long phrase", "short phrase"))
+
+
+# -- AC-3 of final-path-correction-medium-fixes/task0003 ---------------------
+
+# The bullets of the section before final-path-correction-medium-fixes, kept
+# as the sample for the negative proofs.
+OLD_PLANNER_SECTION = """\
+- **Exception to the `### 2a.` pass.** This dispatch is the one dispatch the
+  `### 2a.` pass does not run on: it changes path strings only, and
+  THREAT-MODEL.md is not written.
+- **Path choice.** For each target, choose a new path that does not match the
+  matching-name rule of `## Report Artifact Names` (cited under Inputs above)
+  and does not exist in the worktree. When the plan documents already name a
+  non-matching replacement, propose that path.
+- **Path strings only.** Replace the old path, and the bare old file name, in
+  the target's task plan, IMPLEMENTATION.md and VERIFICATION.md. Change
+  nothing else.
+- **Patch shape.** Return `replace_planning` with every registered id in
+  `carried_task_ids`, the corrections in `path_corrections` (each naming
+  `task_id`, `old_path` and `new_path`), and `step_patches` empty. `entries`
+  holds only new tasks that correct references in merged test files.
+- **References in tests.** An unmerged reference in a test is corrected by
+  that task's implementer from the corrected plan, so it gets no new task. A
+  reference in a merged test file is corrected by a new task under `entries`.
+- **Re-planning pass.** A re-planning pass that carries a non-merged task
+  with a violation also corrects it, through the same field.
+"""
+
+PATH_FORM_NEEDLES = (
+    "fully matches `[\\w./-]+`",
+    "equals its normalized form",
+    "`.`, `./`, `a//b.md`, `a/./b.md` and a trailing `/`",
+    "first segment does not start with `-`",
+    "a space, a newline, a backtick or a colon",
+)
+OTHER_PLANS_NEEDLES = (
+    "unmerged task that is not a target",
+    "only references to the old path or to the bare old file name may be replaced",
+    "only when that plan is listed in `write_policy.targets`",
+    "otherwise the planner leaves that plan unedited",
+    "the old reference may remain there",
+    "The plan of a merged task is not edited",
+)
+SHARED_NAME_NEEDLES = (
+    "Several corrections can share one old file name",
+    "In a target task's plan a bare occurrence of it is replaced by the new file "
+    "name of the correction of the target task that uses the plan",
+    "when a plan is used by several target tasks",
+    "the task whose file the sentence is about",
+    "When no correction of a task using the plan holds that old file name",
+    "in IMPLEMENTATION.md, VERIFICATION.md and every other plan",
+)
+ENTRIES_REQUIREMENTS_NEEDLES = (
+    "non-empty list of regular files at the base commit",
+    "whose text holds an old path or a bare old file name of the corrections",
+    "a new file, a directory or a file without a reference is never listed",
+    "`requirements_patch` is null or has no entries",
+    "names a requirement already in `workflow.yaml`",
+    "sets only `tasks_append`",
+    "all ids under `tasks_patch.entries`",
+    "no `status`, no `tests_append` and no `tests_replace`",
+)
+CANONICAL_INTRO_NEEDLES = (
+    "The plan of a new task under `entries` is exactly the text below",
+    "UTF-8 with LF line ends and a final LF",
+    "a plan named TASK.md included",
+    "holds nothing else",
+)
+# D6 of the feature's IMPLEMENTATION.md, line by line: (line number, text the
+# list item holds).
+CANONICAL_LINES = (
+    (1, "# Task Plan: {task_id} - correct path references"),
+    (2, "An empty line."),
+    (3, "## Scope"),
+    (4, "An empty line."),
+    (5, "### Files to Modify"),
+    (6, "- `{file}` - correct the old references"),
+    (7, "An empty line."),
+    (8, "## Acceptance Criteria (MANDATORY)"),
+    (9, "An empty line."),
+    (
+        10,
+        "- [ ] AC-{n}: `{old_path}` is replaced by `{new_path}`, and the bare "
+        "`{old_name}` by `{new_name}`.",
+    ),
+)
+CANONICAL_CONDITIONS = (
+    (6, ("For each file of the entry", "in `files` order")),
+    (
+        10,
+        (
+            "For each correction with an occurrence in those files at the base commit",
+            "in `path_corrections` order",
+            "n counting from 1",
+            "last path segments",
+        ),
+    ),
+)
+REPLANNING_BODY_NEEDLES = (
+    "A re-planning pass that carries a non-merged task with a violation also "
+    "corrects it, through the same field",
+    "On a re-planning pass the body of the documents may change",
+    "no old path and no bare old file name may remain in IMPLEMENTATION.md, "
+    "VERIFICATION.md or a target task's plan",
+)
+
+
+def _nested_numbered_items(text):
+    """{n: flattened item text} for an indented `1.`-style list, with its
+    deeper-indented continuation lines joined."""
+    items = {}
+    current = None
+    for line in text.splitlines():
+        match = re.match(r"^\s+(\d+)\.\s+(.*)$", line)
+        if match:
+            current = int(match.group(1))
+            items[current] = match.group(2)
+        elif current is not None and line.startswith("     ") and line.strip():
+            items[current] += " " + line.strip()
+        else:
+            current = None
+    return {n: _flat(t) for n, t in items.items()}
+
+
+def _canonical_line_defects(items):
+    """What is wrong with the numbered lines of the canonical plan. Empty
+    when they are the ten lines of D6."""
+    if sorted(items) != list(range(1, 11)):
+        return ["the list is not numbered 1 to 10: %r" % sorted(items)]
+    return [
+        "line %d lacks %r" % (number, text)
+        for number, text in CANONICAL_LINES
+        if text not in items[number]
+    ]
+
+
+class TestAC3MediumFixesPlannerRules(unittest.TestCase):
+    """AC-3 of task0003 (FR8, TS-13): the six items of the design, the D8
+    condition and the canonical plan lines."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(PLANNER_AGENT_PATH)
+        cls.section = _section(cls.text, CORRECTION_HEADING)
+        cls.canonical_items = _nested_numbered_items(cls.section)
+
+    def test_the_new_path_form_is_stated(self):
+        self.assertTrue(states_that(self.section, *PATH_FORM_NEEDLES))
+
+    def test_only_references_are_replaced_in_an_unmerged_non_target_plan(self):
+        self.assertTrue(states_that(self.section, *OTHER_PLANS_NEEDLES))
+
+    def test_the_d8_condition_ties_the_replacement_to_write_policy_targets(self):
+        flat = _flat(self.section)
+        sentence = next(
+            s for s in re.split(r"(?<=[.;])\s+", flat) if "write_policy.targets" in s
+        )
+        self.assertIn("unmerged task that is not a target", flat)
+        self.assertIn("only when that plan is listed in `write_policy.targets`", sentence)
+        # The condition and its "otherwise" stand in the same bullet.
+        bullet = next(b for b in re.split(r"\n(?=- )", self.section) if "write_policy.targets" in b)
+        self.assertTrue(states_that(bullet, "otherwise the planner leaves that plan unedited"))
+
+    def test_a_shared_bare_name_is_replaced_by_the_right_new_name(self):
+        self.assertTrue(states_that(self.section, *SHARED_NAME_NEEDLES))
+
+    def test_entries_and_requirements_patch_are_limited(self):
+        self.assertTrue(states_that(self.section, *ENTRIES_REQUIREMENTS_NEEDLES))
+
+    def test_the_canonical_plan_is_exact_text(self):
+        self.assertTrue(states_that(self.section, *CANONICAL_INTRO_NEEDLES))
+
+    def test_the_canonical_plan_lines_match_d6(self):
+        self.assertEqual(_canonical_line_defects(self.canonical_items), [])
+
+    def test_the_canonical_plan_lines_state_their_repetition(self):
+        for number, needles in CANONICAL_CONDITIONS:
+            self.assertTrue(states_that(self.canonical_items[number], *needles), number)
+
+    def test_the_canonical_plan_is_not_a_subheading_or_a_fenced_heading(self):
+        self.assertEqual(_headings(self.section), [])
+        for number in (1, 3, 5, 8):
+            self.assertFalse(self.canonical_items[number].startswith("#"), number)
+
+    def test_a_re_planning_pass_may_change_the_body_but_leaves_no_old_name(self):
+        self.assertTrue(states_that(self.section, *REPLANNING_BODY_NEEDLES))
+
+    # -- negative proofs ----------------------------------------------------
+
+    def test_negative_the_section_before_the_change_fails_every_new_matcher(self):
+        for needles in (
+            PATH_FORM_NEEDLES,
+            OTHER_PLANS_NEEDLES,
+            SHARED_NAME_NEEDLES,
+            ENTRIES_REQUIREMENTS_NEEDLES,
+            CANONICAL_INTRO_NEEDLES,
+            REPLANNING_BODY_NEEDLES,
+        ):
+            self.assertFalse(states_that(OLD_PLANNER_SECTION, *needles), needles[0])
+        self.assertEqual(_nested_numbered_items(OLD_PLANNER_SECTION), {})
+
+    def test_negative_the_old_phrases_still_hold_in_the_old_sample(self):
+        # Non-vacuity: the sample is the live text minus the new bullets, so
+        # the phrases the old tests pin are in both.
+        for phrase in (
+            "the old path, and the bare old file name",
+            "Change nothing else",
+            "gets no new task",
+            "through the same field",
+        ):
+            self.assertTrue(states_that(OLD_PLANNER_SECTION, phrase), phrase)
+            self.assertTrue(states_that(self.section, phrase), phrase)
+
+    def test_negative_a_d8_condition_dropped_from_the_bullet_is_detected(self):
+        forged = _flat(self.section).replace(
+            "only when that plan is listed in `write_policy.targets`; ", ""
+        )
+        self.assertFalse(states_that(forged, *OTHER_PLANS_NEEDLES))
+
+    def test_negative_a_changed_or_missing_canonical_line_is_detected(self):
+        forged = dict(self.canonical_items)
+        forged[1] = forged[1].replace("correct path references", "fix paths")
+        self.assertNotEqual(_canonical_line_defects(forged), [])
+        del forged[10]
+        self.assertNotEqual(_canonical_line_defects(forged), [])
+        self.assertNotEqual(_canonical_line_defects({}), [])
+
+    def test_negative_the_list_parser_sees_nothing_in_a_bullet_only_text(self):
+        self.assertEqual(_nested_numbered_items("- a\n  b\n- c\n"), {})
+        self.assertEqual(
+            _nested_numbered_items("  1. one\n       more\n  2. two\n"),
+            {1: "one more", 2: "two"},
+        )
 
 
 # -- AC-5 ----------------------------------------------------------------
