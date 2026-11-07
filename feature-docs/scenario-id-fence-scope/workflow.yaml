@@ -99,7 +99,8 @@ workflow:
   failed_items: []
   completed_at_commit: e45f7b9616b6c18a774be3db9109a717b100b7d7
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: e89bd85fd872e5ca0d6d25253a3dea7e807e8a97
 tasks:
   task0001:
     title: Limit the scenario-ID form check's exclusion to line-start fenced blocks
