@@ -5,14 +5,14 @@ status: dispatching
 generation: 1
 base_revision: 7ad6c901ba4609c18e33d9300e09b92c4db60a48
 last_input_digest: sha256:9dd3abf53d0436fe7f72688a0f5285a7016edc15a100f9f11a51b7d3518f4d99
-active_request_id: create-spec-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:9dd3abf53d0436fe7f72688a0f5285a7016edc15a100f9f11a51b7d3518f4d99
-  output_digest: null
+  output_digest: sha256:9e3a5c6ee0e980c65ea61af48da82d93a4d4e948f677c47853f2993480a325fd
   dispatch_digest_inputs:
     CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
     em-workflow/agents/implementation-planner.md: sha256:76abe65c7acec865243fe01991c47569b2cf9d69839521f633b32635136dd867
@@ -31,6 +31,7 @@ worker_runs:
     tests/test_report_name_entry.py: sha256:ddf1e0d18179ea1f145d6eefa486e1285614accddaa28cc1a217cf3d312db9a5
     tests/test_report_name_planner_docs.py: sha256:57522b22605d8170398c5cad710f94505658b8195b95a62f87f524d03d1ffdd5
     tests/test_report_name_validation.py: sha256:27b3a5b9b771eb34f5c097b0f7aafd1c059c0d40deff634cfe1b4a8ca9e5dcf2
+  self_write_set: []
 artifacts: []
 patches: []
 progress_fingerprint: null

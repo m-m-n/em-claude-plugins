@@ -1,0 +1,53 @@
+schema_version: 1
+feature: final-path-correction-medium-fixes
+records:
+- question_id: create-spec.codex.replanning-comparison
+  packet_id: null
+  answered_at: '2026-11-07T15:33:45+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 再計画では条件 5 を残存検査だけにする
+  normalized_answer: 再計画では条件 5 を残存検査だけにする
+  resolution_note: 'user-directed Codex consultation, turns: 2, harness entry: codex;
+    Codex は 2 回に分ける案より、この案を推した。通常の再計画でも本文は更新でき、分割の効果が乏しい'
+- question_id: create-spec.codex.non-target-plan
+  packet_id: null
+  answered_at: '2026-11-07T15:33:45+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 未マージの非対象計画は参照の置換だけを許し、マージ済みの計画はバイト一致にする
+  normalized_answer: 未マージの非対象計画は参照の置換だけを許し、マージ済みの計画はバイト一致にする
+  resolution_note: 'user-directed Codex consultation, turns: 2, harness entry: codex;
+    Codex の案を採用。実行予定の計画に古い要求を残さない。マージ判定は status と journal の両方を見る'
+- question_id: create-spec.codex.new-task-plan
+  packet_id: null
+  answered_at: '2026-11-07T15:33:45+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 訂正入口の新規タスク計画は、検証側が生成する定型本文とのバイト一致にする
+  normalized_answer: 訂正入口の新規タスク計画は、検証側が生成する定型本文とのバイト一致にする
+  resolution_note: 'user-directed Codex consultation, turns: 2, harness entry: codex;
+    Codex の案を採用。比較元が無い本文に別の作業を混ぜる経路を閉じる。パスは new_path と同じ形に限定し、TASK.md にも適用する'
+- question_id: create-spec.codex.positional-comparison
+  packet_id: null
+  answered_at: '2026-11-07T15:33:45+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 比較を基準文書の出現位置に限る
+  normalized_answer: 比較を基準文書の出現位置に限る
+  resolution_note: 'user-directed Codex consultation, turns: 2, harness entry: codex;
+    Codex の指摘を採用。候補名同士を同一視すると enabled を disabled に変えられる。共有計画は共有タスクの訂正の和集合を使う'
+- question_id: create-spec.codex.created-documents
+  packet_id: null
+  answered_at: '2026-11-07T15:33:45+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 訂正入口で基準に無い計画文書の新規作成を拒否する
+  normalized_answer: 訂正入口で基準に無い計画文書の新規作成を拒否する
+  resolution_note: 'user-directed Codex consultation, turns: 2, harness entry: codex;
+    Codex の指摘を採用。例外は既存文書と重ならない新規タスク専用の計画だけ'
