@@ -141,6 +141,7 @@ tasks:
     - tests/test_tier_phase_preconditions.py
     - tests/test_rework_docs_only_validator_rules.py
     - tests/test_gate_outcome_packet_lifecycle.py
+    - tests/test_gate_option_vocabulary.py
     skills:
     - infra-impl
     domains:
@@ -154,7 +155,7 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: in_progress
+    status: merged
     notes: 'batch-retry-consumed: failed (orphaned)'
     branch: em-workflow/scripts-test-bytecode-suppression/task0002
   task0003:
