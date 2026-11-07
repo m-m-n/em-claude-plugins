@@ -372,8 +372,10 @@ workflow.yaml のコマンドが変更された合図 — このゲートを再�
 
 ## Step A.6: failed からの入口
 
-feature 名を指定した再実行の開始時に、`implement` の失敗が最終パスの訂正
-（`## Report Artifact Names` が定める名前の訂正）で解けるかを判定する。
+feature 名を指定した再実行の開始時に、`implement` の失敗が 2 つの訂正のどちらかで
+解けるかを判定する。1 つは最終パスの訂正（`## Report Artifact Names` が定める
+名前の訂正）、もう 1 つは feature-docs の訂正（`files` から `feature-docs` 配下の
+パスを取り除く訂正）。この入口が決める訂正はこの 2 つ。
 この判定は 1 回の起動につき 1 度だけ行う。置き場所は、Step A の既存 feature
 の分岐（上記 3. で workflow.yaml が「存在する」通常の再開）が Step A.5 を
 終えた後で、Step B が workflow.yaml を読むより前。新規 feature のルートと、
@@ -385,43 +387,66 @@ Step B はこの節に入らない。`implement` が `failed` になるのは St
 再実行した起動の開始時だけ。
 
 1. `implement` の `status` が `failed` でなければ、何もせず Step B へ進む。
-2. integration の先端を完全なコミット ID として捕捉し
-   （`git -C {integration worktree の絶対パス} rev-parse HEAD` の出力）、
-   `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/report-name-entry.py` を 4 つの
-   引数で実行する。
+2. integration の先端を完全なコミット ID として捕捉する
+   （`git -C {integration worktree の絶対パス} rev-parse HEAD` の出力）。
+   次の 2 つのスクリプトは、どちらも同じ 4 つの引数で実行する。
    - `--workflow`: integration worktree 内の
      `feature-docs/{feature}/workflow.yaml`
    - `--journal`: `{project_root}/.claude/worktrees/em-workflow/{feature}/journal.jsonl`
    - `--target-repo`: integration worktree の絶対パス
    - `--base-commit`: 捕捉したコミット ID
+3. feature-docs の判定を先に行う。
+   `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/feature-docs-entry.py` を、2. の 4 つの
+   引数で実行する。標準出力の JSON は `entry`（`none` / `dispatch` / `blocked`）、
+   `targets`（各要素が `task_id` / `path` / `failed_journal_line`）、`errors`、
+   `final_path_remaining` を持つ。判定の定義はこのスクリプトが持ち、ここでは
+   繰り返さない。
+4. 最終パスの判定を後に行う。
+   `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/report-name-entry.py` を、同じ 4 つの
+   引数で実行する。標準出力の JSON は `entry`（`none` / `dispatch` / `blocked`）、
+   `violations`（各要素が `task_id` / `path` / `failed_journal_line`）、`errors` を
+   持つ。判定の定義はこのスクリプトが持ち、ここでは繰り返さない。実行する条件と
+   先端は 8. が定める。
+5. 2 つの判定は Step A.6 の 1 回の評価で行う。どちらの結果も、もう片方の判定の
+   評価を飛ばさない。
+6. 結果が `none`、`blocked`、または終了コードが 0 以外のときは、その判定の分の
+   workflow.yaml を変えない。`blocked` の判定と、終了コードが 0 以外の判定は、
+   未解決とする。検証済みのパッチを得ないまま 13 節が終わったとき（却下された
+   訂正を含む）も、その判定は未解決とする。もう片方の判定は 5. のとおり評価する。
+   どちらの判定も workflow.yaml を変えなかったときは、workflow.yaml を変えずに
+   Step B へ進む。step の項目が書かれないまま Step B へ進むと `implement` は
+   `failed` のままなので、停止条件 3 が発火する（発火条件の絞り込みは Step B の
+   既存の判定どおりで、この節は変えない）。`blocked` では停止の報告に失敗した条件を
+   名指しする。未解決の判定が複数あるときは、各判定の失敗した条件をすべて、
+   その判定の `errors` から読んで名指しする。
+7. 結果が `dispatch` のときは、`references/phases/create-plan-phase.md` の 13 節を
+   実行する。最終パスの判定の `dispatch` は 13 節の最終パスの訂正、feature-docs の
+   判定の `dispatch` は 13 節の `### Feature-docs correction dispatch` を実行する。
+   `failed_kind` が `decision` でも、外部要因を示す値でも、この入口は停止条件 3 より
+   前に評価される。対話実行と batch 実行のどちらでも同じこの入口を使う。新しい
+   `gate_id` もユーザーへの質問も導入しない。この 3 つの文は、2 つの判定のどちらの
+   `dispatch` にも当てはまる。
+8. 実行の順序と 4. の先端は次のとおり。feature-docs の判定が `dispatch` のときは、
+   その訂正を先に書き（下記の復元）、あとで 4. を実行する。`final_path_remaining` が
+   false のとき、取り除いた後に最終パスの違反は残らないので 4. は実行せず、
+   feature-docs の訂正が最後の訂正になる。true のときは、書き込みを済ませてから
+   integration の先端を 2. と同じ方法で捕捉し直し、その先端で 4. を実行する。
+   feature-docs の判定が `none`、`blocked`、または終了コードが 0 以外のとき、
+   および feature-docs の訂正が検証済みのパッチを得なかったときは、2. で捕捉した
+   先端で 4. を実行する。
+9. 検証済みのパッチを得たときは、成果物のコミットを作った後、パッチと復元を
+   1 回の Write と 1 回のコミットで書く。コミットは
+   `${CLAUDE_PLUGIN_ROOT}/scripts/commit-docs.sh` で行う。評価が終わったら
+   Step B へ進む。
 
-   標準出力の JSON は `entry`（`none` / `dispatch` / `blocked`）、
-   `violations`（各要素が `task_id` / `path` / `failed_journal_line`）、
-   `errors` を持つ。判定の定義はこのスクリプトが持ち、ここでは繰り返さない。
-3. 結果が `none`、`blocked`、または終了コードが 0 以外のときは、
-   workflow.yaml を変えずに Step B へ進む。その結果、停止条件 3 が発火する
-   （発火条件の絞り込みは Step B の既存の判定どおりで、この節は変えない）。
-   `blocked` では停止の報告に失敗した条件を名指しする。失敗した条件は
-   `errors` から読む。
-4. 結果が `dispatch` のときは、`references/phases/create-plan-phase.md` の
-   13 節を実行する。`failed_kind` が `decision` でも、外部要因を示す値でも、
-   この入口は停止条件 3 より前に評価される。対話実行と batch 実行の
-   どちらでも同じこの入口を使う。新しい `gate_id` もユーザーへの質問も
-   導入しない。
-5. 検証済みのパッチを得ないまま 13 節が終わったとき（却下された訂正を含む）は、
-   workflow.yaml を変えずに Step B へ進み、停止条件 3 が発火する。
-6. 検証済みのパッチを得たときは、成果物のコミットを作った後、パッチと
-   復元を 1 回の Write と 1 回のコミットで書く。コミットは
-   `${CLAUDE_PLUGIN_ROOT}/scripts/commit-docs.sh` で行い、その後 Step B へ
-   進む。
-
-**復元**は `violations` に挙がった訂正対象タスクごとに行う。`implement` と
-`failed_kind` は step の項目なので 1 回だけ書く。
+**復元**は、訂正の対象タスクごとに行う。最終パスの訂正の対象は `violations` に挙がった
+タスク、feature-docs の訂正の対象は `targets` に挙がったタスクである。`implement` と
+`failed_kind` は step の項目なので、評価の中で 1 回だけ書く。
 
 - `implement` を `pending` にする
 - `failed_kind` を null にする
 - `tasks.{T}.status` を `pending` にする
-- `tasks.{T}.routeback_failed_journal_line` を、違反の
+- `tasks.{T}.routeback_failed_journal_line` を、違反（feature-docs の訂正では対象）の
   `failed_journal_line` が null でないときその値にする
 - `notes` はパッチの適用が消す（再試行の消費の記録もこれで消える）
 
@@ -429,8 +454,28 @@ Step B はこの節に入らない。`implement` が `failed` になるのは St
 フェーズが未起動として扱う（`references/implement-phase.md` の Step I.2.a /
 I.2.b — 引用のみでここでは繰り返さない）。
 
+**復元の分割**は、1 回の評価の中で書き込みをどう配分するかを決める。
+
+- タスクの項目（`tasks.{T}.status` と `tasks.{T}.routeback_failed_journal_line`）は、
+  訂正ごとに、その訂正の対象について書く。最終パスの訂正の対象は `violations`、
+  feature-docs の訂正の対象は `targets` である。その訂正のパッチと一緒に、
+  その訂正の成果物のコミットの後の 1 回の Write と 1 回のコミットで書く。
+- step の項目（`implement` と `failed_kind`）は、評価の最後の訂正の Write に入れる。
+  ただし、未解決の判定が 1 つもないときに限る。未解決の判定は、`blocked` になった
+  判定、終了コードが 0 以外だった判定、検証済みのパッチを得ないまま終わった判定。
+- feature-docs の訂正は、`final_path_remaining` が false のとき最後の訂正になる。
+  true のときは、8. のとおり捕捉し直した先端で最終パスの判定が続き、`implement` が
+  `failed` のままその判定が `dispatch` を返せば、その訂正が最後の訂正になる。
+- 捕捉し直した先端での最終パスの判定が `none` を返したときは、step の項目だけを
+  1 回の Write と 1 回のコミットで書く。
+
+訂正と訂正の間で中断した場合、次の起動は feature-docs の判定が `none` を返し、
+最終パスの判定に進む。13 節の Apply 段落は、各 Write がパッチと復元を一緒に書くので
+そのまま成り立つ。
+
 対象タスクの worktree とブランチには触れない。マージ済みのタスクには触れない。
-未コミットの変更がある worktree は破棄しない。
+未コミットの変更がある worktree は破棄しない。この 3 文は、2 つの訂正のどちらにも
+当てはまる。
 
 ## Step B: 自走ループ
 

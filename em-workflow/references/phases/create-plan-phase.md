@@ -220,6 +220,25 @@ carries `dispatch_digest_inputs`, the per-path `digest_inputs` map of the
 dispatch's digest_source, written with the entry when it is created
 (`references/phase-state.md` defines the field and when it is written).
 
+**Other-feature document grant.** When the planner returns the stage-1
+request result that `references/contracts/planner-contract.md`
+(`## Other-feature documents`) defines and the result validates, the
+orchestrator checks each requested path against the scope rule of that
+section and confirms that the path exists as a regular file in the
+integration worktree. A path that fails either check is not granted. For each
+path that passes, the orchestrator adds one `amend_other_feature` target to
+the `write_policy`, with `expect_digest` set to the digest the orchestrator
+computes for the path now. The orchestrator verifies that target before the
+dispatch per `references/artifact-digest.md` (`Pre-dispatch verification`).
+It then re-dispatches the planner once, under a new `request_id`, with the
+same planning inputs. That dispatch's `digest_inputs` include each granted
+path, and the `worker_runs` entry's `dispatch_digest_inputs` records them. A
+request result that fails validation, or none of whose paths passes both
+checks, is handled like any failed planner result, and nothing is granted. A
+grant lives only in the `write_policy` of the dispatch it was added to and is
+not persisted, so an interrupted stage 2 resumes by running stage 1 again.
+The grant asks no question and adds no gate.
+
 ## 5. Question loop
 
 Blocking questions raised by the planner fall into these categories: TBD
@@ -241,6 +260,12 @@ artifacts (IMPLEMENTATION.md, VERIFICATION.md, THREAT-MODEL.md,
 index, and the proposed workflow patch — `tasks_patch`,
 `requirements_patch`, `step_patches`, and `preserve`
 (`references/workflow-patch.md`).
+
+The planner's completed output also covers the other-feature route of
+`references/contracts/planner-contract.md` (`## Other-feature documents`):
+the stage-1 request result, whose payload holds `other_feature_doc_requests`,
+and the stage-2 `payload.other_feature_doc_fixes`. That section owns both
+shapes, and this document does not restate them.
 
 ## 8. Validation
 
@@ -275,6 +300,15 @@ comparison timing" states; a recheck mismatch, or a recheck that cannot run,
 makes the result stale. When the result is
 not stale, the orchestrator records layer 5 (`Layer 5 recording`) together
 with `self_write_set`, in the same phase-state write.
+
+**Other-feature document fixes.** In scope verification (layer 4), every
+observed `modified` path that is an `amend_other_feature` target of the
+dispatch must be listed in `written_artifacts` and declared in
+`other_feature_doc_fixes`; otherwise the result fails scope verification. The
+recording phase-state write appends one `other_feature_doc_fixes` entry per
+declared fix (`path`, `change`, `reason`, and `produced_by` set to the run's
+`request_id`). That is the same write that records layer 5 and
+`self_write_set`; `references/phase-state.md` defines the record.
 
 ## 9. Planning invariants — the validator-implemented subset, and human review for the rest
 
@@ -321,6 +355,18 @@ to every invariant that would be desirable:
   those conditions are reported under their own codes:
   `path-correction-requirements` for `requirements_patch` and
   `path-correction-entries` for the items of `tasks_patch.entries`.
+- No feature-docs path in the `files` of a `tasks_patch.entries` item of a
+  `replace_planning` patch: each one is reported with the error code
+  `plan-task-feature-docs`. The rule is owned by `skills/plan-writing/SKILL.md`
+  (`## Feature-docs Files`) and is not restated here.
+- The other-feature document route: a violation of
+  `references/contracts/planner-contract.md`'s `## Other-feature documents` is
+  reported with `other-feature-doc-scope`, `other-feature-doc-request` or
+  `other-feature-doc-fix`, the codes that section assigns.
+- A patch carrying `tasks_patch.feature_docs_removals` meets the conditions of
+  `references/workflow-patch.md`'s `## Feature-docs correction`, checked under
+  `--dry-run-apply` with `--journal` (the feature's `journal.jsonl`) added to
+  the invocation below.
 
 The following are named as planning invariants but are **not implemented
 by the script** — they remain human review only, with no automated gate
@@ -411,15 +457,17 @@ partial-completion writes above are unchanged.
 
 A feature's declared change set is derived — not authored.
 
-- **Inputs**: the union of three sources. Every `tasks.*.files` entry
+- **Inputs**: the union of four sources. Every `tasks.*.files` entry
   registered in `workflow.yaml` by planning; the default entries, whose
   enumeration and membership semantics live in
   `references/templates/spec-document.md` and
   `references/templates/requirements-document.md` (this document cites
-  them and never restates them); and the implement-derived additions
+  them and never restates them); the implement-derived additions
   admitted by the deviation auto-addition rule in
   `references/implement-phase.md` — cited here by path, its evidence
-  condition not restated in this document.
+  condition not restated in this document; and every `path` of the
+  `other_feature_doc_fixes` record in `phase-state/create-plan.yaml`, which
+  `references/phase-state.md` defines.
 - **Retention**: an admitted addition is retained in exactly one
   location — the `files` list of the task whose deviation was admitted, in
   `workflow.yaml`, the same list the union above is read from.
@@ -431,7 +479,9 @@ A feature's declared change set is derived — not authored.
   (`references/workflow-patch.md`'s Re-planning task-id allocation section
   owns that guarantee — cited here, never restated). The audit trail of
   the admission decision stays where `references/implement-phase.md` puts
-  it; this retention rule does not change that.
+  it; this retention rule does not change that. The
+  `other_feature_doc_fixes` record is append-only and survives phase
+  restarts and re-planning, so a fix stays in the derived set.
 - **Status**: this derivation is a guard, not a statement of the goal — it
   bounds what the implement phase may touch, and it is not itself a
   description of what the feature sets out to achieve.
@@ -440,8 +490,8 @@ A feature's declared change set is derived — not authored.
 - **Timing**: the derivation is available once planning's proposed patch
   has registered the task set (section 10 above), and it is re-derived
   whenever the task set changes — re-planning, a rework append, or an
-  implement wake that admitted a deviation — rather than being frozen at
-  the first successful planning pass.
+  implement wake that admitted a deviation — or a fix is recorded, rather
+  than being frozen at the first successful planning pass.
 
 ## 13. Final-path correction dispatch
 
@@ -479,3 +529,40 @@ orchestrator then applies the patch and the restoration of
 writes `workflow.yaml` with one Write in one commit, after the artifact
 commit, so an interruption cannot leave corrected `files` with
 `implement: failed`.
+
+### Feature-docs correction dispatch
+
+Run from `skills/develop/SKILL.md`'s `## Step A.6: failed からの入口` when
+`scripts/feature-docs-entry.py` returns `dispatch`. The patch contract is
+`references/workflow-patch.md`'s `## Feature-docs correction`, cited here and
+not restated.
+
+The checks before the dispatch are those of section 2: the clean-worktree
+precondition and the scope verification (`references/phases/create-spec-phase.md`,
+"Scope verification"), unchanged.
+
+The dispatch is `Task(subagent_type="em-workflow:implementation-planner")` with
+`planning_inputs.feature_docs_correction` copied from the entry script's `targets`
+(each a `task_id` and a `path`), and with the `write_policy` of
+`references/contracts/planner-contract.md`'s
+`### feature_docs_correction (dispatch-resolved value)`.
+
+A stage-1 request result is handled by the grant rule of section 4
+(`## 4. Planner dispatch`), followed by one re-dispatch.
+
+The run and the patch are recorded the same way as the dispatch above: in
+`phase-state/create-plan.yaml`, under a new `request_id` and the next unused
+`patch_id`. The `create-plan` step stays `completed`, so an interrupted
+correction restarts from Step A.6.
+
+Validation is the canonical invocation of section 9, plus `--journal` (the
+feature's `journal.jsonl`).
+
+Any result other than `completed`, any validator exit other than 0 and any stale
+result ends the dispatch: the worker's writes are discarded and `workflow.yaml`
+is not changed.
+
+On a validated patch the artifact commit comes first. The orchestrator then
+applies the patch and the restoration of `skills/develop/SKILL.md`'s
+`## Step A.6: failed からの入口` in memory, and writes `workflow.yaml` as its split
+of the restoration states, cited here and not restated.

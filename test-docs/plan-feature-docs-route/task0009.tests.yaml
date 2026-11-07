@@ -1,0 +1,107 @@
+task_id: task0009
+# Full suite (python3 -m unittest discover -s tests) run before any edit:
+# 15247 tests, OK, 1 skipped, no failure.
+baseline_failures: []
+# Full suite (python3 -m unittest discover -s tests) re-executed after the
+# implementation and after this record was written (the record is itself
+# checked by tests.test_tests_yaml_id_resolution): no failure.
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_other_feature_docs_create_plan_docs.TestAC1GrantRule.test_section_4_states_the_grant_rule
+      - tests.test_other_feature_docs_create_plan_docs.TestAC1GrantRule.test_the_grant_paragraph_follows_the_dispatch_inputs
+      - tests.test_other_feature_docs_create_plan_docs.TestAC1GrantRule.test_existing_dispatch_paragraphs_are_kept
+      - tests.test_other_feature_docs_create_plan_docs.TestAC1GrantRule.test_the_grant_paragraph_restates_no_digest_owner_wording
+      - tests.test_other_feature_docs_create_plan_docs.TestAC1GrantRule.test_matcher_accepts_the_good_sample_and_rejects_each_missing_element
+      - tests.test_other_feature_docs_create_plan_docs.TestAC1GrantRule.test_paragraph_finder_rejects_a_section_without_the_paragraph
+      - tests.test_other_feature_docs_create_plan_docs.TestAC1GrantRule.test_paragraph_finder_rejects_a_duplicated_paragraph
+      - tests.test_other_feature_docs_create_plan_docs.TestHygiene.test_new_text_adds_no_gate_and_no_question
+      - tests.test_other_feature_docs_create_plan_docs.TestHygiene.test_digest_sentences_name_the_orchestrator_or_are_negated
+      - tests.test_other_feature_docs_create_plan_docs.TestHygiene.test_new_text_holds_no_gate_id_span_and_no_bare_phase_yaml_name
+      - tests.test_other_feature_docs_create_plan_docs.TestHygiene.test_new_text_carries_no_notion_url_or_home_directory_path
+      - tests.test_other_feature_docs_create_plan_docs.TestHygiene.test_create_plan_phase_never_names_git_hash_object
+      - tests.test_other_feature_docs_create_plan_docs.TestHygiene.test_digest_matcher_flags_a_worker_directed_sentence
+      - tests.test_other_feature_docs_create_plan_docs.TestHygiene.test_gate_id_matcher_proof
+      - tests.test_other_feature_docs_create_plan_docs.TestHygiene.test_module_imports_the_standard_library_only
+    red_confirmed: true
+    red_reason: "Against the unedited create-plan-phase.md test_section_4_states_the_grant_rule failed with \"expected exactly one paragraph starting with '**Other-feature document grant.**', found 0\", the follows-the-dispatch-inputs test failed because the label was absent from section 4, and TestHygiene errored in setUpClass with the same missing-paragraph message. The negative-proof tests and the standard-library import test ran green (they use in-test samples or the test module's own source)."
+  AC-2:
+    tests:
+      - tests.test_other_feature_docs_create_plan_docs.TestAC2CompletionOutput.test_section_7_names_the_request_result_and_the_fix_declaration
+      - tests.test_other_feature_docs_create_plan_docs.TestAC2CompletionOutput.test_existing_completion_output_sentence_is_kept
+      - tests.test_other_feature_docs_create_plan_docs.TestAC2CompletionOutput.test_matcher_accepts_the_good_sample_and_rejects_each_missing_element
+      - tests.test_other_feature_docs_create_plan_docs.TestAC2CompletionOutput.test_paragraph_finder_rejects_a_section_without_the_paragraph
+    red_confirmed: true
+    red_reason: "Against the unedited create-plan-phase.md test_section_7_names_the_request_result_and_the_fix_declaration failed with \"expected exactly one paragraph starting with \\\"The planner's completed output also covers\\\", found 0\". The kept-sentence test and the negative-proof tests were green (they use in-test samples or text that pre-existed)."
+  AC-3:
+    tests:
+      - tests.test_other_feature_docs_create_plan_docs.TestAC3ScopeVerificationAndRecording.test_section_8_states_the_coverage_and_the_recording_write
+      - tests.test_other_feature_docs_create_plan_docs.TestAC3ScopeVerificationAndRecording.test_the_return_time_order_paragraph_is_byte_identical
+      - tests.test_other_feature_docs_create_plan_docs.TestAC3ScopeVerificationAndRecording.test_the_new_paragraph_follows_the_return_time_order_paragraph
+      - tests.test_other_feature_docs_create_plan_docs.TestAC3ScopeVerificationAndRecording.test_layer_5_recording_sentence_is_kept
+      - tests.test_other_feature_docs_create_plan_docs.TestAC3ScopeVerificationAndRecording.test_the_new_paragraph_restates_no_digest_owner_wording
+      - tests.test_other_feature_docs_create_plan_docs.TestAC3ScopeVerificationAndRecording.test_matcher_accepts_the_good_sample_and_rejects_each_missing_element
+      - tests.test_other_feature_docs_create_plan_docs.TestAC3ScopeVerificationAndRecording.test_a_section_8_copy_without_the_coverage_sentence_fails
+      - tests.test_other_feature_docs_create_plan_docs.TestAC3ScopeVerificationAndRecording.test_a_section_8_copy_without_the_recording_sentence_fails
+      - tests.test_other_feature_docs_create_plan_docs.TestAC3ScopeVerificationAndRecording.test_pin_detects_a_changed_return_time_order_paragraph
+    red_confirmed: true
+    red_reason: "Against the unedited create-plan-phase.md test_section_8_states_the_coverage_and_the_recording_write failed with \"expected exactly one paragraph starting with '**Other-feature document fixes.**', found 0\", and the follows-the-return-time-order-paragraph and no-digest-owner-wording tests failed for the same missing paragraph. The byte-identical pin on the return-time order paragraph was green before and stays green (a guard for the unchanged paragraph); the negative-proof tests were green (in-test samples)."
+  AC-4:
+    tests:
+      - tests.test_other_feature_docs_create_plan_docs.TestAC4ValidatorImplementedList.test_the_implemented_list_gains_the_three_bullets
+      - tests.test_other_feature_docs_create_plan_docs.TestAC4ValidatorImplementedList.test_each_new_bullet_sits_inside_the_implemented_list
+      - tests.test_other_feature_docs_create_plan_docs.TestAC4ValidatorImplementedList.test_the_new_bullets_replace_no_existing_bullet
+      - tests.test_other_feature_docs_create_plan_docs.TestAC4ValidatorImplementedList.test_the_not_implemented_block_matches_its_pinned_digest
+      - tests.test_other_feature_docs_create_plan_docs.TestAC4ValidatorImplementedList.test_the_canonical_invocation_block_matches_its_pinned_digest
+      - tests.test_other_feature_docs_create_plan_docs.TestAC4ValidatorImplementedList.test_bullet_matcher_accepts_the_good_sample
+      - tests.test_other_feature_docs_create_plan_docs.TestAC4ValidatorImplementedList.test_bullet_matcher_rejects_each_missing_element
+      - tests.test_other_feature_docs_create_plan_docs.TestAC4ValidatorImplementedList.test_bullet_matcher_rejects_a_list_without_one_of_the_bullets
+      - tests.test_other_feature_docs_create_plan_docs.TestAC4ValidatorImplementedList.test_pins_detect_a_changed_block
+    red_confirmed: true
+    red_reason: "Against the unedited create-plan-phase.md test_the_implemented_list_gains_the_three_bullets failed with \"expected exactly one bullet naming `plan-task-feature-docs`, found 0\" and test_each_new_bullet_sits_inside_the_implemented_list failed on the missing bullet. The two pinned-digest tests (not-implemented block, canonical invocation block) were green before and stay green: they guard that those blocks are not touched; the negative-proof tests were green (in-test samples)."
+  AC-5:
+    tests:
+      - tests.test_other_feature_docs_create_plan_docs.TestAC5ChangeSetDerivation.test_section_12_reads_the_fix_record_as_a_fourth_input
+      - tests.test_other_feature_docs_create_plan_docs.TestAC5ChangeSetDerivation.test_the_three_existing_inputs_and_pinned_triggers_stay
+      - tests.test_other_feature_docs_create_plan_docs.TestAC5ChangeSetDerivation.test_no_forbidden_word_from_the_heading_to_the_end_of_the_document
+      - tests.test_other_feature_docs_create_plan_docs.TestAC5ChangeSetDerivation.test_the_two_workflow_artifact_root_globs_never_co_occur
+      - tests.test_other_feature_docs_create_plan_docs.TestAC5ChangeSetDerivation.test_matcher_accepts_the_good_sample_and_rejects_each_missing_element
+      - tests.test_other_feature_docs_create_plan_docs.TestAC5ChangeSetDerivation.test_a_section_12_copy_with_three_inputs_fails_the_fourth_input_check
+      - tests.test_other_feature_docs_create_plan_docs.TestAC5ChangeSetDerivation.test_a_copy_that_names_four_sources_but_no_record_fails
+      - tests.test_other_feature_docs_create_plan_docs.TestAC5ChangeSetDerivation.test_a_copy_without_the_retention_sentence_fails
+      - tests.test_other_feature_docs_create_plan_docs.TestAC5ChangeSetDerivation.test_a_copy_with_the_old_timing_fails
+      - tests.test_other_feature_docs_create_plan_docs.TestAC5ChangeSetDerivation.test_forbidden_word_matcher_flags_each_word
+      - tests.test_other_feature_docs_create_plan_docs.TestAC5ChangeSetDerivation.test_forbidden_word_scan_reaches_the_end_of_the_document
+      - tests.test_change_set_derivation
+    red_confirmed: true
+    red_reason: "Against the unedited create-plan-phase.md test_section_12_reads_the_fix_record_as_a_fourth_input failed with \"the Inputs bullet lacks 'the union of four sources'\". The forbidden-word scan, the pinned-phrase test and the root-glob test were green before and stay green (guards for the unchanged section 12 pins; the existing tests.test_change_set_derivation module pins the same phrases and needed no refresh); the negative-proof tests were green (in-test samples, including the base revision's three-input bullets)."
+  AC-6:
+    tests:
+      - tests.test_other_feature_docs_create_plan_docs.TestAC6PhaseStateRecord.test_the_schema_example_defines_the_record_with_one_entry
+      - tests.test_other_feature_docs_create_plan_docs.TestAC6PhaseStateRecord.test_the_field_table_defines_the_record
+      - tests.test_other_feature_docs_create_plan_docs.TestAC6PhaseStateRecord.test_the_row_sits_inside_the_top_level_field_table
+      - tests.test_other_feature_docs_create_plan_docs.TestAC6PhaseStateRecord.test_existing_example_lines_and_rows_are_kept
+      - tests.test_other_feature_docs_create_plan_docs.TestAC6PhaseStateRecord.test_row_matcher_accepts_the_good_sample_and_rejects_each_missing_element
+      - tests.test_other_feature_docs_create_plan_docs.TestAC6PhaseStateRecord.test_row_matcher_rejects_a_changed_wording
+      - tests.test_other_feature_docs_create_plan_docs.TestAC6PhaseStateRecord.test_row_finder_rejects_a_missing_or_duplicated_row
+      - tests.test_other_feature_docs_create_plan_docs.TestAC6PhaseStateRecord.test_example_matcher_accepts_the_good_sample
+      - tests.test_other_feature_docs_create_plan_docs.TestAC6PhaseStateRecord.test_example_matcher_rejects_a_missing_key
+      - tests.test_other_feature_docs_create_plan_docs.TestAC6PhaseStateRecord.test_example_matcher_rejects_no_entry_and_two_entries
+      - tests.test_other_feature_docs_create_plan_docs.TestAC6PhaseStateRecord.test_example_block_finder_rejects_a_document_without_a_block
+    red_confirmed: true
+    red_reason: "Against the unedited phase-state.md test_the_schema_example_defines_the_record_with_one_entry failed with \"expected one top-level other_feature_doc_fixes: line\", test_the_field_table_defines_the_record failed with \"expected exactly one field table row for other_feature_doc_fixes, found 0\", and the row-position test failed on the missing row. The kept-lines test and the negative-proof tests were green (pre-existing lines, in-test samples)."
+  AC-7:
+    tests:
+      - tests.test_change_set_derivation
+      - tests.test_scenario_id_planner_docs
+      - tests.test_artifact_digest_docs
+      - tests.test_recheck_dispatch_sites_docs
+      - tests.test_self_write_digest_docs
+      - tests.test_final_path_correction_docs
+      - tests.test_phase_state_doc
+      - tests.test_phase_state_schema_compatibility
+      - tests.test_declared_change_set_invariants
+      - tests.test_deviation_auto_addition
+    red_confirmed: false
+    red_reason: "AC-7 is the outcome of the whole-suite command (python3 -m unittest discover -s tests) with no existing assertion removed or weakened; no single check exists that can fail before the change. A dedicated new module is out of scope, but the existing tests listed here read create-plan-phase.md or phase-state.md (found by a search of tests/ for both the repository-relative path and the file name) and detect a changed pinned phrase, section digest, heading list or schema line; no red state occurred for this change. No existing pin needed a refresh, so tests/test_change_set_derivation.py is unchanged. The suite was 15247 tests OK before the change and the same run is repeated after it (see final_failures)."
