@@ -479,3 +479,40 @@ orchestrator then applies the patch and the restoration of
 writes `workflow.yaml` with one Write in one commit, after the artifact
 commit, so an interruption cannot leave corrected `files` with
 `implement: failed`.
+
+### Feature-docs correction dispatch
+
+Run from `skills/develop/SKILL.md`'s `## Step A.6: failed からの入口` when
+`scripts/feature-docs-entry.py` returns `dispatch`. The patch contract is
+`references/workflow-patch.md`'s `## Feature-docs correction`, cited here and
+not restated.
+
+The checks before the dispatch are those of section 2: the clean-worktree
+precondition and the scope verification (`references/phases/create-spec-phase.md`,
+"Scope verification"), unchanged.
+
+The dispatch is `Task(subagent_type="em-workflow:implementation-planner")` with
+`planning_inputs.feature_docs_correction` copied from the entry script's `targets`
+(each a `task_id` and a `path`), and with the `write_policy` of
+`references/contracts/planner-contract.md`'s
+`### feature_docs_correction (dispatch-resolved value)`.
+
+A stage-1 request result is handled by the grant rule of section 4
+(`## 4. Planner dispatch`), followed by one re-dispatch.
+
+The run and the patch are recorded the same way as the dispatch above: in
+`phase-state/create-plan.yaml`, under a new `request_id` and the next unused
+`patch_id`. The `create-plan` step stays `completed`, so an interrupted
+correction restarts from Step A.6.
+
+Validation is the canonical invocation of section 9, plus `--journal` (the
+feature's `journal.jsonl`).
+
+Any result other than `completed`, any validator exit other than 0 and any stale
+result ends the dispatch: the worker's writes are discarded and `workflow.yaml`
+is not changed.
+
+On a validated patch the artifact commit comes first. The orchestrator then
+applies the patch and the restoration of `skills/develop/SKILL.md`'s
+`## Step A.6: failed からの入口` in memory, and writes `workflow.yaml` as its split
+of the restoration states, cited here and not restated.
