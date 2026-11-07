@@ -965,5 +965,120 @@ class TestTask0012AC7Docs(unittest.TestCase):
             self.assertIn(PLACEHOLDER, f.read())
 
 
+# --- merge-docs-align-impl task0002: the README row -------------------------------
+
+
+def destructive_guard_rows(readme_text):
+    """The hook table rows of README_TEXT that start with the
+    destructive-guard cell."""
+    return [
+        line
+        for line in readme_text.splitlines()
+        if line.startswith("| `hooks/destructive-guard.py`")
+    ]
+
+
+# What the destructive-guard row states about the `gh pr merge` exception: its
+# two conditions, and what another statement in the same command does to it.
+README_ROW_TERMS = (
+    ("(a) the canonical form is the only statement", "正規形がコマンドの中で唯一の文であること"),
+    (
+        "(b) the working directory is a registered integration worktree or under one",
+        "作業ディレクトリが登録済みの integration worktree か、その配下であること",
+    ),
+    (
+        "another statement, before or after, ends the exception",
+        "同じコマンドに別の文が前か後にあると例外は成り立たず",
+    ),
+    ("a deny in another statement gives that verdict", "別の文が `deny` ならその判定になる"),
+)
+README_ROW_REMOVED = "後続の区間も通常どおり判定する"
+README_ROW_KEPT = ("gh pr merge", "integration worktree")
+
+
+def readme_row_problems(row):
+    """What is wrong with ROW as the destructive-guard row: the terms it lacks
+    and the removed sentence it still holds. Empty when the row is right."""
+    problems = ["lacks %s" % label for label, term in README_ROW_TERMS if term not in row]
+    if README_ROW_REMOVED in row:
+        problems.append("keeps the removed sentence")
+    problems.extend("lacks %s" % term for term in README_ROW_KEPT if term not in row)
+    return problems
+
+
+class TestMergeDocsAlignReadmeRow(unittest.TestCase):
+    """merge-docs-align-impl task0002 (TS-5): the destructive-guard row of the
+    README hook table states the two conditions of the `gh pr merge`
+    exception, and drift in it is detected. The behavior the row claims is
+    judged by the classes above: the canonical form plus `&& echo done`
+    (TestAC3LaterSegmentsAreStillJudged, TestTask0012AC4SoleStatement) and an
+    unregistered working directory (TestTask0012AC3UnregisteredDirectory)."""
+
+    @classmethod
+    def setUpClass(cls):
+        with open(README, encoding="utf-8") as f:
+            cls.rows = destructive_guard_rows(f.read())
+        cls.row = cls.rows[0] if cls.rows else ""
+
+    def test_ac4_the_row_is_one_line_starting_with_the_guard_cell(self):
+        self.assertEqual(len(self.rows), 1)
+        self.assertTrue(self.row.startswith("| `hooks/destructive-guard.py` |"))
+        self.assertTrue(self.row.endswith(" |"))
+
+    def test_ac1_ac2_ac3_ac4_the_row_has_every_term_and_no_removed_sentence(self):
+        self.assertEqual(readme_row_problems(self.row), [])
+
+    def test_ac1_the_row_states_both_conditions(self):
+        for label, term in README_ROW_TERMS[:2]:
+            with self.subTest(condition=label):
+                self.assertIn(term, self.row)
+
+    def test_ac2_the_row_states_what_another_statement_does(self):
+        for label, term in README_ROW_TERMS[2:]:
+            with self.subTest(statement=label):
+                self.assertIn(term, self.row)
+
+    def test_ac3_the_row_does_not_keep_the_removed_sentence(self):
+        self.assertNotIn(README_ROW_REMOVED, self.row)
+
+    def test_ac4_the_row_keeps_the_terms_the_other_tests_pin(self):
+        for term in README_ROW_KEPT:
+            with self.subTest(term=term):
+                self.assertIn(term, self.row)
+
+    # Every assertion of absence above is paired with a forged row that shows
+    # the matcher fires.
+
+    def test_ac3_a_forged_row_keeping_the_original_sentence_fires(self):
+        forged = self.row + "同じコマンドの後続の区間も通常どおり判定する"
+        self.assertEqual(readme_row_problems(forged), ["keeps the removed sentence"])
+
+    def test_ac3_the_row_before_the_change_fires_on_every_check(self):
+        before = (
+            "| `hooks/destructive-guard.py` | PreToolUse(Bash) | 破壊的コマンドの静的ブロックリスト。"
+            "`gh pr merge` は確認に回すが、integration worktree から実行する正規形だけは"
+            " `allow` で返す。トークンが 1 つでも違う形、環境変数の前置、別の作業ディレクトリは"
+            "従来どおりで、同じコマンドの後続の区間も通常どおり判定する |"
+        )
+        problems = readme_row_problems(before)
+        self.assertIn("keeps the removed sentence", problems)
+        for label, _term in README_ROW_TERMS:
+            self.assertIn("lacks %s" % label, problems)
+
+    def test_ac1_ac2_a_forged_row_missing_one_term_fires(self):
+        for label, term in README_ROW_TERMS:
+            with self.subTest(missing=label):
+                forged = self.row.replace(term, "")
+                self.assertNotEqual(forged, self.row)
+                self.assertIn("lacks %s" % label, readme_row_problems(forged))
+
+    def test_ac4_a_forged_row_missing_a_kept_term_fires(self):
+        for term in README_ROW_KEPT:
+            with self.subTest(missing=term):
+                forged = self.row.replace(term, "")
+                self.assertNotEqual(forged, self.row)
+                self.assertIn("lacks %s" % term, readme_row_problems(forged))
+
+
 if __name__ == "__main__":
     unittest.main()
