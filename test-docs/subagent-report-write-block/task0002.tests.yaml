@@ -1,0 +1,48 @@
+task_id: task0002
+baseline_failures: []          # 4a before any change: python3 -m unittest discover -s tests -> OK (skipped=1). Refreshed after parent-side adoption (task0001, task0004, task0006 and task0007 had merged): the same command on the adoption commit failed only in this task's own new tests (tests.test_final_path_correction, tests.test_report_name_entry and the corpus case of the new invalid-path-correction-shape fixture), which the adopted validator cannot satisfy before the re-implementation; nothing was inherited red
+final_failures: []             # re-executed after the re-implementation on the updated parent and after this record was written: python3 -m unittest discover -s tests -> OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_final_path_correction.TestPermission
+      - tests.test_final_path_correction.TestPathCorrectionShape
+    red_confirmed: true
+    red_reason: "Run against the validator as inherited from the updated parent, before the change: every TestPermission test errored with TypeError (validate_workflow_patch() got an unexpected keyword argument 'journal'); in TestPathCorrectionShape each of the eleven malformed-field cases of test_malformed_fields_are_path_correction_shape failed with AssertionError ('path-correction-shape' not found in []), test_not_permitted_on_append_rework failed with AssertionError ('path-correction-shape' not found in ['docs-only-step-patches']), and test_shape_errors_do_not_hide_in_the_dry_run errored with the same TypeError. The two controls that assert an absent or null field and a well-formed field pass without a dry run (test_absent_and_null_are_the_same, test_a_well_formed_field_passes_the_structural_check_without_dry_run) passed before the change and carry no red of their own."
+  AC-2:
+    tests:
+      - tests.test_final_path_correction.TestCarriedCheck
+    red_confirmed: true
+    red_reason: "Run against the validator as inherited from the updated parent: the carried-task tests errored with TypeError (validate_workflow_patch() got an unexpected keyword argument 'journal'). The two controls that assert behavior unchanged (test_no_matching_name_needs_no_base_inputs, test_without_a_dry_run_the_carried_files_are_not_read) passed before the change and carry no red of their own."
+  AC-3:
+    tests:
+      - tests.test_final_path_correction.TestConditions
+      - tests.test_final_path_correction.TestRequiredInputs
+    red_confirmed: true
+    red_reason: "Run against the validator as inherited from the updated parent: the condition tests errored with TypeError (validate_workflow_patch() got an unexpected keyword argument 'journal'), and test_cli_exits_2_for_a_missing_input_and_0_for_a_complete_call failed with AssertionError 2 != 0 because the CLI printed its usage text for the unknown --journal flag. test_base_tree_entry_classifies_symlinks_and_submodule_like_entries is a control: it passed before the change because base_tree_entry already exists in the parent, so it carries no red of its own."
+  AC-4:
+    tests:
+      - tests.test_final_path_correction.TestContentCondition
+    red_confirmed: true
+    red_reason: "Run against the validator as inherited from the updated parent: the condition 5 tests errored with TypeError (validate_workflow_patch() got an unexpected keyword argument 'journal'), and test_the_normalization_is_deterministic_on_a_shared_bare_name errored with AttributeError (module has no attribute '_correction_normalizer')."
+  AC-5:
+    tests:
+      - tests.test_final_path_correction.TestApplication
+    red_confirmed: true
+    red_reason: "Run against the validator as inherited from the updated parent: test_a_corrected_record_has_the_path_replaced_in_position_and_notes_null and test_the_position_is_kept_when_the_path_is_not_first failed with AssertionError (Lists differ: the carried record was copied verbatim, files still held 'test-docs/demo/REPORT.md'), and the Files-section tests errored with TypeError (_validate_task_plans_against_patch() got an unexpected keyword argument 'workflow', and validate_worker_result() got an unexpected keyword argument 'journal'). The four controls that assert verbatim copy without a correction or with a malformed one (test_a_malformed_field_applies_nothing, test_a_patch_without_corrections_copies_carried_records_verbatim, test_other_carried_records_stay_verbatim, test_the_input_workflow_is_not_changed) passed before the change and carry no red of their own."
+  AC-6:
+    tests:
+      - tests.test_report_name_entry.TestEntryNone
+      - tests.test_report_name_entry.TestEntryDispatch
+      - tests.test_report_name_entry.TestEntryBlocked
+      - tests.test_report_name_entry.TestEntryExecutionErrors
+      - tests.test_report_name_entry.TestJournalReplay
+    red_confirmed: true
+    red_reason: "Run before em-workflow/scripts/report-name-entry.py existed, against the validator as inherited from the updated parent: every none, dispatch and blocked test failed with AssertionError 2 != 0 (the interpreter could not open the script), test_the_validator_is_located_as_a_sibling_file errored with FileNotFoundError, and the journal tests errored with AttributeError (module has no attribute 'journal_last_events' / 'read_journal_events'). The five exit-2 tests of TestEntryExecutionErrors (missing argument, base that does not resolve, repository that is not a repository, unreadable journal, broken workflow) passed before the script existed because a missing script also exits 2, so they carry no red of their own; the none, dispatch and blocked tests are the evidence that the script now reaches those outcomes."
+  AC-7:
+    tests:
+      - tests.test_final_path_correction.TestConditions.test_paths_are_literal_text
+      - tests.test_final_path_correction.TestScenarioIdScan
+      - tests.test_final_path_correction.TestFixtures
+      - tests.test_validate_worker_output.TestFixtureCorpusDataDriven.test_every_fixture_matches_its_declared_exit_code
+    red_confirmed: true
+    red_reason: "Run against the validator as inherited from the updated parent: test_paths_are_literal_text errored with TypeError (validate_workflow_patch() got an unexpected keyword argument 'journal'), test_a_correction_patch_skips_the_verification_target_only failed with AssertionError 2 != 1 (VERIFICATION.md was still scanned), and test_the_malformed_field_is_path_correction_shape_without_a_dry_run failed with AssertionError 0 != 1 (invalid-path-correction-shape exited 0). The controls test_the_well_formed_field_passes_without_a_dry_run, test_neither_fixture_holds_a_report_artifact_name, test_a_patch_without_corrections_still_scans_verification and test_an_empty_or_malformed_field_does_not_skip_the_scan passed before the change (the inherited validator ignores the unknown field and still scans VERIFICATION.md) and carry no red of their own. test_every_fixture_matches_its_declared_exit_code (the corpus test) failed for case invalid-path-correction-shape with AssertionError 0 != 1 (expected exit 1, got 0) when run against the inherited validator and the two new fixtures. The full-suite outcome is final_failures above."

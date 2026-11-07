@@ -370,6 +370,68 @@ Step B に入る前に、`${CLAUDE_PLUGIN_ROOT}/references/command-execution-pro
 workflow.yaml のコマンドが変更された合図 — このゲートを再実行してから
 同一文字列で再試行する。
 
+## Step A.6: failed からの入口
+
+feature 名を指定した再実行の開始時に、`implement` の失敗が最終パスの訂正
+（`## Report Artifact Names` が定める名前の訂正）で解けるかを判定する。
+この判定は 1 回の起動につき 1 度だけ行う。置き場所は、Step A の既存 feature
+の分岐（上記 3. で workflow.yaml が「存在する」通常の再開）が Step A.5 を
+終えた後で、Step B が workflow.yaml を読むより前。新規 feature のルートと、
+workflow.yaml が「存在しない」ルートはこの節に入らない。
+
+Step B はこの節に入らない。`implement` が `failed` になるのは Step B の
+実行中であり、その走行の中にはこの節を評価し直す経路が無い。したがって
+失敗した走行の中ではこの入口を取らない。取るのは、その後に同じ feature 名で
+再実行した起動の開始時だけ。
+
+1. `implement` の `status` が `failed` でなければ、何もせず Step B へ進む。
+2. integration の先端を完全なコミット ID として捕捉し
+   （`git -C {integration worktree の絶対パス} rev-parse HEAD` の出力）、
+   `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/report-name-entry.py` を 4 つの
+   引数で実行する。
+   - `--workflow`: integration worktree 内の
+     `feature-docs/{feature}/workflow.yaml`
+   - `--journal`: `{project_root}/.claude/worktrees/em-workflow/{feature}/journal.jsonl`
+   - `--target-repo`: integration worktree の絶対パス
+   - `--base-commit`: 捕捉したコミット ID
+
+   標準出力の JSON は `entry`（`none` / `dispatch` / `blocked`）、
+   `violations`（各要素が `task_id` / `path` / `failed_journal_line`）、
+   `errors` を持つ。判定の定義はこのスクリプトが持ち、ここでは繰り返さない。
+3. 結果が `none`、`blocked`、または終了コードが 0 以外のときは、
+   workflow.yaml を変えずに Step B へ進む。その結果、停止条件 3 が発火する
+   （発火条件の絞り込みは Step B の既存の判定どおりで、この節は変えない）。
+   `blocked` では停止の報告に失敗した条件を名指しする。失敗した条件は
+   `errors` から読む。
+4. 結果が `dispatch` のときは、`references/phases/create-plan-phase.md` の
+   13 節を実行する。`failed_kind` が `decision` でも、外部要因を示す値でも、
+   この入口は停止条件 3 より前に評価される。対話実行と batch 実行の
+   どちらでも同じこの入口を使う。新しい `gate_id` もユーザーへの質問も
+   導入しない。
+5. 検証済みのパッチを得ないまま 13 節が終わったとき（却下された訂正を含む）は、
+   workflow.yaml を変えずに Step B へ進み、停止条件 3 が発火する。
+6. 検証済みのパッチを得たときは、成果物のコミットを作った後、パッチと
+   復元を 1 回の Write と 1 回のコミットで書く。コミットは
+   `${CLAUDE_PLUGIN_ROOT}/scripts/commit-docs.sh` で行い、その後 Step B へ
+   進む。
+
+**復元**は `violations` に挙がった訂正対象タスクごとに行う。`implement` と
+`failed_kind` は step の項目なので 1 回だけ書く。
+
+- `implement` を `pending` にする
+- `failed_kind` を null にする
+- `tasks.{T}.status` を `pending` にする
+- `tasks.{T}.routeback_failed_journal_line` を、違反の
+  `failed_journal_line` が null でないときその値にする
+- `notes` はパッチの適用が消す（再試行の消費の記録もこれで消える）
+
+復元後のタスクは `routeback_failed_journal_line` の記録を通じて implement
+フェーズが未起動として扱う（`references/implement-phase.md` の Step I.2.a /
+I.2.b — 引用のみでここでは繰り返さない）。
+
+対象タスクの worktree とブランチには触れない。マージ済みのタスクには触れない。
+未コミットの変更がある worktree は破棄しない。
+
 ## Step B: 自走ループ
 
 workflow.yaml は integration worktree 内の
@@ -608,6 +670,10 @@ I.2.c、引用のみでここでは繰り返さない）を通じて扱う。
 停止条件 3 のもう一方の発火条件（`needs_update`）、および `review` /
 `verify` step に対する挙動はこの block の対象外であり、一切変更しない
 （SPEC assumption A3）。
+
+feature 名を指定した再実行の開始時に限り、この block の判定より前に Step A.6
+の入口が 1 度評価される。この block の判定は Step A.6 の結果にかかわらず
+上記のとおりで、変更しない。
 
 **Tier 削減表**: tier は `full` を基準に、`reduced` と `minimal` が成果物と
 並列性を削減する。

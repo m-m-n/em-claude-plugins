@@ -263,6 +263,10 @@ SPEC-change transition (Section 10).
 2. The orchestrator dispatches rework-planner.
 3. The orchestrator validates and applies rework-planner's patch
    (`tasks_patch` + `step_patches` + `preserve`; `references/workflow-patch.md`).
+   The validation passes `--target-repo` (the integration worktree) and
+   `--base-commit` (the full commit ID of the tip of the integration branch,
+   resolved just before validating): the same two values as the canonical
+   invocation of `references/phases/create-plan-phase.md` section 9.
 4. `implement` returning to `pending` happens INSIDE that patch's
    `step_patches` in step 3 — it is never a separate write, and it never
    precedes step 3 registering at least one pending rework task
@@ -438,6 +442,11 @@ Machine-checkable rules a validator applies against the synthesis output:
 - No synthesized task's `files` (an `append_rework` entry) contains a path
   whose first path segment is exactly `feature-docs`, with `\` treated as `/`
   and with empty and `.` segments dropped (Section 7).
+- No synthesized task's `files` (an `append_rework` entry) holds a new
+  report-artifact name: a name that `skills/plan-writing/SKILL.md`'s
+  `## Report Artifact Names` matches and that is not a regular file at the base
+  commit. Each is reported with the error code `report-name-new-file`, and the
+  check needs the two values that Section 10 step 3 passes.
 - An `append_rework` patch whose `tasks_patch.entries` is absent or empty
   never returns `implement` to `pending`: its `step_patches` hold exactly
   one entry, for the origin step only, with `set.status` equal to

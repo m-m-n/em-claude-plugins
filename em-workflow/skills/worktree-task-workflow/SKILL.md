@@ -105,6 +105,20 @@ Never resolve by `--ours`, never hand-merge conflict markers, never skip the
 re-test. The invariant: after adoption, the parent's intent survives verbatim
 and yours is re-expressed on top.
 
+## Write rejection
+
+When your Write returns the rejection text
+`Subagents should return findings as text, not write report files.`, you stop
+at once and fail the task. The detail is in the `## Write rejection` section
+of the implementer agent definition (`agents/implementer.md`).
+
+- Return `status: failed` immediately. Do not run `merge-task.sh`.
+- Report the target path (repository-relative) and the rejection text in the
+  `write_rejection` field of your report.
+- Never work around the rejection: no renaming, no writing under another name,
+  no creating the file with Edit, no writing through Bash, and no asking the
+  parent to write it.
+
 ## Command execution gate (workflow.yaml strings)
 
 `project_commands` values originate in workflow.yaml — repository-controlled
