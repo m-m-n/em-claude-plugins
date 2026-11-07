@@ -114,7 +114,7 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/plan-feature-docs-route/task0001
   task0002:
@@ -215,7 +215,7 @@ tasks:
     - FR7
     - NFR2
     - NFR3
-    status: in_progress
+    status: failed
     notes: null
     branch: em-workflow/plan-feature-docs-route/task0005
   task0006:
