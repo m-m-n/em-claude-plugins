@@ -1,0 +1,140 @@
+schema_version: 1
+feature: hook-test-bytecode-suppression-others
+created: '2026-11-07'
+base_branch: main
+goal: |
+  # hooks を同一プロセスで読み込む他のテスト 7 本も em-workflow/hooks/ と em-review/hooks/ に __pycache__ を書く
+
+  種別: 改善
+
+  ## やりたいこと (必須)
+
+  hooks 配下のモジュールを同じプロセスで読み込む次の 7 本のテストモジュールが、単体実行でも em-workflow/hooks/ と em-review/hooks/ に `__pycache__` を書かないようにする。
+
+  - tests/test_queue_stop_guard.py
+  - tests/test_queue_stop_guard_routeback_record.py
+  - tests/test_failed_run_cleanup_guard.py
+  - tests/test_hooks_registration.py
+  - tests/test_queue_failure_net_cross_hook.py
+  - tests/test_muse_guard.py
+  - tests/test_consultation_harness_chain.py
+
+  ## 背景・なぜ (必須)
+
+  上の 7 本は hooks 配下のモジュールをバイトコード書き込みの抑止なしで読み込んでいる。全体実行で `__pycache__` ができないのは、`tests/test_merge_ci_wait.py` が import 時に `sys.dont_write_bytecode` を True にしたまま戻さないためで、各モジュールを単体実行するとプラグイン配下に書き込む。プラグイン配下は配布物にそのままコピーされる。
+
+  feature hook-test-bytecode-suppression（destructive-guard を読み込む 2 本の対処）の計画時に見つけた範囲外の課題。
+
+  ## 受け入れ条件 / 完了の定義 (必須)
+
+  - [ ] 7 本それぞれを単体実行した後、em-workflow/hooks/ と em-review/hooks/ の配下に `__pycache__` ができない
+  - [ ] 既存テストはすべて通る
+
+  ## スコープ外 (任意)
+
+  - tests/test_destructive_guard_extglob_units.py と tests/test_destructive_guard_lexer_agreement.py（別タスクで対処）
+
+  ## 制約・前提 (任意)
+
+  なし
+parent_branch: em-workflow/hook-test-bytecode-suppression-others/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.02
+      '1': 0.68
+      '2': 0.29
+      '3': 0.01
+    description_plus_code:
+      '0': 0.0
+      '1': 0.27
+      '2': 0.73
+      '3': 0.0
+  at: '2026-11-07T21:20:00+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 8dd4d39cd195b53d0c2d49bdcbf11b6d976f5315
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: テストコードの読み込み処理だけの変更で、画面や利用者に見える振る舞いの変更が無い
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+requirements:
+  FR1:
+    title: テストプロセス内のフック読み込みでバイトコードを書かない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+  FR2:
+    title: 各モジュールを単体で実行しても成り立つ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-3
+  NFR1:
+    title: テストは引き続き標準ライブラリだけを使う
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-2
+  NFR2:
+    title: discover と単体実行のどちらでも動く
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-2
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
