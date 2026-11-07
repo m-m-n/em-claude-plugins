@@ -1,0 +1,75 @@
+task_id: task0001
+baseline_failures: []          # 4a before any change: python3 -m unittest discover -s tests -> Ran 14381 tests, OK (skipped=1)
+final_failures: []             # re-executed after the implementation and after this record was written: python3 -m unittest discover -s tests -> OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_final_path_correction.TestEntryLimits.test_the_round_1_reproduction_raises_both_codes
+      - tests.test_final_path_correction.TestEntryLimits.test_each_requirements_patch_variant_is_rejected
+      - tests.test_final_path_correction.TestEntryLimits.test_a_malformed_requirements_patch_is_a_rejection
+      - tests.test_final_path_correction.TestEntryLimits.test_each_rejected_entry_file_raises_path_correction_entries
+      - tests.test_final_path_correction.TestEntryLimits.test_a_non_utf_8_file_a_symlink_and_a_file_over_the_read_limit_are_rejected
+      - tests.test_final_path_correction.TestEntryLimits.test_a_regular_file_holding_the_old_path_or_the_bare_old_name_passes
+      - tests.test_final_path_correction.TestEntryLimits.test_entry_files_reach_git_only_through_the_base_readers
+    red_confirmed: true
+    red_reason: "Observed against the validator as inherited, with the new tests in place. test_the_round_1_reproduction_raises_both_codes failed with AssertionError: 'path-correction-entries' not found in [] (the round 1 patch of finding 73c084892e91326c validated clean). test_each_rejected_entry_file_raises_path_correction_entries (new file, directory, regular file without a reference, one good and one bad file, empty list, unsafe path) and test_a_non_utf_8_file_a_symlink_and_a_file_over_the_read_limit_are_rejected (binary, over the read limit, symlink) failed with AssertionError. test_each_requirements_patch_variant_is_rejected, test_a_malformed_requirements_patch_is_a_rejection and test_a_regular_file_holding_the_old_path_or_the_bare_old_name_passes errored with AttributeError: module 'validate_worker_output' has no attribute 'canonical_correction_plan'; test_entry_files_reach_git_only_through_the_base_readers errored with AttributeError: no attribute '_correction_entries_errors'."
+  AC-2:
+    tests:
+      - tests.test_final_path_correction.TestEntryLimits.test_the_two_reference_cases_with_the_canonical_plan_pass
+      - tests.test_final_path_correction.TestEntryLimits.test_null_empty_and_tasks_append_of_an_entry_id_pass_the_requirements_limit
+      - tests.test_final_path_correction.TestEntryLimits.test_one_added_line_in_the_plan_is_rejected
+      - tests.test_final_path_correction.TestEntryLimits.test_one_added_line_is_rejected_in_a_task_md_plan_too
+      - tests.test_final_path_correction.TestEntryLimits.test_a_missing_or_unreadable_plan_is_a_rejection
+      - tests.test_final_path_correction.TestEntryLimits.test_a_file_with_a_newline_or_backtick_in_its_name_is_rejected_before_rendering
+      - tests.test_final_path_correction.TestEntryLimits.test_a_correction_path_that_fails_the_form_is_not_rendered
+      - tests.test_final_path_correction.TestEntryLimits.test_the_replanning_path_raises_neither_new_code
+      - tests.test_final_path_correction.TestEntryLimits.test_other_states_do_not_run_the_limits
+      - tests.test_final_path_correction.TestCanonicalPlan
+    red_confirmed: true
+    red_reason: "Observed against the validator as inherited. TestCanonicalPlan and the passing and added-line cases (test_the_two_reference_cases_with_the_canonical_plan_pass, test_null_empty_and_tasks_append_of_an_entry_id_pass_the_requirements_limit, test_one_added_line_in_the_plan_is_rejected, test_one_added_line_is_rejected_in_a_task_md_plan_too, test_a_missing_or_unreadable_plan_is_a_rejection) errored with AttributeError: module 'validate_worker_output' has no attribute 'canonical_correction_plan'. test_a_file_with_a_newline_or_backtick_in_its_name_is_rejected_before_rendering failed with AssertionError: 0 != 1 (no error returned). test_a_correction_path_that_fails_the_form_is_not_rendered failed with AssertionError: 'path-correction-entries' not found in []. test_the_replanning_path_raises_neither_new_code failed with AssertionError: Lists differ: [] != ['path-correction-entries', 'path-correction-requirements'] (the correction entry raised neither code). test_other_states_do_not_run_the_limits passed before the change: the limits are new and no state ran them, so it is a control with no red of its own."
+  AC-3:
+    tests:
+      - tests.test_final_path_correction.TestNewPathForm
+      - tests.test_final_path_correction.TestConditions.test_paths_are_literal_text
+    red_confirmed: true
+    red_reason: "Observed against the validator as inherited. test_the_form_predicate errored with AttributeError: module 'validate_worker_output' has no attribute 'path_correction_form_ok'. test_the_round_1_sentence_is_rejected and test_a_trailing_line_break_fails_the_whole_string_match failed with AssertionError: Lists differ: [] != ['path-correction-new-path']; test_every_new_path_of_ts_5_is_rejected_except_the_non_ascii_directory failed with AssertionError: Lists differ for each of its ten rejected new_path values. test_the_round_1_newline_form_on_a_task_md_plan_is_rejected and test_paths_are_literal_text failed with AssertionError: 'path-correction-new-path' not found in ['path-correction-content']. test_the_form_is_checked_after_the_safe_path_check_and_before_the_base_lookup passed before the change (the safe-path reason already existed), so it is a control with no red of its own."
+  AC-4:
+    tests:
+      - tests.test_final_path_correction.TestNonTargetPlans
+      - tests.test_final_path_correction.TestCreatedDocuments
+      - tests.test_final_path_correction.TestContentCondition.test_a_non_target_plan_is_compared_too
+      - tests.test_final_path_correction.TestContentCondition.test_a_document_created_on_the_correction_entry_is_rejected
+      - tests.test_final_path_correction.TestContentCondition.test_new_task_plans_under_entries_are_outside_the_set
+    red_confirmed: true
+    red_reason: "Observed against the validator as inherited. test_an_edited_acceptance_criterion_is_rejected_whatever_the_status failed with AssertionError: Lists differ: [] != ['tasks/task0003.md'] for pending, failed, merged by status and merged by journal (the finding 041b04abfc9d5b87 reproduction validated clean); test_a_replaced_reference_passes_only_in_an_unmerged_plan failed the same way for the merged cases. test_each_plan_document_absent_at_the_base_and_present_now_is_rejected failed with Lists differ: [] != ['VERIFICATION.md'] (and the IMPLEMENTATION.md and task-plan cases). test_a_non_target_plan_is_compared_too failed with Lists differ: [] != ['tasks/task0002.md']. test_a_document_created_on_the_correction_entry_is_rejected failed with Lists differ: [] != [('path-correction-content', 'VERIFICATION.md')]. test_a_merged_plan_that_differs_names_the_byte_equal_rule errored with IndexError. test_new_task_plans_under_entries_are_outside_the_set and the created-plan cases of TestCreatedDocuments errored with AttributeError: no attribute 'canonical_correction_plan'. test_an_unchanged_plan_passes_and_may_keep_the_old_reference and test_a_document_absent_both_at_the_base_and_now_is_not_an_error passed before the change (behavior that already held), so they are controls with no red of their own. The four tests that pinned the superseded behavior (test_only_the_target_tasks_plan_is_compared, test_a_document_absent_at_the_base_commit_is_outside_the_set, test_a_bare_old_file_name_left_in_place_is_equal_after_normalization, test_the_normalization_is_deterministic_on_a_shared_bare_name) were replaced by tests of the required behavior."
+  AC-5:
+    tests:
+      - tests.test_final_path_correction.TestReplanningPath
+      - tests.test_final_path_correction.TestScenarioIdScanByState
+      - tests.test_final_path_correction.TestScenarioIdScan.test_a_correction_patch_skips_the_verification_target_only
+    red_confirmed: true
+    red_reason: "Observed against the validator as inherited. test_body_updates_with_the_replacement_pass failed with AssertionError: Lists differ, a list of path-correction-content errors where [] was expected, in both the needs_update and the route-back state (finding dc9fcac543811a2d: a re-planning that updates the bodies was rejected); the left-behind, missing-document and created-document and non-target-plan tests of TestReplanningPath failed with Lists differ. Four tests of TestScenarioIdScanByState and test_a_correction_patch_skips_the_verification_target_only errored with TypeError: _validate_scenario_id_form() takes 2 positional arguments but 3 were given; test_through_the_worker_result_path failed with AssertionError: 'scenario-id-form' not found in ['path-correction-content']. test_conditions_one_to_four_and_the_files_agreement_stay and test_the_comparison_runs_on_the_correction_entry_only passed before the change (behavior that already held), so they are controls with no red of their own."
+  AC-6:
+    tests:
+      - tests.test_final_path_correction.TestPositionalComparison
+      - tests.test_final_path_correction.TestSharedPlan
+      - tests.test_final_path_correction.TestPositionalSearch
+      - tests.test_final_path_correction.TestContentCondition.test_a_shared_bare_name_is_an_occurrence_with_two_permitted_new_names
+    red_confirmed: true
+    red_reason: "Observed against the validator as inherited. test_the_example_passes_on_the_shared_documents_and_on_each_target_plan failed with AssertionError: Lists differ, a list of path-correction-content errors where [] was expected (the finding a848a53b57fb0188 example); test_a_replacement_is_literal_so_candidate_names_swap_nowhere_else failed with Lists differ: ['VERIFICATION.md', 'tasks/task0001.md', 'tasks/task0002.md'] != []; test_a_plan_shared_by_two_targets_passes_with_both_replacements failed with Lists differ: ['IMPLEMENTATION.md', 'VERIFICATION.md', 'tasks/shared.md'] != []; test_the_files_sections_are_checked_against_the_union_of_the_files failed with Lists differ: ['task-plan-files-mismatch', 'task-plan-files-mismatch'] != ['task-plan-files-mismatch']. All four tests of TestPositionalSearch and test_a_shared_bare_name_is_an_occurrence_with_two_permitted_new_names errored with AttributeError: module 'validate_worker_output' has no attribute '_positional_match' or '_scan_references'. test_a_plan_used_by_one_target_is_checked_as_before passed before the change (behavior that already held), so it is a control with no red of its own."
+  AC-7:
+    tests:
+      - tests.test_final_path_correction.TestReferenceScanner
+      - tests.test_final_path_correction.TestBareOccurrenceContent
+      - tests.test_final_path_correction.TestContentCondition.test_a_bare_old_file_name_left_in_place_is_rejected
+    red_confirmed: true
+    red_reason: "Observed against the validator as inherited. Every test of TestReferenceScanner errored with AttributeError: module 'validate_worker_output' has no attribute '_scan_references'. test_a_bare_old_file_name_left_in_place_is_rejected failed with AssertionError: Lists differ: [] != ['IMPLEMENTATION.md'] (the finding 25461d162dc42425 reproduction validated clean); test_boundary_names_rewritten_fail failed with the same Lists differ for IMPLEMENTATION.md, VERIFICATION.md and the target plan; test_a_bare_occurrence_left_in_a_compared_document_is_rejected failed with AssertionError: False is not true (an empty list for IMPLEMENTATION.md, and a differs-from-the-base-commit message instead of the left-behind message for VERIFICATION.md and the target plan). test_boundary_names_left_unchanged_pass and test_an_old_path_keeps_the_old_path_wording passed before the change (behavior that already held), so they are controls with no red of their own."
+  AC-8:
+    tests:
+      - tests.test_final_path_correction.TestPatchesWithoutCorrections
+      - tests.test_final_path_correction.TestFailClosedReads
+      - tests.test_final_path_correction.TestRequiredInputs
+      - tests.test_final_path_correction.TestFixtures
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical
+    red_confirmed: true
+    red_reason: "The recurrence tests of the six findings and the updated Reference Impact tests are the red evidence of AC-1 to AC-7. For this criterion, observed: test_a_plan_path_that_is_not_safe_is_rejected failed against the validator as inherited with AssertionError: Lists differ: [] != ['../outside.md']; test_validate_worker_output_py_byte_identical failed when the changed validator was checked against the digest pinned at the base commit (e154f1fb09f8325624055c351a13a1f854ec61ceb646eb3e9332d2b584eac3ba) and passes with the refreshed digest. TestPatchesWithoutCorrections, TestRequiredInputs, TestFixtures and the other three tests of TestFailClosedReads passed before the change (the non-correction behavior of NFR1 and the fail-closed reads already held), so they are controls with no red of their own. The full-suite outcome is final_failures above."

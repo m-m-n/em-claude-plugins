@@ -1378,8 +1378,20 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # skips VERIFICATION.md for a patch that carries corrections.
     # PINNED_VALIDATOR_TEST_LINE below is unaffected and still asserted. Same
     # rationale: refresh, don't remove.
+    #
+    # Refreshed again by final-path-correction-medium-fixes/task0001 (FR1 to
+    # FR3, FR5 to FR7, FR9): a final-path correction passes only when it
+    # changes paths and nothing else. The validator gains the path state, the
+    # form check of new_path, the reference scanner and the positional
+    # comparison of condition 5 (non-target plans, created documents, the
+    # Re-planning path), the limits on tasks_patch.entries and
+    # requirements_patch on the correction entry with the canonical plan text,
+    # and the plan-agreement check per shared plan; the scenario-ID scan
+    # skips VERIFICATION.md only on the correction entry. PINNED_VALIDATOR_TEST_LINE
+    # below is unaffected and still asserted. Same rationale: refresh, don't
+    # remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "e154f1fb09f8325624055c351a13a1f854ec61ceb646eb3e9332d2b584eac3ba"
+        "826a80471d09dfb1a0d934e23b6728a9b3d534f50f39e20bae2972651184cfbe"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-
