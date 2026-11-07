@@ -116,7 +116,7 @@ tasks:
     - FR2
     - NFR1
     - NFR2
-    status: in_progress
+    status: merged
     branch: em-workflow/hook-test-bytecode-suppression-others/task0001
     notes: null
   task0002:
