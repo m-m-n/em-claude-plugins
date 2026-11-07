@@ -1,0 +1,20 @@
+schema_version: 1
+feature: plan-feature-docs-route
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: f25c6d9769a6e440c8d6454cb56a993d4f1a8b0f
+last_input_digest: sha256:41214ba113dad5295706e187cb19b793cf237f6b84d3b95022eec34e3db0cfc2
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: dispatched
+    input_digest: sha256:41214ba113dad5295706e187cb19b793cf237f6b84d3b95022eec34e3db0cfc2
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
