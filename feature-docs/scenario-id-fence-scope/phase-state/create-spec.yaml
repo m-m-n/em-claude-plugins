@@ -1,0 +1,21 @@
+schema_version: 1
+feature: scenario-id-fence-scope
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: ec5d343cdfeef6d07385c2be916999007fe59cbc
+last_input_digest: sha256:8281852102edc10e11cd775188caf79fcccbd392e842eb0e7a0d6b955166fa1a
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:8281852102edc10e11cd775188caf79fcccbd392e842eb0e7a0d6b955166fa1a
+  dispatch_digest_inputs: {}
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
