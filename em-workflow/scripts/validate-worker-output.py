@@ -2484,7 +2484,8 @@ def validate_task_entry(task_id, entry, mode, registries, workflow):
             errors.append(err("provenance", f"{p}.provenance.source must be 'review' or 'verify'"))
         # rework-docs-only-task-routing/task0004 (FR3, TM-1): `append` is the
         # mode bound to `append_rework`, so this is the rework-synthesized
-        # task entry; `replace_planning` entries are never checked. A path
+        # task entry; the `replace_all` mode (`replace_planning`) has its own
+        # check and code below (plan-feature-docs-route/task0004). A path
         # is a planning document when its first normalized segment
         # (path_segments: `\` as `/`, empty and `.` dropped) is exactly
         # `feature-docs` -- exact segment equality, so `feature-docs-archive/x`
@@ -2497,6 +2498,29 @@ def validate_task_entry(task_id, entry, mode, registries, workflow):
                         "rework-task-feature-docs",
                         f"{p}.files entry {f!r} is a feature-docs planning document; "
                         "a rework-synthesized task's files must not reach feature-docs/**",
+                    )
+                )
+    elif mode == "replace_all":
+        # plan-feature-docs-route/task0004 (FR2, NFR2; IMPLEMENTATION.md D1):
+        # a planned task's `files` must not reach `feature-docs/**`. One
+        # `plan-task-feature-docs` error per offending path, the message
+        # holding the task id and the path as given. The predicate is the
+        # append check's own (path_segments, first segment exactly
+        # `feature-docs`); a non-string element and a non-list `files` are
+        # already reported by the `files` code above and are skipped here, so
+        # this never raises. Only `tasks_patch.entries` pass through this
+        # function: carried tasks (`carried_task_ids`) are copied verbatim and
+        # never checked. The rule's prose is owned by
+        # skills/plan-writing/SKILL.md `## Feature-docs Files`, cited not
+        # restated.
+        for f in files:
+            if isinstance(f, str) and path_segments(f)[:1] == ["feature-docs"]:
+                errors.append(
+                    err(
+                        "plan-task-feature-docs",
+                        f"{p}.files entry {f!r} is a feature-docs path; "
+                        "a planned task's files must not reach feature-docs/** "
+                        "(skills/plan-writing/SKILL.md, ## Feature-docs Files)",
                     )
                 )
     return errors
