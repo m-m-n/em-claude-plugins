@@ -2,63 +2,35 @@ schema_version: 1
 feature: plan-feature-docs-route
 created: '2026-11-07'
 base_branch: main
-goal: '# em-workflow の create-plan が実装担当のタスクに feature-docs/** を割り当て、実装担当の規則と食い違って
-  implement が止まる
-
+goal: |
+  # em-workflow の create-plan が実装担当のタスクに feature-docs/** を割り当て、実装担当の規則と食い違って implement が止まる
 
   種別: 改善
 
-
   ## やりたいこと (必須)
 
-
-  em-workflow の create-plan で、実装担当（implementer）のタスクに `feature-docs/**` のファイルを割り当てないようにする。他の
-  feature の文書（THREAT-MODEL.md など）を直す必要がある計画では、実装担当以外の経路で直せるようにする。
-
+  em-workflow の create-plan で、実装担当（implementer）のタスクに `feature-docs/**` のファイルを割り当てないようにする。他の feature の文書（THREAT-MODEL.md など）を直す必要がある計画では、実装担当以外の経路で直せるようにする。
 
   ## 背景・なぜ (必須)
 
-
-  - web-sip-phone の feature `busy-reject-name-and-tm-ac`（2026-11-07）で、implementation-planner
-  が task0001 に Go の改名と `feature-docs/call-end-history/THREAT-MODEL.md` の TM-5・TM-8
-  の修正を 1 タスクで割り当てた
-
-  - 実装担当の規則（`agents/implementer.md` と `skills/worktree-task-workflow/SKILL.md` の「Never
-  modify `feature-docs/**`」）に従って、実装担当は 2 回とも改名だけ終えてマージせずに止まった。batch の自動再試行 1 回を消費して、implement
-  が `failed`（`failed_kind: decision`）で停止した
-
-  - 文書のみの経路（`rework-task-synthesis.md`・`rework-planner`）は review / verify の rework
-  にしかなく、create-plan の計画には無い。Step A.6 の失敗からの入口も最終パスの訂正（レポート名）だけが対象で、この失敗は扱えない
-
-  - 同じリポジトリの過去の feature（busy-reject-history-guard 2026-10-28、db-parent-dir-swap-guard
-  2026-10-31、cancel-wording-spec-align 2026-11-05、expires-reject-slot-doc-align 2026-11-06）でも、計画が他の
-  feature の `feature-docs/` 配下をタスクの files に入れており、これらは implement が completed になっている。計画と実装担当の規則が食い違っていて、結果が実装担当の判断次第になっている
-
+  - web-sip-phone の feature `busy-reject-name-and-tm-ac`（2026-11-07）で、implementation-planner が task0001 に Go の改名と `feature-docs/call-end-history/THREAT-MODEL.md` の TM-5・TM-8 の修正を 1 タスクで割り当てた
+  - 実装担当の規則（`agents/implementer.md` と `skills/worktree-task-workflow/SKILL.md` の「Never modify `feature-docs/**`」）に従って、実装担当は 2 回とも改名だけ終えてマージせずに止まった。batch の自動再試行 1 回を消費して、implement が `failed`（`failed_kind: decision`）で停止した
+  - 文書のみの経路（`rework-task-synthesis.md`・`rework-planner`）は review / verify の rework にしかなく、create-plan の計画には無い。Step A.6 の失敗からの入口も最終パスの訂正（レポート名）だけが対象で、この失敗は扱えない
+  - 同じリポジトリの過去の feature（busy-reject-history-guard 2026-10-28、db-parent-dir-swap-guard 2026-10-31、cancel-wording-spec-align 2026-11-05、expires-reject-slot-doc-align 2026-11-06）でも、計画が他の feature の `feature-docs/` 配下をタスクの files に入れており、これらは implement が completed になっている。計画と実装担当の規則が食い違っていて、結果が実装担当の判断次第になっている
 
   ## 受け入れ条件 / 完了の定義 (必須)
 
-
   - [ ] create-plan が実装担当のタスクの files に `feature-docs/**` を入れない（または入れた計画を検証で弾く）
-
   - [ ] 他の feature の `feature-docs/` 配下の文書修正を含む計画を、実装担当以外の経路で最後まで実行できる
-
-  - [ ] web-sip-phone の busy-reject-name-and-tm-ac を再開したとき、THREAT-MODEL.md の修正で implement
-  が止まらない
-
+  - [ ] web-sip-phone の busy-reject-name-and-tm-ac を再開したとき、THREAT-MODEL.md の修正で implement が止まらない
 
   ## スコープ外 (任意)
 
-
   web-sip-phone 側のコードと文書の修正。
-
 
   ## 制約・前提 (任意)
 
-
-  web-sip-phone の「486 拒否の履歴記録停止の残件: newSIPStackWithHistory の名前と call-end-history THREAT-MODEL
-  の TM-5・TM-8 の AC 引用を直す」タスクがこのタスクの完了を待っている。
-
-  '
+  web-sip-phone の「486 拒否の履歴記録停止の残件: newSIPStackWithHistory の名前と call-end-history THREAT-MODEL の TM-5・TM-8 の AC 引用を直す」タスクがこのタスクの完了を待っている。
 parent_branch: em-workflow/plan-feature-docs-route/integration
 tier: full
 tier_decision:
