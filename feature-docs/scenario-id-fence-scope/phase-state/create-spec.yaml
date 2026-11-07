@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: ec5d343cdfeef6d07385c2be916999007fe59cbc
 last_input_digest: sha256:6e4ea59ad82a32337f42ffdcecde4f5f54befb4c4ccf08f9ecbc96ea8f975893
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -85,12 +85,18 @@ worker_runs:
   output_digest: sha256:23a4b2696cc9c7f3e02d40392988924a2299dd3eeed29b465bbf3c6ce368f9de
   self_write_set: []
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:6e4ea59ad82a32337f42ffdcecde4f5f54befb4c4ccf08f9ecbc96ea8f975893
   dispatch_digest_inputs:
     em-workflow/references/contracts/spec-writer-contract.md: sha256:c66e457a4a68d860f757f9e6cae377b6918d29a3f3152d9a12fc92570303c5f2
     em-workflow/references/templates/spec-document.md: sha256:a5d0106c39a5df7dc2365357a9546588275ed6c7a1651c866e75fa327a7fa592
-artifacts: []
+  output_digest: sha256:503d3437175bbaf11715dc0b0124fb6feba3ad4edade12b5417718d2b0b041a5
+  self_write_set:
+  - feature-docs/scenario-id-fence-scope/SPEC.md
+artifacts:
+- path: feature-docs/scenario-id-fence-scope/SPEC.md
+  sha256: sha256:503d3437175bbaf11715dc0b0124fb6feba3ad4edade12b5417718d2b0b041a5
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
