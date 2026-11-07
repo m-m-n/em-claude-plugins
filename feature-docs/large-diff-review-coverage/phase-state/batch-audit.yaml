@@ -40,3 +40,18 @@ records:
   normalized_answer: exit 124 は JSON パースより先に判定、harness_unavailable、途中の指摘は保持しない
   resolution_note: 'user-directed Codex consultation, turns: 2, harness entry: codex;
     Codex は新理由 timeout と指摘保持を提案。保持は R2b の置換規則変更が要り、見送り（Claude 判断）'
+- question_id: create-plan.codex.planner-assumptions
+  packet_id: null
+  answered_at: '2026-11-07T18:40:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 7 件の仮定をすべて採用
+  normalized_answer: 7 件の仮定をすべて採用
+  resolution_note: 'user-directed Codex consultation, turns: 1, harness entry: codex;
+    Opus escalation: not run; 仮定: 1. spec の救済 run は primary 上限 24 に数えず、spec の再試行として別に
+    floor(24/N) の上限 / 2. 救済 run を実行した spec はその round で部分実施（spec_rescue）として開示し続ける /
+    3. シャード番号は 1 起点、部分実施の reason は固定トークンを定順でカンマ連結 / 4. review-shards / coverage の失敗でレビューフェーズを中断、classify_results
+    失敗時は全件 failed 扱い / 5. FR3 の判定は review-coverage.py の classify_results 操作に置く / 6.
+    未実施判定の対象は最後の pass のシャード構成のファイル / 7. diff_base は HEAD か小文字 16 進 40 桁のコミット ID のみ;
+    Codex は 7 件すべて ACCEPT（SPEC の FR7・A10・FR11・AC8・FR3/TS-2・FR14・R0 と整合、より良い代替なし）'
