@@ -1,7 +1,7 @@
 schema_version: 1
 feature: scenario-id-fence-scope
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: ec5d343cdfeef6d07385c2be916999007fe59cbc
 last_input_digest: sha256:6e4ea59ad82a32337f42ffdcecde4f5f54befb4c4ccf08f9ecbc96ea8f975893
