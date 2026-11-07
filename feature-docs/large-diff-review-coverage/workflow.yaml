@@ -168,7 +168,7 @@ tasks:
     - NFR3
     - NFR4
     - NFR6
-    status: in_progress
+    status: merged
     branch: em-workflow/large-diff-review-coverage/task0003
     notes: null
   task0004:
