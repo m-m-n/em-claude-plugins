@@ -1,0 +1,71 @@
+schema_version: 2
+feature: scenario-id-fence-scope
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.07
+    confidence: 0.93
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.93
+      '2': 0.07
+      '3': 0.0
+  observed_at: '2026-11-07T17:23:10+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.05
+    confidence: 0.95
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.95
+      '2': 0.05
+      '3': 0.0
+  observed_at: '2026-11-07T17:24:38+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/references/contracts/planner-contract.md
+  - em-workflow/references/phases/create-plan-phase.md
+  - em-workflow/skills/plan-writing/SKILL.md
+  - tests/test_validate_worker_output.py
+  - tests/test_scenario_id_planner_docs.py
+  - tests/test_scenario_id_plan_writing_rule.py
+  - tests/test_gate_option_vocabulary.py
+  changed_lines_approx: 80
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules:
+  - tests/test_scenario_id_planner_docs.py
+  - tests/test_scenario_id_plan_writing_rule.py
+  - tests/test_gate_option_vocabulary.py
+  work_still_required: true
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 2
+  body_change_kind: wording_or_rule_addition
+  change_containment: multiple_modules
+  caller_and_dependency_count: 0
+  changes_external_contract: false
+  changes_behavior: false
+  alternative_assumed: SPEC A2と現実装が一致しているため、検査動作を維持し、3文書を「三連バッククォートで囲んだ範囲（_strip_noise
+    と同じ）」に修正する案を想定する
+decided_at: '2026-11-07T17:24:40+09:00'
