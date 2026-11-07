@@ -265,7 +265,15 @@ SKIP_REASON_STRINGS = [
     "review_data_too_large",
 ]
 
-RETRYABLE_SKIP_REASONS = ["rate_limited", "budget_exhausted", "harness_unavailable"]
+# Refreshed by feature-docs/large-diff-review-coverage/tasks/task0001.md (FR10):
+# em-workflow's retryable set gained `review_data_too_large`, so it holds four
+# values.
+RETRYABLE_SKIP_REASONS = [
+    "rate_limited",
+    "budget_exhausted",
+    "harness_unavailable",
+    "review_data_too_large",
+]
 
 SEVERITY_LEVELS = ["critical", "high", "medium"]
 
@@ -371,23 +379,32 @@ class TestFrozenSkipReasonStrings(unittest.TestCase):
             "exactly these strings",
         )
 
-    def test_exactly_three_retryable_reasons_named(self):
+    def test_exactly_four_retryable_reasons_named(self):
         for reason in RETRYABLE_SKIP_REASONS:
             with self.subTest(reason=reason):
                 self.assertIn(f'"{reason}"', self.text)
         self.assertEqual(
-            3,
+            4,
             len(RETRYABLE_SKIP_REASONS),
-            "AC-2: exactly three reasons are retryable",
+            "AC-2: exactly four reasons are retryable",
+        )
+        self.assertIn(
+            "These four `skip_reason` values are the **retryable** set",
+            _normalize_whitespace(self.text),
+            "AC-2: the doc must state that these four values are the "
+            "retryable set",
         )
 
     def test_non_retryable_skip_reasons_statement_present(self):
         normalized = _normalize_whitespace(self.text)
+        # Refreshed by feature-docs/large-diff-review-coverage/tasks/task0001.md
+        # (FR10): `review_data_too_large` joined the retryable set, so the
+        # non-retryable statement names `scratchpad_unavailable` alone.
         self.assertIn(
-            "These last two are NOT retryable, like every value outside "
-            "the three above",
+            "`scratchpad_unavailable`, like every value outside the four "
+            "above, is NOT retryable",
             normalized,
-            "AC-2: the doc must still mark the last two skip reasons "
+            "AC-2: the doc must still mark scratchpad_unavailable "
             "non-retryable",
         )
 
@@ -652,11 +669,16 @@ CODEX_REVIEWER_FROZEN_FRONTMATTER_LINES = [
 # section to the perspective brief, and Step 4's `<task>` bullet gained a
 # sentence stating that the reproduction instructions are part of the
 # `<task>` block. Nothing else in Steps 0-6 changed.
+#
+# Refreshed again by feature-docs/large-diff-review-coverage/tasks/task0001.md
+# (FR1/FR2): Step 6 gained the exit-code-124 rule as its first rule, and its
+# non-JSON rule returns a `harness_unavailable` skip object. Nothing else in
+# Steps 0-6 changed.
 CODEX_REVIEWER_STEPS_START = (
     "## Step 0: Read the protocol (strict fail-closed resolution)"
 )
 CODEX_REVIEWER_STEPS_SHA256 = (
-    "85d1f5cdbf669f44c4acc698dcc8ac90af0fe4f3a9206ded87d12d585b5892bd"
+    "64505b0a77a888b252e3b59f436d1d393f4ddd1aae84ae64e17f1511846670ee"
 )
 
 PRIMARY_ROLE_PHRASE = "main review"

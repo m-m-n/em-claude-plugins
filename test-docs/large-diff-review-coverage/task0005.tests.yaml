@@ -1,0 +1,37 @@
+task_id: task0005
+baseline_failures: []          # 4a before any change: python3 -m unittest discover -s tests -> Ran 14568 tests, OK (skipped=1)
+final_failures: []             # re-executed after the implementation and after this record was written: python3 -m unittest discover -s tests -> Ran 14622 tests, OK (skipped=1); python3 em-workflow/scripts/check-plugin-invariants.py . -> every check PASS
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_review_phase_coverage_record.TestAC1RescueRunFindingRule
+    red_confirmed: true
+    red_reason: "Observed against the review-phase.md of the parent commit with the new module in place. The class errored in setUpClass with ValueError: substring not found, because Phase R3b had no paragraph led by the bold Rescue-run findings lead. After the paragraph was added the class passes, including its negative proofs (a rule that counts rescue findings in the residual, one that sends them to rework-planner, one that keeps them as fix candidates, a scope that takes in evaluator-only findings, an undecidable finding that is not counted, a rule that skips the evaluator-failure path)."
+  AC-2:
+    tests:
+      - tests.test_review_phase_coverage_record.TestAC2PhaseR4PerLoopShards
+    red_confirmed: true
+    red_reason: "Observed against the review-phase.md of the parent commit. The class errored in setUpClass with ValueError: substring not found, because Phase R4 had no Re-review shards and pass record paragraph. The candidate-gate pins (rescue rule named, changed_files is the round's full list) and the pinned re-run-ALL sentence sit in the same class; the pinned sentence already held before the change and is a control with no red of its own."
+  AC-3:
+    tests:
+      - tests.test_review_phase_coverage_record.TestAC3RunIdGrammar
+    red_confirmed: true
+    red_reason: "Observed against the review-phase.md of the parent commit. test_phase_r4_re_review_run_id_follows_the_loop_grammar failed with AssertionError: Lists differ (the loop run_id sentence was missing). test_phase_r5_example_comment_states_the_full_grammar failed with AssertionError for each of the full grammar string, `@s{k}`, `loop{N}.` and `fallback` not found in the example comment. test_the_old_loop_form_is_gone_from_phase_r4_and_phase_r5 failed with AssertionError: True is not false (the Phase R5 comment still held {perspective}#loop{N}). test_negative_proof_the_old_form_is_detected failed because the grammar string it replaces was not yet in Phase R5."
+  AC-4:
+    tests:
+      - tests.test_review_phase_coverage_record.TestAC4PhaseR5CoverageFields
+    red_confirmed: true
+    red_reason: "Observed against the review-phase.md of the parent commit. The class errored in setUpClass with ValueError: substring not found, because Phase R5 had no paragraph that runs the coverage operation before the record is written. After the change the class passes, including the negative proofs: a forged Phase R5 that lists only perspectives whose Claude fallback was dispatched, a disclosure without the skip_reason clause, one that lists the axis 2 tool run, a partial field worked out by hand, and a YAML example with the new fields after or inside the triage_filing block."
+  AC-5:
+    tests:
+      - tests.test_review_phase_coverage_record.TestAC5GateAndDisclosureOnly
+    red_confirmed: true
+    red_reason: "Observed against the review-phase.md of the parent commit. The class errored in setUpClass with ValueError: substring not found, because the coverage paragraph and the Partial-review disclosure paragraph did not exist. The Completion gate pin (test_completion_gate_paragraph_is_unchanged) holds both before and after the change, since the gate text is deliberately unchanged; it is a control with no red of its own, and its negative proof (a gate with an added condition) is in the same class."
+  AC-6:
+    tests:
+      - tests.test_review_phase_llm_led.TestAC4UnreviewedPerspectiveDisclosureAfterFallback.test_disclosure_gated_on_fallback_having_been_dispatched
+      - tests.test_review_phase_llm_led.TestAC4UnreviewedPerspectiveDisclosureAfterFallback
+      - tests.test_review_phase_coverage_record
+      - tests.test_tier_record_schema_v2.TestReviewDocumentsUntouched
+    red_confirmed: true
+    red_reason: "Observed against the review-phase.md of the parent commit. The updated test_disclosure_gated_on_fallback_having_been_dispatched failed with AssertionError: 'a perspective is listed here whenever it has no `status: completed` run, whatever its last `skip_reason` was' not found in the Phase R5 text; the other four tests of that class pass unchanged. The new module is red as described under AC-1 to AC-5. The whole-file pin of review-phase.md in tests/test_tier_record_schema_v2.py (test_review_phase_md_unchanged) fails after any edit of the document, and its hash was refreshed to the new document; the full suite outcome is recorded in final_failures."

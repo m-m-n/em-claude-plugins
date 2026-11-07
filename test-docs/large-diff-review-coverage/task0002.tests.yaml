@@ -1,0 +1,79 @@
+task_id: task0002
+baseline_failures: []          # full suite before any change: 14568 tests, OK (1 skipped)
+final_failures: []             # full suite re-run after implementation: no failure
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_review_shards.TestMeasurement
+      - tests.test_review_shards.TestCharacterCounting
+    red_confirmed: true
+    red_reason: >-
+      Run before em-workflow/scripts/review-shards.py existed: the
+      TestMeasurement tests failed with "AssertionError: exit 2: python3:
+      can't open file '.../em-workflow/scripts/review-shards.py': [Errno 2] No
+      such file or directory", and the TestCharacterCounting class errored in
+      setUpClass because the script could not be loaded by file path. Every
+      test of the two classes that expects a successful run failed. The
+      read-only guard TestReadOnly and the non-ASCII path test were added
+      after the script existed (checked by mutation: removing the quotepath
+      option makes the non-ASCII test fail).
+  AC-2:
+    tests:
+      - tests.test_review_shards.TestSplit
+    red_confirmed: true
+    red_reason: >-
+      Run before the script existed: TestSplit errored in setUpClass (the
+      script could not be loaded by file path) and the end-to-end tests of the
+      class failed with "exit 2 ... No such file or directory".
+  AC-3:
+    tests:
+      - tests.test_review_shards.TestShardCap
+    red_confirmed: true
+    red_reason: >-
+      Run before the script existed: TestShardCap errored in setUpClass (the
+      script could not be loaded by file path) and its end-to-end test failed
+      with "exit 2 ... No such file or directory".
+  AC-4:
+    tests:
+      - tests.test_review_shards.TestDeterminism
+    red_confirmed: true
+    red_reason: >-
+      Run before the script existed: both tests failed with "AssertionError: 2
+      != 0" (the child process could not open the script).
+  AC-5:
+    tests:
+      - tests.test_review_shards.TestOutputContract
+    red_confirmed: true
+    red_reason: >-
+      Run before the script existed: the tests that expect a successful run
+      failed with "AssertionError: 2 != 0" and "b'...' not found in b''"; the
+      test for a failing git run failed on the requirement that stderr starts
+      with the script's own message prefix.
+  AC-6:
+    tests:
+      - tests.test_review_shards.TestInvalidInput
+      - tests.test_review_shards.TestRefusalBeforeAnyRead
+      - tests.test_review_shards.TestLiteralPathspecs
+      - tests.test_review_shards.TestConfiguredDrivers
+    red_confirmed: true
+    red_reason: >-
+      Run before the script existed: the rejection tests first passed because
+      python3 itself exits 2 for a missing script, so they were tightened to
+      require the script's own "review-shards: " message prefix on stderr; with
+      that requirement every one of them failed without the script (stderr was
+      "python3: can't open file ..."). The literal-pathspec and configured
+      driver tests failed with "exit 2 ... No such file or directory". Mutation
+      checks against the finished script (dropping the literal-pathspec, text
+      conversion, external diff, filesystem monitor or GIT_* environment
+      handling, or the regular-file check) each make a test of these classes
+      fail.
+  AC-7:
+    tests:
+      - tests.test_review_shards.TestStandardLibraryOnly
+    red_confirmed: true
+    red_reason: >-
+      Run before the script existed: test_the_script_imports_only_standard_library_modules
+      errored (FileNotFoundError reading the script source). The other tests of
+      the class check this test module and the matcher itself, so they pass
+      without the script; the matcher's negative proof is
+      test_the_check_rejects_forged_sources.

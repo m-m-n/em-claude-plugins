@@ -938,17 +938,17 @@ class TestAC4UnreviewedPerspectiveDisclosureAfterFallback(unittest.TestCase):
         cls.r5 = DocumentFixture.r5()
 
     def test_disclosure_gated_on_fallback_having_been_dispatched(self):
+        # large-diff-review-coverage FR4 supersedes the earlier gating: a
+        # dispatched perspective with no completed run is listed whatever its
+        # last `skip_reason` was, so the disclosure no longer waits for the
+        # Claude fallback to have been dispatched.
         norm = _norm(self.r5)
         self.assertIn(
-            "a perspective is listed here ONLY after its Phase R2b Claude "
-            "fallback",
+            "a perspective is listed here whenever it has no `status: "
+            "completed` run, whatever its last `skip_reason` was",
             norm,
         )
-        self.assertIn(
-            "has itself been dispatched and produced no `status: "
-            "completed` entry",
-            norm,
-        )
+        self.assertNotIn("ONLY after its Phase R2b Claude fallback", norm)
 
     def test_field_name_root_position_and_empty_rule_unchanged(self):
         self.assertIn(
