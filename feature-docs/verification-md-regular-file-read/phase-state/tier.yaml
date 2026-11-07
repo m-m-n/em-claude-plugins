@@ -1,0 +1,49 @@
+schema_version: 2
+feature: verification-md-regular-file-read
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.1
+    confidence: 0.89
+    probabilities:
+      '0': 0.0
+      '1': 0.9
+      '2': 0.09
+      '3': 0.01
+  observed_at: '2026-11-08T01:56:17+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.14
+    confidence: 0.86
+    probabilities:
+      '0': 0.0
+      '1': 0.86
+      '2': 0.14
+      '3': 0.0
+  observed_at: '2026-11-08T01:58:13+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/scripts/validate-worker-output.py
+  - tests/test_rework_docs_only_validator_rules.py
+  changed_lines_approx: 80
+  new_functions_needed: 0
+  new_files_needed: []
+  new_dependencies_needed: []
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 6
+  body_change_kind: new_logic
+  change_containment: single_function
+  caller_and_dependency_count: 3
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: em-workflow/scripts/validate-worker-output.py:4082 は通常ファイル確認・読み込み上限なしで
+    read_text() を実行する。呼び出しは同ファイル:4118 と :4129、抽出関数への依存は :4087 にある。tests/test_rework_docs_only_validator_rules.py:1732、:1747、:1755
+    はディレクトリと不正UTF-8を検証する。通常ファイル確認と上限付き読み込みを行う既存関数は em-workflow/scripts/validate-worker-output.py:3901
+    にある
+decided_at: '2026-11-08T01:58:13+09:00'
