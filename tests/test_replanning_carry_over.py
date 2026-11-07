@@ -48,6 +48,7 @@ those belong to task0022/task0024/task0025 this round).
 import importlib.util
 import json
 import re
+import sys
 import unittest
 from pathlib import Path
 
@@ -74,7 +75,12 @@ CARRIED_RECORD_FIELDS = {
 def _load_module():
     spec = importlib.util.spec_from_file_location("validate_worker_output", SCRIPT_PATH)
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    previous = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = previous
     return module
 
 

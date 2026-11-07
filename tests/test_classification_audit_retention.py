@@ -39,6 +39,7 @@ This module does not duplicate those checks (C4/DRY within the task).
 """
 
 import importlib.util
+import sys
 import unittest
 from pathlib import Path
 
@@ -51,7 +52,12 @@ def _load_module():
         "validate_worker_output_classification_retention", SCRIPT_PATH
     )
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    previous = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = previous
     return module
 
 

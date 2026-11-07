@@ -278,7 +278,16 @@ def _load_validator():
         "validate_worker_output", VALIDATOR_PATH
     )
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    # `sys` is fetched through importlib: the stdlib-only check at the bottom
+    # of this module lists the top-level imports it allows, and `sys` is not
+    # one of them.
+    sys_module = importlib.import_module("sys")
+    previous = sys_module.dont_write_bytecode
+    sys_module.dont_write_bytecode = True
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys_module.dont_write_bytecode = previous
     return module
 
 
