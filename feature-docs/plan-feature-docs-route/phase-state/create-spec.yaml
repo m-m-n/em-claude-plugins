@@ -4,8 +4,8 @@ phase: create-spec
 status: dispatching
 generation: 1
 base_revision: 9be2207e84f439971a8d23b33c49791576f0459d
-last_input_digest: sha256:6eb148512a1afc2c586630be369572b39e290e9bb41dde1ee6332b17174ffd70
-active_request_id: create-spec-run-0003
+last_input_digest: sha256:8e46ce6c6ec18407aaa144d4e70404d2f49826c95d685724cde46118d400b4da
+active_request_id: create-spec-run-0004
 packets:
   create-spec-q0001:
     status: answered
@@ -95,11 +95,16 @@ worker_runs:
   input_digest: sha256:41214ba113dad5295706e187cb19b793cf237f6b84d3b95022eec34e3db0cfc2
   output_digest: sha256:7aba26570ed347df44c94b4ea48be1f98633b6075a3808f1b3b2ed16b2bd8074
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:6eb148512a1afc2c586630be369572b39e290e9bb41dde1ee6332b17174ffd70
+  output_digest: sha256:b8fb11ff2d0fc9846ffbbd80a5129ddb2709bc5934d4434756e28cd34ac03e97
+  self_write_set: []
+- request_id: create-spec-run-0004
+  status: dispatched
+  input_digest: sha256:8e46ce6c6ec18407aaa144d4e70404d2f49826c95d685724cde46118d400b4da
 artifacts: []
 patches: []
 progress_fingerprint: sha256:349cca34fc640b9f9825db73b0c02795b77b59a56ad4091e6d265e9efb62a691
 stale_redispatch_count: 0
 resolved_input_cache: {}
-last_error: 'create-spec-run-0001: layer-2 validation error (gate_id create-spec.design-step missing option decide_autonomously); re-dispatched as run-0002'
+last_error: null
