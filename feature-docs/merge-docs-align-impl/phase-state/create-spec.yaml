@@ -1,7 +1,7 @@
 schema_version: 1
 feature: merge-docs-align-impl
 phase: create-spec
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 0bab3741bb7360751b99be8684f37c9ee04667ee
 last_input_digest: sha256:215768a67477f7d4cba0b57675b5f9c9aa28239b005107f70f8fb4ba3842a487

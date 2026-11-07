@@ -1,0 +1,225 @@
+schema_version: 1
+feature: merge-docs-align-impl
+created: '2026-11-07'
+base_branch: main
+goal: '# merge-result.md の reason code の条件と README の destructive-guard 行を実装に合わせる
+
+
+  ## やりたいこと
+
+  merge まわりの文書を実装に合わせる。
+
+
+  1. `em-workflow/references/merge-result.md` の Reason codes 表の条件を、SKILL での実際の発生箇所に合わせる（`verification_failed`、`git_failed`、`remote_unresolved`）。SKILL.md 側の表は SSOT を引用する形に寄せる。
+
+  2. `em-workflow/README.md` の hook 表の destructive-guard 行に、`gh pr merge` の例外が成り立つ条件を書き足す（正規形がコマンドの中で唯一の文であること、作業ディレクトリが登録済みの integration worktree か、その配下であること）。
+
+
+  ## 背景・なぜ
+
+  - merge-result.md は reason code 表の唯一の持ち主だと宣言しているが、`verification_failed` の条件はコマンドの失敗か timeout だけで、SKILL は手順 10 の未コミット変更・HEAD 不一致や手順 13.3 の integration ブランチ移動でも出す。`git_failed` も手順 9 の commit 失敗や手順 10・13.3 の git status / rev-parse 失敗を含まない。`remote_unresolved` にはホストの形が不正な場合が無い。dispatcher が契約文書をもとに reason を解釈すると、再試行で収まる競合をテスト失敗と読み違える。
+
+  - README は「同じコマンドの後続の区間も通常どおり判定する」と書いており、正規形に後ろの区間が付いても許可が残るように読める。実装（`merge_pr_allow.py` の `keeps_exception`）は単独の文を求めるため、`gh pr merge ... && echo done` は ask になり、無人実行では deny で止まる。
+
+
+  ## 受け入れ条件 / 完了の定義
+
+  - merge-result.md の 3 つの reason code の条件が、SKILL.md の発生箇所をすべて含む
+
+  - README の destructive-guard 行が、単独の文と登録済み integration worktree の 2 条件を書いている
+
+  - 文書と実装のずれを検出するテストがある（可能な範囲で）
+
+
+  ## スコープ外
+
+  `--repo` の文法が merge-pr.py と merge-ci-wait.py で別々に実装されている件（low）は含めない。
+
+
+  ## 制約・前提
+
+  - 詳細: integration ブランチ `em-workflow/unattended-merge-medium-fixes/integration` の `feature-docs/unattended-merge-medium-fixes/reviews/round2.yaml`（stable_id `22317f774603b30b`）。README の件は round3 の evaluator が挙げたもの（evaluator の返却が不完全だったため round3.yaml の findings には載っていない。round_summary に記載）
+
+  - 該当箇所: `em-workflow/references/merge-result.md:95`、`merge-result.md:85`、`merge-result.md:103`、`em-workflow/README.md:134`
+
+  '
+parent_branch: em-workflow/merge-docs-align-impl/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.09
+      '1': 0.89
+      '2': 0.02
+      '3': 0.0
+    description_plus_code:
+      '0': 0.01
+      '1': 0.97
+      '2': 0.02
+      '3': 0.0
+  at: '2026-11-07T14:42:40+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+  - IMPLEMENTATION.md（複数タスクが同一ファイルを宣言しないとき）
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: 803020b554b6d85aa6d18894d69d894cc9422277
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: reduced tier。変更は文書とテストだけで UI を持たない
+- id: create-plan
+  artifacts:
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: c2d17c79c03cff2be36bd7162aceb328b10a727d
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  plan: null
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: verification_failed の条件
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-2
+  FR2:
+    title: git_failed の条件
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-2
+    - TS-3
+  FR3:
+    title: remote_unresolved の条件
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-2
+  FR4:
+    title: SKILL.md の結果の値の表
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-4
+  FR5:
+    title: README の destructive-guard 行
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+  FR6:
+    title: ずれを検出するテスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
+  NFR1:
+    title: 変更範囲
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-4
+  NFR2:
+    title: 既存テストとの整合
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
+  NFR3:
+    title: 表の形式
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-4
+  NFR4:
+    title: テストの規約
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
+  NFR5:
+    title: 文書の秘匿
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
