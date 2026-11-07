@@ -156,7 +156,7 @@ tasks:
     - NFR2
     - NFR4
     - NFR5
-    status: in_progress
+    status: merged
     branch: em-workflow/merge-docs-align-impl/task0002
 review:
   status: pending
