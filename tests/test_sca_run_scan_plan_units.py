@@ -67,7 +67,12 @@ SIBLING_MODULES = (
 def _load_script(name="scan_dependencies_run_scan_plan_units"):
     spec = importlib.util.spec_from_file_location(name, SCRIPT_PATH)
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    previous = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = previous
     return module
 
 
