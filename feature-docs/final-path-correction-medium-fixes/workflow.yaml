@@ -173,7 +173,7 @@ tasks:
     requirements:
     - FR8
     - NFR4
-    status: in_progress
+    status: merged
     branch: em-workflow/final-path-correction-medium-fixes/task0003
     notes: null
 review:
