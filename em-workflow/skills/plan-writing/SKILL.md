@@ -338,6 +338,32 @@ such a name in a workflow patch (error code `report-name-new-file`).
 - A task that updates a matching-name file that exists at the base commit
   states in its body that the update is made with Edit.
 
+## Feature-docs Files
+
+No task's `files` holds a feature-docs path. This section is the single owner
+of that rule; other documents cite it by path plus this heading and never
+restate it.
+
+- **Predicate.** A feature-docs path is a path whose first segment is exactly
+  `feature-docs` once the validator's `path_segments` normalization is
+  applied: `\` is read as `/`, and empty and `.` segments are dropped. So
+  `feature-docs\notes\a.md`, `./feature-docs/notes/a.md` and
+  `feature-docs//notes/a.md` are feature-docs paths, and
+  `feature-docs-old/a.md` is not.
+- **Same normalization as the rework rule.** The Feature-docs files rule of
+  `references/rework-task-synthesis.md` uses the same normalization. It is
+  cited here and not restated as a second rule.
+- **Covered.** The own feature's `feature-docs/{feature}/`, other features'
+  directories and `feature-docs/LESSONS.md` are all covered. A task's `plan`
+  value is outside the rule: only `files` is checked.
+- **Other features' documents.** When the plan needs another feature's
+  document changed, the planner makes that change itself through the route in
+  `references/contracts/planner-contract.md`, `## Other-feature documents`,
+  never through a task.
+- **Mechanical check.** `scripts/validate-worker-output.py` rejects a
+  violating entry of a `replace_planning` patch with the code
+  `plan-task-feature-docs`.
+
 ## Pre-Save Self-Verification Checklist (MANDATORY)
 
 - [ ] No language-specific code blocks, library API calls, or snippets
@@ -371,3 +397,4 @@ such a name in a workflow patch (error code `report-name-new-file`).
       artifact of any task's files, task body, acceptance criterion or
       VERIFICATION.md, and a task updating an existing one states that the
       update is made with Edit.
+- [ ] No task's `files` holds a feature-docs path (`## Feature-docs Files`).

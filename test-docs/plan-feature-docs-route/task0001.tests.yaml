@@ -1,0 +1,104 @@
+task_id: task0001
+baseline_failures: []          # full suite before any edit: 15037 tests, 1 skipped, 0 failures
+final_failures: []             # full suite re-executed after the implementation and this record
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_feature_docs_planner_rules_docs.TestAC1PlanWritingFeatureDocsFiles.test_exactly_one_section_before_the_pre_save_checklist
+      - tests.test_feature_docs_planner_rules_docs.TestAC1PlanWritingFeatureDocsFiles.test_predicate_is_stated_with_the_three_covered_forms
+      - tests.test_feature_docs_planner_rules_docs.TestAC1PlanWritingFeatureDocsFiles.test_the_stated_examples_follow_the_validator_normalization
+      - tests.test_feature_docs_planner_rules_docs.TestAC1PlanWritingFeatureDocsFiles.test_covered_scopes
+      - tests.test_feature_docs_planner_rules_docs.TestAC1PlanWritingFeatureDocsFiles.test_plan_value_is_outside_the_rule
+      - tests.test_feature_docs_planner_rules_docs.TestAC1PlanWritingFeatureDocsFiles.test_other_feature_route_is_cited
+      - tests.test_feature_docs_planner_rules_docs.TestAC1PlanWritingFeatureDocsFiles.test_validator_code
+      - tests.test_feature_docs_planner_rules_docs.TestAC1PlanWritingFeatureDocsFiles.test_checklist_has_exactly_one_item_citing_the_section
+    red_confirmed: true
+    red_reason: >-
+      Before the edit to plan-writing SKILL.md, setUpClass of
+      TestAC1PlanWritingFeatureDocsFiles raised AssertionError "expected
+      exactly one heading line '## Feature-docs Files', found 0", so every
+      test of the class errored.
+  AC-2:
+    tests:
+      - tests.test_feature_docs_planner_rules_docs.TestAC2ToAC4PlannerStep4.test_step_4_cites_the_rule_owner_by_path_and_heading
+      - tests.test_feature_docs_planner_rules_docs.TestAC2ToAC4PlannerStep4.test_the_agent_does_not_contain_the_predicate_wording
+      - tests.test_feature_docs_planner_rules_docs.TestAC2ToAC4PlannerStep4.test_the_predicate_wording_lives_in_plan_writing
+    red_confirmed: true
+    red_reason: >-
+      Before the edits, test_step_4_cites_the_rule_owner_by_path_and_heading
+      failed (step 4 held no block citing skills/plan-writing/SKILL.md with
+      `## Feature-docs Files`), and test_the_predicate_wording_lives_in_plan_writing
+      failed for all four phrases (e.g. "'first segment is exactly
+      `feature-docs`' not found"). test_the_agent_does_not_contain_the_predicate_wording
+      passed before the edits, as it guards against restating the rule.
+  AC-3:
+    tests:
+      - tests.test_feature_docs_planner_rules_docs.TestAC2ToAC4PlannerStep4.test_contract_is_cited_by_path_and_heading
+      - tests.test_feature_docs_planner_rules_docs.TestAC2ToAC4PlannerStep4.test_stage_1_returns_the_request_result_and_writes_nothing
+      - tests.test_feature_docs_planner_rules_docs.TestAC2ToAC4PlannerStep4.test_stage_2_amends_only_granted_documents_and_declares_each_fix
+      - tests.test_feature_docs_planner_rules_docs.TestAC2ToAC4PlannerStep4.test_a_path_out_of_scope_or_not_granted_is_blocked
+    red_confirmed: true
+    red_reason: >-
+      Before the edit to implementation-planner.md all four tests failed:
+      step 4 held no block with the stage 1 / stage 2 / blocked phrases and
+      no citation of planner-contract.md with `## Other-feature documents`
+      (assertTrue(False) on the block matcher).
+  AC-4:
+    tests:
+      - tests.test_feature_docs_planner_rules_docs.TestAC2ToAC4PlannerStep4.test_other_feature_document_content_is_untrusted
+    red_confirmed: true
+    red_reason: >-
+      Before the edit to implementation-planner.md the test failed: no
+      block of step 4 held "another feature's document", "untrusted data" and
+      the Untrusted-Input Handling citation.
+  AC-5:
+    tests:
+      - tests.test_feature_docs_planner_rules_docs.TestAC5FeatureDocsCorrection.test_process_lead_routes_both_corrections
+      - tests.test_feature_docs_planner_rules_docs.TestAC5FeatureDocsCorrection.test_section_is_second_level_after_final_path_and_before_output
+      - tests.test_feature_docs_planner_rules_docs.TestAC5FeatureDocsCorrection.test_section_has_no_subheading
+      - tests.test_feature_docs_planner_rules_docs.TestAC5FeatureDocsCorrection.test_trigger
+      - tests.test_feature_docs_planner_rules_docs.TestAC5FeatureDocsCorrection.test_owning_documents_are_cited_not_restated
+      - tests.test_feature_docs_planner_rules_docs.TestAC5FeatureDocsCorrection.test_exception_to_the_2a_pass
+      - tests.test_feature_docs_planner_rules_docs.TestAC5FeatureDocsCorrection.test_target_plans_are_read_for_what_they_asked_of_the_document
+      - tests.test_feature_docs_planner_rules_docs.TestAC5FeatureDocsCorrection.test_the_four_kinds_of_target_path_are_each_handled
+      - tests.test_feature_docs_planner_rules_docs.TestAC5FeatureDocsCorrection.test_editing_target_plans
+      - tests.test_feature_docs_planner_rules_docs.TestAC5FeatureDocsCorrection.test_requirements_and_other_criteria_stay_unchanged
+      - tests.test_feature_docs_planner_rules_docs.TestAC5FeatureDocsCorrection.test_merged_plans_are_not_edited
+      - tests.test_feature_docs_planner_rules_docs.TestAC5FeatureDocsCorrection.test_patch_shape
+      - tests.test_feature_docs_planner_rules_docs.TestAC5FeatureDocsCorrection.test_task_index_is_empty_and_fixes_are_named
+      - tests.test_feature_docs_planner_rules_docs.TestAC5FeatureDocsCorrection.test_step_headings_equal_the_nine_step_headings
+      - tests.test_feature_docs_planner_rules_docs.TestAC5FeatureDocsCorrection.test_gate_option_vocabulary_is_last_and_unchanged
+      - tests.test_feature_docs_planner_rules_docs.TestAC5FeatureDocsCorrection.test_final_path_2a_exception_stays_true_for_two_dispatches
+      - tests.test_feature_docs_planner_rules_docs.TestAC5FeatureDocsCorrection.test_output_names_the_other_completed_shapes
+    red_confirmed: true
+    red_reason: >-
+      Before the edits, setUpClass of TestAC5FeatureDocsCorrection raised
+      AssertionError "expected exactly one heading line '## Feature-docs
+      correction', found 0", so every test of the class errored. The nine
+      step headings and the Gate option vocabulary pin held before the edits
+      and still hold; they guard the constraints rather than the new text.
+  AC-6:
+    tests:
+      - tests.test_feature_docs_planner_rules_docs.TestAC6ImplementerRuleUnchanged.test_implementer_documents_keep_the_never_modify_text
+    red_confirmed: false
+    red_reason: >-
+      The behavior pre-existed: the two implementer documents already
+      contained "Never modify `feature-docs/**`" and this task does not edit
+      them, so the test passed on its first run. It guards the criterion
+      (FR10); no red state occurred for this change.
+  AC-7:
+    tests:
+      - tests.test_report_name_planner_docs
+      - tests.test_plan_version_plan_writing
+      - tests.test_scenario_id_plan_writing_rule
+    red_confirmed: false
+    red_reason: >-
+      The outcome is the full-suite command `python3 -m unittest discover -s
+      tests`, which was green before this task (0 failures), so no red state
+      occurred. A dedicated new module is out of scope, but the existing
+      test_report_name_planner_docs (the Final-path correction section, the
+      Process lead and the heading list of implementation-planner.md),
+      test_plan_version_plan_writing and test_scenario_id_plan_writing_rule
+      (the checklist and the rule block of plan-writing SKILL.md) detect a
+      removed or weakened pin. No pin had to be refreshed, so
+      test_report_name_planner_docs is unchanged.
