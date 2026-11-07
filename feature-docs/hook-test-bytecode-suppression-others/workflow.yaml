@@ -91,7 +91,7 @@ workflow:
   completed_at_commit: d2d1187e80019cbfae24e9259be844eee8e220fa
   base_commit: 55efe18044c017a68c4bffac7d9c2cd5a99e8e25
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -140,6 +140,13 @@ tasks:
     notes: null
 review:
   status: pending
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - spec
+    discretionary: []
+    cross_validation: false
 requirements:
   FR1:
     title: テストプロセス内のフック読み込みでバイトコードを書かない
