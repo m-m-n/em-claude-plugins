@@ -482,8 +482,11 @@ class TestRetrospectTierDecisionBlock(unittest.TestCase):
 # Refreshed by task0005 of rework-docs-only-task-routing (FR9): Phase R5's
 # interactive and batch rework paths gained the sentence on a review-sourced
 # docs-only round.
+# Refreshed by task0005 of large-diff-review-coverage (FR4, FR8, FR12-FR15):
+# Phase R3b gained the rescue-run finding rule, Phase R4 the per-loop shards
+# and the loop run_id, and Phase R5 the coverage record fields.
 REVIEW_PHASE_SHA256 = (
-    "cf10994b02a0028a57199a7be3bee103147edfbb4f2bda553da84600cf7da898"
+    "c4346eab5eacb94ed1a9c36ee0ffc9db4d9ea0f7d7f55ce09ce25be6cddd8f9d"
 )
 REVIEW_RULES_SHA256 = (
     "56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931"
