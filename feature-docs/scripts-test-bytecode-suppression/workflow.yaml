@@ -117,8 +117,9 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
     notes: null
+    branch: em-workflow/scripts-test-bytecode-suppression/task0001
   task0002:
     title: Bytecode-free validate-worker-output.py loads in tests
     plan: tasks/task0002.md
@@ -153,8 +154,9 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
     notes: null
+    branch: em-workflow/scripts-test-bytecode-suppression/task0002
   task0003:
     title: Bytecode-free loads of the remaining em-workflow scripts in tests
     plan: tasks/task0003.md
@@ -188,8 +190,9 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
     notes: null
+    branch: em-workflow/scripts-test-bytecode-suppression/task0003
   task0004:
     title: Bytecode-free report-name-entry.py tests (in-process load and child launch)
     plan: tasks/task0004.md
@@ -209,8 +212,9 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
     notes: null
+    branch: em-workflow/scripts-test-bytecode-suppression/task0004
 review:
   status: pending
   rounds_completed: 0
