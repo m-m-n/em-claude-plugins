@@ -1,0 +1,79 @@
+schema_version: 2
+feature: large-diff-review-coverage
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.76
+    confidence: 0.72
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.26
+      '2': 0.72
+      '3': 0.02
+  observed_at: '2026-11-07T17:23:00+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 2.01
+    confidence: 0.99
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.0
+      '2': 0.99
+      '3': 0.01
+  observed_at: '2026-11-07T17:25:00+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/agents/codex-reviewer.md
+  - em-workflow/references/review-phase.md
+  - em-workflow/references/review-protocol.md
+  - tests/test_review_phase_llm_led.py
+  - tests/test_reviewer_roles_protocol.py
+  - tests/test_reproduction_reviewer_instructions.py
+  changed_lines_approx: 200
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules:
+  - 呼び出し元は em-workflow/skills/develop/SKILL.md:785 と em-workflow/skills/review/SKILL.md:21
+  - 直接関連する参照先は run_codex_exec.sh、review-output-schema.json、reviewers.yaml、reviewer.md、review-evaluator.md、別配布の
+    vertex-reviewer の6箇所
+  - em-workflow/scripts/run_codex_exec.sh:389 はタイムアウトを exit 124 として返す。設定は em-workflow/references/codex-cli.yaml:13
+    の540秒
+  - tests/test_codex_wrapper_single_invocation.py:437 にタイムアウトの既存テストがある。入力超過後の分割レビューを検証するテストは検索で確認できなかった
+  - tests/test_reviewer_roles_protocol.py:717 と tests/test_reproduction_reviewer_instructions.py:485
+    は Codex の結果処理を含む本文をハッシュで固定している
+  - em-workflow/references/review-protocol.md:19 は別配布の vertex-review が同じ契約を読むと定義している。該当実装はリポジトリ内になく、300,000文字という上限は確認できない
+  - em-review/agents/codex-reviewer.md:204 にも同じ非JSON出力の扱いがある
+  - 行数と追加テスト数は確認した変更対象からの概算。差分分割の手順は現行のレビュー手順に定義されていない
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 8
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  caller_and_dependency_count: 8
+  changes_external_contract: true
+  changes_behavior: true
+  evidence: em-workflow/agents/codex-reviewer.md:213 は非JSON出力を skipped:false で返す。em-workflow/references/review-phase.md:364
+    はスキーマ適合だけで完了扱いにする。同 review-phase.md:1146、:1158 は残件数0での完了とClaude代替実行後に限定した未実施開示を定義する。em-workflow/references/review-protocol.md:264
+    は review_data_too_large を再試行不可とする
+decided_at: '2026-11-07T17:25:01+09:00'
