@@ -117,7 +117,7 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: in_progress
+    status: failed
     notes: null
     branch: em-workflow/scripts-test-bytecode-suppression/task0001
   task0002:
@@ -154,7 +154,7 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: in_progress
+    status: failed
     notes: null
     branch: em-workflow/scripts-test-bytecode-suppression/task0002
   task0003:
@@ -190,7 +190,7 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: in_progress
+    status: failed
     notes: null
     branch: em-workflow/scripts-test-bytecode-suppression/task0003
   task0004:
@@ -212,7 +212,7 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: in_progress
+    status: failed
     notes: null
     branch: em-workflow/scripts-test-bytecode-suppression/task0004
 review:
