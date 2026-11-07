@@ -1,0 +1,102 @@
+schema_version: 1
+feature: large-diff-review-coverage
+records:
+- question_id: create-spec.command-approval
+  packet_id: null
+  answered_at: '2026-11-07T18:10:00+09:00'
+  source: batch-decision-table
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: python3 -m unittest discover -s tests
+  normalized_answer: 既に承認済み
+  resolution_note: 'gate: create-spec.command-approval; 未承認コマンドなし、自動記録は 0 件'
+- question_id: create-spec.codex.spec-shard
+  packet_id: null
+  answered_at: '2026-11-07T18:10:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: spec は全差分優先、全経路失敗時のみシャード救済。救済 run の未実装系指摘は未検証で residual 外
+  normalized_answer: spec は全差分優先、全経路失敗時のみシャード救済。救済 run の未実装系指摘は未検証で residual 外
+  resolution_note: 'user-directed Codex consultation, turns: 2, harness entry: codex;
+    1 回目は全差分のみ、2 回目で折衷案。evaluator は 10 ファイル制限と R4 で動かない点で弱い'
+- question_id: create-spec.codex.shard-cap
+  packet_id: null
+  answered_at: '2026-11-07T18:10:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 1 ラウンド 24 primary dispatch、観点均等割、超過は開示
+  normalized_answer: 1 ラウンド 24 primary dispatch、観点均等割、超過は開示
+  resolution_note: 'user-directed Codex consultation, turns: 2, harness entry: codex;
+    Codex は再試行・R4 込みと優先順配分を提案。計算を単純にするため primary のみの均等割へ変更（Claude 判断）'
+- question_id: create-spec.codex.timeout-precedence
+  packet_id: null
+  answered_at: '2026-11-07T18:10:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: exit 124 は JSON パースより先に判定、harness_unavailable、途中の指摘は保持しない
+  normalized_answer: exit 124 は JSON パースより先に判定、harness_unavailable、途中の指摘は保持しない
+  resolution_note: 'user-directed Codex consultation, turns: 2, harness entry: codex;
+    Codex は新理由 timeout と指摘保持を提案。保持は R2b の置換規則変更が要り、見送り（Claude 判断）'
+- question_id: create-plan.codex.planner-assumptions
+  packet_id: null
+  answered_at: '2026-11-07T18:40:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 7 件の仮定をすべて採用
+  normalized_answer: 7 件の仮定をすべて採用
+  resolution_note: 'user-directed Codex consultation, turns: 1, harness entry: codex;
+    Opus escalation: not run; 仮定: 1. spec の救済 run は primary 上限 24 に数えず、spec の再試行として別に
+    floor(24/N) の上限 / 2. 救済 run を実行した spec はその round で部分実施（spec_rescue）として開示し続ける /
+    3. シャード番号は 1 起点、部分実施の reason は固定トークンを定順でカンマ連結 / 4. review-shards / coverage の失敗でレビューフェーズを中断、classify_results
+    失敗時は全件 failed 扱い / 5. FR3 の判定は review-coverage.py の classify_results 操作に置く / 6.
+    未実施判定の対象は最後の pass のシャード構成のファイル / 7. diff_base は HEAD か小文字 16 進 40 桁のコミット ID のみ;
+    Codex は 7 件すべて ACCEPT（SPEC の FR7・A10・FR11・AC8・FR3/TS-2・FR14・R0 と整合、より良い代替なし）'
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-11-07T19:05:00+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'declined: test-docs/llm-led-review/task0004.tests.yaml'
+  normalized_answer: 'declined: test-docs/llm-led-review/task0004.tests.yaml'
+  resolution_note: 'task_id: task0001; deviation path test-docs/llm-led-review/task0004.tests.yaml
+    not auto-added to files; missing evidence part: the identifier of an existing AC-n or
+    requirement id that would otherwise be dropped (path shape and observable outcome were given)'
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-11-07T19:10:00+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'declined: tests/test_tier_record_schema_v2.py'
+  normalized_answer: 'declined: tests/test_tier_record_schema_v2.py'
+  resolution_note: 'task_id: task0006; deviation path tests/test_tier_record_schema_v2.py
+    not auto-added to files; missing evidence part: the identifier of an existing AC-n or
+    requirement id that would otherwise be dropped (path shape and observable outcome were given)'
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-11-07T19:25:00+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'declined: tests/test_tier_record_schema_v2.py'
+  normalized_answer: 'declined: tests/test_tier_record_schema_v2.py'
+  resolution_note: 'task_id: task0004; deviation path tests/test_tier_record_schema_v2.py
+    not auto-added to files; missing evidence part: the identifier of an existing AC-n or
+    requirement id that would otherwise be dropped (path shape and observable outcome were given)'
+- question_id: review.codex.large-diff-routing
+  packet_id: null
+  answered_at: '2026-11-07T20:00:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'B: review_data_too_large または Codex タイムアウトで完了しない観点は、chain 消尽と同様に Claude 代替レビュアーを 1 回出す'
+  normalized_answer: 'B: review_data_too_large または Codex タイムアウトで完了しない観点は、chain 消尽と同様に Claude 代替レビュアーを 1 回出す'
+  resolution_note: 'user-directed Codex consultation, turns: 1, harness entry: codex; Opus escalation: not run;
+    差分は約 430,000 バイト。導入済みの手順では review_data_too_large は再試行不可で代替も出ず、3 観点が未実施のまま開示もされない。
+    選択肢: A 手順どおり / B 代替レビュアーで補う / C 統合ブランチの分割手順で自己レビュー / D 先に codex へ回す。
+    Codex は B を選択（未導入コードに依存しない、逸脱と未実施を記録できる）。完了しない観点は unreviewed_perspectives に載せる'

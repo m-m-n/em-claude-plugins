@@ -226,8 +226,9 @@ Every skip object sets `skip_reason` to a short machine-stable
 - **Spec perspective** with no readable SPEC.md:
   `{"findings": [], "summary": "skipped: no SPEC.md found", "skipped": true, "skip_reason": "no_spec", "source": "<source>"}`
 - **Any cross-model reviewer** when its harness cannot be reached at all
-  (codex: wrapper script or CLI missing, or the supplied `model`
-  unsupported; litellm: proxy down, `-p litellm`
+  (codex: wrapper script or CLI missing, the supplied `model`
+  unsupported, a timeout (wrapper exit code 124), or output that is not
+  parseable JSON; litellm: proxy down, `-p litellm`
   profile broken, `model` absent or unknown):
   `{"findings": [], "summary": "skipped: codex-cli unavailable", "skipped": true, "skip_reason": "harness_unavailable", "source": "codex"}`
 - **Any cross-model reviewer** when the upstream reports a rate limit

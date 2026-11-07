@@ -1,0 +1,78 @@
+schema_version: 1
+feature: large-diff-review-coverage
+phase: create-plan
+status: completed
+generation: 1
+base_revision: 9c8036690d921aef4ada00f1363b0fe3ebe1e4bf
+last_input_digest: sha256:f0c74fab3a94b6e4b504ad8019b31b0196194425ef8fd8adbf5f2de6941153e5
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: completed
+  input_digest: sha256:f0c74fab3a94b6e4b504ad8019b31b0196194425ef8fd8adbf5f2de6941153e5
+  output_digest: sha256:64229bd0ed9b7a87470d953e3ccb30b467efe406441dbbf6cc79468736d86343
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/planner-contract.md: sha256:6253ad93ad99c87daec151b2da071a950ebaa615b5e438adfc2951f7dba2fb05
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
+    em-workflow/references/workflow-schema.md: sha256:5db914a170c0bd97886671160a2c3498127ffd83f0814bc8fb67407f4dc563ee
+    em-workflow/skills/plan-writing/SKILL.md: sha256:364f9dfc8244f9fe9e52999dfb93cf675d4b0602279d0a6bdf6f70c1dc186b87
+    feature-docs/large-diff-review-coverage/REQUIREMENTS.md: sha256:a009cd9d7573c0277d3936531d3b50bbec7b1f99955dc05c0f726698f6b2a03c
+    feature-docs/large-diff-review-coverage/SPEC.md: sha256:8b5e62196a6ad8d7ed50f7e41a28fb60f505f92ce6f11e8898b9213949d7ce81
+    feature-docs/large-diff-review-coverage/workflow.yaml: sha256:2d25ae55829d23568effc669ad6cee5ec7232d6af439d08a3e6814148e91c434
+  self_write_set:
+  - feature-docs/large-diff-review-coverage/IMPLEMENTATION.md
+  - feature-docs/large-diff-review-coverage/THREAT-MODEL.md
+  - feature-docs/large-diff-review-coverage/VERIFICATION.md
+  - feature-docs/large-diff-review-coverage/tasks/task0001.md
+  - feature-docs/large-diff-review-coverage/tasks/task0002.md
+  - feature-docs/large-diff-review-coverage/tasks/task0003.md
+  - feature-docs/large-diff-review-coverage/tasks/task0004.md
+  - feature-docs/large-diff-review-coverage/tasks/task0005.md
+  - feature-docs/large-diff-review-coverage/tasks/task0006.md
+artifacts:
+- path: feature-docs/large-diff-review-coverage/IMPLEMENTATION.md
+  sha256: sha256:1a8d7d9f90df64190b796889511a03a3f67cd8649724ab6ef838fc76a64eba6c
+  produced_by: create-plan-run-0001
+- path: feature-docs/large-diff-review-coverage/THREAT-MODEL.md
+  sha256: sha256:518add8278bba9447d5ce682c374ae51625e27035b8813e0dfc2a2692171e720
+  produced_by: create-plan-run-0001
+- path: feature-docs/large-diff-review-coverage/VERIFICATION.md
+  sha256: sha256:4224f04093fe95218d8d8498b24c654fed3cf7c6ec6fcaab35c9d145e6c6421f
+  produced_by: create-plan-run-0001
+- path: feature-docs/large-diff-review-coverage/tasks/task0001.md
+  sha256: sha256:f739fd1dce6ca70c3fd29417a4ddb2f5273ed763fa31d4b82970b0264f3b3c1b
+  produced_by: create-plan-run-0001
+- path: feature-docs/large-diff-review-coverage/tasks/task0002.md
+  sha256: sha256:1ba5c8c20083e0d69b90729d02c25b71d40c43900fc6ecf3166f168e635a0f52
+  produced_by: create-plan-run-0001
+- path: feature-docs/large-diff-review-coverage/tasks/task0003.md
+  sha256: sha256:6398d208580db590d795e0871e30c8fbc0649e697cb63e9621f1118f28bb0e36
+  produced_by: create-plan-run-0001
+- path: feature-docs/large-diff-review-coverage/tasks/task0004.md
+  sha256: sha256:597bf860f233eacca90c6ad638b24ed1cce5f26fee78b34821285c5720f10c59
+  produced_by: create-plan-run-0001
+- path: feature-docs/large-diff-review-coverage/tasks/task0005.md
+  sha256: sha256:f70bce009e792f040b429398c198f026dbf17b6b6c405cf947a2e6077cac78c8
+  produced_by: create-plan-run-0001
+- path: feature-docs/large-diff-review-coverage/tasks/task0006.md
+  sha256: sha256:1758b91172ad345f7fe8f7e9e5c761cb72fb4d489f6ee5afca5cc78a1d67fa49
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: create-plan-p0001
+  status: applied
+  base_input_digest: sha256:f0c74fab3a94b6e4b504ad8019b31b0196194425ef8fd8adbf5f2de6941153e5
+  base_workflow_blob: 8848d8189a4f3b9c75ae70db4ae1fbad116a5ec4
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: 'create-plan-run-0001: validator rejected tasks/task0003.md Files bullet
+  (task-plan-files); the same worker corrected that one line within the dispatch window
+  and validation passed on re-run ; the first layer-5 record was written with a single
+  malformed entry (shell word-splitting) and corrected in the completion commit from
+  recomputed digests of the unchanged committed artifacts'

@@ -169,6 +169,26 @@ keep it in-context for the round record.
 
 ## Phase R2: Fan-out (ONE message, N Task calls)
 
+**Measure the review input first.** Before the first Task call of this phase,
+the orchestrator builds the `review-shards` input from Phase R0's values:
+`project_root`, `review_mode`, `diff_base` (develop-駆動: `base_commit`;
+standalone: `HEAD`; whole-codebase: null), `changed_files` exactly as Phase R0
+step 3 validated them (project-relative), and `perspective_count` — the number
+of perspectives this phase dispatches through Task this round (`spec` counts
+when it is dispatched; a `requires_spec` perspective skipped for lack of a SPEC
+and axis 2 `vulnerability` do not count). The orchestrator writes that document
+as a UTF-8 JSON object with its file-writing tool into the session scratchpad
+directory, outside `project_root`, never through shell interpolation, then runs
+`python3 "${CLAUDE_PLUGIN_ROOT}/scripts/review-shards.py" "{input_path}"` and
+reads only its JSON output (`limit`, `total_chars`, `split`, `files`, `shards`,
+`shard_cap`, `dispatched_shards`, `excess_shards`). It never reads diff text to
+measure size. The script applies the fixed limit of 200,000 characters per
+shard and the fixed cap of 24 primary dispatches per pass. The output is kept
+as the pass manifest of loop 0. A non-zero exit aborts the review phase loudly
+before any dispatch of this pass, as the Phase R0 fail-closed aborts do, and no
+round record is written. This one step serves develop-駆動 and standalone runs,
+diff and whole-codebase modes, and Phase R4's re-review (Phase R4 cites it).
+
 Read references/reviewers.yaml. For each selected perspective (skip
 `requires_spec` ones when `spec_available == false` — render as SKIPPED):
 
@@ -177,7 +197,7 @@ Walk that perspective's registry `primary_chain` (an ordered list of
 IMPLEMENTATION.md Shared Components "Registry chain key") from the front and
 take the FIRST entry whose harness is available (`codex_available` for
 `codex`, `litellm_available` for `litellm`). Dispatch exactly ONE primary
-reviewer for this perspective:
+reviewer for this perspective (per shard when the round is split):
 
 - `{harness: codex}` → `Task(subagent_type="em-workflow:codex-reviewer")`; when
   the entry names `model: M`, add `model: M` to the input block, passed
@@ -208,7 +228,7 @@ reviewer for this perspective:
 `Task(subagent_type="em-workflow:reviewer")` instead. The two branches are
 mutually exclusive: the Claude reviewer is never launched alongside a
 harness reviewer for the same perspective. Exactly one primary reviewer runs
-per selected perspective.
+per selected perspective (per shard when the round is split).
 
 Every dispatch — primary harness reviewer or Claude fallback — carries the
 same review-protocol input block (perspective, perspective_skill =
@@ -232,21 +252,42 @@ main session's cwd, and in develop-駆動 mode the reviewed code exists ONLY
 in the integration worktree at project_root, so relative paths (or Reads
 resolved against the reviewer's own cwd) would hit the wrong tree.
 
-Record per perspective: the run `run_id` (unique within this round; the
-orchestrator assigns it as `{perspective}#{chain_index}` for a Phase R2/R2b
-chain-walk dispatch, `{perspective}#fallback` for the chain-exhaustion /
-malformed-result / harness-failure Claude fallback, and
-`{perspective}#loop{N}` for Phase R4's in-loop re-review dispatch N — each
-form is collision-free within the round because only one run of a given kind
-exists per perspective per round/loop), the chain INDEX picked, the run
-`role` (`primary` / `fallback`), and the orchestrator-known source identity
-(IMPLEMENTATION.md Shared Components "Source identity vocabulary":
-`codex:<perspective>`, `litellm:<model>:<perspective>` for a primary
-dispatch, `claude:<perspective>` for the fallback) — R2b resumes the walk
-from the entry after the recorded chain index.
+**Dispatch per shard.** When `split` is false, dispatch exactly as above: the
+round's full `changed_files` and `diff_cmd_quoted`, and the run_ids below
+unchanged. When `split` is true, each non-spec perspective is dispatched once
+per index in `dispatched_shards`, each through the chain pick above. A shard
+dispatch carries the same input block, except that `changed_files` is that
+shard's paths, normalized to project_root-based absolute paths as above, and
+`diff_cmd_quoted` is built from those same paths, each an element of the Phase
+R0 step 3 validated set, with the same `printf %q` quoting and the same command
+form Phase R0 step 3 uses for this run. No input field is added: a shard is
+expressed only through `changed_files` and `diff_cmd_quoted`. Shards listed in
+`excess_shards` are not dispatched; Phase R5 discloses them. `spec` is
+dispatched once, on the full diff, in both cases (Phase R2b states its rescue
+runs).
 
-All Task calls go in a SINGLE message. The orchestrator passes only paths and
-the file list — never diff content (each reviewer fetches its own data).
+Record per run (per perspective, and per shard when the round is split): the
+run `run_id`, unique within this round and assigned by the orchestrator in the
+grammar `{perspective}[@s{k}]#[loop{N}.]{chain_index|fallback}`. `@s{k}` is
+present only for a run in a split pass, `k` being the shard index from the
+review-shards output (starting at 1); `spec` carries it only as a rescue run
+(Phase R2b). `loop{N}.` is present only for Phase R4 loop N, N starting at 1.
+The last segment is the chain index (integer, 0 or more) of the dispatched
+chain entry, or `fallback` for the Claude fallback (chain-exhaustion /
+malformed-result / harness-failure). An unsplit Phase R2 run keeps
+`{perspective}#{chain_index}` or `{perspective}#fallback`; `vulnerability#tool`
+and `evaluator` are unchanged. Examples: `security#0`, `performance@s2#1`,
+`spec@s1#fallback`, `architecture@s3#loop1.0`, `comprehensive#loop2.fallback`.
+Also record the chain INDEX picked, the run `role` (`primary` / `fallback`),
+and the orchestrator-known source identity (IMPLEMENTATION.md Shared Components
+"Source identity vocabulary": `codex:<perspective>`,
+`litellm:<model>:<perspective>` for a primary dispatch, `claude:<perspective>`
+for the fallback) — R2b resumes the walk from the entry after the recorded
+chain index.
+
+All Task calls go in a SINGLE message. Shard dispatches are Task calls too
+and go in it. The orchestrator passes only paths and the file list — never
+diff content (each reviewer fetches its own data).
 
 **Axis 2 (`vulnerability`, deterministic, no Task dispatch):** `vulnerability`
 is served by axis 2, never by a Task-dispatched reviewer: the orchestrator
@@ -324,14 +365,23 @@ no other.
 ## Phase R2b: Cross-model fallback (chain walk)
 
 Applies to every perspective whose R2 primary-reviewer dispatch returned
-`skipped: true` with a **retryable** `skip_reason`. Retryable reasons, and
-how far the walk advances:
+`skipped: true` with a **retryable** `skip_reason`.
+
+**Split passes.** When Phase R2's pass is split, every rule of this section
+applies per shard: the unit of the walk is the shard, not the perspective. That
+covers the walk, the "At most 2 fallback dispatches per perspective" budget,
+counted per shard, the Claude fallback and the last-result replacement. A
+result of one shard never replaces another shard's. All perspectives and shards
+falling back at the same hop go in ONE message.
+
+Retryable reasons, and how far the walk advances:
 
 | `skip_reason` | What it means | Advance to |
 |---|---|---|
 | `rate_limited` | upstream congestion (Codex rate limit, Vertex 429) | the next entry in the chain |
 | `budget_exhausted` | the harness's own budget is spent (LiteLLM's monthly virtual-key cap) | the next entry of a **different** harness |
 | `harness_unavailable` | the harness could not be reached at all (proxy down, profile broken, wrapper missing) | the next entry of a **different** harness |
+| `review_data_too_large` | the assembled prompt exceeds the model's context | the next entry of a **different** harness |
 
 Budget and reachability are properties of the HARNESS, not the model: all
 `litellm` entries share one virtual key and one proxy, so retrying another
@@ -340,7 +390,9 @@ about Muse, so `rate_limited` may advance within the same harness.
 
 Every other `skip_reason` (`protocol_unresolved`, `schema_unresolved`,
 `skill_unresolved`, `no_spec`, …) is **not** retryable: it reports a config
-or input problem that every entry would hit identically. Keep the skip.
+or input problem that every entry would hit identically. Keep the skip. A kept
+skip leaves that unit without a completed run (the perspective, or the shard
+when the pass is split), and Phase R5 discloses it.
 
 **Malformed non-retryable results.** A dispatched reviewer's result that is
 neither a valid `skipped: true` object (with one of the `skip_reason`s above)
@@ -355,8 +407,9 @@ result. The perspective now has no completed run and no further chain entry
 to try, so it receives the same ONE Claude fallback dispatch as the
 chain-exhaustion case below, issued after this determination and never
 concurrently with a harness reviewer. Only when that fallback dispatch also
-fails to produce a completed run does the perspective end up in Phase R5's
-`unreviewed_perspectives` — that disclosure is record-keeping, not a
+fails to produce a completed run does that shard (or the perspective, when
+the pass is unsplit) end the round without a completed run — Phase R5's
+coverage computation discloses it; that disclosure is record-keeping, not a
 completion blocker, so it does NOT by itself hold the step open. Run
 `references/workflow-failure-recovery.md`'s workflow-doctor when the
 harness-level cause needs diagnosing, and report it in Phase R6.
@@ -365,7 +418,20 @@ A result that IS schema-valid — including a well-formed empty `findings: []`
 with `skipped: false`, `skip_reason: null` — is a substantive completed
 result and is used as-is for Phase R3a's `reviewer_outputs`. Schema validity
 is the only test; do not additionally judge whether the reviewer "really"
-inspected the diff.
+inspected the diff. The one exception is the litellm rule in the next
+paragraph.
+
+**litellm exception to that test.** For each schema-valid, non-skipped result of
+a run whose recorded harness is `litellm` — the harness the orchestrator
+recorded when it dispatched the run, never the result's own `source` — the
+orchestrator runs the `classify_results` operation of
+`em-workflow/scripts/review-coverage.py` (one call per hop, the Phase R2
+dispatch included; it passes `run_id`, `origin`, `finding_count` and `summary`
+per result, written and run as Phase R2's measurement step does). A result it
+returns as `failed` is recorded `status: failed`, gets no `skip_reason`, and
+takes the malformed-result path above, with one Claude fallback. Every other
+result stays completed. If the script exits non-zero, every result of that call
+counts as failed and takes the same path.
 
 Walk rules:
 
@@ -383,26 +449,29 @@ Walk rules:
   together with any perspective reaching the malformed-result state above at
   the same point — is dispatched in ONE message (FR9). A perspective whose
   fallback dispatch itself skips or fails has no further reviewer to try:
-  it ends the round unreviewed for this perspective (Phase R5's
-  `unreviewed_perspectives`), and the round continues and degrades rather
-  than aborting.
+  it ends the round without a completed run for that shard or perspective
+  (Phase R5's coverage computation discloses it), and the round continues
+  and degrades rather than aborting.
 - The LAST dispatched result — including the chain-exhaustion Claude
   fallback, when one was dispatched — is this perspective's reviewer result
-  for Phase R3a, in place of the skips that preceded it.
+  for Phase R3a (this shard's, in a split pass), in place of the skips that
+  preceded it.
 - Each hop depends on the previous result, so hops are sequential — but
   perspectives are independent: all perspectives falling back at the same hop
-  go in ONE message.
+  go in ONE message, and so do the shards of those perspectives falling back
+  at that hop.
 - The evaluator (Phase R3a) is dispatched only after every selected
   perspective's chain walk — including any chain-exhaustion Claude fallback
-  dispatch — has finished. This chain-walk mechanism (R2b as a whole)
+  dispatch — has finished. In a split pass that means every shard's walk and
+  every spec rescue walk. This chain-walk mechanism (R2b as a whole)
   applies identically to Phase R4's in-loop re-reviews; only the evaluator
   dispatch at the end of the walk is skipped there (Phase R3a, Phase R4 Loop
   termination).
 - Every dispatch in this chain walk — including the chain-exhaustion Claude
   fallback — carries the same review-protocol input block Phase R2
-  assembled for that perspective; for the `security` perspective this
-  includes the same `threat_model_path` value the round's R2 dispatch
-  carried, unchanged across every hop.
+  assembled for that perspective (for that shard, in a split pass); for the
+  `security` perspective this includes the same `threat_model_path` value the
+  round's R2 dispatch carried, unchanged across every hop.
 
 This is the only cross-validation step that runs after seeing another
 reviewer's result — every dispatch in R2 is availability-based and decided
@@ -421,16 +490,25 @@ reviewer. Diagnose the harness-level cause per
 the failed agents' JSONL logs) and include the diagnosis in the R6 report
 rather than silently recording the perspective as missing.
 
+**spec order and rescue runs.** `spec` is never split. It runs its chain on the
+full diff: the Phase R2 front entry, this section's walk, then the Claude
+fallback. Rescue runs happen only when that whole path, Claude fallback
+included, ends with no completed run and the pass is split. An unsplit pass
+never has rescue runs. A rescue run is a `spec` retry, not a primary dispatch:
+one per dispatched shard, at most `shard_cap`, each with run_id `spec@s{k}#...`
+for its shard index `k`, and each goes through the per-shard walk above, with
+its own two-hop budget, Claude fallback and last-result replacement. Phase R3a
+waits until every rescue walk has finished.
+
 **Axis 2 exclusion:** none of the chain-walk machinery above applies to
 axis 2's `source: tool` run. It was dispatched exactly once,
 deterministically, in Phase R2 above — there is no `primary_chain` to walk
 and no harness that can be unavailable for it. A `source: tool` run never
 consumes one of this section's fallback hops, never triggers the Claude
 fallback dispatch described above, and never appears in Phase R5's
-`unreviewed_perspectives` list: that list only ever holds a perspective
-whose OWN Phase R2b Claude fallback was dispatched and produced no
-completed run, and axis 2 has no fallback dispatch to produce one from. Its
-Phase R2 skip (the scan tool absent) is not a candidate for this section's
+`unreviewed_perspectives` list (nor in `partially_reviewed_perspectives`):
+those lists hold only Task-dispatched perspectives, and axis 2 is not one.
+Its Phase R2 skip (the scan tool absent) is not a candidate for this section's
 retryable-`skip_reason` table for the same reason: it is not a
 `skip_reason` this walk ever routes on.
 
@@ -458,13 +536,23 @@ R3b's evaluator-failure degradation).
 - `reviewer_outputs` — one entry per run, carrying `run_id` plus that run's
   verbatim reviewer output.
 - `unreviewed_perspectives` — the same list Phase R5 records at the
-  round-record root (IMPLEMENTATION.md Shared Components
-  "`unreviewed_perspectives` (rework round 1)"): perspectives whose Claude
-  fallback (Phase R2b) has been dispatched and produced no completed run;
-  present and empty when there are none. The evaluator's Independent
-  Inspection Duty (`references/review-evaluation-contract.md`) does not
-  apply to a perspective listed here: there is no reviewer output to
-  corroborate.
+  round-record root; present and empty when there are none. The orchestrator
+  computes it together with `partially_reviewed_perspectives` by the
+  `coverage` operation of `scripts/review-coverage.py` over the loop-0 pass,
+  right after Phase R2b and before the evaluator dispatch, and copies the
+  values from that output, never deriving them by hand. When the operation
+  exits non-zero, the review phase aborts before the round record is written
+  and no evaluator is dispatched.
+- `partially_reviewed_perspectives` — the same source and the same empty rule:
+  the same list Phase R5 records at the round-record root, present and empty
+  when there are none. Each entry carries `perspective`, `unreviewed_files`
+  and `reason`.
+
+The evaluator's Independent Inspection Duty
+(`references/review-evaluation-contract.md`) does not apply to a perspective
+listed in `unreviewed_perspectives`: there is no reviewer output to
+corroborate. The duty still applies to a perspective listed in
+`partially_reviewed_perspectives`.
 
 `changed_files` and `spec_path` are normalized to project_root-based
 absolute paths exactly as for reviewers (Phase R2). Every run's verbatim
@@ -661,6 +749,23 @@ executed, and verifying it is code reading plus those read-only commands only.
 This step adds no new user question and no new gate identifier, and batch
 mode runs it as written with no batch-only branch.
 
+**Rescue-run findings**: in a pass where spec ran rescue runs, every finding
+of category `spec` whose `sources` include the identity of a spec reviewer run
+is a rescue-run finding; a finding whose only source is the evaluator is out of
+scope. The orchestrator judges each rescue-run finding. A
+missing-implementation finding asserts that the implementation of a
+requirement is absent from the visible diff, rather than an error at a changed
+location, and a finding the orchestrator cannot decide counts as a
+missing-implementation finding. A missing-implementation finding is recorded
+with `resolution: unresolved` and a `resolution_reason` beginning
+`unverified`. It is not an auto-fix candidate, is not counted in the residual
+critical/high count, and is not among the residual findings rework-planner
+receives. The same rule runs on the evaluator path, in the evaluator-failure
+degradation and on Phase R4 re-review output. It runs at the same point as the
+reproduction verification above: after round-context suppression and before
+the auto-fix candidate gate and the residual count of Phase R4. This step adds
+no new user question and no new gate identifier.
+
 **`recommended_action` is advice, never a decision** (IMPLEMENTATION.md D5):
 it never overrides the completion gate (`residual_critical_high == 0`,
 defined once in Phase R5's Completion gate — not restated here), the
@@ -717,8 +822,10 @@ never `Apply as-is`, in batch mode). The candidate gate also excludes a
 finding `declined` by reproduction verification (Phase R3b, "Reproduction
 verification on orchestrator paths"), and the residual critical/high count
 excludes it too. A finding left `unresolved` with a `resolution_reason`
-beginning `unverified` by that verification is excluded from the candidate
-gate and from the residual critical/high count.
+beginning `unverified` by that verification or by the rescue-run finding rule
+(Phase R3b, "Rescue-run findings") is excluded from the candidate gate and from
+the residual critical/high count. In the `file ∈ changed_files` condition,
+`changed_files` is the round's full list, not the paths of one shard.
 
 Classification (mechanical only — never fuzzy semantic judgment):
 
@@ -877,6 +984,20 @@ No bare `git add`/`git commit` against the integration worktree runs outside
 this locked section anywhere in this document. Standalone mode commits
 nothing, ever.
 
+Re-review shards and pass record: before each productive loop's re-review, the
+orchestrator runs review-shards again (the Phase R2 step, cited here and not
+restated) with the same `diff_base`, `changed_files` and `perspective_count` as
+the round's Phase R2 run, so that the shards are rebuilt from the current diff.
+It applies the cap again for that loop, and dispatches the re-review per shard
+under the Phase R2b rules per shard, spec order and rescue runs included. A
+non-zero exit of that run aborts the review phase before the re-review is
+dispatched, and no round record is written. The orchestrator records the pass:
+the loop number, the files that loop's fix changed, and the manifest exactly as
+review-shards returned it. A re-review run's run_id is
+`{perspective}[@s{k}]#loop{N}.{chain_index|fallback}` for loop N: `@s{k}` is
+present only for a run in a split pass, and the part after `loop{N}.` is the
+chain index of the dispatched entry or `fallback` for the Claude fallback.
+
 Loop termination: re-run ALL selected reviewers after any productive loop
 (re-review preamble: per-perspective stable_id/file/line list only — no
 titles/descriptions; other perspectives get a generic collateral-impact
@@ -895,10 +1016,12 @@ self-report), `sources` set to that run's own identity, confidence `60`
 (the two mechanical corrections in R3b step 7 still apply on top). The
 re-review findings then pass Phase R3b's round-context suppression and its
 reproduction verification on orchestrator paths, in that order, before the
-decision below. Record each in-loop re-review run in `perspective_runs`
-exactly like a normal round run (`role: primary`/`fallback`, `status`). Then:
-zero residual critical/high non-spec → `clean`; `loop == 3` → `loop-cap`; no
-progress and no user-resolvable candidates → `no-progress`.
+decision below. They also pass the rescue-run finding rule of Phase R3b
+("Rescue-run findings") at the same point, before the decision below. Record
+each in-loop re-review run in `perspective_runs` exactly like a normal round
+run (`role: primary`/`fallback`, `status`). Then: zero residual critical/high
+non-spec → `clean`; `loop == 3` → `loop-cap`; no progress and no
+user-resolvable candidates → `no-progress`.
 
 ### Triage filing: once per review phase, immediately before the final round's R5 (FR11, FR24)
 
@@ -953,6 +1076,15 @@ batch mode.
 
 ## Phase R5: Persist the round record
 
+Before writing the record, the orchestrator runs the `coverage` operation of
+`em-workflow/scripts/review-coverage.py` with the round's `perspectives` (the
+perspectives dispatched through Task this round, in dispatch order), `passes`
+(every pass of the round: Phase R2 as loop 0 and each Phase R4 loop, each with
+its `loop`, `fixed_files` and `manifest`) and `perspective_runs` (every row, as
+recorded). A non-zero exit aborts the review phase before the round record is
+written; a record without both coverage fields is never written, and the abort
+adds no question and no gate identifier.
+
 Write `reviews/round{N}.yaml` (develop-駆動: at
 `{project_root}/feature-docs/{feature}/reviews/round{N}.yaml` —
 project_root is the integration worktree per the mode table above, a
@@ -979,10 +1111,13 @@ perspective_runs:
   - {run_id: "performance#fallback", perspective: performance, role: fallback, source: claude, status: completed}
   - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
   # `model` は litellm ハーネスと、`model` を渡した codex のときだけ付ける。`run_id` は round 内で一意:
-  # chain walk のエントリは `{perspective}#{chain_index}`、chain-exhaustion /
-  # malformed-result / harness-failure の Claude fallback は
-  # `{perspective}#fallback`、Phase R4 の in-loop 再レビューは
-  # `{perspective}#loop{N}`、evaluator は固定で `evaluator`。R2b の chain
+  # 形式は `{perspective}[@s{k}]#[loop{N}.]{chain_index|fallback}`。`@s{k}` は
+  # 分割された pass の run だけに付く (k は review-shards の shard index、1 始まり)。
+  # `loop{N}.` は Phase R4 の loop N の再レビューだけに付く (N は 1 始まり)。末尾は
+  # chain walk のエントリの chain_index (0 以上の整数)、または chain-exhaustion /
+  # malformed-result / harness-failure の Claude fallback の `fallback`。
+  # 例: `security#0`、`performance@s2#1`、`architecture@s3#loop1.0`、
+  # `comprehensive#loop2.fallback`。evaluator は固定で `evaluator`。R2b の chain
   # walk は 1 観点につき primary の複数行になり得る — 最後の行がその観点の
   # primary reviewer 結果。role: fallback は primary_chain に利用可能な
   # エントリが無かったときの Claude 単独実行を表す。role: evaluator の
@@ -1026,6 +1161,8 @@ auto_fix:
   termination: clean
 residual_critical_high: 0
 rework_required: false       # true → implement へ差し戻し
+unreviewed_perspectives: []  # coverage の出力をそのまま写す。dispatch したが completed の run が無い観点。無ければ空
+partially_reviewed_perspectives: []  # coverage の出力をそのまま写す。perspective / unreviewed_files / reason の entry。無ければ空
 triage_filing:               # present and empty when this round's disposition was `another-round`
   executed: false
   branch: null                # ntd | report, null when not executed
@@ -1090,7 +1227,11 @@ without a confirmed basis is recorded as an ordinary finding with
 `resolution: unresolved` and a `resolution_reason` beginning `unverified`; it
 is not counted in `residual_critical_high`, is not among the residual findings
 rework-planner receives, and is not re-marked `deferred` by the batch
-rework-cap step.
+rework-cap step. A missing-implementation finding of a spec rescue run (Phase
+R3b, "Rescue-run findings") is recorded the same way: `resolution: unresolved`
+with a `resolution_reason` beginning `unverified`, not counted in
+`residual_critical_high`, not among the residual findings rework-planner
+receives, and not re-marked `deferred` by the batch rework-cap step.
 
 The round record also persists the evaluation's `round_summary`,
 `recommended_action`, and `action_rationale` under a root `evaluation`
@@ -1155,22 +1296,33 @@ offered interactively.
 completion blocker): among perspectives actually dispatched this round in
 Phase R2 (excluding any `requires_spec` perspective skipped there because
 `spec_available == false` — no dispatch, no `perspective_runs` entry, nothing
-to disclose), a perspective is listed here ONLY after its Phase R2b Claude
-fallback (the chain-exhausted case, the malformed-result case, or the
-harness-level-failure case) has itself been dispatched and produced no
-`status: completed` entry — the common case
-of a perspective ending the round with zero completed runs is now
-structurally closed by that fallback dispatch rather than merely disclosed.
-List such perspectives under a round-record-root `unreviewed_perspectives`
-field (present and empty when there are none). This is disclosure, not a
-gate: the step still completes whenever `residual_critical_high == 0` above
-holds, and no new gate identifier or batch non-packet gates table entry is
-introduced for it. The committed round record `reviews/round{N}.yaml` —
-which `references/batch-mode.md`'s output-suppression discipline explicitly
-does not touch (Phase R6) — is the batch-visible channel that carries this
-disclosure; interactive mode additionally surfaces the same list in the
-Phase R6 report so a human is not silently left unaware that a perspective
-went unreviewed.
+to disclose — and excluding axis 2's `source: tool` run), a perspective is
+listed here whenever it has no `status: completed` run, whatever its last
+`skip_reason` was; a retryable `skip_reason` does not keep it off the list.
+The list is copied as given from the `unreviewed_perspectives` output of the
+`coverage` operation, in dispatch order. List such perspectives under a
+round-record-root `unreviewed_perspectives` field
+(present and empty when there are none). This is disclosure, not a gate: the
+step still completes whenever `residual_critical_high == 0` above holds, and no
+new gate identifier or batch non-packet gates table entry is introduced for
+it. The committed round record `reviews/round{N}.yaml` — which
+`references/batch-mode.md`'s output-suppression discipline explicitly does not
+touch (Phase R6) — is the batch-visible channel that carries this disclosure;
+interactive mode additionally surfaces the same list in the Phase R6 report so
+a human is not silently left unaware that a perspective went unreviewed.
+
+**Partial-review disclosure** (record-keeping only — never a completion
+blocker): the round record also holds a root field
+`partially_reviewed_perspectives` (present and empty when there are none),
+copied as given from the `partially_reviewed_perspectives` output of the
+`coverage` operation. Each entry holds `perspective`, `unreviewed_files` and
+`reason`; `reason` joins the tokens that apply among `changed_after_review`,
+`shard_cap_exceeded`, `run_not_completed` and `spec_rescue` with `,` and no
+space, in that order. A perspective listed in `unreviewed_perspectives` is not
+listed here too. This is disclosure only: it adds no gate, no gate identifier
+and no question, and the completion gate above is unchanged. Both coverage
+fields hold project-relative paths and perspective names only, never an
+absolute path and never reviewer-written text.
 
 Rework path (interactive): when the user selects rework, follow the fixed
 ordering `references/rework-task-synthesis.md` Section 10 states for
@@ -1281,6 +1433,15 @@ the report also shows "triage filing incomplete" together with that package
 list (Phase R4's "Triage filing" states the policy). This is disclosure
 only: it introduces no new gate identifier and never affects the completion
 gate.
+
+The report also renders, from the round record, every perspective listed in
+`unreviewed_perspectives` and every entry of
+`partially_reviewed_perspectives` with its `reason` and its full
+`unreviewed_files` list, so an unreviewed range is never presented as a clean
+review. This is disclosure only: it introduces no new gate identifier and
+never affects the completion gate. The batch final result carries the same
+content through `references/batch-mode.md`'s `## Reporting` item list.
+
 タメ語・女性・体言止めなし。develop-駆動では末尾に round 記録のパスと
 workflow.yaml の review サマリ更新結果を1行ずつ添える。
 

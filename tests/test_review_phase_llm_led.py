@@ -10,8 +10,9 @@ Covers task0002 Acceptance Criteria
   dispatches the Claude reviewer only on the no-available-entry branch, and
   the document contains no surviving description of a Claude + cross-model
   parallel double-run or of agreement scoring.
-- AC-2: Phase R2b still lists exactly the three retryable skip reasons with
-  unchanged advance semantics and the two-fallback cap, keeps the
+- AC-2: Phase R2b lists exactly the retryable skip reasons (the original
+  three with unchanged advance semantics, plus `review_data_too_large` since
+  large-diff-review-coverage task0004) and the two-fallback cap, keeps the
   one-message-per-hop rule, and states that the evaluator dispatch happens
   only after the walk completes.
 - AC-3: a `Phase R3a` section with the pinned heading dispatches
@@ -302,6 +303,10 @@ class TestAC2PhaseR2bChainWalk(unittest.TestCase):
         )
 
     def test_exactly_three_retryable_skip_reasons_unchanged(self):
+        # large-diff-review-coverage task0004 (FR10): the table gained a
+        # fourth row, `review_data_too_large`; the three original rows stay
+        # byte-identical. The test keeps its name so the records that list
+        # it keep resolving.
         table = (
             "| `skip_reason` | What it means | Advance to |\n"
             "|---|---|---|\n"
@@ -312,11 +317,13 @@ class TestAC2PhaseR2bChainWalk(unittest.TestCase):
             "**different** harness |\n"
             "| `harness_unavailable` | the harness could not be reached "
             "at all (proxy down, profile broken, wrapper missing) | the "
-            "next entry of a **different** harness |"
+            "next entry of a **different** harness |\n"
+            "| `review_data_too_large` | the assembled prompt exceeds the "
+            "model's context | the next entry of a **different** harness |"
         )
         self.assertIn(table, self.r2b)
-        # Exactly three retryable reasons -- no fourth was added.
-        self.assertEqual(self.r2b.count("| the next entry"), 3)
+        # Exactly four retryable reasons -- no fifth was added.
+        self.assertEqual(self.r2b.count("| the next entry"), 4)
 
     def test_two_fallback_cap_unchanged(self):
         self.assertIn(
@@ -931,17 +938,17 @@ class TestAC4UnreviewedPerspectiveDisclosureAfterFallback(unittest.TestCase):
         cls.r5 = DocumentFixture.r5()
 
     def test_disclosure_gated_on_fallback_having_been_dispatched(self):
+        # large-diff-review-coverage FR4 supersedes the earlier gating: a
+        # dispatched perspective with no completed run is listed whatever its
+        # last `skip_reason` was, so the disclosure no longer waits for the
+        # Claude fallback to have been dispatched.
         norm = _norm(self.r5)
         self.assertIn(
-            "a perspective is listed here ONLY after its Phase R2b Claude "
-            "fallback",
+            "a perspective is listed here whenever it has no `status: "
+            "completed` run, whatever its last `skip_reason` was",
             norm,
         )
-        self.assertIn(
-            "has itself been dispatched and produced no `status: "
-            "completed` entry",
-            norm,
-        )
+        self.assertNotIn("ONLY after its Phase R2b Claude fallback", norm)
 
     def test_field_name_root_position_and_empty_rule_unchanged(self):
         self.assertIn(

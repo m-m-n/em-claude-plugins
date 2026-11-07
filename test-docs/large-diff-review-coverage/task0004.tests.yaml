@@ -1,0 +1,146 @@
+task_id: task0004
+# Refreshed after merging the parent into the task branch (parent-side adoption of the review-phase digest pin):
+# the suite run right after the adoption held one failure, the pin that the merged review-phase.md no longer matched.
+baseline_failures:
+  - test_tier_record_schema_v2.TestReviewDocumentsUntouched.test_review_phase_md_unchanged
+# python3 -m unittest discover -s tests re-run after the re-implementation (digest pin refreshed): OK
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_review_phase_shard_dispatch.TestAC1PhaseR2MeasurementAndDispatch.test_measurement_step_is_stated_before_the_fan_out
+      - tests.test_review_phase_shard_dispatch.TestAC1PhaseR2MeasurementAndDispatch.test_unsplit_and_split_dispatch_are_stated
+      - tests.test_review_phase_shard_dispatch.TestAC1PhaseR2MeasurementAndDispatch.test_pinned_one_primary_sentences_are_qualified_per_shard
+      - tests.test_review_phase_shard_dispatch.TestAC1PhaseR2MeasurementAndDispatch.test_task_calls_still_go_in_one_message_for_split_rounds
+      - tests.test_review_phase_shard_dispatch.TestAC1PhaseR2MeasurementAndDispatch.test_every_measurement_phrase_is_load_bearing
+      - tests.test_review_phase_shard_dispatch.TestAC1PhaseR2MeasurementAndDispatch.test_every_split_dispatch_phrase_is_load_bearing
+      - tests.test_review_phase_shard_dispatch.TestAC1PhaseR2MeasurementAndDispatch.test_forged_measurement_after_the_first_dispatch_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestAC1PhaseR2MeasurementAndDispatch.test_forged_measurement_without_abort_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestAC1PhaseR2MeasurementAndDispatch.test_forged_dispatch_of_every_shard_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestAC1PhaseR2MeasurementAndDispatch.test_forged_unqualified_one_primary_sentence_is_rejected
+    red_confirmed: true
+    red_reason: >
+      Run against the pre-change review-phase.md, test_measurement_step_is_stated_before_the_fan_out,
+      test_unsplit_and_split_dispatch_are_stated, test_pinned_one_primary_sentences_are_qualified_per_shard
+      and test_task_calls_still_go_in_one_message_for_split_rounds each failed (the matcher returned
+      False / the phrase "Shard dispatches are Task calls too" was absent): Phase R2 had no
+      review-shards step, no per-shard dispatch rule and no per-shard qualifier on the two pinned
+      "exactly one primary reviewer" sentences. The forged-text tests failed there too because the
+      real text lacked the paragraph their mutation targets.
+  AC-2:
+    tests:
+      - tests.test_review_phase_shard_dispatch.TestAC2ShardInputBlock.test_shard_dispatch_input_block_is_stated
+      - tests.test_review_phase_shard_dispatch.TestAC2ShardInputBlock.test_every_shard_input_phrase_is_load_bearing
+      - tests.test_review_phase_shard_dispatch.TestAC2ShardInputBlock.test_forged_cmd_rejoined_from_script_output_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestAC2ShardInputBlock.test_forged_added_shard_field_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestAC2ShardInputBlock.test_forged_field_list_with_a_shard_field_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestAC2ShardInputBlock.test_reviewer_input_field_list_is_unchanged
+      - tests.test_review_phase_shard_dispatch.TestAC2ShardInputBlock.test_review_output_schema_has_no_shard_property
+    red_confirmed: true
+    red_reason: >
+      Against the pre-change review-phase.md, test_shard_dispatch_input_block_is_stated failed
+      (matcher False: no shard dispatch paragraph, no validated-set or "No input field is added"
+      statement). test_reviewer_input_field_list_is_unchanged and
+      test_review_output_schema_has_no_shard_property passed before the change by design: they pin
+      that the reviewer input fields and review-output-schema.json stay as they were.
+  AC-3:
+    tests:
+      - tests.test_review_phase_shard_dispatch.TestAC3RunIdGrammar.test_whole_grammar_is_stated
+      - tests.test_review_phase_shard_dispatch.TestAC3RunIdGrammar.test_old_phase_r4_run_id_form_is_gone_from_r2_and_r2b
+      - tests.test_review_phase_shard_dispatch.TestAC3RunIdGrammar.test_every_run_id_phrase_is_load_bearing
+      - tests.test_review_phase_shard_dispatch.TestAC3RunIdGrammar.test_forged_shard_marker_on_every_pass_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestAC3RunIdGrammar.test_forged_old_loop_form_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestAC3RunIdGrammar.test_forged_old_loop_form_in_r2b_is_rejected
+    red_confirmed: true
+    red_reason: >
+      Against the pre-change review-phase.md, test_whole_grammar_is_stated failed (the grammar
+      string {perspective}[@s{k}]#[loop{N}.]{chain_index|fallback} was absent) and
+      test_old_phase_r4_run_id_form_is_gone_from_r2_and_r2b failed (the old
+      {perspective}#loop{N} form was still in Phase R2).
+  AC-4:
+    tests:
+      - tests.test_review_phase_shard_dispatch.TestAC4PerShardWalk.test_walk_rules_apply_per_shard
+      - tests.test_review_phase_shard_dispatch.TestAC4PerShardWalk.test_listing_sentences_name_the_unit_without_a_completed_run
+      - tests.test_review_phase_shard_dispatch.TestAC4PerShardWalk.test_axis_2_exclusion_keeps_pins_and_names_task_dispatched_lists
+      - tests.test_review_phase_shard_dispatch.TestAC4PerShardWalk.test_existing_pinned_r2b_phrases_are_still_present
+      - tests.test_review_phase_shard_dispatch.TestAC4PerShardWalk.test_every_per_shard_phrase_is_load_bearing
+      - tests.test_review_phase_shard_dispatch.TestAC4PerShardWalk.test_forged_paragraph_after_the_table_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestAC4PerShardWalk.test_forged_shard_result_replacing_another_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestAC4PerShardWalk.test_forged_removal_of_a_pinned_phrase_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestAC4PerShardWalk.test_forged_old_unreviewed_listing_sentence_is_rejected
+      - tests.test_review_phase_llm_led.TestAC2PhaseR2bChainWalk.test_two_fallback_cap_unchanged
+      - tests.test_review_phase_llm_led.TestAC2PhaseR2bChainWalk.test_one_message_per_hop_rule_kept
+      - tests.test_review_phase_llm_led.TestAC2FallbackBudgetAndBatching.test_fallback_failure_ends_the_round_unreviewed_but_degrades
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC4SourceToolExcludedFromChainWalk.test_r2b_states_never_in_unreviewed_perspectives
+      - tests.test_threat_model_review_phase.TestAC4PhaseR2bCarriesSameValue.test_threat_model_path_carried_across_hops
+    red_confirmed: true
+    red_reason: >
+      Against the pre-change review-phase.md, test_walk_rules_apply_per_shard failed (no
+      "Split passes." paragraph between the opening sentence and the routing table),
+      test_listing_sentences_name_the_unit_without_a_completed_run failed (the old
+      "end up in Phase R5's `unreviewed_perspectives`" sentence was still there) and
+      test_axis_2_exclusion_keeps_pins_and_names_task_dispatched_lists failed (the old clause
+      about the Claude fallback was still there). The existing pin tests listed from
+      test_review_phase_llm_led, test_sca_axis_review_phase_r0_r3 and test_threat_model_review_phase
+      passed before the change and still pass: they detect removal of the pinned Phase R2b phrases;
+      no red state occurred for that part.
+  AC-5:
+    tests:
+      - tests.test_review_phase_shard_dispatch.TestAC5RoutingTableAndLitellmException.test_table_has_four_rows_and_the_three_old_rows_are_unchanged
+      - tests.test_review_phase_shard_dispatch.TestAC5RoutingTableAndLitellmException.test_litellm_exception_is_stated_with_the_recorded_harness
+      - tests.test_review_phase_shard_dispatch.TestAC5RoutingTableAndLitellmException.test_exception_sits_with_the_schema_validity_paragraph
+      - tests.test_review_phase_shard_dispatch.TestAC5RoutingTableAndLitellmException.test_table_keeps_exactly_four_retryable_rows_by_count
+      - tests.test_review_phase_shard_dispatch.TestAC5RoutingTableAndLitellmException.test_every_litellm_phrase_is_load_bearing
+      - tests.test_review_phase_shard_dispatch.TestAC5RoutingTableAndLitellmException.test_forged_three_row_table_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestAC5RoutingTableAndLitellmException.test_forged_fourth_row_advancing_within_the_harness_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestAC5RoutingTableAndLitellmException.test_forged_changed_old_row_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestAC5RoutingTableAndLitellmException.test_forged_rule_keyed_on_the_result_source_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestAC5RoutingTableAndLitellmException.test_forged_rule_whose_source_starts_with_litellm_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestAC5RoutingTableAndLitellmException.test_forged_failed_result_with_a_skip_reason_is_rejected
+      - tests.test_review_phase_llm_led.TestAC2PhaseR2bChainWalk.test_exactly_three_retryable_skip_reasons_unchanged
+    red_confirmed: true
+    red_reason: >
+      Against the pre-change review-phase.md, test_table_has_four_rows_and_the_three_old_rows_are_unchanged
+      failed (three rows only), test_litellm_exception_is_stated_with_the_recorded_harness failed
+      (no classify_results paragraph), and the updated
+      test_exactly_three_retryable_skip_reasons_unchanged (now pinning four rows and a count of four)
+      failed with an AssertionError on the table text.
+  AC-6:
+    tests:
+      - tests.test_review_phase_shard_dispatch.TestAC6SpecOrderAndRescue.test_spec_order_and_rescue_runs_are_stated
+      - tests.test_review_phase_shard_dispatch.TestAC6SpecOrderAndRescue.test_r2_dispatches_spec_once_on_the_full_diff
+      - tests.test_review_phase_shard_dispatch.TestAC6SpecOrderAndRescue.test_rescue_runs_are_not_counted_as_primary_dispatches
+      - tests.test_review_phase_shard_dispatch.TestAC6SpecOrderAndRescue.test_every_spec_phrase_is_load_bearing
+      - tests.test_review_phase_shard_dispatch.TestAC6SpecOrderAndRescue.test_forged_rescue_in_an_unsplit_pass_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestAC6SpecOrderAndRescue.test_forged_rescue_before_the_claude_fallback_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestAC6SpecOrderAndRescue.test_forged_rescue_beyond_the_cap_is_rejected
+    red_confirmed: true
+    red_reason: >
+      Against the pre-change review-phase.md, test_spec_order_and_rescue_runs_are_stated failed
+      (no "spec order and rescue runs." paragraph) and test_r2_dispatches_spec_once_on_the_full_diff
+      failed (the sentence was absent from Phase R2).
+  AC-7:
+    tests:
+      - tests.test_review_phase_shard_dispatch.TestAC7ReadmeAndUnchangedInterfaces.test_primary_reviewer_paragraph_states_per_shard_dispatch
+      - tests.test_review_phase_shard_dispatch.TestAC7ReadmeAndUnchangedInterfaces.test_hop_paragraph_names_review_data_too_large_and_per_shard_hops
+      - tests.test_review_phase_shard_dispatch.TestAC7ReadmeAndUnchangedInterfaces.test_forged_readme_without_the_shard_sentence_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestAC7ReadmeAndUnchangedInterfaces.test_forged_readme_losing_a_pinned_phrase_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestAC7ReadmeAndUnchangedInterfaces.test_forged_readme_with_r2b_before_the_chain_table_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestAC7ReadmeAndUnchangedInterfaces.test_forged_readme_without_the_new_reason_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestAC7ReadmeAndUnchangedInterfaces.test_forged_readme_without_per_shard_hops_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestAC7ReadmeAndUnchangedInterfaces.test_output_schema_keeps_its_top_level_shape
+      - tests.test_review_phase_shard_dispatch.TestAC7ReadmeAndUnchangedInterfaces.test_vertex_reviewer_block_is_still_otherwise_identical
+      - tests.test_review_phase_shard_dispatch.TestOwnModuleStdlibOnly.test_only_standard_library_imports
+      - tests.test_llm_led_review_user_docs.TestReadmeReviewSection.test_describes_one_primary_reviewer_dispatch
+      - tests.test_llm_led_review_user_docs.TestReadmeReviewSection.test_describes_claude_fallback_on_full_chain_unavailability
+      - tests.test_llm_led_review_user_docs.TestReadmeReviewSection.test_chain_table_lists_all_six_perspectives_with_pinned_chains
+    red_confirmed: true
+    red_reason: >
+      Against the pre-change README.md, test_primary_reviewer_paragraph_states_per_shard_dispatch and
+      test_hop_paragraph_names_review_data_too_large_and_per_shard_hops failed (no shard sentence, no
+      review_data_too_large in the jump list, no per-shard hop count). The routing-table pin of four
+      rows is recorded under AC-5 and was watched failing there. The unchanged-interface checks
+      (output schema, vertex reviewer block, README pins of test_llm_led_review_user_docs) and the
+      stdlib-only check passed before the change by design; no red state occurred for them. The
+      task changes no vertex-review file (none exists in this repository), no reviewer input field and
+      no review-output-schema.json.

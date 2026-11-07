@@ -785,7 +785,12 @@ class TestAC8SourceMapRow(unittest.TestCase):
         self.assertTrue(_new_source_map_row_is_well_formed(self.rows))
 
     def test_source_map_has_eight_rows(self):
-        self.assertEqual(len(self.rows), 8)
+        # large-diff-review-coverage task0006 AC-5: the unreviewed and
+        # partially reviewed perspectives add one more row, so the count is
+        # now nine (the method name is kept: other records name this test
+        # ID). The triage row stays second to last and the kept-branch row
+        # last, checked by the well-formedness tests above.
+        self.assertEqual(len(self.rows), 9)
 
 
 class TestAC8NoNewStructure(unittest.TestCase):

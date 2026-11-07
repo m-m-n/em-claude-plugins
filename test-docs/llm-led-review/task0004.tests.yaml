@@ -26,7 +26,7 @@ acceptance_tests:
       - tests.test_reviewer_roles_protocol.TestFrozenInputFieldNames.test_every_documented_input_field_name_present
       - tests.test_reviewer_roles_protocol.TestFrozenSkipReasonStrings.test_every_skip_reason_string_present_verbatim
       - tests.test_reviewer_roles_protocol.TestFrozenSkipReasonStrings.test_retryable_set_statement_present
-      - tests.test_reviewer_roles_protocol.TestFrozenSkipReasonStrings.test_exactly_three_retryable_reasons_named
+      - tests.test_reviewer_roles_protocol.TestFrozenSkipReasonStrings.test_exactly_four_retryable_reasons_named
       - tests.test_reviewer_roles_protocol.TestFrozenSkipReasonStrings.test_non_retryable_skip_reasons_statement_present
       - tests.test_reviewer_roles_protocol.TestFrozenSeverityLevels.test_three_severity_levels_defined_verbatim
       - tests.test_reviewer_roles_protocol.TestFrozenSectionsUnchanged.test_frozen_sections_hash_unchanged

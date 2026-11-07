@@ -1,0 +1,539 @@
+schema_version: 1
+feature: large-diff-review-coverage
+created: '2026-11-07'
+base_branch: main
+goal: |
+  em-workflow のレビューで、大きな差分だと観点が未実施のまま指摘なしとして完了する
+
+  ## 現象 (必須)
+
+  差分が大きいと em-workflow のレビューが一部の観点を実施しないまま完了する。feature subagent-report-write-block（差分 423 KB）で次の 2 つが同時に起きた。
+
+  1. Codex のレビュアーが 540 秒でタイムアウト（exit 124）すると、findings: []、skipped: false の結果を返す。スキーマには合うので、手順どおりなら「指摘なしで完了」になる
+  2. litellm のレビュアーは入力が 300,000 文字を超えると review_data_too_large でスキップする。この理由は再試行不可で Claude の代替も走らないので、performance / architecture / spec の 3 観点が誰にも見られないままレビューが完了する。unreviewed_perspectives にも載らない
+
+  ## 再現手順 (必須)
+
+  1. 差分が 300,000 文字を超える feature で review フェーズを実行する
+  2. performance / architecture / spec が review_data_too_large でスキップされ、residual が 0 ならレビューは完了する
+  3. Codex が 540 秒以内に終わらない観点は空の結果になる
+
+  ## 期待する挙動 (必須)
+
+  実施できなかった観点が「指摘なし」と区別され、差分を分割するなどして 3 観点も実施される。
+
+  ## 完了の定義 (必須)
+
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある
+
+  ## 該当箇所 (任意)
+
+  - em-workflow/agents/codex-reviewer.md（タイムアウトの扱い）
+  - em-workflow/references/review-phase.md（Phase R2b、unreviewed_perspectives）
+  - em-workflow/references/review-protocol.md（review_data_too_large）
+
+  ## 実害・発生条件 (任意)
+
+  今回は Codex のタイムアウトを失敗として扱い Claude レビュアーで代替した。3 観点は未実施のまま。
+parent_branch: em-workflow/large-diff-review-coverage/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.26
+      '2': 0.72
+      '3': 0.02
+    description_plus_code:
+      '0': 0.0
+      '1': 0.0
+      '2': 0.99
+      '3': 0.01
+  at: '2026-11-07T17:25:01+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: d0c187dae7fa5c8c3d206a94f43b610e3e22b884
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI の変更が無い
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: completed
+  completed_at_commit: 9c8036690d921aef4ada00f1363b0fe3ebe1e4bf
+- id: implement
+  status: completed
+  completed_at_commit: a62d61a446077a5f8978d737420c513a0de542d9
+  base_commit: 400bb009516bc9923d9186b44998ebcf0b4a614c
+- id: review
+  status: completed
+  completed_at_commit: 218de7fcee37c2c5f2153874dc0c547e12acfcaa
+- id: verify
+  status: completed
+  completed_at_commit: 368ca91d1addfc08e9a78dc7e1b18378248348bb
+  result: pass
+  failed_items: []
+  summary: |
+    python3 -m unittest discover -s tests: 14990 tests OK (skipped=1)
+    python3 em-workflow/scripts/check-plugin-invariants.py .: all PASS
+    TS-1..TS-13 / AC1..AC13: covered by the passing suite
+    Manual 1: reproduced with review-shards / review-coverage on a disposable
+      repository (6 files, 1,152,510 chars, 5 perspectives): shard_cap 4,
+      excess shards 5 and 6; performance / architecture partial with
+      shard_cap_exceeded and f5/f6; spec partial with spec_rescue
+    Manual 2: not walked by hand; the Phase R2 / R2b / R5 / R6 rules are
+      covered by the text-inspection tests (TS-7)
+- id: retrospect
+  status: completed
+  completed_at_commit: 42baaef5351d04f6578b1101f0ada2c0effb1997
+tasks:
+  task0001:
+    title: Codex reviewer timeout and non-JSON skip handling in both plugins
+    plan: tasks/task0001.md
+    files:
+    - tests/test_codex_reviewer_skip_handling.py
+    - em-workflow/agents/codex-reviewer.md
+    - em-review/agents/codex-reviewer.md
+    - em-workflow/references/review-protocol.md
+    - em-review/references/review-protocol.md
+    - tests/test_reviewer_roles_protocol.py
+    - tests/test_reproduction_reviewer_instructions.py
+    skills: []
+    domains:
+    - input-handling
+    - api-contract
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR10
+    - FR17
+    - FR18
+    status: merged
+    branch: em-workflow/large-diff-review-coverage/task0001
+    notes: null
+  task0002:
+    title: Review input measurement, shard split and dispatch cap script
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/scripts/review-shards.py
+    - tests/test_review_shards.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    - external-io
+    complexity: high
+    requirements:
+    - FR5
+    - FR6
+    - FR7
+    - FR18
+    - NFR1
+    - NFR3
+    - NFR4
+    - NFR6
+    status: merged
+    branch: em-workflow/large-diff-review-coverage/task0002
+    notes: null
+  task0003:
+    title: Result classification and coverage determination script
+    plan: tasks/task0003.md
+    files:
+    - em-workflow/scripts/review-coverage.py
+    - tests/test_review_coverage.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    - api-contract
+    complexity: high
+    requirements:
+    - FR3
+    - FR4
+    - FR8
+    - FR9
+    - FR11
+    - FR13
+    - FR14
+    - FR18
+    - NFR3
+    - NFR4
+    - NFR6
+    status: merged
+    branch: em-workflow/large-diff-review-coverage/task0003
+    notes: null
+  task0004:
+    title: Phase R2 / R2b shard dispatch, chain walk and spec rescue
+    plan: tasks/task0004.md
+    files:
+    - tests/test_review_phase_shard_dispatch.py
+    - em-workflow/references/review-phase.md
+    - em-workflow/README.md
+    - tests/test_review_phase_llm_led.py
+    skills: []
+    domains:
+    - input-handling
+    - api-contract
+    - concurrency
+    - external-io
+    complexity: high
+    requirements:
+    - FR3
+    - FR5
+    - FR6
+    - FR7
+    - FR8
+    - FR9
+    - FR10
+    - FR11
+    - FR18
+    - NFR1
+    - NFR2
+    - NFR5
+    status: merged
+    branch: em-workflow/large-diff-review-coverage/task0004
+    notes: null
+  task0005:
+    title: Rescue-run findings, Phase R4 re-review shards and the Phase R5 coverage record
+    plan: tasks/task0005.md
+    files:
+    - tests/test_review_phase_coverage_record.py
+    - em-workflow/references/review-phase.md
+    - tests/test_review_phase_llm_led.py
+    - tests/test_tier_record_schema_v2.py
+    skills: []
+    domains:
+    - input-handling
+    - api-contract
+    - data-persistence
+    complexity: high
+    requirements:
+    - FR4
+    - FR7
+    - FR8
+    - FR12
+    - FR13
+    - FR14
+    - FR15
+    - FR18
+    status: merged
+    branch: em-workflow/large-diff-review-coverage/task0005
+    notes: null
+  task0006:
+    title: Evaluator handoff and reporting of both coverage fields
+    plan: tasks/task0006.md
+    files:
+    - tests/test_review_coverage_disclosure.py
+    - em-workflow/references/review-phase.md
+    - em-workflow/references/review-evaluation-contract.md
+    - em-workflow/agents/review-evaluator.md
+    - em-workflow/references/batch-mode.md
+    - tests/test_batch_quiet_output_discipline.py
+    - tests/test_batch_quiet_output_audit_persistence.py
+    - tests/test_batch_quiet_output_audit_record_contract.py
+    - tests/test_wrapper_fallback_doc_realignment.py
+    - tests/test_sca_triage_receipt_partial_failure.py
+    skills: []
+    domains:
+    - api-contract
+    complexity: medium
+    requirements:
+    - FR15
+    - FR16
+    - FR18
+    status: merged
+    branch: em-workflow/large-diff-review-coverage/task0006
+    notes: null
+review:
+  status: completed
+  rounds_completed: 1
+  residual_critical_high: 0
+  needs_rework: false
+  perspectives:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - performance
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
+requirements:
+  FR1:
+    title: Codex タイムアウトの区別
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+  FR2:
+    title: Codex の non-JSON の区別
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+  FR3:
+    title: litellm の空結果の区別
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0003
+    - task0004
+    tests:
+    - TS-2
+  FR4:
+    title: 未実施の開示
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0003
+    - task0005
+    tests:
+    - TS-5
+  FR5:
+    title: レビュー入力のサイズ計測
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0002
+    - task0004
+    tests:
+    - TS-3
+  FR6:
+    title: ファイル単位のシャード分割
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0002
+    - task0004
+    tests:
+    - TS-3
+  FR7:
+    title: dispatch 上限
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0002
+    - task0004
+    - task0005
+    tests:
+    - TS-4
+  FR8:
+    title: run_id
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0003
+    - task0004
+    - task0005
+    tests:
+    - TS-6
+  FR9:
+    title: シャード単位の chain walk
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0003
+    - task0004
+    tests:
+    - TS-6
+  FR10:
+    title: review_data_too_large の経路
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0004
+    tests:
+    - TS-7
+  FR11:
+    title: spec 観点の全差分優先
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0003
+    - task0004
+    tests:
+    - TS-7
+  FR12:
+    title: 救済 run の未実装指摘
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0005
+    tests:
+    - TS-7
+  FR13:
+    title: 部分実施の記録
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0003
+    - task0005
+    tests:
+    - TS-5
+  FR14:
+    title: R4 再レビューの網羅
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0003
+    - task0005
+    tests:
+    - TS-5
+  FR15:
+    title: 完了と報告
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0005
+    - task0006
+    tests:
+    - TS-7
+  FR16:
+    title: evaluator への受け渡し
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0006
+    tests:
+    - TS-7
+  FR17:
+    title: em-review の揃え
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+  FR18:
+    title: 再発検出テスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    - task0006
+    tests:
+    - TS-9
+  NFR1:
+    title: 上限以下の round の互換性
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0002
+    - task0004
+    tests:
+    - TS-8
+  NFR2:
+    title: vertex-review の非変更
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0004
+    tests:
+    - TS-10
+  NFR3:
+    title: orchestrator の context
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0002
+    - task0003
+    tests:
+    - TS-11
+  NFR4:
+    title: 決定性
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0002
+    - task0003
+    tests:
+    - TS-12
+  NFR5:
+    title: レビュアーのインターフェース
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0004
+    tests:
+    - TS-8
+  NFR6:
+    title: テストの制約
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0002
+    - task0003
+    tests:
+    - TS-13
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

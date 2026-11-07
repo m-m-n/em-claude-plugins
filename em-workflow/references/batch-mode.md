@@ -130,9 +130,11 @@ resolution (gate / options / choice / Codex consulted or not), every
 autonomous fail-closed-route resolution (gate / option chosen / options not
 chosen / the discussion's key points / whether Codex was consulted / whether
 the Opus escalation ran, with its
-reasoning), every review round whose triage filing was incomplete (reported
-as "triage filing incomplete" with that round's unattempted packages),
-and the kept integration branch name
+reasoning), every review round's `unreviewed_perspectives` and
+`partially_reviewed_perspectives`, each partial entry with its reason and its
+unreviewed files, every review round whose triage filing was incomplete
+(reported as "triage filing incomplete" with that round's unattempted
+packages), and the kept integration branch name
 with the take-over guidance (batch never merges — the human switches to the
 branch in the main working tree and merges locally or pushes + opens a PR).
 The external service relays this to the human evaluator — it is the only
@@ -218,5 +220,6 @@ resolves to a persisted source:
 | Any deferred findings with their stable_ids | `feature-docs/{feature}/reviews/roundN.yaml` `resolution` / `stable_id` |
 | Every unlisted-gate fallback resolution | `feature-docs/{feature}/phase-state/batch-audit.yaml` `records[]` / `records[].resolution_note` (`references/phase-state.md`'s batch audit record file) |
 | Every autonomous fail-closed-route resolution | `feature-docs/{feature}/phase-state/batch-audit.yaml` `records[]` / `records[].resolution_note` (`references/phase-state.md`'s batch audit record file) |
+| Every review round's `unreviewed_perspectives` and `partially_reviewed_perspectives` | `feature-docs/{feature}/reviews/roundN.yaml` `unreviewed_perspectives` / `partially_reviewed_perspectives` (`references/review-phase.md` Phase R5) |
 | Every review round reported as "triage filing incomplete" | `feature-docs/{feature}/reviews/roundN.yaml` `triage_filing.unattempted_packages` / `triage_filing.failed_package` (`references/review-phase.md`'s triage-filing receipt) |
 | The kept integration branch name | `workflow.yaml` `parent_branch` plus the feature name |

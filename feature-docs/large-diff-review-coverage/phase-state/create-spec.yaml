@@ -1,0 +1,198 @@
+schema_version: 1
+feature: large-diff-review-coverage
+phase: create-spec
+status: completed
+generation: 1
+base_revision: c2dfca6df7e4ff3c89030d66b9659296d0dc5ed9
+last_input_digest: sha256:0ff538740248857b1a3329fa611f92b3fd08da40be4fd342d71a50bcf4ba7b69
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-11-07T17:32:00+09:00'
+    questions:
+    - question_id: requirement.split-strategy
+      status: answered
+    - question_id: requirement.split-limit
+      status: answered
+    - question_id: requirement.too-large-route
+      status: answered
+    - question_id: requirement.false-clean-scope
+      status: answered
+    - question_id: requirement.unreviewed-completion
+      status: answered
+    - question_id: requirement.unreviewed-record-shape
+      status: answered
+    - question_id: requirement.spec-shard-handling
+      status: answered
+    - question_id: requirement.em-review-scope
+      status: answered
+    - question_id: requirement.shard-cap
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+answers:
+  requirement.split-strategy:
+    question_id: requirement.split-strategy
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-07T17:50:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - file_shards_all
+    freeform: null
+    normalized_answer: file_shards_all（spec は下記の例外）
+    resolution_note: Codex 2 ターン相談。Codex 一致。Codex にも時間切れがあり LiteLLM 限定では残る
+  requirement.split-limit:
+    question_id: requirement.split-limit
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-07T17:50:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - limit_200k
+    freeform: null
+    normalized_answer: limit_200k。540 秒内の完了保証ではない初期値
+    resolution_note: Codex 一致。組み立て後の超過は too-large-route で扱う
+  requirement.too-large-route:
+    question_id: requirement.too-large-route
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-07T17:50:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - advance_other_harness
+    freeform: null
+    normalized_answer: advance_other_harness
+    resolution_note: Codex 一致。プロンプト上限と Codex の自己取得の上限は別物
+  requirement.false-clean-scope:
+    question_id: requirement.false-clean-scope
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-07T17:50:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - all_harnesses
+    freeform: null
+    normalized_answer: all_harnesses。外部プラグインの判定は「実行元が litellm・findings 空・summary 完全一致」に限定
+    resolution_note: Codex 一致 + 判定条件の絞り込みを採用
+  requirement.unreviewed-completion:
+    question_id: requirement.unreviewed-completion
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-07T17:50:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - disclose_and_report
+    freeform: null
+    normalized_answer: disclose_and_report
+    resolution_note: Codex 一致
+  requirement.unreviewed-record-shape:
+    question_id: requirement.unreviewed-record-shape
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-07T17:50:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - sibling_field
+    freeform: null
+    normalized_answer: sibling_field。両フィールドとも最終報告に含める
+    resolution_note: Codex 一致
+  requirement.spec-shard-handling:
+    question_id: requirement.spec-shard-handling
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-07T17:50:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: []
+    freeform: spec は分割せず全差分で先に実行し（muse-spark は超過、Codex の自己取得、Claude fallback の順）、全経路が失敗したときだけシャード単位で実行する。この救済
+      run の「未実装」系指摘は未検証として auto-fix と residual から除外し、R4 や評価失敗時も維持する。spec は一部実施として開示する
+    normalized_answer: 'spec_hybrid: 全差分優先 + シャード救済（未実装指摘は未検証で residual 外）'
+    resolution_note: Codex turn2 の案 C を採用。evaluator_verifies は 10 ファイル制限と R4 で evaluator
+      が動かない点で弱く、spec_whole_diff_self_fetch は失敗時に spec が丸ごと未実施になる
+  requirement.em-review-scope:
+    question_id: requirement.em-review-scope
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-07T17:50:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - codex_reviewer_parity
+    freeform: null
+    normalized_answer: codex_reviewer_parity
+    resolution_note: Codex 一致
+  requirement.shard-cap:
+    question_id: requirement.shard-cap
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-07T17:50:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids: []
+    freeform: 上限あり。1 ラウンドの primary reviewer dispatch を 24 件までにする。観点あたりのシャード数は floor(24
+      / 選択観点数)、超過シャードは決定的に未実施として開示する。再試行・Claude fallback は数えない。R4 の再レビューはループごとに同じ上限を別に適用する
+    normalized_answer: 'cap_with_disclosure: 1 ラウンド 24 primary dispatch、観点均等割'
+    resolution_note: Codex は再試行・R4 込み 24 回と優先順の循環配分を提案。方向は採用し、計算を単純にするため primary dispatch
+      のみを数える均等割へ変更（Claude 判断）
+  design-step.decision:
+    question_id: design-step.decision
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-07T17:50:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design step は skip（UI 変更なし）
+    resolution_note: policy select
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:847c4916d4d860997c2a1b9e87d9e2af9704904aa8ea5d4f4f7d25fbbda2e6c2
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:78138a0a60272bc8b7c37785d3033341da27de0469081acf022c35466350652c
+  output_digest: sha256:c1386fd066007d53e16a814e0f7fac4e219328c1d4cd63ad6b93558c40ad6ee9
+  dispatch_digest_inputs:
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    em-review/agents/codex-reviewer.md: sha256:c22c4c2344550ab73a6144d6e94d60a49907181331fcf966505cea1f5236b98e
+    em-review/references/review-protocol.md: sha256:c0bb205719e292274f16ef39ab1173c342cd7db6788bf27c5b004c25cd9f84dc
+    em-workflow/agents/codex-reviewer.md: sha256:f687e1d7fa79ca2c72494ce11871dcb30169b8efe5b0fa5d591082cd9657f1da
+    em-workflow/agents/review-evaluator.md: sha256:c39be2e86afe22daf86fad1b6187c12f35b49baf2cd0ce79a2b8ce8ef4e91d5d
+    em-workflow/agents/reviewer.md: sha256:49a3db46037446a339b3e7917e9f00b3ca9abbde489aefd83fc1a85613b2bc86
+    em-workflow/references/codex-cli.yaml: sha256:c2013b9ef76bea016bb10091bf8cf75f80675574068c17b130af1bf831d970ad
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
+    em-workflow/references/review-evaluation-contract.md: sha256:a58b07c2fca794897a1a639fe5400c0a613c65dcc4aa27cdde2fbee0db371fde
+    em-workflow/references/review-output-schema.json: sha256:050d037e247fdfe1927fdd4757a0081735e36daa616259cdf344c32d8b54c747
+    em-workflow/references/review-phase.md: sha256:cf10994b02a0028a57199a7be3bee103147edfbb4f2bda553da84600cf7da898
+    em-workflow/references/review-protocol.md: sha256:0bed81b01928b8a62aa49f0bf8f5651b9bef34c7177248f8ac170fa4a9f3d414
+    em-workflow/references/reviewers.yaml: sha256:598bc9ee5c2835920866bac5d0c1575e055faaeaa6c07e093b0754f035937e98
+    em-workflow/scripts/run_codex_exec.sh: sha256:54bd1de072d5e821e9d2b181e1b2e17e3fa81eaca5e18d9f331963eca05910f9
+    em-workflow/skills/develop/SKILL.md: sha256:1cffbb195ba0efbd46bb76a20f11c5d619a1237826e47cf217784674a71b71d7
+    em-workflow/skills/review/SKILL.md: sha256:8e197fa5f58ae2da9454476135b92ad530079c428bedd2e00cb4e6fb711380bc
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+    tests/test_codex_wrapper_single_invocation.py: sha256:5839d7421737dc50048d6fa063a6de6169ec949d47a05846b9c3ad9e7b559ce3
+    tests/test_reproduction_reviewer_instructions.py: sha256:318484ac4409505b1497db94bcb028cc91f3d3c7f3b0323ffe4ddd2cd9b2807a
+    tests/test_review_phase_llm_led.py: sha256:8bd8728a07722e16b4bf76664172409036ad3a3b142bdec73030444589ba6bba
+    tests/test_reviewer_roles_protocol.py: sha256:f236f4e39bd8a764d4f8ce6285c559a4281d7688ab87a65185c24200e14d3017
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:0ff538740248857b1a3329fa611f92b3fd08da40be4fd342d71a50bcf4ba7b69
+  output_digest: sha256:876af527f779aa3828d313542105d224d7ae61ca77c4f723cb8e80cb6550a0c4
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/spec-writer-contract.md: sha256:c66e457a4a68d860f757f9e6cae377b6918d29a3f3152d9a12fc92570303c5f2
+    em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
+    em-workflow/references/templates/spec-document.md: sha256:a5d0106c39a5df7dc2365357a9546588275ed6c7a1651c866e75fa327a7fa592
+  self_write_set: []
+artifacts:
+- path: feature-docs/large-diff-review-coverage/REQUIREMENTS.md
+  sha256: sha256:a009cd9d7573c0277d3936531d3b50bbec7b1f99955dc05c0f726698f6b2a03c
+  produced_by: create-spec-run-0003
+- path: feature-docs/large-diff-review-coverage/SPEC.md
+  sha256: sha256:8b5e62196a6ad8d7ed50f7e41a28fb60f505f92ce6f11e8898b9213949d7ce81
+  produced_by: create-spec-run-0003
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
