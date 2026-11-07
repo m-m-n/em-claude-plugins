@@ -1526,8 +1526,14 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # triple backticks is reported, and the read side keeps its own range.
     # PINNED_VALIDATOR_TEST_LINE below is unaffected and still asserted. Same
     # rationale: refresh, don't remove.
+    #
+    # Refreshed again by scripts-test-bytecode-suppression/task0002 (FR1): the
+    # module's `_load_module` runs the validator's module body with bytecode
+    # writing turned off only for that load and puts the caller's value back;
+    # no test and no assertion changes. PINNED_VALIDATOR_TEST_LINE below is
+    # unaffected and still asserted. Same rationale: refresh, don't remove.
     TEST_VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "a3cf9384db7416b6f55007e901564cc609fa5ea152d109b2d2bc0a7571333032"
+        "ca941c627d00d57fedb4c0f5dcbb60cc951ecc5837383d5023ed03244bdef6eb"
     )
     FIXTURE_SHA256 = (
         "c8414e673876bb05dc9d35c571b35e255a53c185586d7bc876edf5aadd1f05f5"

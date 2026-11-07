@@ -32,6 +32,7 @@ lives in tests/test_validate_worker_output.py):
 
 import os
 import re
+import sys
 import unittest
 from pathlib import Path
 
@@ -55,7 +56,12 @@ def _load_validator_module():
         "validate_worker_output_gate_outcome", script_path
     )
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    previous = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = previous
     return module
 
 

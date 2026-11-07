@@ -122,6 +122,7 @@ carry-over declaration. This task's own Acceptance Criteria covered here:
 
 import importlib.util
 import re
+import sys
 import unittest
 from pathlib import Path
 
@@ -153,7 +154,12 @@ def _load_validator_module():
         "validate_worker_output_replanning_producer_alignment", VALIDATOR_SCRIPT_PATH
     )
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    previous = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = previous
     return module
 
 NUMBER_WORDS = (
