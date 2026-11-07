@@ -482,8 +482,12 @@ class TestRetrospectTierDecisionBlock(unittest.TestCase):
 # Refreshed by task0005 of rework-docs-only-task-routing (FR9): Phase R5's
 # interactive and batch rework paths gained the sentence on a review-sourced
 # docs-only round.
+# Refreshed by task0004 of large-diff-review-coverage (FR3, FR5-FR11): Phase
+# R2 gained the review-input measurement, the per-shard dispatch and the run_id
+# grammar; Phase R2b gained the per-shard walk, the `review_data_too_large`
+# row, the litellm empty-result exception and the spec rescue order.
 REVIEW_PHASE_SHA256 = (
-    "cf10994b02a0028a57199a7be3bee103147edfbb4f2bda553da84600cf7da898"
+    "eb6fcdc1f6b9c90c68392c037d45b72754f6e7cb964a24945c6d2eaadf65af24"
 )
 REVIEW_RULES_SHA256 = (
     "56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931"
