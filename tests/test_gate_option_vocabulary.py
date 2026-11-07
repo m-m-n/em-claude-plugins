@@ -1409,8 +1409,18 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # `_TS_ID_RE` and `extract_verification_scenario_ids` are unchanged.
     # PINNED_VALIDATOR_TEST_LINE below is unaffected and still asserted. Same
     # rationale: refresh, don't remove.
+    #
+    # Refreshed again by plan-feature-docs-route/task0006 (FR8, FR9): the
+    # validator gains the `tasks_patch.feature_docs_removals` field of
+    # `replace_planning` (shape, permission on the correction entry, the
+    # `feature_docs_removal_precondition_errors` function the new entry script
+    # shares, the limits, the in-memory application, `-incomplete` and the
+    # plan agreement) and its `--workflow`, `--journal` and `--feature-dir`
+    # inputs under `--dry-run-apply`; a permitted correction is outside the
+    # report-name check on carried tasks. PINNED_VALIDATOR_TEST_LINE below is
+    # unaffected and still asserted. Same rationale: refresh, don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "2e7a97b983c06dce938c478e2af4b909cc20bd0ae3047ca08da3406f51c001fc"
+        "7b74f2c12629ae38b720698e4223b9c280ff26c301b5229c58e54ee09acec09c"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-
