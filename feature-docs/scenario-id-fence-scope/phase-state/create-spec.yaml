@@ -4,8 +4,8 @@ phase: create-spec
 status: dispatching
 generation: 1
 base_revision: ec5d343cdfeef6d07385c2be916999007fe59cbc
-last_input_digest: sha256:cea99b555a6b87cfe065ae64f99af7e9f85773e900b167632cd434d9b5cb3e4f
-active_request_id: create-spec-run-0002
+last_input_digest: sha256:6e4ea59ad82a32337f42ffdcecde4f5f54befb4c4ccf08f9ecbc96ea8f975893
+active_request_id: create-spec-run-0003
 packets:
   create-spec-q0001:
     status: answered
@@ -68,7 +68,7 @@ worker_runs:
   input_digest: sha256:8281852102edc10e11cd775188caf79fcccbd392e842eb0e7a0d6b955166fa1a
   dispatch_digest_inputs: {}
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:cea99b555a6b87cfe065ae64f99af7e9f85773e900b167632cd434d9b5cb3e4f
   dispatch_digest_inputs:
     CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
@@ -82,6 +82,14 @@ worker_runs:
     tests/test_scenario_id_plan_writing_rule.py: sha256:c13f5c9bee67c0f46b110f48fae92eec930a0ebb789e79b1a73a2fef5bcf2cad
     tests/test_scenario_id_planner_docs.py: sha256:7941695eb5ecd4f27c0b011b20a557d0549d0bf88100c8cdc1c738ef9478b49c
     tests/test_validate_worker_output.py: sha256:e07203890d7a6509a12c154f01b21d740db86935501d7e5cd49e3d512a0cb8f2
+  output_digest: sha256:23a4b2696cc9c7f3e02d40392988924a2299dd3eeed29b465bbf3c6ce368f9de
+  self_write_set: []
+- request_id: create-spec-run-0003
+  status: dispatched
+  input_digest: sha256:6e4ea59ad82a32337f42ffdcecde4f5f54befb4c4ccf08f9ecbc96ea8f975893
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/spec-writer-contract.md: sha256:c66e457a4a68d860f757f9e6cae377b6918d29a3f3152d9a12fc92570303c5f2
+    em-workflow/references/templates/spec-document.md: sha256:a5d0106c39a5df7dc2365357a9546588275ed6c7a1651c866e75fa327a7fa592
 artifacts: []
 patches: []
 progress_fingerprint: null
