@@ -1409,8 +1409,23 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # `_TS_ID_RE` and `extract_verification_scenario_ids` are unchanged.
     # PINNED_VALIDATOR_TEST_LINE below is unaffected and still asserted. Same
     # rationale: refresh, don't remove.
+    #
+    # Refreshed again by plan-feature-docs-route/task0005 (FR3 to FR7): the
+    # validator gains the other-feature document route. `WRITE_POLICY_ACTIONS`
+    # gains `amend_other_feature`, the scope predicate
+    # `other_feature_doc_in_scope` implements the one scope rule, and the
+    # three codes `other-feature-doc-scope`, `other-feature-doc-request` and
+    # `other-feature-doc-fix` check the action's admission, the stage-1
+    # request result, the equality of the declared fixes with the written
+    # grants, and the shape of the create-plan phase-state's
+    # `other_feature_doc_fixes` list. The envelope's write_policy targets are
+    # now read through one tolerant helper, so a malformed target is reported
+    # instead of raised. The new checks are tested in
+    # tests/test_other_feature_docs_validator.py; PINNED_VALIDATOR_TEST_LINE
+    # below is unaffected and still asserted. Same rationale: refresh, don't
+    # remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "2e7a97b983c06dce938c478e2af4b909cc20bd0ae3047ca08da3406f51c001fc"
+        "c4e9165c80fa9ada5715b1f149777e98221a16d9bda8a89362808148c137bd4f"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-

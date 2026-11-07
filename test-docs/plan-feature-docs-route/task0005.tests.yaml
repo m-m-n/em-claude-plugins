@@ -1,0 +1,119 @@
+task_id: task0005
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 15037 tests, OK (skipped=1) before any change
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 15124 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_other_feature_docs_validator.TestScopePredicate.test_a_request_a_fix_and_a_target_each_yield_one_scope_error_naming_the_path
+      - tests.test_other_feature_docs_validator.TestScopePredicate.test_accepts_a_markdown_document_of_another_feature
+      - tests.test_other_feature_docs_validator.TestScopePredicate.test_judges_the_normalized_segments
+      - tests.test_other_feature_docs_validator.TestScopePredicate.test_rejects_a_non_string
+      - tests.test_other_feature_docs_validator.TestScopePredicate.test_rejects_a_path_outside_feature_docs_or_in_the_wrong_case
+      - tests.test_other_feature_docs_validator.TestScopePredicate.test_rejects_each_out_of_scope_form
+      - tests.test_other_feature_docs_validator.TestScopePredicate.test_the_envelope_feature_wins_over_the_workflow_feature
+      - tests.test_other_feature_docs_validator.TestScopePredicate.test_the_excluded_directories_are_compared_by_segments
+      - tests.test_other_feature_docs_validator.TestScopePredicate.test_the_own_feature_comes_from_the_workflow_when_the_envelope_has_none
+      - tests.test_other_feature_docs_validator.TestScopePredicate.test_the_own_feature_is_compared_by_segment
+      - tests.test_other_feature_docs_validator.TestScopePredicate.test_without_an_own_feature_only_the_other_conditions_apply
+    red_confirmed: true
+    red_reason: "Against the unchanged validator the predicate tests errored with AttributeError: module 'validate_worker_output' has no attribute 'other_feature_doc_in_scope', and the request/fix/target scope tests failed with AssertionError: 0 != 1 (no other-feature-doc-scope error was produced). Passed before the change, as guards of the fallback: test_the_envelope_feature_wins_over_the_workflow_feature."
+  AC-2:
+    tests:
+      - tests.test_other_feature_docs_validator.TestActionAdmission.test_a_null_or_unusable_expect_digest_is_rejected
+      - tests.test_other_feature_docs_validator.TestActionAdmission.test_a_target_of_another_action_is_checked_as_today
+      - tests.test_other_feature_docs_validator.TestActionAdmission.test_a_written_grant_passes_the_coverage_check
+      - tests.test_other_feature_docs_validator.TestActionAdmission.test_accepted_on_a_planner_create_plan_dispatch
+      - tests.test_other_feature_docs_validator.TestActionAdmission.test_an_out_of_scope_path_is_rejected_naming_the_path
+      - tests.test_other_feature_docs_validator.TestActionAdmission.test_an_unknown_action_is_still_rejected
+      - tests.test_other_feature_docs_validator.TestActionAdmission.test_an_unlisted_written_path_is_still_a_write_policy_error
+      - tests.test_other_feature_docs_validator.TestActionAdmission.test_another_phase_is_rejected
+      - tests.test_other_feature_docs_validator.TestActionAdmission.test_another_worker_is_rejected
+      - tests.test_other_feature_docs_validator.TestActionAdmission.test_the_action_is_in_the_write_policy_vocabulary
+      - tests.test_other_feature_docs_validator.TestCommandLine.test_an_amend_target_on_the_wrong_phase_exits_1_with_the_scope_code
+    red_confirmed: true
+    red_reason: "Against the unchanged validator the accepted-case test failed with a write_policy error (amend_other_feature not in the action vocabulary), and the other-worker, other-phase, digest and out-of-scope tests failed with AssertionError: 0 != 1 (no other-feature-doc-scope error). The unknown-action test with a list-valued action errored with TypeError: unhashable type: 'list' (the existing check). Passed before the change, as a guard: test_a_target_of_another_action_is_checked_as_today."
+  AC-3:
+    tests:
+      - tests.test_other_feature_docs_validator.TestRequestResult.test_a_blocked_planner_result_is_not_a_request
+      - tests.test_other_feature_docs_validator.TestRequestResult.test_a_repeated_path_is_a_request_error
+      - tests.test_other_feature_docs_validator.TestRequestResult.test_a_request_result_passes_on_a_dispatch_without_grants
+      - tests.test_other_feature_docs_validator.TestRequestResult.test_a_request_result_passes_when_other_targets_are_not_grants
+      - tests.test_other_feature_docs_validator.TestRequestResult.test_an_empty_reason_or_path_is_a_request_error
+      - tests.test_other_feature_docs_validator.TestRequestResult.test_an_empty_request_list_is_a_request_error
+      - tests.test_other_feature_docs_validator.TestRequestResult.test_an_item_without_a_reason_is_a_request_error
+      - tests.test_other_feature_docs_validator.TestRequestResult.test_an_out_of_scope_requested_path_is_a_scope_error_only
+      - tests.test_other_feature_docs_validator.TestRequestResult.test_an_unknown_item_key_is_a_request_error
+      - tests.test_other_feature_docs_validator.TestRequestResult.test_each_out_of_scope_requested_path_is_reported_once
+      - tests.test_other_feature_docs_validator.TestRequestResult.test_grants_on_the_dispatch_make_it_a_request_error
+      - tests.test_other_feature_docs_validator.TestRequestResult.test_only_the_implementation_planner_has_the_request_alternative
+      - tests.test_other_feature_docs_validator.TestRequestResult.test_task_index_next_to_the_requests_is_a_request_error
+      - tests.test_other_feature_docs_validator.TestRequestResult.test_the_request_shape_does_not_weaken_the_ordinary_planner_result
+      - tests.test_other_feature_docs_validator.TestRequestResult.test_written_artifacts_or_a_patch_on_a_request_are_request_errors
+      - tests.test_other_feature_docs_validator.TestCommandLine.test_a_request_result_on_a_dispatch_without_grants_exits_0
+      - tests.test_other_feature_docs_validator.TestCommandLine.test_a_request_result_on_a_dispatch_with_grants_exits_1_with_the_request_code
+      - tests.test_other_feature_docs_validator.TestCommandLine.test_a_request_for_an_out_of_scope_path_exits_1_with_the_scope_code
+    red_confirmed: true
+    red_reason: "Against the unchanged validator the request result was rejected with workflow_patch and payload-missing task_index errors (so the passing case failed with a non-empty error list), and every request-error and scope-error case failed with AssertionError: 0 != 1 (no other-feature-doc-request or other-feature-doc-scope error). Passed before the change, as guards of the ordinary planner result: test_a_blocked_planner_result_is_not_a_request, test_only_the_implementation_planner_has_the_request_alternative, test_the_request_shape_does_not_weaken_the_ordinary_planner_result."
+  AC-4:
+    tests:
+      - tests.test_other_feature_docs_validator.TestFixDeclaration.test_a_dispatch_without_grants_and_without_fixes_has_no_fix_error
+      - tests.test_other_feature_docs_validator.TestFixDeclaration.test_a_duplicate_path_fails
+      - tests.test_other_feature_docs_validator.TestFixDeclaration.test_a_granted_target_left_unchanged_is_neither_declared_nor_reported
+      - tests.test_other_feature_docs_validator.TestFixDeclaration.test_an_absent_envelope_means_no_grants
+      - tests.test_other_feature_docs_validator.TestFixDeclaration.test_an_unknown_item_key_fails
+      - tests.test_other_feature_docs_validator.TestFixDeclaration.test_declaring_a_grant_that_was_not_written_fails
+      - tests.test_other_feature_docs_validator.TestFixDeclaration.test_declaring_a_path_that_is_not_granted_fails
+      - tests.test_other_feature_docs_validator.TestFixDeclaration.test_declaring_fixes_on_a_dispatch_without_grants_fails
+      - tests.test_other_feature_docs_validator.TestFixDeclaration.test_each_field_must_be_a_non_empty_string
+      - tests.test_other_feature_docs_validator.TestFixDeclaration.test_the_fix_check_applies_to_every_worker
+      - tests.test_other_feature_docs_validator.TestFixDeclaration.test_the_fix_check_is_not_applied_to_a_result_that_is_not_completed
+      - tests.test_other_feature_docs_validator.TestFixDeclaration.test_writing_a_grant_and_declaring_its_fix_passes
+      - tests.test_other_feature_docs_validator.TestFixDeclaration.test_writing_a_grant_without_a_fix_fails
+      - tests.test_other_feature_docs_validator.TestFixDeclaration.test_writing_both_grants_and_declaring_both_passes
+      - tests.test_other_feature_docs_validator.TestCommandLine.test_a_grant_written_without_a_fix_exits_1_with_the_fix_code
+    red_confirmed: true
+    red_reason: "Against the unchanged validator every failing case (grant written without a fix, fix not written, non-granted path, fixes without grants, duplicate, bad fields) failed with AssertionError: 0 not greater than or equal to 1 (no other-feature-doc-fix error). Passed before the change, as guards: test_writing_both_grants_and_declaring_both_passes, test_a_granted_target_left_unchanged_is_neither_declared_nor_reported, test_a_dispatch_without_grants_and_without_fixes_has_no_fix_error, test_the_fix_check_is_not_applied_to_a_result_that_is_not_completed."
+  AC-5:
+    tests:
+      - tests.test_other_feature_docs_validator.TestPhaseStateRecord.test_a_non_list_value_is_a_fix_error
+      - tests.test_other_feature_docs_validator.TestPhaseStateRecord.test_a_non_mapping_item_is_a_fix_error
+      - tests.test_other_feature_docs_validator.TestPhaseStateRecord.test_a_phase_state_without_the_key_passes
+      - tests.test_other_feature_docs_validator.TestPhaseStateRecord.test_a_well_formed_list_passes
+      - tests.test_other_feature_docs_validator.TestPhaseStateRecord.test_an_empty_list_passes
+      - tests.test_other_feature_docs_validator.TestPhaseStateRecord.test_an_item_missing_produced_by_is_a_fix_error
+      - tests.test_other_feature_docs_validator.TestPhaseStateRecord.test_each_field_must_be_a_non_empty_string
+      - tests.test_other_feature_docs_validator.TestPhaseStateRecord.test_every_bad_item_is_reported
+      - tests.test_other_feature_docs_validator.TestPhaseStateRecord.test_the_path_must_pass_the_safe_relative_check
+      - tests.test_other_feature_docs_validator.TestPhaseStateRecord.test_the_record_is_read_only_for_a_create_plan_phase_state
+      - tests.test_other_feature_docs_validator.TestPhaseStateRecord.test_unknown_top_level_keys_stay_tolerated
+      - tests.test_other_feature_docs_validator.TestCommandLine.test_a_phase_state_record_is_checked_through_the_command_line
+    red_confirmed: true
+    red_reason: "Against the unchanged validator every rejection case (non-list value, non-mapping item, missing produced_by, empty or non-string field, unsafe path, every bad item reported) failed with AssertionError: [] != ['other-feature-doc-fix'] (the record was not read). Passed before the change, as guards of the accepted shapes: test_a_phase_state_without_the_key_passes, test_a_well_formed_list_passes, test_an_empty_list_passes, test_unknown_top_level_keys_stay_tolerated, test_the_record_is_read_only_for_a_create_plan_phase_state."
+  AC-6:
+    tests:
+      - tests.test_other_feature_docs_validator.TestMalformedInput.test_a_malformed_write_policy_does_not_raise
+      - tests.test_other_feature_docs_validator.TestMalformedInput.test_a_non_list_fix_value_is_a_fix_error
+      - tests.test_other_feature_docs_validator.TestMalformedInput.test_a_non_list_request_value_is_a_request_error
+      - tests.test_other_feature_docs_validator.TestMalformedInput.test_a_non_mapping_fix_item_is_a_fix_error
+      - tests.test_other_feature_docs_validator.TestMalformedInput.test_a_non_mapping_payload_does_not_raise
+      - tests.test_other_feature_docs_validator.TestMalformedInput.test_a_non_mapping_request_item_is_a_request_error
+      - tests.test_other_feature_docs_validator.TestMalformedInput.test_a_non_mapping_target_item_is_an_error
+      - tests.test_other_feature_docs_validator.TestMalformedInput.test_a_non_mapping_workflow_does_not_raise
+      - tests.test_other_feature_docs_validator.TestMalformedInput.test_a_non_string_envelope_feature_is_judged_against_no_feature
+      - tests.test_other_feature_docs_validator.TestMalformedInput.test_an_amend_target_with_a_non_string_path_is_a_scope_error
+      - tests.test_other_feature_docs_validator.TestMalformedInput.test_every_garbage_record_is_reported_without_raising
+      - tests.test_other_feature_docs_validator.TestMalformedInput.test_every_garbage_value_in_every_slot_is_reported_without_raising
+      - tests.test_other_feature_docs_validator.TestMalformedInput.test_malformed_targets_are_reported_and_do_not_raise
+      - tests.test_other_feature_docs_validator.TestMalformedInput.test_non_string_fix_fields_are_fix_errors
+      - tests.test_other_feature_docs_validator.TestMalformedInput.test_non_string_request_fields_are_request_errors
+      - tests.test_other_feature_docs_validator.TestMalformedInput.test_non_string_target_fields_are_errors
+      - tests.test_other_feature_docs_validator.TestMalformedInput.test_non_string_written_artifact_paths_do_not_raise
+    red_confirmed: true
+    red_reason: "Against the unchanged validator the malformed requests, fixes, targets, write_policy and payload cases failed with 0 errors of the expected code, and the malformed write_policy, target-item and payload cases errored with AttributeError: 'str' object has no attribute 'get' / 'int' object has no attribute 'keys' (the check raised). Passed before the change, as guards that nothing raises: test_every_garbage_value_in_every_slot_is_reported_without_raising, test_non_string_written_artifact_paths_do_not_raise, test_a_non_string_envelope_feature_is_judged_against_no_feature."
+  AC-7:
+    tests:
+      - tests.test_other_feature_docs_validator.TestBytePinRefreshComment.test_the_validator_pin_carries_a_refresh_comment_naming_this_task
+      - tests.test_other_feature_docs_validator.TestBytePinRefreshComment.test_the_pin_assignment_still_exists
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical
+    red_confirmed: true
+    red_reason: "Against the unmodified test_gate_option_vocabulary.py the refresh-comment test failed with AssertionError: 'Refreshed again by plan-feature-docs-route/task0005' not found. test_the_pin_assignment_still_exists passed before the change (a guard that the pin assignment keeps its shape). The existing byte-identical test is the check that the refreshed digest matches the validator; the whole suite (python3 -m unittest discover -s tests) is the other half of this criterion and was re-executed after the change."
