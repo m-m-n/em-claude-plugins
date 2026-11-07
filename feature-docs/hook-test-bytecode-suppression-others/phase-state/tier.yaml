@@ -1,0 +1,83 @@
+schema_version: 2
+feature: hook-test-bytecode-suppression-others
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.29
+    confidence: 0.67
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.02
+      '1': 0.68
+      '2': 0.29
+      '3': 0.01
+  observed_at: '2026-11-07T21:13:00+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.73
+    confidence: 0.73
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.27
+      '2': 0.73
+      '3': 0.0
+  observed_at: '2026-11-07T21:19:30+09:00'
+pre_survey_estimate:
+  files_expected:
+  - tests/test_queue_stop_guard.py
+  - tests/test_queue_stop_guard_routeback_record.py
+  - tests/test_failed_run_cleanup_guard.py
+  - tests/test_hooks_registration.py
+  - tests/test_queue_failure_net_cross_hook.py
+  - tests/test_muse_guard.py
+  - tests/test_consultation_harness_chain.py
+  changed_lines_approx: 51
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules:
+  - tests/test_merge_ci_wait.py:50 がプロセス全体の sys.dont_write_bytecode を True に設定し、復元していない
+  - em-workflow/hooks/queue_stop_guard.py を2本が読み込む（tests/test_queue_stop_guard.py:20、tests/test_queue_stop_guard_routeback_record.py:85）
+  - em-workflow/hooks/failed-run-cleanup-guard.py を読み込む（tests/test_failed_run_cleanup_guard.py:32）
+  - em-workflow/hooks/queue_launch_guard.py を2本が読み込む（tests/test_hooks_registration.py:824、tests/test_queue_failure_net_cross_hook.py:164）
+  - em-workflow/hooks/queue_agent_index.py を読み込む（tests/test_hooks_registration.py:825）
+  - em-workflow/hooks/queue_failure_net.py を2本が読み込む（tests/test_hooks_registration.py:826、tests/test_queue_failure_net_cross_hook.py:161）
+  - em-workflow/hooks/muse_guard.py を2本が読み込む（tests/test_muse_guard.py:38、tests/test_consultation_harness_chain.py:83）
+  - em-review/hooks/muse_guard.py を2本が読み込む（tests/test_muse_guard.py:39、tests/test_consultation_harness_chain.py:84）
+  - tests/test_contributor_tier_criteria.py も別経路で読み込むが、hooks 配下ではない（tests/test_consultation_harness_chain.py:104、tests/test_consultation_harness_chain.py:119）
+  work_still_required: true
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 0
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  caller_and_dependency_count: 14
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: 7本とも importlib.util.spec_from_file_location → module_from_spec → exec_module
+    で hooks を同一プロセスへ読み込み、その読み込みを囲むバイトコード書き込み抑止はない（tests/test_queue_stop_guard.py:855、tests/test_queue_stop_guard_routeback_record.py:762、tests/test_failed_run_cleanup_guard.py:629、tests/test_hooks_registration.py:839、tests/test_queue_failure_net_cross_hook.py:102、tests/test_muse_guard.py:1141、tests/test_consultation_harness_chain.py:497）。比較対象は
+    sys.dont_write_bytecode の元値を保存し、True にして exec_module を実行し、finally で復元する（tests/test_destructive_guard_extglob_units.py:82、tests/test_queue_launch_guard_linked_layout.py:338）。この処理を既存7読込関数へ適用する案では、追加42行・削除7行となり、sys
+    の取り込みがない2本への追加2行を含めて変更行数は51行となる（tests/test_hooks_registration.py:99、tests/test_consultation_harness_chain.py:66）。新規関数・ファイル・依存関係・テストケースの追加はこの案に含めていない。test_change_kind
+    は既存7本の読込補助処理をそれぞれ変更することを示す。対象7本にはバイトコード抑止や __pycache__ 不生成を直接検証する処理がないため covering_tests_exist
+    は false とした。比較対象には、初期値 False／True と正常終了／例外終了を検証するテストがあるが、対象7本の読込関数は検証していない（tests/test_destructive_guard_extglob_units.py:404、tests/test_destructive_guard_extglob_units.py:412、tests/test_destructive_guard_extglob_units.py:433）。caller_and_dependency_count
+    は hooks を直接読み込む7テストモジュールと、重複を除いた読込先7フックの合計14としている。推奨案が変更する動作はテストによる読み込み時のバイトコード書き込みで、フックの外部契約の変更は含まない。調査時点で両
+    hooks 配下に __pycache__ が存在したが、生成元は未検証。ファイルは変更しておらず、ファイル書き込みを伴うテスト実行も行っていないため、単体実行後の不生成と既存テスト全件の成功は未確認
+decided_at: '2026-11-07T21:20:00+09:00'
