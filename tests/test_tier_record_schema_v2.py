@@ -482,8 +482,12 @@ class TestRetrospectTierDecisionBlock(unittest.TestCase):
 # Refreshed by task0005 of rework-docs-only-task-routing (FR9): Phase R5's
 # interactive and batch rework paths gained the sentence on a review-sourced
 # docs-only round.
+# Refreshed by task0006 of large-diff-review-coverage (FR15, FR16): Phase
+# R3a's input block gained the two coverage fields and the Independent
+# Inspection Duty exemption split, and Phase R6 gained the coverage
+# disclosure paragraph.
 REVIEW_PHASE_SHA256 = (
-    "cf10994b02a0028a57199a7be3bee103147edfbb4f2bda553da84600cf7da898"
+    "b6cd329da4a984969b19ded7ea2d34faf61d8ba2958763fdb0170289bb31dc8c"
 )
 REVIEW_RULES_SHA256 = (
     "56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931"

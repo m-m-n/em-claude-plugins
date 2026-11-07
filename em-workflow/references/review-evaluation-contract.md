@@ -71,6 +71,12 @@ The orchestrator hands the evaluator, in its prompt:
   this round; present and empty when there are none. The evaluator's
   Independent Inspection Duty (below) does not apply to a perspective
   listed here — there is no reviewer output to corroborate.
+- `partially_reviewed_perspectives` — perspectives that are not in
+  `unreviewed_perspectives` but whose reviewers left some of the round's
+  `changed_files` unreviewed; present and empty when there are none. Each
+  entry carries `perspective`, `unreviewed_files` and `reason`. The
+  Independent Inspection Duty (below) still applies to a perspective listed
+  here.
 
 ## Output Object
 
@@ -213,6 +219,13 @@ inspection surfaced issues), or "not verified — read budget exhausted"
 per-perspective status is reported via the `round_summary` coverage
 statement (Output Object above); "not verified" is a legitimate status
 and is never rounded up to "corroborated".
+
+The duty does not apply to a perspective listed in
+`unreviewed_perspectives`: there is no reviewer output there to corroborate.
+The duty still applies to a perspective listed in
+`partially_reviewed_perspectives`: that perspective is inspected like any
+other, and its unreviewed files may be among those the evaluator reads within
+the budget.
 
 ## Reproduction Verification
 

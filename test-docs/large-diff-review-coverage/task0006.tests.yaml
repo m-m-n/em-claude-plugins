@@ -1,0 +1,51 @@
+task_id: task0006
+baseline_failures: []          # python3 -m unittest discover -s tests before any edit: 14568 tests OK (skipped=1)
+final_failures: []             # re-executed after the last edit: python3 -m unittest discover -s tests (pending count) and check-plugin-invariants.py . (exit 0)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_review_coverage_disclosure.TestAC1PhaseR3aInputBlock
+      - tests.test_review_coverage_disclosure.TestAC1MatcherCanFail
+    red_confirmed: true
+    red_reason: "Before editing review-phase.md: test_real_phase_r3a_is_well_formed returned False, test_both_fields_are_input_bullets failed (no partially_reviewed_perspectives bullet), test_fields_come_from_the_coverage_operation_over_loop_zero failed ('`coverage` operation' not found), test_unreviewed_definition_through_the_claude_fallback_is_gone failed (the bullet still held the Claude fallback definition), test_only_unreviewed_perspectives_is_exempt_from_the_duty returned False (no 'still applies' sentence), and the real-text mutation negative proof failed because 'still applies' matched nothing. The no-gate_id test was already green: that property pre-existed and is a guard."
+  AC-2:
+    tests:
+      - tests.test_review_coverage_disclosure.TestAC2EvaluationContractAndEvaluator
+      - tests.test_review_coverage_disclosure.TestAC2MatchersCanFail
+    red_confirmed: true
+    red_reason: "Before editing the contract and the evaluator: test_contract_input_block_is_well_formed, test_contract_duty_section_is_well_formed and test_evaluator_step3_is_well_formed returned False (no partially_reviewed_perspectives bullet or sentence in the Input Block, the Independent Inspection Duty section or Step 3). The existing-opening-text and no-retryable-skip-string tests were already green: those properties pre-existed and are guards."
+  AC-3:
+    tests:
+      - tests.test_review_coverage_disclosure.TestAC3PhaseR6Disclosure
+      - tests.test_review_coverage_disclosure.TestAC3MatcherCanFail
+    red_confirmed: true
+    red_reason: "Before editing review-phase.md: test_real_phase_r6_discloses_both_fields returned False, and test_disclosure_renders_from_the_round_record and test_disclosure_affects_no_gate errored because no Phase R6 paragraph names partially_reviewed_perspectives. The kept-wording and no-gate_id tests were already green: those properties pre-existed and are guards."
+  AC-4:
+    tests:
+      - tests.test_review_coverage_disclosure.TestAC4ReportingItem
+      - tests.test_review_coverage_disclosure.TestAC4SourceMapRow
+      - tests.test_review_coverage_disclosure.TestAC4DocumentWide
+      - tests.test_review_coverage_disclosure.TestAC4MatchersCanFail
+      - tests.test_review_coverage_disclosure.TestAC4RealRowsCanFail
+    red_confirmed: true
+    red_reason: "Before editing batch-mode.md: test_real_reporting_item_is_well_formed returned False, test_item_sits_immediately_before_the_triage_item and test_item_follows_the_autonomous_fail_closed_route_item errored (the Reporting item start phrase was not found), and test_real_source_map_row_is_well_formed, test_row_sits_immediately_before_the_triage_row, test_row_maps_to_the_two_round_record_fields and test_row_cites_phase_r5 failed (no row names the two fields). The no-provider, gate_id-count and level-2-heading tests were already green: those properties pre-existed and are guards."
+  AC-5:
+    tests:
+      - tests.test_batch_quiet_output_discipline.TestAuditItemSourceMap
+      - tests.test_batch_quiet_output_audit_persistence.TestAutonomousFailClosedRouteSourceMapRow.test_every_audit_item_still_has_exactly_one_row
+      - tests.test_batch_quiet_output_audit_record_contract.TestAC2SourceMapRegressionGuards.test_source_map_has_eight_rows
+      - tests.test_wrapper_fallback_doc_realignment.TestAC2SurvivingClausesAndCountsUnchanged.test_batch_quiet_output_source_map_has_eight_rows
+      - tests.test_sca_triage_receipt_partial_failure.TestAC8SourceMapRow
+      - tests.test_sca_triage_receipt_partial_failure.TestAC8NoNewStructure
+      - tests.test_review_coverage_disclosure.TestAC4DocumentWide
+    red_confirmed: true
+    red_reason: "With the pins updated and the original batch-mode.md temporarily restored: test_reporting_item_list_unchanged failed (the nine-item sentence was not found), test_source_map_has_one_row_per_audit_item failed (no source-map row for unreviewed_perspectives), and the five row-count checks failed with 8 != 9. batch-mode.md was then re-applied. The level-2 heading and gate_id count tests were green before and after: those properties are unchanged by design and are guards."
+  AC-6:
+    tests:
+      - tests.test_review_coverage_disclosure.TestAC1MatcherCanFail
+      - tests.test_review_coverage_disclosure.TestAC2MatchersCanFail
+      - tests.test_review_coverage_disclosure.TestAC3MatcherCanFail
+      - tests.test_review_coverage_disclosure.TestAC4MatchersCanFail
+      - tests.test_review_coverage_disclosure.TestAC4RealRowsCanFail
+    red_confirmed: false
+    red_reason: "The criterion is about the new test module itself. Its negative proofs feed hand-built forged samples to the matchers and passed on their first run; they cannot fail before the document edits. The module's real-file checks were observed red under AC-1 to AC-4. The one real-text negative proof that failed first (test_real_r3a_with_the_partial_sentence_turned_into_an_exemption_fails) is the only observed red among them."
