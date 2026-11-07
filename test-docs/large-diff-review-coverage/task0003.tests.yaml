@@ -1,0 +1,51 @@
+task_id: task0003
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 14568 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 14711 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_review_coverage.TestClassifyResults
+      - tests.test_review_coverage.TestClassifyResultsRejectsInvalidInput
+    red_confirmed: true
+    red_reason: "Run with em-workflow/scripts/review-coverage.py absent (the state before the implementation), every test of both classes errored: FileNotFoundError: No such file or directory: 'em-workflow/scripts/review-coverage.py' raised while the test module loaded the script. The failed decision, the exact-summary comparison, input order and the invalid-item exit 2 are asserted through that script, so they were red for the missing behavior."
+  AC-2:
+    tests:
+      - tests.test_review_coverage.TestRunIdGrammar
+      - tests.test_review_coverage.TestDuplicateRunIds
+      - tests.test_review_coverage.TestIgnoredRows
+    red_confirmed: true
+    red_reason: "With the script absent, all 21 tests of the three classes errored with FileNotFoundError at the script load. The grammar tables (accepted forms, malformed forms, perspective mismatch, shard on an unsplit pass, shard not dispatched), the duplicate rule and the evaluator/tool row skipping are checked through coverage runs of that script."
+  AC-3:
+    tests:
+      - tests.test_review_coverage.TestShardLevelReplacement
+      - tests.test_review_coverage.TestUnreviewedPerspectives
+    red_confirmed: true
+    red_reason: "With the script absent, all 16 tests of the two classes errored with FileNotFoundError at the script load. Shard-level replacement, last-row-decides ordering and the unreviewed decision for skipped, failed and absent runs exist only in the script."
+  AC-4:
+    tests:
+      - tests.test_review_coverage.TestPartiallyReviewedPerspectives
+      - tests.test_review_coverage.TestReasonTokens
+    red_confirmed: true
+    red_reason: "With the script absent, all 15 tests of the two classes errored with FileNotFoundError at the script load. The partial entries, sorted unreviewed_files, the never-in-both-lists rule, the empty-but-present lists and the four reason tokens in fixed order are produced only by the script."
+  AC-5:
+    tests:
+      - tests.test_review_coverage.TestPostFixInvalidation
+    red_confirmed: true
+    red_reason: "With the script absent, all 13 tests errored with FileNotFoundError at the script load. The last-change-loop rule, the unchanged-file coverage retention and the changed_after_review token exist only in the script."
+  AC-6:
+    tests:
+      - tests.test_review_coverage.TestSpecRescueRuns
+    red_confirmed: true
+    red_reason: "With the script absent, all 13 tests errored with FileNotFoundError at the script load. The spec_rescue mark with every rescue shard completed, with a later full-diff completion, and the unreviewed outcome of failed-only rescue groups exist only in the script."
+  AC-7:
+    tests:
+      - tests.test_review_coverage.TestOutputShape
+      - tests.test_review_coverage.TestPathRules
+      - tests.test_review_coverage.TestRowKeysAreIgnored
+      - tests.test_review_coverage.TestDeterminism
+      - tests.test_review_coverage.TestInputDocumentChecks
+      - tests.test_review_coverage.TestCoverageInputChecks
+      - tests.test_review_coverage.TestCommandLineContract
+      - tests.test_review_coverage.TestStandardLibraryOnly
+    red_confirmed: true
+    red_reason: "With the script absent, every test of these classes that exercises the script failed: the in-process ones with FileNotFoundError at the script load, the child-process ones with a Python 'can't open file' message that does not start with the program name review-coverage. In TestStandardLibraryOnly, 3 of 7 tests failed (the script import, process-facility and open-mode checks read the script); the other 4 are checks of this test module and negative proofs of the import checker with forged sources, which do not depend on the script. Of 33 hand-made mutations of the script (loaded in memory, the file untouched), 31 made at least one test of this module fail, among them a stripped or case-folded summary, a prefix match, a dropped `..` check, ensure_ascii on, a dropped evaluator or tool skip, a first-row-decides group and a wrong universe; the two survivors, an always-true loop-before-last-change guard and a removed NaN constant hook, do not change any behavior."
