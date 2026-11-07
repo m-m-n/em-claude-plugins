@@ -332,7 +332,10 @@ class TestAC1SourceMapRowsNameRecordsContainer(unittest.TestCase):
 # AC-2: exactly eight rows (task0002 AC-5: moved from six to seven -- see the
 # relaxed-route row that task added; sca-file-tasks-robustness task0003 AC-7:
 # moved from seven to eight -- see the incomplete-triage-filing row that task
-# added); the assumption row is byte-identical
+# added; large-diff-review-coverage task0006 AC-5: moved from eight to nine --
+# see the unreviewed and partially reviewed perspectives row that task added,
+# the method name is kept because other records name this test ID); the
+# assumption row is byte-identical
 # ---------------------------------------------------------------------------
 
 ASSUMPTION_ROW = (
@@ -349,7 +352,7 @@ class TestAC2SourceMapRegressionGuards(unittest.TestCase):
         cls.quiet_section = _slice(cls.text, "## Batch quiet output")
 
     def test_source_map_has_eight_rows(self):
-        self.assertEqual(len(_table_rows(self.quiet_section)), 8)
+        self.assertEqual(len(_table_rows(self.quiet_section)), 9)
 
     def test_assumption_row_unchanged_character_for_character(self):
         self.assertIn(ASSUMPTION_ROW, self.quiet_section)

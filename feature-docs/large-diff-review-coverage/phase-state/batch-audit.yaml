@@ -55,3 +55,25 @@ records:
     失敗時は全件 failed 扱い / 5. FR3 の判定は review-coverage.py の classify_results 操作に置く / 6.
     未実施判定の対象は最後の pass のシャード構成のファイル / 7. diff_base は HEAD か小文字 16 進 40 桁のコミット ID のみ;
     Codex は 7 件すべて ACCEPT（SPEC の FR7・A10・FR11・AC8・FR3/TS-2・FR14・R0 と整合、より良い代替なし）'
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-11-07T19:05:00+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'declined: test-docs/llm-led-review/task0004.tests.yaml'
+  normalized_answer: 'declined: test-docs/llm-led-review/task0004.tests.yaml'
+  resolution_note: 'task_id: task0001; deviation path test-docs/llm-led-review/task0004.tests.yaml
+    not auto-added to files; missing evidence part: the identifier of an existing AC-n or
+    requirement id that would otherwise be dropped (path shape and observable outcome were given)'
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-11-07T19:10:00+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'declined: tests/test_tier_record_schema_v2.py'
+  normalized_answer: 'declined: tests/test_tier_record_schema_v2.py'
+  resolution_note: 'task_id: task0006; deviation path tests/test_tier_record_schema_v2.py
+    not auto-added to files; missing evidence part: the identifier of an existing AC-n or
+    requirement id that would otherwise be dropped (path shape and observable outcome were given)'

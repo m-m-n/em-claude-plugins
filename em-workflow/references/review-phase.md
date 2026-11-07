@@ -536,13 +536,23 @@ R3b's evaluator-failure degradation).
 - `reviewer_outputs` — one entry per run, carrying `run_id` plus that run's
   verbatim reviewer output.
 - `unreviewed_perspectives` — the same list Phase R5 records at the
-  round-record root (IMPLEMENTATION.md Shared Components
-  "`unreviewed_perspectives` (rework round 1)"): perspectives whose Claude
-  fallback (Phase R2b) has been dispatched and produced no completed run;
-  present and empty when there are none. The evaluator's Independent
-  Inspection Duty (`references/review-evaluation-contract.md`) does not
-  apply to a perspective listed here: there is no reviewer output to
-  corroborate.
+  round-record root; present and empty when there are none. The orchestrator
+  computes it together with `partially_reviewed_perspectives` by the
+  `coverage` operation of `scripts/review-coverage.py` over the loop-0 pass,
+  right after Phase R2b and before the evaluator dispatch, and copies the
+  values from that output, never deriving them by hand. When the operation
+  exits non-zero, the review phase aborts before the round record is written
+  and no evaluator is dispatched.
+- `partially_reviewed_perspectives` — the same source and the same empty rule:
+  the same list Phase R5 records at the round-record root, present and empty
+  when there are none. Each entry carries `perspective`, `unreviewed_files`
+  and `reason`.
+
+The evaluator's Independent Inspection Duty
+(`references/review-evaluation-contract.md`) does not apply to a perspective
+listed in `unreviewed_perspectives`: there is no reviewer output to
+corroborate. The duty still applies to a perspective listed in
+`partially_reviewed_perspectives`.
 
 `changed_files` and `spec_path` are normalized to project_root-based
 absolute paths exactly as for reviewers (Phase R2). Every run's verbatim
@@ -1423,6 +1433,15 @@ the report also shows "triage filing incomplete" together with that package
 list (Phase R4's "Triage filing" states the policy). This is disclosure
 only: it introduces no new gate identifier and never affects the completion
 gate.
+
+The report also renders, from the round record, every perspective listed in
+`unreviewed_perspectives` and every entry of
+`partially_reviewed_perspectives` with its `reason` and its full
+`unreviewed_files` list, so an unreviewed range is never presented as a clean
+review. This is disclosure only: it introduces no new gate identifier and
+never affects the completion gate. The batch final result carries the same
+content through `references/batch-mode.md`'s `## Reporting` item list.
+
 タメ語・女性・体言止めなし。develop-駆動では末尾に round 記録のパスと
 workflow.yaml の review サマリ更新結果を1行ずつ添える。
 

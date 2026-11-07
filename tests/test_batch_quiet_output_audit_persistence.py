@@ -552,10 +552,13 @@ class TestAutonomousFailClosedRouteSourceMapRow(unittest.TestCase):
         # sca-file-tasks-robustness task0003 AC-7: the map gains one more
         # row (the incomplete triage filing), moving the count from seven
         # to eight in place.
+        # large-diff-review-coverage task0006 AC-5: the map gains one more
+        # row (the unreviewed and partially reviewed perspectives), moving
+        # the count from eight to nine in place.
         rows = _table_rows(self.quiet_section)
         first_cells = [row[0] for row in rows]
         self.assertEqual(len(first_cells), len(set(first_cells)))
-        self.assertEqual(len(rows), 8)
+        self.assertEqual(len(rows), 9)
 
 
 # ---------------------------------------------------------------------------

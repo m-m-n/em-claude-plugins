@@ -273,6 +273,14 @@ SUPPRESSED_ITEMS = (
 # incomplete triage filing joins the list as an eighth item, placed
 # immediately before the kept integration branch name -- the pin moves from
 # seven items to eight in place, no assertion deleted.
+#
+# Extended for large-diff-review-coverage task0006 (feature-docs/
+# large-diff-review-coverage/tasks/task0006.md AC-4, AC-5): the review
+# rounds' `unreviewed_perspectives` and `partially_reviewed_perspectives`
+# join the list as a ninth item, placed after the autonomous
+# fail-closed-route item and immediately before the incomplete triage
+# filing item -- the pin moves from eight items to nine in place, no
+# assertion deleted.
 REPORTING_ITEM_LIST_SENTENCE = (
     "every auto-approved command string, every assumption recorded during "
     "create-spec/planning, auto-rework rounds consumed (review / verify), "
@@ -281,13 +289,15 @@ REPORTING_ITEM_LIST_SENTENCE = (
     "not), every autonomous fail-closed-route resolution (gate / option "
     "chosen / options not chosen / the discussion's key points / whether "
     "Codex was consulted / whether the Opus escalation ran, with its "
-    "reasoning), every review round whose triage filing was incomplete "
-    "(reported as \"triage filing incomplete\" with that round's "
-    "unattempted packages), and the kept integration branch name"
+    "reasoning), every review round's `unreviewed_perspectives` and "
+    "`partially_reviewed_perspectives`, each partial entry with its reason "
+    "and its unreviewed files, every review round whose triage filing was "
+    "incomplete (reported as \"triage filing incomplete\" with that "
+    "round's unattempted packages), and the kept integration branch name"
 )
 
 # IMPLEMENTATION.md D4: audit item -> the phrase its source-map row must
-# name. Eight items, matching `## Reporting`'s eight-item list above.
+# name. Nine items, matching `## Reporting`'s nine-item list above.
 SOURCE_MAP_EXPECTATIONS = (
     ("auto-approved command string", "create-spec.command-approval"),
     ("assumption recorded during create-spec/planning", "phase-state"),
@@ -295,6 +305,7 @@ SOURCE_MAP_EXPECTATIONS = (
     ("deferred findings", "stable_id"),
     ("unlisted-gate fallback resolution", "phase-state"),
     ("autonomous fail-closed-route resolution", "phase-state"),
+    ("unreviewed_perspectives", "partially_reviewed_perspectives"),
     ("triage filing incomplete", "unattempted_packages"),
     ("kept integration branch name", "parent_branch"),
 )
