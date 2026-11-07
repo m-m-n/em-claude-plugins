@@ -63,14 +63,17 @@ AC-n" comment pin that behavior on the document text:
 - AC-6: a failed check yields false even when the failed run printed a line.
 """
 
+import importlib.machinery
 import importlib.util
 import json
 import os
 import re
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = REPO_ROOT / "em-workflow" / "scripts" / "run_codex_exec.sh"
@@ -498,7 +501,15 @@ def _load_guard(path):
         f"muse_guard_{path.parent.parent.name.replace('-', '_')}", path
     )
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    # The module body runs with bytecode writing off, so the load leaves no
+    # `__pycache__` next to the hook; the caller's value is put back on every
+    # exit, a raising body included.
+    previous = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = previous
     return module
 
 
@@ -604,6 +615,120 @@ class TestConsentGuardCoversTheWrapperFlag(unittest.TestCase):
                     '_LITELLM_FLAG_NAME = "--litellm"',
                     path.read_text(encoding="utf-8"),
                 )
+
+
+class TestGuardLoadWritesNoBytecode(unittest.TestCase):
+    """AC-1, AC-2, AC-3 (hook-test-bytecode-suppression-others task0002; FR1,
+    FR2): `_load_guard` turns bytecode writing off only while the guard
+    module's body runs, for both plugins' `muse_guard.py`, and puts the
+    caller's value back on every exit.
+
+    Every test sets the starting value of `sys.dont_write_bytecode` itself: in a
+    whole run the inherited value is already True (tests/test_merge_ci_wait.py
+    sets it at import), and a test that inherited it would pass against a
+    loader that never restored the flag. The module execution step is replaced
+    for the duration of one load wherever a test needs to observe it or make it
+    raise, so a broken loader writes nothing under `em-workflow/hooks/` or
+    `em-review/hooks/` in those tests."""
+
+    def setUp(self):
+        # Registered first, so the value the test found comes back whether the
+        # test passes, fails or errors.
+        self.addCleanup(setattr, sys, "dont_write_bytecode", sys.dont_write_bytecode)
+
+    def load(self, name, starting, exec_step=None):
+        """`_load_guard` for one plugin's guard, with
+        `sys.dont_write_bytecode` set to `starting` just before the call. When
+        `exec_step` is given it replaces the module execution step for the
+        duration of the call and is handed the module."""
+        sys.dont_write_bytecode = starting
+        if exec_step is None:
+            return _load_guard(GUARD_PATHS[name])
+
+        def replaced(loader, module):
+            return exec_step(module)
+
+        with mock.patch.object(
+            importlib.machinery.SourceFileLoader, "exec_module", replaced
+        ):
+            return _load_guard(GUARD_PATHS[name])
+
+    @staticmethod
+    def cache_listing(directory):
+        """The entries of `directory` with their size and modification time;
+        empty when the directory does not exist."""
+        if not directory.is_dir():
+            return {}
+        listing = {}
+        for entry in directory.iterdir():
+            stat = entry.stat()
+            listing[entry.name] = (stat.st_size, stat.st_mtime_ns)
+        return listing
+
+    def test_ac1_flag_is_true_at_the_module_execution_step(self):
+        for name in GUARD_PATHS:
+            for starting in (False, True):
+                with self.subTest(copy=name, starting=starting):
+                    seen = []
+                    self.load(
+                        name, starting, lambda module: seen.append(sys.dont_write_bytecode)
+                    )
+                    self.assertEqual(seen, [True])
+
+    def test_ac1_flag_is_true_at_a_module_execution_step_that_raises(self):
+        def raising(module):
+            raise RuntimeError("guard body raised; flag=%r" % sys.dont_write_bytecode)
+
+        for name in GUARD_PATHS:
+            for starting in (False, True):
+                with self.subTest(copy=name, starting=starting):
+                    with self.assertRaises(RuntimeError) as caught:
+                        self.load(name, starting, raising)
+                    self.assertEqual(
+                        str(caught.exception), "guard body raised; flag=True"
+                    )
+
+    def test_ac1_a_real_load_adds_nothing_to_the_hooks_bytecode_cache(self):
+        # The starting value is off: the one case in which a loader that does
+        # not suppress writes a cache file next to the hook.
+        for name, path in GUARD_PATHS.items():
+            with self.subTest(copy=name):
+                cache_dir = path.parent / "__pycache__"
+                before = self.cache_listing(cache_dir)
+                self.load(name, False)
+                self.assertEqual(self.cache_listing(cache_dir), before)
+
+    def test_ac2_flag_holds_the_starting_value_after_the_load_returns(self):
+        for name in GUARD_PATHS:
+            for starting in (False, True):
+                with self.subTest(copy=name, starting=starting):
+                    self.load(name, starting)
+                    self.assertIs(sys.dont_write_bytecode, starting)
+
+    def test_ac2_the_load_still_returns_the_executed_guard_module(self):
+        for name, path in GUARD_PATHS.items():
+            for starting in (False, True):
+                with self.subTest(copy=name, starting=starting):
+                    module = self.load(name, starting)
+                    self.assertEqual(
+                        module.__name__, f"muse_guard_{name.replace('-', '_')}"
+                    )
+                    self.assertEqual(Path(module.__file__), path)
+                    self.assertTrue(callable(module.is_contributor_invocation))
+
+    def test_ac3_the_exception_propagates_and_the_flag_holds_the_starting_value(self):
+        for name in GUARD_PATHS:
+            for starting in (False, True):
+                with self.subTest(copy=name, starting=starting):
+                    failure = RuntimeError("guard body raised")
+
+                    def raising(module):
+                        raise failure
+
+                    with self.assertRaises(RuntimeError) as caught:
+                        self.load(name, starting, raising)
+                    self.assertIs(caught.exception, failure)
+                    self.assertIs(sys.dont_write_bytecode, starting)
 
 
 if __name__ == "__main__":

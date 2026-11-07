@@ -1,0 +1,89 @@
+task_id: task0002
+baseline_failures: []
+# Re-executed after the implementation and after this record was written:
+# `python3 -m unittest discover -s tests` ran 15050 tests, OK (skipped=1).
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_muse_guard.TestGuardLoadWritesNoBytecode.test_ac1_flag_is_true_at_the_module_execution_step
+      - tests.test_muse_guard.TestGuardLoadWritesNoBytecode.test_ac1_flag_is_true_at_a_module_execution_step_that_raises
+      - tests.test_muse_guard.TestGuardLoadWritesNoBytecode.test_ac1_a_real_load_adds_nothing_to_the_hooks_bytecode_cache
+      - tests.test_consultation_harness_chain.TestGuardLoadWritesNoBytecode.test_ac1_flag_is_true_at_the_module_execution_step
+      - tests.test_consultation_harness_chain.TestGuardLoadWritesNoBytecode.test_ac1_flag_is_true_at_a_module_execution_step_that_raises
+      - tests.test_consultation_harness_chain.TestGuardLoadWritesNoBytecode.test_ac1_a_real_load_adds_nothing_to_the_hooks_bytecode_cache
+    red_confirmed: true
+    red_reason: >-
+      With the loaders unchanged, the new classes were run in both modules.
+      The flag-at-the-execution-step tests failed for starting=False in both
+      plugins' copies (`Lists differ: [False] != [True]`), the raising-step
+      tests failed the same way (`'guard body raised; flag=False' !=
+      'guard body raised; flag=True'`), and the real-load tests failed with
+      `{'muse_guard.cpython-314.pyc': (...)} != {}` (a cache file appeared
+      next to the hook) when the hook directories held no `__pycache__`.
+  AC-2:
+    tests:
+      - tests.test_muse_guard.TestGuardLoadWritesNoBytecode.test_ac2_flag_holds_the_starting_value_after_the_load_returns
+      - tests.test_muse_guard.TestGuardLoadWritesNoBytecode.test_ac2_the_load_still_returns_the_executed_guard_module
+      - tests.test_consultation_harness_chain.TestGuardLoadWritesNoBytecode.test_ac2_flag_holds_the_starting_value_after_the_load_returns
+      - tests.test_consultation_harness_chain.TestGuardLoadWritesNoBytecode.test_ac2_the_load_still_returns_the_executed_guard_module
+    red_confirmed: false
+    red_reason: >-
+      The behavior pre-existed: the unchanged loaders never touched the flag,
+      so it already equalled the starting value after the load and the tests
+      passed before any implementation. The tests guard the new window against
+      a loader that fails to restore. Checked against two hand-made faulty
+      loaders in throwaway copies of both modules (one that never restores,
+      one that restores only on a normal return): the restore test failed for
+      the first, and the exception test for both.
+  AC-3:
+    tests:
+      - tests.test_muse_guard.TestGuardLoadWritesNoBytecode.test_ac3_the_exception_propagates_and_the_flag_holds_the_starting_value
+      - tests.test_consultation_harness_chain.TestGuardLoadWritesNoBytecode.test_ac3_the_exception_propagates_and_the_flag_holds_the_starting_value
+    red_confirmed: false
+    red_reason: >-
+      The behavior pre-existed: the unchanged loaders let the exception
+      propagate and never touched the flag, so the tests passed before any
+      implementation. The tests guard the new window against a loader that
+      swallows or replaces the exception or leaves the flag changed. Checked
+      against the two hand-made faulty loaders described under AC-2: the test
+      failed for starting=False in both plugins' copies, in both modules.
+  AC-4:
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      Command-level check; no unit test can stand for it because it inspects
+      the whole process, child interpreters included. Search of tests/ by
+      path and by basename (test_muse_guard.py,
+      test_consultation_harness_chain.py, muse_guard.py) found no existing
+      test that looks for a `__pycache__` beneath the hook directories after
+      a single-module run. Observed red: from a state with no `__pycache__`
+      beneath either hook directory, `python3 -m unittest tests.test_muse_guard`
+      and, separately, `python3 -m unittest tests.test_consultation_harness_chain`
+      each exited 0 but left `em-workflow/hooks/__pycache__/muse_guard.cpython-314.pyc`
+      and `em-review/hooks/__pycache__/muse_guard.cpython-314.pyc`. After the
+      change both runs exit 0 and leave no `__pycache__` beneath either
+      directory, so the guard run as a child interpreter (stdlib-only body,
+      no sibling import) writes nothing and no spawn site needed a change.
+  AC-5:
+    tests:
+      - tests.test_muse_guard.TestSourceHygiene.test_neither_plugins_hooks_tests_directory_gained_a_file
+    red_confirmed: false
+    red_reason: >-
+      The existing test passed before and after; the behavior it checks was
+      never changed. The new regression tests create no file in
+      `em-workflow/hooks/tests` or `em-review/hooks/tests` (they write
+      nothing there, and `em-review/hooks/tests` still does not exist); no
+      red state occurred for this change.
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      The outcomes are the exit code of `python3 -m unittest discover -s
+      tests`, a review of the two modules' imports (only `importlib.machinery`,
+      `sys` and `unittest.mock` were added, all standard library) and the
+      diff's file list (only `tests/test_muse_guard.py` and
+      `tests/test_consultation_harness_chain.py`, plus this record). Search of
+      tests/ by path and by basename found no existing test that reads these
+      two modules' imports or their diff. The full suite exited 0 before the
+      change (baseline, 15037 tests), so no failing check could be observed.
