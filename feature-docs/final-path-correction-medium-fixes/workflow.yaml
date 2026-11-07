@@ -178,9 +178,14 @@ tasks:
     branch: em-workflow/final-path-correction-medium-fixes/task0003
     notes: null
 review:
-  status: pending
-  rounds_completed: 0
-  perspectives: {}
+  status: completed
+  rounds_completed: 1
+  perspectives:
+    comprehensive: completed
+    security: completed
+    spec: completed
+    performance: completed
+    architecture: completed
   plan:
     floor: [comprehensive, security, spec, performance, architecture]
     discretionary: []
