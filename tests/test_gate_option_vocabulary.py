@@ -1154,8 +1154,17 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # `All eighteen rules apply` and the existing protocol-error sentence are
     # unchanged, and the numbered application rules stay eighteen. Same
     # rationale: refresh, don't remove.
+    #
+    # Refreshed again by final-path-correction-medium-fixes/task0003 (FR8):
+    # the `## Final-path correction` section states the `new_path` form in
+    # condition 4, the Re-planning residual in condition 5, the positional
+    # comparison with its occurrence rule, permitted replacements and
+    # document classes, the absent-document rules, and the FR1 limits with
+    # their two codes outside the five numbered conditions. The numbered
+    # application rules stay eighteen and the section still has five numbered
+    # conditions. Same rationale: refresh, don't remove.
     WORKFLOW_PATCH_SHA256 = (
-        "cfab33e0df1a1d4eb97d651a8da006d4e7fcb6472d5b3756fa5eee76de229ce8"
+        "ea99b215bec30133878058542a5d09937078706cca3f794cccd23aa036a0c667"
     )
     # Updated by goal-vs-spec-divergence/task0016 (review round1 rework),
     # which the user's SPEC.md/REQUIREMENTS.md Declared Change Set extension

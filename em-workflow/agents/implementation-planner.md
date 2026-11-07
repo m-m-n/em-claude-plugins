@@ -357,18 +357,66 @@ section. The input shape is owned by
   matching-name rule of `## Report Artifact Names` (cited under Inputs above)
   and does not exist in the worktree. When the plan documents already name a
   non-matching replacement, propose that path.
+- **Path form.** A new path is a plain path: it fully matches `[\w./-]+`
+  (Unicode word characters, `.`, `/` and `-`), it equals its normalized form,
+  the segments joined by `/`, so `.`, `./`, `a//b.md`, `a/./b.md` and a
+  trailing `/` are never proposed, and its first segment does not start with
+  `-`. A path with any other character, such as a space, a newline, a
+  backtick or a colon, is never proposed.
 - **Path strings only.** Replace the old path, and the bare old file name, in
   the target's task plan, IMPLEMENTATION.md and VERIFICATION.md. Change
   nothing else.
+- **Other plans.** In the plan of an unmerged task that is not a target, only
+  references to the old path or to the bare old file name may be replaced, and
+  only when that plan is listed in `write_policy.targets`; otherwise the
+  planner leaves that plan unedited, because the old reference may remain
+  there. The plan of a merged task is not edited.
+- **Shared bare name.** Several corrections can share one old file name. In a
+  target task's plan a bare occurrence of it is replaced by the new file name
+  of the correction of the target task that uses the plan; when a plan is used
+  by several target tasks, by the new file name of the correction of the task
+  whose file the sentence is about. When no correction of a task using the
+  plan holds that old file name, and in IMPLEMENTATION.md, VERIFICATION.md and
+  every other plan, it is replaced by the new file name of the correction of
+  the patch that holds it for the file the sentence is about.
 - **Patch shape.** Return `replace_planning` with every registered id in
   `carried_task_ids`, the corrections in `path_corrections` (each naming
   `task_id`, `old_path` and `new_path`), and `step_patches` empty. `entries`
   holds only new tasks that correct references in merged test files.
+- **Entries and requirements.** Each task under `entries` has a `files` that
+  is a non-empty list of regular files at the base commit whose text holds an
+  old path or a bare old file name of the corrections; a new file, a
+  directory or a file without a reference is never listed. `requirements_patch`
+  is null or has no entries, or each of its items names a requirement already
+  in `workflow.yaml` and sets only `tasks_append`, whose values are all ids
+  under `tasks_patch.entries`. It sets nothing else: no `status`, no
+  `tests_append` and no `tests_replace`.
+- **Canonical plan.** The plan of a new task under `entries` is exactly the
+  text below, in UTF-8 with LF line ends and a final LF; it holds nothing
+  else, a plan named TASK.md included. Its lines, in order:
+
+  1. ``# Task Plan: {task_id} - correct path references``
+  2. An empty line.
+  3. ``## Scope``
+  4. An empty line.
+  5. ``### Files to Modify``
+  6. For each file of the entry, in `files` order:
+     ``- `{file}` - correct the old references``
+  7. An empty line.
+  8. ``## Acceptance Criteria (MANDATORY)``
+  9. An empty line.
+  10. For each correction with an occurrence in those files at the base
+      commit, in `path_corrections` order, with n counting from 1:
+      ``- [ ] AC-{n}: `{old_path}` is replaced by `{new_path}`, and the bare `{old_name}` by `{new_name}`.``
+      `{old_name}` and `{new_name}` are the last path segments.
 - **References in tests.** An unmerged reference in a test is corrected by
   that task's implementer from the corrected plan, so it gets no new task. A
   reference in a merged test file is corrected by a new task under `entries`.
 - **Re-planning pass.** A re-planning pass that carries a non-merged task
-  with a violation also corrects it, through the same field.
+  with a violation also corrects it, through the same field. On a re-planning
+  pass the body of the documents may change, and no old path and no bare old
+  file name may remain in IMPLEMENTATION.md, VERIFICATION.md or a target
+  task's plan.
 
 ## Output
 

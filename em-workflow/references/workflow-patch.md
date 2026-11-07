@@ -430,18 +430,135 @@ directory, symlink or submodule.
    a matching name, and has no entry at the base commit.
 4. `path-correction-new-path` — `new_path` is not a matching name, passes the
    project-relative check of application rule 7, and has no entry at the base
-   commit.
+   commit. It is also a plain path: it fully matches `[\w./-]+` (Unicode word
+   characters, `.`, `/` and `-`), it equals its normalized form, the segments
+   that `path_segments` returns joined by `/`, so `.`, `./`, `a//b.md`,
+   `a/./b.md` and a trailing `/` are rejected, and its first segment does not
+   start with `-`.
 5. `path-correction-content` — The change is limited to replacing path strings
    and does not change the meaning of requirements or acceptance criteria, as
-   the comparison below decides.
+   the comparison below decides. On the Re-planning path the comparison does
+   not run, and condition 5 requires only that no old path and no bare old
+   file name remain.
 
 **Comparison for condition 5.** For IMPLEMENTATION.md, VERIFICATION.md and
 each target task's plan, take the version at the base commit and the current
-version, and apply one normalization to both: a single left-to-right pass that
-replaces each old path by its new path and each old file name by its new file
-name, longer match first. The two results must be equal, and the current
-version must not contain an old path. A document absent at the base commit is
-outside the set. New task plans under `entries` are outside the set.
+version, and compare them positionally in a single left-to-right pass over the
+base version. The pass fixes the occurrences defined below, longer match first,
+and replaces each old path by its new path and each old file name by its new
+file name at those occurrences only. A replacement is literal and is never
+rescanned. The same positions are read in the current version. The two results
+must be equal: only at an occurrence may the current version differ from the
+base version, and there it holds the old text or a permitted replacement; all
+other text is identical. Because the comparison is positional, one old file
+name may map to different new names: with `a/REPORT.md` corrected to
+`a/enabled` and `b/REPORT.md` corrected to `b/disabled`, changing
+`Authentication is enabled` to `Authentication is disabled` is rejected, since
+that text is outside an occurrence. In IMPLEMENTATION.md, VERIFICATION.md and a
+target task's plan the current version must not contain an old path or a bare
+old file name as an occurrence either (the left-behind check); the old text may
+not remain there. New task plans under `entries` are outside the set, except a
+plan whose normalized path equals one of the documents named under Document
+classes below.
+
+**Occurrences.** The scan runs left to right. At one position the longer token
+wins, and occurrences never overlap. A token is an old path of several
+segments or a bare old file name. A bare occurrence of an old file name is the
+literal, case-sensitive file name not preceded by an ASCII letter, digit, `_`,
+`-`, `.`, `/` or `\`, and not followed by an ASCII letter, digit, `_`, `-`, `/`
+or `\`, or by `.` plus one of letter, digit, `_`, `-`. An old path of several
+segments is an occurrence under the same boundary rule, except that a
+preceding `./`, the two characters before the token, still counts. A
+one-segment old path, judged after `path_segments`, is matched only as a bare
+name. So `existing/REPORT.md`, `PREREPORT.md` and `REPORT.md.bak` are neither
+replaced nor flagged, and rewriting them fails the comparison;
+`existing/a/REPORT.md` and `a/release-REPORT.md` are not occurrences of
+`a/REPORT.md` and may not change.
+
+**Permitted replacements.** The old text itself is always permitted at an
+occurrence; the left-behind check rejects it where it may not remain.
+Otherwise:
+
+| Occurrence | Document | Permitted replacements |
+|---|---|---|
+| Old path of several segments | Any | That correction's `new_path` |
+| Bare old file name | A target task's plan | The new file names of the corrections of the target tasks using that plan that hold this old file name; when there are none, those of all corrections of the patch that hold it |
+| Bare old file name | Any other document | The new file names of all corrections of the patch that hold it |
+| One-segment old path | As for a bare old file name | The bare replacements above, plus the `new_path` of each selected correction whose old path is that one segment |
+
+A plan's Files section holds the full `new_path` of a one-segment old path
+that moves to another directory. For a plan used by several target tasks, the
+candidates are the union of those tasks' corrections, and the plan's Files
+sections are checked against the union of those tasks' files.
+
+**Document classes.** On the correction entry, condition 5 covers the plan of
+every task in `workflow.yaml` that is not a target of the patch, whatever its
+status, as well as the documents above. A document takes the first class that
+fits, with paths compared after `path_segments` normalization:
+
+| Class | Document | Comparison with the base commit | Left-behind check |
+|---|---|---|---|
+| Merged plan | A plan used by a task whose `status` or last journal event is `merged`, a plan shared with a target task included | Byte-equal | No |
+| Target plan | A plan used by a target task | Positional | Yes |
+| Shared document | IMPLEMENTATION.md, VERIFICATION.md | Positional | Yes |
+| Non-target plan | The plan of any other task in `workflow.yaml` | Positional | No |
+
+A plan used by a target task and by a merged task is a merged plan. A merged
+plan that differs from the base commit is rejected as
+`path-correction-content` naming the document, and this takes precedence over
+any replacement a target task would need. In a non-target plan an old
+reference may remain, and replacing it with a permitted replacement is
+allowed, not required; nothing else may change. For every class:
+
+- A document with no entry at the base commit and present now is rejected as
+  `path-correction-content`.
+- A document with no entry at the base commit and absent now has nothing to
+  compare, and is not an error.
+- A document with an entry at the base commit and absent now is rejected.
+- A document that is not a regular file at the base commit, or cannot be read
+  now, is rejected.
+
+The one exception to the first of these rules is the plan of a new task under
+`entries`, when its path is none of those documents and collides with none of
+them after path normalization (`./` and repeated separators removed). Where a
+path is both, the constraint on the existing document wins.
+
+**Condition 5 on the Re-planning path.** The Re-planning path is `create-plan`
+`needs_update`, or `pending` on a SPEC-change re-entry. There the comparison
+above does not run, and the body of the documents may change. Condition 5
+requires only that the current IMPLEMENTATION.md, VERIFICATION.md and target
+task plans hold no old path and no bare old file name as an occurrence, else
+`path-correction-content`; only these documents are read, and a document that
+does not exist now is not an error. Conditions 1 to 4 and the agreement of a
+plan's Files section with `files` stay. The skip of the scenario-ID scan for
+VERIFICATION.md applies only on the correction entry: a correction patch on
+the Re-planning path, or one validated without `workflow.yaml`, scans
+VERIFICATION.md. A patch in any other state is already rejected as
+`path-correction-not-permitted`; condition 5 runs on it as on the correction
+entry, and the limits below do not run.
+
+**Limits on entries and requirements.** On the correction entry, a patch
+carrying `path_corrections` is limited in two more fields. The limits stand
+outside the five numbered conditions, each under its own code:
+
+- `path-correction-requirements` — `requirements_patch` is null or has no
+  entries, or every item names a requirement already in `workflow.yaml` and
+  its `set` holds only `tasks_append` whose values are all ids under
+  `tasks_patch.entries`.
+- `path-correction-entries` — every item of `tasks_patch.entries` has a
+  non-empty `files`, and every file is a regular file at the base commit whose
+  text holds an old path or a bare old file name of the patch's corrections
+  (an occurrence as defined above). A file that cannot be read as text within
+  the existing read limit is rejected. Each file of an entry, and each old
+  path and new path rendered into its plan, passes the form check of
+  condition 4. The plan of an entry is byte-equal to the canonical text that
+  the validator renders from the task's id, its `files` and the corrections
+  whose old path or bare old file name occurs in those files at the base
+  commit: a title, the Files section, and one acceptance criterion for each
+  such correction stating that the old reference is replaced by the new one,
+  and nothing else, a plan named TASK.md included.
+
+The Re-planning path is not limited.
 
 **Ownership.** `implementation-planner` corrects the plan documents and
 proposes `files` through `path_corrections`; the orchestrator applies the
