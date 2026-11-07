@@ -82,7 +82,7 @@ The set below is closed: no other code is written. `reason` is empty for
 | `precondition_unmet` | A step is not completed or skipped, or verify's result is fail | merge-preflight |
 | `unresolved_findings` | The latest review round has critical or high findings whose resolution is neither fixed nor declined | merge-preflight |
 | `commands_unapproved` | A non-empty verification command is not approved, or approval cannot be confirmed | merge-preflight |
-| `remote_unresolved` | No remote can be chosen, the remote name is unsafe, or gh's default repository differs from the chosen remote's | merge-git route, merge-pr repo |
+| `remote_unresolved` | No remote can be chosen; the remote name is unsafe; the remote does not exist; the gh default repository cannot be determined; on either the remote side or the default side, the host of the URL gh reported is malformed; the gh default repository and the chosen remote differ in host or owner/name (case-insensitive) | merge-git route, merge-pr repo |
 | `remote_not_github` | gh cannot resolve the chosen remote to a GitHub repository | merge-pr repo |
 | `pr_closed` | Only closed unmerged pull requests exist, or the pull request is no longer open at the pre-merge check | merge-pr |
 | `pr_draft` | The open pull request is a draft | merge-pr |
@@ -92,7 +92,7 @@ The set below is closed: no other code is written. `reason` is empty for
 | `lock_lost` | This run does not (or no longer) hold the merge lock | merge-lock verify |
 | `worktree_not_clean` | The integration worktree is dirty, on another branch, or inconsistently registered | merge-git worktree-state |
 | `conflict_unattributable` | A conflict cannot be attributed to a base-side feature with a readable spec | the skill |
-| `verification_failed` | A build, test or e2e command failed or timed out, or the integration worktree HEAD before integration differs from the expected integration tip | the skill, merge-git integrate |
+| `verification_failed` | A build, test or e2e command failed or timed out; the integration worktree HEAD before integration differs from the expected integration tip (`head_sha` on a retry); after the verification commands, tracked files have uncommitted changes; after the verification commands, HEAD differs from the verified `head_sha`; immediately before the local merge, the tip of the integration branch differs from the verified `head_sha` | the skill, merge-git integrate |
 | `push_rejected` | The push of the integration branch was rejected | the skill |
 | `ci_failed` | A pull request check failed or was cancelled | merge-ci-wait |
 | `ci_timeout` | Checks are still pending at the 60-minute deadline | merge-ci-wait |
@@ -100,7 +100,7 @@ The set below is closed: no other code is written. `reason` is empty for
 | `base_moving` | The base branch moved again after 3 redos | merge-git base-check |
 | `main_tree_not_ready` | The main working tree is not on the base branch or is not clean | merge-git main-tree |
 | `merge_failed` | The pull request merge or the main-tree merge failed | the skill |
-| `git_failed` | An unexpected git failure: fetch, worktree add, a non-conflict merge failure, or merge abort | merge-git, the skill |
+| `git_failed` | An unexpected git failure: a merge-git subcommand stopped as `git_failed` after a git command failure, a launch failure, a timeout or reaching the script-wide time limit, in route reading remote or config, merged reading the tip or checking the ancestor, main-tree, worktree-state running worktree list, git-path or status, integrate running fetch or a non-conflict merge, or base-check; `git worktree add` failed; `git merge --abort` failed for a merge_in_progress worktree or for an unattributable conflict; worktree-state after the add or abort is neither clean nor stop; the conflict-resolution `git commit` failed; `git status` or `git rev-parse HEAD` failed after verification; `git rev-parse` of the integration tip failed immediately before the local merge | merge-git, the skill |
 | `internal_error` | A script crash, unparseable script output, or rejected renderer input | the skill, merge-result |
 
 ## Field values

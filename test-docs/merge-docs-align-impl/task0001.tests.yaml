@@ -1,0 +1,61 @@
+task_id: task0001
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 13997 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 14023 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_merge_skill_doc.TestDocsAlignWithEmissionSites.test_ac1_the_verification_failed_condition_states_items_a_to_e
+      - tests.test_merge_skill_doc.TestDocsAlignWithEmissionSites.test_ac1_the_condition_matcher_fires_when_a_term_of_an_item_is_removed
+      - tests.test_merge_skill_doc.TestDocsAlignWithEmissionSites.test_ac1_the_condition_matcher_fires_on_a_step_number_and_stays_silent_without_one
+      - tests.test_merge_skill_doc.TestDocsAlignWithEmissionSites.test_ac1_the_condition_matcher_fires_on_a_wrong_emitted_by_and_a_wrong_shape
+    red_confirmed: true
+    red_reason: "Against the unchanged merge-result.md the first two failed: AssertionError: Lists differ: verification_failed item (b) lacks 'on a retry', item (c) lacks 'uncommitted changes', item (d) lacks 'HEAD differs from the verified', item (e) lacks 'immediately before the local merge' and 'tip of the integration branch'. The step-number and Emitted-by matcher tests passed before the change (they assert absence and a pinned value that already held); they are paired forged-text cases for the same matcher."
+  AC-2:
+    tests:
+      - tests.test_merge_skill_doc.TestDocsAlignWithEmissionSites.test_ac2_the_git_failed_condition_states_items_a_to_g_and_no_excluded_failure
+      - tests.test_merge_skill_doc.TestDocsAlignWithEmissionSites.test_ac2_the_excluded_failure_matchers_fire_on_forged_text
+      - tests.test_merge_skill_doc.TestDocsAlignWithEmissionSites.test_ac2_the_shared_words_of_the_positive_items_do_not_fire_an_excluded_matcher
+    red_confirmed: true
+    red_reason: "Against the unchanged merge-result.md the first failed: AssertionError: Lists differ: git_failed item (a) lacks 'launch failure' and the other item (a) to (g) terms. The excluded-failure matcher tests passed before the change; they are the forged-text pair of the absence assertion (each matcher fires on a phrase only the excluded failure would carry and stays silent on the words the positive items share)."
+  AC-3:
+    tests:
+      - tests.test_merge_skill_doc.TestDocsAlignWithEmissionSites.test_ac3_the_remote_unresolved_condition_states_the_existing_and_new_items
+      - tests.test_merge_skill_doc.TestDocsAlignWithEmissionSites.test_ac2_the_excluded_failure_matchers_fire_on_forged_text
+    red_confirmed: true
+    red_reason: "Against the unchanged merge-result.md the first failed: AssertionError: Lists differ: remote_unresolved item (a) lacks 'remote does not exist', item (b) lacks 'default repository cannot be determined', item (c) lacks 'remote side', 'default side' and 'malformed', item (d) lacks 'differ in host or owner/name' and 'case-insensitive'. The existing two conditions and Emitted by were already present. The excluded-failure matcher test (zero remotes, non-JSON output, url missing) passed before the change and is the forged-text pair."
+  AC-4:
+    tests:
+      - tests.test_merge_skill_doc.TestDocsAlignWithEmissionSites.test_ac4_the_results_section_names_merge_result_md_as_the_owner_of_the_conditions
+      - tests.test_merge_skill_doc.TestDocsAlignWithEmissionSites.test_ac4_the_owner_matcher_fires_on_forged_text
+      - tests.test_merge_skill_doc.TestDocsAlignWithEmissionSites.test_ac4_the_result_table_keeps_4_columns_and_the_28_codes_exactly_once
+      - tests.test_merge_skill_doc.TestDocsAlignWithEmissionSites.test_ac4_the_result_table_matcher_fires_on_forged_text
+      - tests.test_merge_skill_doc.TestDocsAlignWithEmissionSites.test_ac4_the_contract_rows_keep_3_cells_with_no_pipe_in_a_cell_body
+      - tests.test_merge_skill_doc.TestTerminals.test_ac6_reason_table_holds_exactly_the_28_codes_once_each
+      - tests.test_merge_result.TestAc6ContractDocument.test_every_reason_code_row_names_a_condition_and_an_emitter
+    red_confirmed: true
+    red_reason: "The ownership sentence is the new behavior. Against the unchanged SKILL.md the owner test failed: AssertionError: Lists differ: ['the 結果の値 section does not name Reason codes in references/merge-result.md as the owner'] != []; the owner-matcher test failed on its first assertion for the same reason. The table-shape tests (4 columns, 28 codes once each, 3 cells in merge-result.md, no pipe in a cell body) passed before the change because that shape already held and is only kept; the existing TestTerminals and TestAc6ContractDocument tests detect the same 28-code and 3-cell shape."
+  AC-5:
+    tests:
+      - tests.test_merge_skill_doc.TestDocsAlignWithEmissionSites.test_ac5_the_step_columns_agree_with_the_steps_that_write_each_code
+      - tests.test_merge_skill_doc.TestDocsAlignWithEmissionSites.test_ac5_the_git_failed_row_lists_exactly_steps_3_4_6_7_8_9_10_12_13
+      - tests.test_merge_skill_doc.TestDocsAlignWithEmissionSites.test_ac5_the_pass_through_steps_each_name_merge_git
+      - tests.test_merge_skill_doc.TestDocsAlignWithEmissionSites.test_ac5_the_steps_writing_each_code_are_read_from_the_step_bodies
+      - tests.test_merge_skill_doc.TestDocsAlignWithEmissionSites.test_ac5_the_step_column_matcher_fires_on_forged_text
+      - tests.test_merge_skill_doc.TestDocsAlignWithEmissionSites.test_ac5_the_verification_failed_detail_gains_the_step_10_mismatches
+      - tests.test_merge_skill_doc.TestDocsAlignWithEmissionSites.test_ac5_the_verification_detail_matcher_fires_on_forged_rows
+      - tests.test_merge_skill_doc.TestIntegrationBoundToExpectedHead.test_ac6_the_skill_row_lists_steps_8_10_13_the_new_origin_and_both_details
+    red_confirmed: true
+    red_reason: "Against the unchanged SKILL.md table the step-column test failed: AssertionError: Lists differ: ['git_failed is written in steps [10] that the column lacks', 'the git_failed column lacks the pass-through step 3', '... step 4', '... step 6', 'the git_failed column is [7, 8, 9, 12, 13], expected [3, 4, 6, 7, 8, 9, 10, 12, 13]']. The row-list test failed with Items in the second set but not the first: 10, 3, 4, 6. The detail test failed: the detail lacks '未コミットの変更' and 'HEAD が検証前の `head_sha` と異なる'. The existing TestIntegrationBoundToExpectedHead row test (steps {8, 10, 13}, origin, both moved-branch details) passed before and after; it pins the values the detail change must keep."
+  AC-6:
+    tests:
+      - tests.test_merge_skill_doc.TestDocsAlignWithEmissionSites.test_ac6_the_excluded_paths_stay_internal_error_main_tree_not_ready_and_merge_failed
+      - tests.test_merge_skill_doc.TestDocsAlignWithEmissionSites.test_ac6_the_excluded_path_matcher_fires_on_forged_text
+    red_confirmed: false
+    red_reason: "The criterion keeps behavior that already holds in SKILL.md (step 2, the step 6 tip read and the step 9 rev-parse are internal_error, main-tree in step 13.3 is main_tree_not_ready, a merge failure there is merge_failed), and this task does not edit those steps. Both tests passed before any change; no red state occurred. The forged-text test shows each matcher fires when the located line writes git_failed, when the line is missing, and when step 2 or 6 gains git_failed."
+  AC-7:
+    tests:
+      - tests.test_merge_skill_doc.TestDocsAlignWithEmissionSites.test_ac7_this_test_module_imports_only_the_standard_library
+      - tests.test_merge_skill_doc.TestDocsAlignWithEmissionSites.test_ac7_the_import_matcher_fires_on_forged_source
+      - tests.test_merge_skill_doc.TestDocsAlignWithEmissionSites.test_ac7_the_changed_documents_carry_no_home_path_and_no_notion_url
+    red_confirmed: false
+    red_reason: "The checks (standard-library-only imports of the test module, no home path and no Notion URL in the two changed documents) hold both before and after the change, so no red state occurred; each absence assertion has a forged-source or forged-text case in the same class. That the full suite passes is the run recorded in final_failures, and that no file under em-workflow/hooks/ or em-workflow/scripts/ changes is read from git diff --stat, not from a test."

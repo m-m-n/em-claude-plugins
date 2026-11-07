@@ -688,7 +688,7 @@ git branch -d em-workflow/<feature>/integration
 
 ## 結果の値
 
-手順 16 の入力文書の値。`reason` は次の 28 個の閉じた集合から選ぶ。`merged` / `already_merged` では空、`not_merged` では必須。
+手順 16 の入力文書の値。`reason` は次の 28 個の閉じた集合から選ぶ。`merged` / `already_merged` では空、`not_merged` では必須。各 reason の条件の正本は、`references/merge-result.md` の Reason codes。
 
 | reason | 出どころ | 手順 | `detail` |
 |---|---|---|---|
@@ -710,7 +710,7 @@ git branch -d em-workflow/<feature>/integration
 | `lock_lost` | merge-lock verify | 6, 13 | スクリプトの `detail` |
 | `worktree_not_clean` | merge-git worktree-state | 7, 9 | スクリプトの `detail` |
 | `conflict_unattributable` | このスキル | 9 | 帰属できなかった最初のパス（リポジトリ相対） |
-| `verification_failed` | merge-git integrate / このスキル | 8, 10, 13 | 手順 8: `integration branch moved after preflight`。手順 10: `component.field` と出力の要点。手順 13: `integration branch moved after verification` |
+| `verification_failed` | merge-git integrate / このスキル | 8, 10, 13 | 手順 8: `integration branch moved after preflight`。手順 10: `component.field` と出力の要点、未コミットの変更がある旨、または HEAD が検証前の `head_sha` と異なる旨。手順 13: `integration branch moved after verification` |
 | `push_rejected` | このスキル | 5, 11 | `git push of the integration branch failed` と失敗の要点 |
 | `ci_failed` | merge-ci-wait | 11 | スクリプトの `detail`（チェック名） |
 | `ci_timeout` | merge-ci-wait | 11 | スクリプトの `detail` |
@@ -718,7 +718,7 @@ git branch -d em-workflow/<feature>/integration
 | `base_moving` | merge-git base-check | 12 | スクリプトの `detail` |
 | `main_tree_not_ready` | merge-git main-tree | 4, 13 | スクリプトの `detail` |
 | `merge_failed` | このスキル | 13 | `gh pr merge failed` または `git merge in the main tree failed` と失敗の要点 |
-| `git_failed` | merge-git / このスキル | 7, 8, 9, 12, 13 | 失敗した操作と要点 |
+| `git_failed` | merge-git / このスキル | 3, 4, 6, 7, 8, 9, 10, 12, 13 | 失敗した操作と要点 |
 | `internal_error` | このスキル | どこでも | 使えなかった結果の出どころ（スクリプト名とサブコマンド） |
 
 終端ごとのキーの値:
