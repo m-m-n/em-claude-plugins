@@ -1409,8 +1409,19 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # `_TS_ID_RE` and `extract_verification_scenario_ids` are unchanged.
     # PINNED_VALIDATOR_TEST_LINE below is unaffected and still asserted. Same
     # rationale: refresh, don't remove.
+    #
+    # Refreshed again by plan-feature-docs-route/task0004 (FR2, NFR2):
+    # `validate_task_entry` rejects a `replace_all` task entry (a
+    # `replace_planning` patch's `tasks_patch.entries` item) whose `files`
+    # reach `feature-docs/**`, with the new code `plan-task-feature-docs`:
+    # one error per offending path, a non-string element and a non-list
+    # `files` left to the existing `files` code, carried tasks never checked.
+    # The `append` branch and its `rework-task-feature-docs` code are
+    # unchanged, and the stale comment saying replace_planning entries are
+    # never checked is corrected. PINNED_VALIDATOR_TEST_LINE below is
+    # unaffected and still asserted. Same rationale: refresh, don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "2e7a97b983c06dce938c478e2af4b909cc20bd0ae3047ca08da3406f51c001fc"
+        "e49cf2fa5bdfbbdc5c6d344ccf6e6adf3f9d9d237574dbf61ee97cb6bc8ccbf6"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-
