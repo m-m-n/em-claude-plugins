@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 86847f0a9d019f96baa6696cc9ffb9e5b11037a7
 last_input_digest: sha256:e48e8ae37d18aaf406409daaf192174110929816ee3adce278aad7521af092e5
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets: {}
 answers:
   design-step.decision:
@@ -43,13 +43,18 @@ worker_runs:
     tests/test_merge_preflight.py: sha256:a6b89bae56feec3977cbb9d537d551be80816a6cc1092dc0cc4770173c194cc7
   self_write_set: []
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:e48e8ae37d18aaf406409daaf192174110929816ee3adce278aad7521af092e5
   output_digest: null
   dispatch_digest_inputs:
     em-workflow/references/contracts/spec-writer-contract.md: sha256:c66e457a4a68d860f757f9e6cae377b6918d29a3f3152d9a12fc92570303c5f2
     em-workflow/references/templates/spec-document.md: sha256:a5d0106c39a5df7dc2365357a9546588275ed6c7a1651c866e75fa327a7fa592
-artifacts: []
+  self_write_set:
+  - feature-docs/merge-pr-test-git-env-isolation/SPEC.md
+artifacts:
+- path: feature-docs/merge-pr-test-git-env-isolation/SPEC.md
+  sha256: sha256:c27b0b67c37af00c743fafa9ec036c41afa9886b2a83c5b875e7a9ac61d04c27
+  produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
