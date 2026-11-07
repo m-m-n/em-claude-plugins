@@ -325,8 +325,9 @@ tasks:
     - FR8
     - FR9
     - NFR3
-    status: pending
+    status: in_progress
     notes: null
+    branch: em-workflow/plan-feature-docs-route/task0010
     provenance:
       source: review
       source_ids:
