@@ -1,0 +1,39 @@
+schema_version: 1
+feature: final-path-correction-medium-fixes
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: 7ad6c901ba4609c18e33d9300e09b92c4db60a48
+last_input_digest: sha256:9dd3abf53d0436fe7f72688a0f5285a7016edc15a100f9f11a51b7d3518f4d99
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:9dd3abf53d0436fe7f72688a0f5285a7016edc15a100f9f11a51b7d3518f4d99
+  output_digest: null
+  dispatch_digest_inputs:
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    em-workflow/agents/implementation-planner.md: sha256:76abe65c7acec865243fe01991c47569b2cf9d69839521f633b32635136dd867
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
+    em-workflow/references/contracts/planner-contract.md: sha256:6253ad93ad99c87daec151b2da071a950ebaa615b5e438adfc2951f7dba2fb05
+    em-workflow/references/phases/create-plan-phase.md: sha256:2fd43db00c2baf1cd84535fea6492a2dcb4c28e2bdff26dec9d1904778dbed90
+    em-workflow/references/workflow-patch.md: sha256:cfab33e0df1a1d4eb97d651a8da006d4e7fcb6472d5b3756fa5eee76de229ce8
+    em-workflow/scripts/report-name-entry.py: sha256:fd71df02b94b085cecb7cc6675d9c99fec95ea7576600e68ff6bd15ee2b13a9d
+    em-workflow/scripts/validate-worker-output.py: sha256:e154f1fb09f8325624055c351a13a1f854ec61ceb646eb3e9332d2b584eac3ba
+    em-workflow/skills/develop/SKILL.md: sha256:1cffbb195ba0efbd46bb76a20f11c5d619a1237826e47cf217784674a71b71d7
+    feature-docs/subagent-report-write-block/SPEC.md: sha256:3f041f1f3268805fa7ee539295bae1bbe79f3e07e1b32470cf96e477d3cb870e
+    feature-docs/subagent-report-write-block/reviews/round1.yaml: sha256:d4298d167520c3924651aa13112494a91d5e75acde4b2cfc66f18a5238359922
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+    tests/test_final_path_correction.py: sha256:f6a3e29eed918b712b5132ae2e099b4a9ce35aa4f7021492d714baa83fcf2e6a
+    tests/test_final_path_correction_docs.py: sha256:b79f00274b8d5fe96f89668046775a33eb342892f7fa9f7f04c2c8e3e7efd68a
+    tests/test_report_name_entry.py: sha256:ddf1e0d18179ea1f145d6eefa486e1285614accddaa28cc1a217cf3d312db9a5
+    tests/test_report_name_planner_docs.py: sha256:57522b22605d8170398c5cad710f94505658b8195b95a62f87f524d03d1ffdd5
+    tests/test_report_name_validation.py: sha256:27b3a5b9b771eb34f5c097b0f7aafd1c059c0d40deff634cfe1b4a8ca9e5dcf2
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
