@@ -9,14 +9,29 @@ task0002.md):
   resolve when one is needed (TS-21).
 - AC-3 (the journal half of conditions 1 and 2) through the entry script.
 
+Acceptance Criteria covered (feature-docs/final-path-correction-medium-fixes/
+tasks/task0002.md), classes TestEntryWidened, TestEntryDocstring and
+TestEntryOutputPassesTheValidator:
+
+- AC-1: a failed task and an unstarted task are both listed (TS-7).
+- AC-2: no violation in the failed tasks is `none`, whatever others hold.
+- AC-3: a merged task is not listed; an unstarted task whose last journal
+  event is `merged`, or whose name is a directory at the base, is blocked
+  (TS-7).
+- AC-4: the output of two targets, corrected in a patch, passes the validator
+  (TS-8).
+- AC-5: the output keys and the docstring (TS-16).
+
 Every repository is built in a temporary directory with the identity set per
 command. A file with an FR2 name is only ever created at run time, inside such
 a repository.
 """
 
+import ast
 import importlib.util
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -304,6 +319,328 @@ class TestEntryBlocked(EntryCase):
         result = self.run_entry()
         self.assertEqual(result.returncode, 0)
         self.assertEqual(self.workflow_path.read_bytes(), before)
+
+
+SECOND = "test-docs/demo/SUMMARY.md"
+
+
+# Recurrence tests for finding 4409a460572aac40 (final-path-correction-medium-fixes, FR4).
+class TestEntryWidened(EntryCase):
+    """Recurrence tests for finding 4409a460572aac40: once a failed task holds
+    a violation, the targets are the violations of every task whose status is
+    not `merged`, because the validator rejects a carried non-merged task that
+    still holds a new report-artifact name."""
+
+    def listed(self, result):
+        return [(v["task_id"], v["path"], v["failed_journal_line"]) for v in result["violations"]]
+
+    def test_a_failed_task_and_an_unstarted_task_are_both_listed(self):
+        self.write_workflow(make_workflow(tasks={
+            "task0001": {"status": "failed", "files": [MATCHING, "src/a.py"]},
+            "task0002": {"status": "pending", "files": [SECOND]},
+        }))
+        self.write_journal([self.event("task0001", "launched"), self.event("task0001", "failed")])
+        result = self.judge()
+        self.assertEqual(result["entry"], "dispatch")
+        self.assertEqual(result["errors"], [])
+        self.assertEqual(self.listed(result), [("task0001", MATCHING, 2), ("task0002", SECOND, None)])
+
+    def test_the_list_follows_the_task_mapping_then_the_file_order(self):
+        self.write_workflow(make_workflow(tasks={
+            "task0001": {"status": "pending", "files": ["src/a.py", SECOND, "docs/Analysis-1.md"]},
+            "task0002": {"status": "failed", "files": [MATCHING, "docs/Summary-1.md"]},
+            "task0003": {"status": "pending", "files": ["docs/Findings.md"]},
+        }))
+        self.write_journal([self.event("task0002", "failed")])
+        result = self.judge()
+        self.assertEqual(result["entry"], "dispatch")
+        self.assertEqual(
+            self.listed(result),
+            [
+                ("task0001", SECOND, None),
+                ("task0001", "docs/Analysis-1.md", None),
+                ("task0002", MATCHING, 1),
+                ("task0002", "docs/Summary-1.md", 1),
+                ("task0003", "docs/Findings.md", None),
+            ],
+        )
+
+    def test_a_task_in_any_status_but_merged_is_listed(self):
+        for status in ("pending", "needs_update", "skipped"):
+            with self.subTest(status):
+                self.write_workflow(make_workflow(tasks={
+                    "task0001": {"status": "failed", "files": [MATCHING]},
+                    "task0002": {"status": status, "files": [SECOND]},
+                }))
+                result = self.judge()
+                self.assertEqual([v["task_id"] for v in result["violations"]], ["task0001", "task0002"])
+
+    def test_the_output_keys_do_not_change(self):
+        self.write_workflow(make_workflow(tasks={
+            "task0001": {"status": "failed", "files": [MATCHING]},
+            "task0002": {"status": "pending", "files": [SECOND]},
+        }))
+        result = self.judge()
+        self.assertEqual(set(result), {"entry", "violations", "errors"})
+        for violation in result["violations"]:
+            self.assertEqual(set(violation), {"task_id", "path", "failed_journal_line"})
+
+    def test_a_failed_task_without_a_violation_is_none_whatever_others_hold(self):
+        # AC-2: the `none` decision is made on the failed tasks alone.
+        self.write_workflow(make_workflow(tasks={
+            "task0001": {"status": "failed", "files": ["src/a.py"]},
+            "task0002": {"status": "pending", "files": [SECOND]},
+        }))
+        self.assertEqual(self.judge(), {"entry": "none", "violations": [], "errors": []})
+
+    def test_a_failed_task_whose_name_is_an_update_is_none_whatever_others_hold(self):
+        self.commit_files({MATCHING: "existing\n"})
+        self.write_workflow(make_workflow(tasks={
+            "task0001": {"status": "failed", "files": [MATCHING]},
+            "task0002": {"status": "pending", "files": [SECOND]},
+        }))
+        self.assertEqual(self.judge(), {"entry": "none", "violations": [], "errors": []})
+
+    def test_the_base_is_not_read_for_the_names_of_other_tasks_when_none(self):
+        self.write_workflow(make_workflow(tasks={
+            "task0001": {"status": "failed", "files": ["src/a.py"]},
+            "task0002": {"status": "pending", "files": [SECOND]},
+        }))
+        for base in ("0" * 40, "HEAD", "not-hex"):
+            with self.subTest(base=base):
+                self.assertEqual(self.judge(**{"--base-commit": base})["entry"], "none")
+
+    def test_a_merged_task_holding_a_name_is_not_listed(self):
+        self.write_workflow(make_workflow(tasks={
+            "task0001": {"status": "failed", "files": [MATCHING]},
+            "task0002": {"status": "merged", "files": [SECOND]},
+        }))
+        self.write_journal([self.event("task0001", "failed"), self.event("task0002", "merged")])
+        result = self.judge()
+        self.assertEqual(result["entry"], "dispatch")
+        self.assertEqual(self.listed(result), [("task0001", MATCHING, 1)])
+
+    def test_an_unstarted_task_whose_last_journal_event_is_merged_is_blocked(self):
+        self.write_workflow(make_workflow(tasks={
+            "task0001": {"status": "failed", "files": [MATCHING]},
+            "task0002": {"status": "pending", "files": [SECOND]},
+        }))
+        self.write_journal([
+            self.event("task0001", "failed"),
+            self.event("task0002", "launched"),
+            self.event("task0002", "merged"),
+        ])
+        result = self.judge()
+        self.assertEqual(result["entry"], "blocked")
+        self.assertEqual(
+            [(e["code"], e["task_id"]) for e in result["errors"] if e["code"] == "path-correction-merged"],
+            [("path-correction-merged", "task0002")],
+        )
+        self.assertEqual(self.listed(result), [("task0001", MATCHING, 1), ("task0002", SECOND, None)])
+
+    def test_an_unstarted_task_whose_name_is_a_directory_at_the_base_is_blocked(self):
+        self.commit_files({SECOND + "/inner.txt": "x\n"})
+        self.write_workflow(make_workflow(tasks={
+            "task0001": {"status": "failed", "files": [MATCHING]},
+            "task0002": {"status": "pending", "files": [SECOND]},
+        }))
+        result = self.judge()
+        self.assertEqual(result["entry"], "blocked")
+        self.assertEqual(
+            [(e["task_id"], e["path"]) for e in result["errors"] if e["code"] == "path-correction-old-path"],
+            [("task0002", SECOND)],
+        )
+        self.assertEqual(self.listed(result), [("task0001", MATCHING, None), ("task0002", SECOND, None)])
+
+    def test_condition_1_is_judged_on_the_whole_list(self):
+        self.write_workflow(make_workflow(tasks={
+            "task0001": {"status": "failed", "files": [MATCHING]},
+            "task0002": {"status": "pending", "files": [SECOND]},
+            "task0003": {"status": "in_progress", "files": ["src/b.py"]},
+        }))
+        result = self.judge()
+        self.assertEqual(result["entry"], "blocked")
+        self.assertIn("path-correction-in-flight", [e["code"] for e in result["errors"]])
+        self.assertEqual([v["task_id"] for v in result["violations"]], ["task0001", "task0002"])
+
+    def test_the_exit_codes_are_unchanged(self):
+        self.write_workflow(make_workflow(tasks={
+            "task0001": {"status": "failed", "files": [MATCHING]},
+            "task0002": {"status": "pending", "files": [SECOND]},
+        }))
+        for flag in self.arguments():
+            with self.subTest(omit=flag):
+                self.assertEqual(self.run_entry(omit=flag).returncode, 2)
+        unusable = self.run_entry(**{"--base-commit": "0" * 40})
+        self.assertEqual((unusable.returncode, unusable.stdout), (2, ""))
+        self.assertEqual(self.run_entry().returncode, 0)
+
+
+class TestEntryDocstring(unittest.TestCase):
+    def test_the_docstring_states_fr4_and_the_two_steps(self):
+        tree = ast.parse(ENTRY_PATH.read_text(encoding="utf-8"))
+        doc = ast.get_docstring(tree)
+        self.assertIsNotNone(doc)
+        doc = " ".join(doc.split())  # the docstring wraps lines; compare phrases
+        self.assertIn("FR4", doc)
+        self.assertIn("final-path-correction-medium-fixes", doc)
+        self.assertIn("every task whose status is not `merged`", doc)
+        self.assertIn("failed_journal_line", doc)
+        self.assertIn("null", doc)
+
+
+# Recurrence test for finding 4409a460572aac40 (final-path-correction-medium-fixes, FR4).
+class TestEntryOutputPassesTheValidator(EntryCase):
+    """TS-8: the violations the entry lists are exactly what a patch has to
+    correct; fed through a patch that corrects them all, the validator's dry
+    run reports nothing. Finding 4409a460572aac40."""
+
+    FEATURE_DIR = "feature-docs/demo"
+    OLD_NAMES = {MATCHING: "test-docs/demo/audit-report.md", SECOND: "test-docs/demo/audit-summary.md"}
+    DIGEST_SOURCE = {
+        "answers_digest": "sha256:" + "2" * 64,
+        "digest_inputs": {"feature-docs/demo/SPEC.md": "sha256:" + "1" * 64},
+        "mode": "interactive",
+        "value_inputs": {"task_description": None},
+        "worker": "implementation-planner",
+        "workflow_blob": "8f17c04",
+        "write_policy_digest": "sha256:" + "3" * 64,
+    }
+    DOCUMENTS = {
+        "IMPLEMENTATION.md": (
+            "# Implementation Plan: demo\n"
+            "\n"
+            "The report is `test-docs/demo/REPORT.md`. REPORT.md is written by task0001 only.\n"
+            "The summary is `test-docs/demo/SUMMARY.md`. SUMMARY.md is written by task0003 only.\n"
+            "\n"
+            "## Shared Components\n"
+            "\n"
+            "None.\n"
+        ),
+        "VERIFICATION.md": (
+            "# Verification Document: demo\n"
+            "\n"
+            "### Test Scenarios from SPEC.md\n"
+            "| ID | Scenario | Expected Result |\n"
+            "|----|----------|-----------------|\n"
+            "| TS-1 | Read `test-docs/demo/REPORT.md` | It holds one finding |\n"
+            "| TS-2 | Read `test-docs/demo/SUMMARY.md` | It holds one line |\n"
+        ),
+        "tasks/task0001.md": (
+            "# Task Plan: task0001 - report\n"
+            "\n"
+            "## Scope\n"
+            "\n"
+            "### Files to Create\n"
+            "- `test-docs/demo/REPORT.md` - the report\n"
+            "\n"
+            "### Files to Modify\n"
+            "- `src/a.py` - change\n"
+            "\n"
+            "## Acceptance Criteria (MANDATORY)\n"
+            "\n"
+            "- [ ] AC-1: REPORT.md lists one finding (TS-1).\n"
+        ),
+        "tasks/task0002.md": (
+            "# Task Plan: task0002 - code\n"
+            "\n"
+            "## Scope\n"
+            "\n"
+            "### Files to Modify\n"
+            "- `src/b.py` - change\n"
+            "\n"
+            "## Acceptance Criteria (MANDATORY)\n"
+            "\n"
+            "- [ ] AC-1: it works.\n"
+        ),
+        "tasks/task0003.md": (
+            "# Task Plan: task0003 - summary\n"
+            "\n"
+            "## Scope\n"
+            "\n"
+            "### Files to Create\n"
+            "- `test-docs/demo/SUMMARY.md` - the summary\n"
+            "\n"
+            "## Acceptance Criteria (MANDATORY)\n"
+            "\n"
+            "- [ ] AC-1: SUMMARY.md holds one line (TS-2).\n"
+        ),
+    }
+
+    def setUp(self):
+        super().setUp()
+        self.feature_dir = self.root / self.FEATURE_DIR
+        self.commit_files({f"{self.FEATURE_DIR}/{rel}": text for rel, text in self.DOCUMENTS.items()})
+        self.workflow = make_workflow(tasks={
+            "task0001": {"status": "failed", "files": [MATCHING, "src/a.py"]},
+            "task0002": {"status": "merged", "files": ["src/b.py"]},
+            "task0003": {"status": "pending", "files": [SECOND]},
+        })
+        self.write_workflow(self.workflow)
+        self.write_journal([
+            self.event("task0001", "launched"), self.event("task0001", "failed"),
+            self.event("task0002", "launched"), self.event("task0002", "merged"),
+        ])
+
+    def correct_documents(self, corrections):
+        """Plays the planner: one left-to-right pass replaces each old path,
+        and each bare old file name, by its new one, in every document."""
+        mapping = {}
+        for c in corrections:
+            mapping[c["old_path"]] = c["new_path"]
+            mapping[c["old_path"].rsplit("/", 1)[-1]] = c["new_path"].rsplit("/", 1)[-1]
+        if not mapping:
+            return
+        tokens = sorted(mapping, key=lambda token: (-len(token), token))
+        pattern = re.compile("|".join(re.escape(token) for token in tokens))
+        for rel in self.DOCUMENTS:
+            target = self.feature_dir / rel
+            target.write_text(
+                pattern.sub(lambda m: mapping[m.group(0)], target.read_text(encoding="utf-8")),
+                encoding="utf-8",
+            )
+
+    def patch_correcting(self, corrections):
+        return {
+            "schema_version": 1,
+            "patch_id": "create-plan-p0001",
+            "base_input_digest": VWO.normalize_json_sha256(self.DIGEST_SOURCE),
+            "base_workflow_blob": self.DIGEST_SOURCE["workflow_blob"],
+            "operation": "replace_planning",
+            "tasks_patch": {
+                "mode": "replace_all",
+                "carried_task_ids": list(self.workflow["tasks"]),
+                "entries": {},
+                "path_corrections": corrections,
+            },
+            "requirements_patch": None,
+            "step_patches": [],
+            "preserve": ["workflow.implement.base_commit"],
+        }
+
+    def test_the_entry_output_corrected_in_a_patch_passes_the_dry_run(self):
+        result = self.judge()
+        self.assertEqual(result["entry"], "dispatch")
+        corrections = [
+            {"task_id": v["task_id"], "old_path": v["path"], "new_path": self.OLD_NAMES[v["path"]]}
+            for v in result["violations"]
+        ]
+        self.correct_documents(corrections)
+        errors = VWO.validate_workflow_patch(
+            self.patch_correcting(corrections),
+            workflow=self.workflow,
+            digest_source=self.DIGEST_SOURCE,
+            dry_run=True,
+            feature_dir=self.feature_dir,
+            target_repo=self.root,
+            base_commit=self.base,
+            journal=self.journal_path,
+        )
+        self.assertEqual([e["code"] for e in errors], [], errors)
+        self.assertEqual(
+            sorted((c["task_id"], c["old_path"]) for c in corrections),
+            [("task0001", MATCHING), ("task0003", SECOND)],
+        )
 
 
 class TestEntryExecutionErrors(EntryCase):
