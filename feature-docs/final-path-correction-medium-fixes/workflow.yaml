@@ -108,7 +108,8 @@ workflow:
   result: pass
   failed_items: []
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: 2b779243bd181f5f6712b9e7dc5adf0c6e366f4e
 tasks:
   task0001:
     title: Correction rules of the validator
