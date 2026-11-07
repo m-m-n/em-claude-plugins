@@ -137,7 +137,8 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
+    branch: em-workflow/merge-docs-align-impl/task0001
   task0002:
     title: State the gh pr merge exception conditions in the README
     plan: tasks/task0002.md
@@ -155,7 +156,8 @@ tasks:
     - NFR2
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
+    branch: em-workflow/merge-docs-align-impl/task0002
 review:
   status: pending
   rounds_completed: 0
