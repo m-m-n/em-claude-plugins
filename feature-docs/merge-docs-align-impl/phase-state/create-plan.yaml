@@ -32,11 +32,22 @@ worker_runs:
   - feature-docs/merge-docs-align-impl/tasks/task0001.md
   - feature-docs/merge-docs-align-impl/tasks/task0002.md
   note: The first validator pass rejected the task0002 Files bullet (task-plan-files);
-    the same run corrected it, and all return-time checks then ran again.
+    the same run corrected it, and all return-time checks then ran again. The orchestrator
+    first recorded artifacts from a failed digest call (paths joined into one argument);
+    digests were recalculated and corrected in a later commit, after confirming the
+    working-tree blobs matched the artifact commit.
 artifacts:
-- path: feature-docs/merge-docs-align-impl/THREAT-MODEL.md feature-docs/merge-docs-align-impl/VERIFICATION.md
-    feature-docs/merge-docs-align-impl/tasks/task0001.md feature-docs/merge-docs-align-impl/tasks/task0002.md
-  sha256: null
+- path: feature-docs/merge-docs-align-impl/THREAT-MODEL.md
+  sha256: sha256:f9228cd9c6aca5839b20848ba9867266ce02aa5659f530ab19f9cbe330d34509
+  produced_by: create-plan-run-0001
+- path: feature-docs/merge-docs-align-impl/VERIFICATION.md
+  sha256: sha256:9a87ed9c3161b7d3d3fed1c52accb8b3a1f8549bc4a84585427f2dd8f9b848a2
+  produced_by: create-plan-run-0001
+- path: feature-docs/merge-docs-align-impl/tasks/task0001.md
+  sha256: sha256:6ff3e68be4159a1edecf829506241bd37aab65cabb42d29bbbbc7c6bb32e3797
+  produced_by: create-plan-run-0001
+- path: feature-docs/merge-docs-align-impl/tasks/task0002.md
+  sha256: sha256:0900c84464f9a40446c809d029582116be2f6f6cf1b172cc2206c27a308ab167
   produced_by: create-plan-run-0001
 patches:
 - patch_id: create-plan-p0001
