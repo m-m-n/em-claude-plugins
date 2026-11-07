@@ -1,0 +1,20 @@
+schema_version: 1
+feature: verification-md-regular-file-read
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: 9dbde03586c9c594dc0747af4e9e942092adb85b
+last_input_digest: sha256:6c65d8210ef7a5cb5328127ce7bd07570389fea42b02c0264dba062cfd7b87fb
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: dispatched
+    input_digest: sha256:6c65d8210ef7a5cb5328127ce7bd07570389fea42b02c0264dba062cfd7b87fb
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
