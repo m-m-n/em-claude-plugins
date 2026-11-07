@@ -1,0 +1,46 @@
+round: 1
+executed_at: "2026-11-07T18:20:37+09:00"
+scope:
+  review_mode: diff
+  base_commit: 6616da7de5ab39d64de1951c73dbbe5e6c03c7c3
+  head_commit: c14cad4002653ed55da8231ca73d8c93d0afcf89
+  changed_files:
+    - em-workflow/scripts/validate-worker-output.py
+    - test-docs/scenario-id-fence-scope/task0001.tests.yaml
+    - tests/test_gate_option_vocabulary.py
+    - tests/test_validate_worker_output.py
+plan:
+  floor: [comprehensive, security, spec]
+  discretionary: []
+  cross_validation: false
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings: []
+evaluation:
+  round_summary: "Round 1 (diff mode, cross_validation=false). All three dispatched runs (comprehensive#0, security#0, spec#0) completed with empty findings; no critical/high site reported, dismissed_sites empty, no injection attempts. Independent inspection of all 4 changed files plus SPEC.md and THREAT-MODEL.md corroborated each perspective: fenced-block removal (line-feed split, trailing CR ignored, unclosed block to end of text, anchored linear regex, no raising path — NFR1); readers still go through _read_document_for_scenario_scan (lstat, O_NOFOLLOW, regular-file, size limit); residual risk of unclosed fence / tilde block accepted by SPEC A1/A4/A7 and THREAT-MODEL.md; FR1-FR8 match, _strip_noise/_FENCE_RE/_TS_ID_RE/extract_verification_scenario_ids unchanged, sha256 pins match actual file hashes. TS-14 (full suite) not executed under read-only constraint."
+  recommended_action: "complete"
+  action_rationale: "No reviewer findings and the evaluator's own inspection found nothing at medium or above; implementation, tests and sha256 pins match SPEC FR1-FR8 and NFR1; remaining gaps are risks SPEC A1/A4/A7 accepts."
+dismissed_sites: []
+dismissed_sites_dropped: []
+unreviewed_perspectives: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-scenario-id-fence-scope-20261107T092022Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
