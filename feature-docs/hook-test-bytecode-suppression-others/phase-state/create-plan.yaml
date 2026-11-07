@@ -1,0 +1,34 @@
+schema_version: 1
+feature: hook-test-bytecode-suppression-others
+phase: create-plan
+status: in_progress
+generation: 1
+base_revision: c925189b1f9108321146a1d186b8ba1241d51899
+last_input_digest: sha256:68f7da38eb1e5513788a4c7299f8dcc5c9849ef7971222cf4c8c1787ca6e81cd
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:68f7da38eb1e5513788a4c7299f8dcc5c9849ef7971222cf4c8c1787ca6e81cd
+  output_digest: null
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/planner-contract.md: sha256:6253ad93ad99c87daec151b2da071a950ebaa615b5e438adfc2951f7dba2fb05
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
+    em-workflow/references/workflow-schema.md: sha256:5db914a170c0bd97886671160a2c3498127ffd83f0814bc8fb67407f4dc563ee
+    em-workflow/skills/plan-writing/SKILL.md: sha256:364f9dfc8244f9fe9e52999dfb93cf675d4b0602279d0a6bdf6f70c1dc186b87
+    feature-docs/hook-test-bytecode-suppression-others/REQUIREMENTS.md: sha256:beedfa1e2abc43ad1506d84c8d8d649be7b296c3a99e1a8c6119b64866084b66
+    feature-docs/hook-test-bytecode-suppression-others/SPEC.md: sha256:2cc121b72ff1a3ad85306c69045c5ea3901e5db4203b9d86b111c04ba9548c59
+    feature-docs/hook-test-bytecode-suppression-others/workflow.yaml: sha256:40540d25809b2603de13f056eaad6f2b79ca3aee784589030f6dfd1f54ec7abb
+  self_write_set: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
