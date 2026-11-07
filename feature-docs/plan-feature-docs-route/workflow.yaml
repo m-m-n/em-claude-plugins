@@ -94,7 +94,8 @@ workflow:
   summary: 'python3 -m unittest discover -s tests: 15603 tests OK (skipped=1); check-plugin-invariants.py: all PASS; manual items 1-3 confirmed (no version change, shared names consistent)'
   completed_at_commit: 85f21b004963b22f6f5daf842c33140c929520af
 - id: retrospect
-  status: pending
+  status: completed
+  completed_at_commit: 61fcfa8b475f13ad0a23de186445381fee56eda8
 tasks:
   task0001:
     title: Planner rules for feature-docs files and other-feature documents
