@@ -93,7 +93,8 @@ workflow:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: 2872a763290a4c36df5a8a5c2fddb02a66a51142
 - id: implement
   status: pending
   base_commit: 6a756561190232fef9ed43e36f5972488eda69d7
@@ -105,7 +106,73 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Correction rules of the validator
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/validate-worker-output.py
+    - tests/test_final_path_correction.py
+    - tests/test_gate_option_vocabulary.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    - external-io
+    - api-contract
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR5
+    - FR6
+    - FR7
+    - FR8
+    - FR9
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: pending
+    notes: null
+  task0002:
+    title: Entry script targets every violating task
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/scripts/report-name-entry.py
+    - tests/test_report_name_entry.py
+    skills:
+    - backend-impl
+    domains:
+    - api-contract
+    complexity: medium
+    requirements:
+    - FR4
+    - FR8
+    - NFR2
+    - NFR4
+    status: pending
+    notes: null
+  task0003:
+    title: Correction rules in the owning documents
+    plan: tasks/task0003.md
+    files:
+    - em-workflow/references/workflow-patch.md
+    - em-workflow/agents/implementation-planner.md
+    - em-workflow/references/phases/create-plan-phase.md
+    - tests/test_final_path_correction_docs.py
+    - tests/test_report_name_planner_docs.py
+    - tests/test_gate_option_vocabulary.py
+    skills: []
+    domains:
+    - api-contract
+    complexity: medium
+    requirements:
+    - FR8
+    - NFR4
+    status: pending
+    notes: null
 review:
   status: pending
   rounds_completed: 0
@@ -118,92 +185,92 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: ["task0001"]
+    tests: ["TS-1", "TS-2", "TS-3", "TS-4"]
   FR2:
     title: Restrict the form of new_path
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: ["task0001"]
+    tests: ["TS-5"]
   FR3:
     title: Compare the plans of non-target tasks on the correction entry
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: ["task0001"]
+    tests: ["TS-6"]
   FR4:
     title: Align the entry's targets with the validator
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: ["task0002"]
+    tests: ["TS-7", "TS-8"]
   FR5:
     title: Limit condition 5's comparison to outside the Re-planning path
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: ["task0001"]
+    tests: ["TS-4", "TS-9", "TS-10"]
   FR6:
     title: Compare positionally, so one old file name may map to different new names
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: ["task0001"]
+    tests: ["TS-11"]
   FR7:
     title: Reject a bare old file name left behind
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: ["task0001"]
+    tests: ["TS-9", "TS-12"]
   FR8:
     title: State the rules in the owning documents
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: ["task0001", "task0002", "task0003"]
+    tests: ["TS-13"]
   FR9:
     title: Reject plan documents created on the correction entry
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: ["task0001"]
+    tests: ["TS-14"]
   NFR1:
     title: Unchanged behavior outside corrections
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: ["task0001"]
+    tests: ["TS-15"]
   NFR2:
     title: Fail closed
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: ["task0001", "task0002"]
+    tests: ["TS-16"]
   NFR3:
     title: Literal paths
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: ["task0001"]
+    tests: ["TS-3", "TS-5"]
   NFR4:
     title: No new gate
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks: ["task0001", "task0002", "task0003"]
+    tests: ["TS-7"]
 batch:
   review_rework_count: 0
   verify_rework:
