@@ -4,8 +4,8 @@ phase: create-spec
 status: in_progress
 generation: 1
 base_revision: 0516197daa51e6c257064923fcd80f1df1e1b6df
-last_input_digest: sha256:e8e74185fc698ef13843b8427dd651499ad27e61e89a15b6aeb6d1c5528181c6
-active_request_id: create-spec-run-0002
+last_input_digest: sha256:03ad6ebace34dd723c063523fcfc0b75663159f201a81d1e77ece40161fb135c
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -31,11 +31,25 @@ worker_runs:
     tests/test_queue_stop_guard_routeback_record.py: sha256:e3d7fa831a37b4ec03fd766b5955be03cfd552662feef22e71b56331557d22fb
   self_write_set: []
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:03ad6ebace34dd723c063523fcfc0b75663159f201a81d1e77ece40161fb135c
-  output_digest: null
+  output_digest: sha256:074f613bbe62771b8507d20cbe31aeaf3f8911ff48d8bfda5455e79287b1ac83
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/spec-writer-contract.md: sha256:c66e457a4a68d860f757f9e6cae377b6918d29a3f3152d9a12fc92570303c5f2
+    em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
+    em-workflow/references/templates/spec-document.md: sha256:a5d0106c39a5df7dc2365357a9546588275ed6c7a1651c866e75fa327a7fa592
+  self_write_set:
+  - feature-docs/hook-test-bytecode-suppression-others/REQUIREMENTS.md
+  - feature-docs/hook-test-bytecode-suppression-others/SPEC.md
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
 last_error: null
+artifacts:
+- path: feature-docs/hook-test-bytecode-suppression-others/REQUIREMENTS.md
+  sha256: sha256:beedfa1e2abc43ad1506d84c8d8d649be7b296c3a99e1a8c6119b64866084b66
+  produced_by: create-spec-run-0002
+- path: feature-docs/hook-test-bytecode-suppression-others/SPEC.md
+  sha256: sha256:2cc121b72ff1a3ad85306c69045c5ea3901e5db4203b9d86b111c04ba9548c59
+  produced_by: create-spec-run-0002
