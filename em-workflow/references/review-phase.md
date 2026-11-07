@@ -671,6 +671,23 @@ executed, and verifying it is code reading plus those read-only commands only.
 This step adds no new user question and no new gate identifier, and batch
 mode runs it as written with no batch-only branch.
 
+**Rescue-run findings**: in a pass where spec ran rescue runs, every finding
+of category `spec` whose `sources` include the identity of a spec reviewer run
+is a rescue-run finding; a finding whose only source is the evaluator is out of
+scope. The orchestrator judges each rescue-run finding. A
+missing-implementation finding asserts that the implementation of a
+requirement is absent from the visible diff, rather than an error at a changed
+location, and a finding the orchestrator cannot decide counts as a
+missing-implementation finding. A missing-implementation finding is recorded
+with `resolution: unresolved` and a `resolution_reason` beginning
+`unverified`. It is not an auto-fix candidate, is not counted in the residual
+critical/high count, and is not among the residual findings rework-planner
+receives. The same rule runs on the evaluator path, in the evaluator-failure
+degradation and on Phase R4 re-review output. It runs at the same point as the
+reproduction verification above: after round-context suppression and before
+the auto-fix candidate gate and the residual count of Phase R4. This step adds
+no new user question and no new gate identifier.
+
 **`recommended_action` is advice, never a decision** (IMPLEMENTATION.md D5):
 it never overrides the completion gate (`residual_critical_high == 0`,
 defined once in Phase R5's Completion gate — not restated here), the
@@ -727,8 +744,10 @@ never `Apply as-is`, in batch mode). The candidate gate also excludes a
 finding `declined` by reproduction verification (Phase R3b, "Reproduction
 verification on orchestrator paths"), and the residual critical/high count
 excludes it too. A finding left `unresolved` with a `resolution_reason`
-beginning `unverified` by that verification is excluded from the candidate
-gate and from the residual critical/high count.
+beginning `unverified` by that verification or by the rescue-run finding rule
+(Phase R3b, "Rescue-run findings") is excluded from the candidate gate and from
+the residual critical/high count. In the `file ∈ changed_files` condition,
+`changed_files` is the round's full list, not the paths of one shard.
 
 Classification (mechanical only — never fuzzy semantic judgment):
 
@@ -887,6 +906,20 @@ No bare `git add`/`git commit` against the integration worktree runs outside
 this locked section anywhere in this document. Standalone mode commits
 nothing, ever.
 
+Re-review shards and pass record: before each productive loop's re-review, the
+orchestrator runs review-shards again (the Phase R2 step, cited here and not
+restated) with the same `diff_base`, `changed_files` and `perspective_count` as
+the round's Phase R2 run, so that the shards are rebuilt from the current diff.
+It applies the cap again for that loop, and dispatches the re-review per shard
+under the Phase R2b rules per shard, spec order and rescue runs included. A
+non-zero exit of that run aborts the review phase before the re-review is
+dispatched, and no round record is written. The orchestrator records the pass:
+the loop number, the files that loop's fix changed, and the manifest exactly as
+review-shards returned it. A re-review run's run_id is
+`{perspective}[@s{k}]#loop{N}.{chain_index|fallback}` for loop N: `@s{k}` is
+present only for a run in a split pass, and the part after `loop{N}.` is the
+chain index of the dispatched entry or `fallback` for the Claude fallback.
+
 Loop termination: re-run ALL selected reviewers after any productive loop
 (re-review preamble: per-perspective stable_id/file/line list only — no
 titles/descriptions; other perspectives get a generic collateral-impact
@@ -905,10 +938,12 @@ self-report), `sources` set to that run's own identity, confidence `60`
 (the two mechanical corrections in R3b step 7 still apply on top). The
 re-review findings then pass Phase R3b's round-context suppression and its
 reproduction verification on orchestrator paths, in that order, before the
-decision below. Record each in-loop re-review run in `perspective_runs`
-exactly like a normal round run (`role: primary`/`fallback`, `status`). Then:
-zero residual critical/high non-spec → `clean`; `loop == 3` → `loop-cap`; no
-progress and no user-resolvable candidates → `no-progress`.
+decision below. They also pass the rescue-run finding rule of Phase R3b
+("Rescue-run findings") at the same point, before the decision below. Record
+each in-loop re-review run in `perspective_runs` exactly like a normal round
+run (`role: primary`/`fallback`, `status`). Then: zero residual critical/high
+non-spec → `clean`; `loop == 3` → `loop-cap`; no progress and no
+user-resolvable candidates → `no-progress`.
 
 ### Triage filing: once per review phase, immediately before the final round's R5 (FR11, FR24)
 
@@ -963,6 +998,15 @@ batch mode.
 
 ## Phase R5: Persist the round record
 
+Before writing the record, the orchestrator runs the `coverage` operation of
+`em-workflow/scripts/review-coverage.py` with the round's `perspectives` (the
+perspectives dispatched through Task this round, in dispatch order), `passes`
+(every pass of the round: Phase R2 as loop 0 and each Phase R4 loop, each with
+its `loop`, `fixed_files` and `manifest`) and `perspective_runs` (every row, as
+recorded). A non-zero exit aborts the review phase before the round record is
+written; a record without both coverage fields is never written, and the abort
+adds no question and no gate identifier.
+
 Write `reviews/round{N}.yaml` (develop-駆動: at
 `{project_root}/feature-docs/{feature}/reviews/round{N}.yaml` —
 project_root is the integration worktree per the mode table above, a
@@ -989,10 +1033,13 @@ perspective_runs:
   - {run_id: "performance#fallback", perspective: performance, role: fallback, source: claude, status: completed}
   - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
   # `model` は litellm ハーネスと、`model` を渡した codex のときだけ付ける。`run_id` は round 内で一意:
-  # chain walk のエントリは `{perspective}#{chain_index}`、chain-exhaustion /
-  # malformed-result / harness-failure の Claude fallback は
-  # `{perspective}#fallback`、Phase R4 の in-loop 再レビューは
-  # `{perspective}#loop{N}`、evaluator は固定で `evaluator`。R2b の chain
+  # 形式は `{perspective}[@s{k}]#[loop{N}.]{chain_index|fallback}`。`@s{k}` は
+  # 分割された pass の run だけに付く (k は review-shards の shard index、1 始まり)。
+  # `loop{N}.` は Phase R4 の loop N の再レビューだけに付く (N は 1 始まり)。末尾は
+  # chain walk のエントリの chain_index (0 以上の整数)、または chain-exhaustion /
+  # malformed-result / harness-failure の Claude fallback の `fallback`。
+  # 例: `security#0`、`performance@s2#1`、`architecture@s3#loop1.0`、
+  # `comprehensive#loop2.fallback`。evaluator は固定で `evaluator`。R2b の chain
   # walk は 1 観点につき primary の複数行になり得る — 最後の行がその観点の
   # primary reviewer 結果。role: fallback は primary_chain に利用可能な
   # エントリが無かったときの Claude 単独実行を表す。role: evaluator の
@@ -1036,6 +1083,8 @@ auto_fix:
   termination: clean
 residual_critical_high: 0
 rework_required: false       # true → implement へ差し戻し
+unreviewed_perspectives: []  # coverage の出力をそのまま写す。dispatch したが completed の run が無い観点。無ければ空
+partially_reviewed_perspectives: []  # coverage の出力をそのまま写す。perspective / unreviewed_files / reason の entry。無ければ空
 triage_filing:               # present and empty when this round's disposition was `another-round`
   executed: false
   branch: null                # ntd | report, null when not executed
@@ -1100,7 +1149,11 @@ without a confirmed basis is recorded as an ordinary finding with
 `resolution: unresolved` and a `resolution_reason` beginning `unverified`; it
 is not counted in `residual_critical_high`, is not among the residual findings
 rework-planner receives, and is not re-marked `deferred` by the batch
-rework-cap step.
+rework-cap step. A missing-implementation finding of a spec rescue run (Phase
+R3b, "Rescue-run findings") is recorded the same way: `resolution: unresolved`
+with a `resolution_reason` beginning `unverified`, not counted in
+`residual_critical_high`, not among the residual findings rework-planner
+receives, and not re-marked `deferred` by the batch rework-cap step.
 
 The round record also persists the evaluation's `round_summary`,
 `recommended_action`, and `action_rationale` under a root `evaluation`
@@ -1165,22 +1218,33 @@ offered interactively.
 completion blocker): among perspectives actually dispatched this round in
 Phase R2 (excluding any `requires_spec` perspective skipped there because
 `spec_available == false` — no dispatch, no `perspective_runs` entry, nothing
-to disclose), a perspective is listed here ONLY after its Phase R2b Claude
-fallback (the chain-exhausted case, the malformed-result case, or the
-harness-level-failure case) has itself been dispatched and produced no
-`status: completed` entry — the common case
-of a perspective ending the round with zero completed runs is now
-structurally closed by that fallback dispatch rather than merely disclosed.
-List such perspectives under a round-record-root `unreviewed_perspectives`
-field (present and empty when there are none). This is disclosure, not a
-gate: the step still completes whenever `residual_critical_high == 0` above
-holds, and no new gate identifier or batch non-packet gates table entry is
-introduced for it. The committed round record `reviews/round{N}.yaml` —
-which `references/batch-mode.md`'s output-suppression discipline explicitly
-does not touch (Phase R6) — is the batch-visible channel that carries this
-disclosure; interactive mode additionally surfaces the same list in the
-Phase R6 report so a human is not silently left unaware that a perspective
-went unreviewed.
+to disclose — and excluding axis 2's `source: tool` run), a perspective is
+listed here whenever it has no `status: completed` run, whatever its last
+`skip_reason` was; a retryable `skip_reason` does not keep it off the list.
+The list is copied as given from the `unreviewed_perspectives` output of the
+`coverage` operation, in dispatch order. List such perspectives under a
+round-record-root `unreviewed_perspectives` field
+(present and empty when there are none). This is disclosure, not a gate: the
+step still completes whenever `residual_critical_high == 0` above holds, and no
+new gate identifier or batch non-packet gates table entry is introduced for
+it. The committed round record `reviews/round{N}.yaml` — which
+`references/batch-mode.md`'s output-suppression discipline explicitly does not
+touch (Phase R6) — is the batch-visible channel that carries this disclosure;
+interactive mode additionally surfaces the same list in the Phase R6 report so
+a human is not silently left unaware that a perspective went unreviewed.
+
+**Partial-review disclosure** (record-keeping only — never a completion
+blocker): the round record also holds a root field
+`partially_reviewed_perspectives` (present and empty when there are none),
+copied as given from the `partially_reviewed_perspectives` output of the
+`coverage` operation. Each entry holds `perspective`, `unreviewed_files` and
+`reason`; `reason` joins the tokens that apply among `changed_after_review`,
+`shard_cap_exceeded`, `run_not_completed` and `spec_rescue` with `,` and no
+space, in that order. A perspective listed in `unreviewed_perspectives` is not
+listed here too. This is disclosure only: it adds no gate, no gate identifier
+and no question, and the completion gate above is unchanged. Both coverage
+fields hold project-relative paths and perspective names only, never an
+absolute path and never reviewer-written text.
 
 Rework path (interactive): when the user selects rework, follow the fixed
 ordering `references/rework-task-synthesis.md` Section 10 states for
