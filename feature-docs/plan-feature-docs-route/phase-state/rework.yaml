@@ -1,11 +1,11 @@
 schema_version: 1
 feature: plan-feature-docs-route
 phase: rework
-status: in_progress
+status: completed
 generation: 1
 base_revision: da31d8b11e925147122756df95d9055d6811f708
 last_input_digest: sha256:18805a9f2d4bab8aad907301b21b5562e285e4efed6e6a2ba4b9fdb43d8970cd
-active_request_id: rework-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -36,7 +36,7 @@ worker_runs:
     (orchestrator had not reset workflow[review]); task plan Files section format;
     outputs reverted'
 - request_id: rework-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:18805a9f2d4bab8aad907301b21b5562e285e4efed6e6a2ba4b9fdb43d8970cd
   dispatch_digest_inputs:
     em-workflow/references/contracts/rework-planner-contract.md: sha256:5856d1d386002d2c68cec28475a3a56a09a4cde73cdc737e01b6f708960151b9
@@ -58,7 +58,25 @@ worker_runs:
     feature-docs/plan-feature-docs-route/tasks/task0008.md: sha256:0fca871d647894e5f89127a4cd0aaf4d0bc8921abf2e497d3e3a3b9b92b68991
     feature-docs/plan-feature-docs-route/tasks/task0009.md: sha256:2e52058b1155cf253ff44d9f3f816a04a2cc0f4774013bba28bfd4609435df78
     feature-docs/plan-feature-docs-route/workflow.yaml: sha256:4dc5830a26e707abe489b3d6ed2994f82117e3cce528f528450a95fad00cb5a9
-artifacts: []
-patches: []
+  output_digest: sha256:2dd2d1c81e8b6cafae24fcb295d064645763b5651032229fa7a0bdbce6a3c73e
+  self_write_set:
+  - feature-docs/plan-feature-docs-route/IMPLEMENTATION.md
+  - feature-docs/plan-feature-docs-route/VERIFICATION.md
+  - feature-docs/plan-feature-docs-route/tasks/task0010.md
+artifacts:
+- path: feature-docs/plan-feature-docs-route/IMPLEMENTATION.md
+  sha256: sha256:e24bb115e8f3b940b03bda3bef299a894778e1c9ecbdce83c57d30f3e98d17ed
+  produced_by: rework-run-0002
+- path: feature-docs/plan-feature-docs-route/VERIFICATION.md
+  sha256: sha256:b12df5ad7f23876a8768d03919a2d49250733c5be3ee37b83f299102202ab641
+  produced_by: rework-run-0002
+- path: feature-docs/plan-feature-docs-route/tasks/task0010.md
+  sha256: sha256:3c86f6f770ae33d1535144bedceeff876733d06b4154e355e22504f748c93d83
+  produced_by: rework-run-0002
+patches:
+- patch_id: plan-feature-docs-route-rework-r1-p0001
+  status: applied
+  base_input_digest: sha256:18805a9f2d4bab8aad907301b21b5562e285e4efed6e6a2ba4b9fdb43d8970cd
+  base_workflow_blob: 575b4e8ef40021751403cdb45bd0f3122afa9588
 stale_redispatch_count: 0
-last_error: rework-run-0001 rejected by validate-worker-output.py
+last_error: null

@@ -60,12 +60,12 @@ traceability checks compare these as literal strings.
 | FR5 | task0002, task0005, task0009 | TS-5, TS-10 |
 | FR6 | task0002, task0003, task0005, task0009 | TS-5, TS-11 |
 | FR7 | task0005, task0009 | TS-5, TS-10 |
-| FR8 | task0001, task0002, task0006, task0007, task0008 | TS-6, TS-7, TS-12 |
-| FR9 | task0006, task0007, task0008 | TS-6, TS-7, TS-8, TS-12 |
+| FR8 | task0001, task0002, task0006, task0007, task0008, task0010 | TS-6, TS-7, TS-12 |
+| FR9 | task0006, task0007, task0008, task0010 | TS-6, TS-7, TS-8, TS-12 |
 | FR10 | task0001 | TS-5 |
 | NFR1 | task0008, task0009 | TS-12 (no new `gate_id` or question stated and asserted) |
 | NFR2 | task0004, task0005, task0006 | TS-9 |
-| NFR3 | task0001 to task0009 | TS-9; every new test module imports only the standard library and unittest (checked in review) |
+| NFR3 | task0001 to task0010 | TS-9; every new test module imports only the standard library and unittest (checked in review) |
 | NFR4 | task0001, task0002, task0003, task0007, task0009 | TS-5 (citations present, rule wording absent from citing documents) |
 | NFR5 | task0001, task0002 | TS-5 (untrusted-input statement); doc redaction enforced by the existing hook on every feature-docs write |
 | NFR6 | none (no task changes a version) | Manual item 1 below |

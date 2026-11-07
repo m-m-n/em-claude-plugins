@@ -47,7 +47,7 @@ implementer's rule (`em-workflow/agents/implementer.md`,
 | `scripts/feature-docs-entry.py` | Step A.6 judgment for the feature-docs correction (FR8) | See D6 below | task0006 (implements), task0008 (cites) |
 | Patch field `tasks_patch.feature_docs_removals` | Remove feature-docs paths from carried task records on the correction entry (FR8, FR9) | See D7 below. Owned by workflow-patch.md `## Feature-docs correction` | task0007 (owner), task0006 (validator), task0001 (planner produces), task0008 (orchestrator applies) |
 | Planning input `planning_inputs.feature_docs_correction` | Tell the planner which (task, path) pairs to correct | See D8 below. Owned by planner-contract.md | task0002 (owner), task0001, task0008 |
-| Step A.6 order and restoration split | Combine the feature-docs and final-path judgments in one evaluation (FR8, FR9, A4) | See D9 below. Owned by develop SKILL.md | task0008 (owner); task0006 provides `final_path_remaining` |
+| Step A.6 order and restoration split | Combine the feature-docs and final-path judgments in one evaluation (FR8, FR9, A4) | See D9 below. Owned by develop SKILL.md | task0008 (owner), task0010 (revises the split); task0006 provides `final_path_remaining` and shares the failed-task selection |
 
 ## Conventions
 
@@ -330,30 +330,46 @@ Affects task0001, task0002, task0008.
    final-path judgment. Neither result skips the evaluation of the other.
 2. A feature-docs `dispatch` runs section 13's
    `### Feature-docs correction dispatch`. Each validated correction is
-   written as today: the artifact commit first, then one Write and one
-   commit carrying its patch and the task-level restoration (each target's
-   status `pending`, `routeback_failed_journal_line` when
-   `failed_journal_line` is non-null, `notes` cleared by the patch).
-3. The step-level restoration items (`implement` `pending`, `failed_kind`
-   null) go into the Write of the last correction of the evaluation, and
-   only when no judgment of the evaluation is unresolved. A judgment is
-   unresolved when it is `blocked`, exits non-zero, or ends without a
-   validated patch.
-4. The feature-docs correction is last when `final_path_remaining` is
+   written with the artifact commit first, then one Write and one commit
+   carrying its patch (`notes` cleared by the patch's application).
+3. The Write of a correction that is not the last of the evaluation carries
+   its patch only. It writes no restoration item: each target's
+   `tasks.{T}.status` stays `failed` and no `routeback_failed_journal_line`
+   is written, so every target stays a failed task (status `failed`) for
+   the failed-task selection that `scripts/report-name-entry.py` owns and
+   `scripts/feature-docs-entry.py` shares, whether or not the task has a
+   `failed` journal event.
+4. Every restoration item goes into the Write of the last correction of the
+   evaluation, together, and only when no judgment of the evaluation is
+   unresolved: the task-level items (status `pending`,
+   `routeback_failed_journal_line` when `failed_journal_line` is non-null)
+   for the targets of every correction of the evaluation (`violations` of
+   the final-path correction, `targets` of the feature-docs correction),
+   and the step-level items (`implement` `pending`, `failed_kind` null).
+   This is FR9's one Write. A judgment is unresolved when it is `blocked`,
+   exits non-zero, or ends without a validated patch; then no restoration
+   item is written at all.
+5. The feature-docs correction is last when `final_path_remaining` is
    false. Otherwise the final-path judgment then runs on the new state, with
    a freshly captured integration tip; while `implement` is still `failed`
    it can dispatch section 13 as today, and that correction is last.
-5. If that final-path judgment returns `none`, the step-level items are
-   written alone, in one Write and one commit.
-6. Any unresolved judgment leaves `implement` `failed`, so Step B's stop
+6. If that final-path judgment returns `none`, the restoration items of
+   point 4 (the feature-docs targets' task-level items and the step-level
+   items) are written alone, in one Write and one commit.
+7. Any unresolved judgment leaves `implement` `failed`, so Step B's stop
    condition 3 fires. The stop report names each unresolved judgment's
    failed conditions, read from `errors`.
 
-Section 13's existing Apply paragraph stays true: each Write carries its
-patch and restoration together, so an interruption cannot split them. An
-interruption between two corrections re-enters Step A.6, which finds no
-feature-docs path left and proceeds to the final-path judgment. Affects
-task0006, task0008.
+Section 13's existing Apply paragraph stays true: the final-path correction
+is always the last correction of its evaluation, so its Write carries its
+patch and the restoration together. An interruption between two
+corrections, or an unresolved final-path judgment after a written
+feature-docs correction, leaves every target with status `failed` and
+`implement` `failed`. The next Step A.6 evaluation finds no feature-docs
+path left, so the feature-docs judgment returns `none`, and the final-path
+judgment still selects those tasks as failed tasks. The restoration of that
+evaluation is written for the targets of its own corrections. Affects
+task0006, task0008, task0010.
 
 ## Risk Assessment
 
