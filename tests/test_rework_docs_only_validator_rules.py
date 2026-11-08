@@ -8,7 +8,9 @@ asserts only the validator's rendering of them):
 - feature-docs files rule (FR3, TM-1): in `append` mode (the mode bound to
   `append_rework`) a task entry any of whose `files` has `feature-docs` as
   its first normalized path segment is reported with code
-  `rework-task-feature-docs`. `replace_planning` entries are not checked.
+  `rework-task-feature-docs`. `replace_planning` entries are checked by a
+  separate rule (code `plan-task-feature-docs`, plan-feature-docs-route
+  task0004), never by this one.
 - no implement reset on a docs-only round (FR5, TM-2): an `append_rework`
   patch with absent or empty `tasks_patch.entries` that sets `implement`
   to `pending` is reported with code `docs-only-implement-reset`, at the
@@ -82,6 +84,7 @@ def _load_module():
 VWO = _load_module()
 
 FEATURE_DOCS_CODE = "rework-task-feature-docs"
+PLAN_FEATURE_DOCS_CODE = "plan-task-feature-docs"
 IMPLEMENT_RESET_CODE = "docs-only-implement-reset"
 STEP_PATCHES_CODE = "docs-only-step-patches"
 REWORK_INDEX_CODE = "rework-index"
@@ -334,10 +337,17 @@ class TestFeatureDocsFilesRule(unittest.TestCase):
         patch = _append_patch({"task0007": _entry(["feature-docs/example/VERIFICATION.md"])})
         self.assertEqual(_codes(VWO.validate_workflow_patch(patch)), [FEATURE_DOCS_CODE])
 
+    # Expectation inverted by plan-feature-docs-route/task0004 (FR2): a
+    # replace_planning entry whose `files` reach feature-docs/** is now
+    # rejected with its own code, `plan-task-feature-docs`, once per path.
+    # The rework rule above stays append-only (its code never appears here).
+    # The test keeps its original name: the plan-feature-docs-route SPEC and
+    # earlier test records refer to it by that name.
     def test_ac1_replace_planning_entries_are_not_checked(self):
-        self.assertEqual(self._errors(["feature-docs/example/SPEC.md"], mode="replace_all"), [])
+        errors = self._errors(["feature-docs/example/SPEC.md"], mode="replace_all")
+        self.assertEqual(_codes(errors), [PLAN_FEATURE_DOCS_CODE])
         patch = _replace_planning_patch({"task0007": _entry(["feature-docs/example/SPEC.md"])})
-        self.assertEqual(VWO.validate_workflow_patch(patch), [])
+        self.assertEqual(_codes(VWO.validate_workflow_patch(patch)), [PLAN_FEATURE_DOCS_CODE])
 
     def test_ac2_code_only_task_is_accepted(self):
         self.assertEqual(self._errors(["src/auth.go", "tests/auth_test.go"]), [])

@@ -78,6 +78,8 @@ ACTIONS = (
     "extend_only",
     "regenerate",
     "preserve",
+    # Refreshed by plan-feature-docs-route/task0003: the seventh action.
+    "amend_other_feature",
 )
 KINDS = ("created", "modified", "deleted")
 
@@ -444,6 +446,8 @@ MATRIX_TARGETS = [
     target("m/extend_only.yaml", "extend_only"),
     target("m/regen.html", "regenerate", source="m/extend_only.yaml"),
     target("m/preserve.md", "preserve"),
+    # Refreshed by plan-feature-docs-route/task0003.
+    target("m/amend_other_feature.md", "amend_other_feature"),
 ]
 MATRIX_ROOTS = ["m/root"]
 
@@ -454,6 +458,12 @@ MATRIX_ROWS = [
     ("replace_authorized target", "m/replace_authorized.md", (False, True, False)),
     ("extend_only target", "m/extend_only.yaml", (False, True, False)),
     ("preserve target", "m/preserve.md", (False, False, False)),
+    # Refreshed by plan-feature-docs-route/task0003: modified only.
+    (
+        "amend_other_feature target",
+        "m/amend_other_feature.md",
+        (False, True, False),
+    ),
     ("not a target, inside an allowed root", "m/root/new.md", (True, False, False)),
     ("neither a target nor inside a root", "m/other/new.md", (False, False, False)),
 ]
@@ -477,8 +487,10 @@ class TestMembershipMatrix(unittest.TestCase):
         labels = {label for label, _, _ in MATRIX_ROWS}
         self.assertIn("not a target, inside an allowed root", labels)
         self.assertIn("neither a target nor inside a root", labels)
+        # Refreshed by plan-feature-docs-route/task0003: five admitting cells
+        # became six with the `amend_other_feature` row's `modified` cell.
         self.assertEqual(
-            sum(cell for _, _, cells in MATRIX_ROWS for cell in cells), 5
+            sum(cell for _, _, cells in MATRIX_ROWS for cell in cells), 6
         )
 
     def test_ac1_the_result_is_a_list_ascending_without_duplicates(self):

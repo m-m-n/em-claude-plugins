@@ -182,6 +182,13 @@ OPERATION_TASKS_PATCH_MODE = {
     "append_rework": "append",
 }
 
+# plan-feature-docs-route/task0005 (FR4): `amend_other_feature` is the action
+# that lets the implementation-planner modify one existing document of
+# another feature (IMPLEMENTATION.md D2). Its admission rules and the other
+# checks of the other-feature document route are implemented in the
+# "Other-feature documents" section below.
+AMEND_OTHER_FEATURE_ACTION = "amend_other_feature"
+
 WRITE_POLICY_ACTIONS = {
     "create",
     "replace_own",
@@ -189,6 +196,7 @@ WRITE_POLICY_ACTIONS = {
     "preserve",
     "extend_only",
     "regenerate",
+    AMEND_OTHER_FEATURE_ACTION,
 }
 
 COMPLEXITY_VALUES = {"low", "medium", "high"}
@@ -1517,12 +1525,7 @@ def _on_correction_entry(workflow, patch):
     mapping."""
     if not isinstance(workflow, dict) or not patch_has_path_corrections(patch):
         return False
-    create_plan = workflow_find_step(workflow, "create-plan")
-    implement = workflow_find_step(workflow, "implement")
-    return (
-        (create_plan.get("status") if create_plan else None) == "completed"
-        and (implement.get("status") if implement else None) == "failed"
-    )
+    return _workflow_on_correction_entry(workflow)
 
 
 def correction_path_state(workflow, patch, phase_state=None, feature_dir=None):
@@ -2344,6 +2347,294 @@ def _carried_report_name_errors(workflow, new_workflow, patch, target_repo, base
 
 
 # ---------------------------------------------------------------------------
+# Feature-docs correction (plan-feature-docs-route/task0006, FR8 and FR9)
+#
+# `tasks_patch.feature_docs_removals` removes feature-docs paths from carried
+# task records on the correction entry (create-plan `completed`, implement
+# `failed`). IMPLEMENTATION.md D7 owns the bindings and references/
+# workflow-patch.md, "Feature-docs correction", owns the contract text. Like
+# the final-path correction it is the exception to the verbatim copy of a
+# carried record, and it changes `files` and `notes` and nothing else:
+#
+# - The structural shape is checked with and without --dry-run-apply.
+# - Under --dry-run-apply the permission comes first: only the correction
+#   entry admits the field. On it, `feature_docs_removal_precondition_errors`
+#   (the one function the entry script `scripts/feature-docs-entry.py` calls
+#   too) judges the in-flight, merged, path and empty-files conditions, then
+#   the limits follow, the in-memory application runs and the
+#   `-incomplete` check judges its result.
+# - The plan agreement (`task-plan-files-mismatch`) is shared with the
+#   final-path correction (`_validate_corrected_task_plans`).
+# - A feature-docs path is expressed as the append check of
+#   `validate_task_entry` expresses it: the first segment after
+#   `path_segments` is exactly `feature-docs`.
+# ---------------------------------------------------------------------------
+
+FEATURE_DOCS_REMOVAL_KEYS = frozenset({"task_id", "path"})
+
+
+def _feature_docs_removals_field(patch):
+    tasks_patch = patch.get("tasks_patch") if isinstance(patch, dict) else None
+    return tasks_patch.get("feature_docs_removals") if isinstance(tasks_patch, dict) else None
+
+
+def patch_has_feature_docs_removals(patch):
+    """True when the patch carries a non-empty list in
+    `tasks_patch.feature_docs_removals`, whatever its elements hold."""
+    field = _feature_docs_removals_field(patch)
+    return isinstance(field, list) and bool(field)
+
+
+def feature_docs_removal_shape_errors(patch):
+    """The structural check of `tasks_patch.feature_docs_removals` (error code
+    `feature-docs-removal-shape`), the same with and without --dry-run-apply:
+    when present it is a non-empty list of mappings with exactly `task_id` and
+    `path` (non-empty strings), on `replace_planning` only; every `task_id` is
+    in the patch's own `carried_task_ids`; each (task_id, path) pair appears
+    once; `path_corrections` is absent. Absent and null are the same. A
+    malformed value is an error of this code and the rest of the check is
+    skipped for it; nothing raises."""
+    field = _feature_docs_removals_field(patch)
+    if field is None:
+        return []
+    label = "tasks_patch.feature_docs_removals"
+    errors = []
+
+    def bad(message):
+        errors.append(err("feature-docs-removal-shape", f"{label}{message}"))
+
+    if patch.get("operation") != "replace_planning":
+        bad(" is permitted on replace_planning only")
+        return errors
+    if not isinstance(field, list) or not field:
+        bad(" must be a non-empty list of mappings")
+        return errors
+    tasks_patch = patch["tasks_patch"]
+    if tasks_patch.get("path_corrections") is not None:
+        bad(" must not be used together with tasks_patch.path_corrections")
+    carried_raw = tasks_patch.get("carried_task_ids")
+    carried = {c for c in carried_raw if isinstance(c, str)} if isinstance(carried_raw, list) else set()
+    seen = set()
+    for i, item in enumerate(field):
+        if not isinstance(item, dict):
+            bad(f"[{i}] must be a mapping")
+            continue
+        if set(item) != FEATURE_DOCS_REMOVAL_KEYS:
+            bad(f"[{i}] must hold exactly task_id and path")
+            continue
+        task_id, path = item["task_id"], item["path"]
+        if not all(isinstance(v, str) and v for v in (task_id, path)):
+            bad(f"[{i}] task_id and path must be non-empty strings")
+            continue
+        if task_id not in carried:
+            bad(f"[{i}].task_id {task_id!r} is not in tasks_patch.carried_task_ids")
+        if (task_id, path) in seen:
+            bad(f"[{i}] repeats the removal of {path!r} from {task_id}")
+        seen.add((task_id, path))
+    return errors
+
+
+def _well_formed_feature_docs_removals(patch):
+    """The list of removals (mappings with the two strings) when the field
+    passes `feature_docs_removal_shape_errors`, else []."""
+    if not patch_has_feature_docs_removals(patch) or feature_docs_removal_shape_errors(patch):
+        return []
+    return [dict(item) for item in _feature_docs_removals_field(patch)]
+
+
+def _apply_feature_docs_removals(tasks, removals):
+    """In-memory application on a {task_id: record} mapping the caller owns
+    (a copy): every occurrence of `path` leaves the target's `files` and
+    `notes` is set to null; every other field stays verbatim. A removal naming
+    a task that is not in `tasks` is skipped."""
+    for removal in removals:
+        record = tasks.get(removal.get("task_id"))
+        if not isinstance(record, dict):
+            continue
+        files = record.get("files")
+        if isinstance(files, list):
+            record["files"] = [f for f in files if f != removal["path"]]
+        record["notes"] = None
+
+
+def _require_feature_docs_removal_inputs(patch, *, workflow, journal, feature_dir):
+    """Under --dry-run-apply a non-empty `feature_docs_removals` needs
+    --workflow, --journal and --feature-dir: a missing one is an execution
+    error (exit 2), never a pass."""
+    if not patch_has_feature_docs_removals(patch):
+        return
+    missing = [
+        flag
+        for flag, value in (("--workflow", workflow), ("--journal", journal), ("--feature-dir", feature_dir))
+        if value is None
+    ]
+    if missing:
+        raise ExecutionError(
+            "--dry-run-apply of a patch with feature_docs_removals requires " + ", ".join(missing)
+        )
+
+
+def _workflow_on_correction_entry(workflow):
+    """True when `workflow` is on the correction entry: create-plan
+    `completed` and implement `failed`. False without a workflow mapping."""
+    if not isinstance(workflow, dict):
+        return False
+    create_plan = workflow_find_step(workflow, "create-plan")
+    implement = workflow_find_step(workflow, "implement")
+    return (
+        (create_plan.get("status") if create_plan else None) == "completed"
+        and (implement.get("status") if implement else None) == "failed"
+    )
+
+
+def _last_event_name(value):
+    """The event of a `journal_last_events` value `(event, line)`; None for a
+    value of any other shape."""
+    return value[0] if isinstance(value, (tuple, list)) and value else None
+
+
+def feature_docs_removal_precondition_errors(workflow, removals, last_events):
+    """The conditions of a feature-docs correction that the workflow and the
+    journal decide, one error code each, in this order. A removal is a mapping
+    with `task_id` and `path`; the entry script supplies them from its
+    targets. `last_events` is `journal_last_events`.
+
+    1. `feature-docs-removal-in-flight`: one error per task whose status is
+       `in_progress` or whose journal last event is `launched` (any task, not
+       only a target).
+    2. `feature-docs-removal-merged`: one error per target task whose status or
+       journal last event is `merged`.
+    3. `feature-docs-removal-path`: one error per removal whose `path` is not a
+       feature-docs path or is not in the target's `files`.
+    4. `feature-docs-removal-empty-files`: one error per target task whose
+       `files` would be empty once every feature-docs path named for it is
+       removed.
+
+    A malformed input (a record that is not a mapping, a removal that is not a
+    mapping) is skipped or judged by condition 3; nothing raises."""
+    errors = []
+    tasks = _tasks_of(workflow)
+    last_events = last_events if isinstance(last_events, dict) else {}
+    removals = [r for r in removals if isinstance(r, dict)] if isinstance(removals, (list, tuple)) else []
+
+    in_flight = {
+        task_id
+        for task_id, record in tasks.items()
+        if isinstance(record, dict) and record.get("status") == "in_progress"
+    }
+    in_flight |= {task_id for task_id, value in last_events.items() if _last_event_name(value) == "launched"}
+    for task_id in sorted(in_flight, key=str):
+        errors.append(
+            err(
+                "feature-docs-removal-in-flight",
+                f"{task_id}: a feature-docs correction requires no task in flight "
+                "(status in_progress or last journal event launched)",
+                task_id=task_id,
+            )
+        )
+
+    targets = []  # distinct target task ids, in removal order
+    for removal in removals:
+        task_id = removal.get("task_id")
+        if isinstance(task_id, str) and task_id not in targets:
+            targets.append(task_id)
+    for task_id in targets:
+        record = tasks.get(task_id)
+        status = record.get("status") if isinstance(record, dict) else None
+        last_event = _last_event_name(last_events.get(task_id))
+        if status == "merged" or last_event == "merged":
+            errors.append(
+                err(
+                    "feature-docs-removal-merged",
+                    f"{task_id}: the target task is merged (status {status!r}, last journal event "
+                    f"{last_event!r}); its record cannot be corrected",
+                    task_id=task_id,
+                )
+            )
+
+    named = {}  # task_id -> the feature-docs paths named for it
+    for removal in removals:
+        task_id, path = removal.get("task_id"), removal.get("path")
+        record = tasks.get(task_id) if isinstance(task_id, str) else None
+        files = record.get("files") if isinstance(record, dict) else None
+        if not (isinstance(path, str) and path_segments(path)[:1] == ["feature-docs"]):
+            reason = "is not a feature-docs path"
+        elif not isinstance(files, list) or path not in files:
+            reason = "is not in the target task's files"
+        else:
+            named.setdefault(task_id, set()).add(path)
+            continue
+        errors.append(
+            err(
+                "feature-docs-removal-path",
+                f"{task_id}: path {path!r} {reason}",
+                task_id=task_id,
+                path=path,
+            )
+        )
+
+    for task_id, paths in named.items():
+        files = tasks[task_id]["files"]
+        remaining = [f for f in files if not (isinstance(f, str) and f in paths)]
+        if not remaining:
+            errors.append(
+                err(
+                    "feature-docs-removal-empty-files",
+                    f"{task_id}: files would be empty once {sorted(paths)} are removed; "
+                    "a task with no file cannot be corrected",
+                    task_id=task_id,
+                )
+            )
+    return errors
+
+
+def _feature_docs_removal_limit_errors(patch):
+    """`feature-docs-removal-limits`: on the correction entry `step_patches`
+    and `tasks_patch.entries` are empty and `requirements_patch` is null or
+    holds no entries. One error per breach."""
+    errors = []
+
+    def reject(message):
+        errors.append(err("feature-docs-removal-limits", message))
+
+    if patch.get("step_patches"):
+        reject("a feature-docs correction requires step_patches to be empty")
+    tasks_patch = patch.get("tasks_patch")
+    if isinstance(tasks_patch, dict) and tasks_patch.get("entries"):
+        reject("a feature-docs correction requires tasks_patch.entries to be empty")
+    requirements_patch = patch.get("requirements_patch")
+    if isinstance(requirements_patch, dict) and requirements_patch.get("entries"):
+        reject("a feature-docs correction requires requirements_patch to be null or to hold no entries")
+    return errors
+
+
+def _feature_docs_removal_incomplete_errors(new_workflow):
+    """`feature-docs-removal-incomplete`: one error per task of the patched
+    workflow whose status is not `merged` and whose `files` still hold a
+    feature-docs path."""
+    errors = []
+    for task_id, record in _tasks_of(new_workflow).items():
+        if not isinstance(record, dict) or record.get("status") == "merged":
+            continue
+        files = record.get("files")
+        remaining = (
+            [f for f in files if isinstance(f, str) and path_segments(f)[:1] == ["feature-docs"]]
+            if isinstance(files, list)
+            else []
+        )
+        if remaining:
+            errors.append(
+                err(
+                    "feature-docs-removal-incomplete",
+                    f"{task_id}: files still hold feature-docs paths after the patch: {remaining}",
+                    task_id=task_id,
+                    paths=remaining,
+                )
+            )
+    return errors
+
+
+# ---------------------------------------------------------------------------
 # --kind workflow-patch (5.5)
 # ---------------------------------------------------------------------------
 
@@ -2476,7 +2767,8 @@ def validate_task_entry(task_id, entry, mode, registries, workflow):
             errors.append(err("provenance", f"{p}.provenance.source must be 'review' or 'verify'"))
         # rework-docs-only-task-routing/task0004 (FR3, TM-1): `append` is the
         # mode bound to `append_rework`, so this is the rework-synthesized
-        # task entry; `replace_planning` entries are never checked. A path
+        # task entry; the `replace_all` mode (`replace_planning`) has its own
+        # check and code below (plan-feature-docs-route/task0004). A path
         # is a planning document when its first normalized segment
         # (path_segments: `\` as `/`, empty and `.` dropped) is exactly
         # `feature-docs` -- exact segment equality, so `feature-docs-archive/x`
@@ -2489,6 +2781,29 @@ def validate_task_entry(task_id, entry, mode, registries, workflow):
                         "rework-task-feature-docs",
                         f"{p}.files entry {f!r} is a feature-docs planning document; "
                         "a rework-synthesized task's files must not reach feature-docs/**",
+                    )
+                )
+    elif mode == "replace_all":
+        # plan-feature-docs-route/task0004 (FR2, NFR2; IMPLEMENTATION.md D1):
+        # a planned task's `files` must not reach `feature-docs/**`. One
+        # `plan-task-feature-docs` error per offending path, the message
+        # holding the task id and the path as given. The predicate is the
+        # append check's own (path_segments, first segment exactly
+        # `feature-docs`); a non-string element and a non-list `files` are
+        # already reported by the `files` code above and are skipped here, so
+        # this never raises. Only `tasks_patch.entries` pass through this
+        # function: carried tasks (`carried_task_ids`) are copied verbatim and
+        # never checked. The rule's prose is owned by
+        # skills/plan-writing/SKILL.md `## Feature-docs Files`, cited not
+        # restated.
+        for f in files:
+            if isinstance(f, str) and path_segments(f)[:1] == ["feature-docs"]:
+                errors.append(
+                    err(
+                        "plan-task-feature-docs",
+                        f"{p}.files entry {f!r} is a feature-docs path; "
+                        "a planned task's files must not reach feature-docs/** "
+                        "(skills/plan-writing/SKILL.md, ## Feature-docs Files)",
                     )
                 )
     return errors
@@ -2733,6 +3048,12 @@ def validate_workflow_patch(
     # application need workflow.yaml and live in _validate_dry_run_apply.
     errors.extend(path_correction_shape_errors(data))
 
+    # Feature-docs correction (workflow-patch.md "Feature-docs correction"):
+    # the structural shape of tasks_patch.feature_docs_removals, with and
+    # without --dry-run-apply. The permission, the conditions and the
+    # application need workflow.yaml and live in _validate_dry_run_apply.
+    errors.extend(feature_docs_removal_shape_errors(data))
+
     requirements_patch = data.get("requirements_patch")
     if requirements_patch is not None:
         if not isinstance(requirements_patch, dict):
@@ -2882,6 +3203,10 @@ def _validate_dry_run_apply(
         base_commit=base_commit,
     )
     corrections = _well_formed_path_corrections(data)
+    # Feature-docs correction inputs (D7): a missing one is an execution
+    # error (exit 2) as well, decided before any other check.
+    _require_feature_docs_removal_inputs(data, workflow=workflow, journal=journal, feature_dir=feature_dir)
+    removals = _well_formed_feature_docs_removals(data)
 
     if digest_source is None:
         errors.append(err("dry-run-apply", "--digest-source is required for --dry-run-apply"))
@@ -2900,6 +3225,11 @@ def _validate_dry_run_apply(
     # here, before the replace_all branch, so the corrections block below can
     # read it whatever `tasks_patch.mode` holds.
     path_state = correction_path_state(workflow, data, phase_state, feature_dir)
+    # Feature-docs correction (IMPLEMENTATION.md D7): the field is admitted on
+    # the correction entry only, where the replace_all below is permitted the
+    # same way a final-path correction is.
+    has_removals = patch_has_feature_docs_removals(data)
+    removal_entry = has_removals and _workflow_on_correction_entry(workflow)
 
     # Rule 3: all `expected` values must match current state. A step_patches
     # that is not a list, or an element that is not a mapping, is reported by
@@ -2990,18 +3320,19 @@ def _validate_dry_run_apply(
                         "a correction on the correction entry requires step_patches to be empty",
                     )
                 )
-        blocked_task_statuses = ("in_progress",) if correction_entry else ("in_progress", "failed")
-        if current_status not in ("pending", "needs_update") and not correction_entry:
+        on_correction_entry = correction_entry or removal_entry
+        blocked_task_statuses = ("in_progress",) if on_correction_entry else ("in_progress", "failed")
+        if current_status not in ("pending", "needs_update") and not on_correction_entry:
             errors.append(err("replace-all-not-permitted", f"replace_all requires create-plan step to be pending or needs_update, got {current_status!r}"))
         else:
             if tasks and any((t or {}).get("status") in blocked_task_statuses for t in tasks.values()):
-                if correction_entry:
+                if on_correction_entry:
                     errors.append(err("replace-all-not-permitted", "replace_all on the correction entry requires no task to be in_progress (implementation is in flight)"))
                 else:
                     errors.append(err("replace-all-not-permitted", "replace_all requires no task to be in_progress or failed (implementation has started)"))
             else:
                 is_replanning = (
-                    correction_entry
+                    on_correction_entry
                     or current_status == "needs_update"
                     or workflow_replace_all_spec_change_reentry(workflow, phase_state, feature_dir)
                 )
@@ -3100,6 +3431,27 @@ def _validate_dry_run_apply(
                 _correction_entry_limit_errors(workflow, corrections, data, feature_dir, target_repo, base_commit)
             )
 
+    # Feature-docs correction (IMPLEMENTATION.md D7): the permission comes
+    # first. Any state but the correction entry is rejected; on it the
+    # precondition function (shared with scripts/feature-docs-entry.py) and
+    # then the limits are judged. The in-memory application and the
+    # `-incomplete` check follow below.
+    if has_removals and not removal_entry:
+        create_plan_now = workflow_find_step(workflow, "create-plan")
+        implement_now = workflow_find_step(workflow, "implement")
+        errors.append(
+            err(
+                "feature-docs-removal-not-permitted",
+                "tasks_patch.feature_docs_removals is admitted only on the correction entry "
+                "(create-plan completed and implement failed), "
+                f"not with create-plan {(create_plan_now or {}).get('status')!r} and "
+                f"implement {(implement_now or {}).get('status')!r}",
+            )
+        )
+    elif removals:
+        errors.extend(feature_docs_removal_precondition_errors(workflow, removals, journal_last_events(journal)))
+        errors.extend(_feature_docs_removal_limit_errors(data))
+
     # Rule 4: append must not overwrite existing task IDs, and
     # expected_next_task_id must match the actual next id.
     if mode == "append":
@@ -3147,9 +3499,18 @@ def _validate_dry_run_apply(
             if field not in task:
                 errors.append(err("post-apply-structure", f"applied workflow.yaml tasks.{task_id} is missing required field {field!r}"))
 
+    # Feature-docs correction: `-incomplete` judges the in-memory result.
+    permitted_removals = bool(removals) and removal_entry
+    if permitted_removals:
+        errors.extend(_feature_docs_removal_incomplete_errors(new_workflow))
+
     # FR3 on the carried tasks that are not merged, judged on their files
     # after corrections (same code and same exit 2 rule as for an entry).
-    if operation == "replace_planning":
+    # A permitted feature-docs correction is outside it: the patch only
+    # removes paths, so it introduces no report artifact name, and a name a
+    # failed task still holds is the final-path judgment's to correct on the
+    # next evaluation of Step A.6 (SPEC A4: neither judgment stops the other).
+    if operation == "replace_planning" and not permitted_removals:
         errors.extend(_carried_report_name_errors(workflow, new_workflow, data, target_repo, base_commit))
 
     return errors
@@ -3204,6 +3565,10 @@ def apply_patch(workflow, patch):
         # (workflow-patch.md "Final-path correction") replaces old_path by
         # new_path in place and clears `notes`; every other field stays.
         _apply_path_corrections(new_tasks, _well_formed_path_corrections(patch))
+        # Likewise a feature-docs correction (workflow-patch.md "Feature-docs
+        # correction") removes the named paths from `files` and clears
+        # `notes`; applied after the verbatim copy, as path corrections are.
+        _apply_feature_docs_removals(new_tasks, _well_formed_feature_docs_removals(patch))
         for task_id, entry in entries.items():
             new_entry = dict(entry)
             new_entry["status"] = new_entry.pop("initial_status", "pending")
@@ -3252,6 +3617,311 @@ def apply_patch(workflow, patch):
                 step["status"] = set_block["status"]
 
     return new_wf
+
+
+# ---------------------------------------------------------------------------
+# Other-feature documents (plan-feature-docs-route/task0005; FR3 to FR7)
+#
+# The implementation-planner may amend an existing document of ANOTHER
+# feature during create-plan, in two stages (IMPLEMENTATION.md D3): stage 1
+# returns a request result and writes nothing; the orchestrator grants one
+# `amend_other_feature` write_policy target per requested path; stage 2 amends
+# the granted documents and declares each amendment in
+# `payload.other_feature_doc_fixes`. This section is the mechanical side of
+# that route. The rule text is owned by planner-contract.md
+# (`## Other-feature documents`) and spec-writer-contract.md (the action
+# table); this section only implements it.
+#
+# Every check reports a malformed value as an error of its own code and skips
+# the rest of its check for that value; none raises (NFR2).
+# ---------------------------------------------------------------------------
+
+OTHER_FEATURE_DOC_SCOPE_CODE = "other-feature-doc-scope"
+OTHER_FEATURE_DOC_REQUEST_CODE = "other-feature-doc-request"
+OTHER_FEATURE_DOC_FIX_CODE = "other-feature-doc-fix"
+
+OTHER_FEATURE_DOC_REQUESTS_KEY = "other_feature_doc_requests"
+OTHER_FEATURE_DOC_FIXES_KEY = "other_feature_doc_fixes"
+
+OTHER_FEATURE_DOC_REQUEST_FIELDS = ("path", "reason")
+OTHER_FEATURE_DOC_FIX_FIELDS = ("path", "change", "reason")
+OTHER_FEATURE_DOC_RECORD_FIELDS = ("path", "change", "reason", "produced_by")
+
+# The create-plan worker that may hold the action, and the phase it holds it in.
+AMEND_OTHER_FEATURE_WORKER = "implementation-planner"
+AMEND_OTHER_FEATURE_PHASE = "create-plan"
+
+
+def other_feature_doc_in_scope(path, own_feature):
+    """D4: whether `path` may be requested, granted and amended as a document
+    of another feature than `own_feature`. All of these hold:
+
+    1. `path` is a string that passes `is_safe_relative_path`;
+    2. its normalized segments (`path_segments`) number at least three, the
+       first is exactly `feature-docs` and the second is not `own_feature`;
+    3. its last segment ends with `.md` (case-sensitive);
+    4. it is not inside `feature-docs/{x}/phase-state/`,
+       `feature-docs/{x}/tasks/` or `feature-docs/{x}/design/mockups/`,
+       compared by segments.
+
+    Existence as a regular file is the orchestrator's check at grant time;
+    nothing here reads the file system. `own_feature` that is not a non-empty
+    string is judged as no feature: only the other conditions apply. Never
+    raises."""
+    if not is_safe_relative_path(path):
+        return False
+    segments = path_segments(path)
+    if len(segments) < 3 or segments[0] != "feature-docs":
+        return False
+    if isinstance(own_feature, str) and own_feature and segments[1] == own_feature:
+        return False
+    if not segments[-1].endswith(".md"):
+        return False
+    inside = segments[2:]
+    if inside[0] in ("phase-state", "tasks") and len(inside) > 1:
+        return False
+    if inside[:2] == ["design", "mockups"] and len(inside) > 2:
+        return False
+    return True
+
+
+def _dispatch_feature(envelope, workflow):
+    """The own feature of the dispatch: the envelope's `feature`, else the
+    workflow's. None when neither is a non-empty string."""
+    for source in (envelope, workflow):
+        if isinstance(source, dict):
+            feature = source.get("feature")
+            if isinstance(feature, str) and feature:
+                return feature
+    return None
+
+
+def _is_non_empty_string(value):
+    return isinstance(value, str) and bool(value.strip())
+
+
+def _path_identity(path):
+    """Key under which two spellings of one path collide: the normalized
+    segments of a safe relative path, the string itself otherwise."""
+    if is_safe_relative_path(path):
+        return tuple(path_segments(path))
+    return path
+
+
+def _write_policy_targets(envelope):
+    """The mapping items of the input envelope's `write_policy.targets`, and
+    the structural errors of everything else there (code `write_policy`).
+    A missing `write_policy` or `targets` is an empty list. Never raises."""
+    if not isinstance(envelope, dict):
+        return [], []
+    write_policy = envelope.get("write_policy") or {}
+    if not isinstance(write_policy, dict):
+        return [], [err("write_policy", "input envelope write_policy must be a mapping")]
+    raw = write_policy.get("targets", [])
+    if not isinstance(raw, list):
+        return [], [err("write_policy", "input envelope write_policy.targets must be a list")]
+    targets = []
+    errors = []
+    for i, target in enumerate(raw):
+        if not isinstance(target, dict):
+            errors.append(err("write_policy", f"input envelope write_policy.targets[{i}] must be a mapping"))
+            continue
+        path = target.get("path")
+        if not isinstance(path, str) and target.get("action") != AMEND_OTHER_FEATURE_ACTION:
+            # an amend_other_feature target with such a path is the scope
+            # rule's error (_amend_other_feature_target_errors), not this one
+            errors.append(err("write_policy", f"input envelope write_policy.targets[{i}].path must be a string"))
+            continue
+        targets.append(target)
+    return targets, errors
+
+
+def _amend_other_feature_target_errors(targets, worker, envelope, own_feature):
+    """D2 / D3: an `amend_other_feature` target is valid only on an
+    implementation-planner create-plan dispatch, with a non-null
+    `expect_digest` and an in-scope path. Each breach is one
+    `other-feature-doc-scope` error naming the path."""
+    errors = []
+    phase = envelope.get("phase") if isinstance(envelope, dict) else None
+    for target in targets:
+        if target.get("action") != AMEND_OTHER_FEATURE_ACTION:
+            continue
+        path = target.get("path")
+        if worker != AMEND_OTHER_FEATURE_WORKER or phase != AMEND_OTHER_FEATURE_PHASE:
+            errors.append(err(
+                OTHER_FEATURE_DOC_SCOPE_CODE,
+                f"write_policy target {path!r} has action {AMEND_OTHER_FEATURE_ACTION!r}, which is valid only on an "
+                f"{AMEND_OTHER_FEATURE_WORKER} {AMEND_OTHER_FEATURE_PHASE} dispatch",
+            ))
+        if not _is_non_empty_string(target.get("expect_digest")):
+            errors.append(err(
+                OTHER_FEATURE_DOC_SCOPE_CODE,
+                f"write_policy target {path!r} has action {AMEND_OTHER_FEATURE_ACTION!r} and requires a non-null expect_digest",
+            ))
+        if not other_feature_doc_in_scope(path, own_feature):
+            errors.append(err(
+                OTHER_FEATURE_DOC_SCOPE_CODE,
+                f"write_policy target {path!r} has action {AMEND_OTHER_FEATURE_ACTION!r} but is not a document that "
+                "may be amended in another feature (out of scope)",
+            ))
+    return errors
+
+
+def _is_other_feature_request_result(worker, status, payload):
+    """Whether a result takes the stage-1 request shape's place: a completed
+    implementation-planner result whose payload carries the requests key."""
+    return (
+        worker == AMEND_OTHER_FEATURE_WORKER
+        and status == "completed"
+        and isinstance(payload, dict)
+        and OTHER_FEATURE_DOC_REQUESTS_KEY in payload
+    )
+
+
+def _other_feature_request_errors(payload, written_artifacts_raw, workflow_patch, has_grants, own_feature):
+    """D3 stage 1: the shape of the request result and its admission.
+
+    Shape and admission errors are `other-feature-doc-request`; a requested
+    path out of scope is `other-feature-doc-scope`. The result is admitted
+    only on a dispatch with no `amend_other_feature` target (`has_grants`)."""
+    errors = []
+
+    def request_error(message):
+        errors.append(err(OTHER_FEATURE_DOC_REQUEST_CODE, message))
+
+    if has_grants:
+        request_error(
+            f"a request result is admitted only on a dispatch without {AMEND_OTHER_FEATURE_ACTION!r} targets; "
+            "this dispatch already carries grants"
+        )
+    for key in sorted((k for k in payload if k != OTHER_FEATURE_DOC_REQUESTS_KEY), key=str):
+        request_error(f"a request result payload holds only {OTHER_FEATURE_DOC_REQUESTS_KEY!r}; it also carries {key!r}")
+    if written_artifacts_raw:
+        request_error("a request result writes nothing; written_artifacts must be empty")
+    if workflow_patch is not None:
+        request_error("a request result carries no patch; workflow_patch must be null")
+
+    requests = payload[OTHER_FEATURE_DOC_REQUESTS_KEY]
+    if not isinstance(requests, list):
+        request_error(f"{OTHER_FEATURE_DOC_REQUESTS_KEY} must be a list")
+        return errors
+    if not requests:
+        request_error(f"{OTHER_FEATURE_DOC_REQUESTS_KEY} must not be empty")
+        return errors
+    seen = set()
+    for i, item in enumerate(requests):
+        label = f"{OTHER_FEATURE_DOC_REQUESTS_KEY}[{i}]"
+        if not isinstance(item, dict):
+            request_error(f"{label} must be a mapping with exactly 'path' and 'reason'")
+            continue
+        missing = [f for f in OTHER_FEATURE_DOC_REQUEST_FIELDS if f not in item]
+        unknown = sorted((k for k in item if k not in OTHER_FEATURE_DOC_REQUEST_FIELDS), key=str)
+        if missing or unknown:
+            request_error(f"{label} must hold exactly 'path' and 'reason' (missing {missing}, unknown {unknown})")
+        for field in OTHER_FEATURE_DOC_REQUEST_FIELDS:
+            if field in item and not _is_non_empty_string(item[field]):
+                request_error(f"{label}.{field} must be a non-empty string")
+        path = item.get("path")
+        if not _is_non_empty_string(path):
+            continue
+        identity = _path_identity(path)
+        if identity in seen:
+            request_error(f"{label}.path {path!r} repeats an earlier request")
+        seen.add(identity)
+        if not other_feature_doc_in_scope(path, own_feature):
+            errors.append(err(
+                OTHER_FEATURE_DOC_SCOPE_CODE,
+                f"{label}.path {path!r} is not a document that may be amended in another feature (out of scope)",
+            ))
+    return errors
+
+
+def _other_feature_fix_errors(payload, amend_paths, written_paths, own_feature):
+    """D3 stage 2: `payload.other_feature_doc_fixes` against the written
+    grants. `amend_paths` is the set of `amend_other_feature` target paths of
+    the dispatch; `written_paths` the usable `written_artifacts` paths.
+
+    The set of declared paths must equal the set of target paths that are
+    written. Each item holds exactly non-empty `path`, `change` and `reason`;
+    a fix on a dispatch without grants, a fix for a path that is not a target,
+    a written target without a fix, a declared target that is not written and
+    a repeated path are each `other-feature-doc-fix`. A declared path out of
+    scope is also `other-feature-doc-scope`."""
+    errors = []
+
+    def fix_error(message):
+        errors.append(err(OTHER_FEATURE_DOC_FIX_CODE, message))
+
+    written_grants = {p for p in written_paths if p in amend_paths}
+    declared = set()
+    if OTHER_FEATURE_DOC_FIXES_KEY in payload:
+        fixes = payload[OTHER_FEATURE_DOC_FIXES_KEY]
+        if not isinstance(fixes, list):
+            fix_error(f"{OTHER_FEATURE_DOC_FIXES_KEY} must be a list")
+            return errors
+        seen = set()
+        for i, item in enumerate(fixes):
+            label = f"{OTHER_FEATURE_DOC_FIXES_KEY}[{i}]"
+            if not isinstance(item, dict):
+                fix_error(f"{label} must be a mapping with exactly 'path', 'change' and 'reason'")
+                continue
+            missing = [f for f in OTHER_FEATURE_DOC_FIX_FIELDS if f not in item]
+            unknown = sorted((k for k in item if k not in OTHER_FEATURE_DOC_FIX_FIELDS), key=str)
+            if missing or unknown:
+                fix_error(f"{label} must hold exactly 'path', 'change' and 'reason' (missing {missing}, unknown {unknown})")
+            for field in OTHER_FEATURE_DOC_FIX_FIELDS:
+                if field in item and not _is_non_empty_string(item[field]):
+                    fix_error(f"{label}.{field} must be a non-empty string")
+            path = item.get("path")
+            if not _is_non_empty_string(path):
+                continue
+            identity = _path_identity(path)
+            if identity in seen:
+                fix_error(f"{label}.path {path!r} repeats an earlier fix")
+            seen.add(identity)
+            declared.add(path)
+            if not other_feature_doc_in_scope(path, own_feature):
+                errors.append(err(
+                    OTHER_FEATURE_DOC_SCOPE_CODE,
+                    f"{label}.path {path!r} is not a document that may be amended in another feature (out of scope)",
+                ))
+            if path not in amend_paths:
+                if amend_paths:
+                    fix_error(f"{label}.path {path!r} is not an {AMEND_OTHER_FEATURE_ACTION!r} target of this dispatch")
+                else:
+                    fix_error(
+                        f"{label}.path {path!r} is declared on a dispatch without {AMEND_OTHER_FEATURE_ACTION!r} targets"
+                    )
+    for path in sorted(written_grants - declared):
+        fix_error(f"granted document {path!r} is in written_artifacts but has no entry in {OTHER_FEATURE_DOC_FIXES_KEY}")
+    for path in sorted((declared & amend_paths) - written_grants):
+        fix_error(f"{OTHER_FEATURE_DOC_FIXES_KEY} declares {path!r}, which is not in written_artifacts")
+    return errors
+
+
+def other_feature_doc_fix_record_errors(value):
+    """D5: the shape of a create-plan phase-state's `other_feature_doc_fixes`
+    list. A list of mappings, each with non-empty string `path`, `change`,
+    `reason` and `produced_by`, every `path` passing the safe-relative check.
+    Each breach is `other-feature-doc-fix`. Never raises."""
+    if not isinstance(value, list):
+        return [err(OTHER_FEATURE_DOC_FIX_CODE, f"{OTHER_FEATURE_DOC_FIXES_KEY} must be a list")]
+    errors = []
+    for i, item in enumerate(value):
+        label = f"{OTHER_FEATURE_DOC_FIXES_KEY}[{i}]"
+        if not isinstance(item, dict):
+            errors.append(err(OTHER_FEATURE_DOC_FIX_CODE, f"{label} must be a mapping"))
+            continue
+        for field in OTHER_FEATURE_DOC_RECORD_FIELDS:
+            if not _is_non_empty_string(item.get(field)):
+                errors.append(err(OTHER_FEATURE_DOC_FIX_CODE, f"{label}.{field} must be a non-empty string"))
+        path = item.get("path")
+        if _is_non_empty_string(path) and not is_safe_relative_path(path):
+            errors.append(err(
+                OTHER_FEATURE_DOC_FIX_CODE,
+                f"{label}.path {path!r} must be a relative path without '..' segments or NUL bytes",
+            ))
+    return errors
 
 
 # ---------------------------------------------------------------------------
@@ -3379,6 +4049,12 @@ def validate_phase_state(data):
                 if entry.get("decision") == "stop" and not entry.get("reason"):
                     errors.append(err("classification", f"classification[{i}].reason is required when decision is stop"))
 
+    # plan-feature-docs-route/task0005 (FR7, D5): a create-plan phase-state
+    # may carry the append-only `other_feature_doc_fixes` list. Its absence is
+    # valid, and so is any other top-level key (unknown keys stay tolerated).
+    if data.get("phase") == "create-plan" and OTHER_FEATURE_DOC_FIXES_KEY in data:
+        errors.extend(other_feature_doc_fix_record_errors(data[OTHER_FEATURE_DOC_FIXES_KEY]))
+
     return errors
 
 
@@ -3462,6 +4138,14 @@ def validate_worker_result(
     workflow_patch = data.get("workflow_patch")
     mode_echo = data.get("mode_echo")
     payload = data.get("payload") or {}
+    if status == "completed" and not isinstance(payload, dict):
+        # every check below reads the payload as a mapping
+        errors.append(err("payload", "payload must be a mapping"))
+        payload = {}
+    # plan-feature-docs-route/task0005 (D3): the stage-1 request result takes
+    # the place of the planner's ordinary result shape (workflow_patch and
+    # payload.task_index); its own checks are made below.
+    is_request_result = _is_other_feature_request_result(worker, status, payload)
 
     # --- status exclusivity (5.3) ---
     if status == "needs_user_input":
@@ -3523,26 +4207,33 @@ def validate_worker_result(
             errors.append(err("status-not-allowed", f"{worker} ({mode_key}) cannot return status {status!r}"))
         if not caps["has_workflow_patch"] and workflow_patch:
             errors.append(err("workflow_patch", f"{worker} must not return workflow_patch"))
-        if caps["has_workflow_patch"] and status == "completed" and not workflow_patch:
+        if caps["has_workflow_patch"] and status == "completed" and not workflow_patch and not is_request_result:
             errors.append(err("workflow_patch", f"{worker} completed result must include workflow_patch"))
         if status == "completed":
             missing = caps["required_payload"] - set(payload.keys())
-            if missing:
+            if missing and not is_request_result:
                 errors.append(err("payload-missing", f"payload is missing required keys: {sorted(missing)}"))
             forbidden_present = caps["forbidden_payload"] & set(payload.keys())
             if forbidden_present:
                 errors.append(err("payload-forbidden", f"payload contains keys forbidden for this mode: {sorted(forbidden_present)}"))
 
     # --- input_revision copy-check + write_policy consistency (5.3) ---
+    # plan-feature-docs-route/task0005: the targets are read once, with their
+    # structural errors, because the other-feature document checks below need
+    # them too (an absent envelope has no grants).
+    policy_targets, policy_errors = _write_policy_targets(envelope)
+    own_feature = _dispatch_feature(envelope, workflow)
     if envelope is not None:
         envelope_digest = (envelope.get("input_revision") or {}).get("input_digest")
         if envelope_digest is not None and input_revision.get("input_digest") != envelope_digest:
             errors.append(err("input_revision", "input_revision.input_digest was not copied verbatim from the input envelope"))
-        write_policy = envelope.get("write_policy") or {}
-        targets_by_path = {t.get("path"): t for t in write_policy.get("targets", [])}
+        errors.extend(policy_errors)
+        targets_by_path = {t.get("path"): t for t in policy_targets if isinstance(t.get("path"), str)}
         for path, target in targets_by_path.items():
-            if target.get("action") not in WRITE_POLICY_ACTIONS:
+            action = target.get("action")
+            if not (isinstance(action, str) and action in WRITE_POLICY_ACTIONS):
                 errors.append(err("write_policy", f"input envelope write_policy.targets[{path!r}].action is not one of {sorted(WRITE_POLICY_ACTIONS)}"))
+        errors.extend(_amend_other_feature_target_errors(policy_targets, worker, envelope, own_feature))
         allowed_roots = envelope.get("allowed_write_roots") or []
         for path in written_artifacts:
             if path in targets_by_path:
@@ -3552,11 +4243,26 @@ def validate_worker_result(
             errors.append(err("write_policy", f"written_artifacts path {path!r} is covered by neither write_policy.targets nor allowed_write_roots"))
         # regenerate co-occurrence (5.4.2)
         artifact_paths = set(written_artifacts)
-        for target in write_policy.get("targets", []):
+        for target in policy_targets:
             if target.get("action") == "regenerate" and target.get("path") in artifact_paths:
                 source = target.get("source")
-                if source not in artifact_paths:
+                if not isinstance(source, str) or source not in artifact_paths:
                     errors.append(err("regenerate", f"written_artifacts includes regenerate target {target.get('path')!r} without its source {source!r}"))
+
+    # --- other-feature documents (plan-feature-docs-route/task0005) ---
+    # Stage 1 (D3): the request result's shape and admission. Stage 2: the
+    # declared fixes against the written grants. Both read the dispatch's
+    # `amend_other_feature` targets; an absent envelope has none.
+    amend_targets = [t for t in policy_targets if t.get("action") == AMEND_OTHER_FEATURE_ACTION]
+    amend_paths = {t["path"] for t in amend_targets if isinstance(t.get("path"), str)}
+    if is_request_result:
+        errors.extend(
+            _other_feature_request_errors(
+                payload, written_artifacts_raw, workflow_patch, bool(amend_targets), own_feature
+            )
+        )
+    if status == "completed":
+        errors.extend(_other_feature_fix_errors(payload, amend_paths, written_artifacts, own_feature))
 
     # --- tokens.yaml / tokens.html co-occurrence (5.4.5), unconditional ---
     artifact_paths = set(written_artifacts)
@@ -3592,7 +4298,14 @@ def validate_worker_result(
     # Only a completed implementation-planner result with a feature directory
     # is checked (IMPLEMENTATION.md D1); rework-planner output and every other
     # status or worker are left alone.
-    if worker == "implementation-planner" and status == "completed" and feature_dir is not None:
+    # A stage-1 request result (plan-feature-docs-route/task0005) writes no
+    # document and carries no patch, so there is nothing of its own to scan.
+    if (
+        worker == "implementation-planner"
+        and status == "completed"
+        and feature_dir is not None
+        and not is_request_result
+    ):
         errors.extend(_validate_scenario_id_form(workflow_patch, feature_dir, workflow))
 
     # --- rework_index coverage (5.4.4) ---
@@ -3722,23 +4435,26 @@ def _task_plan_document_errors(task_id, plan_rel, files_declared, feature_dir, *
 
 def _validate_corrected_task_plans(workflow_patch, feature_dir, workflow):
     """FR5 plan agreement: for each plan used by a task a final-path
-    correction corrects, the plan's Files sections against the files of those
-    tasks after the correction, as for an entry (`task-plan-files-mismatch`).
+    correction or a feature-docs correction corrects, the plan's Files
+    sections against the files of those tasks after the correction, as for an
+    entry (`task-plan-files-mismatch`).
     The target tasks are grouped by normalized plan and each plan is checked
     once, against the union of its tasks' files (FR6); a plan used by one
     target behaves as for that task alone. Needs the current workflow.yaml
     (the carried record is not in the patch) and the feature directory."""
     errors = []
     corrections = _well_formed_path_corrections(workflow_patch)
-    if not corrections or not isinstance(workflow, dict):
+    removals = _well_formed_feature_docs_removals(workflow_patch)
+    if not (corrections or removals) or not isinstance(workflow, dict):
         return errors
     existing = _tasks_of(workflow)
     corrected = {}
-    for correction in corrections:
+    for correction in corrections + removals:
         record = existing.get(correction["task_id"])
         if isinstance(record, dict):
             corrected[correction["task_id"]] = copy.deepcopy(record)
     _apply_path_corrections(corrected, corrections)
+    _apply_feature_docs_removals(corrected, removals)
     plans = {}  # normalized plan path -> {"plan": spelling, "task_ids": [...], "files": set}
     for task_id, record in corrected.items():
         plan_rel = record.get("plan")
@@ -4403,8 +5119,9 @@ def build_arg_parser():
     # the current directory.
     parser.add_argument("--target-repo", dest="target_repo", default=None)
     parser.add_argument("--base-commit", dest="base_commit", default=None)
-    # Final-path correction (FR5): the append-only journal of the run, read
-    # only when the patch carries `tasks_patch.path_corrections`.
+    # Final-path correction (FR5) and feature-docs correction (D7): the
+    # append-only journal of the run, read only when the patch carries
+    # `tasks_patch.path_corrections` or `tasks_patch.feature_docs_removals`.
     parser.add_argument("--journal", type=Path, dest="journal")
     return parser
 

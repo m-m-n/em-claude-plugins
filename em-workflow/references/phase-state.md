@@ -80,6 +80,11 @@ artifacts:
   - path: feature-docs/example/IMPLEMENTATION.md
     sha256: sha256:...
     produced_by: create-plan-run-0002
+other_feature_doc_fixes:       # `phase: create-plan` only; append-only
+  - path: feature-docs/other-feature/SPEC.md
+    change: "..."
+    reason: "..."
+    produced_by: create-plan-run-0002
 patches:
   - patch_id: create-plan-p0001
     status: proposed          # proposed | validated | applied | rejected
@@ -133,6 +138,7 @@ Every top-level field:
 | `answers` | Map keyed by `question_id`. Each value: `packet_id`, `answered_at`, `source`, `answer_mode`, `selected_option_ids`, `freeform`, `normalized_answer`. |
 | `worker_runs` | List. Each entry: `request_id`, `status` (see transitions below), `input_digest`, `output_digest` (digest only — see Size management), and two optional fields. `dispatch_digest_inputs` is the per-path `digest_inputs` map of the dispatch's `digest_source`; it is written with the entry when the orchestrator creates the entry at dispatch (`status: dispatched`) and never changed afterwards. `self_write_set` is the ascending list of paths the orchestrator's self-write rule (`references/contracts/worker-envelope.md`, Rule R1) identified for the run; it is absent until the run's return-time sequence completes and is then written once in the same phase-state write as the run's layer-5 `artifacts` entries (for a run with no written artifacts, the write that records its returned `status`), and never changed afterwards. An entry written before these fields existed carries neither and stays valid. |
 | `artifacts` | List. Each entry: `path`, `sha256`, `produced_by` (a `request_id`). `sha256` is the digest `references/artifact-digest.md` "Digest definition" defines — not a git blob id; a value recorded by the earlier git-blob method is handled as `references/artifact-digest.md` "Legacy records" states. |
+| `other_feature_doc_fixes` | `phase: create-plan` only. An append-only list of the other-feature document fixes that planner runs declared. Each entry: `path`, `change`, `reason` and `produced_by` (the `request_id` of the run that declared the fix). The orchestrator appends one entry per declared fix in the run's recording phase-state write, the same write that records the run's layer-5 `artifacts` entries and `self_write_set` (`references/phases/create-plan-phase.md`, section 8). The list is never rewritten or cleared, a phase restart (`generation` increases) included. `references/phases/create-plan-phase.md`, section 12, reads every `path` into the declared change set. A file written before the field existed lacks it and stays valid. |
 | `patches` | List. Each entry: `patch_id`, `status` (`proposed` \| `validated` \| `applied` \| `rejected`), `base_input_digest`, `base_workflow_blob`. |
 | `progress_fingerprint` | Digest summarizing dialogue+worker progress; used for the loop-termination check. |
 | `stale_redispatch_count` | See "Consecutive retry limit". |

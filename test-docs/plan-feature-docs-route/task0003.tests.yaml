@@ -1,0 +1,70 @@
+task_id: task0003
+baseline_failures: []          # python3 -m unittest discover -s tests before any change: Ran 15037 tests, OK (skipped=1)
+final_failures: []             # the same command re-run after the implementation and this record
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_amend_other_feature_action.TestSpecWriterContractRow.test_ac1_heading_row_scope_non_reuse_and_example_comment
+      - tests.test_amend_other_feature_action.TestSpecWriterContractRow.test_ac1_each_forged_departure_from_the_row_is_rejected
+      - tests.test_amend_other_feature_action.TestSpecWriterContractRow.test_ac1_a_table_without_the_row_is_rejected
+      - tests.test_amend_other_feature_action.TestSpecWriterContractRow.test_ac1_a_forged_eighth_action_row_is_rejected
+      - tests.test_threat_model_planner_contract.TestSpecWriterContractAC5.test_ac5_six_actions_unchanged
+      - tests.test_threat_model_planner_contract.TestSpecWriterContractAC5.test_forged_seventh_action_is_rejected
+    red_confirmed: true
+    red_reason: "AssertionError: '### The `write_policy` actions' not found in the document (the heading was still 'The six `write_policy` actions'), AssertionError: 'may modify the content of the existing file' not found (no `amend_other_feature` row), and ValueError: substring not found for the refreshed pin in the threat-model test; the example-comment and non-reuse-sentence checks failed the same way. TestSpecWriterContractRow.test_ac1_who_verifies_section_is_left_as_it_was was green before the change on purpose: it guards the section this task leaves unchanged and is deliberately not listed."
+  AC-2:
+    tests:
+      - tests.test_amend_other_feature_action.TestCountFreeWording.test_ac2_no_modified_file_names_the_count_or_the_old_heading
+      - tests.test_amend_other_feature_action.TestCountFreeWording.test_ac2_every_citation_of_the_action_table_names_the_new_heading
+      - tests.test_amend_other_feature_action.TestCountFreeWording.test_ac2_no_plugin_document_cites_the_old_heading
+    red_confirmed: true
+    red_reason: "AssertionError: Lists differ: ['six actions'] != [] (and ['six `write_policy`'] != [] for the old heading text) in spec-writer-contract.md, worker-envelope.md, designer-contract.md, rework-planner-contract.md, agents/spec-writer.md and artifact-digest.md; the citation check failed for worker-envelope.md and artifact-digest.md because they cited 'The six `write_policy` actions'. The matcher probes of the same class (test_ac2_the_count_matcher_fires_on_each_forged_wording and its siblings) were green before the change by design: they run on forged text, not on a document, and are deliberately not listed."
+  AC-3:
+    tests:
+      - tests.test_amend_other_feature_action.TestEnvelopeSelfWriteRow.test_ac3_the_row_admits_modified_only_and_the_document_has_no_expect_digest
+      - tests.test_amend_other_feature_action.TestEnvelopeSelfWriteRow.test_ac3_a_table_without_the_row_is_rejected
+      - tests.test_amend_other_feature_action.TestEnvelopeSelfWriteRow.test_ac3_a_row_with_a_wrong_cell_is_rejected
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac1_membership_matrix_header_and_row_set
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac1_membership_matrix_every_row_tm2
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac1_matrix_is_written_out_exactly_once_in_the_document
+    red_confirmed: true
+    red_reason: "AssertionError: None != ['not a member', 'member', 'not a member'] (no `amend_other_feature` row in the envelope's membership table), and the refreshed MATRIX pin of test_self_write_digest_docs failed on the missing row. The envelope's no-expect_digest clause held before the change (the document never carried the string); it is covered by test_ac3_the_row_admits_modified_only_and_the_document_has_no_expect_digest together with the row, and by TestEnvelopeSelfWriteRow.test_ac3_the_real_envelope_is_free_of_expect_digest, which was written after the implementation and is deliberately not listed."
+  AC-4:
+    tests:
+      - tests.test_amend_other_feature_action.TestScriptMembership.test_ac4_each_change_kind_follows_the_matrix_through_the_module
+      - tests.test_amend_other_feature_action.TestScriptMembership.test_ac4_each_change_kind_follows_the_matrix_through_the_command_line
+      - tests.test_amend_other_feature_action.TestScriptMembership.test_ac4_a_modified_amended_path_carries_its_dispatch_time_digest
+      - tests.test_amend_other_feature_action.TestScriptMembership.test_ac4_a_created_amended_path_keeps_its_current_digest
+      - tests.test_amend_other_feature_action.TestScriptMembership.test_ac4_the_target_decides_even_when_the_path_lies_under_a_root
+      - tests.test_amend_other_feature_action.TestScriptMembership.test_ac4_the_target_needs_no_source
+      - tests.test_amend_other_feature_action.TestScriptMembership.test_ac4_an_unchanged_granted_target_is_not_a_member
+      - tests.test_amend_other_feature_action.TestScriptMembership.test_ac4_regenerate_is_still_decided_after_every_other_path
+      - tests.test_amend_other_feature_action.TestScriptMembership.test_ac4_the_module_docstring_lists_the_action
+      - tests.test_amend_other_feature_action.TestScriptRejectsUnknownActions.test_ac4_the_known_action_is_not_rejected
+      - tests.test_self_write_digest.TestMembershipMatrix.test_ac1_every_non_regenerate_cell_follows_the_matrix
+    red_confirmed: true
+    red_reason: "self-write-digest: write_policy.targets[0].action must be one of ['create', 'extend_only', 'preserve', 'regenerate', 'replace_authorized', 'replace_own'], got 'amend_other_feature' (exit 2 on the command line, InputError in the module): the action was not in the script's vocabulary. The unknown-action clause of this criterion is recorded under AC-4-unknown-action."
+  AC-4-unknown-action:
+    tests:
+      - tests.test_amend_other_feature_action.TestScriptRejectsUnknownActions.test_ac4_an_unknown_action_is_an_input_error_in_the_module
+      - tests.test_amend_other_feature_action.TestScriptRejectsUnknownActions.test_ac4_an_unknown_action_exits_2_on_the_command_line
+      - tests.test_amend_other_feature_action.TestScriptRejectsUnknownActions.test_ac4_a_repeated_amend_target_path_is_still_rejected
+      - tests.test_self_write_digest.TestCliRejections
+    red_confirmed: false
+    red_reason: "The behavior pre-existed: the script already rejected every action outside its vocabulary as an input error, so these tests passed before any change and no red state occurred. The listed tests keep the clause from regressing."
+  AC-5:
+    tests:
+      - tests.test_threat_model_planner_contract.TestSpecWriterContractAC5.test_ac5_six_actions_unchanged
+      - tests.test_threat_model_planner_contract.TestSpecWriterContractAC5.test_forged_seventh_action_is_rejected
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac1_membership_matrix_every_row_tm2
+      - tests.test_self_write_digest_docs.TestRuleR1SelfWriteRule.test_ac1_actions_meaning_is_cited_not_restated
+      - tests.test_self_write_digest_docs.TestUnchangedStructure.test_ac6_opening_sentence_about_write_policy_structure_is_kept
+      - tests.test_self_write_digest_docs.TestUnchangedStructure.test_ac6_r1_names_the_actions_only_to_say_which_kinds_count
+      - tests.test_self_write_digest.TestMembershipMatrix.test_ac1_every_non_regenerate_cell_follows_the_matrix
+    red_confirmed: true
+    red_reason: "The refreshed pins failed against the documents and the script as they stood: ValueError: substring not found: '### The `write_policy` actions'; AssertionError: the citation literal '(\"The `write_policy` actions\")' and the count-free opening sentence were absent from worker-envelope.md; the seven-action table row was missing. tests.test_amend_other_feature_action.TestPinsAreRefreshed (the pins carry seven actions, the new heading and a comment naming this task) was written after the pins were refreshed and was green on its first run, so it is deliberately not listed."
+  AC-6:
+    tests:
+      - tests.test_check_plugin_invariants.TestRepositoryLevelInvariant.test_checker_exits_cleanly_against_the_repository_root
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing tests.test_check_plugin_invariants.TestRepositoryLevelInvariant detects any finding of check-plugin-invariants.py against the repository root; no red state occurred for this change, because the documents this task edits kept the check green. The other half of the criterion, python3 -m unittest discover -s tests passing, is the whole-suite run recorded in baseline_failures and final_failures and has no single test ID."

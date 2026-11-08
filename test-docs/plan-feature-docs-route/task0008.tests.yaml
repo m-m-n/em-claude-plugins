@@ -1,0 +1,44 @@
+task_id: task0008
+# Full suite (python3 -m unittest discover -s tests) run before any edit:
+# 15247 tests, OK, 1 skipped, no failure.
+baseline_failures: []
+# Full suite (python3 -m unittest discover -s tests) re-executed after the
+# implementation and after this record was written (the record is itself
+# checked by tests.test_tests_yaml_id_resolution): no failure.
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_feature_docs_entry_develop_docs.TestAC1ScriptAndOrder
+      - tests.test_feature_docs_entry_develop_docs.TestStepA6ScopeNonVacuity
+      - tests.test_failed_entry_develop_docs
+    red_confirmed: true
+    red_reason: "Run against the unedited develop SKILL.md (a scratch copy of HEAD), TestAC1ScriptAndOrder failed: test_four_arguments_and_script_order with \"feature-docs-entry.py is not named\", test_feature_docs_script_is_run_with_python3, test_feature_docs_script_item_names_its_output_keys (\"no block holds feature-docs-entry.py and python3\"), test_both_judgments_are_evaluated_in_one_evaluation (\"no block holds '1 回の評価'\") and test_opening_paragraph_names_the_feature_docs_correction (missing 'feature-docs の訂正'). test_failed_entry_develop_docs, which pins the existing Step A.6 phrases, was green before the edit and stays green; it guards the retained wording and went through no red state."
+  AC-2:
+    tests:
+      - tests.test_feature_docs_entry_develop_docs.TestAC2DispatchCoversBothJudgments
+    red_confirmed: true
+    red_reason: "Against the unedited SKILL.md test_the_dispatch_item_covers_both_judgments failed with the two missing phrases ['`### Feature-docs correction dispatch`', 'どちらの `dispatch` にも当てはまる'], and test_the_dispatch_item_names_each_judgments_correction failed on the missing per-judgment sentences. test_the_gate_and_question_sentence_appears_once was already green: the no-gate sentence pre-existed and the test pins that it stays single."
+  AC-3:
+    tests:
+      - tests.test_feature_docs_entry_develop_docs.TestAC3RestorationSplit
+      - tests.test_feature_docs_entry_develop_docs.TestAC1To4UntouchedItemsCoverBothCorrections
+    red_confirmed: true
+    red_reason: "Against the unedited SKILL.md every live-text test of TestAC3RestorationSplit failed with \"the restoration-split region is not found\" (no '**復元の分割**' paragraph), and test_the_untouched_paragraph_covers_both_corrections failed with the missing sentence 'この 3 文は、2 つの訂正のどちらにも当てはまる'."
+  AC-4:
+    tests:
+      - tests.test_feature_docs_entry_develop_docs.TestAC4UnresolvedJudgment
+    red_confirmed: true
+    red_reason: "Against the unedited SKILL.md test_the_unresolved_item_states_every_point failed with the missing phrases ['その判定の分の workflow.yaml を変えない', '未解決', ...], test_nothing_written_goes_to_step_b_unchanged failed on the missing sentence, and test_the_unresolved_item_keeps_the_pinned_rejected_correction_wording failed because the pinned phrases sat in a separate item from the none/blocked/non-zero item."
+  AC-5:
+    tests:
+      - tests.test_feature_docs_entry_develop_docs.TestAC5Section13Subsection
+    red_confirmed: true
+    red_reason: "Against the unedited create-plan-phase.md the class's setUpClass failed with \"expected exactly one '### Feature-docs correction dispatch' heading, found 0\", so every live-document test of the class errored."
+  AC-6:
+    tests:
+      - tests.test_feature_docs_entry_develop_docs.TestAC6ForbiddenWords
+      - tests.test_failed_entry_develop_docs
+      - tests.test_final_path_correction_docs
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope for the unchanged-suite half of this criterion: the existing tests.test_failed_entry_develop_docs and tests.test_final_path_correction_docs detect the retained Step A.6 and section 13 wording (and tests.test_change_set_derivation the forbidden words of section 12), and no red state occurred for them. TestAC6ForbiddenWords is new: against the unedited create-plan-phase.md its setUpClass failed with \"expected exactly one '### Feature-docs correction dispatch' heading, found 0\", but the forbidden-word check itself would have passed on the pre-change text (it holds none), so the criterion has no red of its own; its negative proofs show the check fails on a copy that holds a forbidden word."

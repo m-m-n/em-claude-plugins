@@ -1163,8 +1163,19 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # their two codes outside the five numbered conditions. The numbered
     # application rules stay eighteen and the section still has five numbered
     # conditions. Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by plan-feature-docs-route/task0007 (FR8, FR9): the
+    # `tasks_patch` section gains the `tasks_patch.feature_docs_removals`
+    # field, the `replace_all` permission intro and the correction-entry
+    # sentence name the new `## Feature-docs correction` section, the
+    # verbatim-copy pointer names both corrections, and the new section sits
+    # between `## Interrupted authorization-spend recovery` and
+    # `## Final-path correction`. The numbered application rules stay
+    # eighteen, `## Final-path correction` stays directly before
+    # `## Ownership boundary`, and the protocol-error sentence is
+    # unchanged. Same rationale: refresh, don't remove.
     WORKFLOW_PATCH_SHA256 = (
-        "ea99b215bec30133878058542a5d09937078706cca3f794cccd23aa036a0c667"
+        "b2502b4348774853bb8c85f1da614823c64e8e66ce2a1e90196a451ac8f0b166"
     )
     # Updated by goal-vs-spec-divergence/task0016 (review round1 rework),
     # which the user's SPEC.md/REQUIREMENTS.md Declared Change Set extension
@@ -1409,8 +1420,46 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # `_TS_ID_RE` and `extract_verification_scenario_ids` are unchanged.
     # PINNED_VALIDATOR_TEST_LINE below is unaffected and still asserted. Same
     # rationale: refresh, don't remove.
+    #
+    # Refreshed again by plan-feature-docs-route/task0005 (FR3 to FR7): the
+    # validator gains the other-feature document route. `WRITE_POLICY_ACTIONS`
+    # gains `amend_other_feature`, the scope predicate
+    # `other_feature_doc_in_scope` implements the one scope rule, and the
+    # three codes `other-feature-doc-scope`, `other-feature-doc-request` and
+    # `other-feature-doc-fix` check the action's admission, the stage-1
+    # request result, the equality of the declared fixes with the written
+    # grants, and the shape of the create-plan phase-state's
+    # `other_feature_doc_fixes` list. The envelope's write_policy targets are
+    # now read through one tolerant helper, so a malformed target is reported
+    # instead of raised. The new checks are tested in
+    # tests/test_other_feature_docs_validator.py; PINNED_VALIDATOR_TEST_LINE
+    # below is unaffected and still asserted. Same rationale: refresh, don't
+    # remove.
+    #
+    # Refreshed again by plan-feature-docs-route/task0004 (FR2, NFR2):
+    # `validate_task_entry` rejects a `replace_all` task entry (a
+    # `replace_planning` patch's `tasks_patch.entries` item) whose `files`
+    # reach `feature-docs/**`, with the new code `plan-task-feature-docs`:
+    # one error per offending path, a non-string element and a non-list
+    # `files` left to the existing `files` code, carried tasks never checked.
+    # The `append` branch and its `rework-task-feature-docs` code are
+    # unchanged, and the stale comment saying replace_planning entries are
+    # never checked is corrected. PINNED_VALIDATOR_TEST_LINE below is
+    # unaffected and still asserted. Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by plan-feature-docs-route/task0006 (FR8, FR9): the
+    # validator gains the `tasks_patch.feature_docs_removals` field of
+    # `replace_planning` (shape, permission on the correction entry, the
+    # `feature_docs_removal_precondition_errors` function the new entry script
+    # shares, the limits, the in-memory application, `-incomplete` and the
+    # plan agreement) and its `--workflow`, `--journal` and `--feature-dir`
+    # inputs under `--dry-run-apply`; a permitted correction is outside the
+    # report-name check on carried tasks. The new checks are tested in
+    # tests/test_feature_docs_removal_validator.py and
+    # tests/test_feature_docs_entry.py; PINNED_VALIDATOR_TEST_LINE below is
+    # unaffected and still asserted. Same rationale: refresh, don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "2e7a97b983c06dce938c478e2af4b909cc20bd0ae3047ca08da3406f51c001fc"
+        "e13a7275bc5231cd9fc262fff0aa8d45c0ea664a56c05817aa2ae0a31d17377f"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-

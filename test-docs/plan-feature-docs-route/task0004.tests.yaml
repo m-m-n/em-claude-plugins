@@ -1,0 +1,108 @@
+task_id: task0004
+baseline_failures:         # refreshed after the parent-side adoption (merge of the parent branch into this task branch): python3 -m unittest discover -s tests -> Ran 15278 tests, FAILED (failures=2, skipped=1). Both failures are caused by this task's own validator edit, which merged cleanly, meeting the adopted parent version of the pin module (the pin and the refresh comment of this task were gone); neither is inherited from the parent. The first baseline run, before any edit, was Ran 15037 tests, OK (skipped=1), no failing test
+  - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical
+  - tests.test_plan_task_feature_docs_validator.TestValidatorBytePinRefreshComment.test_ac7_the_pin_is_preceded_by_a_refresh_comment_naming_this_task
+final_failures: []             # re-executed after the re-implementation on the updated parent (pin comment and digest recomputed for the merged validator): python3 -m unittest discover -s tests -> Ran 15278 tests, OK (skipped=1), no failing test
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_plan_task_feature_docs_validator.TestReplacePlanningEntryFeatureDocsPath.test_ac1_one_error_with_the_new_code_naming_the_task_and_the_path
+      - tests.test_plan_task_feature_docs_validator.TestReplacePlanningEntryFeatureDocsPath.test_ac1_the_message_states_the_rule_and_cites_its_owner
+      - tests.test_plan_task_feature_docs_validator.TestReplacePlanningEntryFeatureDocsPath.test_ac1_the_message_holds_the_path_as_given
+      - tests.test_plan_task_feature_docs_validator.TestReplacePlanningEntryFeatureDocsPath.test_ac1_the_error_is_reported_through_a_replace_planning_patch
+      - tests.test_plan_task_feature_docs_validator.TestReplacePlanningEntryFeatureDocsPath.test_ac1_a_code_path_next_to_the_feature_docs_path_is_not_reported
+      - tests.test_plan_task_feature_docs_validator.TestReplacePlanningEntryFeatureDocsPath.test_ac1_each_entry_of_the_patch_is_checked_under_its_own_task_id
+    red_confirmed: true
+    red_reason: >-
+      Before the validator edit these tests failed: validate_task_entry in the replace_all
+      mode and validate_workflow_patch on a replace_planning patch returned no errors where
+      Lists differ: [] != ['plan-task-feature-docs'] was asserted, and the message-citation
+      test raised IndexError on the empty error list.
+  AC-2:
+    tests:
+      - tests.test_plan_task_feature_docs_validator.TestFeatureDocsPathForms.test_ac2_each_spelling_of_a_feature_docs_path_yields_one_error
+      - tests.test_plan_task_feature_docs_validator.TestFeatureDocsPathForms.test_ac2_two_feature_docs_paths_yield_two_errors_one_per_path
+      - tests.test_plan_task_feature_docs_validator.TestFeatureDocsPathForms.test_ac2_the_same_path_listed_twice_is_reported_once_per_occurrence
+      - tests.test_plan_task_feature_docs_validator.TestFeatureDocsPathForms.test_ac2_forms_and_look_alikes_through_a_replace_planning_patch
+      - tests.test_plan_task_feature_docs_validator.TestFeatureDocsPathForms.test_ac2_look_alike_paths_yield_no_error
+    red_confirmed: true
+    red_reason: >-
+      Before the validator edit the spelling, two-path, repeated-path and replace_planning
+      patch tests failed with Lists differ: [] != ['plan-task-feature-docs'] (every spelling
+      of ./feature-docs/x, backslash and double-slash forms returned no error). The look-alike
+      test (feature-docs-archive/x, src/feature-docs/x and the others expect no error) passed
+      before and after: it is the boundary guard against an over-broad match, with no red state
+      of its own.
+  AC-3:
+    tests:
+      - tests.test_plan_task_feature_docs_validator.TestAppendRuleUnchanged.test_ac3_an_append_entry_gets_only_the_append_code_and_message
+      - tests.test_plan_task_feature_docs_validator.TestAppendRuleUnchanged.test_ac3_an_append_rework_patch_gets_only_the_append_code
+      - tests.test_plan_task_feature_docs_validator.TestAppendRuleUnchanged.test_ac3_look_alike_paths_stay_accepted_on_the_append_side
+      - tests.test_plan_task_feature_docs_validator.TestAppendRuleUnchanged.test_ac3_the_two_modes_use_different_codes_for_the_same_path
+      - tests.test_rework_docs_only_validator_rules.TestFeatureDocsFilesRule.test_ac1_all_planning_documents_are_rejected
+      - tests.test_rework_docs_only_validator_rules.TestFeatureDocsFilesRule.test_ac1_rejected_through_an_append_rework_patch
+    red_confirmed: false
+    red_reason: >-
+      The append behavior pre-existed and the criterion is that it does not change, so no
+      red state occurred for the append assertions: they passed before and after the edit.
+      The existing tests.test_rework_docs_only_validator_rules.TestFeatureDocsFilesRule tests
+      already detect the append code and messages; the new TestAppendRuleUnchanged tests add
+      the verbatim message pin and the absence of plan-task-feature-docs on the append side.
+      Only the mode-contrast test (the replace_all half) failed before the edit; that failure
+      does not prove the append property.
+  AC-4:
+    tests:
+      - tests.test_plan_task_feature_docs_validator.TestCarriedTasksAreNotChecked.test_ac4_the_new_entry_next_to_a_carried_task_is_still_checked
+      - tests.test_plan_task_feature_docs_validator.TestCarriedTasksAreNotChecked.test_ac4_the_command_line_validator_reports_the_new_code_for_an_entry
+      - tests.test_plan_task_feature_docs_validator.TestCarriedTasksAreNotChecked.test_ac4_a_carried_task_with_a_feature_docs_path_gets_no_new_error_in_process
+      - tests.test_plan_task_feature_docs_validator.TestCarriedTasksAreNotChecked.test_ac4_the_command_line_validator_with_and_without_dry_run_apply
+      - tests.test_plan_task_feature_docs_validator.TestCarriedTasksAreNotChecked.test_ac4_a_carried_id_without_a_dry_run_gets_no_new_error
+    red_confirmed: true
+    red_reason: >-
+      Before the validator edit the two tests that pair a carried task (feature-docs path in
+      its files) with a new task0002 entry holding a feature-docs path failed: 0 != 1 for the
+      in-process and the command-line runs (--dry-run-apply, exit code 0 where 1 was asserted).
+      They assert exactly one plan-task-feature-docs error naming task0002 and not task0001,
+      so they also fail an implementation that checks carried tasks. The three carried-only
+      tests (no new error with and without --dry-run-apply, in process and through the command
+      line) passed before the edit because no such check existed; they are guards, not reds.
+  AC-5:
+    tests:
+      - tests.test_rework_docs_only_validator_rules.TestFeatureDocsFilesRule.test_ac1_replace_planning_entries_are_not_checked
+    red_confirmed: true
+    red_reason: >-
+      Run against the validator as committed before this task (a copy of the pre-edit script),
+      the inverted test failed with Lists differ: [] != ['plan-task-feature-docs']; the other
+      six tests of TestFeatureDocsFilesRule passed unchanged. The test keeps its original name
+      because the SPEC and earlier records refer to it by that name.
+  AC-6:
+    tests:
+      - tests.test_plan_task_feature_docs_validator.TestMalformedFilesNeverRaise.test_ac6_a_non_string_element_next_to_a_feature_docs_path
+      - tests.test_plan_task_feature_docs_validator.TestMalformedFilesNeverRaise.test_ac6_malformed_files_through_a_replace_planning_patch
+      - tests.test_plan_task_feature_docs_validator.TestMalformedFilesNeverRaise.test_ac6_malformed_files_through_the_command_line_exit_1_without_a_traceback
+      - tests.test_plan_task_feature_docs_validator.TestMalformedFilesNeverRaise.test_ac6_a_files_value_that_is_not_a_list_is_reported_not_raised
+      - tests.test_plan_task_feature_docs_validator.TestMalformedFilesNeverRaise.test_ac6_a_non_string_element_alone_gets_only_the_structural_code
+      - tests.test_plan_task_feature_docs_validator.TestMalformedFilesNeverRaise.test_ac6_an_empty_string_element_is_not_a_feature_docs_path
+      - tests.test_plan_task_feature_docs_validator.TestMalformedFilesNeverRaise.test_ac6_validation_does_not_mutate_the_entry
+    red_confirmed: true
+    red_reason: >-
+      Before the validator edit the tests that put a feature-docs path next to a non-string
+      element failed: Lists differ: ['files'] != ['files', 'plan-task-feature-docs'] for each
+      element kind (5, None, 1.5, True, a list, a mapping), and the patch and command-line runs
+      did not report the new code. The non-list files, non-string-alone, empty-string and
+      no-mutation tests passed before the edit (the structural code and the no-raise behavior
+      pre-existed); they guard that the new check skips malformed values and never raises.
+  AC-7:
+    tests:
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical
+      - tests.test_plan_task_feature_docs_validator.TestValidatorBytePinRefreshComment.test_ac7_the_pin_is_preceded_by_a_refresh_comment_naming_this_task
+      - tests.test_plan_task_feature_docs_validator.TestValidatorBytePinRefreshComment.test_ac7_the_pin_assignment_still_exists
+    red_confirmed: true
+    red_reason: >-
+      With the validator edited and the pin still at its previous digest, the pin test failed
+      (the previous digest 2e7a97b9... was asserted against the new digest e49cf2fa...), run
+      from a copy of the pre-refresh test module. The refresh-comment test failed with
+      0 != 1 (no marker comment) when pointed at the pre-refresh test_gate_option_vocabulary
+      module. The pin-assignment test is a guard that passed before and after. The whole
+      suite is checked by the full run of python3 -m unittest discover -s tests, which ends
+      with no failing test.
