@@ -1,7 +1,7 @@
 schema_version: 1
 feature: verification-md-regular-file-read
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 20b4ae9bcd7fe09fee5a9c54b7a3bd5c2e005aca
 last_input_digest: sha256:bf97540f65dda7898b602c73d559bf35d3416ac4724ccb1319388a1f2f678ff8
@@ -40,7 +40,7 @@ artifacts:
   produced_by: create-plan-run-0001
 patches:
 - patch_id: verification-md-regular-file-read-p0001
-  status: pending
+  status: applied
   base_input_digest: sha256:bf97540f65dda7898b602c73d559bf35d3416ac4724ccb1319388a1f2f678ff8
   base_workflow_blob: d1045e70e14cbfa1b72bbf62e4c5aaeabd3d421f
 progress_fingerprint: null
