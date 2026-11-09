@@ -4,8 +4,8 @@ phase: create-spec
 status: dispatching
 generation: 1
 base_revision: a1cf16d8f9ecd6b794a25bdea64fad81a1e4e123
-last_input_digest: sha256:1b0451cf113132ff5376d79026b1785b769149d645ba00503059e254144a83f7
-active_request_id: create-spec-run-0002
+last_input_digest: sha256:97b459d8eca116bbcb85b23ac11c36aeb60be635424ce2454f2ed8fbf352f273
+active_request_id: create-spec-run-0003
 packets: {}
 answers:
   create-spec.feature-identity:
@@ -53,6 +53,16 @@ answers:
       | bash）の検知は維持し、deny ケースで固定する'
     resolution_note: 'gate: create-spec.requirement-clarification; chosen: Q（データ引数内の候補に限定した狭い修正）; not chosen: P（単一引用符内の候補を一律に再走査対象から外す）; key points: statements() は候補本文を目印に置換してから実行用文字列を抽出するため、一律除外は bash
       -c の単一引用符ペイロード内の置換や printf ... | bash の経路で検知を失う恐れがある。.unresolved の付与と引用無し・二重引用符内の置換の検査は維持; codex_consulted: true（codex entry）; opus_escalation: false'
+  create-spec.design-step:
+    question_id: create-spec.design-step
+    packet_id: null
+    source: batch-decision-table
+    answer_mode: select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 'accept the design_step_recommendation: skipped (no UI)'
+    answered_at: '2026-11-09T21:20:00+09:00'
 worker_runs:
 - request_id: create-spec-run-0001
   status: completed
@@ -60,9 +70,18 @@ worker_runs:
   output_digest: sha256:47c1f425612116769bfd9640f04481a53438e2f84aecd150c51ca3bc5aca79fb
   self_write_set: []
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:1b0451cf113132ff5376d79026b1785b769149d645ba00503059e254144a83f7
+  output_digest: sha256:60a958dd1158d5acbcf97907dd10f45c4f0317b1e3a6ad953f1e1a56a24a839d
+  self_write_set: []
+- request_id: create-spec-run-0003
+  status: dispatched
+  input_digest: sha256:97b459d8eca116bbcb85b23ac11c36aeb60be635424ce2454f2ed8fbf352f273
   output_digest: null
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/spec-writer-contract.md: sha256:1e63f69687c6850e890f66b5ca92af7f3b0d02645cc464fca88455ad2269d671
+    em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
+    em-workflow/references/templates/spec-document.md: sha256:a5d0106c39a5df7dc2365357a9546588275ed6c7a1651c866e75fa327a7fa592
 artifacts: []
 patches: []
 progress_fingerprint: null
