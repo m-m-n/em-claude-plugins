@@ -1,7 +1,7 @@
 schema_version: 1
 feature: destructive-guard-false-deny
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 0964dc18619937e3064e60348fbc0ed86ad0370f
 last_input_digest: sha256:e9178385a1e6b3a5cf00d5f916ca7741fd618fe34be31f518fa88c475359cb94
