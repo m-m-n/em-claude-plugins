@@ -1,0 +1,93 @@
+# Verification Document: destructive-guard-false-deny
+
+## Overview
+**Feature**: destructive-guard-false-deny / **SPEC.md**: `feature-docs/destructive-guard-false-deny/SPEC.md` / **IMPLEMENTATION.md**: `feature-docs/destructive-guard-false-deny/IMPLEMENTATION.md`
+
+## Build Verification
+- Command: none. `project.components.main.build_command` is empty, and the hook is a Python script with no build step.
+- Expected: not applicable.
+
+## Test Verification
+- Command: `python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests`
+- Expected: the runner reports every case `ok` and exits 0. Unittest discovery reports the same set of failing tests as at the implement base commit (NFR4).
+- Coverage target: not measured. The suite is case-driven. Coverage is the scenarios below plus the fail-closed cases of task0001 AC-2.
+
+### Test Scenarios from SPEC.md
+The commands are in SPEC.md, section Test Scenarios. TS-1 to TS-17 are cases in `em-workflow/hooks/tests/destructive-guard-cases.json`, run by the runner.
+
+| ID | Scenario | Expected Result | Test Type |
+|----|----------|-----------------|-----------|
+| TS-1 | Non-forced task-branch deletion from the integration worktree (the protocol form) | allow | Unit (case) |
+| TS-2 | Forced deletion of a task branch | deny | Unit (case) |
+| TS-3 | mcp-bridge comment whose single-quoted JSON argument holds a backtick substitution of a forced deletion | allow | Unit (case) |
+| TS-4 | The same with a `$( )` substitution | allow | Unit (case) |
+| TS-5 | mcp-bridge comment whose argument is a double-quoted substitution that reads a file | allow | Unit (case) |
+| TS-6 | printf of an ANSI-C-quoted argument holding a backtick substitution | allow | Unit (case) |
+| TS-7 | Unquoted backtick substitution of a forced deletion | deny | Unit (case) |
+| TS-8 | Double-quoted backtick substitution | deny | Unit (case) |
+| TS-9 | bash -c payload holding a backtick substitution | deny | Unit (case) |
+| TS-10 | bash -c payload holding a `$( )` substitution | deny | Unit (case) |
+| TS-11 | sh -c payload holding a `$( )` substitution | deny | Unit (case) |
+| TS-12 | eval of a single-quoted argument holding a substitution | deny | Unit (case) |
+| TS-13 | Here-string into bash holding a substitution | deny | Unit (case) |
+| TS-14 | Single-quoted text piped into bash | deny | Unit (case) |
+| TS-15 | Single-quoted text written to a file, which bash then runs | deny | Unit (case) |
+| TS-16 | Single-quoted text inside a process-substitution body that bash runs | deny | Unit (case) |
+| TS-17 | Single-quoted text inside a command-substitution body passed to eval | deny | Unit (case) |
+| TS-18 | The whole case suite, pre-existing cases included, within the per-case time limit | every case ok, none timed out | Integration |
+
+## Code Quality Verification
+- Format: none configured (`format_command` is empty).
+- Static analysis: none configured.
+
+## SPEC.md Compliance
+
+### Success Criteria
+| ID | Criterion | How to Verify |
+|----|-----------|---------------|
+| SPEC AC-1 | The protocol's non-forced task-branch deletion is allowed | TS-1 |
+| SPEC AC-2 | Forced task-branch deletion stays denied | TS-2 |
+| SPEC AC-3 | implement-phase.md Step I.2.b step 4 keeps the non-forced deletion and the sentence forbidding a forced fallback | `tests/test_protocol_git_ops_pass_destructive_guard.py` (run by unittest discovery), plus the manual check below |
+| SPEC AC-4 | Data-argument forms are allowed | TS-3, TS-4, TS-5, TS-6 |
+| SPEC AC-5 | Executed forms stay denied | TS-7 to TS-17 |
+| SPEC AC-6 | No pre-existing case is removed or changed, and the runner passes | TS-18, plus the parsed-JSON comparison of task0001 AC-1 |
+| SPEC AC-7 | The pre-fix run is recorded | Manual check below |
+| Success Criteria: unit tests | `python3 -m unittest discover -s tests` gives the same result as before the change (NFR4) | Test Verification command |
+| Success Criteria: review | Code review is completed | Review phase |
+
+### Functional Requirements Coverage
+| Requirement | Tasks | Verification |
+|-------------|-------|--------------|
+| FR1 | task0001 | TS-1, TS-2; manual check of SPEC AC-3 |
+| FR2 | task0001 | TS-3, TS-4, TS-5, TS-6; task0001 AC-2 cases |
+| FR3 | task0001 | TS-18 (FR3 example cases); manual diff check |
+| FR4 | task0001 | TS-7 to TS-17 |
+| FR5 | task0001 | TS-1 to TS-18 |
+| FR6 | task0001 | Manual: commit order and pre-fix record |
+| FR7 | task0001 | Manual: comment review |
+| NFR1 | task0001 | TS-18 |
+| NFR2 | task0001 | TS-18 (the runner's per-case time limit); manual diff check of the two budget constants |
+| NFR3 | task0001 | Manual diff check |
+| NFR4 | task0001 | Comparison of unittest discovery results |
+
+## Manual Testing (E2E Not Possible)
+- [ ] FR6 / SPEC AC-7: on task0001's branch, the commit that adds the cases comes before every commit that changes `em-workflow/hooks/destructive-guard.py`. task0001's test record holds the pre-fix runner result: the added deny-side cases pass, and TS-3, TS-4 and TS-6 come out deny.
+- [ ] FR7: the HONOR_SINGLE_QUOTES paragraph of `scan_structure()`, the comment above the quote-agnostic scan in `statements()`, and the single-quote passages of the `_mark_quoted_substitutions()` and `extract_shell_payload_anchored()` docstrings all describe the FR2 / FR3 behaviour. None still says that every single-quote candidate is re-scanned.
+- [ ] FR1 / SPEC AC-3: the diff from the implement base commit leaves `em-workflow/references/implement-phase.md` unchanged. Step I.2.b step 4 still deletes the task branch from the integration worktree without force, and still forbids falling back to a forced deletion.
+- [ ] NFR3: the diff from the implement base commit leaves unchanged the `version` in `em-workflow/.claude-plugin/plugin.json` and the em-workflow entry's `version` in `.claude-plugin/marketplace.json`.
+- [ ] FR3: the diff leaves unchanged the top-level span computation, both marking passes, the extension of the run-global substitution list and the per-token flags in `statements()`.
+
+## Performance / Security Verification
+- NFR2: every runner case finishes within the runner's per-case limit (10 s), so no case is marked as a timeout. The diff leaves `scan_budget` and `MAX_SHELL_PAYLOAD_EXPANSIONS` unchanged.
+- TM-1: the hook skips re-scanning only in a top-level chunk that meets FR2 (a)-(d); anything it cannot decide is re-scanned. Checked by TS-7 to TS-17 coming out deny with the changed hook, and by every task0001 AC-2 case keeping its non-allow expected decision.
+- TM-2: marking and token flags stay unchanged, and only queueing differs. Checked by the FR3 example cases of SPEC.md passing with unchanged expected decisions (TS-18), and by the FR3 manual diff check.
+
+## Verification Summary
+| Category | Items | Automated | E2E | Manual |
+|----------|-------|-----------|-----|--------|
+| Build | 0 | 0 | 0 | 0 |
+| Test scenarios (TS-1 to TS-18) | 18 | 18 | 0 | 0 |
+| Repository unit tests (NFR4) | 1 | 1 | 0 | 0 |
+| Code quality | 0 | 0 | 0 | 0 |
+| Manual checks (FR6, FR7, SPEC AC-3, NFR3, FR3 diff) | 5 | 0 | 0 | 5 |
+| Performance / Security (NFR2, TM-1, TM-2) | 3 | 3 | 0 | 0 |
