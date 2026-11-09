@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: a1cf16d8f9ecd6b794a25bdea64fad81a1e4e123
 last_input_digest: sha256:97b459d8eca116bbcb85b23ac11c36aeb60be635424ce2454f2ed8fbf352f273
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets: {}
 answers:
   create-spec.feature-identity:
@@ -75,14 +75,23 @@ worker_runs:
   output_digest: sha256:60a958dd1158d5acbcf97907dd10f45c4f0317b1e3a6ad953f1e1a56a24a839d
   self_write_set: []
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:97b459d8eca116bbcb85b23ac11c36aeb60be635424ce2454f2ed8fbf352f273
-  output_digest: null
+  output_digest: sha256:4314312a906011a44b6384f8eb35f601f119848962d5e60599229c2b01779e55
   dispatch_digest_inputs:
     em-workflow/references/contracts/spec-writer-contract.md: sha256:1e63f69687c6850e890f66b5ca92af7f3b0d02645cc464fca88455ad2269d671
     em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
     em-workflow/references/templates/spec-document.md: sha256:a5d0106c39a5df7dc2365357a9546588275ed6c7a1651c866e75fa327a7fa592
-artifacts: []
+  self_write_set:
+  - feature-docs/destructive-guard-false-deny/REQUIREMENTS.md
+  - feature-docs/destructive-guard-false-deny/SPEC.md
+artifacts:
+- path: feature-docs/destructive-guard-false-deny/REQUIREMENTS.md
+  sha256: sha256:e9fe207356a800f2dfafaa403149dfdf452a4007edc5df496edf1fcb96633f37
+  produced_by: create-spec-run-0003
+- path: feature-docs/destructive-guard-false-deny/SPEC.md
+  sha256: sha256:99addc85406eab0b496582b5f744e02400f8b4a05a5267ca5445980e7a5c71e4
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
