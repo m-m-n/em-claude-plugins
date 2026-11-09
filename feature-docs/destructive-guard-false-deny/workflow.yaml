@@ -124,7 +124,8 @@ workflow:
   completed_at_commit: a8728ad37c742cb592531320537d5b562d2ffbe6
   base_commit: 03343519bf77a6d38bb717aec1fc701f7f0a72b2
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 83c0d716162b60b660896744434f669f0df2bc66
 - id: verify
   status: pending
   result: null
@@ -192,8 +193,8 @@ tasks:
       - 767398d2b9499db6
       review_round: 1
 review:
-  status: pending
-  rounds_completed: 1
+  status: completed
+  rounds_completed: 2
   plan:
     floor:
     - comprehensive
@@ -204,8 +205,8 @@ review:
     - perspective: performance
       reason: 毎回の Bash 呼び出しで走るフックの走査経路を変えたため、10 秒 timeout と scan_budget の範囲に収まるかを確かめる
     cross_validation: true
-  residual_critical_high: 2
-  needs_rework: true
+  residual_critical_high: 0
+  needs_rework: false
 requirements:
   FR1:
     title: '現象 1 の方針: フックの強制削除 deny は維持し、プロトコルは非強制削除を使う'
