@@ -162,6 +162,16 @@ tasks:
 review:
   status: pending
   rounds_completed: 0
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary:
+    - perspective: performance
+      reason: 毎回の Bash 呼び出しで走るフックの走査経路を変えたため、10 秒 timeout と scan_budget の範囲に収まるかを確かめる
+    cross_validation: true
   residual_critical_high: 0
   needs_rework: false
 requirements:
