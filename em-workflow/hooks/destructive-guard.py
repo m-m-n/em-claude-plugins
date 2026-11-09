@@ -6417,6 +6417,7 @@ RESCAN_EXECUTION_WORDS = frozenset(
     {
         "eval", "source", ".", "exec", "xargs", "find", "su", "ssh",
         "trap", "watch", "parallel", "let", "test", "read",
+        "declare", "typeset", "local", "readonly", "export", "unset",
     }
 )
 
@@ -6442,6 +6443,32 @@ def _single_quote_data_spans(lexmap, real_spans):
         for candidate in lexmap.candidates
         if lexmap.regions[candidate.quote].parent is None
     } - set(real_spans)
+
+
+_ARGS_NOT_EXECUTED_WORDS = frozenset(
+    {
+        "echo",
+        "printf",
+        "cat",
+        "head",
+        "tail",
+        "wc",
+        "grep",
+        "egrep",
+        "fgrep",
+        "rg",
+        "cut",
+        "tr",
+        "sort",
+        "uniq",
+        "basename",
+        "dirname",
+        "true",
+        "false",
+        ":",
+        "mcp-bridge",
+    }
+)
 
 
 def _statement_may_run_text(words_only, lead, shaped_words):
@@ -6491,6 +6518,10 @@ def _statement_may_run_text(words_only, lead, shaped_words):
             return True
         if name != "builtin":
             # `printf -v 'a[$(cmd)]'` assigns through a subscript bash expands.
+            # Only commands known not to execute their arguments may skip the
+            # re-scan; any other command word is "cannot decide" -> True.
+            if name not in _ARGS_NOT_EXECUTED_WORDS:
+                return True
             return name == "printf" and any(
                 arg.startswith("-v") for arg in shaped_words[index + 1 :]
             )
@@ -6955,7 +6986,15 @@ def statements(command, unsettled=None):
         single_quote_slots = (
             [] if is_command and all(lexed for _m, lexed, _s in segments) else None
         )
-        single_quote_data_only = True
+        # A construct by which bash itself re-evaluates a variable's value
+        # later (arithmetic, subscript / substring / transform / indirect
+        # expansion, PS4 / set -x, function definitions, let) is not decided
+        # by the command words, so such a chunk keeps its bodies queued.
+        single_quote_data_only = not re.search(
+            r"\(\(|\$\{[^}]*[\[:@]|\$\{!|\bPS4\b|\bset\b|\blet\b"
+            r"|\bfunction\b|\w\s*\(\s*\)",
+            chunk,
+        )
         data_spans = (
             _single_quote_data_spans(legacy_lexmap, chunk_scan[0])
             if single_quote_slots is not None
