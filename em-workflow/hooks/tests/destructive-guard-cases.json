@@ -1203,6 +1203,7 @@
   ["deny", "destructive-guard-false-deny TS-19 変数に入れた単一引用符内の置換を二重引用符内のコマンド置換の eval が実行するので deny", "X='$(git branch -D example)'; echo \"$(eval \"$X\")\""],
   ["deny", "destructive-guard-false-deny TS-20 変数に入れた単一引用符内の置換をプロセス置換内の bash -c が実行するので deny", "X='$(git branch -D example)'; cat <(bash -c \"$X\")"],
   ["deny", "destructive-guard-false-deny TS-21 sort --compress-program=sh へパイプした単一引用符内の置換は sort が sh で実行するので deny", "printf '%s\\n' '$(git branch -D example)' | sort -S 1b --compress-program=sh"],
+  ["deny", "destructive-guard-false-deny TS-21 の再現（echo 形）sort --compress-program=sh へパイプした echo の単一引用符内の置換は sort が sh で実行するので deny", "echo '$(git branch -D example)' | sort -S 1b --compress-program=sh"],
   ["deny", "destructive-guard-false-deny W4 二重引用符内の実コマンド置換に書いた git branch -D は実行されるので deny", "mcp-bridge run --args-json \"$(git branch -D example)\""],
   ["deny", "destructive-guard-false-deny W3 パス付きの /tmp/mcp-bridge はコマンド語が mcp-bridge ではないので単一引用符内の置換を再走査して deny", "/tmp/mcp-bridge run --args-json '{\"body\":\"$(git branch -D example)\"}'"],
   ["deny", "destructive-guard-false-deny W2 代入語 OPTIND=... を前置した mcp-bridge は単一コマンドの形ではないので再走査して deny", "OPTIND='a[$(git branch -D example)]' mcp-bridge run --args-json '{}'"],
