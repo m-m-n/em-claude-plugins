@@ -1,0 +1,12 @@
+schema_version: 1
+feature: verification-md-regular-file-read
+records:
+  - question_id: implement.wake-decline
+    packet_id: null
+    answered_at: "2026-11-09T09:40:00+09:00"
+    source: batch-safe-default
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "decline auto-addition of tests/test_gate_option_vocabulary.py to tasks.task0001.files"
+    normalized_answer: "decline auto-addition of tests/test_gate_option_vocabulary.py to tasks.task0001.files"
+    resolution_note: "task_id: task0001; declined path: tests/test_gate_option_vocabulary.py; missing evidence part: the identifier of the acceptance criterion or requirement that would otherwise be dropped (the deviation names no AC-n of the task plan and no registered requirement id); the path passes the shape check and is not under a workflow control path; reported reason: the byte-identity sha256 pin VALIDATE_WORKER_OUTPUT_SHA256 failed after the loader change and was refreshed, no assertion changed or removed"
