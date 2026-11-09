@@ -1,7 +1,7 @@
 schema_version: 1
 feature: destructive-guard-false-deny
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: a1cf16d8f9ecd6b794a25bdea64fad81a1e4e123
 last_input_digest: sha256:97b459d8eca116bbcb85b23ac11c36aeb60be635424ce2454f2ed8fbf352f273
@@ -12,7 +12,7 @@ answers:
     question_id: create-spec.feature-identity
     packet_id: null
     source: batch-decision-table
-    answer_mode: select
+    answer_mode: single_select
     selected_option_ids:
     - derive_from_task_description
     freeform: null
@@ -57,7 +57,7 @@ answers:
     question_id: create-spec.design-step
     packet_id: null
     source: batch-decision-table
-    answer_mode: select
+    answer_mode: single_select
     selected_option_ids:
     - decide_autonomously
     freeform: null

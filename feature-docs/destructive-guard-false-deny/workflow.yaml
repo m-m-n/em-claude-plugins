@@ -1,0 +1,275 @@
+schema_version: 1
+feature: destructive-guard-false-deny
+created: '2026-11-09'
+base_branch: main
+goal: |
+  # destructive-guard がマージ済みタスクブランチの削除と散文中の引用フラグを誤って deny する
+
+  Notion タスク: <notion-url> （種別: バグ）
+
+  ## 現象 (必須)
+
+  `em-workflow/hooks/destructive-guard.py` の `git-branch-force-delete` ルールが、次の 2 つの場面で誤って deny する。
+
+  **1. implement フェーズ規定のタスクブランチ削除が実行できない**
+
+  `em-workflow/references/implement-phase.md` の Step I.2.b step 4 は、マージ済みタスクブランチの後片付けとして強制削除フラグ付きの `git branch` を規定している。同ドキュメントはこのフラグを選ぶ理由もコメントで明記している（オーケストレーターの HEAD は base\_branch であり、タスクブランチは integration へマージされているため通常削除は拒否される）。しかし実際に実行すると destructive-guard が deny する。
+
+  ```txt
+  [destructive-guard/git-branch-force-delete] 未マージのブランチを強制削除する（`-D`）。到達不能なコミットが残る。
+  ```
+
+  つまりプラグイン自身のプロトコルが規定するコマンドを、プラグイン自身のフックが止めている。
+
+  **2. コマンドではなく散文中に引用したフラグにも反応する**
+
+  Notion へ進捗コメントを投稿するコマンドの引数（Markdown 本文）に、上記の現象を説明するため強制削除フラグの文字列を含めたところ、同じルールで deny された。実行されるコマンドは `mcp-bridge run --mcp notion --tool notion-create-comment --args-json <JSON>` であり、`git` の呼び出しは含まれていない。
+
+  ## 再現手順 (必須)
+
+  **現象 1**
+
+  1. em-workflow の implement フェーズを回し、タスクが 1 つ integration ブランチへマージされた状態にする
+  2. メイン作業ツリーで、そのタスクブランチに対して強制削除フラグ付きの `git branch` を実行する
+  3. destructive-guard が deny する
+
+  **現象 2**
+
+  1. 強制削除フラグの文字列（ハイフン + 大文字 D）を本文中に含む JSON をファイルへ書く
+  2. `mcp-bridge run --mcp notion --tool notion-create-comment --args-json "$(cat <その JSON ファイル>)"` を実行する
+  3. destructive-guard が deny する
+
+  ## 期待する挙動 (必須)
+
+  - 現象 1: マージ済みであることが検証済みのタスクブランチの削除は通す。少なくとも em-workflow のプロトコルが規定する形は通る必要がある。もしくは implement-phase.md 側を、フックを通る形（integration worktree からの通常削除）に書き換える。
+  - 現象 2: `git` が実際に実行されない位置に現れた文字列には反応しない。`.claude/rules/hook-tests.md` が挙げる既存の allow ケース（クォート内の `rm -rf`、ヒアドキュメント本文、`> /dev/null`）と同じ種類の誤爆。
+
+  ## 完了の定義 (必須)
+
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある（`em-workflow/hooks/tests/destructive-guard-cases.json` に allow ケースとして 2 件追加する。既存の deny / ask ケースは消さない）
+  - [ ] 現象 1 の解決方針を決める（フック側を緩めるか、implement-phase.md 側の手順を書き換えるか）。両プラグインに同じ判断を反映する
+
+  ## 該当箇所 (任意)
+
+  - `em-workflow/hooks/destructive-guard.py` の `git-branch-force-delete` ルール
+  - `em-workflow/references/implement-phase.md` Step I.2.b step 4（タスクブランチの後片付け）
+  - テストケース: `em-workflow/hooks/tests/destructive-guard-cases.json`
+  - テストランナー: `em-workflow/hooks/tests/run-destructive-guard.py`
+
+  ## 実害・発生条件 (任意)
+
+  - 現象 1 は em-workflow の implement フェーズを回すたびに、マージされたタスクの数だけ発生する。無人実行（`--batch`）では `ask` が `deny` に降格されるため、オーケストレーターが回避手段を持たないとその場で止まる。今回は integration worktree からの通常削除に置き換えて回避したが、これはプロトコルに書かれていない手順である。
+  - 現象 2 は、フックやガードの挙動を説明する文章を外部サービスへ送る場面で起きる。ワークフローが自分の不具合を報告しようとすると自分のフックに止められる形になる。
+  - 観測は 2026-09-08、feature `muse-spark-contributor-consent` の implement フェーズ実行中。
+
+  ## 追加指示（起動時）
+
+  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作成する。integration ブランチはローカル・リモート両方に残す（base_branch へ自動マージしない）
+  - 不明点は Codex に相談し、相対的に良いと判断した選択肢を採用する
+  - その議論内容を Notion に記録する
+parent_branch: em-workflow/destructive-guard-false-deny/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+  - basis: description_only
+    probabilities:
+      '0': 0.0
+      '1': 0.79
+      '2': 0.21
+      '3': 0.0
+  - basis: description_plus_code
+    probabilities:
+      '0': 0.0
+      '1': 0.84
+      '2': 0.16
+      '3': 0.0
+  at: '2026-11-09T20:52:30+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: b0484d18aecb48f1522316ee7faee76053e706db
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'UI を持たないフックスクリプトとテストケースの変更のみのため（design-step 推奨: skipped）'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: 03343519bf77a6d38bb717aec1fc701f7f0a72b2
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: '現象 1 の方針: フックの強制削除 deny は維持し、プロトコルは非強制削除を使う'
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+  FR2:
+    title: データ引数の中の単一引用符内置換候補だけを再走査しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-3
+    - TS-4
+    - TS-5
+    - TS-6
+  FR3:
+    title: 単一引用符内候補の印付けは維持する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-18
+  FR4:
+    title: 実際に実行される位置の置換は従来どおり検知する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-7
+    - TS-8
+    - TS-9
+    - TS-10
+    - TS-11
+    - TS-12
+    - TS-13
+    - TS-14
+    - TS-15
+    - TS-16
+    - TS-17
+  FR5:
+    title: テストケースの追加
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
+    - TS-6
+    - TS-7
+    - TS-8
+    - TS-9
+    - TS-10
+    - TS-11
+    - TS-12
+    - TS-13
+    - TS-14
+    - TS-15
+    - TS-16
+    - TS-17
+    - TS-18
+  FR6:
+    title: ケースの追加を修正より先に行う
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-6
+    - TS-7
+    - TS-8
+    - TS-9
+    - TS-10
+    - TS-11
+    - TS-12
+    - TS-13
+    - TS-14
+    - TS-15
+    - TS-16
+    - TS-17
+  FR7:
+    title: コード内の説明の更新
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 既存スイートの全通過
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-18
+  NFR2:
+    title: 性能
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: version を触らない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: リポジトリ全体のテスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
