@@ -1,0 +1,35 @@
+schema_version: 1
+feature: destructive-guard-false-deny
+records:
+- question_id: create-spec.requirement-clarification.phenomenon1-policy
+  packet_id: null
+  answered_at: '2026-11-09T21:05:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 現象 1 はフックの強制削除 deny を維持し、プロトコルは integration worktree からの非強制削除（強制への切り替え禁止）を使う方針とする（案 B）。フックはマージ状態を静的に確かめられないため
+  normalized_answer: 現象 1 はフックの強制削除 deny を維持し、プロトコルは integration worktree からの非強制削除（強制への切り替え禁止）を使う方針とする（案 B）。フックはマージ状態を静的に確かめられないため
+  resolution_note: 'gate: create-spec.requirement-clarification; chosen: B（フック維持・プロトコルは非強制削除）; not chosen: A（マージ済み検証付きで強制削除を許可）; key points: implement-phase.md Step I.2.b step 4 は既に integration worktree
+    からの非強制削除と強制へのフォールバック禁止を規定、check_git は構文のみで判定しマージ状態を検証できない; codex_consulted: true（codex entry）; opus_escalation: false'
+- question_id: create-spec.requirement-clarification.protocol-force-forms-scope
+  packet_id: null
+  answered_at: '2026-11-09T21:05:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: implement-phase.md の Resume guard（Clean re-attempt）と route-back 後片付けにある未マージブランチ・worktree の強制破棄はこの feature の対象外とし、別タスクとして起票する（案 X）
+  normalized_answer: implement-phase.md の Resume guard（Clean re-attempt）と route-back 後片付けにある未マージブランチ・worktree の強制破棄はこの feature の対象外とし、別タスクとして起票する（案 X）
+  resolution_note: 'gate: create-spec.requirement-clarification; chosen: X（対象外・後続タスク）; not chosen: Y（本 feature に含める）; key points: 未統合ブランチや未コミット変更を破棄する処理で、今回の誤検知とは別の削除方針が要る。既存 feature implement-guard-compatible-git-ops
+    の SPEC FR7 と tests/test_protocol_git_ops_pass_destructive_guard.py も未対応として明示; codex_consulted: true（codex entry）; opus_escalation: false'
+- question_id: create-spec.requirement-clarification.phenomenon2-fix-scope
+  packet_id: null
+  answered_at: '2026-11-09T21:05:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: '単一引用符内のコマンド置換候補を一律に再走査対象から外すのではなく、実行されないデータ引数の中にある候補に限って再走査しない狭い修正とする（案 Q）。bash -c / sh -c / eval / here-string / パイプでシェルへ渡す経路（例: printf ''%s\n'' ''echo $(git branch <強制削除フラグ> x)'' | bash）の検知は維持し、deny
+    ケースで固定する'
+  normalized_answer: '単一引用符内のコマンド置換候補を一律に再走査対象から外すのではなく、実行されないデータ引数の中にある候補に限って再走査しない狭い修正とする（案 Q）。bash -c / sh -c / eval / here-string / パイプでシェルへ渡す経路（例: printf ''%s\n'' ''echo $(git branch <強制削除フラグ> x)''
+    | bash）の検知は維持し、deny ケースで固定する'
+  resolution_note: 'gate: create-spec.requirement-clarification; chosen: Q（データ引数内の候補に限定した狭い修正）; not chosen: P（単一引用符内の候補を一律に再走査対象から外す）; key points: statements() は候補本文を目印に置換してから実行用文字列を抽出するため、一律除外は bash -c
+    の単一引用符ペイロード内の置換や printf ... | bash の経路で検知を失う恐れがある。.unresolved の付与と引用無し・二重引用符内の置換の検査は維持; codex_consulted: true（codex entry）; opus_escalation: false'
