@@ -1,0 +1,178 @@
+task_id: task0002
+# Baseline, recorded before any edit, at the task's base commit. The approved
+# test command `python3 em-workflow/hooks/tests/run-destructive-guard.py &&
+# python3 -m unittest discover -s tests` stopped at its first part: the runner
+# gave 1177/1178 passed with one failure,
+#   FAIL allow destructive-guard-false-deny TS-6  got=deny [destructive-guard/git-branch-force-delete]
+# (the hook at the task's base commit does not yet give TS-6 its allow), and the
+# `&&` skipped unittest discovery. Unittest discovery was then run on its own
+# with the same arguments (`python3 -m unittest discover -s tests`): "Ran 15723
+# tests ... FAILED (failures=2, skipped=1)". Both failures are the case table's
+# TS-6 failure seen through a unittest wrapper, so the baseline holds these two
+# test IDs:
+baseline_failures:
+  - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+  - tests.test_destructive_guard_extglob_units.TestCacheDisabled.test_every_case_table_entry_yields_its_verdict_with_the_cache_off
+# After the hook change and this record, an actually re-executed run: the runner
+# gave 1207/1207 passed (no case marked as a timeout), and unittest discovery
+# gave no failure (see the Unittest line of the last comment block). The two
+# baseline failures went green because TS-6 now gives allow; nothing absent from
+# the baseline failed.
+final_failures: []
+# Pre-fix run A (AC-3, FR6). At the cases-only commits 8aa212deb and df15d1ef6,
+# before any commit that changes em-workflow/hooks/destructive-guard.py (the
+# hook was byte-identical to the one at this task's base commit), the runner on
+# the unmodified hook gave 1195/1207 passed. The 12 failures were:
+#   allow expected, got=deny [destructive-guard/git-branch-force-delete]:
+#     TS-6, TS-22, TS-22 with the trailing comment, the printf ANSI-C data argument
+#   deny expected, got=allow [destructive-guard] (the findings reproduced):
+#     TS-19, TS-20, the echo form of TS-21 (added, see below), W3 /tmp/mcp-bridge,
+#     W2 wrapper (command mcp-bridge), W2 redirect (> out.json), S1 (mcp-bridge exec),
+#     C1 (the quote region followed by x)
+# TS-21, character for character, did NOT come out allow in run A: it came out
+# deny. The unmodified hook keeps the re-scan for a `printf` whose data argument
+# token carries the unresolved flag (the marking of the candidate), so the printf
+# form never reproduced finding 767398d2b9499db6. The case stays. The echo form
+# `echo '$(git branch -D example)' | sort -S 1b --compress-program=sh` does
+# reproduce it (run A: allow), so it was added as a second deny case in the
+# second cases commit (df15d1ef6), before the hook change.
+#
+# Pre-fix run B (AC-2, FR6). The hook directory of the implement base commit
+# 03343519bf77a6d38bb717aec1fc701f7f0a72b2 was extracted with git archive into a
+# temporary directory outside the repository (the sibling merge_pr_allow.py came
+# with it) and the runner was started with that copy's hook path. It gave
+# 1201/1207 passed. Decision of every case this task adds (29 cases):
+#   TS-22 (allow expected)                    base hook: deny
+#   TS-22 + trailing comment (allow)          base hook: deny
+#   printf ANSI-C data argument (allow)       base hook: deny
+#   all 26 deny cases (TS-19, TS-20, TS-21, TS-21 echo form, W4 double-quote
+#     substitution, W3, W2 assignment, W2 control structure, W2 wrapper, W2
+#     redirect, S1, S2 option x2, S2 format, W4 line continuation, C1, and the
+#     nine review-loop reproductions: awk system(), declare, typeset,
+#     /usr/bin/env bash -c, builtin command eval, $((x)), $[x], RANDOM, rg --pre,
+#     printf "$opt")                        base hook: deny (every one)
+# The other failures of run B were TS-3, TS-4 and TS-6, which is the base hook
+# re-scanning every single-quote candidate; they are the earlier work's allow
+# cases and need no change.
+#
+# Allow cases added by earlier work (task0001). TS-1, TS-3, TS-4, TS-5 and TS-6
+# keep their expectation (allow) and all give allow with the changed hook. No
+# other allow case was added after the implement base commit, so no allow
+# expectation changed (list of changed expectations: empty). No deny or ask case
+# was removed or changed; the only change to a pre-existing line of the case
+# file is the comma added after the previous last case.
+#
+# Last run of the changed hook:
+#   Runner: 1207/1207 passed, no timeout marker.
+#   Unittest: the whole approved command ran to its end with exit code 0, so
+#   `python3 -m unittest discover -s tests` gave "Ran 15724 tests ... OK
+#   (skipped=1)" (the baseline run had 15723 tests and 2 failures; this run
+#   collected one test more; this task adds no unittest module and the cause of
+#   the difference was not traced). No failure at all.
+#   FR3 example cases (rm -rf '$(pwd)/../tmp/scratch': deny; the echo 'a $(' ; rm
+#   -rf ... case: deny; X='foo$(bar'; rm -rf $X: ask) are in the case file with
+#   unchanged expectations and pass.
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >
+      The listed test runs the case runner and fails when the runner prints a FAIL.
+      At the cases-only commits, against the unmodified hook, the runner printed
+      "FAIL allow destructive-guard-false-deny TS-22 ...", the same for TS-22 with
+      the trailing comment and for the printf ANSI-C data argument, each
+      "got=deny [destructive-guard/git-branch-force-delete]" (1195/1207 passed,
+      exit 1). With the changed hook the three give allow.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >
+      Against the unmodified hook the runner printed "FAIL deny ... got=allow" for
+      TS-19, TS-20, the echo form of TS-21, W3, W2 wrapper, W2 redirect, S1 and
+      C1 (run A above). The other deny cases of AC-2 passed against the unmodified
+      hook by design: they pin detection that must stay, and the base hook
+      (pre-fix run B) gives deny for every deny case this task adds. TS-21 in the
+      plan's exact printf form gave deny in run A, not allow (explained in the
+      comments above); its echo form gave allow, so the finding is reproduced by a
+      case that stays in the file.
+  AC-3:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      A statement about commit order and about recorded runs, with no executable
+      check that can be made to fail. Searched tests/ by the path
+      em-workflow/hooks/destructive-guard.py and by the basename
+      destructive-guard.py and by destructive-guard-cases: the existing tests run
+      the hook or the case table (for example
+      tests.test_destructive_guard_command_substitution) and none reads the git
+      history or this record. Verified with git log: the two commits that add the
+      cases (8aa212deb, df15d1ef6) come before the commit that changes
+      em-workflow/hooks/destructive-guard.py, and runs A and B are recorded in the
+      comments at the top of this file.
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      A statement about the shape of the code, with no executable check that can
+      be made to fail. Searched tests/ by the path and by the basename of the hook:
+      the existing tests exercise decisions, and the only one reading the lexer's
+      single-quote candidates (tests.test_destructive_guard_lexer_agreement) pins
+      scan_structure(), not the queueing decision. Checked by reading the diff
+      and by git grep: _single_quote_skip_spans() is one function separate from
+      the queueing loop, called once for the top-level chunk before any candidate
+      body is pushed; the push loop skips a body whose span it names (`continue`)
+      and nothing deletes or reorders a pending entry afterwards;
+      _ARGS_NOT_EXECUTED_WORDS, RESCAN_EXECUTION_WORDS, _STATIC_COMMAND_WORD,
+      _statement_may_run_text(), _single_quote_data_spans() and the raw-text
+      re.search of the previous decision no longer exist in the hook.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >
+      The allow side was red against the unmodified hook (TS-6, TS-22 and the other
+      AC-1 cases gave deny, run A) and the deny side that the old decision let
+      through was red too (TS-19, TS-20 and the AC-2 cases listed under AC-2).
+      With the changed hook TS-1, TS-3, TS-4, TS-5, TS-6, TS-22 and every AC-1
+      case give allow, and TS-2, TS-7 to TS-17, TS-19, TS-20, TS-21, every AC-2
+      case and every pre-existing deny or ask case keep their expected decision
+      (runner 1207/1207).
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_extglob_units.TestCacheDisabled.test_every_case_table_entry_yields_its_verdict_with_the_cache_off
+    red_confirmed: true
+    red_reason: >
+      Both listed tests failed in the baseline run before any edit (the case
+      table's TS-6 gave deny) and pass with the changed hook, so the failing
+      set after the change (empty) is a subset of the baseline set (two tests);
+      the two went green because TS-6 now gives allow, nothing else changed.
+      The runner passes every case (1207/1207, no timeout marker), including the
+      three FR3 example cases (rm -rf with a single-quoted $(pwd) path: deny; echo
+      'a $(' ; rm -rf /home/user/x ; f "(" ; echo ')': deny; X='foo$(bar'; rm -rf
+      $X: ask), which are in the case file with unchanged expectations. By reading
+      the diff against the implement base commit: top_spans, both marking passes,
+      the all_subs extension, the marker positions and the per-token flags are not
+      touched, and scan_budget and MAX_SHELL_PAYLOAD_EXPANSIONS are not in the
+      diff. No allow expectation changed and no deny or ask case was removed or
+      changed.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      A statement about comment and docstring text. Searched tests/ by the path
+      em-workflow/hooks/destructive-guard.py and by the basename
+      destructive-guard.py: the existing tests that read the hook's docstrings (for
+      example tests.test_destructive_guard_rm_reason_positions.TestNumberingDescriptionsAreCurrent)
+      assert other phrases (ordinal numbering) and none reads the single-quote
+      passages, and none failed after the rewrite. Checked by reading the diff:
+      the scan_structure() HONOR_SINGLE_QUOTES paragraph, the statements()
+      docstring head and the comments above the legacy scan and the queueing loop,
+      the _mark_quoted_substitutions() docstring and the
+      extract_shell_payload_anchored() docstring each state that marking still
+      covers single-quote candidates and that a candidate body is skipped only
+      under the conditions of _single_quote_skip_spans(); git grep finds no
+      comment that describes the removed execution-word list or allowlist or says
+      that every single-quote candidate is re-scanned.
