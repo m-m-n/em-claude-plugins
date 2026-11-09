@@ -1,0 +1,111 @@
+task_id: task0001
+# python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
+# at the task's base commit (before any edit): the runner gave 1137/1137 passed,
+# unittest discovery "Ran 15722 tests ... OK (skipped=1)".
+baseline_failures: []
+# The same command after the hook change and this record: the runner gave
+# 1178/1178 passed (no case marked as a timeout) and unittest discovery
+# the same set of failing tests as the baseline (none).
+final_failures: []
+# Pre-fix run (AC-3, FR6). At the commit that adds the cases and before any
+# commit that changes em-workflow/hooks/destructive-guard.py (cases commits
+# 455538388 and c3cf77138, both with the hook byte-identical to the base
+# commit), `python3 em-workflow/hooks/tests/run-destructive-guard.py` on the
+# unmodified hook gave 1175/1178 passed. The three failures were:
+#   FAIL allow  destructive-guard-false-deny TS-3  got=deny [destructive-guard/git-branch-force-delete]
+#   FAIL allow  destructive-guard-false-deny TS-4  got=deny [destructive-guard/git-branch-force-delete]
+#   FAIL allow  destructive-guard-false-deny TS-6  got=deny [destructive-guard/git-branch-force-delete]
+# That is phenomenon 2, reproduced. TS-1 and TS-5 passed already, and every
+# added deny case passed (TS-2, TS-7 to TS-17 and all the FR2 cases). The first
+# commit held 35 cases (1169/1172: the same three failures); the second added
+# 6 more deny cases before the first hook commit (1175/1178: the same three).
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_every_pre_task_command_preserved_with_only_named_changes
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: false
+    red_reason: >
+      The criterion is about what the case file contains. The cases did not exist
+      before this task, so no check could fail first; a dedicated new module is out
+      of scope, but the existing test_every_pre_task_command_preserved_with_only_named_changes
+      detects a changed or removed pre-task command and the runner wrapper runs
+      every case; no red state occurred for this change. Checked by script against
+      the base commit: the 1136 base entries equal the first 1136 entries of the new
+      array as parsed JSON, TS-1 to TS-17 each appear once with the SPEC command
+      character for character and the expected decision (allow for TS-1, TS-3,
+      TS-4, TS-5, TS-6; deny for TS-2 and TS-7 to TS-17), and no added command is
+      a duplicate of another three-element case. The red of TS-3, TS-4 and TS-6 is
+      recorded under AC-4.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: false
+    red_reason: >
+      These deny cases pin behaviour the change must keep, so they pass against the
+      unmodified hook by design (FR6, AC-3): the unmodified hook gave a non-allow
+      decision for each one (deny, as recorded in the case file). No red state
+      occurred for this change. Each case was shown to be able to fail: a copy of
+      the changed hook with one condition weakened (no execution-word check, no
+      override check, no parse-failure check, no env -S check, no substitution-head
+      check, no static-word check, no last-path-segment comparison, no builtin
+      handling, no printf -v check, no top-level quote-region check, and each
+      single execution word removed from the vocabulary one at a time) flips the
+      matching case to allow.
+  AC-3:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      A statement about commit order and about a recorded run, with no executable
+      check that can be made to fail. Verified with git log: the two commits that
+      add the cases (455538388, c3cf77138) come before the commit that changes
+      em-workflow/hooks/destructive-guard.py, and the pre-fix run is recorded in the
+      comments at the top of this file.
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >
+      At the cases-only commit, against the unmodified hook, the runner (the check
+      the listed test executes) printed "FAIL allow destructive-guard-false-deny TS-3",
+      "TS-4" and "TS-6", each "got=deny [destructive-guard/git-branch-force-delete]"
+      (1175/1178 passed). TS-1 and TS-5 already gave allow before the change. With the
+      changed hook all five give allow.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: false
+    red_reason: >
+      The deny cases (TS-2, TS-7 to TS-17 and every AC-2 case) passed against the
+      unmodified hook and still pass with the changed hook; they guard against a
+      loss of detection, so no red state occurred for this change. The mutation
+      check under AC-2 shows each of them can fail.
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: false
+    red_reason: >
+      A regression guard with no red state. The runner passes every case (1178/1178,
+      no timeout marker), including the three FR3 example cases (rm -rf with a
+      single-quoted $(pwd) path: deny; echo 'a $(' ; rm -rf /home/user/x ; f "(" ;
+      echo ')': deny; X='foo$(bar'; rm -rf $X: ask), which are in the case file with
+      unchanged expectations. Unittest discovery gives the same result as at the base
+      commit. By reading the diff: top_spans, both marking passes, the
+      all_subs extension, the marker positions and the per-token flags are not
+      touched, and scan_budget and MAX_SHELL_PAYLOAD_EXPANSIONS are not in the diff.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      A statement about comment and docstring text. Searched tests/ by the path
+      em-workflow/hooks/destructive-guard.py and by the basename destructive-guard.py:
+      the existing tests that read the hook's docstrings (for example
+      tests.test_destructive_guard_rm_reason_positions.TestNumberingDescriptionsAreCurrent)
+      assert other phrases (ordinal numbering) and none reads the single-quote
+      passages; the task plan names reading the listed passages as the check and
+      adds no new unittest module. Checked by reading the diff: the scan_structure()
+      HONOR_SINGLE_QUOTES paragraph, the statements() docstring head and the comments
+      above the legacy scan and the queueing loop, the _mark_quoted_substitutions()
+      docstring and the extract_shell_payload_anchored() docstring each state that
+      marking still covers single-quote candidates and that the body of a candidate
+      in a top-level chunk meeting FR2 (a)-(d) is not queued.
