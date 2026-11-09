@@ -6506,6 +6506,11 @@ def _statement_may_run_text(words_only, lead, shaped_words):
         return True
     # Assigning to an integer-attribute special variable makes bash evaluate
     # the value arithmetically, which runs `a[$(cmd)]` subscripts.
+    # `for NAME in ...` / `select NAME in ...` assign to NAME the same way, and
+    # the loop variable is not read statically: keep the re-scan.
+    for loop_word in words_only[: lead + 1]:
+        if loop_word in ("for", "select") and not getattr(loop_word, "quoted", False):
+            return True
     for assigned in words_only[:lead]:
         if re.match(
             r"(?:RANDOM|SRANDOM|OPTIND|SECONDS|LINENO|BASH_ARGV0|EPOCHSECONDS"
@@ -6535,6 +6540,7 @@ def _statement_may_run_text(words_only, lead, shaped_words):
             # keeps the re-scan.
             return name == "printf" and any(
                 arg.startswith(("-v", "$", "`"))
+                or (arg.startswith("-") and ("$" in arg or "`" in arg))
                 or getattr(arg, "unresolved", False)
                 or getattr(arg, "substitution_only", False)
                 for arg in shaped_words[index + 1 :]
@@ -7007,7 +7013,7 @@ def statements(command, unsettled=None):
         single_quote_data_only = not re.search(
             r"\(\(|\$\[|\$\{[^}]*[\[:@]|\$\{!|\bPS4\b|\bset\b|\blet\b"
             r"|\bfunction\b|\w\s*\(\s*\)",
-            chunk,
+            re.sub(r"\\\n", "", chunk),
         )
         data_spans = (
             _single_quote_data_spans(legacy_lexmap, chunk_scan[0])
