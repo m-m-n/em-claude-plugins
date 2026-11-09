@@ -132,7 +132,8 @@ workflow:
   result: pass
   failed_items: []
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: a518bfa7ddf73403bbee2fb78fe50aa2a8ff0823
 tasks:
   task0001:
     title: Pin false-deny cases and stop re-scanning single-quoted data arguments in destructive-guard

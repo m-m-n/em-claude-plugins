@@ -1,0 +1,51 @@
+feature: destructive-guard-false-deny
+collected_at: "2026-11-10T00:28:41+09:00"
+session_ids: [01a1c0ec-4f87-70bb-8692-cf662bd54ca1.jsonl]
+signals:
+  review_critical_high:
+    - {stable_id: 9c35e14fee9c0d96, category: comprehensive, file: em-workflow/hooks/destructive-guard.py, title: "declare / typeset など配列添字を評価する組み込みが実行系の語に無い", resolution: fixed}
+    - {stable_id: 5cc1ab1df623b91a, category: comprehensive, file: em-workflow/hooks/destructive-guard.py, title: "絶対パスで書いたラッパーの後ろのシェルを実行系の語として判定しない", resolution: fixed}
+    - {stable_id: 7000b8e7e9b0d8c8, category: comprehensive, file: em-workflow/hooks/destructive-guard.py, title: "builtin の後ろでラッパーの読み飛ばしを再適用しないため builtin command eval を見落とす", resolution: fixed}
+    - {stable_id: 552c64a9b4af3dad, category: security, file: em-workflow/hooks/destructive-guard.py, title: "実行系の語を否定リストで判定するため、一覧外の実行手段で再検査が外れる", resolution: fixed}
+    - {stable_id: 1b066e651a3043c5, category: security, file: em-workflow/hooks/destructive-guard.py, title: "変数に入れた単一引用符の値を bash が後から再評価する形で再検査対象を削除する", resolution: fixed}
+    - {stable_id: 91322e21838462e2, category: comprehensive, file: em-workflow/hooks/destructive-guard.py, title: "整数変数への代入で実行される置換を保持する", resolution: fixed}
+    - {stable_id: 57ce987cd256ddec, category: security, file: em-workflow/hooks/destructive-guard.py, title: "$[...] の算術展開が再評価検出を回避する", resolution: fixed}
+    - {stable_id: 73bf3aa02d2f8430, category: security, file: em-workflow/hooks/destructive-guard.py, title: "変数で指定した printf の -v が再検査を回避する", resolution: fixed}
+    - {stable_id: 8ba9f263d5962fe0, category: security, file: em-workflow/hooks/destructive-guard.py, title: "rg の外部プログラム実行を安全な引数処理と判定する", resolution: fixed}
+    - {stable_id: 649831fa96a61ec7, category: security, file: em-workflow/hooks/destructive-guard.py, title: "for 文による整数型特殊変数への代入が再走査から漏れる", resolution: fixed}
+    - {stable_id: 7f4b87ad275037dd, category: security, file: em-workflow/hooks/destructive-guard.py, title: "printf のオプション途中の変数展開で破壊的操作を許可する", resolution: fixed}
+    - {stable_id: c5dd8f50d37f1971, category: security, file: em-workflow/hooks/destructive-guard.py, title: "行継続で算術展開の検出を回避できる", resolution: fixed}
+    - {stable_id: c5ba37f0aa1e155e, category: architecture, file: em-workflow/hooks/destructive-guard.py, title: "statements() のゴッド関数拡大と pending 索引削除の密結合", resolution: unresolved}
+    - {stable_id: 35d77ee1dce1a929, category: architecture, file: em-workflow/hooks/destructive-guard.py, title: "命令語判定 SSOT の二重化と汎用層への固有語漏れ", resolution: unresolved}
+    - {stable_id: 9db27104415c584f, category: security, file: em-workflow/hooks/destructive-guard.py, title: "入れ子の実行処理を検査する前に、実行される文字列を再検査対象から削除する", resolution: "unresolved in round 1; addressed by rework task0002"}
+    - {stable_id: 767398d2b9499db6, category: security, file: em-workflow/hooks/destructive-guard.py, title: "sort の外部プログラム実行を無条件に安全と判断する", resolution: "unresolved in round 1; addressed by rework task0002"}
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives:
+    - {perspective: performance, reason: "毎回の Bash 呼び出しで走るフックの走査経路を変えたため、10 秒 timeout と scan_budget の範囲に収まるかを確かめる"}
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の最終読み（score 1.16、バケット 1 の確率 0.84）に基づく決定"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.21, confidence: 0.79}
+        observed_at: "2026-11-09T20:47:10+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.16, confidence: 0.84}
+        observed_at: "2026-11-09T20:52:20+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/hooks/destructive-guard.py
+        - em-workflow/hooks/tests/destructive-guard-cases.json
+      changed_lines_approx: 20
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      body_change_kind: new_logic
+      change_containment: single_module
+follow_up_drafts: []
+lessons_candidates:
+  - "事前調査の見積り（変更 20 行・追加関数 0）に対し、review で high 指摘が 3 ループ連続で出た。シェルの再評価構文を静的解析で塞ぐ変更は、見積りより大きく膨らみやすい"
+  - "round 2 の medium 指摘 3 件（717acb1e7d66bc83 / d0374e8669a9d315 / 5e5ea20ec35726d7）と round 1 の architecture 指摘が未解決のまま残った"
