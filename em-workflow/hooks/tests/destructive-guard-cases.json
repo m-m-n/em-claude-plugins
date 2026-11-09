@@ -1190,5 +1190,11 @@
   ["deny", "destructive-guard-false-deny FR2(d) コマンド語がパラメータ展開のコマンドの単一引用符内の置換は deny", "$TOOL run '$(git branch -D example)'"],
   ["deny", "destructive-guard-false-deny FR2(d) コマンド語がコマンド置換のコマンドの単一引用符内の置換は deny", "$(printf mcp-bridge) run --args-json '$(git branch -D example)'"],
   ["deny", "destructive-guard-false-deny FR2(d) コマンド名の上書き構文（alias）があるコマンドの単一引用符内の置換は deny", "alias mcp-bridge=true; mcp-bridge run --args-json '$(git branch -D example)'"],
-  ["deny", "destructive-guard-false-deny FR2(b) 字句解析に失敗する（引用符が閉じない）コマンドの単一引用符内の置換は deny", "mcp-bridge run --args-json '$(git branch -D example)' \"unclosed"]
+  ["deny", "destructive-guard-false-deny FR2(b) 字句解析に失敗する（引用符が閉じない）コマンドの単一引用符内の置換は deny", "mcp-bridge run --args-json '$(git branch -D example)' \"unclosed"],
+  ["deny", "destructive-guard-false-deny FR2(c) 追加した実行系の語 let（添字を展開して評価する）を持つ文があるコマンドの単一引用符内の置換は deny", "let 'a[$(git branch -D example)]'"],
+  ["deny", "destructive-guard-false-deny FR2(c) 追加した実行系の語 test（-v が添字を展開して評価する）を持つ文があるコマンドの単一引用符内の置換は deny", "test -v 'a[$(git branch -D example)]'"],
+  ["deny", "destructive-guard-false-deny FR2(c) 追加した実行系の語 read（添字を展開して評価する）を持つ文があるコマンドの単一引用符内の置換は deny", "read 'a[$(git branch -D example)]'"],
+  ["deny", "destructive-guard-false-deny FR2(c) printf -v（添字を展開して代入する）を持つ文があるコマンドの単一引用符内の置換は deny", "printf -v 'a[$(git branch -D example)]' x"],
+  ["deny", "destructive-guard-false-deny FR2(d) コマンド語が静的に決まらない [[（-eq が添字を展開して評価する）の単一引用符内の置換は deny", "[[ 'a[$(git branch -D example)]' -eq 0 ]]"],
+  ["deny", "destructive-guard-false-deny FR2 二重引用符内のパラメータ展開 ${X:-'...'} の中の $( ) は bash が展開するので deny（字句解析器は単一引用符の領域と読む）", "echo \"${X:-'$(git branch -D example)'}\""]
 ]
