@@ -4246,10 +4246,10 @@ def extract_shell_payload_anchored(toks, lexed, quoted_toks=None):
     inside a pair of double quotes in the raw text) or UNRESOLVED_MARK
     (everywhere else, including no quotes at all, single quotes — a real
     shell would not expand a substitution there either; the marking still
-    covers it, and only the re-scan of its body is narrowed, in a top-level
-    chunk that meets FR2 (a)-(d) of destructive-guard-false-deny, which a
-    chunk holding a `-c`/eval/here-string payload never does, its command
-    word being an execution word — or quotes mixed with other text). None (the
+    covers it, and statements() skips the re-scan of its body only under the
+    conditions of _single_quote_skip_spans() of destructive-guard-false-deny,
+    which a command holding a `-c`/eval/here-string payload never meets --
+    or quotes mixed with other text). None (the
     caller could not supply a same-shaped parallel) is treated as "never
     quoted", which reproduces this function's pre-FR4 behaviour exactly
     rather than guessing.
@@ -4946,14 +4946,16 @@ def scan_structure(text, mode="shell", checkpoints=None, honor_single_quotes=Tru
       same way UNRESOLVED_EXPANSION's own raw-text search (check_rm() step 3)
       never did either.
     - It QUEUES the candidate's body on `pending` for re-scanning as a
-      command, except in one case (destructive-guard-false-deny FR2): the
-      candidate sits in the top-level chunk, the original command string,
-      and that chunk meets (a)-(d) -- every statement lexed, none with an
-      execution word as its command word, every command word static, no
-      command-name override construct. The body is then data the shell never
-      runs, and is not queued. A candidate in any other chunk, or in a
-      quote region nested in another region (`"${X:-'$(cmd)'}"`, where bash
-      does expand it), is queued as before.
+      command unless _single_quote_skip_spans() names the candidate's span
+      (destructive-guard-false-deny FR2). It names a span only in the
+      top-level chunk, the original command string, and only when that
+      chunk is one static `mcp-bridge run --args-json <word>` or
+      `printf '%s\\n' <word>` command and the candidate fills the data word
+      whole, in a single-quote or ANSI-C-quote region that is not nested in
+      another region. The body is then data the program never runs, and is
+      not queued. A candidate in any other chunk or command, or in a quote
+      region nested in another region (`"${X:-'$(cmd)'}"`, where bash does
+      expand it), is queued as before.
     """
     lexmap = lex_shell(text, mode, False)
     regions = lexmap.regions
@@ -5895,11 +5897,12 @@ def _mark_quoted_substitutions(chunk, top_spans):
     text — `"$(...)"` / `` "`...`" ``, with nothing else between the quote
     and the substitution boundary on either side — is replaced with
     QUOTED_MARK instead of UNRESOLVED_MARK. Every other occurrence (bare,
-    single-quoted — a real shell would not expand that, and statements()
-    leaves such a body unqueued in a top-level chunk that meets FR2 (a)-(d)
-    of destructive-guard-false-deny, but the marking, which this function is
-    part of, still covers every single-quote candidate — or mixed with other
-    text inside the quotes) gets the ordinary UNRESOLVED_MARK, byte for byte as
+    single-quoted — a real shell would not expand that; the marking, which
+    this function is part of, still covers every single-quote candidate, and
+    statements() leaves a candidate's body unqueued only under the
+    conditions of _single_quote_skip_spans() of destructive-guard-false-deny
+    — or mixed with other text inside the quotes) gets the ordinary
+    UNRESOLVED_MARK, byte for byte as
     _mark_substitutions() itself would produce (a single marker character,
     no index, no terminator — the two functions' outputs are compared only
     by segment/token shape, never by absolute offset, so this narrower
@@ -6404,151 +6407,189 @@ def _overrides_command_name_unlexed(toks, shaped_words):
     return any(PATH_ASSIGNMENT.match(t) for t in toks)
 
 
-# destructive-guard-false-deny FR2 (c): command words that run text, an
-# argument or a later statement's input, as a command -- or, `let`, `test`
-# and `read`, evaluate an argument as an expression whose array subscript
-# bash expands (`let 'a[$(cmd)]'` runs cmd). statements() leaves a
-# single-quote candidate's body unqueued only in a top-level chunk none of
-# whose statements has one of these, or one of SINK_WORD_RE's, as its command
-# word (_statement_may_run_text()). A word added here only keeps more bodies
-# re-scanned, so the list may grow; each word has a deny case in
-# destructive-guard-cases.json.
-RESCAN_EXECUTION_WORDS = frozenset(
-    {
-        "eval", "source", ".", "exec", "xargs", "find", "su", "ssh",
-        "trap", "watch", "parallel", "let", "test", "read",
-        "declare", "typeset", "local", "readonly", "export", "unset",
-    }
-)
-
-# The spellings of a command word statements() reads as static (FR2 (d)):
-# letters, digits and the punctuation of a path or a program name. Anything
-# else -- `$`, a backtick, a brace, a glob character, a quote left in the
-# token, whitespace -- could make the shell run another program than the one
-# the text names, so it is not decided and the chunk is re-scanned.
-_STATIC_COMMAND_WORD = re.compile(r"^[\w.+/@%:,-]+$")
+# destructive-guard-false-deny FR2: which single-quote candidates of the
+# top-level chunk statements() leaves unqueued. The decision is
+# _single_quote_skip_spans(); the two helpers before it read the lexer's
+# regions (positions, kinds, nesting) and the characters at those positions,
+# and nothing else.
 
 
-def _single_quote_data_spans(lexmap, real_spans):
-    """The spans of LEXMAP's single-quote substitution candidates that
-    statements() may leave unqueued in the top-level chunk (FR2): those the
-    quote-aware scan does not report (REAL_SPANS is its span list), whose
-    quote region sits at the chunk's top level. A quote region nested in
-    another region -- `"${X:-'$(cmd)'}"` is one: bash expands the
-    substitution there although the lexer reads the quotes around it as a
-    single-quote region -- is left to the re-scan.
+def _command_word_pieces(chunk, regions):
+    """CHUNK read as the words of one simple command, from the lexer's
+    REGIONS alone: a list of words, each a list of pieces
+    (kind, start, end, region index). A piece is a region of the top level
+    (kind: the region's kind) or a run of characters outside every region
+    (kind None, region index None), so a word that joins a quote region with
+    other text has more than one piece.
+
+    The result is None unless CHUNK is exactly: blank-separated words, then at
+    most one comment, then blanks and newlines (a trailing newline ends the
+    command; a comment may follow the last word but not a newline). Any
+    operator character outside a region (`;`, `|`, `&`, `(`, `)`, `<`, `>`:
+    a second command, a pipe, a redirect, a here-document, a group, a process
+    substitution), any backslash outside a region (a line continuation or an
+    escape), or anything but blanks and newlines after the first newline or
+    the comment makes it None. Reads positions only.
     """
-    return {
-        (candidate.start, candidate.end)
-        for candidate in lexmap.candidates
-        if lexmap.regions[candidate.quote].parent is None
-    } - set(real_spans)
+    top = [(index, region) for index, region in enumerate(regions) if region.parent is None]
+    words = []
+    word = None
+    tail = False
+    pos = 0
+    k = 0
+    size = len(chunk)
+    while pos < size:
+        if k < len(top) and top[k][1].start <= pos:
+            index, region = top[k]
+            k += 1
+            if region.start != pos or region.end <= pos:
+                return None
+            pos = region.end
+            if region.kind == "comment":
+                if tail or word is not None:
+                    return None
+                tail = True
+                continue
+            if tail:
+                return None
+            if word is None:
+                word = []
+                words.append(word)
+            word.append((region.kind, region.start, region.end, index))
+            continue
+        char = chunk[pos]
+        if char in " \t":
+            word = None
+        elif char == "\n":
+            word = None
+            tail = True
+        elif tail or char in ";|&()<>\\":
+            return None
+        else:
+            if word is None:
+                word = []
+                words.append(word)
+            if word and word[-1][0] is None and word[-1][2] == pos:
+                word[-1] = (None, word[-1][1], pos + 1, None)
+            else:
+                word.append((None, pos, pos + 1, None))
+        pos += 1
+    return words
 
 
-_ARGS_NOT_EXECUTED_WORDS = frozenset(
-    {
-        "echo",
-        "printf",
-        "cat",
-        "head",
-        "tail",
-        "wc",
-        "grep",
-        "egrep",
-        "fgrep",
-        "cut",
-        "tr",
-        "sort",
-        "uniq",
-        "basename",
-        "dirname",
-        "true",
-        "false",
-        ":",
-        "mcp-bridge",
-    }
-)
-
-
-def _statement_may_run_text(words_only, lead, shaped_words):
-    """Whether one lexed statement fails FR2 (c) or (d) of
-    destructive-guard-false-deny, which makes statements() keep re-scanning
-    the single-quote candidates of the chunk it sits in. True unless the
-    statement is decided to run nothing it was handed as text.
-
-    WORDS_ONLY is the statement's non-redirect words, LEAD where command
-    position starts in them and SHAPED_WORDS what remains from there, as
-    _overrides_command_name() reads them. The command word is the one
-    head() finds: past the assignments and wrappers, and past a
-    `.substitution_only` token, which makes the command word unknown
-    (FR2 (d)). It is True when:
-
-    - an `env` option among the skipped words is -S/--split-string in any
-      spelling (_SkippedWords.env_split, FR6 of the heredoc destination
-      decision): `env -S 'cmd'` runs a command line it splits itself;
-    - the command word is not a static word (_STATIC_COMMAND_WORD), or is
-      flagged `.unresolved` / `.substitution_only`;
-    - the command word, taken by its last path segment, is one of
-      RESCAN_EXECUTION_WORDS or matches SINK_WORD_RE (`/usr/bin/bash` is
-      `bash`), or is `printf` with a `-v` option;
-    - the command word is `builtin`, and the word after it (past its
-      options) is judged the same way.
-
-    A statement with no command word at all -- empty, grouping syntax only,
-    assignments only -- is not a match. Reads only what the chunk's one
-    statement walk has already shaped (Q3): no scan of its own.
-    """
-    skipped = _SkippedWords()
-    _collect_skipped_words(words_only, lead, skipped)
-    index, saw_substitution, _ = _skip_to_command_word(shaped_words)
-    _collect_skipped_words(shaped_words, index, skipped)
-    if skipped.env_split or saw_substitution:
+def _piece_is_static(chunk, piece, leading):
+    """Whether one piece of a word (_command_word_pieces()) is text the shell
+    passes on as written (W4). A single-quote or ANSI-C-quote region is
+    whatever it holds. A double-quote region holds no `$`, backtick or
+    backslash. An unquoted run holds no `$`, backtick, backslash, glob
+    character (`*`, `?`, `[`) or brace, and does not open the word with a
+    tilde (LEADING: it is the word's first piece). Every other region kind (a
+    substitution, a parameter or arithmetic expansion, a locale quote, ...)
+    is not static."""
+    kind, start, end, _index = piece
+    text = chunk[start:end]
+    if kind is None:
+        if leading and text.startswith("~"):
+            return False
+        return not any(char in text for char in "$`\\*?[{}")
+    if kind in ("single-quote", "ansi-c-quote"):
         return True
-    # Assigning to an integer-attribute special variable makes bash evaluate
-    # the value arithmetically, which runs `a[$(cmd)]` subscripts.
-    # `for NAME in ...` / `select NAME in ...` assign to NAME the same way, and
-    # the loop variable is not read statically: keep the re-scan.
-    for loop_word in words_only[: lead + 1]:
-        if loop_word in ("for", "select") and not getattr(loop_word, "quoted", False):
-            return True
-    for assigned in words_only[:lead]:
-        if re.match(
-            r"(?:RANDOM|SRANDOM|OPTIND|SECONDS|LINENO|BASH_ARGV0|EPOCHSECONDS"
-            r"|EPOCHREALTIME|SHLVL|BASHPID|UID|EUID|PPID|COLUMNS|LINES"
-            r"|HISTCMD|OPTERR)(?:\[[^=]*\])?\+?=",
-            str(assigned),
-        ):
-            return True
-    while index < len(shaped_words):
-        word = shaped_words[index]
-        if (
-            getattr(word, "unresolved", False)
-            or getattr(word, "substitution_only", False)
-            or not _STATIC_COMMAND_WORD.match(word)
-        ):
-            return True
-        name = os.path.basename(word)
-        if not name or SINK_WORD_RE.match(name) or name in RESCAN_EXECUTION_WORDS:
-            return True
-        if name != "builtin":
-            # `printf -v 'a[$(cmd)]'` assigns through a subscript bash expands.
-            # Only commands known not to execute their arguments may skip the
-            # re-scan; any other command word is "cannot decide" -> True.
-            if name not in _ARGS_NOT_EXECUTED_WORDS:
-                return True
-            # An argument that is not statically known (it may expand to `-v`)
-            # keeps the re-scan.
-            return name == "printf" and any(
-                arg.startswith(("-v", "$", "`"))
-                or (arg.startswith("-") and ("$" in arg or "`" in arg))
-                or getattr(arg, "unresolved", False)
-                or getattr(arg, "substitution_only", False)
-                for arg in shaped_words[index + 1 :]
-            )
-        index += 1
-        while index < len(shaped_words) and shaped_words[index].startswith("-"):
-            index += 1
+    if kind == "double-quote":
+        return not any(char in text for char in "$`\\")
     return False
+
+
+def _single_quote_skip_spans(chunk, lexmap, real_spans, lexed):
+    """The spans of the single-quote candidates whose bodies statements()
+    does not queue for re-scanning (destructive-guard-false-deny FR2). It is
+    called for the top-level chunk only, before any of its candidate bodies
+    is queued; every other chunk skips none. The result is a set of
+    (start, end) spans, empty when every body is queued.
+
+    CHUNK is the top-level chunk, LEXMAP lex_shell()'s map of it, REAL_SPANS
+    the spans the quote-aware scan reports (a span in it is a real
+    substitution, not a single-quote candidate), and LEXED whether every
+    statement of the chunk lexed without the parse-failure fallback. It reads
+    positions, region kinds and region nesting, and changes nothing outside
+    its result. Any condition that is false or cannot be decided gives the
+    empty set. A candidate is named only when all of these hold:
+
+    - W1: LEXED, no here-document, no opener the lexer settled as not
+      opened, and every quote and substitution closed.
+    - W2: CHUNK is exactly one simple command: no second command, redirect,
+      here-document, group or substitution at the top level, no backslash
+      outside a region, and nothing after its words but one comment and
+      newlines (_command_word_pieces()).
+    - W3: its command word is the first word, unquoted, and exactly
+      `mcp-bridge` or exactly `printf`. A word that has an assignment, a
+      wrapper, a path or a quote in front of it is another word.
+    - W4: every word is static (_piece_is_static()).
+    - S1: for `mcp-bridge`, the second word is exactly `run`, and the word
+      that directly follows a word exactly `--args-json` is the data word.
+    - S2: for `printf`, the second word is exactly one single-quote region
+      holding `%s\\n`, and every word after it is a data word.
+    - C1: the candidate sits in a data word that is one closed single-quote
+      or ANSI-C-quote region at the top level, the whole word.
+
+    Such a word reaches the program as data and the program never runs it, so
+    a command in a substitution written inside it is not queued. Every other
+    candidate, and every real substitution, is queued as before.
+    """
+    skip = set()
+    real = set(real_spans)
+    candidates = [c for c in lexmap.candidates if (c.start, c.end) not in real]
+    regions = lexmap.regions
+    if (
+        not candidates
+        or not lexed
+        or lexmap.heredocs
+        or lexmap.unopened
+        or lexmap.tail_start is not None
+        or lexmap.unreadable
+        or not all(region.closed for region in regions)
+    ):
+        return skip
+    words = _command_word_pieces(chunk, regions)
+    if not words or not all(
+        _piece_is_static(chunk, piece, n == 0)
+        for word in words
+        for n, piece in enumerate(word)
+    ):
+        return skip
+
+    def unquoted(word):
+        """The text of WORD when it is a single unquoted run, else None."""
+        if len(word) == 1 and word[0][0] is None:
+            return chunk[word[0][1] : word[0][2]]
+        return None
+
+    if len(words) < 2:
+        return skip
+    command = unquoted(words[0])
+    if command == "mcp-bridge":
+        if unquoted(words[1]) != "run":
+            return skip
+        data = [
+            words[j]
+            for j in range(2, len(words))
+            if unquoted(words[j - 1]) == "--args-json"
+        ]
+    elif command == "printf":
+        form = words[1]
+        if not (
+            len(form) == 1
+            and form[0][0] == "single-quote"
+            and chunk[form[0][1] : form[0][2]] == "'%s\\n'"
+        ):
+            return skip
+        data = words[2:]
+    else:
+        return skip
+    for word in data:
+        if len(word) == 1 and word[0][0] in ("single-quote", "ansi-c-quote"):
+            quote = word[0][3]
+            skip.update((c.start, c.end) for c in candidates if c.quote == quote)
+    return skip
 
 
 def ask_scan_budget_exceeded():
@@ -6606,9 +6647,11 @@ def ask_lex_unsettled(exc):
 def statements(command, unsettled=None):
     """Yield (text, tokens, lexed, shaped_words, redirects, origin) per
     command segment, substitution bodies included -- but for the bodies of
-    the single-quote candidates in a top-level chunk that meets FR2 (a)-(d)
-    of destructive-guard-false-deny, which are data the shell never runs
-    (see the queueing loop below; the marking still covers them).
+    the single-quote candidates that _single_quote_skip_spans() names
+    (destructive-guard-false-deny FR2: the data argument of one static
+    `mcp-bridge run --args-json` or `printf '%s\\n'` command, which is the
+    whole command string). The marking still covers those candidates; only
+    their re-scan is skipped (see the queueing loop below).
 
     UNSETTLED (a list, or None) says what happens to a chunk derived from the
     command -- a substitution body, an unclosed command form's content, a
@@ -6838,23 +6881,19 @@ def statements(command, unsettled=None):
         # `.unresolved`/`.substitution_only` as "this token's value was
         # never fully present", a static reading that has never depended on
         # whether the `$(`/backtick sat inside a pair of single quotes. So
-        # the marking covers the single-quote candidates in every chunk;
-        # what is narrowed is the queueing of their bodies for re-scanning,
-        # in the top-level chunk only (destructive-guard-false-deny FR2, the
-        # comment above the queueing loop below). The heredoc destination
-        # decision (CHUNK_SCAN above, passed to _heredoc_destinations()
-        # untouched) stays on the quote-aware default it needs for correct
-        # statement/case-state structure; only TOP_SPANS below reads the
-        # wider scan.
+        # the span list, the marking and the extension of ALL_SUBS cover the
+        # single-quote candidates of every chunk, and they are all unchanged.
+        # Only the queueing of a candidate's body for re-scanning is
+        # decided apart, by _single_quote_skip_spans() (the comment above the
+        # queueing loop below): a body is queued unless that function names
+        # its span. The heredoc destination decision (CHUNK_SCAN above,
+        # passed to _heredoc_destinations() untouched) stays on the
+        # quote-aware default it needs for correct statement/case-state
+        # structure; only TOP_SPANS below reads the wider scan.
         legacy_spans, legacy_parent_of, _l_unmatched, _l_opaque, _l_containing = (
             scan_structure(chunk, mode="shell", honor_single_quotes=False)
         )
         top_spans = _top_level_spans(legacy_spans, legacy_parent_of)
-        # destructive-guard-false-deny FR2: the lexer's map behind the scan
-        # above, for the top-level chunk only. lex_shell() returns the very
-        # map scan_structure() just read (it is cached on the text), so this
-        # is no scan of its own (Q3).
-        legacy_lexmap = lex_shell(chunk, "shell", False) if is_command else None
         chunk_subs = [_span_inner(chunk, span)[0] for span in top_spans]
         offset = len(all_subs)
         # An unclosed command form `${ cmd` (bash 5.3 reports a syntax error)
@@ -6984,46 +7023,39 @@ def statements(command, unsettled=None):
         # nesting, unlike SUBSTITUTION's own single-level, paren-free regex:
         # a chunk-local substitution several levels deep no longer needs a
         # second regex pass here to be marked at all. Each span's own inner
-        # text is queued (but for the exception below); a nested level inside
-        # it is found in turn once that text is popped off PENDING and
+        # text is queued, but for the bodies named below; a nested level
+        # inside it is found in turn once that text is popped off PENDING and
         # scanned as its own chunk.
         #
-        # destructive-guard-false-deny FR2: a single-quote candidate's body
-        # (see _single_quote_data_spans()) is not left queued in the top-level
-        # chunk when every statement of that chunk is decided to run nothing
-        # it was handed as text. (a) is IS_COMMAND, (b) every statement
-        # lexed (checked here), (c) and (d) _statement_may_run_text() and the
-        # override flag of the statement walk below, which is where those
-        # facts are produced. The decision therefore comes after the bodies
-        # are queued, so each candidate body is queued here exactly as
-        # before and its PENDING position kept in SINGLE_QUOTE_SLOTS (None:
-        # not the top-level chunk, or a statement went through the
-        # parse-failure fallback, so nothing is dropped); the walk drops them
-        # once it has decided. PENDING only grows in between, which keeps the
-        # other entries in their order (Q1). Everything else this loop does
-        # -- TOP_SPANS, the marking, the extension of ALL_SUBS, the marker
-        # positions -- is unchanged (Q2).
-        single_quote_slots = (
-            [] if is_command and all(lexed for _m, lexed, _s in segments) else None
-        )
-        # A construct by which bash itself re-evaluates a variable's value
-        # later (arithmetic, subscript / substring / transform / indirect
-        # expansion, PS4 / set -x, function definitions, let) is not decided
-        # by the command words, so such a chunk keeps its bodies queued.
-        single_quote_data_only = not re.search(
-            r"\(\(|\$\[|\$\{[^}]*[\[:@]|\$\{!|\bPS4\b|\bset\b|\blet\b"
-            r"|\bfunction\b|\w\s*\(\s*\)",
-            re.sub(r"\\\n", "", chunk),
-        )
-        data_spans = (
-            _single_quote_data_spans(legacy_lexmap, chunk_scan[0])
-            if single_quote_slots is not None
-            else ()
+        # destructive-guard-false-deny FR2: the one exception is decided by
+        # _single_quote_skip_spans(), asked once, here, before any body of
+        # this chunk is queued, and answering for the top-level chunk (the
+        # original command string, IS_COMMAND) only; every other chunk gets
+        # the empty set. It names the spans of single-quote candidates that
+        # fill the data argument of one static `mcp-bridge run --args-json`
+        # or `printf '%s\n'` command, which is the whole chunk; a body it
+        # names is not queued, every other body is queued as it always was
+        # (the same entries in the same order; none is pushed and removed
+        # again). Everything else this loop does -- TOP_SPANS, the marking, the
+        # extension of ALL_SUBS (so a marker's index still names the right
+        # entry, an unqueued body's included), the marker positions -- is
+        # unchanged. The statements of the chunk lexed through the
+        # parse-failure fallback make the function answer with the empty set
+        # (SEGMENTS holds their LEXED flags).
+        skipped_spans = (
+            _single_quote_skip_spans(
+                chunk,
+                lex_shell(chunk, "shell", False),
+                chunk_scan[0],
+                all(lexed for _m, lexed, _s in segments),
+            )
+            if is_command
+            else frozenset()
         )
         for i, body in enumerate(chunk_subs):
             if body.strip():
-                if single_quote_slots is not None and top_spans[i] in data_spans:
-                    single_quote_slots.append(len(pending))
+                if top_spans[i] in skipped_spans:
+                    continue
                 # Anchored at its marker's position once the statements below
                 # (and any payload chunk derived from them) have registered
                 # it; the "after everything" step is only the answer for a
@@ -7060,21 +7092,6 @@ def statements(command, unsettled=None):
                 statement_overrides = not override_seen and _overrides_command_name(
                     words_only, lead, shaped_words
                 )
-                # FR2 (c)/(d): a statement that may run text, or that holds a
-                # command-name override construct, keeps the top-level chunk's
-                # single-quote candidate bodies queued. The top-level chunk
-                # is the first one scanned, so OVERRIDE_SEEN is False when it
-                # starts and STATEMENT_OVERRIDES is this chunk's own answer
-                # up to its first construct; the flag stays down after it.
-                if (
-                    single_quote_slots
-                    and single_quote_data_only
-                    and (
-                        statement_overrides
-                        or _statement_may_run_text(words_only, lead, shaped_words)
-                    )
-                ):
-                    single_quote_data_only = False
                 # task0004 postcondition 2: evaluated for every statement,
                 # including one with zero tokens (an standalone
                 # `;;`/`;&`/`;|` line) — see this function's docstring.
@@ -7131,13 +7148,6 @@ def statements(command, unsettled=None):
                                 None,
                             )
                         )
-        # FR2: every statement of the top-level chunk is decided to run nothing
-        # it was handed as text, so the bodies of its single-quote candidates
-        # (queued above) are data the shell never runs: drop them from PENDING,
-        # last first so each recorded position is still the one it was.
-        if single_quote_slots and single_quote_data_only:
-            for slot in reversed(single_quote_slots):
-                del pending[slot]
         # The unclosed command forms of this chunk: every level of a nest of
         # them is scanned as a chunk of nearly the whole text, so a deep nest
         # spends the scan budget above on copies of one text, in time that
