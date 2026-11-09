@@ -6456,7 +6456,6 @@ _ARGS_NOT_EXECUTED_WORDS = frozenset(
         "grep",
         "egrep",
         "fgrep",
-        "rg",
         "cut",
         "tr",
         "sort",
@@ -6505,6 +6504,16 @@ def _statement_may_run_text(words_only, lead, shaped_words):
     _collect_skipped_words(shaped_words, index, skipped)
     if skipped.env_split or saw_substitution:
         return True
+    # Assigning to an integer-attribute special variable makes bash evaluate
+    # the value arithmetically, which runs `a[$(cmd)]` subscripts.
+    for assigned in words_only[:lead]:
+        if re.match(
+            r"(?:RANDOM|SRANDOM|OPTIND|SECONDS|LINENO|BASH_ARGV0|EPOCHSECONDS"
+            r"|EPOCHREALTIME|SHLVL|BASHPID|UID|EUID|PPID|COLUMNS|LINES"
+            r"|HISTCMD|OPTERR)(?:\[[^=]*\])?\+?=",
+            str(assigned),
+        ):
+            return True
     while index < len(shaped_words):
         word = shaped_words[index]
         if (
@@ -6522,8 +6531,13 @@ def _statement_may_run_text(words_only, lead, shaped_words):
             # re-scan; any other command word is "cannot decide" -> True.
             if name not in _ARGS_NOT_EXECUTED_WORDS:
                 return True
+            # An argument that is not statically known (it may expand to `-v`)
+            # keeps the re-scan.
             return name == "printf" and any(
-                arg.startswith("-v") for arg in shaped_words[index + 1 :]
+                arg.startswith(("-v", "$", "`"))
+                or getattr(arg, "unresolved", False)
+                or getattr(arg, "substitution_only", False)
+                for arg in shaped_words[index + 1 :]
             )
         index += 1
         while index < len(shaped_words) and shaped_words[index].startswith("-"):
@@ -6991,7 +7005,7 @@ def statements(command, unsettled=None):
         # expansion, PS4 / set -x, function definitions, let) is not decided
         # by the command words, so such a chunk keeps its bodies queued.
         single_quote_data_only = not re.search(
-            r"\(\(|\$\{[^}]*[\[:@]|\$\{!|\bPS4\b|\bset\b|\blet\b"
+            r"\(\(|\$\[|\$\{[^}]*[\[:@]|\$\{!|\bPS4\b|\bset\b|\blet\b"
             r"|\bfunction\b|\w\s*\(\s*\)",
             chunk,
         )
