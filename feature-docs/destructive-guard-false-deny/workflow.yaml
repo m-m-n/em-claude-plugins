@@ -120,7 +120,7 @@ workflow:
   status: completed
   completed_at_commit: dd2e15e484c25f46ca746ff14773b66e7c831217
 - id: implement
-  status: completed
+  status: pending
   completed_at_commit: 2e8c0fa15c651004cf2b065a443c56e2c5efb93a
   base_commit: 03343519bf77a6d38bb717aec1fc701f7f0a72b2
 - id: review
@@ -159,6 +159,37 @@ tasks:
     - NFR4
     status: merged
     branch: em-workflow/destructive-guard-false-deny/task0001
+  task0002:
+    title: Narrow the FR2 re-scan skip to one static mcp-bridge or printf command
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - em-workflow/hooks/destructive-guard.py
+    - test-docs/destructive-guard-false-deny/task0002.tests.yaml
+    skills:
+    - backend-impl
+    domains:
+    - auth
+    - input-handling
+    complexity: high
+    requirements:
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: pending
+    provenance:
+      source: review
+      source_ids:
+      - 9db27104415c584f
+      - 767398d2b9499db6
+      review_round: 1
 review:
   status: pending
   rounds_completed: 1
@@ -192,11 +223,13 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-3
     - TS-4
     - TS-5
     - TS-6
+    - TS-22
   FR3:
     title: 単一引用符内候補の印付けは維持する
     status: ok
@@ -204,6 +237,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-18
   FR4:
@@ -213,6 +247,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-7
     - TS-8
@@ -225,6 +260,9 @@ requirements:
     - TS-15
     - TS-16
     - TS-17
+    - TS-19
+    - TS-20
+    - TS-21
   FR5:
     title: テストケースの追加
     status: ok
@@ -232,6 +270,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-1
     - TS-2
@@ -251,6 +290,10 @@ requirements:
     - TS-16
     - TS-17
     - TS-18
+    - TS-19
+    - TS-20
+    - TS-21
+    - TS-22
   FR6:
     title: ケースの追加を修正より先に行う
     status: ok
@@ -258,6 +301,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-2
     - TS-3
@@ -274,6 +318,10 @@ requirements:
     - TS-15
     - TS-16
     - TS-17
+    - TS-19
+    - TS-20
+    - TS-21
+    - TS-22
   FR7:
     title: コード内の説明の更新
     status: ok
@@ -281,6 +329,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests: []
   NFR1:
     title: 既存スイートの全通過
@@ -289,6 +338,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-18
   NFR2:
@@ -298,6 +348,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-18
   NFR3:
@@ -307,6 +358,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests: []
   NFR4:
     title: リポジトリ全体のテスト
@@ -315,9 +367,10 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests: []
 batch:
-  review_rework_count: 0
+  review_rework_count: 1
   verify_rework:
     rounds: 0
     failed_id_counts: {}

@@ -1,7 +1,7 @@
 schema_version: 1
 feature: destructive-guard-false-deny
 phase: rework
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 85e44e9d3d47345fc6ef54780eed59a11d732cf4
 last_input_digest: sha256:ed3c00b60ab00b93d10ec4e7f7f61561da469391be765869859e92f6b7737c66
@@ -37,7 +37,7 @@ artifacts:
   produced_by: rework-run-0001
 patches:
 - patch_id: destructive-guard-false-deny-rework1-p0001
-  status: validated
+  status: applied
   base_input_digest: sha256:ed3c00b60ab00b93d10ec4e7f7f61561da469391be765869859e92f6b7737c66
   base_workflow_blob: 4f0aed838163c9aa3f181dc245674f1de336c941
 progress_fingerprint: null
