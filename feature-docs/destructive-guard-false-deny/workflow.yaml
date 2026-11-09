@@ -161,7 +161,7 @@ tasks:
     branch: em-workflow/destructive-guard-false-deny/task0001
 review:
   status: pending
-  rounds_completed: 0
+  rounds_completed: 1
   plan:
     floor:
     - comprehensive
@@ -172,7 +172,7 @@ review:
     - perspective: performance
       reason: 毎回の Bash 呼び出しで走るフックの走査経路を変えたため、10 秒 timeout と scan_budget の範囲に収まるかを確かめる
     cross_validation: true
-  residual_critical_high: 0
+  residual_critical_high: 2
   needs_rework: false
 requirements:
   FR1:
