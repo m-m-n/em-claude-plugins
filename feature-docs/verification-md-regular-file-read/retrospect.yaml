@@ -1,0 +1,43 @@
+feature: verification-md-regular-file-read
+collected_at: "2026-11-09T10:03:20+09:00"
+session_ids: [01a1bdd3-cb4c-7696-927c-825987e3ecb5]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses:
+    - task: task0001
+      files:
+        - tests/test_gate_option_vocabulary.py
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: "最終読み（description_plus_code）はバケット 1 が 0.86。変更は単一関数とそのテストに収まり、外部契約を変えない"
+    bases:
+      - basis: description_only
+        score:
+          type: score
+          score: 1.1
+          confidence: 0.89
+          probabilities: {'0': 0.0, '1': 0.9, '2': 0.09, '3': 0.01}
+        observed_at: "2026-11-08T01:56:17+09:00"
+      - basis: description_plus_code
+        score:
+          type: score
+          score: 1.14
+          confidence: 0.86
+          probabilities: {'0': 0.0, '1': 0.86, '2': 0.14, '3': 0.0}
+        observed_at: "2026-11-08T01:58:13+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/scripts/validate-worker-output.py
+        - tests/test_rework_docs_only_validator_rules.py
+      changed_lines_approx: 80
+      new_functions_needed: 0
+      change_containment: single_function
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "検証スクリプトの固定ダイジェストを持つ tests/test_gate_option_vocabulary.py が、validate-worker-output.py の変更時に files 予測から漏れた"

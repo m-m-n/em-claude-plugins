@@ -4790,16 +4790,29 @@ def _load_scenario_ids(path):
     - `("ok", ids)`: the file was read as text; `ids` come from
       `extract_verification_scenario_ids` (the one derivation every
       cross-artifact check shares).
-    - `("absent", None)`: no such file.
-    - `("unreadable", reason)`: the path exists but cannot be read as text (a
-      directory, a permission failure, bytes that do not decode as UTF-8).
-      Never raises."""
+    - `("absent", None)`: the path has no directory entry (not found, or a
+      parent component is not a directory).
+    - `("unreadable", reason)`: the path exists but cannot be read as text.
+      `reason` is a short human-readable string. That covers a symlink
+      (whether it points to a regular file, to a device or nowhere), a
+      directory, a FIFO or a device file, a file over `MAX_PLAN_READ_BYTES`,
+      bytes that do not decode as UTF-8, a permission failure and a path that
+      cannot be examined (such as one with a NUL character).
+
+    Only a regular file that is not a symlink is read, and at most
+    `MAX_PLAN_READ_BYTES` + 1 bytes of it: the reading is delegated to
+    `_read_document_for_scenario_scan`, which opens the entry without
+    following a symlink and without blocking, so a FIFO never makes the
+    loader wait and a file such as /dev/zero behind a symlink is never read.
+    Never raises."""
     try:
-        text = path.read_text(encoding="utf-8")
-    except (FileNotFoundError, NotADirectoryError):
-        return "absent", None
+        text, reason = _read_document_for_scenario_scan(path)
     except (OSError, ValueError) as exc:
         return "unreadable", type(exc).__name__
+    if reason == _SCAN_ABSENT:
+        return "absent", None
+    if reason is not None:
+        return "unreadable", _scenario_scan_reason_text(reason)
     return "ok", extract_verification_scenario_ids(text)
 
 

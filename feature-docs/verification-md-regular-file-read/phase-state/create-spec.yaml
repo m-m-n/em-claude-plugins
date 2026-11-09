@@ -1,0 +1,51 @@
+schema_version: 1
+feature: verification-md-regular-file-read
+phase: create-spec
+status: completed
+generation: 1
+base_revision: 8e63c714c54edcb2d4ed0a48016029c34c3e38b1
+last_input_digest: sha256:df154f6b3eb7bb8d2b404b8bbb0c20f46e7e72a166cf3186b8f6310e8f2872c3
+active_request_id: null
+packets: {}
+answers:
+  create-spec.feature-identity:
+    question_id: create-spec.feature-identity
+    packet_id: null
+    source: batch-decision-table
+    answer_mode: select
+    selected_option_ids:
+    - derive_from_task_description
+    freeform: null
+    normalized_answer: 'feature name derived from the task description: verification-md-regular-file-read'
+    answered_at: '2026-11-08T02:02:43+09:00'
+  create-spec.design-step:
+    question_id: create-spec.design-step
+    packet_id: null
+    source: batch-decision-table
+    answer_mode: select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 'accept the design_step_recommendation: skipped (no UI)'
+    answered_at: '2026-11-08T02:02:43+09:00'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: completed
+  input_digest: sha256:6c65d8210ef7a5cb5328127ce7bd07570389fea42b02c0264dba062cfd7b87fb
+  output_digest: sha256:8c0ce946cb8865b4862b6a8a3c70dc972f8f00c9128e633f0266f10fe8f1ce2e
+  self_write_set: []
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:df154f6b3eb7bb8d2b404b8bbb0c20f46e7e72a166cf3186b8f6310e8f2872c3
+  output_digest: sha256:0df32215f869abee9678148372b5998879ba40c03d9e6b98f90899037a80654a
+  self_write_set:
+  - feature-docs/verification-md-regular-file-read/SPEC.md
+artifacts:
+- path: feature-docs/verification-md-regular-file-read/SPEC.md
+  sha256: sha256:a0391b296ff62605b2b1ab20e6142ad423ce47dac149fc61ccc51b0c510cedef
+  produced_by: create-spec-run-0002
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

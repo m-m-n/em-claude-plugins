@@ -1458,8 +1458,17 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # tests/test_feature_docs_removal_validator.py and
     # tests/test_feature_docs_entry.py; PINNED_VALIDATOR_TEST_LINE below is
     # unaffected and still asserted. Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by verification-md-regular-file-read/task0001 (FR1 to
+    # FR4): `_load_scenario_ids` reads a VERIFICATION.md through
+    # `_read_document_for_scenario_scan`, so a FIFO, any symlink or a file
+    # over `MAX_PLAN_READ_BYTES` gives the unreadable state and nothing is
+    # read without a bound. `_VerificationDiff`, `_RenameAwareCoverage`, the
+    # CLI exit codes and the scenario-ID form check are unchanged.
+    # PINNED_VALIDATOR_TEST_LINE below is unaffected and still asserted. Same
+    # rationale: refresh, don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "e13a7275bc5231cd9fc262fff0aa8d45c0ea664a56c05817aa2ae0a31d17377f"
+        "e202b935c1cb149d7d705980d0cd93c5e34291f1dfe3ea689a63432a8af79355"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-

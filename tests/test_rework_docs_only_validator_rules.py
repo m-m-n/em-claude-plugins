@@ -36,6 +36,14 @@ asserts only the validator's rendering of them):
   old ID of a rename is never accepted; with the diff every covered ID must
   exist in the post-change VERIFICATION.md. TestRenameCoverageDiff and
   TestRenameDiffFixtures pin it.
+- VERIFICATION.md read as a bounded regular file
+  (verification-md-regular-file-read, task0001; FR1-FR4): the scenario-ID
+  loader gives the unreadable state, without blocking or loading the file in
+  full, for a FIFO, any symlink, a directory, a file over
+  `MAX_PLAN_READ_BYTES` and bytes that are not UTF-8; the CLI then ends with
+  exit 1 and one `rework-index` error. TestLoadScenarioIdsFileKinds and
+  TestVerificationMdNotRegularCli pin it; the cases that give a FIFO or a
+  /dev/zero link run in a child process with a timeout and a memory cap.
 - tests_replace overlap (rework-docs-only-medium-fixes, task0003; FR4, TM-4):
   a `requirements_patch` entry whose `set.tests_replace` has a `from` set and
   a `to` set that share an ID (a chain TS-1->TS-2, TS-2->TS-3 or a swap
@@ -59,8 +67,14 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import tracemalloc
 import unittest
 from pathlib import Path
+
+try:
+    import resource
+except ImportError:  # a platform without resource limits
+    resource = None
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = REPO_ROOT / "em-workflow" / "scripts" / "validate-worker-output.py"
@@ -1801,7 +1815,7 @@ class TestRenameCoverageDiff(unittest.TestCase):
 
     # -- AC-7 through the CLI: exit 1 with JSON error details, never exit 2 --
 
-    def _run_cli(self, result, index, *, post=("TS-3",), baseline=("TS3",)):
+    def _run_cli(self, result, index, *, post=("TS-3",), baseline=("TS3",), runner=run_cli):
         feature_dir = self._make_dir(self.feature_dir, post)
         baseline_dir = self._make_dir(self.baseline_dir, baseline)
         if feature_dir is not None:
@@ -1821,7 +1835,7 @@ class TestRenameCoverageDiff(unittest.TestCase):
             args += ["--feature-dir", str(feature_dir)]
         if baseline_dir is not None:
             args += ["--baseline-dir", str(baseline_dir)]
-        return run_cli(args)
+        return runner(args)
 
     def _assert_rejected_with_json(self, completed, *phrases):
         self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
@@ -2048,6 +2062,268 @@ class TestRenameDiffFixtures(unittest.TestCase):
             with self.subTest(case=case):
                 completed = run_cli(fixture_cli_args(case))
                 self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
+
+
+# ---------------------------------------------------------------------------
+# VERIFICATION.md that is not a bounded regular file
+# (verification-md-regular-file-read, task0001; FR1-FR4, NFR1, NFR2)
+#
+# The scenario-ID loader reads VERIFICATION.md only when it is a regular file
+# of at most MAX_PLAN_READ_BYTES: a FIFO, a symlink (to /dev/zero, to a regular
+# file or to nothing), a directory, an over-limit file and bytes that are not
+# UTF-8 all give the unreadable state. A case that hands the loader or the CLI
+# a FIFO or a /dev/zero link runs in a child process with a short timeout and,
+# where the platform supports one, a memory cap, so that a reverted fix fails
+# the case instead of hanging or exhausting the test runner.
+# ---------------------------------------------------------------------------
+
+CHILD_TIMEOUT_SECONDS = 15
+CHILD_MEMORY_CAP_BYTES = 512 * 1024 * 1024
+DEV_ZERO = Path("/dev/zero")
+OVER_LIMIT_FACTOR = 50  # the sparse file is this many times MAX_PLAN_READ_BYTES
+
+# Calls `_load_scenario_ids` once on the path in argv[2] and reports the
+# returned (state, value) as JSON.
+LOADER_CHILD_SOURCE = """
+import importlib.util, json, pathlib, sys
+sys.dont_write_bytecode = True
+spec = importlib.util.spec_from_file_location("validate_worker_output", sys.argv[1])
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+state, value = module._load_scenario_ids(pathlib.Path(sys.argv[2]))
+if state == "ok":
+    value = sorted(value)
+json.dump([state, value], sys.stdout)
+"""
+
+
+def _cap_child_memory():
+    """Runs in the child before it starts executing: caps its address space."""
+    try:
+        resource.setrlimit(resource.RLIMIT_AS, (CHILD_MEMORY_CAP_BYTES, CHILD_MEMORY_CAP_BYTES))
+    except (ValueError, OSError):
+        pass  # the platform does not enforce it; the timeout alone applies
+
+
+def run_limited(cmd):
+    """Runs `cmd` in a child with a timeout of seconds and a memory cap (where
+    the platform supports one). A timeout fails the calling test."""
+    kwargs = {}
+    if resource is not None and os.name == "posix":
+        kwargs["preexec_fn"] = _cap_child_memory
+    try:
+        return subprocess.run(
+            cmd, capture_output=True, text=True, timeout=CHILD_TIMEOUT_SECONDS, **kwargs
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise AssertionError(
+            f"the child did not finish within {CHILD_TIMEOUT_SECONDS} seconds: {cmd[-1]}"
+        ) from exc
+
+
+def run_cli_limited(args):
+    """`run_cli` with a timeout and a memory cap."""
+    return run_limited([sys.executable, str(SCRIPT_PATH)] + list(args))
+
+
+def load_scenario_ids_in_child(path):
+    """`_load_scenario_ids(path)` called once in a limited child process, as
+    (state, value). The runner itself never touches a FIFO or a /dev/zero link."""
+    completed = run_limited(
+        [sys.executable, "-B", "-c", LOADER_CHILD_SOURCE, str(SCRIPT_PATH), str(path)]
+    )
+    if completed.returncode != 0:
+        raise AssertionError(
+            f"the loader child exited {completed.returncode}: {completed.stdout}{completed.stderr}"
+        )
+    state, value = json.loads(completed.stdout)
+    return state, value
+
+
+def make_fifo(path):
+    if not hasattr(os, "mkfifo"):
+        raise unittest.SkipTest("os.mkfifo is not available on this platform")
+    try:
+        os.mkfifo(path)
+    except OSError as exc:
+        raise unittest.SkipTest(f"a FIFO cannot be created here: {exc}")
+
+
+def make_dev_zero_link(path):
+    if not DEV_ZERO.exists():
+        raise unittest.SkipTest("/dev/zero does not exist on this platform")
+    try:
+        os.symlink(DEV_ZERO, path)
+    except (OSError, NotImplementedError) as exc:
+        raise unittest.SkipTest(f"a symlink cannot be created here: {exc}")
+
+
+def _sized_verification_md(scenario_ids, size):
+    """UTF-8 bytes of exactly `size` bytes: a VERIFICATION.md defining
+    `scenario_ids`, padded with spaces."""
+    head = "".join(
+        [
+            "## Test Verification\n\n### Test Scenarios from SPEC.md\n\n",
+            "| ID | Scenario | Expected | Layer |\n|---|---|---|---|\n",
+        ]
+        + [f"| {tid} | scenario | outcome | Unit |\n" for tid in scenario_ids]
+    ).encode("utf-8")
+    assert len(head) <= size, (len(head), size)
+    return head + b" " * (size - len(head))
+
+
+class TestLoadScenarioIdsFileKinds(unittest.TestCase):
+    """The loader contract per kind of directory entry. `_load_scenario_ids`
+    returns (state, value) and never raises."""
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.tmp = Path(tmp.name)
+        self.path = self.tmp / "VERIFICATION.md"
+
+    def _assert_unreadable(self, result):
+        state, reason = result
+        self.assertEqual(state, "unreadable", result)
+        self.assertIsInstance(reason, str, result)
+        self.assertTrue(reason, result)
+
+    # -- AC-1 (TS-4): entries that are not regular files ---------------------
+
+    def test_ac1_fifo_with_no_writer_is_unreadable_and_returns(self):
+        make_fifo(self.path)
+        self._assert_unreadable(load_scenario_ids_in_child(self.path))
+
+    def test_ac1_symlink_to_dev_zero_is_unreadable_and_returns(self):
+        make_dev_zero_link(self.path)
+        self._assert_unreadable(load_scenario_ids_in_child(self.path))
+
+    def test_ac1_symlink_to_a_regular_file_with_valid_ids_is_unreadable(self):
+        _write_verification_md(self.tmp / "real", ["TS-1", "TS-2"])
+        try:
+            os.symlink(self.tmp / "real" / "VERIFICATION.md", self.path)
+        except (OSError, NotImplementedError) as exc:
+            self.skipTest(f"a symlink cannot be created here: {exc}")
+        self._assert_unreadable(VWO._load_scenario_ids(self.path))
+
+    def test_ac1_dangling_symlink_is_unreadable_not_absent(self):
+        try:
+            os.symlink(self.tmp / "nowhere", self.path)
+        except (OSError, NotImplementedError) as exc:
+            self.skipTest(f"a symlink cannot be created here: {exc}")
+        self._assert_unreadable(VWO._load_scenario_ids(self.path))
+
+    # -- AC-2 (TS-5): the byte limit ------------------------------------------
+
+    def test_ac2_file_one_byte_over_the_limit_is_unreadable(self):
+        self.path.write_bytes(_sized_verification_md(["TS-1"], VWO.MAX_PLAN_READ_BYTES + 1))
+        self._assert_unreadable(VWO._load_scenario_ids(self.path))
+
+    def test_ac2_file_of_exactly_the_limit_with_valid_ids_is_ok(self):
+        self.path.write_bytes(_sized_verification_md(["TS-1", "TS-2"], VWO.MAX_PLAN_READ_BYTES))
+        self.assertEqual(self.path.stat().st_size, VWO.MAX_PLAN_READ_BYTES)
+        self.assertEqual(VWO._load_scenario_ids(self.path), ("ok", {"TS-1", "TS-2"}))
+
+    def test_ac2_sparse_file_many_times_the_limit_is_unreadable_and_not_loaded_in_full(self):
+        with open(self.path, "wb") as handle:
+            handle.truncate(OVER_LIMIT_FACTOR * VWO.MAX_PLAN_READ_BYTES)
+        tracemalloc.start()
+        try:
+            result = VWO._load_scenario_ids(self.path)
+            _, peak = tracemalloc.get_traced_memory()
+        finally:
+            tracemalloc.stop()
+        self._assert_unreadable(result)
+        self.assertLess(peak, 2 * VWO.MAX_PLAN_READ_BYTES)
+
+    # -- AC-3 (TS-6): the behavior that stays ---------------------------------
+
+    def test_ac3_missing_file_is_absent(self):
+        self.assertEqual(VWO._load_scenario_ids(self.path), ("absent", None))
+
+    def test_ac3_a_parent_that_is_not_a_directory_is_absent(self):
+        (self.tmp / "file").write_text("x", encoding="utf-8")
+        self.assertEqual(
+            VWO._load_scenario_ids(self.tmp / "file" / "VERIFICATION.md"), ("absent", None)
+        )
+
+    def test_ac3_directory_is_unreadable(self):
+        self.path.mkdir()
+        self._assert_unreadable(VWO._load_scenario_ids(self.path))
+
+    def test_ac3_bytes_that_are_not_utf8_are_unreadable(self):
+        self.path.write_bytes(b"### Test Scenarios from SPEC.md\n\xff\xfe\x80 TS-3\n")
+        self._assert_unreadable(VWO._load_scenario_ids(self.path))
+
+    def test_ac3_regular_file_gives_the_ids_the_shared_derivation_gives(self):
+        _write_verification_md(self.tmp, ["TS-1", "TS2", "TS-3"])
+        text = self.path.read_text(encoding="utf-8")
+        expected = VWO.extract_verification_scenario_ids(text)
+        self.assertEqual(expected, {"TS-1", "TS2", "TS-3"})
+        self.assertEqual(VWO._load_scenario_ids(self.path), ("ok", expected))
+
+    def test_ac3_a_path_python_refuses_is_unreadable_and_never_raises(self):
+        self._assert_unreadable(VWO._load_scenario_ids(self.tmp / "bad\0name" / "VERIFICATION.md"))
+
+
+class TestVerificationMdNotRegularCli(unittest.TestCase):
+    """The CLI validates a rework-planner result whose coverage judgement
+    needs the VERIFICATION.md set of one side, with that file replaced by a
+    FIFO or a /dev/zero link: exit 1 with exactly one rework-index error that
+    names the file, before the timeout. The fixture builder is the one of
+    TestRenameCoverageDiff."""
+
+    setUp = TestRenameCoverageDiff.setUp
+    PRE_INDEX = TestRenameCoverageDiff.PRE_INDEX
+    _make_dir = TestRenameCoverageDiff._make_dir
+    _run_cli = TestRenameCoverageDiff._run_cli
+    _assert_rejected_with_json = TestRenameCoverageDiff._assert_rejected_with_json
+
+    def _assert_one_unreadable_error(self, completed, path):
+        errors = self._assert_rejected_with_json(completed, MSG_UNREADABLE, str(path))
+        self.assertEqual(len(errors), 1, errors)
+        self.assertIn(str(path), errors[0]["message"])
+        self.assertIn(MSG_UNREADABLE, errors[0]["message"])
+
+    def _run_with_feature_entry(self, make_entry):
+        """The feature-dir VERIFICATION.md is replaced; the judgement of a
+        declared rename needs the post-change set."""
+        feature_dir = self._make_dir(self.feature_dir, NO_FILE)
+        path = feature_dir / "VERIFICATION.md"
+        make_entry(path)
+        result = _rework_result(doc_corrections=[_correction(_rename("TS3", "TS-3"))])
+        completed = self._run_cli(
+            result, self.PRE_INDEX, post=KEEP, baseline=("TS3",), runner=run_cli_limited
+        )
+        return completed, path
+
+    def _run_with_baseline_entry(self, make_entry):
+        """The baseline-dir VERIFICATION.md is replaced; the judgement of a
+        declared rename needs the baseline set."""
+        baseline_dir = self._make_dir(self.baseline_dir, NO_FILE)
+        path = baseline_dir / "VERIFICATION.md"
+        make_entry(path)
+        result = _rework_result(doc_corrections=[_correction(_rename("TS3", "TS-3"))])
+        completed = self._run_cli(
+            result, self.PRE_INDEX, post=("TS-3",), baseline=KEEP, runner=run_cli_limited
+        )
+        return completed, path
+
+    def test_ac4_ts1_feature_dir_verification_md_that_is_a_fifo_exits_1(self):
+        completed, path = self._run_with_feature_entry(make_fifo)
+        self._assert_one_unreadable_error(completed, path)
+
+    def test_ac5_ts2_feature_dir_verification_md_that_links_dev_zero_exits_1(self):
+        completed, path = self._run_with_feature_entry(make_dev_zero_link)
+        self._assert_one_unreadable_error(completed, path)
+
+    def test_ac6_ts3_baseline_dir_verification_md_that_is_a_fifo_exits_1(self):
+        completed, path = self._run_with_baseline_entry(make_fifo)
+        self._assert_one_unreadable_error(completed, path)
+
+    def test_ac6_ts3_baseline_dir_verification_md_that_links_dev_zero_exits_1(self):
+        completed, path = self._run_with_baseline_entry(make_dev_zero_link)
+        self._assert_one_unreadable_error(completed, path)
 
 
 # ---------------------------------------------------------------------------
