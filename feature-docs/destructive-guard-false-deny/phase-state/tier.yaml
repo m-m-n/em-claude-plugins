@@ -1,0 +1,71 @@
+schema_version: 2
+feature: destructive-guard-false-deny
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.21
+    confidence: 0.79
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files
+        together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the
+        architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.79
+      '2': 0.21
+      '3': 0.0
+  observed_at: '2026-11-09T20:47:10+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.16
+    confidence: 0.84
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files
+        together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the
+        architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.84
+      '2': 0.16
+      '3': 0.0
+  observed_at: '2026-11-09T20:52:20+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  changed_lines_approx: 20
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  work_still_required_evidence: 記載された2現象が、そのまま両方再現する状態ではない。現象1の旧コマンド git branch -D は現在も deny されるが、implement-phase.md:1072
+    は既に integration worktree から git branch -d を実行する手順で、この現行手順は通常時・CLAUDE_BATCH=1 の両方で allow された。現象2の記載どおりの
+    --args-json "$(cat /tmp/comment.json)" と、引用本文に -D だけを含む直接指定の JSON も allow された。一方、--args-json の単一引用符内
+    JSON にバッククォートで囲った git branch -D example を記載すると、実行されない引用文なのに同じルールで deny された。引用位置では反応しないという期待挙動に対して、この残存例の対応が必要になる
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 2
+  body_change_kind: new_logic
+  change_containment: single_module
+  caller_and_dependency_count: 1
+  changes_external_contract: false
+  changes_behavior: true
+  notes: ファイルの変更・作成・削除は行っていない。変更行数20、追加関数0、追加ケース2は残存例への対応候補の暫定見積もりであり、実装による確定値ではない。caller_and_dependency_count
+    は statements() の本番コード内の直接呼び出し元 main() 1個を数えた。check_git():7679 は branch の引数に -D、または -d/--delete と --force
+    があれば、マージ状態を検証せず deny する。通常の区切り解析は lex_segments():3870 の引用を考慮する字句解析を通り、head() と git_subcommand() がコマンドと引数を取り出す。残存例の原因は
+    statements():6680 が scan_structure(..., honor_single_quotes=False) を使い、単一引用符内のバッククォートも置換候補として取り出し、6814以降でその本文を再走査することにある。実測でも
+    mcp-bridge の文に加えて git branch -D example が独立した文として抽出された。検討対象はこの再走査対象の選別になる。現行 Step I.2.b step 4 は通常削除失敗時の強制削除への切り替えも禁止している。既存
+    JSON:288 に現行のブランチ削除の allow ケースがあるが、全1136ケースに mcp-bridge/notion-create-comment のケースはなかったため、両現象を覆うテストは揃っていない。既存ランナーは一時リポジトリを作るため
+    main() は実行せず、同ランナーの judge() で一時リポジトリ不要の950ケースと無人実行判定1件を実行し、951/951成功した。作成を伴う186ケースは未実行。関連する文書・コマンド抽出テスト2モジュールは44件成功した。em-review
+    と plugin-dev に同フックまたは同じ後片付け手順の複製は見つからなかった。em-review/hooks/hooks.json の登録は muse_guard.py のみだった。implement-phase.md:385、1234には別用途の強制削除が残り、既存のコマンド抽出テストでも明示的に対象外とされている。実際のブランチ削除や外部サービスへの投稿は実行していない
+decided_at: '2026-11-09T20:52:30+09:00'
