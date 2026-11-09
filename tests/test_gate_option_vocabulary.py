@@ -1409,8 +1409,17 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # `_TS_ID_RE` and `extract_verification_scenario_ids` are unchanged.
     # PINNED_VALIDATOR_TEST_LINE below is unaffected and still asserted. Same
     # rationale: refresh, don't remove.
+    #
+    # Refreshed again by verification-md-regular-file-read/task0001 (FR1 to
+    # FR4): `_load_scenario_ids` reads a VERIFICATION.md through
+    # `_read_document_for_scenario_scan`, so a FIFO, any symlink or a file
+    # over `MAX_PLAN_READ_BYTES` gives the unreadable state and nothing is
+    # read without a bound. `_VerificationDiff`, `_RenameAwareCoverage`, the
+    # CLI exit codes and the scenario-ID form check are unchanged.
+    # PINNED_VALIDATOR_TEST_LINE below is unaffected and still asserted. Same
+    # rationale: refresh, don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "2e7a97b983c06dce938c478e2af4b909cc20bd0ae3047ca08da3406f51c001fc"
+        "2da1d3254aa9b1f6a27c51b7b59f1f9f313b64a56e4aa425c6762f03b2c4ccca"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-

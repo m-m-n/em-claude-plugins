@@ -1,0 +1,57 @@
+task_id: task0001
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 15138 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> OK
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_rework_docs_only_validator_rules.TestLoadScenarioIdsFileKinds.test_ac1_fifo_with_no_writer_is_unreadable_and_returns
+      - tests.test_rework_docs_only_validator_rules.TestLoadScenarioIdsFileKinds.test_ac1_symlink_to_dev_zero_is_unreadable_and_returns
+      - tests.test_rework_docs_only_validator_rules.TestLoadScenarioIdsFileKinds.test_ac1_symlink_to_a_regular_file_with_valid_ids_is_unreadable
+      - tests.test_rework_docs_only_validator_rules.TestLoadScenarioIdsFileKinds.test_ac1_dangling_symlink_is_unreadable_not_absent
+    red_confirmed: true
+    red_reason: "Against the unchanged loader all four failed. FIFO (child process): the loader blocked in the open and the case failed at the 15 second timeout (the class ran 15 s in total, one timeout). /dev/zero link (child process): failed under the 512 MiB memory cap without a timeout. Symlink to a regular file: returned ('ok', {'TS-1'}) where unreadable was expected. Dangling symlink: returned ('absent', None) where unreadable was expected."
+  AC-2:
+    tests:
+      - tests.test_rework_docs_only_validator_rules.TestLoadScenarioIdsFileKinds.test_ac2_file_one_byte_over_the_limit_is_unreadable
+      - tests.test_rework_docs_only_validator_rules.TestLoadScenarioIdsFileKinds.test_ac2_file_of_exactly_the_limit_with_valid_ids_is_ok
+      - tests.test_rework_docs_only_validator_rules.TestLoadScenarioIdsFileKinds.test_ac2_sparse_file_many_times_the_limit_is_unreadable_and_not_loaded_in_full
+    red_confirmed: true
+    red_reason: "Against the unchanged loader the over-limit case returned 'ok' where unreadable was expected, and the sparse case (50 times the limit) returned ('ok', set()) after loading the whole file. The exact-limit case passed before the change; it pins the boundary that must stay readable and is not itself a red."
+  AC-3:
+    tests:
+      - tests.test_rework_docs_only_validator_rules.TestLoadScenarioIdsFileKinds.test_ac3_missing_file_is_absent
+      - tests.test_rework_docs_only_validator_rules.TestLoadScenarioIdsFileKinds.test_ac3_a_parent_that_is_not_a_directory_is_absent
+      - tests.test_rework_docs_only_validator_rules.TestLoadScenarioIdsFileKinds.test_ac3_directory_is_unreadable
+      - tests.test_rework_docs_only_validator_rules.TestLoadScenarioIdsFileKinds.test_ac3_bytes_that_are_not_utf8_are_unreadable
+      - tests.test_rework_docs_only_validator_rules.TestLoadScenarioIdsFileKinds.test_ac3_regular_file_gives_the_ids_the_shared_derivation_gives
+      - tests.test_rework_docs_only_validator_rules.TestLoadScenarioIdsFileKinds.test_ac3_a_path_python_refuses_is_unreadable_and_never_raises
+      - tests.test_rework_docs_only_validator_rules.TestRenameCoverageDiff
+      - tests.test_rework_docs_only_validator_rules.TestRenameDiffFixtures
+    red_confirmed: false
+    red_reason: "Existing behavior that this change must keep: the six new cases and the two existing classes all passed against the unchanged loader, so no red state occurred for this criterion. The existing TestRenameCoverageDiff and TestRenameDiffFixtures detect any change to the absent/unreadable/ok behavior and to the rework-index messages."
+  AC-4:
+    tests:
+      - tests.test_rework_docs_only_validator_rules.TestVerificationMdNotRegularCli.test_ac4_ts1_feature_dir_verification_md_that_is_a_fifo_exits_1
+    red_confirmed: true
+    red_reason: "Against the unchanged loader the CLI child blocked on the FIFO and the case failed with AssertionError: the child did not finish within 15 seconds."
+  AC-5:
+    tests:
+      - tests.test_rework_docs_only_validator_rules.TestVerificationMdNotRegularCli.test_ac5_ts2_feature_dir_verification_md_that_links_dev_zero_exits_1
+    red_confirmed: true
+    red_reason: "Against the unchanged loader the CLI child hit the 512 MiB memory cap while reading the /dev/zero link and ended with exit 2 (execution error: unexpected exception during --kind 'worker-result' validation) where exit 1 was expected."
+  AC-6:
+    tests:
+      - tests.test_rework_docs_only_validator_rules.TestVerificationMdNotRegularCli.test_ac6_ts3_baseline_dir_verification_md_that_is_a_fifo_exits_1
+      - tests.test_rework_docs_only_validator_rules.TestVerificationMdNotRegularCli.test_ac6_ts3_baseline_dir_verification_md_that_links_dev_zero_exits_1
+    red_confirmed: true
+    red_reason: "Against the unchanged loader the FIFO case failed at the 15 second timeout (AssertionError: the child did not finish within 15 seconds), and the /dev/zero case hit the memory cap and ended with exit 2 where exit 1 was expected."
+  AC-7:
+    tests:
+      - tests.test_rework_docs_only_validator_rules.TestLoadScenarioIdsFileKinds.test_ac1_fifo_with_no_writer_is_unreadable_and_returns
+      - tests.test_rework_docs_only_validator_rules.TestLoadScenarioIdsFileKinds.test_ac1_symlink_to_dev_zero_is_unreadable_and_returns
+      - tests.test_rework_docs_only_validator_rules.TestVerificationMdNotRegularCli.test_ac4_ts1_feature_dir_verification_md_that_is_a_fifo_exits_1
+      - tests.test_rework_docs_only_validator_rules.TestVerificationMdNotRegularCli.test_ac5_ts2_feature_dir_verification_md_that_links_dev_zero_exits_1
+      - tests.test_rework_docs_only_validator_rules.TestVerificationMdNotRegularCli.test_ac6_ts3_baseline_dir_verification_md_that_is_a_fifo_exits_1
+      - tests.test_rework_docs_only_validator_rules.TestVerificationMdNotRegularCli.test_ac6_ts3_baseline_dir_verification_md_that_links_dev_zero_exits_1
+    red_confirmed: true
+    red_reason: "Observed with the fix absent: each FIFO case failed at the 15 second timeout and each /dev/zero case failed at the memory cap, in a child process, so neither the runner hung nor ran out of memory. Skips are in place for platforms without os.mkfifo or /dev/zero. The standard-library-only clause is held by the existing TestStandardLibraryOnly of the same module, which passed before and after the change; that clause has no red state."
