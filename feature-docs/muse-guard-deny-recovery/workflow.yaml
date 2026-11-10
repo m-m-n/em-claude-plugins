@@ -155,7 +155,7 @@ tasks:
     - NFR2
     - NFR3
     - NFR5
-    status: in_progress
+    status: merged
     branch: em-workflow/muse-guard-deny-recovery/task0002
   task0003:
     title: Route contributor_consent_missing in em-workflow Phase R2b and the README
