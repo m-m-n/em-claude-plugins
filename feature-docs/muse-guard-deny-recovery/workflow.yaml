@@ -107,7 +107,7 @@ workflow:
   completed_at_commit: ea14d0dab06148ba966afa16462f3992cdbab4e6
   base_commit: ee8851ebe8ff4ca6606a50dc9db898c065610da6
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -201,8 +201,16 @@ tasks:
     status: merged
     branch: em-workflow/muse-guard-deny-recovery/task0004
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
 requirements:
   FR1:
     title: New retryable skip_reason in em-workflow Skip Semantics
