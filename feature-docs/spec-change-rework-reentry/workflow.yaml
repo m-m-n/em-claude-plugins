@@ -123,7 +123,8 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
+    branch: em-workflow/spec-change-rework-reentry/task0001
   task0002:
     title: Invariant 1 does not govern the SPEC-change transition
     plan: tasks/task0002.md
@@ -144,7 +145,8 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
+    branch: em-workflow/spec-change-rework-reentry/task0002
   task0003:
     title: Step I.0 admits the SPEC-change re-entry
     plan: tasks/task0003.md
@@ -170,7 +172,8 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
+    branch: em-workflow/spec-change-rework-reentry/task0003
 review:
   status: pending
   rounds_completed: 0
