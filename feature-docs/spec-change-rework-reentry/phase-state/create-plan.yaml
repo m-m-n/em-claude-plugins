@@ -1,7 +1,7 @@
 schema_version: 1
 feature: spec-change-rework-reentry
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: bf5fe6df36c2036093217d4e16b8b38f6c786259
 last_input_digest: sha256:4990088fe03c1998ff4a4b49fc460f002de8cad3fd35769198245317d655982b
@@ -53,7 +53,7 @@ artifacts:
 patches:
 - patch_id: spec-change-rework-reentry-plan-p0001
   produced_by: create-plan-run-0001
-  applied: false
+  applied: true
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
