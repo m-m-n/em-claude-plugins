@@ -1,0 +1,204 @@
+schema_version: 1
+feature: spec-change-rework-reentry
+created: '2026-11-11'
+base_branch: main
+goal: |
+  # em-workflow: SPEC-change rework 経路が implement の Step I.0 abort と verify の stale failed で必ず停止する
+
+  種別: バグ
+
+  ## 現象
+  em-workflow の develop で rework の SPEC-change 遷移を通った feature は、人手で workflow.yaml を編集しない限り 2 箇所で停止する。
+
+  1. `implement` の再突入が Step I.0 の Re-entry precondition で即 ABORT する。SPEC-change 遷移は `implement` を無条件に `pending` へ戻すが、Invariant 9 が「SPEC 変更が必要な rework では task を作らない」と定めるため、pending タスクも failed タスクも 0 件になる。Step I.0 はこの状態を protocol error と定めて ABORT を指示している。
+  2. 1 を回避して `implement` を `completed` にしても、`verify` が前ラウンドの `failed` のまま残るため、`review` 完了後に develop の停止条件 3 が発火して再び停止する。SPEC-change 遷移（Section 10 step 2）が `pending` へ戻すのは create-plan / implement / review だけで、verify を戻さない。verify 由来の通常 rework では patch が implement と verify の両方を `pending` に戻す（SKILL.md「verify フェーズ」6）のに、SPEC-change 経路だけこれが欠けている。
+
+  実例: loop-develop の feature `format-undecidable-slash-fail-closed`。無人実行が implement で停止し、`stop_reason: step_stuck` を記録した。2 番目の停止は同 feature の遷移コミット `560146f` の差分で確認でき、`verify: failed` が書き換えられていない。
+
+  ## 再現手順
+  1. develop を走らせ、verify を失敗させる
+  2. verify 由来の rework で rework-planner に `gate_id: rework.spec-change` を返させる（SPEC 変更が必要な finding）
+  3. SPEC-change 遷移で create-spec → create-plan と再走し、再計画が新規タスクを 0 件生む（既存タスクは merged のまま carried される）
+  4. implement へ再突入した時点で Step I.0 が ABORT する
+  5. `implement` の status を手で `completed` にして再開すると、review 完了後に `verify: failed` で停止条件 3 が発火する
+
+  ## 期待する挙動
+  SPEC-change 遷移を通った feature が、人手の workflow.yaml 編集なしに review → verify → retrospect まで進む。
+
+  - Step I.0 の Re-entry precondition が「SPEC-change 経路で再計画が新規タスクを 0 件生んだ状態」を正当な再突入として扱う（または Invariant 1 に同経路の carve-out を置く）
+  - SPEC-change 遷移が `verify` も `pending` へ戻す
+
+  ## 完了の定義
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある
+
+  ## 該当箇所
+  - `em-workflow/references/implement-phase.md` Step I.0 の Re-entry precondition
+  - `em-workflow/references/rework-task-synthesis.md` Section 10（Workflow state transition）/ Section 11 Invariant 1・9
+  - `em-workflow/skills/develop/SKILL.md` ターンを終わらせていい唯一の条件 3、「verify フェーズ」6
+
+  ## 実害・発生条件
+  `--batch` の無人実行が停止し、自動再試行では解消しない。発生条件は「rework が SPEC 変更を要求し、その後の再計画が新規タスクを 0 件生む」こと。
+parent_branch: em-workflow/spec-change-rework-reentry/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.01
+      '1': 0.71
+      '2': 0.28
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.77
+      '2': 0.23
+      '3': 0.0
+  at: '2026-11-11T00:04:16+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: python3 em-workflow/scripts/check-plugin-invariants.py .
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: d87cf0779d72f2972bf4e9be72215a90a9c53270
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: Markdown protocol documents and unittest tests only; no user interface.
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: 928092d592f0cdb9398533e26d4c6358f9f255e6
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: The SPEC-change transition also returns verify to pending
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: Step I.0 recognises the SPEC-change re-entry as a valid entry route
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: Zero-task SPEC-change re-entry goes straight to phase completion
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: Keep the ABORT for every other state
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: Fix the scope of Invariant 1
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: Cross-reference from the develop skill
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: Tests that detect a recurrence
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: Update the existing pinned tests that the change affects
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: Keep the existing division of ownership
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: Do not change the em-workflow version
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: Standard-library unittest; suite and check-plugin-invariants.py pass
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: Existing document language; no Notion URL or home-directory absolute path
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: Other entry routes keep their existing behaviour
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
