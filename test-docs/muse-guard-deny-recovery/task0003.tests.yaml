@@ -1,0 +1,119 @@
+task_id: task0003
+# python3 -m unittest discover -s tests on the untouched worktree (before any edit): Ran 15724 tests, OK (skipped=1).
+baseline_failures: []
+# python3 -m unittest discover -s tests re-run after the implementation and this record: OK.
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_review_phase_llm_led.TestAC2PhaseR2bChainWalk.test_exactly_three_retryable_skip_reasons_unchanged
+      - tests.test_review_phase_shard_dispatch.TestAC5RoutingTableAndLitellmException.test_table_has_four_rows_and_the_three_old_rows_are_unchanged
+      - tests.test_review_phase_shard_dispatch.TestAC5RoutingTableAndLitellmException.test_table_keeps_exactly_four_retryable_rows_by_count
+      - tests.test_review_phase_shard_dispatch.TestAC5RoutingTableAndLitellmException.test_forged_three_row_table_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestAC5RoutingTableAndLitellmException.test_forged_four_row_table_without_the_fifth_row_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestAC5RoutingTableAndLitellmException.test_forged_fifth_row_advancing_to_a_different_harness_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestAC5RoutingTableAndLitellmException.test_forged_fifth_row_with_a_changed_meaning_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestAC5RoutingTableAndLitellmException.test_forged_fifth_row_ahead_of_the_fourth_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestAC5RoutingTableAndLitellmException.test_forged_changed_old_row_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestAC5RoutingTableAndLitellmException.test_forged_changed_old_row_after_the_fifth_row_is_rejected
+    red_confirmed: true
+    red_reason: >
+      Run against the pre-change review-phase.md after the tests were updated, the table literal test
+      (test_exactly_three_retryable_skip_reasons_unchanged: the five-row table literal was not found in the
+      section), test_table_has_four_rows_and_the_three_old_rows_are_unchanged (routing_table_ok returned False:
+      4 data rows, 5 expected) and test_table_keeps_exactly_four_retryable_rows_by_count (4 != 5) failed.
+      test_forged_four_row_table_without_the_fifth_row_is_rejected failed on its mutation-applied guard because the
+      real text had no fifth row to remove; the other forged-table tests rejected the text vacuously before the
+      change and now reject a real five-row table.
+  AC-2:
+    tests:
+      - tests.test_review_phase_shard_dispatch.TestContributorConsentMissingNoteAndPrecedence.test_note_matcher_passes_on_the_real_text
+      - tests.test_review_phase_shard_dispatch.TestContributorConsentMissingNoteAndPrecedence.test_every_note_phrase_is_load_bearing
+      - tests.test_review_phase_shard_dispatch.TestContributorConsentMissingNoteAndPrecedence.test_forged_text_without_the_note_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestContributorConsentMissingNoteAndPrecedence.test_forged_note_that_re_dispatches_as_plain_muse_spark_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestContributorConsentMissingNoteAndPrecedence.test_forged_note_that_re_judges_consent_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestContributorConsentMissingNoteAndPrecedence.test_forged_note_moved_before_the_routing_table_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestContributorConsentMissingNoteAndPrecedence.test_forged_note_moved_after_the_walk_rules_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestContributorConsentMissingNoteAndPrecedence.test_forged_note_written_as_a_table_row_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestContributorConsentMissingNoteAndPrecedence.test_note_adds_no_next_entry_cell_outside_the_table
+    red_confirmed: true
+    red_reason: >
+      Run against the pre-change review-phase.md, test_note_matcher_passes_on_the_real_text failed
+      (AssertionError: '' is not true, no paragraph held "consent is a property of the contributor tier"),
+      test_every_note_phrase_is_load_bearing and the forged-note tests that target the note paragraph failed with
+      "no paragraph holds 'consent is a property of the contributor tier'", and
+      test_forged_text_without_the_note_is_rejected failed on its mutation-applied guard (nothing to remove).
+  AC-3:
+    tests:
+      - tests.test_review_phase_shard_dispatch.TestContributorConsentMissingNoteAndPrecedence.test_precedence_matcher_passes_on_the_real_text
+      - tests.test_review_phase_shard_dispatch.TestContributorConsentMissingNoteAndPrecedence.test_harness_level_sentence_is_still_pinned_verbatim
+      - tests.test_review_phase_shard_dispatch.TestContributorConsentMissingNoteAndPrecedence.test_every_precedence_phrase_is_load_bearing
+      - tests.test_review_phase_shard_dispatch.TestContributorConsentMissingNoteAndPrecedence.test_forged_text_without_the_precedence_statement_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestContributorConsentMissingNoteAndPrecedence.test_forged_precedence_statement_before_the_harness_paragraph_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestContributorConsentMissingNoteAndPrecedence.test_forged_precedence_statement_not_adjacent_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestContributorConsentMissingNoteAndPrecedence.test_forged_statement_that_drops_the_harness_level_fallback_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestContributorConsentMissingNoteAndPrecedence.test_forged_harness_level_paragraph_with_a_changed_byte_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestContributorConsentMissingNoteAndPrecedence.test_forged_harness_level_sentence_rewritten_is_rejected
+    red_confirmed: true
+    red_reason: >
+      Run against the pre-change review-phase.md, test_precedence_matcher_passes_on_the_real_text failed
+      (precedence_statement_ok returned False: the paragraph after the harness-level paragraph was the
+      "spec order and rescue runs" paragraph) and test_every_precedence_phrase_is_load_bearing failed
+      (the phrase 'the one Claude fallback and the `workflow-doctor` diagnosis' was not found in the paragraph that
+      follows the harness-level paragraph). The harness-level paragraph pin passed before and after, as intended.
+  AC-4:
+    tests:
+      - tests.test_review_phase_shard_dispatch.TestAC7ReadmeAndUnchangedInterfaces.test_hop_paragraph_puts_the_consent_value_in_the_next_entry_group
+      - tests.test_review_phase_shard_dispatch.TestAC7ReadmeAndUnchangedInterfaces.test_hop_paragraph_names_review_data_too_large_and_per_shard_hops
+      - tests.test_review_phase_shard_dispatch.TestAC7ReadmeAndUnchangedInterfaces.test_forged_readme_without_the_consent_value_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestAC7ReadmeAndUnchangedInterfaces.test_forged_readme_with_the_consent_value_in_the_other_group_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestAC7ReadmeAndUnchangedInterfaces.test_readme_has_one_slash_listing_ending_in_review_data_too_large
+      - tests.test_review_phase_shard_dispatch.TestAC7ReadmeAndUnchangedInterfaces.test_forged_readme_without_the_new_reason_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestAC7ReadmeAndUnchangedInterfaces.test_forged_readme_without_per_shard_hops_is_rejected
+    red_confirmed: true
+    red_reason: >
+      Run against the pre-change README, test_hop_paragraph_puts_the_consent_value_in_the_next_entry_group failed
+      (readme_consent_in_next_entry_group_ok returned False: the hop paragraph had no
+      "`rate_limited` / `contributor_consent_missing` は次のエントリへ、"), and
+      test_forged_readme_without_the_consent_value_is_rejected and
+      test_forged_readme_with_the_consent_value_in_the_other_group_is_rejected failed on their mutation-applied
+      guards because the README did not name the value.
+  AC-5:
+    tests:
+      - tests.test_review_phase_shard_dispatch.TestAC4PerShardWalk.test_existing_pinned_r2b_phrases_are_still_present
+      - tests.test_sca_axis_review_phase_r0_r3.TestAC4SourceToolExcludedFromChainWalk.test_r2b_states_skip_not_a_retryable_chain_walk_candidate
+      - tests.test_threat_model_review_phase.TestAC4PhaseR2bCarriesSameValue.test_threat_model_path_carried_across_hops
+      - tests.test_contributor_tier_criteria.TestSubstitutionExceptionInReviewPhaseDocs.test_exception_uses_the_r0_consent_value
+      - tests.test_contributor_tier_criteria.TestConsentOnlyRuleInAllFourDocuments.test_no_comparison_against_a_recorded_value
+      - tests.test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+      - tests.test_tier_record_schema_v2.TestReviewDocumentsUntouched.test_review_phase_md_unchanged
+    red_confirmed: false
+    red_reason: >
+      A dedicated new module is out of scope, but the existing pins detect that the NFR4 phrases, the
+      Contributor-tier read-mapping sentence, the forbidden-phrase lists and the interactive-question tool name count
+      are unchanged; no red state occurred for this change. The only existing pin that went red after the edit was
+      TestReviewDocumentsUntouched.test_review_phase_md_unchanged (a SHA-256 of the whole of review-phase.md); its
+      pinned hash was refreshed to the new file, following the refresh convention recorded above it.
+  AC-6:
+    tests:
+      - tests.test_review_phase_shard_dispatch.TestContributorConsentMissingNoteAndPrecedence.test_note_matcher_passes_on_the_real_text
+      - tests.test_review_phase_shard_dispatch.TestContributorConsentMissingNoteAndPrecedence.test_precedence_matcher_passes_on_the_real_text
+      - tests.test_review_phase_shard_dispatch.TestAC5RoutingTableAndLitellmException.test_table_has_four_rows_and_the_three_old_rows_are_unchanged
+      - tests.test_review_phase_shard_dispatch.TestAC5RoutingTableAndLitellmException.test_forged_four_row_table_without_the_fifth_row_is_rejected
+      - tests.test_review_phase_shard_dispatch.TestAC7ReadmeAndUnchangedInterfaces.test_hop_paragraph_puts_the_consent_value_in_the_next_entry_group
+      - tests.test_review_phase_llm_led.TestAC2PhaseR2bChainWalk.test_exactly_three_retryable_skip_reasons_unchanged
+    red_confirmed: true
+    red_reason: >
+      Each new matcher is paired with a non-vacuity test that it passes on the real text; run before the document
+      edit, test_note_matcher_passes_on_the_real_text, test_precedence_matcher_passes_on_the_real_text,
+      test_table_has_four_rows_and_the_three_old_rows_are_unchanged,
+      test_hop_paragraph_puts_the_consent_value_in_the_next_entry_group and the llm_led table literal test all
+      failed. The forged texts they reject are in the AC-1 to AC-4 entries.
+  AC-7:
+    tests:
+      - tests.test_tier_record_schema_v2.TestReviewDocumentsUntouched.test_review_phase_md_unchanged
+    red_confirmed: false
+    red_reason: >
+      The outcome is the result of the whole-suite command python3 -m unittest discover -s tests, which has no
+      single test id; the baseline run was green, so no red state occurred before the change. The one test that failed
+      mid-way (the review-phase.md digest pin named here) was refreshed, and the full suite was re-run afterwards.
