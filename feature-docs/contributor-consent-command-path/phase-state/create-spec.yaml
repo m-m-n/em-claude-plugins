@@ -1,7 +1,7 @@
 schema_version: 1
 feature: contributor-consent-command-path
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 8dbc3db85048d133415b3894df0bdd3c12c87641
 last_input_digest: sha256:05a1996e3c143ffb904ab38848870d1c99ffc388db90cd4fab43dee01a0f0e9f
