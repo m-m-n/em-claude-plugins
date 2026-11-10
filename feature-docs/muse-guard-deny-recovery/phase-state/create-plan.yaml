@@ -1,7 +1,7 @@
 schema_version: 1
 feature: muse-guard-deny-recovery
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 8db85afc4c5655dc934eed6ce02b4bd61befd9d3
 last_input_digest: sha256:895b04f23962fc1471321c9e9ea767cba561675609328107331f5d692ed74213
