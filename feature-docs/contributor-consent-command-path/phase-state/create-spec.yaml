@@ -1,11 +1,11 @@
 schema_version: 1
 feature: contributor-consent-command-path
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: 8dbc3db85048d133415b3894df0bdd3c12c87641
-last_input_digest: sha256:a526100664ce478bbd1e45c4749f1d8e34a28d6d13bdeadf60fa4f9e1061b727
-active_request_id: create-spec-run-0001
+last_input_digest: sha256:5823ff0160549f7513fa886091b3f03c5ec8f72bc4a54579088fc6866dfc0741
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     status: answered
@@ -53,6 +53,27 @@ worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
   input_digest: sha256:a526100664ce478bbd1e45c4749f1d8e34a28d6d13bdeadf60fa4f9e1061b727
+  output_digest: null
+  dispatch_digest_inputs:
+    .claude/rules/core-plugin-version-bump.md: sha256:2d4c25eb5b7e70a44df068780fce08b4736cd52ff14e13b60ac711beb3b96745
+    .claude/rules/hook-tests.md: sha256:2ae9d862d09c554e2f88d864896d09b89676f7ce567b7f3c098a89e610ffea9b
+    .github/workflows/plugin-version-bump.yml: sha256:fbbadfe2d4ea13de2793a5d7892e73660fdafc4dee8a615d54d9ba439c410a02
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    em-review/hooks/muse_guard.py: sha256:224bf7fa0e14a58135d7ad02b9b819c7fac348285f0955160df52d1be99fbd3f
+    em-review/skills/contributor-consent/SKILL.md: sha256:766eadc7bcbb76866fe4996cdf6bf129df0f12dc17d6e067b6be95232a8eaae2
+    em-workflow/README.md: sha256:81eb1a4fd3b566bc03e1e62646764d24043ecb6447792c108c72b13b7b846150
+    em-workflow/hooks/muse_guard.py: sha256:95107d9633c29394f6f4e52cab218da080e97b31b8ab7bbcf77e28b40f404f02
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
+    em-workflow/references/question-resolution.md: sha256:73cc9a0072babfcc86899cf648e21685f38b85ba71b7c6236f321b2526f35b29
+    em-workflow/skills/contributor-consent/SKILL.md: sha256:b1491e85641ab99ad80b4e26ee786434a7a6b3ab082cb2dd8521664807b7c6ef
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+    tests/test_contributor_consent_skill.py: sha256:d364a01cb1353905a574c986249e8db1e51c9012b40fb775d66535a875091ba6
+    tests/test_muse_consent_no_new_questions.py: sha256:9850f3f8b7862f09d7d1115ecff5fbf54184a7b1dc9a355d5a904fda418c8d0c
+    tests/test_muse_consent_version_bump.py: sha256:6b79f38eb409193fb194853caaf150044077b43d5dd97cc6306d37a138191dad
+    tests/test_muse_guard.py: sha256:7cab81d328e8c80fa41edde1671f5f4e72bf694982ecc00e8899b9b07a8aa787
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:5823ff0160549f7513fa886091b3f03c5ec8f72bc4a54579088fc6866dfc0741
   output_digest: null
   dispatch_digest_inputs:
     .claude/rules/core-plugin-version-bump.md: sha256:2d4c25eb5b7e70a44df068780fce08b4736cd52ff14e13b60ac711beb3b96745
