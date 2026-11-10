@@ -413,7 +413,7 @@ class TestAC6ExistingHandlingKept(_ImplementPhaseCase):
 
     def test_step_i0_opening_and_resume_guard_bullets_are_retained(self):
         normalized = _normalize(self.text)
-        self.assertIn("Step I.0 recognises three entry routes into", normalized)
+        self.assertIn("Step I.0 recognises four entry routes into", normalized)
         self.assertIn(
             "- Retry on the same worktree (user chose \"retry\" in I.2.c): reuse the "
             "existing worktree as-is and re-launch the implementer against it.",

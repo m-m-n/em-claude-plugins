@@ -154,12 +154,12 @@ document is written; this phase never creates them itself.
    fail-closed with the same trusted-root fallback discipline as the review
    protocol (search `$HOME/.claude/plugins` / `$HOME/.claude/skills` with
    path filter `*/em-workflow/*/scripts/*`, never cwd).
-5. **Re-entry precondition**: Step I.0 recognises three entry routes into
-   `implement: pending` — a fresh first pass, a rework re-entry, and the
-   develop skill's batch infra auto-resume (`skills/develop/SKILL.md`, the
-   auto-resume block; its own precondition and write set are stated there,
-   not restated here). A fresh first pass carries no further condition
-   here.
+5. **Re-entry precondition**: Step I.0 recognises four entry routes into
+   `implement: pending` — a fresh first pass, a rework re-entry, the
+   SPEC-change re-entry, and the develop skill's batch infra auto-resume
+   (`skills/develop/SKILL.md`, the auto-resume block; its own precondition
+   and write set are stated there, not restated here). A fresh first pass
+   carries no further condition here.
 
    Rework re-entry: when this phase is entered because
    review or verify sent `implement` back to `pending` (rework, not a fresh
@@ -175,12 +175,64 @@ document is written; this phase never creates them itself.
    phase has work to do about; no `pending` task is required on this
    route, since the auto-resume's write set registers no task.
 
-   A non-fresh entry satisfying neither condition — every task `merged`
+   SPEC-change re-entry: the entry into `implement` after the SPEC-change
+   transition (`references/rework-task-synthesis.md` Section 10, the
+   `**When rework needs a SPEC.md change**` block, cited here, not
+   restated) and the create-spec → create-plan re-run that follows it.
+   This phase is entered by this route only when ALL of the following hold,
+   each read from committed facts only — `workflow.yaml`, the
+   `spec_change` record of `phase-state/rework.yaml`, and the integration
+   branch's commit history; no timestamp is compared:
+
+   - `create-spec` and `create-plan` are `completed`, and `implement` holds
+     a `base_commit` and a prior `completed_at_commit`.
+   - `phase-state/rework.yaml` holds a `spec_change` record with
+     `consumed: true` and `replan_authorized: false` (the record's fields
+     are defined by `references/phase-state.md`, cited here, not restated).
+   - The prior `completed_at_commit` is a proper ancestor of the record's
+     `recorded_at_commit`, and `recorded_at_commit` is an ancestor of the
+     current integration tip.
+   - The commit history shows that the SPEC-change transition that wrote
+     this record returned `implement` to `pending` — the tier-upgrade
+     procedure writes the same record without doing so, so the flags alone
+     do not suffice.
+   - `tasks` is non-empty and every task is `merged`.
+
+   The identification uses no session memory and no worker natural-language
+   output.
+
+   Commit values: before a commit value read from `workflow.yaml` or from
+   the `spec_change` record appears in any git command, it is checked
+   against the shape of a full hexadecimal commit object id
+   (`^[0-9a-f]{40}$`, or `^[0-9a-f]{64}$` in a SHA-256 repository). A value
+   that does not match means the entry is not a SPEC-change re-entry, and
+   the value is never sanitised (the same fail-closed discipline as item
+   2's identifier gate). The ancestry checks above run on the integration
+   branch's history and take only values that passed this check.
+
+   A resume of the same re-entry — `implement` reads `in_progress`, written
+   by that re-entry's own Step I.1 — is admitted on the same facts.
+
+   On this route an entry with no `pending` task and no task whose
+   reconciled state is `failed` is not a protocol error and does not ABORT.
+   With no `pending` task, Step I.1 runs as usual (the gitignore guard,
+   `base_commit` preserved, the `implement` → `in_progress` commit), Step
+   I.2 is skipped — no implementer is launched and the turn does not end
+   waiting on an empty queue — and the phase proceeds in the same turn to
+   Step I.3, whose capture → refresh → write → commit sets
+   `completed_at_commit` even though no task ran; that update keeps the same
+   `spec_change` record from grounding a later re-entry. When the re-plan
+   registered one or more new `pending` tasks, the entry meets the rework
+   re-entry's condition above and proceeds through Step I.2 as usual.
+
+   A non-fresh entry that is not a SPEC-change re-entry and satisfies
+   neither the rework nor the auto-resume condition — every task `merged`
    (or otherwise none `pending`), and no task whose reconciled state is
    `failed` — is therefore a protocol error, not a fresh idle state to
    wait out: ABORT the phase immediately with a clear report naming the
    offending workflow.yaml state, rather than looping through Step I.2
-   with nothing to launch.
+   with nothing to launch. An entry for which any identification condition
+   above does not hold is not a SPEC-change re-entry and falls here.
 
    The failed-entry restoration of `skills/develop/SKILL.md` Step A.6
    (`## Step A.6: failed からの入口`) sets `implement` and the target task's
