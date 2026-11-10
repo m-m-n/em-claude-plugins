@@ -1,0 +1,234 @@
+schema_version: 1
+feature: muse-guard-deny-recovery
+created: '2026-11-10'
+base_branch: main
+goal: |
+  # muse_guard の DENY_CONTEXT がレビュアーにチェーン選択を指示しているが deny 後の復帰経路がプロトコルに無い
+
+  種別: バグ
+
+  ## 現象
+
+  `muse_guard.py` が deny を返すときに付ける `DENY_CONTEXT` が、レビュアーに対してチェーン選択を指示する文言になっている。しかしフックが deny した後にレビュアーがどう復帰すればよいかの経路が、レビュープロトコル側に定義されていない。
+
+  `review-protocol.md` の `skip_reason` は閉じた語彙で、この deny に対応する値が無い。レビュアーは deny を受けても、次のチェーンエントリへ歩進してよいのか、retryable な skip として扱うのか、非 retryable として観点ごと落とすのかを決められない。
+
+  ## 再現手順
+
+  1. 同意を記録していないプロジェクトで、`muse-spark` → `muse-spark-contributor` の読み替えが起きる経路を通す
+  2. `muse_guard.py` が PreToolUse(Bash) で deny する
+  3. レビュアーが `DENY_CONTEXT` を受け取るが、プロトコル上の復帰手段が無い
+
+  ## 期待する挙動
+
+  deny 後の扱いをプロトコル上の 1 つの経路に寄せる。次のいずれかに決める。
+
+  - `review-protocol.md` の `skip_reason` 閉じた語彙に retryable な値を 1 つ追加し、`review-phase.md` R2b のチェーン歩進表に対応する行を足す
+  - deny を非 retryable として扱い、その観点をクリーンにスキップさせる
+
+  ## 完了の定義
+
+  - [ ] deny 後の復帰経路がプロトコル文書に明記されている
+  - [ ] `DENY_CONTEXT` の文言が、そのプロトコル上の経路と一致している
+  - [ ] em-workflow / em-review の両コピーが同じ形になっている（`PLUGIN_SLUG` 以外バイト一致の制約を維持）
+  - [ ] 両プラグインの version を bump した
+
+  ## 該当箇所
+
+  `em-workflow/hooks/muse_guard.py:73`（`DENY_CONTEXT`）、`em-review/hooks/muse_guard.py` の同一箇所
+
+  関連: `references/review-protocol.md` の `skip_reason` 語彙、`references/review-phase.md` R2b のチェーン歩進表（両プラグイン）
+
+  検出: review round 3 の finding `d23f182330cc695e`（high, architecture）
+
+  ## 実害・発生条件
+
+  同意の無いプロジェクトで contributor tier の読み替えが試みられたとき。レビュアーの挙動が未定義になるため、観点が黙って落ちるか、無駄な再試行を繰り返すかが実装依存になる。
+
+  過去の無人実行では review rework cap（1）到達により deferred のまま残った。指摘自身の提案が 2 プラグイン 3 ドキュメントにまたがる設計選択を残しており、単一ファイルしか書けない review-editor では決められないため auto-fix も見送っている。
+
+  ## 追加指示
+
+  - 不明点は Codex に相談し、比較して良いと判断した選択肢を採用する。
+  - 完了後、integration ブランチを push して base_branch への PR を gh pr create で作成する。integration ブランチはローカル・リモートとも残す（base_branch へ自動マージしない）。
+parent_branch: em-workflow/muse-guard-deny-recovery/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+  - basis: description_only
+    probabilities:
+      '0': 0.19
+      '1': 0.12
+      '2': 0.69
+      '3': 0.0
+  - basis: description_plus_code
+    probabilities:
+      '0': 0.0
+      '1': 0.07
+      '2': 0.91
+      '3': 0.02
+  at: '2026-11-10T19:23:32+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: c585ca15e28c9a8f5218f89024a02be5ad0c6073
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'No UI or visual surface: the change is a hook string constant plus protocol and reference markdown and tests (answer q-design-step = decide_autonomously, recommendation skip).'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: ee8851ebe8ff4ca6606a50dc9db898c065610da6
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: New retryable skip_reason in em-workflow Skip Semantics
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-3
+    - TS-4
+  FR2:
+    title: New retryable skip_reason in em-review Skip Semantics
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-3
+  FR3:
+    title: em-workflow Phase R2b routing row
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+  FR4:
+    title: Precedence over the harness-level failure path
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-6
+  FR5:
+    title: em-review Phase R2b routing row
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-8
+  FR6:
+    title: DENY_CONTEXT rewritten to match the protocol (reviewer-conditional)
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+  FR7:
+    title: Copies stay byte-identical except PLUGIN_SLUG
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-2
+  FR8:
+    title: em-workflow README R2b hop paragraph
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-7
+  FR9:
+    title: Test updates
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: Hook decision behavior unchanged
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: No version change
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: Forbidden words stay absent
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: Existing pinned R2b phrases stay verbatim
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: Unit test suite passes
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

@@ -1,7 +1,7 @@
 schema_version: 1
 feature: muse-guard-deny-recovery
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 6071d0f3818454eb5b99e424e98713f6befc1597
 last_input_digest: sha256:345609c309dee7d39ac1cfbe7d6a1b710d01b6ace3c13447ab65c0f716c25248
