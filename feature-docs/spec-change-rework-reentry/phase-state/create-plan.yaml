@@ -1,16 +1,16 @@
 schema_version: 1
 feature: spec-change-rework-reentry
 phase: create-plan
-status: dispatched
+status: applying_patch
 generation: 1
 base_revision: bf5fe6df36c2036093217d4e16b8b38f6c786259
 last_input_digest: sha256:4990088fe03c1998ff4a4b49fc460f002de8cad3fd35769198245317d655982b
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:4990088fe03c1998ff4a4b49fc460f002de8cad3fd35769198245317d655982b
   dispatch_digest_inputs:
     feature-docs/spec-change-rework-reentry/REQUIREMENTS.md: sha256:144ceb6e56aba455686dbdc89c1a1e0494b37f98233f482142dfa89599994b72
@@ -24,8 +24,36 @@ worker_runs:
     plugin:references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
     plugin:references/workflow-schema.md: sha256:5db914a170c0bd97886671160a2c3498127ffd83f0814bc8fb67407f4dc563ee
     plugin:skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
-artifacts: []
-patches: []
+  self_write_set:
+  - feature-docs/spec-change-rework-reentry/IMPLEMENTATION.md
+  - feature-docs/spec-change-rework-reentry/THREAT-MODEL.md
+  - feature-docs/spec-change-rework-reentry/VERIFICATION.md
+  - feature-docs/spec-change-rework-reentry/tasks/task0001.md
+  - feature-docs/spec-change-rework-reentry/tasks/task0002.md
+  - feature-docs/spec-change-rework-reentry/tasks/task0003.md
+artifacts:
+- path: feature-docs/spec-change-rework-reentry/IMPLEMENTATION.md
+  sha256: sha256:3c0a284ea51ca6eba508017037197face9b69a896dfded5c516367bcaa3a7b97
+  produced_by: create-plan-run-0001
+- path: feature-docs/spec-change-rework-reentry/VERIFICATION.md
+  sha256: sha256:73a2b77eec3dff97b9767ff89df6453b5b992164342de64cc745afdb06f0c608
+  produced_by: create-plan-run-0001
+- path: feature-docs/spec-change-rework-reentry/THREAT-MODEL.md
+  sha256: sha256:015954fa0ac2294163e3bff6b4a66106013fc9b7df4b7077cc9558d269b51767
+  produced_by: create-plan-run-0001
+- path: feature-docs/spec-change-rework-reentry/tasks/task0001.md
+  sha256: sha256:60d73fd12df472bb24cf519122f229d16a54a33aefa1a8a90d60bf2e715337a4
+  produced_by: create-plan-run-0001
+- path: feature-docs/spec-change-rework-reentry/tasks/task0002.md
+  sha256: sha256:1f2ec6623bd580c28a6588acd4111c2eb76f12620670db102d69055fa27519d3
+  produced_by: create-plan-run-0001
+- path: feature-docs/spec-change-rework-reentry/tasks/task0003.md
+  sha256: sha256:95ef32eea7cdb306cd926c22209ce0af8ee93dfdaf8d8fc967ffaf5b32bded66
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: spec-change-rework-reentry-plan-p0001
+  produced_by: create-plan-run-0001
+  applied: false
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
