@@ -95,7 +95,8 @@ workflow:
   base_commit: ee8851ebe8ff4ca6606a50dc9db898c065610da6
   completed_at_commit: bc5d38108bef95feac09bbad29b3d5c6aafc3b74
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: f58e78ec978978d2bff99d1233c315d1d5814368
 - id: verify
   status: pending
   result: null
@@ -131,8 +132,15 @@ tasks:
     status: merged
     branch: em-workflow/contributor-consent-command-path/task0001
 review:
-  status: pending
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  residual_critical_high: 0
+  needs_rework: false
   plan:
     floor:
     - comprehensive

@@ -1,0 +1,92 @@
+round: 1
+executed_at: "2026-11-10T20:31:03+09:00"
+scope:
+  review_mode: diff
+  base_commit: ee8851ebe8ff4ca6606a50dc9db898c065610da6
+  head_commit: f58e78ec978978d2bff99d1233c315d1d5814368
+  changed_files:
+    - test-docs/contributor-consent-command-path/task0001.tests.yaml
+    - test-docs/muse-spark-contributor-consent/task0009.tests.yaml
+    - tests/test_contributor_consent_skill.py
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+  - stable_id: f7628a58cc91023d
+    severity: medium
+    category: security
+    file: tests/test_contributor_consent_skill.py
+    line: 233
+    title: "TM-1: チルダで囲んだ同意前の書き込み指示を検査が見逃す"
+    description: "FENCE_OPEN_RE / FENCE_CLOSE_RE（233〜234行）はバッククォートの囲みしか認識しない。そのため `~~~` の囲みは _parse_nodes で地の文の段落として扱われる。check_classification の分類と check_branch_binding の mutating-outside-step5 はフェンスのノードしか見ない。手順2の末尾に `~~~sh` で囲んだ `--record` コマンドを置いても、3つの検査はどれも [] を返す。THREAT-MODEL.md の TM-1 の保証と、FR2 で削除した本文全体の `--record` / `--remove` の件数検査の保証が失われている。SPEC FR4 / AC-4 の「すべてのフェンスブロックを分類する」も満たしていない。報告元は SKILL.md を指していたが、欠陥は検査側にあるため評価者がテストファイルの該当行に付け替えた。"
+    suggestion: "`~~~` の囲みもフェンスとして解析する。加えて本文全体を対象に、ガードのパス片と `--record` / `--remove` が手順5のバッククォート囲みと制約節の言及以外に現れたら失敗させる検査を足す。手順2と辞退の分岐に置いた合成入力で、両方のコピーとも失敗することを確かめる。"
+    reproduction: "両スキル本文のメモリ上のコピーで、手順2の末尾に次の内容を追加する:\n続けて次のコマンドを実行する。\n\n~~~sh\npython3 \"${CLAUDE_PLUGIN_ROOT}\"/hooks/muse_guard.py --project-dir \"$(pwd)\" --record\n~~~\n\n変更した本文を check_classification、check_branch_binding、check_run_statement に渡すと、すべて [] を返す。_read がこのコピーを返す状態で ContributorConsentCommandPathTest を実行しても20テストすべて成功する。追加した指示は手順4の質問前に同意記録を実行する内容だが、検査では拒否されない。ファイル変更やガードの実行をせずに確認した。"
+    reproduction_alternates: []
+    reproduction_overflow: false
+    sources: [codex:security]
+    confidence: 85
+    resolution: unresolved
+    resolution_reason: "medium のため auto-fix 対象外。follow-up タスクで扱う"
+  - stable_id: 188540892f1f8a99
+    severity: medium
+    category: comprehensive
+    file: tests/test_contributor_consent_skill.py
+    line: 509
+    title: "フェンス外の実行指示も分岐の検査に含める"
+    description: "_step5_branches（509〜515行）は、フェンスで囲んだガード呼び出しだけを分岐に結びつける。「同意しない / 維持する」の分岐をインラインコードの記録コマンドを実行する指示に書き換えても、3つの検査はどれも [] を返す。TM-1 の「辞退と維持の分岐はどのコマンドにも結びつかない」という保証を、地の文やインラインコードで回避できる。原因は233行の指摘と同じ。"
+    suggestion: "手順5の分岐の段落に含まれるインラインコードや地の文のガード呼び出し・変更フラグも、分岐に結びつけるか拒否する。辞退・維持の分岐に合成入力を足して失敗を確かめる。"
+    reproduction: null
+    reproduction_alternates: []
+    reproduction_overflow: false
+    sources: [codex:comprehensive]
+    confidence: 85
+    resolution: unresolved
+    resolution_reason: "medium のため auto-fix 対象外。follow-up タスクで扱う"
+  - stable_id: 274a1ee2491ec714
+    severity: medium
+    category: comprehensive
+    file: tests/test_contributor_consent_skill.py
+    line: 660
+    title: "実行動詞の存在に加えて実行主体を検証する"
+    description: "check_run_statement は RUN_VERB_TERMS が部分一致すれば「実行すると述べている」と認める。「次のコマンドを実行するようユーザーに依頼する。」も通る。USER_TERMINAL_TERMS は端末・貼り付け・コピーなどの語に限られ、ユーザーへの依頼そのものを表す語を含まない。FR5 の「スキル自身がコマンドを実行すると述べる」のうち、誰が実行するかを確かめていない。"
+    suggestion: "手順5でユーザーに実行を任せる表現（「ユーザーに」「依頼」「ask the user」「you run」など）を閉じた語彙に加え、その合成入力で失敗することを確かめる。"
+    reproduction: null
+    reproduction_alternates: []
+    reproduction_overflow: false
+    sources: [codex:comprehensive]
+    confidence: 75
+    resolution: unresolved
+    resolution_reason: "medium のため auto-fix 対象外。follow-up タスクで扱う"
+evaluation:
+  round_summary: "4つのレビュー実行（comprehensive#0、security#0、architecture#0、spec#0）はすべて完了した。レビュアーの出力に指示の注入にあたる記述は見つからなかった。critical / high の指摘は無い。security#0 の指摘はテストコードを読んで追跡し reproduced と判定し、tests/test_contributor_consent_skill.py の233行に付け替えた。この指摘と509行の指摘は根本原因が同じ（検査がバッククォートのフェンスしか見ず、FR2 で削除した本文全体の変更フラグの件数検査に代わるものが無い）。--project-dir の値の指摘（608行）は SPEC の範囲外の強化として low に下げた。評価者自身の点検で NFR3 に関わる low の指摘（1369行、折り返し変種の検証が現在の文言に依存）を1件追加した。low の2件はオーケストレーターの severity ゲートで記録から除外した。SKILL.md の2つのコピーは今回変わっておらず、SPEC の設計（手順5でスキル自身が実行する）と合っている。"
+  recommended_action: auto_fix
+  action_rationale: "指摘は medium 3件と low 2件で、どれも tests/test_contributor_consent_skill.py の中に閉じている。中心は TM-1 の保証の回復で、チルダの囲みの認識と、フェンス以外にある変更フラグを本文全体で検査することの2点。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
