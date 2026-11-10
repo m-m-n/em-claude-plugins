@@ -4,8 +4,8 @@ phase: create-spec
 status: dispatching
 generation: 1
 base_revision: 8dbc3db85048d133415b3894df0bdd3c12c87641
-last_input_digest: sha256:5823ff0160549f7513fa886091b3f03c5ec8f72bc4a54579088fc6866dfc0741
-active_request_id: create-spec-run-0002
+last_input_digest: sha256:05a1996e3c143ffb904ab38848870d1c99ffc388db90cd4fab43dee01a0f0e9f
+active_request_id: create-spec-run-0003
 packets:
   create-spec-q0001:
     status: answered
@@ -72,9 +72,9 @@ worker_runs:
     tests/test_muse_consent_version_bump.py: sha256:6b79f38eb409193fb194853caaf150044077b43d5dd97cc6306d37a138191dad
     tests/test_muse_guard.py: sha256:7cab81d328e8c80fa41edde1671f5f4e72bf694982ecc00e8899b9b07a8aa787
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:5823ff0160549f7513fa886091b3f03c5ec8f72bc4a54579088fc6866dfc0741
-  output_digest: null
+  output_digest: sha256:386e0d1cd6e70aa9cd1ed6e1d7b30ebacc0f594f0d6433a3b4e6522313bff829
   dispatch_digest_inputs:
     .claude/rules/core-plugin-version-bump.md: sha256:2d4c25eb5b7e70a44df068780fce08b4736cd52ff14e13b60ac711beb3b96745
     .claude/rules/hook-tests.md: sha256:2ae9d862d09c554e2f88d864896d09b89676f7ce567b7f3c098a89e610ffea9b
@@ -92,9 +92,21 @@ worker_runs:
     tests/test_muse_consent_no_new_questions.py: sha256:9850f3f8b7862f09d7d1115ecff5fbf54184a7b1dc9a355d5a904fda418c8d0c
     tests/test_muse_consent_version_bump.py: sha256:6b79f38eb409193fb194853caaf150044077b43d5dd97cc6306d37a138191dad
     tests/test_muse_guard.py: sha256:7cab81d328e8c80fa41edde1671f5f4e72bf694982ecc00e8899b9b07a8aa787
+  self_write_set: []
+- request_id: create-spec-run-0003
+  status: dispatched
+  input_digest: sha256:05a1996e3c143ffb904ab38848870d1c99ffc388db90cd4fab43dee01a0f0e9f
+  output_digest: null
+  dispatch_digest_inputs: {}
 artifacts: []
 patches: []
-progress_fingerprint: null
+progress_fingerprint: sha256:45e70fd23f57bd9eb10b38f44b9d26460b43051457ed4602a4f56e72c8957303
 stale_redispatch_count: 0
-resolved_input_cache: {}
+resolved_input_cache:
+  design_system_candidates:
+    generation_digest: sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945
+    resolved_at_generation: 1
+    paths: []
+    digests: {}
+    truncated: false
 last_error: null
