@@ -66,13 +66,18 @@ DENY_REASON = (
 )
 
 # Agent-facing additional context: exactly three clauses, in order -- what
-# to do instead, who may grant consent and how, and the prohibition on the
-# agent granting consent for itself. A single-line string constant; the
-# only value it references is PLUGIN_SLUG (a static module-level constant
-# fixed at authoring time), never anything derived from the hook input.
+# to do instead (two branches: a reviewer returns the skip object whose
+# skip_reason is contributor_consent_missing and ends; any other agent looks
+# for no workaround and continues without the contributor tier), who may
+# grant consent and how, and the prohibition on the agent granting consent
+# for itself. A single-line string constant; the only value it references is
+# PLUGIN_SLUG (a static module-level constant fixed at authoring time),
+# never anything derived from the hook input.
 DENY_CONTEXT = (
-    "回避策を探さず、reviewers.yaml の chain にある非 contributor の "
-    "muse-spark エントリ、または他の chain エントリでレビューを続行する。"
+    "レビュアーとして動作している場合は、skip_reason が "
+    "contributor_consent_missing のスキップオブジェクトを返して終了する。"
+    "レビュアー以外のエージェントは、回避策を探さず、muse-spark-contributor "
+    "ティアを使わずに作業を続行する。"
     "同意はユーザーが対話セッションで /"
     f"{PLUGIN_SLUG}:contributor-consent スキルを実行したときにだけ記録される。"
     "エージェント自身が muse_guard.py --record を実行して同意を代行しては"

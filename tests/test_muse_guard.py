@@ -274,9 +274,63 @@ class TestDenyPayloadContent(MuseGuardTestCase):
                 # No path, project key, or store location in the reason.
                 self.assertNotIn(str(repo), out["permissionDecisionReason"])
                 self.assertNotIn(str(self.store_path), out["permissionDecisionReason"])
-                # Additional context directs the agent to a non-contributor entry.
+                # Additional context names the tier and the consent skill, and
+                # routes a denied reviewer to the skip object (see the two
+                # route tests below).
                 self.assertIn("muse-spark", out["additionalContext"])
                 self.assertIn(f"{name}:contributor-consent", out["additionalContext"])
+
+    def _deny_additional_context(self, guard_path, repo):
+        result = run_guard(
+            guard_path,
+            self.git_env,
+            payload={
+                "tool_name": "Bash",
+                "tool_input": {"command": f'codex exec -m {CONTRIBUTOR_TIER} "x"'},
+                "cwd": str(repo),
+            },
+        )
+        return assert_deny(self, result)["additionalContext"]
+
+    def test_ac1_additional_context_is_one_line_and_names_the_skip_reason_the_consent_skill_and_the_record_command_in_order(
+        self,
+    ):
+        """AC-1: one line; carries `contributor_consent_missing`,
+        `muse-spark`, the copy's own `{plugin}:contributor-consent` and
+        `muse_guard.py --record`, in that order."""
+        repo = self.init_repo()
+        for name, guard_path in GUARD_PATHS.items():
+            with self.subTest(copy=name):
+                context = self._deny_additional_context(guard_path, repo)
+                skill = f"{name}:contributor-consent"
+                self.assertNotIn("\n", context)
+                self.assertNotIn("\r", context)
+                for needle in (
+                    "contributor_consent_missing",
+                    "muse-spark",
+                    skill,
+                    "muse_guard.py --record",
+                ):
+                    self.assertIn(needle, context)
+                skip_pos = context.index("contributor_consent_missing")
+                skill_pos = context.index(skill)
+                record_pos = context.index("muse_guard.py --record")
+                self.assertLess(skip_pos, skill_pos)
+                self.assertLess(skill_pos, record_pos)
+
+    def test_ac2_additional_context_routes_a_reviewer_to_the_skip_object_and_never_to_another_entry(
+        self,
+    ):
+        """AC-2: the reviewer branch is present; the old instruction to
+        continue with a non-contributor `muse-spark` entry of
+        `reviewers.yaml` or with another chain entry is gone."""
+        repo = self.init_repo()
+        for name, guard_path in GUARD_PATHS.items():
+            with self.subTest(copy=name):
+                context = self._deny_additional_context(guard_path, repo)
+                self.assertIn("レビュアー", context)
+                for gone in ("reviewers.yaml", "非 contributor", "chain エントリ"):
+                    self.assertNotIn(gone, context)
 
     def test_deny_never_interpolates_the_command_cwd_key_or_store_path(self):
         repo = self.init_repo()

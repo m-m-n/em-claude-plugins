@@ -1,0 +1,46 @@
+task_id: task0001
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 15724 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 15727 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_muse_guard.TestDenyPayloadContent.test_ac1_additional_context_is_one_line_and_names_the_skip_reason_the_consent_skill_and_the_record_command_in_order
+    red_confirmed: true
+    red_reason: "Failed for both copies against the unrewritten DENY_CONTEXT: AssertionError: 'contributor_consent_missing' not found in '回避策を探さず、reviewers.yaml の chain にある非 contributor の muse-spark エントリ、...'."
+  AC-2:
+    tests:
+      - tests.test_muse_guard.TestDenyPayloadContent.test_ac2_additional_context_routes_a_reviewer_to_the_skip_object_and_never_to_another_entry
+    red_confirmed: true
+    red_reason: "Failed for both copies against the unrewritten DENY_CONTEXT: AssertionError: 'レビュアー' not found in '回避策を探さず、reviewers.yaml の chain にある非 contributor の muse-spark エントリ、...'. The test checks the reviewer-branch token and the three absent phrases; the second branch (an agent not acting as a reviewer continues without the contributor tier and without a workaround) is confirmed by review of the constant, as the plan states."
+  AC-3:
+    tests:
+      - tests.test_muse_guard.TestDenyPayloadContent.test_deny_never_interpolates_the_command_cwd_key_or_store_path
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing tests.test_muse_guard.TestDenyPayloadContent.test_deny_never_interpolates_the_command_cwd_key_or_store_path detects a command marker, the repository path or the store path in any output field of either copy; no red state occurred for this change (the unrewritten constant already referenced only PLUGIN_SLUG). That DENY_CONTEXT references PLUGIN_SLUG and no other name is confirmed by review of the constant."
+  AC-4:
+    tests:
+      - tests.test_muse_guard.TestBothCopiesShape.test_copies_differ_in_exactly_one_line_the_plugin_slug
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing tests.test_muse_guard.TestBothCopiesShape.test_copies_differ_in_exactly_one_line_the_plugin_slug detects a line-count mismatch or any difference beyond the PLUGIN_SLUG line; no red state occurred for this change because the identical edit was applied to both copies."
+  AC-5:
+    tests:
+      - tests.test_muse_guard.TestDenyPayloadContent.test_deny_payload_has_exactly_four_fields_and_names_the_missing_consent
+      - tests.test_muse_guard.TestInvocationSpellingsDenyWithNoConsent.test_every_spelling_denies_from_both_copies_and_store_stays_absent
+      - tests.test_muse_guard.TestNoDecisionCases.test_plain_tier_in_every_spelling_is_never_denied
+      - tests.test_muse_guard.TestSourceHygiene.test_no_ask_decision_literal
+      - tests.test_muse_guard.TestSourceHygiene.test_no_allow_decision_literal
+      - tests.test_muse_guard.TestLatencyStaysWellUnderTheRegisteredTimeout.test_a_representative_sample_of_hook_calls_completes_quickly
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing tests.test_muse_guard tests listed detect a changed payload shape, decision, classification, source-hygiene literal or latency, and the unchanged permissionDecisionReason assertions; no red state occurred for this change. That the diff of both copies touches only the DENY_CONTEXT constant and its comment is confirmed by review of the task diff."
+  AC-6:
+    tests:
+      - tests.test_codex_reviewer_skip_handling.TestEmReviewProtocolSkipSemantics.test_ac5_no_em_review_file_mentions_shards_or_a_dispatch_cap
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing tests.test_codex_reviewer_skip_handling.TestEmReviewProtocolSkipSemantics.test_ac5_no_em_review_file_mentions_shards_or_a_dispatch_cap detects a shard or dispatch cap mention in any em-review file, the rewritten em-review/hooks/muse_guard.py included; no red state occurred for this change."
+  AC-7:
+    tests:
+      - tests.test_muse_guard.TestDenyPayloadContent.test_ac1_additional_context_is_one_line_and_names_the_skip_reason_the_consent_skill_and_the_record_command_in_order
+      - tests.test_muse_guard.TestDenyPayloadContent.test_ac2_additional_context_routes_a_reviewer_to_the_skip_object_and_never_to_another_entry
+      - tests.test_muse_guard.TestDenyPayloadContent.test_deny_payload_has_exactly_four_fields_and_names_the_missing_consent
+    red_confirmed: true
+    red_reason: "The two new tests failed against the unrewritten DENY_CONTEXT (see AC-1 and AC-2); the third keeps the existing muse-spark and {plugin}:contributor-consent assertions and passed before and after. The whole-suite part (python3 -m unittest discover -s tests passes) has no red state of its own: the baseline was green before the change."
