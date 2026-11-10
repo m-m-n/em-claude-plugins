@@ -1,0 +1,20 @@
+schema_version: 1
+feature: spec-change-rework-reentry
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: aedb3081899e20f177443af813c71c677689bb53
+last_input_digest: sha256:9ee6d98bdb3a83ae01c5addbd94bc09c45e89897f552a51779db19bf278fb27e
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: dispatched
+    input_digest: sha256:9ee6d98bdb3a83ae01c5addbd94bc09c45e89897f552a51779db19bf278fb27e
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
