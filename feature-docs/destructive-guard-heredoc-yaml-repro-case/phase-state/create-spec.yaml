@@ -1,7 +1,7 @@
 schema_version: 1
 feature: destructive-guard-heredoc-yaml-repro-case
 phase: create-spec
-status: applying_patch
+status: completed
 generation: 1
 base_revision: b008f906ad5923d5269287493e9b89410e6595d4
 last_input_digest: sha256:7ad0da371b01c5335a7b07de1955d2cf0287a6f56c039eb5256705503f70b152

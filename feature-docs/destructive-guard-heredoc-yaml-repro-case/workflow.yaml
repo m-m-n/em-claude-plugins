@@ -1,0 +1,137 @@
+schema_version: 1
+feature: destructive-guard-heredoc-yaml-repro-case
+created: '2026-11-11'
+base_branch: main
+goal: "# destructive-guard: heredoc 本文中の git の reset --hard を実行と誤認して deny する\n\n種別: バグ / 優先度: 中\n\n## 事象\n\nem-workflow/hooks/destructive-guard.py が、ヒアドキュメント本文に含まれるだけの git の reset --hard という文字列を実際の実行と誤認して deny を返す。\nレビュー記録（YAML）をヒアドキュメントで書き出すコマンドで、本文の引用として当該文字列を含んでいただけで deny された。\n\n## 再現\n\n次の形のコマンドで発火する（実際に git は実行されない）。\n\n    cat > /tmp/example.yaml <<'YAML'\n    description: |\n      実測: `rm -rf tmp/$X` は main deny → 本ブランチ ask、\n      `rm -rf tmp/$X; git reset --hard HEAD~1` も main deny → ask。\n    YAML\n\n結果: [destructive-guard/git-reset-hard] の deny。\n\n## 期待する挙動\n\nヒアドキュメントの本文はコマンドとして解釈しない。.claude/rules/hook-tests.md に「ヒアドキュメントの本文を 1 行ずつコマンドとして読む」誤爆は allow ケースとして残してあると書かれており、rm -rf 等については既に対処済みに見える。git-reset-hard の判定がその扱いから漏れている。\n\n## 影響\n\n誤爆は無人実行をその場で止める。ask は claude-batch 下で deny に降格されるため、誰も答えられないまま走行が終わる。\n\n## 該当箇所（推定）\n\nem-workflow/hooks/destructive-guard.py のヒアドキュメント処理と git reset --hard 判定の適用順序。rm -rf 側と同じ除外が効いていない。\n\n## 完了の定義\n\n- 上記の再現コマンドが allow になる\n- em-workflow/hooks/tests/destructive-guard-cases.json\
+  \ に allow ケースを追加\n- 本物の git reset --hard 実行が deny のまま維持されている\n- python3 em-workflow/hooks/tests/run-destructive-guard.py が全件通る\n\n## 追加指示\n\n- 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作成する。integration ブランチはローカル・remote 双方に残す（base_branch へ自動マージしない）。\n- 不明点は Codex に相談し、比較的良いと判断した選択肢を採用する。\n- その議論内容を Notion に記録する。\n"
+parent_branch: em-workflow/destructive-guard-heredoc-yaml-repro-case/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+  - basis: description_only
+    probabilities:
+      '0': 0.0
+      '1': 1.0
+      '2': 0.0
+      '3': 0.0
+  - basis: description_plus_code
+    probabilities:
+      '0': 0.08
+      '1': 0.87
+      '2': 0.05
+      '3': 0.0
+  at: '2026-11-11T00:03:45+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: 4ad375805599a38a4481091ea0265d4b8a6f9a1d
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'UI の無い変更。静的解析フックの期待値ケースの追加に収まる（design-step 推奨: skipped。tier reduced でも design は削減対象）'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: 928092d592f0cdb9398533e26d4c6358f9f255e6
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: Allow case for the reproduction shape
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+  FR2:
+    title: Guard verdict for the reproduction shape
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+  FR3:
+    title: 'Contrast deny case: real reset after the heredoc'
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-2
+  FR4:
+    title: Existing deny / ask cases are kept
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-3
+  NFR1:
+    title: 期待値スイートの全件通過
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-3
+  NFR2:
+    title: ケースのラベルとコマンドの書き方
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: プラグインの version を変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
