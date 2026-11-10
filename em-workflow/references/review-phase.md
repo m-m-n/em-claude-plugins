@@ -382,11 +382,22 @@ Retryable reasons, and how far the walk advances:
 | `budget_exhausted` | the harness's own budget is spent (LiteLLM's monthly virtual-key cap) | the next entry of a **different** harness |
 | `harness_unavailable` | the harness could not be reached at all (proxy down, profile broken, wrapper missing) | the next entry of a **different** harness |
 | `review_data_too_large` | the assembled prompt exceeds the model's context | the next entry of a **different** harness |
+| `contributor_consent_missing` | muse_guard denied the contributor tier because the repository has no recorded consent | the next entry in the chain |
 
 Budget and reachability are properties of the HARNESS, not the model: all
 `litellm` entries share one virtual key and one proxy, so retrying another
 model on it repeats the failure. Congestion is not — Vertex 429 says nothing
 about Muse, so `rate_limited` may advance within the same harness.
+
+`contributor_consent_missing` advances like `rate_limited`, not like the
+harness rows: consent is a property of the contributor tier, not of the
+harness, so the walk may advance within the same harness. The walk resumes from
+the entry after the recorded chain index and never re-dispatches the same entry
+as plain `muse-spark`; the prohibition on reading `muse-spark` as the
+contributor tier after a hop has been spent stays in force. Phase R0's
+`contributor_consented` is not re-judged and the chain is not edited. The hop
+counts against the "At most 2 fallback dispatches per perspective" budget, and
+an exhausted chain takes the existing Claude fallback dispatch described below.
 
 Every other `skip_reason` (`protocol_unresolved`, `schema_unresolved`,
 `skill_unresolved`, `no_spec`, …) is **not** retryable: it reports a config
@@ -489,6 +500,14 @@ reviewer. Diagnose the harness-level cause per
 `references/workflow-failure-recovery.md` (dispatch `workflow-doctor` over
 the failed agents' JSONL logs) and include the diagnosis in the R6 report
 rather than silently recording the perspective as missing.
+
+A reviewer result that is a valid `skipped: true` object whose `skip_reason` is
+`contributor_consent_missing` is routed by the table above even when the cause
+was a hook deny: the reviewer returned a skip object, so there is a
+`skip_reason` to route on. Only when no valid skip object comes back — the Task
+call is `is_error`, a permission denial lands in the output without a skip
+object, or the wrapper script never ran — the harness-level path above applies:
+the one Claude fallback and the `workflow-doctor` diagnosis.
 
 **spec order and rescue runs.** `spec` is never split. It runs its chain on the
 full diff: the Phase R2 front entry, this section's walk, then the Claude

@@ -16,13 +16,25 @@ Acceptance criteria covered:
   `{perspective}#loop{N}` form is left in Phase R2 or Phase R2b.
 - AC-4: Phase R2b applies the walk, the two-hop budget, the Claude fallback and
   the last-result replacement per shard.
-- AC-5: the Phase R2b table has a fourth row for `review_data_too_large`; the
-  schema-validity paragraph states the litellm exception decided by
-  `classify_results` on the recorded harness.
+- AC-5: the Phase R2b table has a fourth row for `review_data_too_large` and
+  a fifth, last row for `contributor_consent_missing`; the schema-validity
+  paragraph states the litellm exception decided by `classify_results` on the
+  recorded harness.
 - AC-6: Phase R2b states the spec order and the rescue runs.
 - AC-7: the README states per-shard dispatch and the `review_data_too_large`
   route; the reviewer input fields and `review-output-schema.json` are
   unchanged; this module uses only the standard library.
+
+muse-guard-deny-recovery task0003 adds:
+
+- the fifth Phase R2b routing row, `contributor_consent_missing`, advancing to
+  the next entry in the chain (FR3);
+- the note on that row (consent belongs to the contributor tier, the walk
+  resumes after the recorded chain index, no re-judgment and no chain edit, the
+  2-hop budget, an exhausted chain takes the Claude fallback) (FR3);
+- the precedence statement placed right after the harness-level paragraph
+  (FR4);
+- the README hop paragraph putting the value in the next-entry group (FR8).
 
 The matchers slice Phase R2 and Phase R2b by their headings and compare
 whitespace-normalized phrases. Every matcher gets forged texts it must reject.
@@ -582,6 +594,11 @@ FOURTH_ROW_LINE = (
     "| `review_data_too_large` | the assembled prompt exceeds the model's "
     "context | the next entry of a **different** harness |"
 )
+FIFTH_ROW_LINE = (
+    "| `contributor_consent_missing` | muse_guard denied the contributor "
+    "tier because the repository has no recorded consent | the next entry "
+    "in the chain |"
+)
 
 
 def _first_table_lines(section):
@@ -602,9 +619,9 @@ def _first_table_lines(section):
 
 def routing_table_ok(r2b):
     table = _first_table_lines(r2b)
-    if len(table) != 2 + 4:
+    if len(table) != 2 + 5:
         return False
-    return table[2:] == ORIGINAL_ROW_LINES + [FOURTH_ROW_LINE]
+    return table[2:] == ORIGINAL_ROW_LINES + [FOURTH_ROW_LINE, FIFTH_ROW_LINE]
 
 
 LITELLM_ANCHOR = "classify_results"
@@ -649,6 +666,9 @@ class TestAC5RoutingTableAndLitellmException(unittest.TestCase):
         cls.r2b = _Doc.r2b()
 
     def test_table_has_four_rows_and_the_three_old_rows_are_unchanged(self):
+        # The name is kept so the records that list it keep resolving. The
+        # table now has five data rows: the four earlier rows byte-identical,
+        # then `contributor_consent_missing` as the last row.
         self.assertTrue(routing_table_ok(self.r2b))
 
     def test_litellm_exception_is_stated_with_the_recorded_harness(self):
@@ -673,6 +693,57 @@ class TestAC5RoutingTableAndLitellmException(unittest.TestCase):
 
     def test_forged_three_row_table_is_rejected(self):
         forged = self.r2b.replace(FOURTH_ROW_LINE + "\n", "", 1)
+        self.assertTrue(forged != self.r2b, "mutation did not apply")
+        self.assertFalse(routing_table_ok(forged))
+
+    def test_forged_four_row_table_without_the_fifth_row_is_rejected(self):
+        forged = self.r2b.replace(FIFTH_ROW_LINE + "\n", "", 1)
+        self.assertTrue(forged != self.r2b, "mutation did not apply")
+        self.assertEqual(len(_first_table_lines(forged)), 2 + 4)
+        self.assertFalse(routing_table_ok(forged))
+
+    def test_forged_fifth_row_advancing_to_a_different_harness_is_rejected(
+        self,
+    ):
+        forged = self.r2b.replace(
+            FIFTH_ROW_LINE,
+            FIFTH_ROW_LINE.replace(
+                "the next entry in the chain",
+                "the next entry of a **different** harness",
+            ),
+            1,
+        )
+        self.assertTrue(forged != self.r2b, "mutation did not apply")
+        self.assertFalse(routing_table_ok(forged))
+
+    def test_forged_fifth_row_with_a_changed_meaning_is_rejected(self):
+        forged = self.r2b.replace(
+            "muse_guard denied the contributor tier because the repository "
+            "has no recorded consent",
+            "muse_guard denied the contributor tier",
+            1,
+        )
+        self.assertTrue(forged != self.r2b, "mutation did not apply")
+        self.assertFalse(routing_table_ok(forged))
+
+    def test_forged_fifth_row_ahead_of_the_fourth_is_rejected(self):
+        forged = self.r2b.replace(
+            FOURTH_ROW_LINE + "\n" + FIFTH_ROW_LINE,
+            FIFTH_ROW_LINE + "\n" + FOURTH_ROW_LINE,
+            1,
+        )
+        self.assertTrue(forged != self.r2b, "mutation did not apply")
+        self.assertFalse(routing_table_ok(forged))
+
+    def test_forged_changed_old_row_after_the_fifth_row_is_rejected(self):
+        forged = self.r2b.replace(
+            "| `harness_unavailable` | the harness could not be reached at all "
+            "(proxy down, profile broken, wrapper missing) | the next entry of "
+            "a **different** harness |",
+            "| `harness_unavailable` | the harness could not be reached | the "
+            "next entry of a **different** harness |",
+            1,
+        )
         self.assertTrue(forged != self.r2b, "mutation did not apply")
         self.assertFalse(routing_table_ok(forged))
 
@@ -728,7 +799,273 @@ class TestAC5RoutingTableAndLitellmException(unittest.TestCase):
         self.assertFalse(litellm_exception_ok(forged))
 
     def test_table_keeps_exactly_four_retryable_rows_by_count(self):
-        self.assertEqual(self.r2b.count("| the next entry"), 4)
+        # The name is kept so the records that list it keep resolving. The
+        # section holds five `| the next entry` occurrences: one per data row,
+        # none in the prose outside the table.
+        self.assertEqual(self.r2b.count("| the next entry"), 5)
+        self.assertEqual(len(_first_table_lines(self.r2b)) - 2, 5)
+
+
+# ---------------------------------------------------------------------------
+# muse-guard-deny-recovery task0003: the note on the `contributor_consent_missing`
+# row (FR3) and the precedence over the harness-level path (FR4)
+# ---------------------------------------------------------------------------
+
+CONSENT_NOTE_ANCHOR = "consent is a property of the contributor tier"
+WALK_RULES_MARKER = "Walk rules:"
+
+CONSENT_NOTE_PHRASES = [
+    "consent is a property of the contributor tier, not of the harness",
+    "so the walk may advance within the same harness",
+    "resumes from the entry after the recorded chain index",
+    "never re-dispatches the same entry as plain `muse-spark`",
+    "Phase R0's `contributor_consented` is not re-judged",
+    "the chain is not edited",
+    'The hop counts against the "At most 2 fallback dispatches per '
+    'perspective" budget',
+    "an exhausted chain takes the existing Claude fallback",
+]
+
+
+def contributor_consent_note_ok(r2b):
+    """The note sits in prose after the routing table (after its last row,
+    before the walk rules), outside the table, and states every point."""
+    paragraph = _paragraph(r2b, CONSENT_NOTE_ANCHOR)
+    if not paragraph or paragraph.lstrip().startswith("|"):
+        return False
+    if not _contains_all(paragraph, CONSENT_NOTE_PHRASES):
+        return False
+    norm = _norm(r2b)
+    if norm.count(CONSENT_NOTE_ANCHOR) != 1:
+        return False
+    last_row = norm.find(FIFTH_ROW_LINE)
+    note = norm.find(CONSENT_NOTE_ANCHOR)
+    walk_rules = norm.find(WALK_RULES_MARKER)
+    return -1 < last_row < note < walk_rules
+
+
+HARNESS_LEVEL_ANCHOR = (
+    "A reviewer that fails at the **harness** level never reaches this table"
+)
+# The harness-level paragraph, whitespace-normalized, byte-for-byte as it was
+# before the precedence statement was added after it.
+HARNESS_LEVEL_PARAGRAPH = (
+    "A reviewer that fails at the **harness** level never reaches this table: "
+    "the Task call itself comes back `is_error`, a permission denial lands in "
+    "its output, or the Codex wrapper script never executed, so there is no "
+    "`skip_reason` to route on. That is not a chain-walk case, but the "
+    "perspective still has no completed run and no further chain entry to "
+    "try, so — separately from diagnosing the harness failure — it receives "
+    "the same ONE Claude fallback dispatch as the malformed-result and "
+    "chain-exhaustion cases above, issued after this determination and never "
+    "concurrently with a harness reviewer. Diagnose the harness-level cause "
+    "per `references/workflow-failure-recovery.md` (dispatch `workflow-doctor` "
+    "over the failed agents' JSONL logs) and include the diagnosis in the R6 "
+    "report rather than silently recording the perspective as missing."
+)
+
+PRECEDENCE_PHRASES = [
+    "a valid `skipped: true` object whose `skip_reason` is "
+    "`contributor_consent_missing`",
+    "is routed by the table above even when the cause was a hook deny",
+    "no valid skip object comes back",
+    "the Task call is `is_error`",
+    "a permission denial lands in the output without a skip object",
+    "the wrapper script never ran",
+    "the harness-level path above applies",
+    "the one Claude fallback and the `workflow-doctor` diagnosis",
+]
+
+
+def _blocks(text):
+    return re.split(r"\n\s*\n", text)
+
+
+def harness_level_paragraph_unchanged_ok(r2b):
+    blocks = _blocks(r2b)
+    holders = [b for b in blocks if HARNESS_LEVEL_ANCHOR in _norm(b)]
+    return len(holders) == 1 and _norm(holders[0]) == HARNESS_LEVEL_PARAGRAPH
+
+
+def precedence_statement_ok(r2b):
+    """The precedence statement is the paragraph immediately after the
+    harness-level paragraph, and states both halves."""
+    blocks = _blocks(r2b)
+    holders = [
+        i for i, b in enumerate(blocks) if HARNESS_LEVEL_ANCHOR in _norm(b)
+    ]
+    if len(holders) != 1 or holders[0] + 1 >= len(blocks):
+        return False
+    following = blocks[holders[0] + 1]
+    if not following.strip() or following.lstrip().startswith("|"):
+        return False
+    return _contains_all(following, PRECEDENCE_PHRASES)
+
+
+class TestContributorConsentMissingNoteAndPrecedence(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.r2b = _Doc.r2b()
+
+    # -- non-vacuity: the matchers pass on the real text ------------------
+
+    def test_note_matcher_passes_on_the_real_text(self):
+        self.assertTrue(_paragraph(self.r2b, CONSENT_NOTE_ANCHOR))
+        self.assertTrue(contributor_consent_note_ok(self.r2b))
+
+    def test_precedence_matcher_passes_on_the_real_text(self):
+        self.assertTrue(harness_level_paragraph_unchanged_ok(self.r2b))
+        self.assertTrue(precedence_statement_ok(self.r2b))
+
+    def test_harness_level_sentence_is_still_pinned_verbatim(self):
+        self.assertIn(HARNESS_LEVEL_ANCHOR, _norm(self.r2b))
+
+    # -- the note (FR3) ----------------------------------------------------
+
+    def test_every_note_phrase_is_load_bearing(self):
+        for phrase in CONSENT_NOTE_PHRASES:
+            with self.subTest(phrase=phrase):
+                mutated = _forge(self.r2b, CONSENT_NOTE_ANCHOR, phrase)
+                self.assertFalse(contributor_consent_note_ok(mutated))
+
+    def test_forged_text_without_the_note_is_rejected(self):
+        paragraph = _paragraph(self.r2b, CONSENT_NOTE_ANCHOR)
+        forged = self.r2b.replace(paragraph, "", 1)
+        self.assertTrue(forged != self.r2b, "mutation did not apply")
+        self.assertFalse(contributor_consent_note_ok(forged))
+
+    def test_forged_note_that_re_dispatches_as_plain_muse_spark_is_rejected(
+        self,
+    ):
+        forged = _forge(
+            self.r2b,
+            CONSENT_NOTE_ANCHOR,
+            "never re-dispatches the same entry as plain `muse-spark`",
+            "re-dispatches the same entry as plain `muse-spark`",
+        )
+        self.assertFalse(contributor_consent_note_ok(forged))
+
+    def test_forged_note_that_re_judges_consent_is_rejected(self):
+        forged = _forge(
+            self.r2b,
+            CONSENT_NOTE_ANCHOR,
+            "Phase R0's `contributor_consented` is not re-judged",
+            "Phase R0's `contributor_consented` is judged again",
+        )
+        self.assertFalse(contributor_consent_note_ok(forged))
+
+    def test_forged_note_moved_before_the_routing_table_is_rejected(self):
+        paragraph = _paragraph(self.r2b, CONSENT_NOTE_ANCHOR)
+        moved = self.r2b.replace(paragraph, "", 1).replace(
+            R2B_TABLE_HEADER, paragraph.strip() + "\n\n" + R2B_TABLE_HEADER, 1
+        )
+        self.assertTrue(moved != self.r2b, "mutation did not apply")
+        self.assertFalse(contributor_consent_note_ok(moved))
+
+    def test_forged_note_moved_after_the_walk_rules_is_rejected(self):
+        paragraph = _paragraph(self.r2b, CONSENT_NOTE_ANCHOR)
+        moved = self.r2b.replace(paragraph, "", 1) + "\n\n" + paragraph
+        self.assertTrue(moved != self.r2b, "mutation did not apply")
+        self.assertFalse(contributor_consent_note_ok(moved))
+
+    def test_forged_note_written_as_a_table_row_is_rejected(self):
+        paragraph = _paragraph(self.r2b, CONSENT_NOTE_ANCHOR)
+        forged = self.r2b.replace(
+            paragraph, "| " + _norm(paragraph) + " |\n", 1
+        )
+        self.assertTrue(forged != self.r2b, "mutation did not apply")
+        self.assertFalse(contributor_consent_note_ok(forged))
+
+    def test_note_adds_no_next_entry_cell_outside_the_table(self):
+        paragraph = _paragraph(self.r2b, CONSENT_NOTE_ANCHOR)
+        self.assertNotIn("| the next entry", _norm(paragraph))
+
+    # -- the precedence over the harness-level path (FR4) -----------------
+
+    def test_every_precedence_phrase_is_load_bearing(self):
+        following = self._following_paragraph(self.r2b)
+        for phrase in PRECEDENCE_PHRASES:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, _norm(following))
+                mutated = self.r2b.replace(
+                    following, _norm(following).replace(phrase, "", 1), 1
+                )
+                self.assertTrue(mutated != self.r2b, "mutation did not apply")
+                self.assertFalse(precedence_statement_ok(mutated))
+
+    def test_forged_text_without_the_precedence_statement_is_rejected(self):
+        following = self._following_paragraph(self.r2b)
+        forged = self.r2b.replace(following, "", 1)
+        self.assertTrue(forged != self.r2b, "mutation did not apply")
+        self.assertFalse(precedence_statement_ok(forged))
+
+    def test_forged_precedence_statement_before_the_harness_paragraph_is_rejected(
+        self,
+    ):
+        following = self._following_paragraph(self.r2b)
+        harness = _paragraph(self.r2b, HARNESS_LEVEL_ANCHOR)
+        swapped = self.r2b.replace(
+            harness.strip() + "\n\n" + following.strip(),
+            following.strip() + "\n\n" + harness.strip(),
+            1,
+        )
+        self.assertTrue(swapped != self.r2b, "mutation did not apply")
+        self.assertFalse(precedence_statement_ok(swapped))
+
+    def test_forged_precedence_statement_not_adjacent_is_rejected(self):
+        following = self._following_paragraph(self.r2b)
+        forged = self.r2b.replace(
+            following, "An unrelated sentence.\n\n" + following, 1
+        )
+        self.assertTrue(forged != self.r2b, "mutation did not apply")
+        self.assertFalse(precedence_statement_ok(forged))
+
+    def test_forged_statement_that_drops_the_harness_level_fallback_is_rejected(
+        self,
+    ):
+        following = self._following_paragraph(self.r2b)
+        forged = self.r2b.replace(
+            following,
+            _norm(following).replace(
+                "the one Claude fallback and the `workflow-doctor` diagnosis",
+                "nothing further",
+                1,
+            ),
+            1,
+        )
+        self.assertTrue(forged != self.r2b, "mutation did not apply")
+        self.assertFalse(precedence_statement_ok(forged))
+
+    def test_forged_harness_level_paragraph_with_a_changed_byte_is_rejected(
+        self,
+    ):
+        forged = _forge(
+            self.r2b,
+            HARNESS_LEVEL_ANCHOR,
+            "a permission denial lands in its output",
+            "a permission denial lands in its log",
+        )
+        self.assertFalse(harness_level_paragraph_unchanged_ok(forged))
+
+    def test_forged_harness_level_sentence_rewritten_is_rejected(self):
+        forged = self.r2b.replace(
+            HARNESS_LEVEL_ANCHOR,
+            "A reviewer that fails at the harness level reaches this table",
+            1,
+        )
+        self.assertTrue(forged != self.r2b, "mutation did not apply")
+        self.assertFalse(harness_level_paragraph_unchanged_ok(forged))
+        self.assertFalse(precedence_statement_ok(forged))
+
+    @staticmethod
+    def _following_paragraph(r2b):
+        blocks = _blocks(r2b)
+        index = next(
+            i
+            for i, b in enumerate(blocks)
+            if HARNESS_LEVEL_ANCHOR in _norm(b)
+        )
+        return blocks[index + 1]
 
 
 # ---------------------------------------------------------------------------
@@ -854,6 +1191,22 @@ def readme_hop_paragraph_ok(readme):
     return bool(paragraph) and all(p in paragraph for p in README_HOP_PHRASES)
 
 
+# muse-guard-deny-recovery task0003 (FR8): the hop paragraph lists
+# `contributor_consent_missing` in the group that advances to the next entry
+# (the `rate_limited` group), not in the different-harness group.
+README_NEXT_ENTRY_GROUP = (
+    "`rate_limited` / `contributor_consent_missing` は次のエントリへ、"
+)
+
+
+def readme_consent_in_next_entry_group_ok(readme):
+    paragraph = _paragraph(readme, README_HOP_ANCHOR)
+    if not paragraph or README_NEXT_ENTRY_GROUP not in paragraph:
+        return False
+    other_group = paragraph[paragraph.index("`budget_exhausted`"):]
+    return "`contributor_consent_missing`" not in other_group
+
+
 class TestAC7ReadmeAndUnchangedInterfaces(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -888,6 +1241,43 @@ class TestAC7ReadmeAndUnchangedInterfaces(unittest.TestCase):
         )
         self.assertTrue(forged != self.readme, "mutation did not apply")
         self.assertFalse(readme_hop_paragraph_ok(forged))
+
+    def test_hop_paragraph_puts_the_consent_value_in_the_next_entry_group(
+        self,
+    ):
+        self.assertTrue(readme_consent_in_next_entry_group_ok(self.readme))
+        # Both pinned phrases stay verbatim next to it.
+        self.assertTrue(readme_hop_paragraph_ok(self.readme))
+
+    def test_forged_readme_without_the_consent_value_is_rejected(self):
+        forged = self.readme.replace(" / `contributor_consent_missing`", "", 1)
+        self.assertTrue(forged != self.readme, "mutation did not apply")
+        self.assertFalse(readme_consent_in_next_entry_group_ok(forged))
+
+    def test_forged_readme_with_the_consent_value_in_the_other_group_is_rejected(
+        self,
+    ):
+        forged = self.readme.replace(
+            " / `contributor_consent_missing` は次のエントリへ、"
+            "`budget_exhausted` / `harness_unavailable` / "
+            "`review_data_too_large` は",
+            " は次のエントリへ、`budget_exhausted` / `harness_unavailable` / "
+            "`review_data_too_large` / `contributor_consent_missing` は",
+            1,
+        )
+        self.assertTrue(forged != self.readme, "mutation did not apply")
+        self.assertFalse(readme_consent_in_next_entry_group_ok(forged))
+
+    def test_readme_has_one_slash_listing_ending_in_review_data_too_large(
+        self,
+    ):
+        # An existing forged-text test removes the first such occurrence and
+        # expects the hop paragraph to lose it, so none may precede it.
+        self.assertEqual(self.readme.count(" / `review_data_too_large`"), 1)
+        self.assertIn(
+            " / `review_data_too_large`",
+            _paragraph(self.readme, README_HOP_ANCHOR),
+        )
 
     def test_forged_readme_without_per_shard_hops_is_rejected(self):
         forged = self.readme.replace("ホップ数はシャードごとに数える", "", 1)

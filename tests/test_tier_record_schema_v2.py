@@ -493,8 +493,11 @@ class TestRetrospectTierDecisionBlock(unittest.TestCase):
 # R2 gained the review-input measurement, the per-shard dispatch and the run_id
 # grammar; Phase R2b gained the per-shard walk, the `review_data_too_large`
 # row, the litellm empty-result exception and the spec rescue order.
+# Refreshed by task0003 of muse-guard-deny-recovery (FR3, FR4): Phase R2b
+# gained the `contributor_consent_missing` routing row, the note on that row
+# and the precedence statement after the harness-level paragraph.
 REVIEW_PHASE_SHA256 = (
-    "4992622bbbbabef9fd9b8513b6f61db2ceca7e62fce4d25b0f76d390c0c56a82"
+    "ad57fbdbd9056b5551200078df003c2148ce7cf06382f35e88a78208c00d0ff2"
 )
 REVIEW_RULES_SHA256 = (
     "56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931"
