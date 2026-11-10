@@ -1,0 +1,13 @@
+schema_version: 1
+feature: contributor-consent-command-path
+records:
+- question_id: create-plan.plugin-version-bump
+  packet_id: null
+  answered_at: "2026-11-10T19:50:37+09:00"
+  source: batch-codex
+  answer_mode: option
+  selected_option_ids:
+  - A
+  freeform: null
+  normalized_answer: "A: version に触れない。完了の定義の version 項目は「対象なし（プラグインの内容に変更なし）」として報告する"
+  resolution_note: "gate: create-plan 未決事項（タスク記述の完了の定義『両プラグインの version を bump した』と、実装で version を触らず Actions が変更のあったプラグインの patch を上げるリポジトリのルールの衝突。計画では変更がテストのみでプラグイン配下に差分が出ない見込み）; options: A=version に触れない / B=SKILL.md 2 コピーに意味を変えない変更を入れて Actions に上げさせる / C=plugin.json と marketplace.json を手で上げる（ルール違反）; chosen: A; not chosen: B（必要性のない変更）, C（ルール違反）; codex_consulted: true（Codex の根拠: ルールは patch を Actions に任せ実装で version を変えないと定める。ワークフローはプラグイン配下の変更を検出するため、テストだけの変更では更新対象が生じない。両 SKILL.md の手順 5 はすでにスキル自身が実行する設計で端末へ貼る手順はなく、本文を変えないならキャッシュ更新のための増版は不要）; opus_escalation: false"
