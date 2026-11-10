@@ -1,16 +1,57 @@
 schema_version: 1
 feature: contributor-consent-command-path
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: 8dbc3db85048d133415b3894df0bdd3c12c87641
 last_input_digest: sha256:a526100664ce478bbd1e45c4749f1d8e34a28d6d13bdeadf60fa4f9e1061b727
 active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-11-10T19:35:00+09:00'
+    questions:
+    - question_id: requirement.scope.premise-mismatch
+      status: answered
+    - question_id: design-step.recommendation
+      status: answered
+answers:
+  requirement.scope.premise-mismatch:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-10T19:40:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - align_test_to_executing_skill
+    freeform: null
+    normalized_answer: Keep the current design where the skill runs --record/--remove
+      itself. Replace the literal command pins in tests/test_contributor_consent_skill.py
+      with structural checks, and update the outdated task0009 docstring/comments.
+    resolution_note: 'gate: create-spec.requirement-clarification (policy action codex_consultation,
+      record_as_assumption). Codex consulted (1 turn, codex entry); Codex chose align_test_to_executing_skill.
+      Basis: commit 0d42ad24b already moved step 5 to skill-executed commands and
+      removed the isatty precondition; ${CLAUDE_PLUGIN_ROOT} in skill text is substituted
+      at load time. Options not chosen: present_with_resolved_path (reverses the current
+      design), close_no_change (leaves the outdated test pins and docstring). Codex
+      extra requirements adopted: the test must also confirm agree->--record, revoke->--remove,
+      decline/keep/no-answer->no change; the unresolved-variable check targets lines
+      shown to the user and must not ban load-time-substituted ${CLAUDE_PLUGIN_ROOT}
+      in the skill body; align task0009 test names/comments/docstring. Codex risk:
+      a check for absence of forbidden phrasing alone would pass even if the record/remove
+      step were deleted. Opus escalation did not run.'
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-10T19:40:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 'Accept the recommendation: skip the design step (no UI).'
+    resolution_note: batch-policies.yaml create-spec.design-step -> decide_autonomously
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:a526100664ce478bbd1e45c4749f1d8e34a28d6d13bdeadf60fa4f9e1061b727
   output_digest: null
   dispatch_digest_inputs:
