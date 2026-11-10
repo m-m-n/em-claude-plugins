@@ -115,7 +115,7 @@ workflow:
   result: pass
   failed_items: []
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: Rewrite the muse_guard DENY_CONTEXT to the reviewer-conditional recovery route
