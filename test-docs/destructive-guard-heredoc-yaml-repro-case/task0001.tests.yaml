@@ -1,0 +1,110 @@
+task_id: task0001
+baseline_failures: []          # python3 em-workflow/hooks/tests/run-destructive-guard.py -> 1207/1207 passed; python3 -m unittest discover -s tests -> Ran 15802 tests, OK (skipped=1), on the untouched worktree
+final_failures: []             # re-executed after the case file and this record were written, as the project test command run verbatim: runner -> 1209/1209 passed; python3 -m unittest discover -s tests -> Ran 15803 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing
+      tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      detects a changed exit status or a FAIL line over every case of the
+      case file, including the new allow case; no red state occurred for
+      this change. Before any case was added, the reproduction command was
+      fed to the unchanged guard directly (Bash payload on standard input)
+      and the guard answered permissionDecision allow, so the behaviour the
+      criterion pins already existed (SPEC assumption A1 held; processing
+      flow step 3a). The case-shape check (one allow case, three elements,
+      command equal to the reproduction command, Japanese label, label
+      unique) is a one-off script kept outside the repository.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing
+      tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      runs the runner against the in-tree guard and rejects any FAIL line;
+      no red state occurred for this change. The in-tree guard already
+      returned allow for the reproduction command before the case was added
+      (direct invocation), so em-workflow/hooks/destructive-guard.py is left
+      byte-identical to the base commit (git diff against the base commit
+      is empty for that path).
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing
+      tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      rejects any FAIL line, including one for the new deny case; no red
+      state occurred for this change. Before any case was added, the
+      reproduction command followed by a line feed and the line
+      "git reset --hard HEAD~1" was fed to the unchanged guard directly and
+      the guard answered permissionDecision deny with a reason beginning
+      "[destructive-guard/git-reset-hard]", so the behaviour pre-existed.
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_every_pre_task_command_preserved_with_only_named_changes
+      - tests.test_destructive_guard_lexer_agreement.TestNonAdjacentCloseRereading.test_the_entries_present_at_the_feature_base_are_unchanged
+      - tests.test_destructive_guard_lexer_agreement.TestModuleContract.test_round2_deferred_cases_come_only_after_the_base_entries
+      - tests.test_destructive_guard_merge_allow.TestAC6ExistingCasesAndDocs.test_ac6_every_pre_existing_case_is_present_and_unchanged
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing tests listed
+      here pin the first 627, 773 and 942 entries of the case table by
+      digest and the pre-task commands by decision; they detect a removed,
+      edited or reordered existing case, and the two new cases were
+      therefore appended at the end of the table (a mid-table insertion
+      would change those digests). No red state occurred for this change.
+      The criterion's full statement (every existing case present with the
+      same decision, label and command, and exactly two more cases than at
+      the base commit) was also checked by a one-off script kept outside the
+      repository, comparing the parsed case list at the base commit with the
+      current one; that script failed on its "exactly two more cases"
+      assertion before the cases were added and passed afterwards. It is not
+      a test that the project's test command can select, so it does not
+      make this entry a confirmed red.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing
+      tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      requires exit status 0, no FAIL in the output and an "N/N passed" line
+      with equal numbers; no red state occurred for this change (the two new
+      cases pass against the unchanged guard). Run directly, the runner
+      printed 1207/1207 passed before the change and 1209/1209 passed after
+      it (1208 cases plus the unattended-demotion check).
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      No existing test reads the text of the two new commands (searched
+      tests/ for destructive-guard-cases.json by relative path and by
+      filename; the hits read the case table for other purposes, and the
+      only home-directory check there, in
+      tests/test_destructive_guard_merge_allow.py, looks at the cwd element
+      of four-element cases only). The criterion is checked by the one-off
+      script outside the repository: no /home/, no $HOME, no word-initial
+      tilde, and the only path is /tmp/example.yaml. The commands contain
+      the revision suffix HEAD~1 (required by the verbatim reproduction
+      command), so the literal tilde character cannot be absent; the check
+      reads the criterion as "no home-directory path". No executable check
+      of the new text existed before the cases were added, so no red state
+      could be observed.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      The criterion is an invariant over the list of files the task's
+      commits change (em-workflow/.claude-plugin/plugin.json and
+      .claude-plugin/marketplace.json must stay unchanged); it is checked
+      from git diff --name-only against the base commit. Searched tests/ for
+      plugin.json and marketplace.json by name: tests such as
+      tests/test_plugin_version_parity.py read both files but only compare
+      them with each other and with a fixed baseline, so they do not detect
+      "unchanged since the base commit" and are not listed. No change was
+      made to these files, so no failing state could occur.

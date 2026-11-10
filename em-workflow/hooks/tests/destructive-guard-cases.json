@@ -1225,5 +1225,7 @@
   ["deny", "destructive-guard-false-deny 再現 $[x] は変数の値を算術評価し添字の置換を実行するので deny", "x='a[$(git branch -D example)]'; echo $[x]"],
   ["deny", "destructive-guard-false-deny 再現 RANDOM への代入は値を算術評価し添字の置換を実行するので deny", "RANDOM='a[$(git branch -D example)]' true"],
   ["deny", "destructive-guard-false-deny 再現 rg --pre は前処理コマンドを実行するので単一引用符内の置換は deny", "rg --pre bash needle '$(git branch -D example)'"],
-  ["deny", "destructive-guard-false-deny 再現 書式が \"$opt\" の printf は -v を取りうるので単一引用符内の置換は deny", "opt=-v; printf \"$opt\" 'a[$(git branch -D example)]' x"]
+  ["deny", "destructive-guard-false-deny 再現 書式が \"$opt\" の printf は -v を取りうるので単一引用符内の置換は deny", "opt=-v; printf \"$opt\" 'a[$(git branch -D example)]' x"],
+  ["allow", "destructive-guard-heredoc-yaml-repro-case 再現: クォート区切りのヒアドキュメントで cat が YAML ファイルを書き、本文のバッククォート内に rm -rf と git reset --hard を引用しているだけなら allow", "cat > /tmp/example.yaml <<'YAML'\ndescription: |\n  実測: `rm -rf tmp/$X` は main deny → 本ブランチ ask、\n  `rm -rf tmp/$X; git reset --hard HEAD~1` も main deny → ask。\nYAML"],
+  ["deny", "destructive-guard-heredoc-yaml-repro-case 対照: 再現形の終端行の後に本物の git reset --hard HEAD~1 の行が続けば、その行は実コマンドとして deny", "cat > /tmp/example.yaml <<'YAML'\ndescription: |\n  実測: `rm -rf tmp/$X` は main deny → 本ブランチ ask、\n  `rm -rf tmp/$X; git reset --hard HEAD~1` も main deny → ask。\nYAML\ngit reset --hard HEAD~1"]
 ]
