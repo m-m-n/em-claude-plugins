@@ -356,6 +356,12 @@ objective.
    registers no task; this invariant does not govern it — its precondition
    is `references/implement-phase.md`'s Step I.0 (cited, not restated
    here).
+   The SPEC-change transition (Section 10, the
+   `**When rework needs a SPEC.md change**` block) also returns `implement` to
+   `pending`, but registers no task (Invariant 9); this invariant does not
+   govern it either, although Section 10 describes it — its re-entry
+   precondition is `references/implement-phase.md`'s Step I.0 (cited, not
+   restated here).
 2. Every newly synthesized task's `status` is `pending`.
 3. Every rework task plan states objective, test-translatable Acceptance
    Criteria.
