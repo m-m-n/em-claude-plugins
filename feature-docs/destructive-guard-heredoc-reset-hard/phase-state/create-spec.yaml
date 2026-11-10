@@ -1,31 +1,68 @@
 schema_version: 1
 feature: destructive-guard-heredoc-reset-hard
 phase: create-spec
-status: completed
+status: dispatching
 generation: 1
-base_revision: e9163b7dcb400408c2374d0fbc6f6094eca203e0
-last_input_digest: sha256:7fc3fe36ae7d385a6283e9b5913e0cabda7efaae3bf99b62e9b1af0ea384a715
-active_request_id: null
+base_revision: 501de3bcb026256b5d645ee6e7847e2f091fbbec
+last_input_digest: sha256:c047c20112658b1a1a06b87d0b6dc6e7b8d255645dc05fd452b5a199571f0046
+active_request_id: create-spec-run-0002
 packets: {}
-answers: {}
+answers:
+  create-spec.design-step:
+    option_id: decide_autonomously
+    source: batch-policies.yaml
+    note: 'analyst recommendation: skipped (no UI surface)'
+  create-spec.design-system:
+    option_id: top_candidate_or_none
+    source: batch-policies.yaml
+    note: no candidates -> none
 worker_runs:
 - request_id: create-spec-run-0001
   status: completed
-  input_digest: sha256:7fc3fe36ae7d385a6283e9b5913e0cabda7efaae3bf99b62e9b1af0ea384a715
-  output_digest: null
+  input_digest: sha256:d94dc694d5025c28bcbc75b55f875419dec64abf033773ded072ced6decb52fc
+  output_digest: sha256:d94dc694d5025c28bcbc75b55f875419dec64abf033773ded072ced6decb52fc
+  dispatch_digest_inputs:
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+    em-workflow/hooks/destructive-guard.py: sha256:1103280f3fefd5335269c31b7871b8a2d133658dfff5bfcd355494a81b6b96b9
+    em-workflow/hooks/tests/destructive-guard-cases.json: sha256:2d06b5c74dc28c55d99a8f3e3b31d86ac0a6d16a973804d7eace72d0d8f08d92
+    em-workflow/hooks/tests/run-destructive-guard.py: sha256:e09d392a2857b4b6fe126502b856bca6ce989742b027a59704fc3deb64e055db
+    .claude/rules/hook-tests.md: sha256:2ae9d862d09c554e2f88d864896d09b89676f7ce567b7f3c098a89e610ffea9b
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
 - request_id: create-spec-run-0002
-  status: completed
-  input_digest: sha256:7fc3fe36ae7d385a6283e9b5913e0cabda7efaae3bf99b62e9b1af0ea384a715
+  status: dispatched
+  input_digest: sha256:c047c20112658b1a1a06b87d0b6dc6e7b8d255645dc05fd452b5a199571f0046
   output_digest: null
-artifacts:
-- path: feature-docs/destructive-guard-heredoc-reset-hard/REQUIREMENTS.md
-  sha256: sha256:99d6484cf428583023c750580fda5e9a088a645e63295d37d597d6faf07aeedd
-  produced_by: create-spec-run-0002
-- path: feature-docs/destructive-guard-heredoc-reset-hard/SPEC.md
-  sha256: sha256:4292536f6269167c1ecae6ac3601fced05d2126bb7b51851a369e04643fe5276
-  produced_by: create-spec-run-0002
+  dispatch_digest_inputs:
+    em-workflow/references/templates/spec-document.md: sha256:a5d0106c39a5df7dc2365357a9546588275ed6c7a1651c866e75fa327a7fa592
+    em-workflow/references/contracts/spec-writer-contract.md: sha256:1e63f69687c6850e890f66b5ca92af7f3b0d02645cc464fca88455ad2269d671
+artifacts: []
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
-resolved_input_cache: {}
+resolved_input_cache:
+  reference_scan_targets:
+    resolved_at_generation: 1
+    paths:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - em-workflow/hooks/tests/run-destructive-guard.py
+    - .claude/rules/hook-tests.md
+    truncated: false
+  design_system_candidates:
+    resolved_at_generation: 1
+    paths: []
+    truncated: false
+  e2e:
+    resolved_at_generation: 1
+    paths: []
+    truncated: false
 last_error: null
+assumptions:
+- id: A1
+  statement: 現行ツリーは再現コマンドを既に allow し、本物の reset --hard を deny する。報告された deny は古いフックのコピー由来と推定。変更はテストケースの追加のみで、FR1
+    が失敗したときだけ destructive-guard.py の修正が範囲に入る
+- id: A2
+  statement: インタプリタ宛て（| bash / python3 / sh）のヒアドキュメントは設計どおり deny のまま
+- id: A3
+  statement: 区切り子を引用しない <<YAML 形は範囲外（本文のバッククォートを bash が実行するため誤爆ではない）
