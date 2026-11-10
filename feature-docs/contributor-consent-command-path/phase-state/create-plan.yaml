@@ -1,0 +1,35 @@
+schema_version: 1
+feature: contributor-consent-command-path
+phase: create-plan
+status: in_progress
+generation: 1
+base_revision: 650b55fbcb912d3d6f3a45103646d23b3fc8a9ec
+last_input_digest: sha256:6ef859fba4c92b8a62dd2ddfa619ad67a82c061dd34cba89e397ac0a60096a2e
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:6ef859fba4c92b8a62dd2ddfa619ad67a82c061dd34cba89e397ac0a60096a2e
+  output_digest: null
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/planner-contract.md: sha256:df2bf3f0321c2627a31b878a14adb176ee7c2131638245112e5d3bb27f7a3682
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
+    em-workflow/references/workflow-schema.md: sha256:5db914a170c0bd97886671160a2c3498127ffd83f0814bc8fb67407f4dc563ee
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/contributor-consent-command-path/REQUIREMENTS.md: sha256:1f68c1069e13cabee9b5fe8c855e5279ff4ed0d3d154e26b73a6a82295fd9e10
+    feature-docs/contributor-consent-command-path/SPEC.md: sha256:ae6ae062ff1ca8da09f38cdc88180bd8d62df7e10a3b7a31b933da550c8998fb
+    feature-docs/contributor-consent-command-path/workflow.yaml: sha256:46a0fbffd329af9fd584d741b79d737e27efb5326a51151070d151f519202e78
+  self_write_set: []
+artifacts: []
+other_feature_doc_fixes: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
