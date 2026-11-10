@@ -107,7 +107,8 @@ workflow:
   completed_at_commit: ea14d0dab06148ba966afa16462f3992cdbab4e6
   base_commit: ee8851ebe8ff4ca6606a50dc9db898c065610da6
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: ab7156ad5a857b591436cbd789cba2ce6d846c57
 - id: verify
   status: pending
   result: null
@@ -201,8 +202,15 @@ tasks:
     status: merged
     branch: em-workflow/muse-guard-deny-recovery/task0004
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  residual_critical_high: 0
+  needs_rework: false
   plan:
     floor:
     - comprehensive
