@@ -1,0 +1,87 @@
+feature: contributor-consent-command-path
+collected_at: '2026-11-10T20:42:40+09:00'
+session_ids:
+- 01a1c543-c1a8-777a-82c0-8f34ff7f9bf4
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: 最終読み（description_plus_code）は bucket 1 が 0.75、bucket 2 が 0.22 で、評価器の閾値表により
+      full を採用した
+    bases:
+    - basis: description_only
+      score:
+        type: score
+        score: 1.02
+        confidence: 0.98
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread
+            across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to
+            an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+            or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.98
+          '2': 0.02
+          '3': 0.0
+      observed_at: '2026-11-10T19:19:50+09:00'
+    - basis: description_plus_code
+      score:
+        type: score
+        score: 1.2
+        confidence: 0.75
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread
+            across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to
+            an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+            or a change to the architecture.'
+        probabilities:
+          '0': 0.03
+          '1': 0.75
+          '2': 0.22
+          '3': 0.0
+      observed_at: '2026-11-10T19:22:10+09:00'
+    pre_survey_estimate:
+      files_expected:
+      - em-workflow/skills/contributor-consent/SKILL.md
+      - em-review/skills/contributor-consent/SKILL.md
+      - tests/test_contributor_consent_skill.py
+      - em-workflow/.claude-plugin/plugin.json
+      - em-review/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+      changed_lines_approx: 30
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: true
+      spillover_modules:
+      - em-workflow/.claude-plugin/plugin.json
+      - em-review/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+      work_still_required: true
+      test_change_kind: extend_existing_one_to_one
+      added_test_cases_approx: 0
+      body_change_kind: wording_or_rule_addition
+      change_containment: multiple_modules
+      caller_and_dependency_count: 2
+      changes_external_contract: false
+      changes_behavior: true
+      evidence: em-workflow/skills/contributor-consent/SKILL.md:94,100 と em-review/skills/contributor-consent/SKILL.md:94,100
+        の記録・撤回コマンドに ${CLAUDE_PLUGIN_ROOT} が残っている。ただし現在の両コピー:89,91,97,124 はユーザーへの提示ではなくスキル自身による実行を指定している。tests/test_contributor_consent_skill.py:123,127,388,417
+        は環境変数参照を含む文字列を要求し、未解決参照の不在を検査していない。両 hooks/muse_guard.py:694,710,724 に既存の引数解析・記録・撤回処理がある。.claude/rules/core-plugin-version-bump.md:3,8
+        と .github/workflows/plugin-version-bump.yml:96,102 は版の更新を自動処理すると定めている
+follow_up_drafts: []
+lessons_candidates:
+- review round 1 の medium 3 件（f7628a58cc91023d / 188540892f1f8a99 / 274a1ee2491ec714）は
+  unresolved のまま残り、triage filing は未実行
