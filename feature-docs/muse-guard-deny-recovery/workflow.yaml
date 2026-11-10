@@ -197,7 +197,7 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: in_progress
+    status: merged
     branch: em-workflow/muse-guard-deny-recovery/task0004
 review:
   status: pending
