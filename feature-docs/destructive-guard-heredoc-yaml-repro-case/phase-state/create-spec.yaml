@@ -1,11 +1,11 @@
 schema_version: 1
 feature: destructive-guard-heredoc-yaml-repro-case
 phase: create-spec
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: b008f906ad5923d5269287493e9b89410e6595d4
 last_input_digest: sha256:7ad0da371b01c5335a7b07de1955d2cf0287a6f56c039eb5256705503f70b152
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets: {}
 answers:
   create-spec.feature-identity:
@@ -44,13 +44,18 @@ worker_runs:
   note: 衝突した feature 名の worktree で実行した。入力ファイルは同じ main コミットで input_digest も一致するため結果を再利用し、feature_name
     だけ改めた
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:7ad0da371b01c5335a7b07de1955d2cf0287a6f56c039eb5256705503f70b152
-  output_digest: null
+  output_digest: sha256:7ad0da371b01c5335a7b07de1955d2cf0287a6f56c039eb5256705503f70b152
   dispatch_digest_inputs:
     em-workflow/references/templates/spec-document.md: sha256:a5d0106c39a5df7dc2365357a9546588275ed6c7a1651c866e75fa327a7fa592
     em-workflow/references/contracts/spec-writer-contract.md: sha256:1e63f69687c6850e890f66b5ca92af7f3b0d02645cc464fca88455ad2269d671
-artifacts: []
+  self_write_set:
+  - feature-docs/destructive-guard-heredoc-yaml-repro-case/SPEC.md
+artifacts:
+- path: feature-docs/destructive-guard-heredoc-yaml-repro-case/SPEC.md
+  digest: sha256:e87ab121b733bab31cb93405d586c60abf9bedfc4b9dcb7c9818ad833dccf9ef
+  request_id: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
