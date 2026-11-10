@@ -8,18 +8,76 @@ last_input_digest: sha256:f98bee6aab203d443affb52551a268cb0efb3209ec72a53032d7f1
 active_request_id: create-spec-run-0001
 packets:
   create-spec-q0001:
-    status: issued
+    status: answered
     issued_at: '2026-11-10T19:28:37+09:00'
     questions:
     - question_id: q-deny-routing
-      status: issued
+      status: answered
     - question_id: q-version-bump
-      status: issued
+      status: answered
     - question_id: q-deny-context-non-reviewer
-      status: issued
+      status: answered
     - question_id: q-design-step
-      status: issued
-answers: {}
+      status: answered
+answers:
+  q-deny-routing:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-10T19:30:45+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - retryable_next_entry
+    freeform: null
+    normalized_answer: 'retryable・次のエントリ: skip_reason `contributor_consent_missing`
+      を retryable 集合に足す（em-workflow 4→5、em-review 3→4）。R2b 表に『the next entry in the
+      chain』へ進む行を足す。原因はティア固有でハーネス全体の問題ではないため、同じハーネスの別モデルへの歩進も許す。同じエントリを素の muse-spark
+      として読み直すことはしない（ホップ後の読み替え禁止を維持）。'
+    resolution_note: 'gate: create-spec.requirement-clarification (policy action codex_consultation,
+      record_as_assumption); Codex consulted (harness entry codex, 1 turn, converged);
+      chosen: retryable_next_entry; not chosen: retryable_different_harness, non_retryable_skip,
+      harness_failure_path; Codex rationale: 拒否は contributor ティア固有なので、同じハーネスの別モデルまで除外する必要はないよ。非
+      retryable の「全エントリ共通の問題」という定義には合わず、既存の失敗経路では試せる後続エントリを打ち切ってしまうため、次のエントリへ進むのが適切だよ;
+      Opus escalation: not run'
+  q-version-bump:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-10T19:30:45+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - leave_to_actions
+    freeform: null
+    normalized_answer: 'Actionsに任せる: plugin.json と marketplace.json の version は変えない。PR
+      が main にマージされたときに Actions が両プラグインの patch を上げる。SPEC にも version 変更は書かない。'
+    resolution_note: 'gate: create-spec.requirement-clarification (policy action codex_consultation,
+      record_as_assumption); Codex consulted (harness entry codex, 1 turn, converged);
+      chosen: leave_to_actions; not chosen: manual_minor_bump; Codex rationale: 既存の同意拒否後の処理を修正する変更なので、機能追加として
+      minor を手動更新する根拠は薄いよ。.claude/rules/core-plugin-version-bump.md と実際の Actions の処理に従い、変更された両プラグインの
+      patch 更新を任せるのが適切だよ; Opus escalation: not run'
+  q-deny-context-non-reviewer:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-10T19:30:45+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - reviewer_conditional
+    freeform: null
+    normalized_answer: 'レビュアー条件付き: 『レビュアーとして実行中なら skip_reason <値> のスキップオブジェクトを返して終える。それ以外では
+      contributor ティアを使わずに作業を続ける』の 2 分岐を 1 行で書く。3 節構成は保つ。'
+    resolution_note: 'gate: create-spec.requirement-clarification (policy action codex_consultation,
+      record_as_assumption); Codex consulted (harness entry codex, 1 turn, converged);
+      chosen: reviewer_conditional; not chosen: reviewer_only; Codex rationale: 両プラグインの
+      hooks.json と hook_main はレビュアーに限定せず Bash 呼び出しを対象にしているため、レビュアー専用という前提は成立しないよ。条件付きなら、他の呼び出し元へ無関係なスキップ結果の返却を指示せず、それぞれの続行方法を明示できるよ;
+      Opus escalation: not run'
+  q-design-step:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-10T19:30:45+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: 推奨値（skip）をそのまま採用する
+    resolution_note: 'gate: create-spec.design-step; batch-policies.yaml select decide_autonomously'
 worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
