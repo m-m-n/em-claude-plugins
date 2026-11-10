@@ -13,16 +13,22 @@ Covers the task0001 Acceptance Criteria
 - AC-3: the rate-limit and unsupported-model rules keep their objects
   byte-identical and sit after the exit-124 rule and the parse rule.
 - AC-4 (FR10): em-workflow's review-protocol.md names the timeout and
-  non-JSON cases under `harness_unavailable`, lists four retryable values
-  including `review_data_too_large`, and keeps `scratchpad_unavailable`
-  non-retryable.
+  non-JSON cases under `harness_unavailable`, lists five retryable values
+  including `review_data_too_large` and `contributor_consent_missing`, and
+  keeps `scratchpad_unavailable` non-retryable.
 - AC-5 (FR17): em-review's review-protocol.md names the timeout and non-JSON
-  cases under `harness_unavailable`, keeps exactly three retryable values with
-  `review_data_too_large` non-retryable, and no em-review file mentions shards
-  or a dispatch cap.
+  cases under `harness_unavailable`, keeps exactly four retryable values
+  (including `contributor_consent_missing`) with `review_data_too_large`
+  non-retryable, and no em-review file mentions shards or a dispatch cap.
 - AC-7: this module checks AC-1 to AC-5 on the real files, including the
   order inside Step 6, and its matchers reject forged texts (parse-first
-  order, the old non-JSON object, a three-value em-workflow retryable set).
+  order, the old non-JSON object, a four-value em-workflow retryable set).
+
+Refreshed by feature-docs/muse-guard-deny-recovery/tasks/task0002.md (FR1,
+FR2, FR9): both protocols gained the retryable `skip_reason`
+`contributor_consent_missing` (em-workflow now five retryable values,
+em-review four), the new bullet's skip object is pinned verbatim, and each
+new pin is paired with forged texts the matcher rejects.
 
 All checks are text inspection over whitespace-normalized text. Order checks
 compare positions inside the Step 6 section, which runs from the Step 6
@@ -94,9 +100,35 @@ EM_WORKFLOW_RETRYABLE = {
     "harness_unavailable",
     "rate_limited",
     "budget_exhausted",
+    "contributor_consent_missing",
     "review_data_too_large",
 }
-EM_REVIEW_RETRYABLE = {"harness_unavailable", "rate_limited", "budget_exhausted"}
+EM_REVIEW_RETRYABLE = {
+    "harness_unavailable",
+    "rate_limited",
+    "budget_exhausted",
+    "contributor_consent_missing",
+}
+
+# The skip object of the contributor-tier deny, exactly as both protocols
+# carry it (muse-guard-deny-recovery SPEC.md FR1 / FR2).
+CONTRIBUTOR_CONSENT_OBJECT = (
+    '{"findings": [], "summary": "skipped: contributor consent missing", '
+    '"skipped": true, "skip_reason": "contributor_consent_missing", '
+    '"source": "<source>"}'
+)
+CONTRIBUTOR_CONSENT_VALUE = "contributor_consent_missing"
+# Role-split points the new bullet states (IMPLEMENTATION.md Shared
+# Components, "Role split after the deny").
+CONTRIBUTOR_CONSENT_BULLET_PHRASES = (
+    "`muse-spark-contributor`",
+    "muse_guard",
+    "returns this object and ends",
+    "does not retry the same entry as plain `muse-spark`",
+    "does not record or re-judge consent",
+    "does not choose another model or chain entry",
+    "the orchestrator selects the next entry",
+)
 
 
 def _read(path):
@@ -310,16 +342,17 @@ def _assert_retryable_set(text, label, expected, count_word):
 
 
 def assert_em_workflow_retryable_set(text, label):
-    """AC-4: four retryable values including `review_data_too_large`;
-    `scratchpad_unavailable` stays non-retryable."""
+    """AC-4: five retryable values including `review_data_too_large` and
+    `contributor_consent_missing`; `scratchpad_unavailable` stays
+    non-retryable."""
     bullets, end = _assert_retryable_set(
-        text, label, EM_WORKFLOW_RETRYABLE, "four"
+        text, label, EM_WORKFLOW_RETRYABLE, "five"
     )
     after = " ".join(bullets[end + 1 :])
-    if "`scratchpad_unavailable`, like every value outside the four above, is NOT retryable" not in after:
+    if "`scratchpad_unavailable`, like every value outside the five above, is NOT retryable" not in after:
         raise AssertionError(
             f"{label}: `scratchpad_unavailable` is not stated non-retryable "
-            "against the four-value set"
+            "against the five-value set"
         )
     if "review_data_too_large" in after:
         raise AssertionError(
@@ -329,11 +362,12 @@ def assert_em_workflow_retryable_set(text, label):
 
 
 def assert_em_review_retryable_set(text, label):
-    """AC-5: exactly three retryable values; `scratchpad_unavailable` and
+    """AC-5: exactly four retryable values (including
+    `contributor_consent_missing`); `scratchpad_unavailable` and
     `review_data_too_large` stay non-retryable."""
-    bullets, end = _assert_retryable_set(text, label, EM_REVIEW_RETRYABLE, "three")
+    bullets, end = _assert_retryable_set(text, label, EM_REVIEW_RETRYABLE, "four")
     after = " ".join(bullets[end + 1 :])
-    if "These last two are NOT retryable, like every value outside the three above" not in after:
+    if "These last two are NOT retryable, like every value outside the four above" not in after:
         raise AssertionError(
             f"{label}: the non-retryable statement for the last two values is missing"
         )
@@ -342,6 +376,48 @@ def assert_em_review_retryable_set(text, label):
             raise AssertionError(
                 f"{label}: {value} is not listed after the retryable-set statement"
             )
+
+
+def assert_contributor_consent_bullet(text, label):
+    """FR1 / FR2 / AC-3: the Skip Semantics list carries exactly one top-level
+    bullet for the contributor-tier deny. The bullet holds the skip object
+    verbatim and states the role split. It sits inside the retryable group:
+    after the `harness_unavailable` bullet and before the bullet holding the
+    retryable-set statement."""
+    bullets = _top_level_bullets(_skip_semantics_section(text))
+    own = [i for i, b in enumerate(bullets) if CONTRIBUTOR_CONSENT_VALUE in b]
+    if len(own) != 1:
+        raise AssertionError(
+            f"{label}: expected exactly one Skip Semantics bullet naming "
+            f"{CONTRIBUTOR_CONSENT_VALUE!r}, found {len(own)}"
+        )
+    index = own[0]
+    bullet = bullets[index]
+    if CONTRIBUTOR_CONSENT_OBJECT not in bullet:
+        raise AssertionError(
+            f"{label}: the contributor-consent bullet does not carry the skip "
+            "object verbatim"
+        )
+    for phrase in CONTRIBUTOR_CONSENT_BULLET_PHRASES:
+        if phrase not in bullet:
+            raise AssertionError(
+                f"{label}: the contributor-consent bullet does not state "
+                f"{phrase!r}"
+            )
+    start = next(
+        (i for i, b in enumerate(bullets) if '"skip_reason": "harness_unavailable"' in b),
+        None,
+    )
+    statement = next(
+        (i for i, b in enumerate(bullets) if RETRYABLE_STATEMENT_RE.search(b)), None
+    )
+    if start is None or statement is None:
+        raise AssertionError(f"{label}: retryable group anchors not found")
+    if not (start < index < statement):
+        raise AssertionError(
+            f"{label}: the contributor-consent bullet is not between the "
+            "`harness_unavailable` bullet and the retryable-set statement"
+        )
 
 
 SHARD_TERMS_RE = re.compile(r"shard|dispatch[\s-]+cap", re.I)
@@ -430,7 +506,12 @@ class TestEmWorkflowProtocolSkipSemantics(unittest.TestCase):
         )
 
     def test_ac4_four_retryable_values_with_scratchpad_non_retryable(self):
+        # Name kept for records that cite it; the set is five values since
+        # muse-guard-deny-recovery task0002 (FR1).
         assert_em_workflow_retryable_set(self.text, "AC-4 em-workflow")
+
+    def test_fr1_contributor_consent_bullet_in_retryable_group(self):
+        assert_contributor_consent_bullet(self.text, "FR1 em-workflow")
 
 
 class TestEmReviewProtocolSkipSemantics(unittest.TestCase):
@@ -446,7 +527,12 @@ class TestEmReviewProtocolSkipSemantics(unittest.TestCase):
         )
 
     def test_ac5_three_retryable_values_with_review_data_too_large_non_retryable(self):
+        # Name kept for records that cite it; the set is four values since
+        # muse-guard-deny-recovery task0002 (FR2).
         assert_em_review_retryable_set(self.text, "AC-5 em-review")
+
+    def test_fr2_contributor_consent_bullet_in_retryable_group(self):
+        assert_contributor_consent_bullet(self.text, "FR2 em-review")
 
     def test_ac5_no_em_review_file_mentions_shards_or_a_dispatch_cap(self):
         files = _em_review_text_files()
@@ -505,6 +591,54 @@ def _move_timeout_rule_last(text):
     head, lines, starts = _step6_bullet_line_ranges(text)
     first, second = starts[0], starts[1]
     return head + "".join(lines[:first] + lines[second:] + lines[first:second])
+
+
+def _contributor_consent_bullet_lines(text):
+    """(lines of the file, start index, end index) of the top-level
+    Skip Semantics bullet naming `contributor_consent_missing`; the end is
+    the next top-level bullet, the next heading, or the end of the file."""
+    lines = text.splitlines(keepends=True)
+    section_start = next(
+        i for i, line in enumerate(lines) if line.startswith(SKIP_SEMANTICS_HEADING)
+    )
+    starts = [
+        i
+        for i in range(section_start + 1, len(lines))
+        if lines[i].startswith("- ")
+    ]
+    for start in starts:
+        end = start + 1
+        while (
+            end < len(lines)
+            and not lines[end].startswith("- ")
+            and not lines[end].startswith("## ")
+        ):
+            end += 1
+        if any(CONTRIBUTOR_CONSENT_VALUE in line for line in lines[start:end]):
+            return lines, start, end
+    raise AssertionError("no contributor-consent bullet in the Skip Semantics")
+
+
+def _remove_contributor_consent_bullet(text):
+    """A forged protocol text without the contributor-consent bullet."""
+    lines, start, end = _contributor_consent_bullet_lines(text)
+    return "".join(lines[:start] + lines[end:])
+
+
+def _move_contributor_consent_bullet_first(text):
+    """A forged protocol text whose contributor-consent bullet sits right
+    after the `no_spec` bullet, before the `harness_unavailable` bullet."""
+    lines, start, end = _contributor_consent_bullet_lines(text)
+    bullet = lines[start:end]
+    rest = lines[:start] + lines[end:]
+    section_start = next(
+        i for i, line in enumerate(rest) if line.startswith(SKIP_SEMANTICS_HEADING)
+    )
+    bullet_starts = [
+        i for i in range(section_start, len(rest)) if rest[i].startswith("- ")
+    ]
+    insert_at = bullet_starts[1]  # before the second bullet (harness_unavailable)
+    return "".join(rest[:insert_at] + bullet + rest[insert_at:])
 
 
 class TestMatchersRejectForgedTexts(unittest.TestCase):
@@ -594,21 +728,37 @@ class TestMatchersRejectForgedTexts(unittest.TestCase):
                 )
 
     def test_three_value_em_workflow_retryable_set_is_rejected(self):
+        # Name kept for records that cite it. The em-workflow set is five
+        # values; the em-review text is a real four-value text.
         real = self.protocols["em-workflow"]
-        # The em-review protocol is a real three-value text.
         _assert_rejects(
             assert_em_workflow_retryable_set,
             real,
             self.protocols["em-review"],
-            "forged three-value set (em-review text)",
+            "forged four-value set (em-review text)",
         )
         forged_count = _replace_flexible(
             real,
+            "These five `skip_reason` values",
             "These four `skip_reason` values",
-            "These three `skip_reason` values",
         )
         _assert_rejects(
             assert_em_workflow_retryable_set, real, forged_count, "forged count word"
+        )
+        forged_non_retryable = _replace_flexible(
+            real, "outside the five above", "outside the four above"
+        )
+        _assert_rejects(
+            assert_em_workflow_retryable_set,
+            real,
+            forged_non_retryable,
+            "forged non-retryable statement count word",
+        )
+        _assert_rejects(
+            assert_em_workflow_retryable_set,
+            real,
+            _remove_contributor_consent_bullet(real),
+            "forged set without contributor_consent_missing",
         )
         forged_values = _replace_flexible(
             real,
@@ -623,12 +773,99 @@ class TestMatchersRejectForgedTexts(unittest.TestCase):
         )
 
     def test_four_value_em_review_retryable_set_is_rejected(self):
+        # Name kept for records that cite it. The em-review set is four
+        # values; the em-workflow text is a real five-value text.
+        real = self.protocols["em-review"]
         _assert_rejects(
             assert_em_review_retryable_set,
-            self.protocols["em-review"],
+            real,
             self.protocols["em-workflow"],
-            "forged four-value set (em-workflow text)",
+            "forged five-value set (em-workflow text)",
         )
+        forged_count = _replace_flexible(
+            real,
+            "These four `skip_reason` values",
+            "These three `skip_reason` values",
+        )
+        _assert_rejects(
+            assert_em_review_retryable_set, real, forged_count, "forged count word"
+        )
+        forged_non_retryable = _replace_flexible(
+            real, "outside the four above", "outside the three above"
+        )
+        _assert_rejects(
+            assert_em_review_retryable_set,
+            real,
+            forged_non_retryable,
+            "forged non-retryable statement count word",
+        )
+        _assert_rejects(
+            assert_em_review_retryable_set,
+            real,
+            _remove_contributor_consent_bullet(real),
+            "forged set without contributor_consent_missing",
+        )
+
+    def test_contributor_consent_bullet_forgeries_are_rejected(self):
+        matchers = {
+            "em-workflow": assert_em_workflow_retryable_set,
+            "em-review": assert_em_review_retryable_set,
+        }
+        for plugin, real in self.protocols.items():
+            with self.subTest(plugin=plugin):
+                label = f"forged contributor-consent bullet ({plugin})"
+                _assert_rejects(
+                    assert_contributor_consent_bullet,
+                    real,
+                    _remove_contributor_consent_bullet(real),
+                    f"{label} removed",
+                )
+                _assert_rejects(
+                    assert_contributor_consent_bullet,
+                    real,
+                    real.replace(
+                        CONTRIBUTOR_CONSENT_OBJECT,
+                        CONTRIBUTOR_CONSENT_OBJECT.replace(
+                            '"skipped": true', '"skipped": false'
+                        ),
+                    ),
+                    f"{label} object altered",
+                )
+                _assert_rejects(
+                    assert_contributor_consent_bullet,
+                    real,
+                    _replace_flexible(
+                        real,
+                        "does not retry the same entry as plain `muse-spark`",
+                        "retries the same entry as plain `muse-spark`",
+                    ),
+                    f"{label} retry allowed",
+                )
+                _assert_rejects(
+                    assert_contributor_consent_bullet,
+                    real,
+                    _replace_flexible(
+                        real,
+                        "does not choose another model or chain entry",
+                        "chooses another model or chain entry",
+                    ),
+                    f"{label} reviewer chooses next entry",
+                )
+                _assert_rejects(
+                    assert_contributor_consent_bullet,
+                    real,
+                    _move_contributor_consent_bullet_first(real),
+                    f"{label} placed before harness_unavailable",
+                )
+                # Each plugin's retryable matcher also rejects the other
+                # plugin's text (count word and value set differ).
+                other = next(p for p in self.protocols if p != plugin)
+                _assert_rejects(
+                    matchers[plugin],
+                    real,
+                    self.protocols[other],
+                    f"{label} other plugin's text",
+                )
 
     def test_protocol_without_timeout_and_non_json_cases_is_rejected(self):
         for plugin, text in self.protocols.items():
