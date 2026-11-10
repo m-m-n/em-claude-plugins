@@ -134,7 +134,7 @@ tasks:
     - NFR2
     - NFR3
     - NFR5
-    status: in_progress
+    status: merged
     branch: em-workflow/muse-guard-deny-recovery/task0001
   task0002:
     title: Add contributor_consent_missing to both Skip Semantics sections
