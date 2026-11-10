@@ -1,0 +1,17 @@
+schema_version: 1
+feature: muse-guard-deny-recovery
+phase: create-spec
+status: initialized
+generation: 1
+base_revision: 6071d0f3818454eb5b99e424e98713f6befc1597
+last_input_digest: null
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
