@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 8dbc3db85048d133415b3894df0bdd3c12c87641
 last_input_digest: sha256:05a1996e3c143ffb904ab38848870d1c99ffc388db90cd4fab43dee01a0f0e9f
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -94,11 +94,20 @@ worker_runs:
     tests/test_muse_guard.py: sha256:7cab81d328e8c80fa41edde1671f5f4e72bf694982ecc00e8899b9b07a8aa787
   self_write_set: []
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:05a1996e3c143ffb904ab38848870d1c99ffc388db90cd4fab43dee01a0f0e9f
   output_digest: null
   dispatch_digest_inputs: {}
-artifacts: []
+  self_write_set:
+  - feature-docs/contributor-consent-command-path/REQUIREMENTS.md
+  - feature-docs/contributor-consent-command-path/SPEC.md
+artifacts:
+- path: feature-docs/contributor-consent-command-path/REQUIREMENTS.md
+  sha256: sha256:1f68c1069e13cabee9b5fe8c855e5279ff4ed0d3d154e26b73a6a82295fd9e10
+  produced_by: create-spec-run-0003
+- path: feature-docs/contributor-consent-command-path/SPEC.md
+  sha256: sha256:ae6ae062ff1ca8da09f38cdc88180bd8d62df7e10a3b7a31b933da550c8998fb
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: sha256:45e70fd23f57bd9eb10b38f44b9d26460b43051457ed4602a4f56e72c8957303
 stale_redispatch_count: 0
