@@ -134,7 +134,8 @@ tasks:
     - NFR2
     - NFR3
     - NFR5
-    status: pending
+    status: in_progress
+    branch: em-workflow/muse-guard-deny-recovery/task0001
   task0002:
     title: Add contributor_consent_missing to both Skip Semantics sections
     plan: tasks/task0002.md
@@ -154,7 +155,8 @@ tasks:
     - NFR2
     - NFR3
     - NFR5
-    status: pending
+    status: in_progress
+    branch: em-workflow/muse-guard-deny-recovery/task0002
   task0003:
     title: Route contributor_consent_missing in em-workflow Phase R2b and the README
     plan: tasks/task0003.md
@@ -175,7 +177,8 @@ tasks:
     - NFR2
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
+    branch: em-workflow/muse-guard-deny-recovery/task0003
   task0004:
     title: Route contributor_consent_missing in em-review Phase R2b
     plan: tasks/task0004.md
@@ -193,7 +196,8 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
+    branch: em-workflow/muse-guard-deny-recovery/task0004
 review:
   status: pending
   rounds_completed: 0
