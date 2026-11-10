@@ -1,0 +1,38 @@
+feature: destructive-guard-heredoc-yaml-repro-case
+collected_at: "2026-11-11T01:06:00+09:00"
+session_ids: [01a1c634-a2cb-72ba-97fb-76d5e40ec8c0]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: "最終読み（description_plus_code）はバケット 1（ルール追加とテスト追加の組み合わせ）が 0.87 で、score 0.97 の閾値行により reduced に決まった"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.0, confidence: 1.0}
+        observed_at: "2026-11-11T00:00:42+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 0.97, confidence: 0.87}
+        observed_at: "2026-11-11T00:03:41+09:00"
+    pre_survey_estimate:
+      files_expected: [em-workflow/hooks/tests/destructive-guard-cases.json]
+      changed_lines_approx: 1
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: true
+      work_still_required: true
+      test_change_kind: extend_existing_one_to_one
+      added_test_cases_approx: 1
+      body_change_kind: wording_or_rule_addition
+      change_containment: single_module
+      changes_external_contract: false
+      changes_behavior: false
+follow_up_drafts: []
+lessons_candidates:
+  - "報告された誤爆は既存の完了済み feature で修正済みで、変更は再現ケースの固定（allow 1 件と対照の deny 1 件）に収まった。起票時点で現行ツリーの再現確認があれば、テスト追加だけの小タスクとして切れた"
+  - "task0001 の files は destructive-guard.py を含めたが、実際には変更しなかった（FR1 が通ったため）"

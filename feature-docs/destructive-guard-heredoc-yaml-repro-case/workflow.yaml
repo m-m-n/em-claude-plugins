@@ -69,7 +69,8 @@ workflow:
   failed_items: []
   excluded: []
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: 3754916d4242cd824c91ee6391257b902d9871e5
 tasks:
   task0001:
     title: Pin the reported heredoc reproduction in the destructive-guard expectation suite
