@@ -96,7 +96,7 @@ SDD・並列実装・多観点レビューを統合した開発ワークフロ�
 | security / comprehensive / license | codex → litellm `muse-spark` |
 | performance / spec / architecture | litellm `muse-spark` → codex |
 
-R2b はスキップ理由が retryable なときだけチェーンを進める。`rate_limited` は次のエントリへ、`budget_exhausted` / `harness_unavailable` / `review_data_too_large` は**別ハーネス**の次エントリへ飛ぶ。チェーンは 2 エントリなので、フォールバックは 1 観点につき 1 ホップで尽きる。入力を分割したときは、ホップ数はシャードごとに数える。
+R2b はスキップ理由が retryable なときだけチェーンを進める。`rate_limited` / `contributor_consent_missing` は次のエントリへ、`budget_exhausted` / `harness_unavailable` / `review_data_too_large` は**別ハーネス**の次エントリへ飛ぶ。チェーンは 2 エントリなので、フォールバックは 1 観点につき 1 ホップで尽きる。入力を分割したときは、ホップ数はシャードごとに数える。
 
 ## マージ戦略（worktree 並列）
 

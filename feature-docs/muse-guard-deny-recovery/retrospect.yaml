@@ -1,0 +1,98 @@
+feature: muse-guard-deny-recovery
+collected_at: '2026-11-10T21:49:30+09:00'
+session_ids:
+- 01a1c580-1909-775a-9fbe-9c9863c92a88
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: description_plus_code の最終読みがバケット 2（確率 0.91）で、閾値表により full を採用した。
+    bases:
+    - basis: description_only
+      score:
+        type: score
+        score: 1.51
+        confidence: 0.5
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread
+            across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to
+            an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+            or a change to the architecture.'
+        probabilities:
+          '0': 0.19
+          '1': 0.12
+          '2': 0.69
+          '3': 0.0
+      observed_at: '2026-11-10T19:23:32+09:00'
+    - basis: description_plus_code
+      score:
+        type: score
+        score: 1.94
+        confidence: 0.91
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread
+            across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to
+            an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+            or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.07
+          '2': 0.91
+          '3': 0.02
+      observed_at: '2026-11-10T19:23:32+09:00'
+    pre_survey_estimate:
+      files_expected:
+      - em-workflow/hooks/muse_guard.py
+      - em-review/hooks/muse_guard.py
+      - em-workflow/references/review-protocol.md
+      - em-review/references/review-protocol.md
+      - em-workflow/references/review-phase.md
+      - em-review/references/review-phase.md
+      - em-workflow/.claude-plugin/plugin.json
+      - em-review/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+      - tests/test_muse_guard.py
+      - tests/test_codex_reviewer_skip_handling.py
+      - tests/test_reviewer_roles_protocol.py
+      - tests/test_review_phase_llm_led.py
+      - tests/test_review_phase_shard_dispatch.py
+      changed_lines_approx: 100
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: true
+      spillover_modules:
+      - .claude-plugin/marketplace.json
+      - tests/test_codex_reviewer_skip_handling.py
+      - tests/test_reviewer_roles_protocol.py
+      - tests/test_review_phase_llm_led.py
+      - tests/test_review_phase_shard_dispatch.py
+      work_still_required: true
+      test_change_kind: extend_existing_one_to_one
+      added_test_cases_approx: 4
+      body_change_kind: wording_or_rule_addition
+      change_containment: multiple_modules
+      caller_and_dependency_count: 2
+      changes_external_contract: true
+      changes_behavior: true
+      evidence: em-workflow/hooks/muse_guard.py:73 と em-review/hooks/muse_guard.py:73
+        は別のチェーンエントリで続行するよう指示している。対応する deny 後の復帰規定は em-workflow/references/review-protocol.md:237、em-review/references/review-protocol.md:221、em-workflow/references/review-phase.md:379、em-review/references/review-phase.md:227
+        に無い。同意が無ければ通常モデルを使う事前規定は既にある（em-workflow/references/review-phase.md:357、em-review/references/review-phase.md:213）。フックは
+        PLUGIN_SLUG 以外バイト一致し、DENY_CONTEXT の直接参照は各コピーの emit_deny 内に1箇所ある（各:656）。tests/test_muse_guard.py:242
+        はコピー一致、:257 は deny 内容を検査するが、復帰経路は検査していない。retryable 追加時には既存の集合・行数固定テストも影響する（tests/test_codex_reviewer_skip_handling.py:93、tests/test_reviewer_roles_protocol.py:382、tests/test_review_phase_llm_led.py:305、tests/test_review_phase_shard_dispatch.py:730）。テストは未実行で、ファイル変更は行っていない
+follow_up_drafts: []
+lessons_candidates:
+- タスクの完了の定義に「両プラグインの version を bump した」があったが、リポジトリのルール（version は Actions が上げる）と衝突したため
+  NFR2 で version を変えない形に読み替えた。事前調査の files_expected にも plugin.json / marketplace.json
+  が入っていた。起票テンプレート側で version 上げを完了の定義に書かない運用にするか検討の余地あり。

@@ -234,11 +234,19 @@ Every skip object sets `skip_reason` to a short machine-stable
 - **Any cross-model reviewer** when the upstream reports a rate limit
   (Codex's own limit, or a Vertex 429 surfaced through LiteLLM):
   `{"findings": [], "summary": "skipped: codex rate limited", "skipped": true, "skip_reason": "rate_limited", "source": "codex"}`
+- **Any cross-model reviewer** whose call of the contributor tier
+  (`muse-spark-contributor`) muse_guard denied because the repository has no
+  recorded consent: it returns this object and ends
+  (`<source>` is the reviewer's own harness):
+  `{"findings": [], "summary": "skipped: contributor consent missing", "skipped": true, "skip_reason": "contributor_consent_missing", "source": "<source>"}`
+  The reviewer does not retry the same entry as plain `muse-spark`, does not
+  record or re-judge consent, and does not choose another model or chain
+  entry; the orchestrator selects the next entry.
 - **litellm reviewer** when the harness budget is spent (LiteLLM's monthly
   virtual-key cap — surfaces as 400/401 `ExceededBudget`):
   `{"findings": [], "summary": "skipped: litellm budget exhausted", "skipped": true, "skip_reason": "budget_exhausted", "source": "litellm"}`
 
-  These three `skip_reason` values are the **retryable** set: the review
+  These four `skip_reason` values are the **retryable** set: the review
   phase's Phase R2b walks the perspective's fallback chain on exactly these
   strings, and on nothing else. Emit them verbatim.
 - **Any reviewer** with unresolved protocol/schema/skill (Step 0):
@@ -251,7 +259,7 @@ Every skip object sets `skip_reason` to a short machine-stable
   `skip_reason: "review_data_too_large"` — sending a truncated diff would
   read as a clean review.
 
-  These last two are NOT retryable, like every value outside the three above:
+  These last two are NOT retryable, like every value outside the four above:
   the next entry in the chain would hit the same local failure or be handed
   the same oversized data.
 

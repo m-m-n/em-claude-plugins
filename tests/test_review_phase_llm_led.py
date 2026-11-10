@@ -305,8 +305,10 @@ class TestAC2PhaseR2bChainWalk(unittest.TestCase):
     def test_exactly_three_retryable_skip_reasons_unchanged(self):
         # large-diff-review-coverage task0004 (FR10): the table gained a
         # fourth row, `review_data_too_large`; the three original rows stay
-        # byte-identical. The test keeps its name so the records that list
-        # it keep resolving.
+        # byte-identical. muse-guard-deny-recovery task0003 (FR3): the table
+        # gained a fifth and last row, `contributor_consent_missing`; the four
+        # earlier rows stay byte-identical. The test keeps its name so the
+        # records that list it keep resolving.
         table = (
             "| `skip_reason` | What it means | Advance to |\n"
             "|---|---|---|\n"
@@ -319,11 +321,15 @@ class TestAC2PhaseR2bChainWalk(unittest.TestCase):
             "at all (proxy down, profile broken, wrapper missing) | the "
             "next entry of a **different** harness |\n"
             "| `review_data_too_large` | the assembled prompt exceeds the "
-            "model's context | the next entry of a **different** harness |"
+            "model's context | the next entry of a **different** harness |\n"
+            "| `contributor_consent_missing` | muse_guard denied the "
+            "contributor tier because the repository has no recorded consent "
+            "| the next entry in the chain |"
         )
         self.assertIn(table, self.r2b)
-        # Exactly four retryable reasons -- no fifth was added.
-        self.assertEqual(self.r2b.count("| the next entry"), 4)
+        # Exactly five retryable reasons -- no sixth was added, and the note
+        # prose outside the table adds no `| the next entry` occurrence.
+        self.assertEqual(self.r2b.count("| the next entry"), 5)
 
     def test_two_fallback_cap_unchanged(self):
         self.assertIn(
