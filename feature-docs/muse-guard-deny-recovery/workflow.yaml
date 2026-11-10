@@ -165,6 +165,7 @@ tasks:
     - em-workflow/README.md
     - tests/test_review_phase_llm_led.py
     - tests/test_review_phase_shard_dispatch.py
+    - tests/test_tier_record_schema_v2.py
     skills: []
     domains:
     - api-contract
@@ -177,7 +178,7 @@ tasks:
     - NFR2
     - NFR4
     - NFR5
-    status: in_progress
+    status: merged
     branch: em-workflow/muse-guard-deny-recovery/task0003
   task0004:
     title: Route contributor_consent_missing in em-review Phase R2b
