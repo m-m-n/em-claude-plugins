@@ -145,7 +145,7 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: in_progress
+    status: merged
     branch: em-workflow/spec-change-rework-reentry/task0002
   task0003:
     title: Step I.0 admits the SPEC-change re-entry
