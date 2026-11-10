@@ -69,7 +69,7 @@ workflow:
   failed_items: []
   excluded: []
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: Pin the reported heredoc reproduction in the destructive-guard expectation suite
