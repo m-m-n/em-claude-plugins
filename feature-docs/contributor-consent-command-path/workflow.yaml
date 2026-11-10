@@ -1,0 +1,199 @@
+schema_version: 1
+feature: contributor-consent-command-path
+created: '2026-11-10'
+base_branch: main
+goal: |
+  # contributor-consent スキルが提示するコマンドに未解決の ${CLAUDE_PLUGIN_ROOT} が残っていて同意記録ができない
+
+  ## 現象 (必須)
+
+  `skills/contributor-consent/SKILL.md`（em-workflow / em-review 両コピー、88-110 行付近）の step 5 が、ユーザーが自分の端末で実行する手順として次の形のコマンドを逐語提示している。
+
+  `python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/muse_guard.py --record ...`
+
+  `CLAUDE_PLUGIN_ROOT` は Claude Code がプラグイン実行時に設定する変数で、ユーザー自身のシェルでは未設定。貼り付けると `python3 /hooks/muse_guard.py ...` に展開されて失敗する。同意ストアへ記録する経路はこの CLI しか無いため、同意付与が実運用で成立しない。
+
+  ## 再現手順 (必須)
+
+  1. `/em-workflow:contributor-consent`（または em-review 側）を実行し、step 5 が提示するコマンド行をコピーする
+  2. 自分の端末（Claude Code の外）でそのまま貼り付けて実行する
+  3. `python3: can't open file '/hooks/muse_guard.py'` 相当のエラーで失敗する
+
+  ## 期待する挙動 (必須)
+
+  提示するコマンド行が、ユーザーの端末にそのまま貼って動く形になっていること。プラグインの実体パスを解決済みの絶対パスで埋めて提示するか、環境変数に依存しない解決手段を案内する。
+
+  ## 完了の定義 (必須)
+
+  - [ ] 再現手順で現象が起きない（提示された行をそのまま貼って同意が記録できる）
+  - [ ] 再発を検出するテストがある（`tests/test_contributor_consent_skill.py` を「特定の文言」ではなく「提示行に未解決の環境変数参照が残っていないこと」を検査する形に変える）
+  - [ ] em-workflow / em-review の両コピーに同じ修正が入っている
+  - [ ] 両プラグインの version を bump した
+
+  ## 該当箇所 (任意)
+
+  `em-workflow/skills/contributor-consent/SKILL.md:97` および `em-review/skills/contributor-consent/SKILL.md` の同一箇所
+
+  検出: review round 3 の finding `ec05dc7aa23bc46f`（high, comprehensive）
+
+  ## 実害・発生条件 (任意)
+
+  muse-spark-contributor tier の同意を付与しようとするすべてのユーザー。同意ストアへの唯一の書き込み経路が塞がっているため、機能全体が使えない状態になる。
+
+  PR #28（https://github.com/m-m-n/em-claude-plugins/pull/28）の無人実行では review rework cap（1）到達により deferred のまま残った。verify フェーズが両コピーを読んで事実であることを独立に確認済み。VERIFICATION.md の TS/SC のいずれにも抵触しない（AC-12 と TS-18 は文書構造の基準）ため verify は pass のまま通っている。
+parent_branch: em-workflow/contributor-consent-command-path/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.98
+      '2': 0.02
+      '3': 0.0
+    description_plus_code:
+      '0': 0.03
+      '1': 0.75
+      '2': 0.22
+      '3': 0.0
+  at: '2026-11-10T19:22:22+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: f9742cea3cdd25e7a98188c38d4953ab4e146ff4
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI が無い。変更対象は Markdown のスキル文書と Python の unittest のみ
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: ee8851ebe8ff4ca6606a50dc9db898c065610da6
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: スキルが実行する設計の維持
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: 文言固定の削除
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: 回答と実行内容の対応のテスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: ユーザーに見せる行の未解決変数の検査
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: ユーザー端末での実行指示がないことの検査
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: task0009 の記述の整合
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: 2 つのコピーの一致
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 標準ライブラリのみ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 既存の不変条件の維持
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: 文言に依存しない検査
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: 非空性の証明
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: ドキュメントの秘匿
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
