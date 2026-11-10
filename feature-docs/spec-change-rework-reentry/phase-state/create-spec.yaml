@@ -5,13 +5,35 @@ status: dispatching
 generation: 1
 base_revision: aedb3081899e20f177443af813c71c677689bb53
 last_input_digest: sha256:9ee6d98bdb3a83ae01c5addbd94bc09c45e89897f552a51779db19bf278fb27e
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-11-11T00:14:11+09:00'
+    questions:
+    - question_id: create-spec.reentry-identification
+      status: answered
+answers:
+  create-spec.reentry-identification:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-11T00:14:11+09:00'
+    source: codex
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - A
+    normalized_answer: 'Approach A (Step I.0 SPEC-change re-entry route + Invariant
+      1 scope + verify in transition step 2). Re-entry identified from committed facts:
+      create-spec/create-plan completed; rework.yaml spec_change consumed true and
+      replan_authorized false; prior implement completed_at_commit is a strict ancestor
+      of recorded_at_commit which is an ancestor of the integration tip; the transition
+      carrying that record set implement to pending (commit history); every task merged
+      (task set non-empty).'
+    resolution_note: batch create-spec.requirement-clarification resolved by Codex
+      consultation; recorded as assumption A2 (refined).
 worker_runs:
-  - request_id: create-spec-run-0001
-    status: dispatched
-    input_digest: sha256:9ee6d98bdb3a83ae01c5addbd94bc09c45e89897f552a51779db19bf278fb27e
+- request_id: create-spec-run-0001
+  status: completed
+  input_digest: sha256:9ee6d98bdb3a83ae01c5addbd94bc09c45e89897f552a51779db19bf278fb27e
 artifacts: []
 patches: []
 progress_fingerprint: null
