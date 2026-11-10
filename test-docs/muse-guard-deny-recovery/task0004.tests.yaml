@@ -1,0 +1,90 @@
+task_id: task0004
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_em_review_r2b_contributor_consent.TestAC1RoutingTable.test_table_has_exactly_four_data_rows
+      - tests.test_em_review_r2b_contributor_consent.TestAC1RoutingTable.test_old_rows_are_byte_identical_and_new_row_is_last
+      - tests.test_em_review_r2b_contributor_consent.TestAC1RoutingTable.test_last_row_of_the_document_advances_to_the_next_entry_in_the_chain
+      - tests.test_em_review_r2b_contributor_consent.TestAC1RoutingTable.test_table_matcher_passes_on_real_text
+    red_confirmed: true
+    red_reason: >-
+      Run before the document edit: the Phase R2b table had five lines
+      (header, separator, three rows) and no fourth data row.
+      test_table_has_exactly_four_data_rows failed with "AssertionError: 5 != 6",
+      test_old_rows_are_byte_identical_and_new_row_is_last errored (no sixth
+      table line), test_last_row_of_the_document_advances_to_the_next_entry_in_the_chain
+      failed with "'`harness_unavailable`' != '`contributor_consent_missing`'",
+      and test_table_matcher_passes_on_real_text failed with "False is not true".
+  AC-2:
+    tests:
+      - tests.test_em_review_r2b_contributor_consent.TestAC2Note.test_each_note_point_is_stated
+      - tests.test_em_review_r2b_contributor_consent.TestAC2Note.test_note_sits_after_the_table
+      - tests.test_em_review_r2b_contributor_consent.TestAC2Note.test_note_matcher_passes_on_real_text
+    red_confirmed: true
+    red_reason: >-
+      Run before the document edit: the R2b section carried none of the seven
+      note phrases. test_each_note_point_is_stated failed once per phrase (for
+      example "'consent is a property of the contributor tier, not of the
+      harness' not found in <section>"), test_note_sits_after_the_table failed
+      with "-1 not greater than 150" for every phrase, and
+      test_note_matcher_passes_on_real_text failed with "False is not true".
+  AC-3:
+    tests:
+      - tests.test_em_review_r2b_contributor_consent.TestAC3WordingConstraints.test_no_shard_and_no_dispatch_cap_anywhere_in_the_file
+      - tests.test_em_review_r2b_contributor_consent.TestAC3WordingConstraints.test_budget_rule_stays_verbatim
+      - tests.test_em_review_r2b_contributor_consent.TestAC3WordingConstraints.test_exhaustion_rule_is_unchanged
+      - tests.test_codex_reviewer_skip_handling
+      - tests.test_contributor_tier_criteria
+      - tests.test_muse_consent_no_new_questions
+      - tests.test_reproduction_review_phase_em_review
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope for the four existing modules,
+      but test_codex_reviewer_skip_handling detects shard and dispatch-cap
+      wording in em-review files, test_contributor_tier_criteria detects the
+      forbidden contributor-tier phrases, test_muse_consent_no_new_questions
+      detects a changed interactive-question tool-name count, and
+      test_reproduction_review_phase_em_review pins the em-review review-phase
+      text; no red state occurred for this change. The criterion is a guard on
+      behavior that held before the edit (the three TestAC3WordingConstraints
+      tests passed before the edit as well, since the file already had no
+      shard or dispatch-cap wording and kept the budget and exhaustion rules).
+  AC-4:
+    tests:
+      - tests.test_em_review_r2b_contributor_consent.TestAC4MatchersRejectForgedTexts.test_table_matcher_rejects_three_row_table
+      - tests.test_em_review_r2b_contributor_consent.TestAC4MatchersRejectForgedTexts.test_table_matcher_rejects_changed_old_row
+      - tests.test_em_review_r2b_contributor_consent.TestAC4MatchersRejectForgedTexts.test_table_matcher_rejects_new_row_advancing_to_a_different_harness
+      - tests.test_em_review_r2b_contributor_consent.TestAC4MatchersRejectForgedTexts.test_table_matcher_rejects_new_row_not_last
+      - tests.test_em_review_r2b_contributor_consent.TestAC4MatchersRejectForgedTexts.test_table_matcher_rejects_fifth_row
+      - tests.test_em_review_r2b_contributor_consent.TestAC4MatchersRejectForgedTexts.test_note_matcher_rejects_each_dropped_point_phrase
+      - tests.test_em_review_r2b_contributor_consent.TestAC4MatchersRejectForgedTexts.test_note_matcher_rejects_note_placed_before_the_table
+      - tests.test_em_review_r2b_contributor_consent.TestAC4MatchersRejectForgedTexts.test_forged_texts_are_well_formed_otherwise
+      - tests.test_em_review_r2b_contributor_consent.TestAC4MatchersRejectForgedTexts.test_matchers_pass_on_real_text
+    red_confirmed: true
+    red_reason: >-
+      Run before the document edit: test_matchers_pass_on_real_text failed with
+      "False is not true" (the matchers do not pass on the unedited real text),
+      and the forged-text tests failed because their forge anchor, the new
+      row or the note phrase, did not exist in the real text ("forge anchor
+      not found: '| `contributor_consent_missing` | ...'"). After the edit all
+      of them pass, so each matcher rejects its forged text and accepts the
+      real one. test_table_matcher_rejects_changed_old_row passed before the
+      edit as well, because the three-row table was already rejected by the
+      matcher for a different reason; it only constrains the matcher once the
+      fourth row exists.
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      The verifiable outcome is the whole-suite command "python3 -m unittest
+      discover -s tests", which has no single selectable test ID. It was green
+      at baseline (15724 tests, OK, skipped=1) and green after the change
+      and after this record was written (15745 tests, OK, skipped=1; the
+      added tests are the new module and the record check).
+      No red state of the whole-suite command was run; the red of the new
+      module is recorded under AC-1, AC-2 and AC-4.
+notes: >-
+  The red runs for AC-1, AC-2 and AC-4 were taken by running the new module
+  alone against the unedited review-phase.md, before the Phase R2b edit.

@@ -229,11 +229,19 @@ how far the walk advances:
 | `rate_limited` | upstream congestion (Codex rate limit, Vertex 429) | the next entry in the chain |
 | `budget_exhausted` | the harness's own budget is spent (LiteLLM's monthly virtual-key cap) | the next entry of a **different** harness |
 | `harness_unavailable` | the harness could not be reached at all (proxy down, profile broken, wrapper missing) | the next entry of a **different** harness |
+| `contributor_consent_missing` | muse_guard denied the contributor tier because the repository has no recorded consent | the next entry in the chain |
 
 Budget and reachability are properties of the HARNESS, not the model: all
 `litellm` entries share one virtual key and one proxy, so retrying another
 model on it repeats the failure. Congestion is not — Vertex 429 says nothing
 about Muse, so `rate_limited` may advance within the same harness.
+
+For `contributor_consent_missing`, consent is a property of the contributor
+tier, not of the harness, so the walk may advance within the same harness.
+The walk resumes from the entry after the recorded chain index and never
+re-dispatches the same entry as plain `muse-spark`. Phase R0's
+`contributor_consented` is not re-judged and the chain is not edited. The hop
+counts against the existing 2-hop budget of the walk rules below.
 
 Every other `skip_reason` (`protocol_unresolved`, `schema_unresolved`,
 `skill_unresolved`, `no_spec`, …) is **not** retryable: it reports a config
