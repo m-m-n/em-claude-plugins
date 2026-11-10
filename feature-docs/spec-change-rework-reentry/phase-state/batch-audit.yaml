@@ -14,3 +14,12 @@ records:
     same stop if interrupted between the two writes; re-entry identified only from
     committed facts incl. ancestry of recorded_at_commit vs prior completed_at_commit;
     tier upgrade writes the same spec_change record so flags alone are insufficient.'
+- gate_id: create-spec.command-approval
+  question_id: create-spec.command-approval
+  answered_at: '2026-11-11T00:18:17+09:00'
+  source: policy
+  selected_option_ids:
+  - auto_record
+  resolution_note: 'All workflow.yaml commands were already approved; nothing newly
+    recorded. Commands: "python3 em-workflow/scripts/check-plugin-invariants.py ."
+    (build_command), "python3 -m unittest discover -s tests" (test_command).'
