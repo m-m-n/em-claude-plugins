@@ -112,7 +112,87 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Rewrite the muse_guard DENY_CONTEXT to the reviewer-conditional recovery route
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/hooks/muse_guard.py
+    - em-review/hooks/muse_guard.py
+    - tests/test_muse_guard.py
+    skills: []
+    domains:
+    - auth
+    - api-contract
+    complexity: high
+    requirements:
+    - FR6
+    - FR7
+    - FR9
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR5
+    status: pending
+  task0002:
+    title: Add contributor_consent_missing to both Skip Semantics sections
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/references/review-protocol.md
+    - em-review/references/review-protocol.md
+    - tests/test_codex_reviewer_skip_handling.py
+    - tests/test_reviewer_roles_protocol.py
+    skills: []
+    domains:
+    - api-contract
+    complexity: medium
+    requirements:
+    - FR1
+    - FR2
+    - FR9
+    - NFR2
+    - NFR3
+    - NFR5
+    status: pending
+  task0003:
+    title: Route contributor_consent_missing in em-workflow Phase R2b and the README
+    plan: tasks/task0003.md
+    files:
+    - em-workflow/references/review-phase.md
+    - em-workflow/README.md
+    - tests/test_review_phase_llm_led.py
+    - tests/test_review_phase_shard_dispatch.py
+    skills: []
+    domains:
+    - api-contract
+    complexity: high
+    requirements:
+    - FR3
+    - FR4
+    - FR8
+    - FR9
+    - NFR2
+    - NFR4
+    - NFR5
+    status: pending
+  task0004:
+    title: Route contributor_consent_missing in em-review Phase R2b
+    plan: tasks/task0004.md
+    files:
+    - em-review/references/review-phase.md
+    - tests/test_em_review_r2b_contributor_consent.py
+    skills: []
+    domains:
+    - api-contract
+    complexity: medium
+    requirements:
+    - FR5
+    - FR9
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    status: pending
 review:
   status: pending
   rounds_completed: 0
@@ -122,7 +202,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0002
     tests:
     - TS-3
     - TS-4
@@ -131,7 +212,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0002
     tests:
     - TS-3
   FR3:
@@ -139,7 +221,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0003
     tests:
     - TS-5
   FR4:
@@ -147,7 +230,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0003
     tests:
     - TS-6
   FR5:
@@ -155,7 +239,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0004
     tests:
     - TS-8
   FR6:
@@ -163,7 +248,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
   FR7:
@@ -171,7 +257,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-2
   FR8:
@@ -179,7 +266,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0003
     tests:
     - TS-7
   FR9:
@@ -187,43 +275,68 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS-9
   NFR1:
     title: Hook decision behavior unchanged
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-13
   NFR2:
     title: No version change
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS-10
   NFR3:
     title: Forbidden words stay absent
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0004
+    tests:
+    - TS-11
   NFR4:
     title: Existing pinned R2b phrases stay verbatim
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0003
+    - task0004
+    tests:
+    - TS-12
   NFR5:
     title: Unit test suite passes
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS-9
 batch:
   review_rework_count: 0
   verify_rework:
