@@ -4,14 +4,20 @@ final_failures: []
 acceptance_tests:
   AC-1:
     tests:
-      - tests.test_contributor_consent_skill.ContributorConsentSkillTest.test_task0009_ac1_presents_mutating_commands_never_executes_them
+      - tests.test_contributor_consent_skill.ContributorConsentCommandPathTest.test_ac2_branches_bind_each_answer_to_the_commands_the_skill_runs
+      - tests.test_contributor_consent_skill.ContributorConsentCommandPathTest.test_ac3_every_element_is_a_skill_command_or_user_visible_text
+      - tests.test_contributor_consent_skill.ContributorConsentCommandPathTest.test_ac4_commands_are_run_by_the_skill_not_in_a_user_terminal
     red_confirmed: true
     red_reason: >-
-      Ran against the pre-task0009 SKILL.md content (both plugins):
-      AssertionError: 0 != 1 on step5.count(PRESENTED_RECORD_CMD) -- the old
-      document described "ガード CLI を --record で呼び出す" (the skill
-      invoking the mutating command itself) and contained no presented,
-      ready-to-copy command line at all.
+      Historical observation, made with the wording-locked test that this
+      criterion first used: ran against the pre-task0009 SKILL.md content
+      (both plugins): AssertionError: 0 != 1 on step5.count(PRESENTED_RECORD_CMD)
+      -- the old document described "ガード CLI を --record で呼び出す" (the
+      skill invoking the mutating command itself) and contained no presented,
+      ready-to-copy command line at all. That test was removed by
+      contributor-consent-command-path task0001 and the criterion is now
+      checked structurally by the tests listed here; their red state is
+      recorded in test-docs/contributor-consent-command-path/task0001.tests.yaml.
   AC-2:
     tests:
       - tests.test_contributor_consent_skill.ContributorConsentSkillTest.test_task0009_ac2_all_six_steps_present_in_order
