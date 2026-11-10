@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 6071d0f3818454eb5b99e424e98713f6befc1597
 last_input_digest: sha256:6e1ee424f58473266c207490da4f2a8f19a3391ae506d5473de2273ff8a0cf6f
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -100,9 +100,9 @@ worker_runs:
     tests/test_reviewer_roles_protocol.py: sha256:2bfb5f52fa455d14d734f177bf19a0804455de4c71687d2351144247ead4dc12
   self_write_set: []
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:6e1ee424f58473266c207490da4f2a8f19a3391ae506d5473de2273ff8a0cf6f
-  output_digest: null
+  output_digest: sha256:b9db2df607397c63b02db2f33e2fbd00d08d2f7b38b0205f3fffcdb56336c887
   dispatch_digest_inputs:
     CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
     em-review/hooks/muse_guard.py: sha256:224bf7fa0e14a58135d7ad02b9b819c7fac348285f0955160df52d1be99fbd3f
@@ -118,6 +118,7 @@ worker_runs:
     tests/test_review_phase_llm_led.py: sha256:93e3bfdb7898882de8e4de56cd52f2d8ade458729b7b50e9676b1fba262e91ef
     tests/test_review_phase_shard_dispatch.py: sha256:4a68c0647af1186a82f12713af7a82c97524796870f0909faca71aa863e86a80
     tests/test_reviewer_roles_protocol.py: sha256:2bfb5f52fa455d14d734f177bf19a0804455de4c71687d2351144247ead4dc12
+  self_write_set: []
 artifacts: []
 patches: []
 progress_fingerprint: null
