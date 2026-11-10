@@ -11,3 +11,12 @@ records:
   freeform: null
   normalized_answer: "A: version に触れない。完了の定義の version 項目は「対象なし（プラグインの内容に変更なし）」として報告する"
   resolution_note: "gate: create-plan 未決事項（タスク記述の完了の定義『両プラグインの version を bump した』と、実装で version を触らず Actions が変更のあったプラグインの patch を上げるリポジトリのルールの衝突。計画では変更がテストのみでプラグイン配下に差分が出ない見込み）; options: A=version に触れない / B=SKILL.md 2 コピーに意味を変えない変更を入れて Actions に上げさせる / C=plugin.json と marketplace.json を手で上げる（ルール違反）; chosen: A; not chosen: B（必要性のない変更）, C（ルール違反）; codex_consulted: true（Codex の根拠: ルールは patch を Actions に任せ実装で version を変えないと定める。ワークフローはプラグイン配下の変更を検出するため、テストだけの変更では更新対象が生じない。両 SKILL.md の手順 5 はすでにスキル自身が実行する設計で端末へ貼る手順はなく、本文を変えないならキャッシュ更新のための増版は不要）; opus_escalation: false"
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: "2026-11-10T20:19:41+09:00"
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: "decline auto-addition of test-docs/muse-spark-contributor-consent/task0009.tests.yaml to tasks.task0001.files"
+  normalized_answer: "declined: test-docs/muse-spark-contributor-consent/task0009.tests.yaml"
+  resolution_note: "task_id: task0001; declined deviation path test-docs/muse-spark-contributor-consent/task0009.tests.yaml; missing evidence part: identifier (the report names no AC-n of task0001's plan and no requirement id registered in workflow.yaml); the path part passes the shape check and is not under a workflow control path; the failure part is stated (tests/test_tests_yaml_id_resolution.py fails after the removed test ID); left to the containment check as an ordinary deviation"
