@@ -34,7 +34,16 @@ worker_runs:
 - request_id: create-spec-run-0001
   status: completed
   input_digest: sha256:9ee6d98bdb3a83ae01c5addbd94bc09c45e89897f552a51779db19bf278fb27e
-artifacts: []
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:spec-writer-run-0002
+artifacts:
+- path: feature-docs/spec-change-rework-reentry/REQUIREMENTS.md
+  sha256: sha256:144ceb6e56aba455686dbdc89c1a1e0494b37f98233f482142dfa89599994b72
+  produced_by: create-spec-run-0002
+- path: feature-docs/spec-change-rework-reentry/SPEC.md
+  sha256: sha256:07326902cfb497d1c283f94bf46e913a3e47a942be8cb0fba6d353c33abab1c8
+  produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
