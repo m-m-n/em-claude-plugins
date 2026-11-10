@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 6071d0f3818454eb5b99e424e98713f6befc1597
 last_input_digest: sha256:345609c309dee7d39ac1cfbe7d6a1b710d01b6ace3c13447ab65c0f716c25248
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -120,14 +120,23 @@ worker_runs:
     tests/test_reviewer_roles_protocol.py: sha256:2bfb5f52fa455d14d734f177bf19a0804455de4c71687d2351144247ead4dc12
   self_write_set: []
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:345609c309dee7d39ac1cfbe7d6a1b710d01b6ace3c13447ab65c0f716c25248
-  output_digest: null
+  output_digest: sha256:6dd3ec7eb6b05c5cdca7eeb6b3a32ea449af18965f5643364244171b70e9fd01
   dispatch_digest_inputs:
     em-workflow/references/contracts/spec-writer-contract.md: sha256:1e63f69687c6850e890f66b5ca92af7f3b0d02645cc464fca88455ad2269d671
     em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
     em-workflow/references/templates/spec-document.md: sha256:a5d0106c39a5df7dc2365357a9546588275ed6c7a1651c866e75fa327a7fa592
-artifacts: []
+  self_write_set:
+  - feature-docs/muse-guard-deny-recovery/REQUIREMENTS.md
+  - feature-docs/muse-guard-deny-recovery/SPEC.md
+artifacts:
+- path: feature-docs/muse-guard-deny-recovery/REQUIREMENTS.md
+  sha256: sha256:dca5ba4b1e96a651e6b0710fc20e1d13f716a37128e56496b2ed5316c39bfd3b
+  produced_by: create-spec-run-0003
+- path: feature-docs/muse-guard-deny-recovery/SPEC.md
+  sha256: sha256:425e61ec5632e54ad50994c6ee6ad61b01a2a78dbbd9b424099902b09361fd88
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
