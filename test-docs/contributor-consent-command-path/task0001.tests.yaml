@@ -1,0 +1,123 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Verified by a static text search of tests/test_contributor_consent_skill.py
+      (SPEC allows TS-8 to be a static check): no removed constant name, no
+      quoted plugin-root form and no project-directory argument form occurs. A
+      test in the module that searched its own source would have to spell out
+      the forbidden strings itself. No existing test covers it: a search of
+      tests/ by the repository-relative path and by the filename
+      test_contributor_consent_skill finds no test that reads this module's
+      source. No executable check exists that can be made to fail, so no red
+      state was observed.
+  AC-2:
+    tests:
+      - tests.test_contributor_consent_skill.ContributorConsentCommandPathTest.test_ac2_branches_bind_each_answer_to_the_commands_the_skill_runs
+    red_confirmed: true
+    red_reason: >-
+      With check_branch_binding not yet implemented (stubbed to always report
+      a failure) the test failed on both copies: AssertionError: Lists differ:
+      ['not-implemented: stub'] != []. It passes on the real text of both
+      copies once the check exists. The synthetic tests of AC-5 (b) and (d)
+      show the check can fail.
+  AC-3:
+    tests:
+      - tests.test_contributor_consent_skill.ContributorConsentCommandPathTest.test_ac3_every_element_is_a_skill_command_or_user_visible_text
+      - tests.test_contributor_consent_skill.ContributorConsentCommandPathTest.test_ac3_reference_in_a_skill_command_is_not_flagged
+    red_confirmed: true
+    red_reason: >-
+      With check_classification not yet implemented (stubbed to always report
+      a failure) both tests failed: AssertionError: Lists differ:
+      ['not-implemented: stub'] != []. With the reference detection stubbed
+      to find nothing, the second test failed on its assertTrue of a
+      reference inside the edited command: AssertionError: [] is not true.
+  AC-4:
+    tests:
+      - tests.test_contributor_consent_skill.ContributorConsentCommandPathTest.test_ac4_commands_are_run_by_the_skill_not_in_a_user_terminal
+    red_confirmed: true
+    red_reason: >-
+      With check_run_statement not yet implemented (stubbed to always report
+      a failure) the test failed on both copies: AssertionError: Lists differ:
+      ['not-implemented: stub'] != [].
+  AC-5:
+    tests:
+      - tests.test_contributor_consent_skill.ContributorConsentCommandPathTest.test_ac5a_reference_detection_on_free_standing_strings
+      - tests.test_contributor_consent_skill.ContributorConsentCommandPathTest.test_ac5a_check_1_flags_references_in_every_kind_of_user_visible_text
+      - tests.test_contributor_consent_skill.ContributorConsentCommandPathTest.test_ac5b_check_2_fails_when_a_mutating_command_is_removed
+      - tests.test_contributor_consent_skill.ContributorConsentCommandPathTest.test_ac5b_check_1_fails_when_the_list_command_is_removed
+      - tests.test_contributor_consent_skill.ContributorConsentCommandPathTest.test_ac5b_check_2_fails_on_a_command_without_its_arguments
+      - tests.test_contributor_consent_skill.ContributorConsentCommandPathTest.test_ac5c_check_1_fails_on_a_block_that_is_neither_kind
+      - tests.test_contributor_consent_skill.ContributorConsentCommandPathTest.test_ac5d_check_2_fails_on_a_command_bound_to_decline_or_keep
+      - tests.test_contributor_consent_skill.ContributorConsentCommandPathTest.test_ac5d_check_2_fails_on_a_guard_invocation_in_step_6
+      - tests.test_contributor_consent_skill.ContributorConsentCommandPathTest.test_ac5d_check_2_fails_when_step_6_outputs_something_else
+      - tests.test_contributor_consent_skill.ContributorConsentCommandPathTest.test_ac5d_check_2_fails_on_a_mutating_command_outside_its_branch
+      - tests.test_contributor_consent_skill.ContributorConsentCommandPathTest.test_ac5e_check_3_fails_on_an_instruction_to_use_the_user_terminal
+      - tests.test_contributor_consent_skill.ContributorConsentCommandPathTest.test_ac5e_check_3_fails_when_a_bound_branch_no_longer_states_the_run
+      - tests.test_contributor_consent_skill.ContributorConsentCommandPathTest.test_ac5e_check_3_fails_when_no_branch_is_bound_to_a_command
+    red_confirmed: true
+    red_reason: >-
+      With the three checks stubbed to report no failure at all, every
+      synthetic test failed because the check could not fail, for example
+      AssertionError: 'command-count[consent]' not found in [], and
+      AssertionError: 'unresolved-reference' not found in []. With the
+      reference detection stubbed to find nothing, the free-standing-string
+      test failed: AssertionError: [] is not true.
+  AC-6:
+    tests:
+      - tests.test_contributor_consent_skill.ContributorConsentCommandPathTest.test_ac6_checks_hold_on_both_rewrap_variants
+      - tests.test_contributor_consent_skill.ContributorConsentCommandPathTest.test_ac6_variants_reflow_prose_paragraphs_only
+      - tests.test_contributor_consent_skill.ContributorConsentCommandPathTest.test_ac6_narrow_variant_wraps_branches_and_splits_a_run_verb
+    red_confirmed: true
+    red_reason: >-
+      With the checks stubbed to always report a failure, the first test
+      failed: AssertionError: Lists differ: ['not-implemented: stub'] != [].
+      With the variant builder stubbed to return the text unchanged, the two
+      variant tests failed (AssertionError: False is not true, and
+      AssertionError: 1 not greater than 1), so the variants really re-flow
+      the prose.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      Verified by a case-insensitive static text search of
+      tests/test_contributor_consent_skill.py for the two forbidden phrases
+      and by review of the docstring and comments. No existing test covers
+      it: a search of tests/ by the repository-relative path and by the
+      filename test_contributor_consent_skill finds no test that reads this
+      module's source. No executable check exists that can be made to fail,
+      so no red state was observed.
+  AC-8:
+    tests:
+      - tests.test_contributor_consent_skill.ContributorConsentSkillTest.test_ac1_files_exist_with_valid_frontmatter_and_no_commands_dir
+      - tests.test_contributor_consent_skill.ContributorConsentSkillTest.test_ac2_probe_by_reference_and_not_installed_exit
+      - tests.test_contributor_consent_skill.ContributorConsentSkillTest.test_ac3_exactly_three_facts_fixed_labels_order_and_vocabulary
+      - tests.test_contributor_consent_skill.ContributorConsentSkillTest.test_ac4_exactly_one_question_round_with_two_options_each
+      - tests.test_contributor_consent_skill.ContributorConsentSkillTest.test_ac5_record_remove_via_cli_never_the_store_file
+      - tests.test_contributor_consent_skill.ContributorConsentSkillTest.test_ac6_no_develop_phase_document_references_the_skill
+      - tests.test_contributor_consent_skill.ContributorConsentSkillTest.test_task0009_ac2_all_six_steps_present_in_order
+      - tests.test_contributor_consent_skill.ContributorConsentSkillTest.test_task0009_ac3_store_is_reached_only_through_the_cli
+      - tests.test_contributor_consent_skill.ContributorConsentSkillTest.test_task0009_ac5_valid_frontmatter_and_only_plugin_naming_differs
+      - tests.test_muse_consent_no_new_questions.TestExcludedFilesAreExactlyTheContributorConsentSkillDocs.test_excluded_set_is_exactly_the_two_contributor_consent_skill_docs
+    red_confirmed: false
+    red_reason: >-
+      These checks existed before this task and were kept with their
+      assertions unchanged; the behavior pre-existed and no red state
+      occurred. The suite as a whole (python3 -m unittest discover -s tests)
+      passes: baseline and final runs both report no failure.
+  AC-9:
+    tests:
+      - tests.test_contributor_consent_skill.ContributorConsentSkillTest.test_task0009_ac5_valid_frontmatter_and_only_plugin_naming_differs
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing
+      test_task0009_ac5_valid_frontmatter_and_only_plugin_naming_differs
+      detects any drift between the two skill copies; no red state occurred
+      for this change, because both SKILL.md copies stay unchanged. The
+      second half of the criterion (no Notion URL and no absolute path under
+      a home directory in the changed files) was verified by a static text
+      search of the changed files.

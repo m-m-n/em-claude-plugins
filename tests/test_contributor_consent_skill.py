@@ -19,9 +19,9 @@ consent/tasks/task0002.md):
   with both state-dependent wordings and two options each, and states that
   dismissal takes the non-mutating branch and writes nothing.
 - AC-5: each document queries state through the guard CLI's `--list`, and
-  neither document reads or writes the store file directly. (Narrowed by
-  task0009 below: recording/revoking is no longer described as an action
-  the skill performs -- see task0009 AC-1.)
+  neither document reads or writes the store file directly. (Recording and
+  revoking go through the same CLI, which the skill itself runs -- see the
+  task0009 and contributor-consent-command-path parts below.)
 - AC-6: neither document is referenced from any develop-phase document in
   either plugin (this task never edits an existing file, so it also adds
   no occurrence of the interactive-question tool name to any develop-phase
@@ -32,21 +32,23 @@ consent/tasks/task0002.md):
   suite, not by a test within this module).
 
 Covers task0009 Acceptance Criteria (feature-docs/muse-spark-contributor-
-consent/tasks/task0009.md) -- the amended FR13, under which the skill
-presents the mutating command instead of running it:
+consent/tasks/task0009.md), restated for the skill-executed design: the
+skill is a slash command the user launches, and after the explicit answer of
+its one question the skill itself runs the guard CLI -- `--record` after the
+consent answer, `--remove` after the revoke answer:
 
-- AC-1: both documents describe presenting the recording command and the
-  removal command as command lines the user runs in their own terminal,
-  each naming that plugin's own guard script path and the project-directory
-  option, and neither document contains any step, fallback or retry in
-  which the skill itself runs a mutating command.
+- AC-1: both documents have the skill run the recording command after the
+  consent answer and the removal command after the revoke answer, each
+  naming that plugin's own guard script and the project-directory option.
+  Asserted structurally by the checks of the next part, not by a pinned
+  command string.
 - AC-2: both documents still describe, in order, the same six steps as
   task0002 (probe/exit, read-only check, three facts, one question round,
-  command presentation, no-write line on dismissal); neither presents
+  command execution, no-write line on dismissal); neither presents
   unpushed-commit state.
-- AC-3: the accompanying context line states that the write path requires
-  an interactive terminal, and asserts no impossibility of writing the
-  store by other means.
+- AC-3: both documents carry the CLI-only line: the skill reaches the
+  consent store only through the guard CLI and takes no other route to the
+  store file.
 - AC-4: neither document gains an occurrence of the interactive-question
   tool name relative to task0002 (still exactly one `AskUserQuestion` per
   document) and neither is referenced by any develop-phase document (reuses
@@ -58,6 +60,40 @@ presents the mutating command instead of running it:
   both documents, imports the standard library only, and
   `python3 -m unittest discover -s tests` passes.
 
+Covers contributor-consent-command-path task0001 Acceptance Criteria
+(feature-docs/contributor-consent-command-path/SPEC.md and tasks/
+task0001.md). The skill itself runs the guard CLI: `--list` in step 2,
+`--record` and `--remove` in step 5. The checks are structural. They split a
+document into steps, sort every fenced block and every user-facing literal of
+step 4 into one of two kinds (a command the skill runs, or text the user
+reads), and bind each answer of step 5 to the commands the skill runs for it.
+No check matches a whole command string or a path spelling.
+
+- Check 1, classification (`check_classification`): every element is exactly
+  one kind; text the user reads holds no unresolved environment-variable
+  reference (`${NAME}` or `$NAME`); the commands of step 2 and step 5 are
+  classified as run by the skill and carry `--list`, `--record` and
+  `--remove`. A reference inside a command the skill runs is never flagged.
+- Check 2, branch binding (`check_branch_binding`): the consent branch of
+  step 5 is bound to exactly one command carrying `--record` and
+  `--project-dir`, the revoke branch to exactly one carrying `--remove` and
+  `--project-dir`, the decline and keep branches to none, and step 6 holds no
+  guard invocation and outputs the no-write line only.
+- Check 3, run statement (`check_run_statement`): every branch bound to a
+  command states that the command is run, and step 5 holds no instruction to
+  paste or run a command in the user's own terminal.
+- Checks 1 and 2 together are THREAT-MODEL.md mitigation TM-1: a mutating
+  guard command is reachable only from the explicit consent answer or the
+  explicit revoke answer.
+- Every check has failing synthetic inputs (NFR4): copies of a real document
+  edited by removing, duplicating, moving or inserting blocks and paragraphs,
+  and short free-standing strings. Neither kind of input spells out a full
+  guard command line.
+- Checks 1 to 3 also run on two rewrapped variants of each real document
+  (NFR3): one joins each prose paragraph into one line, the other splits it
+  at a narrow column. Prose terms are compared with all whitespace removed,
+  so a wrap cannot split a term, including in Japanese text.
+
 Frontmatter is parsed with a hand-rolled scalar `key: value` splitter (no
 PyYAML), the same dependency-free convention `tests/test_new_worker_agents.py`
 documents for agent frontmatter (PyYAML is a plugin runtime dependency, not
@@ -66,6 +102,7 @@ a test dependency -- IMPLEMENTATION.md Technology Stack).
 
 import re
 import unittest
+from collections import namedtuple
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -117,19 +154,8 @@ UNPUSHED_WORDINGS = ["未push", "未プッシュ", "unpushed", "un-pushed"]
 
 STORE_INTERNALS = ["muse-consent.json", "EM_WORKFLOW_MUSE_CONSENT"]
 
-# task0009: the two mutating commands are PRESENTED to the user, never
-# executed by the skill. These are the exact, ready-to-copy command lines.
-PRESENTED_RECORD_CMD = (
-    'python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/muse_guard.py'
-    ' --project-dir "$(pwd)" --record'
-)
-PRESENTED_REMOVE_CMD = (
-    'python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/muse_guard.py'
-    ' --project-dir "$(pwd)" --remove'
-)
-
-# task0009 AC-3: two exact, single-line sentences (each authored to fit on
-# one physical source line, so no Japanese no-space line-wrap can silently
+# task0009 AC-3: one exact, single-line sentence (authored to fit on one
+# physical source line, so no Japanese no-space line-wrap can silently
 # insert a token into the middle of the checked text -- _normalize_ws only
 # recovers word-for-word text across a wrap for space-delimited prose).
 # CLI_ONLY_LINE states that the skill reaches the consent store only through
@@ -140,6 +166,78 @@ CLI_ONLY_LINE = (
 )
 
 HEADING_RE = re.compile(r"^#{1,6}\s")
+
+# --- contributor-consent-command-path: structural vocabulary ---------------
+
+# A guard invocation is any text that contains this path segment.
+GUARD_PATH_SEGMENT = "hooks/muse_guard.py"
+
+# Fenced guard invocations in these steps are commands the skill runs.
+COMMAND_STEPS = (2, 5)
+# Fenced blocks that are not guard invocations, in these steps, are text the
+# user reads.
+VISIBLE_BLOCK_STEPS = (1, 6)
+
+KIND_COMMAND = "command the skill runs"
+KIND_VISIBLE = "text the user reads"
+
+# The role of each option of step 4, taken from the option constants that the
+# question-round check (task0002 AC-4) already pins.
+ROLE_LABELS = {
+    "consent": OPTIONS_NOT_CONSENTED[0],
+    "decline": OPTIONS_NOT_CONSENTED[1],
+    "keep": OPTIONS_ALREADY_CONSENTED[0],
+    "revoke": OPTIONS_ALREADY_CONSENTED[1],
+}
+# The mutating roles: the flag the bound command must carry, and the flag it
+# must not carry.
+MUTATING_ROLES = {
+    "consent": ("--record", "--remove"),
+    "revoke": ("--remove", "--record"),
+}
+PROJECT_DIR_FLAG = "--project-dir"
+
+# Characters skipped before and between option labels at the start of a
+# branch paragraph (markup and list separators), after whitespace removal.
+LEADING_MARKUP = "*_`>-•"
+TRAILING_MARKUP = "*_`"
+LABEL_SEPARATORS = "/／、,・と"
+
+# Check 3: the verbs by which a branch states that the command is run, and
+# the closed vocabulary of an instruction to use the user's own terminal or to
+# copy or paste a command (Japanese and English, matched case-insensitively
+# after whitespace removal).
+RUN_VERB_TERMS = ("実行する", "実行して", "呼び出す", "呼び出して")
+USER_TERMINAL_TERMS = (
+    "端末",
+    "ターミナル",
+    "貼り付",
+    "貼付",
+    "貼って",
+    "貼る",
+    "ペースト",
+    "コピー",
+    "terminal",
+    "paste",
+    "pasting",
+    "copy",
+)
+
+# Rewrap variants (NFR3). The narrow column splits the run verb of the
+# command-bound branches across two lines.
+NARROW_COLUMN = 8
+LINE_START_FORBIDDEN = "#>-*+|="
+
+Node = namedtuple("Node", ["kind", "lines"])
+
+FENCE_OPEN_RE = re.compile(r"^\s*```")
+FENCE_CLOSE_RE = re.compile(r"^\s*```\s*$")
+MD_HEADING_RE = re.compile(r"^(#{1,6})\s+\S")
+STEP_HEADING_RE = re.compile(r"^###\s+(\d+)\.")
+LIST_ITEM_RE = re.compile(r"^\s*(?:[-*+]|\d+\.)\s")
+INLINE_CODE_RE = re.compile(r"`([^`]+)`")
+OPTION_SEPARATOR_RE = re.compile(r"\s*[—–]\s*|\s+-\s+")
+UNRESOLVED_REFERENCE_RE = re.compile(r"\$\{?[A-Za-z_][A-Za-z0-9_]*")
 
 
 def _read(path):
@@ -152,6 +250,12 @@ def _normalize_ws(text):
     word. NOT used for line-anchored extraction (headings, bullet counts,
     numbered-list parsing) -- only for multi-word substring checks below."""
     return re.sub(r"\s+", " ", text)
+
+
+def _squash(text):
+    """Remove all whitespace. Term matching in prose compares text and term
+    in this form, so a wrap at any column cannot split a term."""
+    return re.sub(r"\s+", "", text)
 
 
 def _split_frontmatter(text):
@@ -194,6 +298,589 @@ def _extract_section(body, heading_pattern):
             end = j
             break
     return "\n".join(lines[start:end])
+
+
+def _skill_body(plugin):
+    _fm, body = _split_frontmatter(_read(PLUGINS[plugin]["skill_path"]))
+    return body
+
+
+# --- document model: nodes, steps, elements --------------------------------
+
+
+def _parse_nodes(body):
+    """Split a body into nodes in document order: a heading (one line), a
+    fenced block (its fence lines included) or a paragraph (a run of
+    non-blank lines outside fenced blocks, headings excluded)."""
+    nodes = []
+    paragraph = []
+    lines = body.splitlines()
+
+    def flush():
+        nonlocal paragraph
+        if paragraph:
+            nodes.append(Node("para", paragraph))
+            paragraph = []
+
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        if FENCE_OPEN_RE.match(line):
+            flush()
+            block = [line]
+            i += 1
+            while i < len(lines):
+                block.append(lines[i])
+                closing = FENCE_CLOSE_RE.match(lines[i]) is not None
+                i += 1
+                if closing:
+                    break
+            nodes.append(Node("fence", block))
+            continue
+        if MD_HEADING_RE.match(line):
+            flush()
+            nodes.append(Node("heading", [line]))
+        elif line.strip():
+            paragraph.append(line)
+        else:
+            flush()
+        i += 1
+    flush()
+    return nodes
+
+
+def _render(nodes):
+    return "\n\n".join("\n".join(node.lines) for node in nodes) + "\n"
+
+
+def _fence_text(node):
+    inner = node.lines[1:]
+    if inner and FENCE_CLOSE_RE.match(inner[-1]):
+        inner = inner[:-1]
+    return "\n".join(inner)
+
+
+def _node_text(node):
+    return _fence_text(node) if node.kind == "fence" else "\n".join(node.lines)
+
+
+def _node_steps(nodes):
+    """The step of each node. Step N runs from the `### N.` heading up to the
+    next heading of level 1, 2 or 3; level-4 headings stay inside their step.
+    The preamble, the `## 手順` heading and the constraints section belong to
+    no step (None)."""
+    steps = []
+    current = None
+    for node in nodes:
+        if node.kind == "heading":
+            level = len(MD_HEADING_RE.match(node.lines[0]).group(1))
+            if level <= 3:
+                match = STEP_HEADING_RE.match(node.lines[0])
+                current = int(match.group(1)) if match else None
+        steps.append(current)
+    return steps
+
+
+def _entries(body):
+    nodes = _parse_nodes(body)
+    return list(zip(_node_steps(nodes), nodes))
+
+
+def _render_entries(entries):
+    return _render([node for _step, node in entries])
+
+
+def _step_nodes(entries, step):
+    return [node for s, node in entries if s == step]
+
+
+def _step_text(entries, step):
+    return "\n".join(_node_text(node) for node in _step_nodes(entries, step))
+
+
+def _is_guard_invocation(text):
+    return GUARD_PATH_SEGMENT in text
+
+
+def _has_flag(text, flag):
+    return re.search(r"(?<![\w-])" + re.escape(flag) + r"(?![\w-])", text) is not None
+
+
+def _unresolved_references(text):
+    """`${NAME}` and `$NAME` (NAME: a letter or underscore, then letters,
+    digits or underscores). A command substitution `$(...)` is not one."""
+    return UNRESOLVED_REFERENCE_RE.findall(text)
+
+
+def _fence_kind(step, text):
+    guard = _is_guard_invocation(text)
+    if guard and step in COMMAND_STEPS:
+        return KIND_COMMAND
+    if not guard and step in VISIBLE_BLOCK_STEPS:
+        return KIND_VISIBLE
+    return None
+
+
+def _option_label(item):
+    """The text of an option list item before its description separator."""
+    return OPTION_SEPARATOR_RE.split(item, maxsplit=1)[0].strip()
+
+
+def _option_lists(entries):
+    """The option lists of step 4: for each list paragraph, the labels of
+    its items in order."""
+    lists = []
+    for node in _step_nodes(entries, 4):
+        if node.kind != "para":
+            continue
+        items = []
+        for line in node.lines:
+            match = re.match(r"^-\s+(.*)$", line)
+            if match:
+                items.append(match.group(1))
+            elif items:
+                items[-1] += " " + line.strip()
+        if items:
+            lists.append([_option_label(item) for item in items])
+    return lists
+
+
+def _option_roles(entries, failures):
+    """Role -> label (whitespace removed), from the two option lists of
+    step 4: consent and decline for the not-consented list, keep and revoke
+    for the consented list. None, with a failure recorded, when the lists do
+    not have that shape or a label differs from the pinned option constant."""
+    lists = _option_lists(entries)
+    if len(lists) != 2 or any(len(options) != 2 for options in lists):
+        failures.append(
+            "option-lists: expected two option lists of two options, got "
+            f"{[len(options) for options in lists]}"
+        )
+        return None
+    parsed = {
+        "consent": lists[0][0],
+        "decline": lists[0][1],
+        "keep": lists[1][0],
+        "revoke": lists[1][1],
+    }
+    roles = {}
+    for role, label in parsed.items():
+        if _squash(label) != _squash(ROLE_LABELS[role]):
+            failures.append(
+                f"option-role[{role}]: step 4 label {label!r} differs from "
+                f"the pinned option {ROLE_LABELS[role]!r}"
+            )
+            return None
+        roles[role] = _squash(label)
+    return roles
+
+
+def _leading_roles(text, role_labels):
+    """The roles whose labels a paragraph begins with, in order. One
+    paragraph may name several labels, separated by LABEL_SEPARATORS."""
+    rest = _squash(text).lstrip(LEADING_MARKUP)
+    roles = []
+    while True:
+        for role, label in role_labels.items():
+            if rest.startswith(label):
+                roles.append(role)
+                rest = rest[len(label) :].lstrip(TRAILING_MARKUP + LABEL_SEPARATORS)
+                break
+        else:
+            return roles
+
+
+def _step5_branches(entries, role_labels):
+    """The branches of step 5 and the guard commands bound to them. A branch
+    is a paragraph that begins with one or more option labels; the commands
+    bound to it are the skill-executed commands between it and the next
+    branch paragraph or the end of step 5. Commands before the first branch
+    paragraph are unbound."""
+    branches = []
+    unbound = []
+    current = None
+    for node in _step_nodes(entries, 5):
+        if node.kind == "para":
+            text = "\n".join(node.lines)
+            roles = _leading_roles(text, role_labels)
+            if roles:
+                current = {"roles": roles, "text": text, "commands": []}
+                branches.append(current)
+        elif node.kind == "fence":
+            text = _fence_text(node)
+            if _is_guard_invocation(text):
+                if current is None:
+                    unbound.append(text)
+                else:
+                    current["commands"].append(text)
+    return branches, unbound
+
+
+# --- the three checks -------------------------------------------------------
+# Each check takes the body of one skill copy and returns the list of its
+# failures; an empty list means the check passes. A failure is a string that
+# starts with a short code, then a colon.
+
+
+def check_classification(body):
+    """Check 1 (FR4): every element is exactly one kind, no text the user
+    reads holds an unresolved environment-variable reference, and the
+    commands of step 2 and step 5 are classified as run by the skill."""
+    entries = _entries(body)
+    failures = []
+    commands = {step: [] for step in COMMAND_STEPS}
+    visible = []  # (description, text)
+
+    for step, node in entries:
+        if node.kind != "fence":
+            continue
+        text = _fence_text(node)
+        where = "outside any step" if step is None else f"step {step}"
+        kind = _fence_kind(step, text)
+        if kind == KIND_COMMAND:
+            commands[step].append(text)
+        elif kind == KIND_VISIBLE:
+            visible.append((f"fenced block in {where}", step, text))
+        else:
+            first = text.strip().splitlines()[0][:40] if text.strip() else ""
+            failures.append(f"unclassified-element: fenced block {where}: {first!r}")
+
+    for step, node in entries:
+        if step == 4 and node.kind in ("heading", "para"):
+            for match in INLINE_CODE_RE.finditer("\n".join(node.lines)):
+                visible.append(("inline code span in step 4", 4, match.group(1)))
+    for options in _option_lists(entries):
+        for label in options:
+            visible.append(("option label in step 4", 4, label))
+
+    # non-vacuity: the places that hold text the user reads were found
+    for step in VISIBLE_BLOCK_STEPS:
+        if not any(s == step and w.startswith("fenced block") for w, s, _t in visible):
+            failures.append(f"missing-visible-text: step {step} holds no block")
+    for what in ("inline code span in step 4", "option label in step 4"):
+        if not any(w == what for w, _s, _t in visible):
+            failures.append(f"missing-visible-text: no {what}")
+
+    for where, _step, text in visible:
+        references = _unresolved_references(text)
+        if references:
+            failures.append(f"unresolved-reference: {where}: {references}")
+
+    if not any(_has_flag(text, "--list") for text in commands[2]):
+        failures.append("missing-command: step 2 holds no command with --list")
+    for flag in ("--record", "--remove"):
+        if not any(_has_flag(text, flag) for text in commands[5]):
+            failures.append(f"missing-command: step 5 holds no command with {flag}")
+    return failures
+
+
+def check_branch_binding(body):
+    """Check 2 (FR3, TM-1): each answer of step 5 is bound to the commands
+    the skill runs for it, and nothing else reaches a mutating command."""
+    entries = _entries(body)
+    failures = []
+
+    for step in (5, 6):
+        if not _step_nodes(entries, step):
+            failures.append(f"missing-step: step {step} not found")
+    role_labels = _option_roles(entries, failures)
+
+    if role_labels is not None and _step_nodes(entries, 5):
+        branches, unbound = _step5_branches(entries, role_labels)
+        for text in unbound:
+            failures.append(f"unbound-command: a command precedes every branch: {text!r}")
+        for role in ("consent", "revoke", "decline", "keep"):
+            named = [branch for branch in branches if role in branch["roles"]]
+            if not named:
+                failures.append(f"missing-branch[{role}]: no branch paragraph begins with its label")
+                continue
+            bound = [text for branch in named for text in branch["commands"]]
+            if role not in MUTATING_ROLES:
+                if bound:
+                    failures.append(f"command-bound[{role}]: {len(bound)} command(s) bound")
+                continue
+            required, forbidden = MUTATING_ROLES[role]
+            if len(bound) != 1:
+                failures.append(f"command-count[{role}]: expected 1 command, got {len(bound)}")
+                continue
+            command = bound[0]
+            if not (
+                _is_guard_invocation(command)
+                and _has_flag(command, required)
+                and _has_flag(command, PROJECT_DIR_FLAG)
+                and not _has_flag(command, forbidden)
+            ):
+                failures.append(
+                    f"command-content[{role}]: the command must name the guard, "
+                    f"{required} and {PROJECT_DIR_FLAG}, and not {forbidden}"
+                )
+
+    # a mutating flag in a fenced block outside step 5 reaches no branch
+    for step, node in entries:
+        if node.kind == "fence" and step != 5:
+            text = _fence_text(node)
+            if _has_flag(text, "--record") or _has_flag(text, "--remove"):
+                failures.append(f"mutating-outside-step5: fenced block in step {step}")
+
+    # step 6 runs nothing and outputs the no-write line only
+    step6 = _step_nodes(entries, 6)
+    if step6:
+        if _is_guard_invocation("\n".join(_node_text(node) for node in step6)):
+            failures.append("step6-guard-invocation: step 6 names the guard")
+        blocks = [
+            _fence_text(node)
+            for node in step6
+            if node.kind == "fence" and not _is_guard_invocation(_fence_text(node))
+        ]
+        if len(blocks) != 1 or _squash(blocks[0]) != _squash(NO_WRITE_LINE):
+            failures.append(
+                "step6-block: step 6 must hold exactly one user-visible block, "
+                f"the no-write line; got {len(blocks)}"
+            )
+    return failures
+
+
+def check_run_statement(body):
+    """Check 3 (FR5): every branch bound to a command states that the
+    command is run, and step 5 holds no instruction to use the user's own
+    terminal or to copy or paste a command."""
+    entries = _entries(body)
+    failures = []
+
+    if not _step_nodes(entries, 5):
+        failures.append("missing-step: step 5 not found")
+        return failures
+    role_labels = _option_roles(entries, failures)
+    if role_labels is not None:
+        branches, _unbound = _step5_branches(entries, role_labels)
+        bound = [branch for branch in branches if branch["commands"]]
+        if not bound:
+            failures.append("no-bound-branch: no branch of step 5 is bound to a command")
+        for branch in bound:
+            if not any(_squash(term) in _squash(branch["text"]) for term in RUN_VERB_TERMS):
+                failures.append(
+                    "no-run-statement: a command-bound branch does not state that "
+                    f"the command is run: {_squash(branch['text'])[:30]!r}"
+                )
+
+    text = _squash(_step_text(entries, 5)).lower()
+    for term in USER_TERMINAL_TERMS:
+        if _squash(term).lower() in text:
+            failures.append(f"user-terminal-instruction: step 5 contains {term!r}")
+    return failures
+
+
+def _codes(failures):
+    return [failure.split(":", 1)[0] for failure in failures]
+
+
+# --- rewrap variants --------------------------------------------------------
+
+
+def _is_prose_paragraph(node):
+    return node.kind == "para" and not any(LIST_ITEM_RE.match(line) for line in node.lines)
+
+
+def _tokens(text):
+    """Characters, with each inline code span kept whole."""
+    tokens = []
+    position = 0
+    for match in re.finditer(r"`[^`]+`", text):
+        tokens.extend(text[position : match.start()])
+        tokens.append(match.group(0))
+        position = match.end()
+    tokens.extend(text[position:])
+    return tokens
+
+
+def _wrap(text, width):
+    """Split text into lines of about `width` characters. It never splits
+    inside an inline code span, and never starts a line with a character
+    that would turn it into a heading, a list item or a quote."""
+    lines = []
+    current = ""
+    for token in _tokens(text):
+        can_break = (
+            len(current) >= width
+            and current.strip()
+            and not token.isspace()
+            and token[0] not in LINE_START_FORBIDDEN
+            and not token[0].isdigit()
+        )
+        if can_break:
+            lines.append(current.strip())
+            current = ""
+        current += token
+    if current.strip():
+        lines.append(current.strip())
+    return lines
+
+
+def _reflowed(body, reflow):
+    nodes = []
+    for node in _parse_nodes(body):
+        if _is_prose_paragraph(node):
+            joined = " ".join(line.strip() for line in node.lines)
+            node = Node("para", reflow(joined))
+        nodes.append(node)
+    return _render(nodes)
+
+
+def _joined_variant(body):
+    return _reflowed(body, lambda text: [text])
+
+
+def _narrow_variant(body):
+    return _reflowed(body, lambda text: _wrap(text, NARROW_COLUMN))
+
+
+# --- synthetic inputs: edits of a real copy --------------------------------
+
+
+def _command_with(flag):
+    def matches(node):
+        if node.kind != "fence":
+            return False
+        text = _fence_text(node)
+        return _is_guard_invocation(text) and _has_flag(text, flag)
+
+    return matches
+
+
+def _find_command(entries, flag):
+    for index, (_step, node) in enumerate(entries):
+        if _command_with(flag)(node):
+            return index
+    raise AssertionError(f"synthetic input needs a {flag} command in the copy")
+
+
+def _end_of_step(entries, step):
+    """The index just after the last node of the step."""
+    indexes = [i for i, (s, _node) in enumerate(entries) if s == step]
+    if not indexes:
+        raise AssertionError(f"synthetic input needs step {step} in the copy")
+    return indexes[-1] + 1
+
+
+def _branch_index(entries, role):
+    labels = {r: _squash(label) for r, label in ROLE_LABELS.items()}
+    for index, (step, node) in enumerate(entries):
+        if step == 5 and node.kind == "para":
+            if role in _leading_roles("\n".join(node.lines), labels):
+                return index
+    raise AssertionError(f"synthetic input needs the {role} branch in step 5")
+
+
+def _without_command(body, flag):
+    entries = _entries(body)
+    del entries[_find_command(entries, flag)]
+    return _render_entries(entries)
+
+
+def _with_command_copy(body, flag, *, step=None, after_role=None):
+    """Copy the real `flag` command to the end of `step`, or right after the
+    branch paragraph of `after_role` in step 5."""
+    entries = _entries(body)
+    node = entries[_find_command(entries, flag)][1]
+    if after_role is not None:
+        index, target = _branch_index(entries, after_role) + 1, 5
+    else:
+        index, target = _end_of_step(entries, step), step
+    entries.insert(index, (target, node))
+    return _render_entries(entries)
+
+
+def _with_command_before_branches(body, flag):
+    """Move the real `flag` command to the start of step 5, before every
+    branch paragraph."""
+    entries = _entries(body)
+    _step, node = entries.pop(_find_command(entries, flag))
+    first = min(i for i, (s, _n) in enumerate(entries) if s == 5)
+    entries.insert(first + 1, (5, node))
+    return _render_entries(entries)
+
+
+def _with_edited_command(body, flag, edit):
+    entries = _entries(body)
+    index = _find_command(entries, flag)
+    step, node = entries[index]
+    old = _fence_text(node)
+    new = edit(old)
+    assert new != old, "synthetic edit changed nothing"
+    entries[index] = (step, Node("fence", [node.lines[0], new, node.lines[-1]]))
+    return _render_entries(entries)
+
+
+def _with_block(body, step, content):
+    """Insert a free-standing fenced block at the end of the step."""
+    entries = _entries(body)
+    node = Node("fence", ["```", content, "```"])
+    entries.insert(_end_of_step(entries, step), (step, node))
+    return _render_entries(entries)
+
+
+def _with_paragraph(body, step, text):
+    entries = _entries(body)
+    node = Node("para", [text])
+    entries.insert(_end_of_step(entries, step), (step, node))
+    return _render_entries(entries)
+
+
+def _with_edited_visible_block(body, step, edit):
+    """Edit the user-visible fenced block of the step."""
+    entries = _entries(body)
+    for index, (s, node) in enumerate(entries):
+        if s == step and node.kind == "fence" and not _is_guard_invocation(_fence_text(node)):
+            old = _fence_text(node)
+            new = edit(old)
+            assert new != old, "synthetic edit changed nothing"
+            entries[index] = (s, Node("fence", [node.lines[0], new, node.lines[-1]]))
+            return _render_entries(entries)
+    raise AssertionError(f"synthetic input needs a user-visible block in step {step}")
+
+
+def _with_edited_step4_span(body, suffix):
+    """Append the suffix to the first inline code span of step 4."""
+    entries = _entries(body)
+    for index, (s, node) in enumerate(entries):
+        if s == 4 and node.kind == "para" and INLINE_CODE_RE.search("\n".join(node.lines)):
+            text = INLINE_CODE_RE.sub(
+                lambda m: f"`{m.group(1)}{suffix}`", "\n".join(node.lines), count=1
+            )
+            entries[index] = (s, Node("para", text.split("\n")))
+            return _render_entries(entries)
+    raise AssertionError("synthetic input needs an inline code span in step 4")
+
+
+def _with_edited_first_option_label(body, suffix):
+    """Append the suffix to the label of the first option of step 4."""
+    entries = _entries(body)
+    for index, (s, node) in enumerate(entries):
+        if s == 4 and node.kind == "para" and node.lines[0].startswith("- "):
+            first = OPTION_SEPARATOR_RE.sub(lambda m: f"{suffix}{m.group(0)}", node.lines[0], count=1)
+            assert first != node.lines[0], "synthetic edit changed nothing"
+            entries[index] = (s, Node("para", [first] + node.lines[1:]))
+            return _render_entries(entries)
+    raise AssertionError("synthetic input needs an option list in step 4")
+
+
+def _with_edited_branch(body, role, edit):
+    """Replace the branch paragraph of the role by the edited one-line text."""
+    entries = _entries(body)
+    index = _branch_index(entries, role)
+    step, node = entries[index]
+    old = " ".join(line.strip() for line in node.lines)
+    new = edit(old)
+    assert new != old, "synthetic edit changed nothing"
+    entries[index] = (step, Node("para", [new]))
+    return _render_entries(entries)
+
+
+def _without_run_verbs(text):
+    squashed = _squash(text)
+    for term in RUN_VERB_TERMS:
+        squashed = squashed.replace(term, "示す")
+    return squashed
 
 
 class ContributorConsentSkillTest(unittest.TestCase):
@@ -372,59 +1059,6 @@ class ContributorConsentSkillTest(unittest.TestCase):
                         f"{md_path} unexpectedly references the skill",
                     )
 
-    # task0009 AC-1
-    def test_task0009_ac1_presents_mutating_commands_never_executes_them(self):
-        for plugin, info in PLUGINS.items():
-            with self.subTest(plugin=plugin):
-                _fm, body = self._load(plugin)
-
-                step5 = _extract_section(body, r"^### 5\.")
-                constraints = _extract_section(
-                    body, r"^## このスキルの制約"
-                )
-
-                # exactly one presented, ready-to-copy command line per
-                # mutating branch, and nowhere else in the document
-                self.assertEqual(step5.count(PRESENTED_RECORD_CMD), 1)
-                self.assertEqual(body.count(PRESENTED_RECORD_CMD), 1)
-                self.assertEqual(step5.count(PRESENTED_REMOVE_CMD), 1)
-                self.assertEqual(body.count(PRESENTED_REMOVE_CMD), 1)
-
-                # each mutating flag occurs only in a presented-command
-                # context: the command line itself (step 5), and the
-                # constraints sentence that introduces "presented, not
-                # executed" -- never anywhere the skill would be described
-                # as performing the write itself
-                self.assertEqual(step5.count("--record"), 1)
-                self.assertEqual(constraints.count("--record"), 1)
-                self.assertEqual(body.count("--record"), 2)
-                self.assertEqual(step5.count("--remove"), 1)
-                self.assertEqual(constraints.count("--remove"), 1)
-                self.assertEqual(body.count("--remove"), 2)
-
-                # no step, fallback or retry in which the skill itself
-                # invokes a mutating command (the old "呼び出す" phrasing
-                # for --record/--remove must be gone)
-                self.assertNotIn("呼び出す", step5)
-                self.assertNotIn("--record` で呼び出", body)
-                self.assertNotIn("--remove` で呼び出", body)
-
-                # the presented commands name this plugin's own guard
-                # script path (via the shared ${CLAUDE_PLUGIN_ROOT}
-                # convention already used by the read-only --list call)
-                # and the project-directory option
-                self.assertIn(
-                    '"${CLAUDE_PLUGIN_ROOT}"/hooks/muse_guard.py', step5
-                )
-                self.assertIn('--project-dir "$(pwd)"', step5)
-
-                # the read-only command is still described as run by the
-                # skill itself -- the negative assertions above are not
-                # satisfied by removing CLI use altogether
-                step2 = _extract_section(body, r"^### 2\.")
-                self.assertIn("--list", step2)
-                self.assertIn("呼び出し", step2)
-
     # task0009 AC-2
     def test_task0009_ac2_all_six_steps_present_in_order(self):
         for plugin, info in PLUGINS.items():
@@ -474,6 +1108,274 @@ class ContributorConsentSkillTest(unittest.TestCase):
             "em-review", "<PLUGIN>"
         ).replace(f"手順 {review_info['probe_step']}", "手順 <N>")
         self.assertEqual(workflow_text, review_text)
+
+
+class ContributorConsentCommandPathTest(unittest.TestCase):
+    """contributor-consent-command-path task0001: structural checks of the
+    skill-executed design, with failing synthetic inputs for every check."""
+
+    # AC-2: Check 2 on the real text
+    def test_ac2_branches_bind_each_answer_to_the_commands_the_skill_runs(self):
+        for plugin in PLUGINS:
+            with self.subTest(plugin=plugin):
+                self.assertEqual(check_branch_binding(_skill_body(plugin)), [])
+
+    # AC-3: Check 1 on the real text
+    def test_ac3_every_element_is_a_skill_command_or_user_visible_text(self):
+        for plugin in PLUGINS:
+            with self.subTest(plugin=plugin):
+                self.assertEqual(check_classification(_skill_body(plugin)), [])
+
+    # AC-3: a reference inside a command the skill runs is never flagged
+    def test_ac3_reference_in_a_skill_command_is_not_flagged(self):
+        for plugin in PLUGINS:
+            for flag in ("--list", "--record", "--remove"):
+                with self.subTest(plugin=plugin, flag=flag):
+                    body = _skill_body(plugin)
+                    edited = _with_edited_command(body, flag, lambda text: text + " $HOME")
+                    entries = _entries(edited)
+                    command = _fence_text(entries[_find_command(entries, flag)][1])
+                    self.assertTrue(_unresolved_references(command))
+                    self.assertEqual(check_classification(edited), [])
+
+    # AC-4: Check 3 on the real text
+    def test_ac4_commands_are_run_by_the_skill_not_in_a_user_terminal(self):
+        for plugin in PLUGINS:
+            with self.subTest(plugin=plugin):
+                self.assertEqual(check_run_statement(_skill_body(plugin)), [])
+
+    # AC-5 (a): the variable check, on free-standing strings
+    def test_ac5a_reference_detection_on_free_standing_strings(self):
+        flagged = [
+            "root is ${CLAUDE_PLUGIN_ROOT}/x here",
+            "home is $HOME now",
+            "name is $name_1 now",
+        ]
+        not_flagged = [
+            "dir is $(pwd) now",
+            "no reference at all",
+            "price is 5$ today",
+        ]
+        for text in flagged:
+            with self.subTest(flagged=text):
+                self.assertTrue(_unresolved_references(text))
+        for text in not_flagged:
+            with self.subTest(not_flagged=text):
+                self.assertEqual(_unresolved_references(text), [])
+
+    # AC-5 (a): the variable check inside Check 1, on edits of a real copy
+    def test_ac5a_check_1_flags_references_in_every_kind_of_user_visible_text(self):
+        placements = {
+            "step 1 block": lambda body, suffix: _with_edited_visible_block(
+                body, 1, lambda text: text + suffix
+            ),
+            "step 6 block": lambda body, suffix: _with_edited_visible_block(
+                body, 6, lambda text: text + suffix
+            ),
+            "step 4 inline span": _with_edited_step4_span,
+            "step 4 option label": _with_edited_first_option_label,
+        }
+        references = [" ${CLAUDE_PLUGIN_ROOT}/x", " $HOME"]
+        harmless = [" $(pwd)", " plain"]
+        for plugin in PLUGINS:
+            body = _skill_body(plugin)
+            for name, place in placements.items():
+                for suffix in references:
+                    with self.subTest(plugin=plugin, placement=name, suffix=suffix):
+                        failures = check_classification(place(body, suffix))
+                        self.assertIn("unresolved-reference", _codes(failures))
+                for suffix in harmless:
+                    with self.subTest(plugin=plugin, placement=name, suffix=suffix):
+                        self.assertEqual(check_classification(place(body, suffix)), [])
+
+    # AC-5 (b): Check 2 needs the record and the remove command
+    def test_ac5b_check_2_fails_when_a_mutating_command_is_removed(self):
+        expected = {"--record": "command-count[consent]", "--remove": "command-count[revoke]"}
+        for plugin in PLUGINS:
+            for flag, code in expected.items():
+                with self.subTest(plugin=plugin, removed=flag):
+                    body = _without_command(_skill_body(plugin), flag)
+                    self.assertIn(code, _codes(check_branch_binding(body)))
+                    self.assertIn("missing-command", _codes(check_classification(body)))
+
+    # AC-5 (b): Check 1 needs the read-only command of step 2
+    def test_ac5b_check_1_fails_when_the_list_command_is_removed(self):
+        for plugin in PLUGINS:
+            with self.subTest(plugin=plugin):
+                body = _without_command(_skill_body(plugin), "--list")
+                self.assertIn("missing-command", _codes(check_classification(body)))
+
+    # AC-5 (b): the project-directory argument and the flag exclusivity
+    def test_ac5b_check_2_fails_on_a_command_without_its_arguments(self):
+        for plugin in PLUGINS:
+            body = _skill_body(plugin)
+            for flag, role in (("--record", "consent"), ("--remove", "revoke")):
+                with self.subTest(plugin=plugin, flag=flag, case="project-dir"):
+                    edited = _with_edited_command(
+                        body, flag, lambda text: text.replace(PROJECT_DIR_FLAG, "--dir")
+                    )
+                    self.assertIn(f"command-content[{role}]", _codes(check_branch_binding(edited)))
+                with self.subTest(plugin=plugin, flag=flag, case="other-flag"):
+                    other = "--remove" if flag == "--record" else "--record"
+                    edited = _with_edited_command(body, flag, lambda text: text + " " + other)
+                    self.assertIn(f"command-content[{role}]", _codes(check_branch_binding(edited)))
+
+    # AC-5 (c): Check 1 needs every block to be one of the two kinds
+    def test_ac5c_check_1_fails_on_a_block_that_is_neither_kind(self):
+        placements = {
+            "step 3": lambda body: _with_block(body, 3, "plain note"),
+            "step 4": lambda body: _with_block(body, 4, "plain note"),
+            "step 5, not a guard invocation": lambda body: _with_block(body, 5, "plain note"),
+            "step 2, not a guard invocation": lambda body: _with_block(body, 2, "plain note"),
+            "outside any step": lambda body: _with_block(body, None, "plain note"),
+            "guard invocation in step 1": lambda body: _with_command_copy(body, "--list", step=1),
+            "guard invocation in step 6": lambda body: _with_command_copy(body, "--list", step=6),
+        }
+        for plugin in PLUGINS:
+            body = _skill_body(plugin)
+            for name, place in placements.items():
+                with self.subTest(plugin=plugin, placement=name):
+                    failures = check_classification(place(body))
+                    self.assertIn("unclassified-element", _codes(failures))
+
+    # AC-5 (d): Check 2 needs the decline and keep branches to run nothing
+    def test_ac5d_check_2_fails_on_a_command_bound_to_decline_or_keep(self):
+        for plugin in PLUGINS:
+            body = _skill_body(plugin)
+            for flag in ("--record", "--remove"):
+                for role in ("decline", "keep"):
+                    with self.subTest(plugin=plugin, flag=flag, role=role):
+                        edited = _with_command_copy(body, flag, after_role=role)
+                        failures = check_branch_binding(edited)
+                        self.assertIn(f"command-bound[{role}]", _codes(failures))
+
+    # AC-5 (d): Check 2 needs step 6 to hold no guard invocation
+    def test_ac5d_check_2_fails_on_a_guard_invocation_in_step_6(self):
+        for plugin in PLUGINS:
+            body = _skill_body(plugin)
+            for flag in ("--record", "--remove", "--list"):
+                with self.subTest(plugin=plugin, flag=flag):
+                    edited = _with_command_copy(body, flag, step=6)
+                    failures = check_branch_binding(edited)
+                    self.assertIn("step6-guard-invocation", _codes(failures))
+
+    # AC-5 (d): Check 2 needs step 6 to output the no-write line only
+    def test_ac5d_check_2_fails_when_step_6_outputs_something_else(self):
+        for plugin in PLUGINS:
+            body = _skill_body(plugin)
+            with self.subTest(plugin=plugin, case="other line"):
+                edited = _with_edited_visible_block(body, 6, lambda text: "別の行")
+                self.assertIn("step6-block", _codes(check_branch_binding(edited)))
+            with self.subTest(plugin=plugin, case="second block"):
+                edited = _with_block(body, 6, "別の行")
+                self.assertIn("step6-block", _codes(check_branch_binding(edited)))
+
+    # AC-5 (d): a mutating command outside step 5, or outside every branch
+    def test_ac5d_check_2_fails_on_a_mutating_command_outside_its_branch(self):
+        for plugin in PLUGINS:
+            body = _skill_body(plugin)
+            for flag in ("--record", "--remove"):
+                with self.subTest(plugin=plugin, flag=flag, case="step 2"):
+                    edited = _with_command_copy(body, flag, step=2)
+                    self.assertIn("mutating-outside-step5", _codes(check_branch_binding(edited)))
+                with self.subTest(plugin=plugin, flag=flag, case="before the branches"):
+                    edited = _with_command_before_branches(body, flag)
+                    self.assertIn("unbound-command", _codes(check_branch_binding(edited)))
+            for flag, role in (("--record", "consent"), ("--remove", "revoke")):
+                with self.subTest(plugin=plugin, flag=flag, case="second command"):
+                    edited = _with_command_copy(body, flag, after_role=role)
+                    self.assertIn(f"command-count[{role}]", _codes(check_branch_binding(edited)))
+
+    # AC-5 (e): Check 3 needs step 5 to hold no user-terminal instruction
+    def test_ac5e_check_3_fails_on_an_instruction_to_use_the_user_terminal(self):
+        instructions = [
+            "次のコマンドを自分の端末に貼り付けて実行する。",
+            "Paste the command into your own terminal and run it.",
+        ]
+        for plugin in PLUGINS:
+            body = _skill_body(plugin)
+            for text in instructions:
+                with self.subTest(plugin=plugin, text=text, placement="new paragraph"):
+                    edited = _with_paragraph(body, 5, text)
+                    failures = check_run_statement(edited)
+                    self.assertIn("user-terminal-instruction", _codes(failures))
+                with self.subTest(plugin=plugin, text=text, placement="consent branch"):
+                    edited = _with_edited_branch(body, "consent", lambda old: old + " " + text)
+                    failures = check_run_statement(edited)
+                    self.assertIn("user-terminal-instruction", _codes(failures))
+
+    # AC-5 (e): Check 3 needs every command-bound branch to state the run
+    def test_ac5e_check_3_fails_when_a_bound_branch_no_longer_states_the_run(self):
+        for plugin in PLUGINS:
+            body = _skill_body(plugin)
+            for role in ("consent", "revoke"):
+                with self.subTest(plugin=plugin, role=role):
+                    edited = _with_edited_branch(body, role, _without_run_verbs)
+                    self.assertIn("no-run-statement", _codes(check_run_statement(edited)))
+
+    # AC-5 (e): Check 3 needs a branch bound to a command to exist
+    def test_ac5e_check_3_fails_when_no_branch_is_bound_to_a_command(self):
+        for plugin in PLUGINS:
+            with self.subTest(plugin=plugin):
+                body = _without_command(_without_command(_skill_body(plugin), "--record"), "--remove")
+                self.assertIn("no-bound-branch", _codes(check_run_statement(body)))
+
+    # AC-6: Checks 1 to 3 on both rewrap variants of each real copy
+    def test_ac6_checks_hold_on_both_rewrap_variants(self):
+        for plugin in PLUGINS:
+            body = _skill_body(plugin)
+            variants = {"joined": _joined_variant(body), "narrow": _narrow_variant(body)}
+            for name, variant in variants.items():
+                with self.subTest(plugin=plugin, variant=name):
+                    self.assertEqual(check_classification(variant), [])
+                    self.assertEqual(check_branch_binding(variant), [])
+                    self.assertEqual(check_run_statement(variant), [])
+
+    # AC-6: the variants really re-flow the prose and nothing else
+    def test_ac6_variants_reflow_prose_paragraphs_only(self):
+        for plugin in PLUGINS:
+            body = _skill_body(plugin)
+            original = _parse_nodes(body)
+            joined = _parse_nodes(_joined_variant(body))
+            narrow = _parse_nodes(_narrow_variant(body))
+            with self.subTest(plugin=plugin):
+                self.assertEqual(len(original), len(joined))
+                self.assertEqual(len(original), len(narrow))
+                for kept in ("fence", "heading"):
+                    self.assertEqual(
+                        [n.lines for n in original if n.kind == kept],
+                        [n.lines for n in joined if n.kind == kept],
+                    )
+                    self.assertEqual(
+                        [n.lines for n in original if n.kind == kept],
+                        [n.lines for n in narrow if n.kind == kept],
+                    )
+                lists = [n.lines for n in original if n.kind == "para" and not _is_prose_paragraph(n)]
+                self.assertTrue(lists)
+                for variant in (joined, narrow):
+                    self.assertEqual(
+                        lists,
+                        [n.lines for n in variant if n.kind == "para" and not _is_prose_paragraph(n)],
+                    )
+                prose = [n for n in joined if _is_prose_paragraph(n)]
+                self.assertTrue(all(len(n.lines) == 1 for n in prose))
+                self.assertTrue(any(len(n.lines) > 1 for n in original if _is_prose_paragraph(n)))
+                self.assertGreater(
+                    len(_narrow_variant(body).splitlines()),
+                    len(_joined_variant(body).splitlines()),
+                )
+
+    # AC-6: the narrow variant wraps a branch paragraph and splits a term
+    def test_ac6_narrow_variant_wraps_branches_and_splits_a_run_verb(self):
+        for plugin in PLUGINS:
+            with self.subTest(plugin=plugin):
+                entries = _entries(_narrow_variant(_skill_body(plugin)))
+                shared = entries[_branch_index(entries, "decline")][1]
+                self.assertGreater(len(shared.lines), 1)
+                consent = entries[_branch_index(entries, "consent")][1]
+                text = "\n".join(consent.lines)
+                split = [t for t in RUN_VERB_TERMS if t in _squash(text) and t not in text]
+                self.assertTrue(split, f"no run verb split by a wrap in {text!r}")
 
 
 if __name__ == "__main__":
