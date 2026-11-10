@@ -1,0 +1,84 @@
+task_id: task0002
+baseline_failures: []          # `python3 -m unittest discover -s tests` from the repository root, before any
+                                # file was touched: 15724 tests, OK (skipped=1), no failing test.
+final_failures: []             # same command re-executed after implementation and after this record was
+                                # written: 15730 tests (15724 + 6 new), OK (skipped=1), no failing test.
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_reviewer_skip_handling.TestEmWorkflowProtocolSkipSemantics.test_ac4_four_retryable_values_with_scratchpad_non_retryable
+      - tests.test_codex_reviewer_skip_handling.TestEmWorkflowProtocolSkipSemantics.test_fr1_contributor_consent_bullet_in_retryable_group
+      - tests.test_reviewer_roles_protocol.TestFrozenSkipReasonStrings.test_every_skip_reason_string_present_verbatim
+      - tests.test_reviewer_roles_protocol.TestFrozenSkipReasonStrings.test_exactly_four_retryable_reasons_named
+      - tests.test_reviewer_roles_protocol.TestFrozenSkipReasonStrings.test_non_retryable_skip_reasons_statement_present
+      - tests.test_reviewer_roles_protocol.TestFrozenSkipReasonStrings.test_retryable_statements_match_the_real_protocol
+    red_confirmed: true
+    red_reason: >-
+      Watched the updated tests fail against the unedited em-workflow protocol:
+      "the retryable-set statement says 'four' values, expected 'five'",
+      "expected exactly one Skip Semantics bullet naming
+      'contributor_consent_missing', found 0", and the roles-protocol checks
+      reported '"contributor_consent_missing"' not found. All passed after the
+      Skip Semantics edit. The existing test names are kept (other records cite
+      them); their expectations now say five.
+  AC-2:
+    tests:
+      - tests.test_codex_reviewer_skip_handling.TestEmReviewProtocolSkipSemantics.test_ac5_three_retryable_values_with_review_data_too_large_non_retryable
+      - tests.test_codex_reviewer_skip_handling.TestEmReviewProtocolSkipSemantics.test_fr2_contributor_consent_bullet_in_retryable_group
+    red_confirmed: true
+    red_reason: >-
+      Watched both fail against the unedited em-review protocol: "the
+      retryable-set statement says 'three' values, expected 'four'" and
+      "expected exactly one Skip Semantics bullet naming
+      'contributor_consent_missing', found 0". Both passed after the edit.
+  AC-3:
+    tests:
+      - tests.test_codex_reviewer_skip_handling.TestEmWorkflowProtocolSkipSemantics.test_fr1_contributor_consent_bullet_in_retryable_group
+      - tests.test_codex_reviewer_skip_handling.TestEmReviewProtocolSkipSemantics.test_fr2_contributor_consent_bullet_in_retryable_group
+    red_confirmed: true
+    red_reason: >-
+      Watched both fail with "found 0" (no bullet naming
+      'contributor_consent_missing') before the protocol edits. The matcher
+      asserts the skip object verbatim, the role-split phrases (ends after
+      returning it, no retry as plain muse-spark, no consent recording or
+      re-judging, no choice of another model or chain entry, the orchestrator
+      selects the next entry) and the bullet's position between the
+      harness_unavailable bullet and the retryable-set statement.
+  AC-4:
+    tests:
+      - tests.test_reviewer_roles_protocol.TestNoSecondOpinionFramingSurvives.test_no_forbidden_framing_phrase_present
+      - tests.test_reviewer_roles_protocol.TestFrozenSectionsUnchanged.test_frozen_sections_hash_unchanged
+      - tests.test_codex_reviewer_skip_handling.TestEmReviewProtocolSkipSemantics.test_ac5_no_em_review_file_mentions_shards_or_a_dispatch_cap
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing tests above
+      detect the forbidden framing phrases, the frozen-section hash drift and
+      the shard / dispatch-cap words; no red state occurred for this change
+      because the new text was written to avoid them. They were green before
+      and after the edit.
+  AC-5:
+    tests:
+      - tests.test_codex_reviewer_skip_handling.TestMatchersRejectForgedTexts.test_three_value_em_workflow_retryable_set_is_rejected
+      - tests.test_codex_reviewer_skip_handling.TestMatchersRejectForgedTexts.test_four_value_em_review_retryable_set_is_rejected
+      - tests.test_codex_reviewer_skip_handling.TestMatchersRejectForgedTexts.test_contributor_consent_bullet_forgeries_are_rejected
+      - tests.test_reviewer_roles_protocol.TestValidationDetectsRegressions.test_retryable_statements_reject_the_old_four_value_text
+    red_confirmed: true
+    red_reason: >-
+      Watched all four fail before the protocol edits, because each first
+      requires its matcher to accept the real text ("the retryable-set
+      statement says 'four' values, expected 'five'", "says 'three' values,
+      expected 'four'", "no contributor-consent bullet in the Skip Semantics",
+      '"contributor_consent_missing"' not found). After the edits each matcher
+      accepts the real text and rejects the forged texts (old count word,
+      old non-retryable count word, value removed, new bullet removed, object
+      altered, role-split phrase reversed, bullet misplaced, the other
+      plugin's text) in both plugins.
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      The criterion is the whole-suite run `python3 -m unittest discover -s
+      tests`, which has no single test ID. The existing suite covers it. The
+      failing states of the individual tests under AC-1, AC-2, AC-3 and AC-5
+      were observed by running their two modules; the whole suite was not run
+      in that red state, so no whole-suite red is recorded.

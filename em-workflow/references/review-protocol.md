@@ -253,13 +253,21 @@ Every skip object sets `skip_reason` to a short machine-stable
 - **litellm reviewer** when the harness budget is spent (LiteLLM's monthly
   virtual-key cap — surfaces as 400/401 `ExceededBudget`):
   `{"findings": [], "summary": "skipped: litellm budget exhausted", "skipped": true, "skip_reason": "budget_exhausted", "source": "litellm"}`
+- **A harness reviewer (codex / litellm)** whose call of the contributor tier
+  (`muse-spark-contributor`) muse_guard denied because the repository has no
+  recorded consent: it returns this object and ends
+  (`<source>` is the reviewer's own harness):
+  `{"findings": [], "summary": "skipped: contributor consent missing", "skipped": true, "skip_reason": "contributor_consent_missing", "source": "<source>"}`
+  The reviewer does not retry the same entry as plain `muse-spark`, does not
+  record or re-judge consent, and does not choose another model or chain
+  entry; the orchestrator selects the next entry.
 - **litellm reviewer** when the assembled prompt still exceeds the model's
   context after dropping investigation files and whole-file contents:
   `skip_reason: "review_data_too_large"` — sending a truncated diff would
   read as a clean review. The chain walk advances to the next entry of a
   different harness; an exhausted chain gets the Claude fallback.
 
-  These four `skip_reason` values are the **retryable** set: the review
+  These five `skip_reason` values are the **retryable** set: the review
   phase's Phase R2b walks the perspective's fallback chain on exactly these
   strings, and on nothing else. Emit them verbatim.
 - **Any reviewer** with unresolved protocol/schema/skill (Step 0):
@@ -268,7 +276,7 @@ Every skip object sets `skip_reason` to a short machine-stable
 - **A harness reviewer (codex / litellm)** that cannot allocate its own scratchpad temp
   files: `skip_reason: "scratchpad_unavailable"`.
 
-  `scratchpad_unavailable`, like every value outside the four above, is NOT
+  `scratchpad_unavailable`, like every value outside the five above, is NOT
   retryable: the next entry in the chain would hit the same local failure.
 
 The orchestrator treats `skipped: true` as a non-failure and renders

@@ -263,17 +263,43 @@ SKIP_REASON_STRINGS = [
     "schema_unresolved",
     "scratchpad_unavailable",
     "review_data_too_large",
+    "contributor_consent_missing",
 ]
 
 # Refreshed by feature-docs/large-diff-review-coverage/tasks/task0001.md (FR10):
-# em-workflow's retryable set gained `review_data_too_large`, so it holds four
-# values.
+# em-workflow's retryable set gained `review_data_too_large`. Refreshed again
+# by feature-docs/muse-guard-deny-recovery/tasks/task0002.md (FR1, FR9): it
+# gained `contributor_consent_missing`, so it holds five values.
 RETRYABLE_SKIP_REASONS = [
     "rate_limited",
     "budget_exhausted",
     "harness_unavailable",
+    "contributor_consent_missing",
     "review_data_too_large",
 ]
+
+RETRYABLE_STATEMENT = "These five `skip_reason` values are the **retryable** set"
+NON_RETRYABLE_STATEMENT = (
+    "`scratchpad_unavailable`, like every value outside the five above, "
+    "is NOT retryable"
+)
+
+
+def assert_retryable_statements(text, label):
+    """AC-2 (refreshed): the doc states that the five retryable values are
+    the retryable set, names each of them, and marks `scratchpad_unavailable`
+    non-retryable against the same five."""
+    normalized = _normalize_whitespace(text)
+    for reason in RETRYABLE_SKIP_REASONS:
+        if f'"{reason}"' not in text:
+            raise AssertionError(f"{label}: retryable value {reason!r} is missing")
+    if RETRYABLE_STATEMENT not in normalized:
+        raise AssertionError(f"{label}: the five-value retryable-set statement is missing")
+    if NON_RETRYABLE_STATEMENT not in normalized:
+        raise AssertionError(
+            f"{label}: the non-retryable statement against the five-value set "
+            "is missing"
+        )
 
 SEVERITY_LEVELS = ["critical", "high", "medium"]
 
@@ -380,18 +406,20 @@ class TestFrozenSkipReasonStrings(unittest.TestCase):
         )
 
     def test_exactly_four_retryable_reasons_named(self):
+        # Name kept for records that cite it: the set holds five values since
+        # muse-guard-deny-recovery task0002 (FR1), four before it.
         for reason in RETRYABLE_SKIP_REASONS:
             with self.subTest(reason=reason):
                 self.assertIn(f'"{reason}"', self.text)
         self.assertEqual(
-            4,
+            5,
             len(RETRYABLE_SKIP_REASONS),
-            "AC-2: exactly four reasons are retryable",
+            "AC-2: exactly five reasons are retryable",
         )
         self.assertIn(
-            "These four `skip_reason` values are the **retryable** set",
+            RETRYABLE_STATEMENT,
             _normalize_whitespace(self.text),
-            "AC-2: the doc must state that these four values are the "
+            "AC-2: the doc must state that these five values are the "
             "retryable set",
         )
 
@@ -400,13 +428,17 @@ class TestFrozenSkipReasonStrings(unittest.TestCase):
         # Refreshed by feature-docs/large-diff-review-coverage/tasks/task0001.md
         # (FR10): `review_data_too_large` joined the retryable set, so the
         # non-retryable statement names `scratchpad_unavailable` alone.
+        # Refreshed by feature-docs/muse-guard-deny-recovery/tasks/task0002.md
+        # (FR1): the set it is measured against holds five values.
         self.assertIn(
-            "`scratchpad_unavailable`, like every value outside the four "
-            "above, is NOT retryable",
+            NON_RETRYABLE_STATEMENT,
             normalized,
             "AC-2: the doc must still mark scratchpad_unavailable "
             "non-retryable",
         )
+
+    def test_retryable_statements_match_the_real_protocol(self):
+        assert_retryable_statements(self.text, "AC-2 real protocol")
 
 
 class TestFrozenSeverityLevels(unittest.TestCase):
@@ -791,6 +823,29 @@ class TestValidationDetectsRegressions(unittest.TestCase):
         ).hexdigest()
         # Does not raise.
         _assert_section_hash(text, "## Start", "## End", expected, "fake-section")
+
+    def test_retryable_statements_reject_the_old_four_value_text(self):
+        real = _read(PROTOCOL_PATH)
+        # Real text first: the proof must not pass for an unrelated reason.
+        assert_retryable_statements(real, "real protocol")
+        old_count = real.replace(
+            "These five `skip_reason` values", "These four `skip_reason` values"
+        )
+        old_non_retryable = real.replace(
+            "outside the five above", "outside the four above"
+        )
+        without_value = real.replace(
+            '"contributor_consent_missing"', '"other_consent_reason"'
+        )
+        for name, forged in (
+            ("old count word", old_count),
+            ("old non-retryable count word", old_non_retryable),
+            ("missing contributor_consent_missing", without_value),
+        ):
+            with self.subTest(forged=name):
+                self.assertNotEqual(real, forged)
+                with self.assertRaises(AssertionError):
+                    assert_retryable_statements(forged, name)
 
     def test_forbidden_framing_phrase_detection_is_meaningful(self):
         forged = "this reviewer exists to provide a second opinion on the diff"
