@@ -105,7 +105,12 @@ workflow:
   status: completed
   completed_at_commit: e440f68f6b30da544d72b9868d421051b32c38db
 - id: verify
-  status: in_progress
+  status: completed
+  completed_at_commit: f5075f02577cac743bc38ad78943df4c376a8490
+  result: pass
+  failed_items: []
+  excluded: []
+  summary: build (plugin invariants) passed; destructive-guard runner 1242/1242 passed; unittest 15990 tests OK (1 skipped); TS-1..TS-27 and manual checks (reason readability, FR7 wording, manifest untouched, case table append-only) passed
 - id: retrospect
   status: pending
 tasks:
