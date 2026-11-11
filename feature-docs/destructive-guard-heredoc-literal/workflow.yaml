@@ -2,43 +2,66 @@ schema_version: 1
 feature: destructive-guard-heredoc-literal
 created: '2026-11-11'
 base_branch: main
-goal: |
-  # destructive-guard が heredoc 本文の文字列リテラルを実行コマンドと誤認して拒否する
+goal: '# destructive-guard が heredoc 本文の文字列リテラルを実行コマンドと誤認して拒否する
+
 
   種別: バグ
 
+
   ## 現象
+
 
   `destructive-guard.py` が heredoc 本文に書かれた文字列リテラルを実行コマンドとして誤認し、無害な書き込みを拒否する。
 
-  heredoc-stdin-guard フィーチャーの batch 実行中、`phase-state/batch-audit.yaml` に監査記録を書き込む python heredoc の中で、引用として出てくる破壊的コマンドの語がマッチして拒否された。heredoc 本文はスクリプトの入力データであって実行されるコマンドではない。
+
+  heredoc-stdin-guard フィーチャーの batch 実行中、`phase-state/batch-audit.yaml` に監査記録を書き込む
+  python heredoc の中で、引用として出てくる破壊的コマンドの語がマッチして拒否された。heredoc 本文はスクリプトの入力データであって実行されるコマンドではない。
+
 
   `.claude/rules/hook-tests.md` が allow 側のケースとして明記している誤爆の類型そのもの（「ヒアドキュメントの本文を 1 行ずつコマンドとして読む」）。
 
+
   ## 再現手順
 
-  1. heredoc 本文の中に、destructive-guard のルールにマッチする文字列（削除系コマンドの語や `git branch` の強制削除フラグ等）を引用として含む Bash コマンドを組み立てる
+
+  1. heredoc 本文の中に、destructive-guard のルールにマッチする文字列（削除系コマンドの語や `git branch` の強制削除フラグ等）を引用として含む
+  Bash コマンドを組み立てる
+
   2. そのコマンドを実行する
+
   3. destructive-guard が deny する
+
 
   ## 期待する挙動
 
+
   heredoc 本文（`<<` の区切り語から終端行までの範囲）はコマンド列として解析せず、allow する。
+
 
   ## 完了の定義
 
+
   - 再現手順で現象が起きない
+
   - 再発を検出するテストがある（`em-workflow/hooks/tests/destructive-guard-cases.json` に allow 側ケースを追加）
+
   - 既存の deny / ask ケースが 1 件も緑から赤に変わっていない
+
 
   ## 該当箇所
 
+
   - `em-workflow/hooks/destructive-guard.py`
+
   - テスト: `em-workflow/hooks/tests/destructive-guard-cases.json` / `em-workflow/hooks/tests/run-destructive-guard.py`
+
 
   ## 実害・発生条件
 
+
   無人 batch では `ask` が `deny` に降格されるため、誤爆 1 件がその場で走行を止める。ログ断片や引用文を含む監査記録の書き込みで踏みやすい。
+
+  '
 parent_branch: em-workflow/destructive-guard-heredoc-literal/integration
 tier: reduced
 tier_decision:
@@ -91,7 +114,8 @@ workflow:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: ed7b076d75a5424f1b96b387107c1594819b7908
 - id: implement
   status: pending
 - id: review
@@ -100,7 +124,33 @@ workflow:
   status: pending
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Read closed string literals in Python-program heredoc bodies as data
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    - auth
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - FR8
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: pending
 review:
   status: pending
 requirements:
@@ -109,7 +159,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-2
@@ -117,12 +168,14 @@ requirements:
     - TS-4
     - TS-5
     - TS-6
+    - TS-17
   FR2:
     title: 宛先が Python だと判定する条件
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-2
@@ -130,30 +183,40 @@ requirements:
     - TS-5
     - TS-9
     - TS-10
+    - TS-18
+    - TS-20
+    - TS-21
+    - TS-26
+    - TS-27
   FR3:
     title: リテラルの外は今どおり読む
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-4
     - TS-6
     - TS-13
+    - TS-17
   FR4:
     title: f-string / t-string は対象外
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-15
+    - TS-25
   FR5:
     title: 区切り語に引用符が無い heredoc の置換は今どおり調べる
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-7
     - TS-8
@@ -162,24 +225,29 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-14
+    - TS-25
   FR7:
     title: 他の宛先は変えない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-11
     - TS-12
+    - TS-19
   FR8:
     title: テストケース
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-2
@@ -197,35 +265,53 @@ requirements:
     - TS-14
     - TS-15
     - TS-16
+    - TS-17
+    - TS-18
+    - TS-19
+    - TS-20
+    - TS-21
+    - TS-22
+    - TS-25
+    - TS-26
+    - TS-27
   NFR1:
     title: 静的解析のみ
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-24
   NFR2:
     title: 時間予算
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-16
+    - TS-24
   NFR3:
     title: 変更範囲
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-23
   NFR4:
     title: 既存スイートが通る
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-16
+    - TS-22
 batch:
   review_rework_count: 0
   verify_rework:
