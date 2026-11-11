@@ -136,7 +136,7 @@ tasks:
     - NFR4
     - NFR5
     - NFR6
-    status: in_progress
+    status: merged
     branch: em-workflow/destructive-guard-mixed-rm-precedence/task0001
   task0002:
     title: Describe the rule key and the mixed-case guidance in the hook-tests rule
