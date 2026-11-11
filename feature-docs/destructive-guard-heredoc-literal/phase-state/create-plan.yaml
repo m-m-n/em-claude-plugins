@@ -5,7 +5,7 @@ status: dispatching
 generation: 2
 base_revision: 71258145072a3f0e1a5c107fa892b05559355c28
 last_input_digest: sha256:1c9510d5339bd650dfbd874dc5344157a4a157a35b37507d6f83a8f7028e6046
-active_request_id: create-plan-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -28,9 +28,9 @@ worker_runs:
   - feature-docs/destructive-guard-heredoc-literal/VERIFICATION.md
   - feature-docs/destructive-guard-heredoc-literal/tasks/task0001.md
 - request_id: create-plan-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:1c9510d5339bd650dfbd874dc5344157a4a157a35b37507d6f83a8f7028e6046
-  output_digest: null
+  output_digest: sha256:f934a6162a7cf888c8f1f5ab531df612dc82fde5dfc0f83b562380c59cea57be
   dispatch_digest_inputs:
     feature-docs/destructive-guard-heredoc-literal/SPEC.md: sha256:24ef2ecd1ea424f1e0edcb0be032e04cec976eeb11c5db1a778117989e0d4f8d
     feature-docs/destructive-guard-heredoc-literal/THREAT-MODEL.md: sha256:b5094a4d9503cb390450a2f44dfe312912591948dda7e67d3a6204f09d0ffb0f
@@ -62,4 +62,6 @@ patches:
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
-last_error: null
+last_error: create-plan-run-0002 は検証を通ったが、パッチ create-plan-p0002 は適用せず成果物を破棄した。計画の未解決の問い（パス名展開・波括弧展開でしか状態変更や差し替えの組み込みにならないコマンド語が
+  FR9 (3) の外）について Codex に相談し、変更前の deny が現状 allow になる検出漏れを確認、SPEC の FR9 (3) の改訂が必要と判断して停止した。SPEC
+  改訂後の再開では input_digest が変わるため新しい request_id で再ディスパッチする
