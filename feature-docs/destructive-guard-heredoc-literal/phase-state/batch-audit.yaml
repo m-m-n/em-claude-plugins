@@ -1,0 +1,14 @@
+schema_version: 1
+feature: destructive-guard-heredoc-literal
+records:
+- question_id: create-spec.requirement-clarification
+  packet_id: null
+  answered_at: '2026-11-11T20:07:13+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: A-2 は Codex の代替案を採用（f-string / t-string を対象外）。他は同意
+  normalized_answer: A-2 代替案採用、A-1/A-3/A-4 同意
+  resolution_note: 'gate: create-spec.requirement-clarification (analyst assumptions
+    A-1..A-4); options: analyst 原案 / Codex 代替案; chosen: Codex 代替案（A-2）と原案（他）; codex_consulted:
+    true; opus_escalation: false; 要点: 本文一律除外は既存 deny と両立しない、f-string は式評価があるため除外しない、リテラル経由のシェル渡しは既知の制約'
