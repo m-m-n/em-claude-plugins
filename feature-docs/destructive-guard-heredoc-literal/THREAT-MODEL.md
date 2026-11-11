@@ -4,28 +4,40 @@
 threats-identified
 
 ## Rationale
-Inspected SPEC.md (FR1-FR8, NFR1-NFR4, assumptions A-1 to A-4) at the reduced
-tier (no REQUIREMENTS.md; the design step was skipped). The feature's only
-input is the Bash command string that `em-workflow/hooks/destructive-guard.py`
-judges before the shell runs it. The feature stops the guard from reading the
-contents of closed ordinary string literals in the body of a heredoc whose
-body is the program a Python interpreter runs. task0001 declares
-`input-handling` and `auth` (the guard is a permission gate), so the one
-boundary is analysed at deep depth.
+Inspected SPEC.md (FR1-FR9, NFR1-NFR5, assumptions A-1 to A-5) at the reduced
+tier (no REQUIREMENTS.md; the design step was skipped), after the SPEC change
+that added FR9 and NFR5 and the revision that widened FR9 (3) to every
+command word that cannot be fixed statically as a single word. The feature's
+only input is the Bash command string that
+`em-workflow/hooks/destructive-guard.py` judges before the shell runs it. The
+feature stops the guard from reading the contents of closed ordinary string
+literals in the body of a heredoc whose body is the program a Python
+interpreter runs, and stops that masking again for the whole command when the
+command holds a statement that can change what the Python name runs, the
+shell's state, or how the Python output is evaluated. task0001 and task0002
+both declare `input-handling` and `auth` (the guard is a permission gate), so
+the one boundary is analysed at deep depth.
 
 The expectation suite file is project test data and not a boundary of its
 own; it is listed under TB-1 because it pins the guard's verdicts at that
 boundary. The verdict holds because every narrowing of what the guard reads
 can let a command that a shell actually runs pass the guard (TB-1).
 
-Accepted residual risk, not mitigated here: Python code that hands the
-content of a masked literal to a shell later (`os.system`, a `subprocess`
-call with `shell=True`, a file written by Python and run by a shell
-afterwards) can pass the guard after this change. SPEC A-3 accepts this as a
-known limitation; the guard already does not follow a file written by a data
-heredoc into a later shell run. Whole-command checks that read the raw
-command string (the download-piped-to-shell check, the kill-word deferral)
-are unchanged by this feature and not modelled.
+Accepted residual risks, not mitigated here:
+
+- Python code that hands the content of a masked literal to a shell later
+  (`os.system`, a `subprocess` call with `shell=True`, a file written by
+  Python and run by a shell afterwards) can pass the guard after this change.
+  SPEC A-3 accepts this as a known limitation; the guard already does not
+  follow a file written by a data heredoc into a later shell run.
+- The FR7 override reading, which turns data-heredoc judgments undetermined,
+  keeps its one-level `builtin` reading, so an override written behind nested
+  `builtin` words does not change how a data heredoc is judged. This predates
+  the feature; SPEC A-5 keeps it unchanged and TS-31 pins it.
+
+Whole-command checks that read the raw command string (the
+download-piped-to-shell check, the kill-word deferral) are unchanged by this
+feature and not modelled.
 
 ## Trust Boundaries
 
@@ -46,3 +58,7 @@ Depth: deep (input-handling, auth)
 | Elevation of privilege | With an unquoted delimiter the outer shell expands `$( )` and backticks in the body, literals included, before Python receives it. Masking the literal contents would hide substitutions the shell runs (FR5). | TM-5 | For an unquoted delimiter the substitutions of the original, unmasked body are extracted and inspected exactly as for a data heredoc body (escaped openers stay literal, an unclosed opener makes the whole original body inspected), in addition to the masked body read as statements. | task0001 AC-3 | VERIFICATION.md, Performance / Security Verification: TM-5 (via TS-7, TS-8) |
 | Denial of service | A body crafted so that the literal scan costs more than linear time in its length (rescanning from each quote, backtracking) runs the hook past its time limit, and the command gets no verdict (NFR2). | TM-6 | The literal scan is one left-to-right pass over the body; the masked text has the body's length, so the existing relative scan budget bounds the whole run, and exceeding it asks rather than allows. | task0001 AC-8 | VERIFICATION.md, Performance / Security Verification: TM-6 (via TS-16, TS-24) |
 | Elevation of privilege | Determining literal extents by evaluating, compiling or importing the body would run attacker-chosen Python inside the hook process (NFR1). | TM-7 | The literal scan reads the body's characters only; no part of the body is evaluated, compiled, executed or imported, and only the standard library is used. | task0001 AC-8 | VERIFICATION.md, Performance / Security Verification: TM-7 (via TS-24) |
+| Spoofing | A command-name override that the one-level reading does not see — written behind nested `builtin` / `command` words, their options or `--` (`builtin builtin alias python3=bash`, `builtin builtin hash -p /bin/bash python3`) — makes the Python name run a shell while its literals stay masked. A list of stop words kept apart from the override vocabulary can also drift from it, so an override word added later stops nothing (FR9, NFR5). | TM-8 | The masking-stop check reads the command word through one function that removes any number of `builtin` / `command` words with their options and `--`; its command-word vocabulary is the override builtin set joined with the state builtins, and its variable-name vocabulary the override variable-name definition joined with `BASH_ALIASES`, each referring to the override definition by name. Every override word, nested or not, and every statement the override reading flags, stops masking for the whole command, before or after the heredoc. | task0002 AC-1, AC-6 | VERIFICATION.md, Performance / Security Verification: TM-8 (via TS-30, TS-32) |
+| Elevation of privilege | A statement that changes shell state or a variable's attributes (`declare -i` making a later assignment evaluate an array subscript that holds `$( )` printed by Python; `source`, `eval`, `set`, `shopt`) is hidden from a reading of token values: behind nested `builtin` / `command` words, their options or `--`; behind a command word that a parameter expansion, a command substitution, a tilde, a pathname or extended-glob pattern, a brace expansion or a locale quote makes at run time; or spelled with quotes, escapes or an ANSI-C quote. Text inside a masked literal is then run by the shell (FR9). | TM-9 | Such a statement anywhere in the command stops masking for the whole command, before or after the heredoc. The command word, and every word passed while removing `builtin` / `command` and their options, is read as written with the lexer's region kinds: a word that only quotes and escapes make is restored and matched against the stop vocabulary; any word that depends on an expansion, a locale quote, an escape the decoder does not support, or a reading that failed is undeterminable and stops masking. | task0002 AC-1, AC-2, AC-3 | VERIFICATION.md, Performance / Security Verification: TM-9 (via TS-28, TS-29, TS-33 to TS-39, TS-41) |
+| Elevation of privilege | The exemption that keeps FR9 (3) off the code of a Python-program body re-read as shell reaches text the shell itself evaluates: a substitution in the body of an unquoted-delimiter heredoc, whose undeterminable command word would then not stop the masking of another Python body in the same command (FR9, FR5). | TM-10 | Only chunks that re-read a Python-program body, and chunks derived from them, are exempt, and only from FR9 (3). The substitutions the FR5 extraction queues from an unquoted delimiter's original body, the substitutions and unclosed command forms found in the body chunk of an unquoted-delimiter Python heredoc, and everything derived from them are not exempt; FR9 (1) and (2) apply to every chunk. | task0002 AC-4 | VERIFICATION.md, Performance / Security Verification: TM-10 (via TS-42) |
+| Denial of service | A command crafted so that the masking-stop check costs more than linear time — re-peeling nested `builtin` words, or searching each word again from every `[`, `{` or quote for its closing character — runs the hook past its time limit, and the command gets no verdict (NFR2). | TM-11 | The peel visits each word of a statement at most once, the word reading reads each character of a word a bounded number of times, and the existing relative scan budget is unchanged, so exceeding it asks rather than allows. | task0002 AC-6 | VERIFICATION.md, Performance / Security Verification: TM-11 (via TS-16, TS-45) |
