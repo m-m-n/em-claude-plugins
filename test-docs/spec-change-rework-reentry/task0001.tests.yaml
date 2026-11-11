@@ -1,0 +1,56 @@
+task_id: task0001
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests, before any file was touched -> Ran 15802 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_spec_change_verify_pending.TestAC1SynthesisSection10.test_ac1_step2_names_four_steps_and_states_status_only_write
+      - tests.test_spec_change_verify_pending.TestAC1SynthesisSection10.test_ac1_block_keeps_five_numbered_steps_before_the_reentry_paragraph
+      - tests.test_spec_change_origin_binding.TestAC7SpecChangeTransitionFieldListUsesOriginPair.test_still_five_numbered_steps_in_spec_change_transition
+    red_confirmed: true
+    red_reason: "Against the unedited rework-task-synthesis.md, test_ac1_step2_names_four_steps_and_states_status_only_write failed: AssertionError: Lists differ: [\"step 2 does not name `verify` before '→ `pending`'\", ...the four missing status-only fragments] != []. The structure test (five numbered steps, re-entry paragraph directly after) and the existing five-step test in test_spec_change_origin_binding passed before the edit; they hold the block shape and no red state occurred for that part."
+  AC-2:
+    tests:
+      - tests.test_spec_change_verify_pending.TestAC2ContractStep2.test_ac2_step2_names_the_same_four_steps_as_pending
+      - tests.test_spec_change_verify_pending.TestAC2ContractStep2.test_ac2_section_keeps_numbered_steps_one_to_five
+      - tests.test_worker_contracts_planning.TestReworkPlannerContract.test_five_step_orchestrator_sequence_present
+    red_confirmed: true
+    red_reason: "Against the unedited rework-planner-contract.md, test_ac2_step2_names_the_same_four_steps_as_pending failed: AssertionError: Lists differ: [\"step 2 does not name `verify` before 'to `pending`'\"] != []. The numbering test and the existing test_five_step_orchestrator_sequence_present passed before the edit (they hold the 1-5 numbering); no red state occurred for that part."
+  AC-3:
+    tests:
+      - tests.test_spec_change_verify_pending.TestAC3AgentSummary.test_ac3_summary_names_verify_among_the_pending_steps
+    red_confirmed: true
+    red_reason: "Against the unedited agents/rework-planner.md, the test failed: AssertionError: Lists differ: [\"step 2 does not name `verify` before '→ `pending`'\"] != []. The fixed five-step wording checks inside the same test passed before the edit."
+  AC-4:
+    tests:
+      - tests.test_spec_change_verify_pending.TestAC4SkillItem6.test_ac4_item6_cites_section_10_and_returns_verify_to_pending
+      - tests.test_spec_change_verify_pending.TestAC4SkillItem6.test_ac4_stop_condition_list_is_byte_identical_to_the_base_revision
+      - tests.test_batch_policies.TestGateIdCoverageWithinOwnedFiles.test_intentional_exception_excluded_from_both_directions
+      - tests.test_batch_policies.TestGateIdCoverageWithinOwnedFiles.test_item6_exclusion_hides_only_a_name_inside_item6
+      - tests.test_batch_policies.TestGateIdCoverageWithinOwnedFiles.test_item6_exclusion_hides_nothing_without_the_item6_span
+    red_confirmed: true
+    red_reason: "Against the unedited SKILL.md, test_ac4_item6_cites_section_10_and_returns_verify_to_pending failed: AssertionError: Lists differ: ['item 6 has no sentence after the commit-docs.sh sentence'] != []. The stop-condition digest test passed before the edit (it is a hold-steady pin of the base revision, with a non-vacuity proof in TestAC5NegativeProofs); no red state occurred for that part. The sentence names `rework.spec-change` as the SPEC requires, so the existing test_intentional_exception_excluded_from_both_directions failed in the first full-suite run after the SKILL.md edit (AssertionError: 'rework.spec-change' unexpectedly found in the owned-files text); its pin in tests/test_batch_policies.py (outside the planned files) now excludes only the span of item 6, and the two new item6_exclusion tests prove that a name before or after item 6, or an absent span, is still found."
+  AC-5:
+    tests:
+      - tests.test_spec_change_verify_pending.TestAC5NegativeProofs.test_ac5_synthesis_matcher_rejects_the_pre_change_step2
+      - tests.test_spec_change_verify_pending.TestAC5NegativeProofs.test_ac5_contract_matcher_rejects_the_pre_change_step2
+      - tests.test_spec_change_verify_pending.TestAC5NegativeProofs.test_ac5_agent_matcher_rejects_the_pre_change_summary
+      - tests.test_spec_change_verify_pending.TestAC5NegativeProofs.test_ac5_item6_matcher_rejects_the_pre_change_item
+      - tests.test_spec_change_verify_pending.TestAC5NegativeProofs.test_ac5_item6_matcher_rejects_a_sentence_without_the_citation
+      - tests.test_spec_change_verify_pending.TestAC5NegativeProofs.test_ac5_digest_changes_when_the_stop_list_is_edited
+    red_confirmed: false
+    red_reason: "These tests exercise the matchers against verbatim pre-change constants and synthetic text, so they passed on the unedited documents and no red state occurred for the documents. The pre-change constants were checked byte for byte against the base revision (git show of the base commit) before the documents were edited. Their non-vacuity was observed separately: with every matcher replaced by a stub that accepts everything (in memory only, module file untouched), 31 of the 37 TestAC5NegativeProofs tests failed; the other 6 are positive controls and parser/extractor checks."
+  AC-6:
+    tests:
+      - tests.test_spec_change_verify_pending.TestAC6Redaction.test_ac6_synthesis_has_no_notion_url_or_home_path
+      - tests.test_spec_change_verify_pending.TestAC6Redaction.test_ac6_contract_has_no_notion_url_or_home_path
+      - tests.test_spec_change_verify_pending.TestAC6Redaction.test_ac6_agent_prompt_has_no_notion_url_or_home_path
+      - tests.test_spec_change_verify_pending.TestAC6Redaction.test_ac6_develop_skill_has_no_notion_url_or_home_path
+      - tests.test_spec_change_verify_pending.TestAC5NegativeProofs.test_ac5_redaction_matcher_flags_each_marker
+    red_confirmed: false
+    red_reason: "The four documents were already free of Notion URLs and /home/ paths before the edit, so the document checks passed without a red state; this criterion holds the redaction state through the edit. The matcher's detection is proven by test_ac5_redaction_matcher_flags_each_marker against synthetic text containing each marker."
+  AC-7:
+    tests:
+      - tests.test_worker_contracts_planning.TestReworkPlannerContract.test_five_step_orchestrator_sequence_present
+    red_confirmed: false
+    red_reason: "The criterion holds the suite and the build green through the edit: the full suite (python3 -m unittest discover -s tests) was green at the baseline run and is re-run after the edit, and the build (python3 em-workflow/scripts/check-plugin-invariants.py .) is run after the edit. Neither check failed before the edit, so there is no executable red for the criterion itself; the existing test_five_step_orchestrator_sequence_present passed before and after the edit and pins the 1-5 numbering."
