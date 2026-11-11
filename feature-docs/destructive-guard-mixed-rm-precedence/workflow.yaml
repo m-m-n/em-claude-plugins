@@ -112,7 +112,8 @@ workflow:
   excluded: []
   summary: build (plugin invariants) passed; destructive-guard runner 1242/1242 passed; unittest 15990 tests OK (1 skipped); TS-1..TS-27 and manual checks (reason readability, FR7 wording, manifest untouched, case table append-only) passed
 - id: retrospect
-  status: pending
+  status: completed
+  completed_at_commit: a4b955bf1b38af8d14e196f0f852f194c9d0658b
 tasks:
   task0001:
     title: A pooled rm deny wins over held non-rm asks, and cases pin the reason id
