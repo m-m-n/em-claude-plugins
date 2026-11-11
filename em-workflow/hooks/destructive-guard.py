@@ -386,9 +386,35 @@ class _Decided(BaseException):
 # printing it.
 _capture_decisions = False
 
+# The `ask` decisions of the non-rm checks that main() has held back so far in
+# the judgment under way, in the order they were reached (tier, reason id and
+# reason text as authored, before any demotion); None whenever main() is not
+# collecting. main() owns it: it starts each judgment with an empty list and
+# puts None back when the statement loop ends, so no judgment sees another's.
+_held_asks = None
+
+
+def hold_ask(rule, reason):
+    """The `ask` of a non-rm check. While main() collects (_held_asks is a
+    list) the `ask` is recorded and the check goes on, so that a recursive
+    delete the hook denies on its own, in the same command, can still decide
+    (destructive-guard-mixed-rm-precedence); main()'s one resolution step
+    emits the first held `ask` when nothing stronger turns up. A caller
+    outside that collection gets the `ask` emitted at once, as decide()
+    does."""
+    if _held_asks is None:
+        decide("ask", rule, reason)
+    else:
+        _held_asks.append(("ask", rule, reason))
+
 
 def decide(decision, rule, reason):
-    """Emit a PreToolUse permission decision and stop."""
+    """The one emission routine: print a PreToolUse permission decision and
+    stop. Every verdict the hook gives ends here, and the CLAUDE_BATCH
+    demotion of an `ask` to a `deny` happens here and nowhere else, after
+    main()'s resolution step has chosen the verdict. A `deny` reached inside
+    the statement loop is passed to it at once; an `ask` reached there goes
+    through hold_ask() first."""
     if decision == "ask" and unattended():
         decision = "deny"
         reason = (
@@ -6592,33 +6618,56 @@ def _single_quote_skip_spans(chunk, lexmap, real_spans, lexed):
     return skip
 
 
+# The scan-budget `ask` (reason id, reason text): the static analysis would
+# cost far more than the input is long, either because statements() queued too
+# much text (its own relative cap) or because lex_shell() could not settle the
+# text within its linear work bound (LexBudgetExceeded,
+# destructive-guard-unified-lexer D4).
+SCAN_BUDGET_ASK = (
+    "scan-budget-exceeded",
+    "入れ子/積み上げの構造が深く、静的解析の走査量が入力長に対して"
+    "過大になったため打ち切った。安全側で確認を挟む。",
+)
+
+# The `ask` for an array subscript whose matching `]` is not found before the
+# end of the input (LexUnmatchedSubscript, P14): bash keeps reading for the
+# `]`, so the line boundaries it would use cannot be placed statically.
+UNMATCHED_SUBSCRIPT_ASK = (
+    "unmatched-subscript",
+    "配列の添字の `]` が入力の終わりまでに見つからない。bash は `]` が来るまで"
+    "続きの行を読み続けるため、行の境界を静的に決められない。安全側で確認を挟む。",
+)
+
+
+def lex_unsettled_ask(exc):
+    """The (reason id, reason text) of the `ask` for a text lex_shell() could
+    not settle: the unmatched-subscript one for an unmatched subscript, the
+    scan-budget one for everything else. main() takes it as the early-stop
+    `ask` when such an exception ends the statement scan."""
+    if isinstance(exc, LexUnmatchedSubscript):
+        return UNMATCHED_SUBSCRIPT_ASK
+    return SCAN_BUDGET_ASK
+
+
 def ask_scan_budget_exceeded():
-    """Emit the scan-budget `ask` decision and stop: the static analysis
-    would cost far more than the input is long, either because statements()
-    queued too much text (its own relative cap) or because lex_shell() could
-    not settle the text within its linear work bound (LexBudgetExceeded,
-    destructive-guard-unified-lexer D4). Never an `allow`: under claude-batch
-    the `ask` is demoted to `deny` by decide()."""
-    decide(
-        "ask",
-        "scan-budget-exceeded",
-        "入れ子/積み上げの構造が深く、静的解析の走査量が入力長に対して"
-        "過大になったため打ち切った。安全側で確認を挟む。",
-    )
+    """Emit the scan-budget `ask` (SCAN_BUDGET_ASK) through decide() and stop.
+    Never an `allow`: under claude-batch decide() demotes the `ask` to
+    `deny`. main() does not call this for an early stop: the scan-budget
+    overrun that statements() detects ends the scan and is handed to main()
+    as the early-stop `ask`, which the resolution step weighs against the rm
+    decisions and the held asks before it is emitted. This function is the
+    answer for a caller that has no such step: statements() without an
+    EARLY_STOP list, and ask_lex_unsettled()."""
+    decide("ask", *SCAN_BUDGET_ASK)
 
 
 def ask_unmatched_subscript():
-    """Emit the `ask` decision for an array subscript whose matching `]` is
-    not found before the end of the input (LexUnmatchedSubscript, P14): bash
-    keeps reading for the `]`, so the line boundaries it would use cannot be
-    placed statically. Never an `allow`; under claude-batch decide() demotes
-    the `ask` to `deny`."""
-    decide(
-        "ask",
-        "unmatched-subscript",
-        "配列の添字の `]` が入力の終わりまでに見つからない。bash は `]` が来るまで"
-        "続きの行を読み続けるため、行の境界を静的に決められない。安全側で確認を挟む。",
-    )
+    """Emit the unmatched-subscript `ask` (UNMATCHED_SUBSCRIPT_ASK) through
+    decide() and stop. Never an `allow`; under claude-batch decide() demotes
+    the `ask` to `deny`. Like ask_scan_budget_exceeded(), this is the answer
+    of a caller with no resolution step; main() takes the same `ask` as its
+    early-stop `ask` (lex_unsettled_ask())."""
+    decide("ask", *UNMATCHED_SUBSCRIPT_ASK)
 
 
 def ask_unreadable_heredoc_delimiter():
@@ -6638,13 +6687,14 @@ def ask_unreadable_heredoc_delimiter():
 
 def ask_lex_unsettled(exc):
     """The `ask` decision for a text lex_shell() could not settle: its own
-    for an unmatched subscript, the scan-budget one for everything else."""
-    if isinstance(exc, LexUnmatchedSubscript):
-        ask_unmatched_subscript()
-    ask_scan_budget_exceeded()
+    for an unmatched subscript, the scan-budget one for everything else
+    (lex_unsettled_ask()). Emitted at once: _judge_under() uses it for a
+    LexBudgetExceeded that escapes main() from outside the statement loop,
+    where no rm decision or held `ask` is being kept."""
+    decide("ask", *lex_unsettled_ask(exc))
 
 
-def statements(command, unsettled=None):
+def statements(command, unsettled=None, early_stop=None):
     """Yield (text, tokens, lexed, shaped_words, redirects, origin) per
     command segment, substitution bodies included -- but for the bodies of
     the single-quote candidates that _single_quote_skip_spans() names
@@ -6663,6 +6713,16 @@ def statements(command, unsettled=None):
     subscript can be left open inside one while the command around it reads
     fine: the caller then judges everything that could be read, and asks only
     when nothing in it is a `deny` (main()).
+
+    EARLY_STOP (a list, or None) says what happens when the relative scan
+    budget below runs out, either as a chunk is taken off the queue or after
+    the statements of a chunk that holds unclosed command forms: with None the
+    scan-budget `ask` is emitted at once (ask_scan_budget_exceeded()); with a
+    list the scan simply ends -- no further statement is yielded -- and the
+    scan-budget `ask` (SCAN_BUDGET_ASK) is appended to it, for the caller to
+    weigh against what the statements already yielded earned (main(): the
+    early stop of destructive-guard-mixed-rm-precedence). Either way, the
+    statements yielded before the overrun were yielded in full.
 
     The text is the tokens rejoined, so quoting is already resolved by the
     time the regex-based checks see it. LEXED is lex_segments()'s per-segment
@@ -6847,7 +6907,10 @@ def statements(command, unsettled=None):
             anchor = marker_pos.get(sub_index, anchor)
         scanned_chars += len(chunk)
         if scanned_chars > scan_budget:
-            ask_scan_budget_exceeded()
+            if early_stop is None:
+                ask_scan_budget_exceeded()
+            early_stop.append(SCAN_BUDGET_ASK)
+            return
         try:
             # The chunk's first lexing, as written: the extended-glob parse
             # units it holds are identified here, by this chunk's origin
@@ -7153,13 +7216,18 @@ def statements(command, unsettled=None):
         # spends the scan budget above on copies of one text, in time that
         # grows with the budget's multiple of the length. When the forms of
         # this chunk alone add up to more than the budget has left, the budget
-        # is bound to run out on them: answer now, after the statements of
-        # this chunk (a deny among them has been given), instead of scanning
-        # the copies one after the other until the budget says so. The answer
-        # is the same ask; a form that is not nested deep enough to get there
-        # is scanned as before.
+        # is bound to run out on them: end the scan now, after the statements
+        # of this chunk have been yielded (the caller has them all, so a deny
+        # they earned is not lost to the answer), instead of scanning the
+        # copies one after the other until the budget says so. The answer is
+        # the same scan-budget ask, either emitted at once or handed over as
+        # the early stop (EARLY_STOP); a form that is not nested deep enough
+        # to get there is scanned as before.
         if scanned_chars + unclosed_form_chars > scan_budget:
-            ask_scan_budget_exceeded()
+            if early_stop is None:
+                ask_scan_budget_exceeded()
+            early_stop.append(SCAN_BUDGET_ASK)
+            return
 
 
 def tokens(segment):
@@ -7865,9 +7933,10 @@ def route_substitution_headed_statement(
     unchanged, matching its existing signature.
 
     Returns check_rm()'s own list of records for main() to pool (D6) when
-    evidence reads as "rm"; calls check_git() (which decide()s and exits
-    directly, or returns None) when evidence reads as "git"; returns [] — no
-    route entered, no decision — when evidence reads as anything else, or is
+    evidence reads as "rm"; calls check_git() when evidence reads as "git"
+    (an `ask` it reaches is held, hold_ask(), and the call returns; a `deny`
+    still decide()s and exits directly); returns [] — no route entered, no
+    decision — when evidence reads as anything else, or is
     unreadable (R4:
     falls open, never `ask`; a fallback `ask` would demote to `deny`
     unattended and halt normal operation, NFR3). Two forms are therefore
@@ -7978,8 +8047,7 @@ def check_git(args, segment):
                 "このマシンでは gitleaks のシークレット検査がそこに載っている。",
             )
         if has(rest, "--amend"):
-            decide(
-                "ask",
+            hold_ask(
                 "git-amend",
                 "`--amend` は既存コミットを書き換える。push 済みかどうかは"
                 "コマンドだけでは判定できない。",
@@ -8538,8 +8606,8 @@ def check_file_destruction(word, args, segment):
     if word == "rsync" and has(args, "--delete", "--delete-after", "--delete-before"):
         decide("deny", "rsync-delete", "`rsync --delete` は宛先にしかないファイルを消す。")
     if word in ("tar", "unzip") and has(args, "-o", "--overwrite"):
-        decide(
-            "ask", "archive-overwrite", "アーカイブ展開が既存ファイルを無条件で上書きする。"
+        hold_ask(
+            "archive-overwrite", "アーカイブ展開が既存ファイルを無条件で上書きする。"
         )
 
 
@@ -8913,7 +8981,12 @@ def check_self_modification(word, args, redirects, segment, lexed):
     Each candidate is also checked in its normalized form (`~`/`$HOME`/
     `${HOME}` expanded, `..` segments collapsed lexically) so equivalent
     spellings of a protected path are not missed.
+
+    The `ask` for a protected path is held (hold_ask()), once per call, and
+    the remaining candidates are still checked, so a transcript path among
+    them earns its `deny` all the same.
     """
+    asked = False
     if lexed:
         candidates = write_targets(word, args, redirects)
     else:
@@ -8926,9 +8999,11 @@ def check_self_modification(word, args, redirects, segment, lexed):
         candidates = [segment] if writes else []
     for target in candidates:
         normalized = normalize_candidate(target)
-        if SELF_CONFIG.search(target) or SELF_CONFIG.search(normalized):
-            decide(
-                "ask",
+        if not asked and (
+            SELF_CONFIG.search(target) or SELF_CONFIG.search(normalized)
+        ):
+            asked = True
+            hold_ask(
                 "self-modification",
                 "Claude Code 自身の設定（settings / hooks / rules / agents / skills）への書き込み。"
                 "権限やガードの挙動が変わるので、ユーザーの意図を確認する。",
@@ -9060,7 +9135,7 @@ def check_external(word, args, segment, merge_allowed=False):
         if re.match(r"^secret\s+set", sub):
             decide("deny", "gh-secret-set", "リポジトリ secret の書き換え。")
         if re.match(r"^pr\s+merge", sub) and not merge_allowed:
-            decide("ask", "gh-pr-merge", "PR のマージは他者から見える不可逆な操作。")
+            hold_ask("gh-pr-merge", "PR のマージは他者から見える不可逆な操作。")
     if word in ("npm", "pnpm", "yarn") and "publish" in args:
         decide("deny", "package-publish", "パッケージの公開は取り消せない。")
     if word == "cargo" and "publish" in args:
@@ -9075,8 +9150,7 @@ def check_external(word, args, segment, merge_allowed=False):
             )
     if word == "systemctl" and not has(args, "--user"):
         if any(a in ("stop", "disable", "mask") for a in args):
-            decide(
-                "ask",
+            hold_ask(
                 "systemctl-system",
                 "system スコープの unit を止める/無効化する操作。"
                 "`--user` を付け忘れていないか確認する。",
@@ -9086,25 +9160,23 @@ def check_external(word, args, segment, merge_allowed=False):
         if re.search(
             r"\b(delete|remove-iam-policy-binding|add-iam-policy-binding)\b", joined
         ):
-            decide(
-                "ask",
+            hold_ask(
                 "cloud-iam",
                 "クラウド側のリソース削除または IAM 変更。ローカルでは取り消せない。",
             )
     if word == "kubectl" and any(a in ("delete", "drain", "cordon") for a in args):
-        decide("ask", "kubectl-destructive", "クラスタ上のリソースに対する破壊的操作。")
+        hold_ask("kubectl-destructive", "クラスタ上のリソースに対する破壊的操作。")
     if word == "terraform" and any(a in ("destroy", "apply") for a in args):
-        decide("ask", "terraform", "インフラへの適用/破棄。")
+        hold_ask("terraform", "インフラへの適用/破棄。")
     if word == "aws":
         joined = " ".join(args)
         if re.search(r"\b(rm|rb|delete-\w+|terminate-\w+)\b", joined):
-            decide("ask", "cloud-delete", "AWS リソースの削除。")
+            hold_ask("cloud-delete", "AWS リソースの削除。")
     if word == "ssh":
         # `ssh host` alone is interactive; `ssh host '<cmd>'` runs remotely.
         remote = [a for a in args if not a.startswith("-")]
         if len(remote) >= 2:
-            decide(
-                "ask",
+            hold_ask(
                 "remote-exec",
                 "リモートホスト上でのコマンド実行。手元のガードはリモート側には届かない。",
             )
@@ -9140,9 +9212,9 @@ def check_permissions(word, args):
             has(args, "-R", "--recursive")
             and any(re.fullmatch(r"[0-7]{3,4}", a) for a in args)
         ):
-            decide("ask", "chmod-broad", "広い、または再帰的なパーミッション変更。")
+            hold_ask("chmod-broad", "広い、または再帰的なパーミッション変更。")
     if word == "chown" and has(args, "-R", "--recursive"):
-        decide("ask", "chown-recursive", "再帰的な所有者変更。")
+        hold_ask("chown-recursive", "再帰的な所有者変更。")
 
 
 # A bare function-signature token: shlex's punctuation_chars fuses adjacent
@@ -9323,11 +9395,46 @@ def matches_target_shape(word, args, cwd):
     return False
 
 
+def rm_operands_name_self_config(args):
+    """Whether a deletion operand of the rm invocation whose operand basis is
+    ARGS (check_rm()'s ARGS: the rm's own arguments, or the REMAINDER of a
+    substitution-headed statement) matches the protected self-config pattern
+    the way check_self_modification() matches a write target: the raw operand,
+    or its normalized form. The operands are the ones check_rm() judges -- a
+    counted operand that does not start with `-` -- whatever the statement's
+    LEXED flag; a redirect target is not among them."""
+    for _number, operand in _number_rm_operands(args):
+        if operand.startswith("-"):
+            continue
+        if SELF_CONFIG.search(operand) or SELF_CONFIG.search(
+            normalize_candidate(operand)
+        ):
+            return True
+    return False
+
+
+def scanned_statements(command, unsettled, early_stop):
+    """statements() for main(): the same statements, and when the scan ends
+    early the reason is recorded instead of raised. A scan-budget overrun is
+    appended to EARLY_STOP by statements() itself; a lexer budget overrun or an
+    unmatched subscript that escapes the iteration (LexBudgetExceeded, which
+    LexUnmatchedSubscript is a kind of) ends it here, and its `ask`
+    (lex_unsettled_ask()) goes to EARLY_STOP. Either way no further statement
+    is yielded, and the statements already yielded stand. Only what is raised
+    while statements() runs is caught: the checks main() runs on a yielded
+    statement are outside this generator."""
+    try:
+        yield from statements(command, unsettled, early_stop)
+    except LexBudgetExceeded as exc:
+        early_stop.append(lex_unsettled_ask(exc))
+
+
 def main(payload):
     """The hook's judgment of one PreToolUse payload under the lexer reading
     in force (_lex_extglob). It always ends in decide() or in sys.exit(0) (the
     hook has no decision to give). run() reads the payload and combines the
     judgments under the two readings."""
+    global _held_asks
     if payload.get("tool_name") != "Bash":
         sys.exit(0)
     command = (payload.get("tool_input") or {}).get("command", "")
@@ -9358,13 +9465,24 @@ def main(payload):
     # loop below and the check would never fire.
     check_pipe_to_shell(command)
 
-    # Every rm target of every segment, pooled across possibly several `rm`
-    # invocations in one compound command (D6). check_rm() no longer decides
-    # for itself — an `ask` on an early target must not end the scan before a
-    # later target, or a later segment's own `rm`, gets to contribute a
-    # `deny` — so this loop only collects, and the strongest decision found
-    # is emitted once, after every segment has been examined.
+    # The statement loop below collects; it emits nothing except the `deny` of
+    # a non-rm check, which ends the scan at once. Everything else waits for
+    # the one resolution step after the loop
+    # (destructive-guard-mixed-rm-precedence). What is collected:
+    #  - RM_RECORDS: every rm target of every segment, pooled across possibly
+    #    several `rm` invocations in one compound command (D6). check_rm()
+    #    does not decide for itself;
+    #  - HELD_ASKS: the `ask` of every non-rm check (hold_ask()), in the order
+    #    reached. No `ask` ends the scan, so a segment's `rm` that comes after
+    #    one still gets to contribute a `deny`, as one before it does;
+    #  - EARLY_STOP: the `ask` that ended the scan before the statements ran
+    #    out (a scan-budget overrun, a lexer budget overrun, an unmatched
+    #    subscript), which scanned_statements() reports.
+    # The state belongs to this one judgment: run() may judge the same
+    # payload twice, once per lexer reading, and each judgment starts empty.
     rm_records = []
+    held_asks = []
+    early_stop = []
 
     # destructive-guard-rm-reason-positions: the anchor of every rm
     # invocation the loop below establishes — the origin position (see
@@ -9400,110 +9518,157 @@ def main(payload):
     context_changed = False
     statement_count = 0
 
-    for (
-        segment, toks, lexed, shaped_words, shaped_redirects, origin
-    ) in statements(command, unsettled):
-        statement_count += 1
-        check_bypass(segment, toks)
+    _held_asks = held_asks
+    try:
+        for (
+            segment, toks, lexed, shaped_words, shaped_redirects, origin
+        ) in scanned_statements(command, unsettled, early_stop):
+            statement_count += 1
+            check_bypass(segment, toks)
 
-        # task0001 D1: every check below reads SHAPED_WORDS/SHAPED_REDIRECTS
-        # — statements()'s grouping/case-aware unwrap of TOKS (see that
-        # function's docstring and _shape_leading()) — so a command sitting
-        # behind a subshell, a brace group, a reserved word, a case pattern,
-        # or a function definition is judged exactly as the same command
-        # written alone. The deferral computation below deliberately keeps
-        # using the UNSHAPED words instead; see its own comment.
-        word, args = head(shaped_words)
-        # `> ~/.claude/settings.json` のようにコマンド語を持たない純リダイレクト
-        # 文も対象を切り詰める。word が無くても redirects だけで判定する。
-        check_self_modification(word or "", args, shaped_redirects, segment, lexed)
+            # task0001 D1: every check below reads SHAPED_WORDS/SHAPED_REDIRECTS
+            # — statements()'s grouping/case-aware unwrap of TOKS (see that
+            # function's docstring and _shape_leading()) — so a command sitting
+            # behind a subshell, a brace group, a reserved word, a case pattern,
+            # or a function definition is judged exactly as the same command
+            # written alone. The deferral computation below deliberately keeps
+            # using the UNSHAPED words instead; see its own comment.
+            word, args = head(shaped_words)
+            held_before = len(held_asks)
+            # `> ~/.claude/settings.json` のようにコマンド語を持たない純リダイレクト
+            # 文も対象を切り詰める。word が無くても redirects だけで判定する。
+            check_self_modification(word or "", args, shaped_redirects, segment, lexed)
+            # The exclusion (destructive-guard-mixed-rm-precedence): when THIS
+            # statement reached the self-modification `ask` (held above like
+            # any other non-rm `ask`) and the deletion operand of ITS OWN rm
+            # invocation is the protected path, that invocation's rm records
+            # are left out of the pool below, so that
+            # `rm -rf ~/.claude/skills/foo` keeps its self-modification `ask`
+            # instead of being denied as a recursive delete. A match only in
+            # a redirect target, another write source, or another statement
+            # (a substitution body, a payload, a heredoc body) leaves the
+            # records in. The invocation keeps its place in rm_invocations,
+            # so the other invocations are still numbered counting it.
+            self_modification_asked = any(
+                rule == "self-modification"
+                for _tier, rule, _reason in held_asks[held_before:]
+            )
 
-        # task0001 FR1/FR2/FR3 (AS-2), rebuilt by task0002 FR1/FR2/FR3/FR11/
-        # FR13: a statement whose command word is a `.substitution_only`
-        # token — skipped by head() above to reach WORD/ARGS — has a
-        # command name that is statically unknown. WORD/ARGS themselves are
-        # untouched by this classification — a statement whose command word
-        # was found directly (no substitution skip at all) never reaches
-        # route_substitution_headed_statement(), leaving the WORD == "git" /
-        # "rm" dispatch below, and every substitution-free command's
-        # verdict, unchanged (AC-12). The single entry point below reads a
-        # command name statically out of the skipped substitution's own raw
-        # text and hands the remaining tokens to the EXISTING rm/git shape
-        # matchers on that evidence alone — never on the remainder's flag
-        # shape (D2, superseding task0001's dash pre-gate and recursion-AND-
-        # force-AND-operand pre-screen, both removed) — reusing the
-        # matchers' own verdict tier and reason id verbatim (R5: no new
-        # stage, no new reason id, no verdict produced by the
-        # classification itself).
-        skip_index, saw_substitution, substitution_tok = _skip_to_command_word(
-            shaped_words
-        )
-        # Whether the substitution route established this statement's rm
-        # invocation (the evidence read `rm`): then the plain route below
-        # must not judge it a second time, whatever its written command
-        # word is.
-        substitution_headed_rm = False
-        if saw_substitution:
-            invocations_before = len(rm_invocations)
-            rm_records.extend(
-                route_substitution_headed_statement(
+            # task0001 FR1/FR2/FR3 (AS-2), rebuilt by task0002 FR1/FR2/FR3/FR11/
+            # FR13: a statement whose command word is a `.substitution_only`
+            # token — skipped by head() above to reach WORD/ARGS — has a
+            # command name that is statically unknown. WORD/ARGS themselves are
+            # untouched by this classification — a statement whose command word
+            # was found directly (no substitution skip at all) never reaches
+            # route_substitution_headed_statement(), leaving the WORD == "git" /
+            # "rm" dispatch below, and every substitution-free command's
+            # verdict, unchanged (AC-12). The single entry point below reads a
+            # command name statically out of the skipped substitution's own raw
+            # text and hands the remaining tokens to the EXISTING rm/git shape
+            # matchers on that evidence alone — never on the remainder's flag
+            # shape (D2, superseding task0001's dash pre-gate and recursion-AND-
+            # force-AND-operand pre-screen, both removed) — reusing the
+            # matchers' own verdict tier and reason id verbatim (R5: no new
+            # stage, no new reason id, no verdict produced by the
+            # classification itself).
+            skip_index, saw_substitution, substitution_tok = _skip_to_command_word(
+                shaped_words
+            )
+            # Whether the substitution route established this statement's rm
+            # invocation (the evidence read `rm`): then the plain route below
+            # must not judge it a second time, whatever its written command
+            # word is.
+            substitution_headed_rm = False
+            if saw_substitution:
+                invocations_before = len(rm_invocations)
+                records = route_substitution_headed_statement(
                     shaped_words[skip_index:],
                     getattr(substitution_tok, "raw_substitution_body", None),
                     segment,
                     token_position(origin, toks, substitution_tok),
                     rm_invocations.append,
                 )
-            )
-            substitution_headed_rm = len(rm_invocations) > invocations_before
+                substitution_headed_rm = len(rm_invocations) > invocations_before
+                if not (
+                    self_modification_asked
+                    and substitution_headed_rm
+                    and rm_operands_name_self_config(shaped_words[skip_index:])
+                ):
+                    rm_records.extend(records)
 
-        # The deferral is judged on the statement's REAL head — leading
-        # grouping tokens (subshell `(`, brace group `{`, a function
-        # signature) stripped first (D7) — over the UNSHAPED words TOKS
-        # itself produces (task0001: deliberately not SHAPED_WORDS above;
-        # the deferral's own, narrower grouping-construct vocabulary —
-        # strip_grouping_prefix(), unchanged by this task — and its pinned
-        # verdicts stay exactly as they were; see that function's
-        # docstring). A subshell's `(` is itself WORD when ungrouped
-        # ("(" != "git"), so this must run even when WORD is None or not
-        # "git"/"gh"; it is placed before the `continue` below for that
-        # reason.
-        words, _ = split_redirects(toks, lexed)
-        gword, gargs = _deferral_head(strip_grouping_prefix(words))
-        if matches_target_shape(gword, gargs, cwd):
-            defer_to_new_guard = True
+            # The deferral is judged on the statement's REAL head — leading
+            # grouping tokens (subshell `(`, brace group `{`, a function
+            # signature) stripped first (D7) — over the UNSHAPED words TOKS
+            # itself produces (task0001: deliberately not SHAPED_WORDS above;
+            # the deferral's own, narrower grouping-construct vocabulary —
+            # strip_grouping_prefix(), unchanged by this task — and its pinned
+            # verdicts stay exactly as they were; see that function's
+            # docstring). A subshell's `(` is itself WORD when ungrouped
+            # ("(" != "git"), so this must run even when WORD is None or not
+            # "git"/"gh"; it is placed before the `continue` below for that
+            # reason.
+            words, _ = split_redirects(toks, lexed)
+            gword, gargs = _deferral_head(strip_grouping_prefix(words))
+            if matches_target_shape(gword, gargs, cwd):
+                defer_to_new_guard = True
 
-        context_changed = context_changed or changes_context(word, toks, words)
+            context_changed = context_changed or changes_context(word, toks, words)
 
-        if word is None:
-            continue
+            if word is None:
+                continue
 
-        if word == "git":
-            check_git(args, segment)
-        elif word == "rm":
-            if not substitution_headed_rm:
-                rm_anchor = token_position(origin, toks, shaped_words[skip_index])
-                rm_invocations.append(rm_anchor)
-                rm_records.extend(check_rm(args, rm_anchor))
-        else:
-            merge_allowed = exception_allows(merge_exception, toks, lexed, cwd)
-            merge_allowed_seen = merge_allowed_seen or merge_allowed
-            check_file_destruction(word, args, segment)
-            check_external(word, args, segment, merge_allowed)
-            check_permissions(word, args)
+            if word == "git":
+                check_git(args, segment)
+            elif word == "rm":
+                if not substitution_headed_rm:
+                    rm_anchor = token_position(origin, toks, shaped_words[skip_index])
+                    rm_invocations.append(rm_anchor)
+                    records = check_rm(args, rm_anchor)
+                    if not (
+                        self_modification_asked and rm_operands_name_self_config(args)
+                    ):
+                        rm_records.extend(records)
+            else:
+                merge_allowed = exception_allows(merge_exception, toks, lexed, cwd)
+                merge_allowed_seen = merge_allowed_seen or merge_allowed
+                check_file_destruction(word, args, segment)
+                check_external(word, args, segment, merge_allowed)
+                check_permissions(word, args)
+    finally:
+        _held_asks = None
 
-    # Emission happens once, after every segment's rm targets have been
-    # collected (D6) — an earlier deny from check_git()/check_file_
-    # destruction()/etc. already exited the process before this line, so
-    # reaching it means no OTHER check decided first.
+    # One resolution step ends every judgment: a normal end, an early stop, an
+    # unreadable chunk and the deferral to the sibling guards alike. Every
+    # verdict goes through decide(), which alone applies the CLAUDE_BATCH
+    # demotion, after the choice made here. A non-rm `deny` reached in the
+    # loop has already left at once (A2). The choice, in order:
+    #  1. the strongest rm decision when it is a `deny` (rm-root when any
+    #     winner is, else rm-recursive), whatever the order of the segments
+    #     and whatever held ask stands beside it. Its reason is the rm reason
+    #     alone: no text of any other check, no demotion sentence;
+    #  2. the first held ask;
+    #  3. the early-stop ask;
+    #  4. the ask of a chunk that could not be read, after a normal end;
+    #  5. the PR merge fallback ask;
+    #  6. the rm `ask`;
+    #  7. otherwise the final allow / silence below.
+    # The rm records of a statement whose own rm deletion operand is a
+    # protected self-config path were left out in the loop, with the
+    # self-modification `ask` of that statement competing as an ordinary held
+    # ask, so they take no part in this choice.
     top = strongest_rm_decision(render_rm_decisions(rm_invocations, rm_records))
-    if unsettled and (top is None or top[0] != "deny"):
+    if top is not None and top[0] == "deny":
+        decide(*top)
+    if held_asks:
+        decide(*held_asks[0])
+    if early_stop:
+        decide("ask", *early_stop[0])
+    if unsettled:
         # A chunk was left unread: the verdict is the `ask` of an unsettled
-        # text, unless what was read earns a `deny`.
-        raise unsettled[0]
-    if (
-        merge_allowed_seen
-        and not exception_stands(merge_exception, statement_count, context_changed)
-        and (top is None or top[0] != "deny")
+        # text, unless what was read earned a `deny` (above).
+        decide("ask", *lex_unsettled_ask(unsettled[0]))
+    if merge_allowed_seen and not exception_stands(
+        merge_exception, statement_count, context_changed
     ):
         decide(
             "ask",
@@ -9513,8 +9678,7 @@ def main(payload):
             "正規形でも許可しない。",
         )
     if top is not None:
-        tier, rule, message = top
-        decide(tier, rule, message)
+        decide(*top)
 
     if ALLOW_NON_DESTRUCTIVE and not defer_to_kill_guard and not defer_to_new_guard:
         decide("allow", None, "破壊的なパターンに一致しない。")
@@ -9538,7 +9702,10 @@ def _judge_under(payload, extglob):
     without one. A text lex_shell() could not settle -- within its linear work
     bound, or for lack of a subscript's `]` -- gets an `ask` (the scan-budget
     one, or ask_unmatched_subscript()), never an `allow`
-    (destructive-guard-unified-lexer D4, NFR3)."""
+    (destructive-guard-unified-lexer D4, NFR3). Such an overrun in the
+    statement loop is weighed by main() itself, against the rm decisions and
+    the held asks (scanned_statements()); the handler here answers what
+    escapes main() from outside that loop."""
     global _capture_decisions, _lex_extglob
     _capture_decisions = True
     _lex_extglob = extglob
