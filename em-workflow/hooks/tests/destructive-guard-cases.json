@@ -1265,5 +1265,10 @@
   ["deny", "destructive-guard-heredoc-literal TS-26a: ヒアドキュメントを 2 つ持ち、片方を記述子 3 に移す python3 は本文を読まない扱いにせず deny", "python3 <<'DATA' 3<&0 <<'PY'\nx = \"`git branch -D example`\"\nDATA\nprint(\"ok\")\nPY"],
   ["deny", "destructive-guard-heredoc-literal TS-26b: 標準入力を記述子 3 から複製する 0<&3 付きの python3 宛てヒアドキュメントは本文を読まない扱いにせず deny", "python3 <<'PY' 0<&3\nx = \"`git branch -D example`\"\nPY"],
   ["deny", "destructive-guard-heredoc-literal TS-26c: < でファイルも標準入力に渡す python3 - 宛てヒアドキュメントは本文を読まない扱いにせず deny", "python3 - <<'PY' < /tmp/in.py\nx = \"`git branch -D example`\"\nPY"],
-  ["allow", "destructive-guard-heredoc-literal TS-27: 出力を > でファイルに書く python3 - 宛てヒアドキュメントは、リテラルの中のバッククォートなら allow", "python3 - <<'PY' > /tmp/out.txt\nx = \"`git branch -D example`\"\nPY"]
+  ["allow", "destructive-guard-heredoc-literal TS-27: 出力を > でファイルに書く python3 - 宛てヒアドキュメントは、リテラルの中のバッククォートなら allow", "python3 - <<'PY' > /tmp/out.txt\nx = \"`git branch -D example`\"\nPY"],
+  ["deny", "destructive-guard-heredoc-literal 追加: python3 0 <<'PY' の 0 はスクリプトのオペランドでありファイル記述子ではないので、本文のリテラルも読んで deny", "python3 0 <<'PY'\nx = \"`git branch -D example`\"\nPY"],
+  ["allow", "destructive-guard-heredoc-literal 追加: 記述子 2 の出力リダイレクトは python3 - 宛てヒアドキュメントを妨げないので、リテラルの中のバッククォートなら allow", "python3 - <<'PY' 2>/dev/null\nx = \"`git branch -D example`\"\nPY"],
+  ["deny", "destructive-guard-heredoc-literal 追加: 置換に隣り合うオプションは実行時の語を静的に読めないので、python3 宛てでもリテラルを読んで deny", "python3 -I$(echo c) - <<'PY'\nx = \"`git branch -D example`\"\nPY"],
+  ["deny", "destructive-guard-heredoc-literal 追加: 先の文の alias が python3 を差し替えうるなら、後ろの置換の中の python3 宛てヒアドキュメントは本文を読まない扱いにせず deny", "alias q=bash; echo \"$(python3 <<'PY'\nx = \"`git branch -D example`\"\nPY\n)\""],
+  ["deny", "destructive-guard-heredoc-literal 追加: 三重引用符のリテラルが本文の終わりまで閉じなければ、python3 宛てでも本文全体を従来どおり読んで deny", "python3 <<'PY'\nb = '''\n`git branch -D example`\nPY"]
 ]
