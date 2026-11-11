@@ -110,6 +110,7 @@ tasks:
     - em-workflow/skills/develop/SKILL.md
     - tests/test_spec_change_verify_pending.py
     - tests/test_worker_contracts_planning.py
+    - tests/test_batch_policies.py
     skills: []
     domains:
     - api-contract
@@ -123,7 +124,7 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: in_progress
+    status: merged
     branch: em-workflow/spec-change-rework-reentry/task0001
   task0002:
     title: Invariant 1 does not govern the SPEC-change transition
