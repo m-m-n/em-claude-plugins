@@ -25,6 +25,9 @@
 - [ ] AC-10: `builtin builtin declare -i x`、`builtin command declare -i x`、`builtin -- declare -i x`、`builtin builtin source ./env.sh`、`builtin builtin $b declare -i x` の後の Python 宛て heredoc は、リテラルの中身を読む扱いのまま deny になる（FR9）。
 - [ ] AC-11: `builtin builtin alias python3=bash` と `builtin builtin hash -p /bin/bash python3` の後の Python 宛て heredoc は、リテラルの中身を読む扱いのまま deny になる。同じ `builtin builtin alias` を含むコマンドの data 宛て heredoc は、変更前と同じ判定のまま（変更前の値を確かめたうえでケースとして固定する）（FR9 / NFR5 / FR7）。
 - [ ] AC-12: 変更後の `em-workflow/hooks/destructive-guard.py` で、読まない扱いを止める判定の語彙が差し替え検出の語彙から導かれていて、同じ語が 2 つの一覧に別々に書かれていない。`builtin` / `command` を外す読み方が 1 つの関数にある（NFR5）。
+- [ ] AC-13: パス名展開、波括弧展開、extglob、チルダ展開を含むコマンド語の文が同じコマンドにあれば、入れ子の `builtin` / `command` の途中にある場合も、heredoc の前後どちらにある場合も、Python 宛て heredoc はリテラルの中身を読む扱いのまま deny になる（TS-33〜TS-37、TS-39）（FR9）。
+- [ ] AC-14: 引用・エスケープから静的に復元できる状態変更の組み込みは、復元後の語で検出される。復元できない語は FR9 (3) に当たる（TS-38 は deny）（FR9）。
+- [ ] AC-15: 引用だけを含む無害なコマンド語の文と、Python 本文のリスト式（`[1, 2]`）は、FR1 を止めない（TS-40 は allow）。TS-1・TS-2 と既存の allow ケース、TS-31 の判定、AC-12 は保つ（FR9 / FR7 / NFR5）。
 
 ## Technical Requirements
 
@@ -62,10 +65,12 @@
   同じコマンドの中に次のどれかの文があれば、heredoc の前にあっても後にあっても、そのコマンドの Python 宛て本文に FR1 を適用しない。判定は今と同じになる。
   - (1) コマンド名の差し替え（関数定義、`alias` / `hash` / `enable`、PATH の代入、`BASH_CMDS` / `BASH_ALIASES` を含む語）。
   - (2) シェルの状態や変数の属性を変えうる組み込み（`declare`、`typeset`、`local`、`export`、`readonly`、`let`、`shopt`、`set`、`unset`、`source`、`.`、`eval`）をコマンド語にする文。
-  - (3) コマンド語が静的に読めない文（`$`、バッククォート、置換を含む語）。
+  - (3) シェルとして評価される文で、コマンド語を単一の語として静的に確定できないもの。引用とエスケープだけで結果を確定できる語は、復元後の語を (1)・(2) の語彙と照合する。パラメータ展開、コマンド置換、算術展開、プロセス置換、チルダ展開、パス名展開（extglob を含む）、波括弧展開、ロケール翻訳（`$"..."`）に依存する語、および復元に対応していない語や解析に失敗した語は、本項に当たる。`$'...'` は復号できれば復元後の語で照合し、復号に対応していなければ本項に当たる。
 
   コマンド語は、`builtin` と `command` を何段重ねても（`builtin builtin declare`、`builtin command declare` など）、それぞれのオプションと `--` を外した後の語で判定する。
-  外した後の語が静的に読めないときも (3) に当たる。
+  外す途中のコマンド語とオプションにも (3) と同じ確定条件を適用し、確定できない語に達した時点で (3) に当たる。判定には、引用・エスケープ・展開の情報を失う前の語を使う。
+
+  Python 宛て heredoc 本文を検査のためにシェルとして読み直した語には、(3) を適用しない。ただし、区切り語に引用符が無い heredoc の本文でシェルが評価する置換と、その中のシェルの文には適用する。FR3・FR5 の検査は保つ。
 
 ### Non-Functional Requirements
 
@@ -135,7 +140,7 @@ design ステップの成果物を含む。これらはフェーズ文書と `re
 
 ## Test Scenarios
 
-TS-1〜TS-15 と TS-28〜TS-31 は FR8 に従い `em-workflow/hooks/tests/destructive-guard-cases.json` にケースとして足す（TS-1〜TS-15 は追加済み）。
+TS-1〜TS-15、TS-28〜TS-31、TS-33〜TS-40 は FR8 に従い `em-workflow/hooks/tests/destructive-guard-cases.json` にケースとして足す（TS-1〜TS-15 は追加済み）。
 コマンドの中の改行は、ケースの文字列では改行文字になる。
 
 TS-16 と TS-28 の間の番号は、計画（task0001.md と workflow.yaml の requirements の tests）がすでに使っているので、新規シナリオは TS-28 から番号を振る。
@@ -300,6 +305,69 @@ TS-9 / TS-10 の print 形は `destructive-guard-cases.json` の既存ケース�
   PY
   ```
 
+TS-33〜TS-38 は、次のコマンドの `<語>` を各シナリオの文字列に置き換えたもの。
+
+```
+<語>; x="$(python3 <<'PY'
+print('a[$(git branch -D example)]')
+PY
+)"
+```
+
+- [ ] TS-33: 波括弧展開のコマンド語（AC-13） - deny
+  - `{declare,-i} x`
+- [ ] TS-34: パス名展開のコマンド語（AC-13） - deny
+  - `decl?re -i x`
+  - `[d]eclare -i x`
+  - `decl*re -i x`
+- [ ] TS-35: `builtin` の後のパス名展開・波括弧展開（AC-13） - deny
+  - `builtin {declare,-i,x}`
+  - `builtin decl?re -i x`
+  - `builtin {builtin,declare,-i,x}`
+  - 次の全文:
+    ```
+    builtin {hash,-p,/bin/bash,python3}
+    python3 <<'PY'
+    x = "`git branch -D example`"
+    PY
+    ```
+- [ ] TS-36: extglob のコマンド語（AC-13） - deny
+  - `@(declare) -i x`
+  - `?(declare) -i x`
+  - `+(declare) -i x`
+  - `*(declare) -i x`
+  - `!(never) -i x`
+- [ ] TS-37: チルダ展開のコマンド語（AC-13） - deny
+  - `HOME=declare; ~ -i x`
+  - `PWD=declare; ~+ -i x`
+- [ ] TS-38: 引用・エスケープを含むコマンド語（AC-14） - deny
+  - `decl\are -i x`
+  - `de"cl"are -i x`
+  - `'declare' -i x`
+  - `$'decla\x72e' -i x`
+  - `$"declare" -i x`
+  - `builtin 'builtin' de"cl"are -i x`
+- [ ] TS-39: heredoc より後にある波括弧展開のコマンド語（AC-13） - deny
+  ```
+  python3 <<'PY'
+  x = "`git branch -D example`"
+  PY
+  {declare,-i} x
+  ```
+- [ ] TS-40: 誤爆しない形（AC-15） - allow
+  ```
+  'echo' ok
+  python3 <<'PY'
+  x = "`git branch -D example`"
+  PY
+  ```
+  ```
+  python3 <<'PY'
+  [1, 2]
+  x = "`git branch -D example`"
+  PY
+  ```
+
 ### E2E Tests
 
 **Existing E2E tests**: None
@@ -365,7 +433,7 @@ TS-9 / TS-10 の print 形は `destructive-guard-cases.json` の既存ケース�
 ## Success Criteria
 
 - [ ] FR1〜FR9 が実装され、テストされている
-- [ ] TS-1〜TS-16 と TS-28〜TS-32 がすべて通る
+- [ ] TS-1〜TS-16 と TS-28〜TS-40 がすべて通る
 - [ ] NFR1〜NFR5 を満たす
 
 ## Open Questions
