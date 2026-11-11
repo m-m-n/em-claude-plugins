@@ -1,0 +1,163 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_mixed_rm_precedence.TestScenarioCasesPassAgainstTheHook.test_ac1_the_rm_first_forms_deny_with_rm_recursive
+      - tests.test_destructive_guard_mixed_rm_precedence.TestCaseTable.test_each_scenario_has_its_case
+    red_confirmed: true
+    red_reason: >
+      Run against a copy of the base commit's destructive-guard.py (the new
+      runner and the appended cases in place). 13 of the 14 rm-first cases
+      failed in test_ac1_the_rm_first_forms_deny_with_rm_recursive: the hook
+      answered ask where deny / rm-recursive is required, with the reason id
+      of the non-rm check that sat after the rm (git-amend for TS-1 and the
+      three TS-18 forms, chmod-broad for TS-3, terraform for TS-4,
+      kubectl-destructive for TS-5, cloud-iam for TS-6, and chown-recursive,
+      cloud-delete, systemctl-system, remote-exec and gh-pr-merge for TS-19).
+      The TS-19 form with `tar -xo -f a.tar` was already deny / rm-recursive
+      on the base hook (`-xo` is not the `-o` flag the archive-overwrite
+      check reads), so it is a regression pin and not red evidence.
+      test_each_scenario_has_its_case reads the case table only and was green
+      once the cases were appended.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_mixed_rm_precedence.TestScenarioCasesPassAgainstTheHook.test_ac2_the_non_rm_first_forms_deny_with_rm_recursive
+    red_confirmed: true
+    red_reason: >
+      Run against a copy of the base commit's destructive-guard.py. All five
+      cases failed: TS-2 got ask / git-amend, and the reversed forms of TS-3,
+      TS-4, TS-5 and TS-6 got ask with chmod-broad, terraform,
+      kubectl-destructive and cloud-iam, where deny / rm-recursive is required.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_mixed_rm_precedence.TestScenarioCasesPassAgainstTheHook.test_ac3_batch_and_root_forms
+      - tests.test_destructive_guard_mixed_rm_precedence.TestRmDenyReasonText.test_the_reason_equals_the_reason_of_the_rm_alone
+      - tests.test_destructive_guard_mixed_rm_precedence.TestRmDenyReasonText.test_the_reason_designates_the_rm_and_offers_the_deletion_alternative
+      - tests.test_destructive_guard_mixed_rm_precedence.TestRmDenyReasonText.test_the_reason_carries_no_text_of_the_non_rm_check_or_the_demotion
+      - tests.test_destructive_guard_mixed_rm_precedence.TestRmDenyReasonText.test_root_wins_over_a_held_ask_with_the_root_rule
+    red_confirmed: true
+    red_reason: >
+      Run against a copy of the base commit's destructive-guard.py. TS-7 got
+      deny / git-amend (the git-amend ask demoted by CLAUDE_BATCH, its
+      demotion sentence in the reason) and TS-8 got ask / git-amend, where
+      deny / rm-recursive and deny / rm-root are required. In
+      TestRmDenyReasonText, with HOME and PATH fixed, each of the four tests
+      failed for both batch settings: the reason of the rm-plus-git-amend
+      command differed from the reason of the rm alone, lacked
+      1番目のrmの1番目の対象, and carried the git-amend sentence (and the
+      demotion sentence under CLAUDE_BATCH).
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_mixed_rm_precedence.TestScenarioCasesPassAgainstTheHook.test_ac4_the_scan_budget_early_stop
+      - tests.test_destructive_guard_mixed_rm_precedence.TestNoDenyCommandsKeepTheirVerdict.test_the_scan_budget_ask_does_not_hide_an_rm_deny_read_before_it
+      - tests.test_destructive_guard_mixed_rm_precedence.TestLexerOverrunRaisedOutOfTheIteration.test_an_rm_deny_read_before_the_overrun_still_decides
+      - tests.test_destructive_guard_mixed_rm_precedence.TestLexerOverrunRaisedOutOfTheIteration.test_a_held_ask_read_before_the_overrun_comes_first
+      - tests.test_destructive_guard_mixed_rm_precedence.TestLexerOverrunRaisedOutOfTheIteration.test_with_nothing_else_the_overrun_is_the_scan_budget_ask
+    red_confirmed: true
+    red_reason: >
+      Recorded before the hook was edited: the base hook answers TS-11's
+      command (`rm -rf /home/user/valuable`, a newline, then `${ ` repeated 80
+      times, 267 characters) with ask / scan-budget-exceeded, and TS-22's
+      command (`git commit --amend` in place of the rm) with ask / git-amend.
+      Against a copy of the base hook, the TS-11 case failed (got ask /
+      scan-budget-exceeded where deny / rm-recursive is required; the TS-22
+      case already passed and pins the held ask), test_the_scan_budget_ask_
+      does_not_hide_an_rm_deny_read_before_it failed for the same reason, and
+      test_an_rm_deny_read_before_the_overrun_still_decides failed (a lexer
+      budget overrun raised for the body of a substitution after the rm
+      statement was read gave the scan-budget ask instead of the rm deny).
+      The other two tests of TestLexerOverrunRaisedOutOfTheIteration pin
+      results the base hook already gave.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_mixed_rm_precedence.TestScenarioCasesPassAgainstTheHook.test_ac5_the_protected_self_config_exclusion
+      - tests.test_destructive_guard_mixed_rm_precedence.TestProtectedSelfConfigExclusion.test_the_other_rm_is_designated_by_its_place_in_the_command
+      - tests.test_destructive_guard_mixed_rm_precedence.TestProtectedSelfConfigExclusion.test_the_other_rm_before_the_excluded_one_is_the_first
+      - tests.test_destructive_guard_mixed_rm_precedence.TestProtectedSelfConfigExclusion.test_a_redirect_target_alone_excludes_nothing
+      - tests.test_destructive_guard_mixed_rm_precedence.TestProtectedSelfConfigExclusion.test_a_protected_path_in_another_statement_excludes_nothing
+      - tests.test_destructive_guard_mixed_rm_precedence.TestProtectedSelfConfigExclusion.test_a_protected_path_in_a_derived_chunk_excludes_nothing
+      - tests.test_destructive_guard_mixed_rm_precedence.TestProtectedSelfConfigExclusion.test_on_the_parse_failure_fallback_the_operand_test_decides
+      - tests.test_destructive_guard_mixed_rm_precedence.TestProtectedSelfConfigExclusion.test_the_spelling_of_the_protected_operand_does_not_matter
+    red_confirmed: true
+    red_reason: >
+      Run against a copy of the base commit's destructive-guard.py. Of the
+      seven cases of test_ac5, TS-9, TS-13, TS-14 and TS-20 failed (got ask /
+      self-modification where deny / rm-recursive is required); TS-12, TS-15
+      and TS-16 passed already and pin the exclusion's own side. In
+      TestProtectedSelfConfigExclusion the TS-13 reason test failed
+      (no 2番目のrmの1番目の対象, since the base hook gave the
+      self-modification ask), and the redirect-target, other-statement,
+      derived-chunk, parse-failure-fallback and spelling tests failed the
+      same way.
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_mixed_rm_precedence.TestScenarioCasesPassAgainstTheHook.test_ac6_the_no_deny_commands_keep_their_reason_ids
+      - tests.test_destructive_guard_mixed_rm_precedence.TestNoDenyCommandsKeepTheirVerdict.test_decision_and_reason_id_equal_the_recorded_values
+      - tests.test_destructive_guard_mixed_rm_precedence.TestNoDenyCommandsKeepTheirVerdict.test_an_unattended_run_demotes_the_ask_that_is_emitted
+      - tests.test_destructive_guard_mixed_rm_precedence.TestCaseTable.test_every_existing_case_is_present_unchanged_and_first
+      - tests.test_destructive_guard_mixed_rm_precedence.TestCaseTable.test_every_new_case_is_rule_pinned_and_named_after_the_feature
+      - tests.test_destructive_guard_mixed_rm_precedence.TestDeterminism.test_the_output_is_byte_identical_across_runs
+    red_confirmed: false
+    red_reason: >
+      These criteria pin behaviour the hook already had, so no red state
+      occurred for them. The reason ids of TS-10 (git-amend), TS-21
+      (git-amend, then chmod-broad) were recorded from the base hook before
+      it was edited and passed on it unchanged. The case-table prefix is
+      pinned by count and digest, and the byte-identical output holds on both
+      hooks. The whole-table run of em-workflow/hooks/tests/
+      run-destructive-guard.py (every case within GUARD_TIMEOUT_SECONDS) is
+      part of the project test command and has no test ID of its own.
+  AC-7:
+    tests:
+      - tests.test_destructive_guard_mixed_rm_precedence.TestRunnerRuleKey.test_a_case_whose_decision_and_rule_both_match_passes
+      - tests.test_destructive_guard_mixed_rm_precedence.TestRunnerRuleKey.test_a_rule_pinned_case_may_also_carry_batch_and_cwd
+      - tests.test_destructive_guard_mixed_rm_precedence.TestRunnerRuleKey.test_a_matching_decision_with_another_rule_fails_and_shows_the_obtained_id
+      - tests.test_destructive_guard_mixed_rm_precedence.TestRunnerRuleKey.test_the_fail_line_still_shows_what_it_showed_before
+      - tests.test_destructive_guard_mixed_rm_precedence.TestRunnerRuleKey.test_a_pinned_rule_against_a_reason_with_no_reason_id_fails
+      - tests.test_destructive_guard_mixed_rm_precedence.TestRunnerRuleKey.test_a_case_without_rule_is_judged_on_the_decision_only
+      - tests.test_destructive_guard_mixed_rm_precedence.TestRunnerRuleKey.test_a_malformed_rule_or_key_ends_the_run
+      - tests.test_destructive_guard_mixed_rm_precedence.TestRunnerRuleKey.test_a_malformed_case_ends_the_run_before_it_is_judged
+      - tests.test_destructive_guard_mixed_rm_precedence.TestRunnerRuleKey.test_against_the_real_hook_a_wrong_rule_pin_fails
+      - tests.test_destructive_guard_mixed_rm_precedence.TestRunnerRuleKey.test_against_the_real_hook_the_right_pin_passes
+      - tests.test_destructive_guard_mixed_rm_precedence.TestRunnerRuleKey.test_the_runner_text_names_the_rule_key
+      - tests.test_destructive_guard_merge_allow.TestAC5RunnerOptionalElement
+    red_confirmed: true
+    red_reason: >
+      Run against the unmodified runner (before it was edited). The `rule` key
+      was an unknown key, so every rule-pinned case ended the run as
+      malformed: seven of the TestRunnerRuleKey tests errored with SystemExit
+      (decision-and-rule match, rule with batch and cwd, wrong rule, the FAIL
+      line, no reason id, and the two real-hook pins), and
+      test_the_runner_text_names_the_rule_key failed because neither the
+      module docstring nor the malformed-case message named `rule`. Three
+      tests passed on the unmodified runner and pin behaviour that stays:
+      a case without `rule` is judged on the decision only, and a malformed
+      case ends the run (the `rule` shapes they try ended the run as unknown
+      keys before, and end it as bad `rule` values now). The existing runner
+      tests of tests.test_destructive_guard_merge_allow
+      .TestAC5RunnerOptionalElement stay green.
+  AC-8:
+    tests:
+      - tests.test_destructive_guard_mixed_rm_precedence.TestDescriptionsAreCurrent.test_the_comment_before_the_emission_describes_the_held_asks
+      - tests.test_destructive_guard_mixed_rm_precedence.TestDescriptionsAreCurrent.test_the_comment_before_the_emission_is_not_the_old_one
+      - tests.test_destructive_guard_mixed_rm_precedence.TestDescriptionsAreCurrent.test_the_comment_at_the_start_of_the_loop_is_not_the_old_one
+      - tests.test_destructive_guard_mixed_rm_precedence.TestDescriptionsAreCurrent.test_statements_does_not_say_a_deny_has_been_given
+      - tests.test_destructive_guard_mixed_rm_precedence.TestDescriptionsAreCurrent.test_the_substitution_route_docstring_says_an_ask_is_held
+      - tests.test_destructive_guard_mixed_rm_precedence.TestDescriptionsAreCurrent.test_the_emission_routine_and_the_scan_budget_ask_say_how_they_are_reached
+      - tests.test_destructive_guard_mixed_rm_precedence.TestDescriptionsAreCurrent.test_the_phrases_the_numbering_tests_pin_are_kept
+      - tests.test_destructive_guard_mixed_rm_precedence.TestRunnerRuleKey.test_the_runner_text_names_the_rule_key
+      - tests.test_destructive_guard_rm_reason_positions.TestNumberingDescriptionsAreCurrent
+    red_confirmed: true
+    red_reason: >
+      Run against a copy of the base commit's destructive-guard.py, six of the
+      seven TestDescriptionsAreCurrent tests failed (the old comment before
+      the emission, the old D6 comment, the statements() comment "a deny among
+      them has been given", the substitution route docstring "decide()s and
+      exits directly", and the "Emit ... and stop" docstrings); the seventh,
+      test_the_phrases_the_numbering_tests_pin_are_kept, pins phrases the base
+      hook already had. The runner text test failed on the unmodified runner
+      as recorded for AC-7. The existing
+      TestNumberingDescriptionsAreCurrent tests that pin main()'s comments
+      and the docstrings stay green with the rewritten texts.

@@ -15,13 +15,20 @@ written inside a quoted string, a here-doc body holding shell examples, a
 redirect to /dev/null read as another path to delete.
 
 Each case is `[decision, label, command]`. A case may carry a fourth element,
-an object that sets the situation the hook is judged in:
+an object that sets the situation the hook is judged in and, optionally, pins
+the reason id of the verdict:
 
-    {"cwd": "<absolute path>", "batch": true}
+    {"cwd": "<absolute path>", "batch": true, "rule": "<reason id>"}
 
 `cwd` is sent as the payload's working directory. `batch` sets CLAUDE_BATCH for
-that case. Both keys are optional; a three-element case sends no working
-directory and runs with CLAUDE_BATCH cleared.
+that case. `rule` is the reason id the verdict must carry: the `<rule>` of a
+permissionDecisionReason that starts with `[destructive-guard/<rule>]` (a
+reason that does not start that way has no reason id). All three keys are
+optional; a three-element case sends no working directory, runs with
+CLAUDE_BATCH cleared and is judged on the decision only, and so is a case
+without `rule`. A case with `rule` passes only when the decision and the reason
+id both equal the expected values, and its FAIL line shows the reason id the
+hook gave.
 
 A `cwd` may contain the placeholder {merge_fixture}. Once per run the runner
 builds a temporary directory holding a git repository with one commit, and
@@ -70,6 +77,12 @@ GUARD_TIMEOUT_SECONDS = 10
 # The decision verdict() reports for an evaluation that ran past the limit.
 TIMED_OUT = "(timeout)"
 
+# Where the reason of a verdict names its reason id: `[destructive-guard/<id>]`.
+REASON_ID_PREFIX = "[destructive-guard/"
+
+# The keys of a case's fourth element.
+CASE_OPTION_KEYS = {"cwd", "batch", "rule"}
+
 # A case's `cwd` may contain this; judge() replaces it with the root of the
 # repository build_merge_fixture() makes.
 MERGE_FIXTURE_PLACEHOLDER = "{merge_fixture}"
@@ -84,24 +97,42 @@ GIT_TIMEOUT_SECONDS = 60
 
 
 def case_options(case):
-    """The (cwd, batch) a case asks for: its optional fourth element, or the
-    defaults (no working directory, CLAUDE_BATCH cleared). A fourth element
-    that is not an object holding only `cwd` (a string) and `batch` (a
-    boolean) ends the run: a case the runner cannot honour must not pass by
-    being judged in some other situation."""
+    """The (cwd, batch, rule) a case asks for: its optional fourth element, or
+    the defaults (no working directory, CLAUDE_BATCH cleared, no reason id
+    pinned). A fourth element that is not an object holding only `cwd` (a
+    string), `batch` (a boolean) and `rule` (a non-empty string) ends the run:
+    a case the runner cannot honour must not pass by being judged in some
+    other situation, or on less than it asks for."""
     if len(case) == 3:
-        return None, False
+        return None, False, None
     options = case[3] if len(case) == 4 else None
     ok = (
         isinstance(options, dict)
-        and set(options) <= {"cwd", "batch"}
+        and set(options) <= CASE_OPTION_KEYS
         and isinstance(options.get("cwd", ""), str)
         and isinstance(options.get("batch", False), bool)
+        and (
+            "rule" not in options
+            or (isinstance(options["rule"], str) and options["rule"] != "")
+        )
     )
     if not ok:
         sys.exit("malformed case (want [decision, label, command] or a fourth "
-                 "element {\"cwd\": str, \"batch\": bool}): %r" % (case,))
-    return options.get("cwd"), options.get("batch", False)
+                 "element {\"cwd\": str, \"batch\": bool, \"rule\": non-empty str}): %r"
+                 % (case,))
+    return options.get("cwd"), options.get("batch", False), options.get("rule")
+
+
+def reason_id(reason):
+    """The reason id of a verdict's reason: the text between
+    `[destructive-guard/` and the first `]` after it. A reason that does not
+    start with `[destructive-guard/` has none (None)."""
+    if not reason.startswith(REASON_ID_PREFIX):
+        return None
+    end = reason.find("]", len(REASON_ID_PREFIX))
+    if end < 0:
+        return None
+    return reason[len(REASON_ID_PREFIX):end]
 
 
 def uses_placeholder(case):
@@ -236,15 +267,17 @@ def judge(cases, root):
 
     for case in cases:
         want, label, command = case[:3]
-        cwd, batch = case_options(case)
+        cwd, batch, rule = case_options(case)
         if cwd is not None and root is not None:
             cwd = cwd.replace(MERGE_FIXTURE_PLACEHOLDER, root)
         got, reason = verdict(command, batch=batch, cwd=cwd)
-        if got != want:
+        got_rule = reason_id(reason)
+        passed = got == want and (rule is None or got_rule == rule)
+        if not passed:
             failed.append((label, want, got, reason))
-        print(f"{'ok  ' if got == want else 'FAIL'} {want:5} {label}{timeout_marker(got)}")
-        if got != want:
-            print(f"       got={got} {reason[:150]}")
+        print(f"{'ok  ' if passed else 'FAIL'} {want:5} {label}{timeout_marker(got)}")
+        if not passed:
+            print(f"       got={got} rule={got_rule} {reason[:150]}")
 
     # The unattended demotion: with nobody to answer, `ask` has to become
     # `deny` rather than hang a batch run on a prompt.
