@@ -1,0 +1,72 @@
+schema_version: 1
+feature: destructive-guard-heredoc-literal
+phase: rework
+status: completed
+generation: 1
+base_revision: cd173173f4f31b833bfa911275752b505c6dcc98
+last_input_digest: sha256:6ee9261b44b1aef98c3fac61780c81d2d1033a8cdb7d7f7c0cf32ff9c90906a5
+active_request_id: null
+packets:
+  rework-q0001:
+    status: answered
+    issued_at: '2026-11-11T22:32:33+09:00'
+    questions:
+    - question_id: rework.spec-change.ac6-print-form
+      status: answered
+answers:
+  rework.spec-change.ac6-print-form:
+    packet_id: rework-q0001
+    answered_at: '2026-11-11T22:32:33+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - change-spec
+    freeform: null
+    normalized_answer: SPEC を書き換える（AC-6 / TS-9 / TS-10 の print 形は変更前の判定で固定し、deny 境界は probe 形で固定）
+    resolution_note: 'gate: rework.spec-change; routed arm → classification gate; direction 2 は round1
+      の bound set に security 指摘を含むため batch 緩和ルートで Codex 相談に合流; classifier: codex (1 turn, harness codex);
+      verdict: spec_gap; evidence: FR2, FR7, AC-6, TS-9, TS-10; Claude も同意（print 形の変更前判定は allow を実測、FR2/FR7
+      が判定維持を要求）; opus_escalation: false; classification 記録 1 件目'
+worker_runs:
+- request_id: rework-run-0001
+  status: needs_user_input
+  input_digest: sha256:6ee9261b44b1aef98c3fac61780c81d2d1033a8cdb7d7f7c0cf32ff9c90906a5
+  output_digest: sha256:7a1f87fcdd8e92f455c4f5ef126c612b8730fca2909edd0e31fc748958bb906f
+  dispatch_digest_inputs:
+    feature-docs/destructive-guard-heredoc-literal/SPEC.md: sha256:9f9c9bc2587e10b9f19a33100727fbb99b561712afd50427737158ce0636e577
+    feature-docs/destructive-guard-heredoc-literal/VERIFICATION.md: sha256:dc75141b822374a73b77afa4caa0b0353c0d71cd12793122e7942b30229bd647
+    feature-docs/destructive-guard-heredoc-literal/tasks/task0001.md: sha256:208ebac8e9aca30b027c0fe0f6f4673aec1df9434b99d08c32417ce69813e75f
+    feature-docs/destructive-guard-heredoc-literal/workflow.yaml: sha256:deffd54387579a3fe86361e8be20c7ffc0224535fde759f57526258e5b293f34
+    plugin:references/contracts/rework-planner-contract.md: sha256:0c9f82099c3546b6b675856539d8244628b7170ce7a4442ec951e13e16577ec3
+    plugin:references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    plugin:references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    plugin:references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    plugin:references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    plugin:skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+  self_write_set: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
+spec_change:
+  reason: SPEC AC-6 / TS-9 / TS-10 が print 形を deny と書くが、FR2 / FR7 によりこの 2 形の判定は変更前の allow のまま。AC-6 / TS-9
+    / TS-10 を書き換え、print 形は変更前の判定で固定し deny 境界は probe 形で固定する。あわせて review round 1 の残る high（状態変更の語彙の二重化、入れ子
+    builtin による整数属性検出の回避）を作り直す計画で扱う
+  origin_kind: review
+  origin_id: afb35a8836e267bd
+  recorded_at_commit: cd173173f4f31b833bfa911275752b505c6dcc98
+  consumed: false
+  replan_authorized: true
+classification:
+- classifier: codex
+  verdict: spec_gap
+  evidence_ids:
+  - FR2
+  - FR7
+  - AC-6
+  - TS-9
+  - TS-10
+  decision: proceed
+  reason: print 形は変更前から allow で、維持は FR2 / FR7 と整合。AC-6 / TS-9 / TS-10 の記載が不整合
