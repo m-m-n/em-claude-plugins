@@ -5871,9 +5871,16 @@ def _is_plain_assignment(stmt):
     for tok in stmt.toks:
         if "((" in tok or "[" in tok.split("=", 1)[0]:
             return False
-    return all(
-        _PLAIN_ASSIGNMENT_WORD_RE.match(tok) for tok in stmt.toks
-    )
+    for tok in stmt.toks:
+        if not _PLAIN_ASSIGNMENT_WORD_RE.match(tok):
+            return False
+        name = tok.split("=", 1)[0].rstrip("+")
+        # Only names holding at least one lowercase letter: all-uppercase /
+        # digit / underscore names may be special or integer-attribute
+        # variables whose value the shell re-evaluates.
+        if not any("a" <= c <= "z" for c in name):
+            return False
+    return True
 
 
 def _downstream_stages_safe(table, idx):
@@ -6769,6 +6776,37 @@ def _overrides_command_name_unlexed(toks, shaped_words):
     return any(PATH_ASSIGNMENT.match(t) for t in toks)
 
 
+# Python-program masking only (not part of the FR7 override flag): commands
+# that can change shell state, names or PATH in ways the literal checks of
+# _overrides_command_name() cannot see (fail closed).
+PYTHON_MASK_STATE_BUILTINS = frozenset({
+    "declare", "typeset", "local", "export", "readonly", "let", "shopt",
+    "set", "unset", "source", ".", "eval",
+})
+
+
+def _python_mask_unsafe_words(toks, shaped_words):
+    """Whether a statement may have changed what a command name runs or the
+    shell state, read fail-closed for the python-program masking path: a
+    BASH_ALIASES / BASH_CMDS word, a command word that is not statically
+    readable ($, backtick, substitution leftover), or a state-changing
+    builtin (also behind `builtin` / `command`) as the command word."""
+    if any("BASH_ALIASES" in t or "BASH_CMDS" in t for t in toks):
+        return True
+    word, args = head(shaped_words)
+    if not word:
+        return False
+    if "$" in word or "`" in word or UNRESOLVED_MARK in word:
+        return True
+    if word in ("builtin", "command"):
+        if not args:
+            return False
+        word = args[0]
+        if "$" in word or "`" in word or UNRESOLVED_MARK in word:
+            return True
+    return word in PYTHON_MASK_STATE_BUILTINS
+
+
 # destructive-guard-false-deny FR2: which single-quote candidates of the
 # top-level chunk statements() leaves unqueued. The decision is
 # _single_quote_skip_spans(); the two helpers before it read the lexer's
@@ -7201,6 +7239,12 @@ def statements(command, unsettled=None):
     # so each parked body is queued at most once.
     override_seen = False
     deferred_data_bodies = []
+    # Python-masking only: raised by _python_mask_unsafe_words() (a statement
+    # whose effect on names / state cannot be read statically). Stops further
+    # masking and queues the parked originals of already masked bodies; data
+    # judgments are not affected.
+    python_unsafe_seen = False
+    deferred_python_bodies = []
     command_chunk = True
     while pending:
         chunk, anchor, sub_index = pending.pop()
@@ -7311,7 +7355,7 @@ def statements(command, unsettled=None):
                     # already (TM-2), or a literal whose extent cannot be
                     # settled (FR6), reads it as the sink body it was
                     # before this outcome existed.
-                    if not override_seen:
+                    if not override_seen and not python_unsafe_seen:
                         masked_body = _mask_python_literals(record.body)
                     if masked_body is None:
                         destination = "sink"
@@ -7345,7 +7389,7 @@ def statements(command, unsettled=None):
                     # this command (TM-2), queued whole then through the
                     # same deferral a data body uses; the flag is raised
                     # once, so it is queued at most once.
-                    deferred_data_bodies.append((record.body, body_anchor, None))
+                    deferred_python_bodies.append((record.body, body_anchor, None))
                     pending.append((masked_body, body_anchor, None))
                 if queued_whole:
                     pending.append((record.body, body_anchor, None))
@@ -7500,6 +7544,16 @@ def statements(command, unsettled=None):
                 override_seen = True
                 pending.extend(deferred_data_bodies)
                 deferred_data_bodies = []
+            if (
+                (statement_overrides or not python_unsafe_seen)
+                and (
+                    statement_overrides
+                    or _python_mask_unsafe_words(toks, shaped_words)
+                )
+            ):
+                python_unsafe_seen = True
+                pending.extend(deferred_python_bodies)
+                deferred_python_bodies = []
 
             if toks:
                 yield (
