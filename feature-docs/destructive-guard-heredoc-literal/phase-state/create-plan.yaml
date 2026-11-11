@@ -1,11 +1,11 @@
 schema_version: 1
 feature: destructive-guard-heredoc-literal
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 2
 base_revision: a85154dd3d14648904bed28236231c4bbec99f53
 last_input_digest: sha256:4ffbe607d05ffe07abd968db60aec1c3f026dd15c21d3ebc86c04372c2cb921f
-active_request_id: create-plan-run-0003
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
