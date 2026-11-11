@@ -1,0 +1,67 @@
+task_id: task0002
+baseline_failures: []          # before any edit: python3 em-workflow/hooks/tests/run-destructive-guard.py -> 1209/1209 passed; python3 -m unittest discover -s tests -> Ran 15923 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after writing this record: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests, no failure
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_hook_tests_rule_key_doc.TestFourthElementDescription.test_ac1_the_example_object_shows_cwd_batch_and_rule
+      - tests.test_hook_tests_rule_key_doc.TestFourthElementDescription.test_ac1_all_three_keys_are_stated_optional
+      - tests.test_hook_tests_rule_key_doc.TestFourthElementDescription.test_ac1_rule_is_a_non_empty_string_compared_with_the_leading_reason_id
+      - tests.test_hook_tests_rule_key_doc.TestFourthElementDescription.test_ac1_a_mismatch_fails_the_case_and_the_fail_line_shows_the_reason_id
+      - tests.test_hook_tests_rule_key_doc.TestFourthElementDescription.test_ac1_a_case_without_rule_is_judged_on_the_decision_only
+    red_confirmed: true
+    red_reason: >-
+      Before editing the rule document all five failed. The example-object test failed with
+      "no example object holds the keys cwd, batch and rule", listing the only object the
+      document had, the two-key {"cwd": ..., "batch": true}. The optional test failed because
+      the bullet still said "どちらのキーも省略できる" (two keys). The other three failed
+      because the fourth-element bullet had no sentence about a non-empty string `rule`, about
+      permissionDecisionReason and [destructive-guard/<rule>], about the FAIL line's obtained
+      reason id, or about a case without `rule`. Existing-test search (by path
+      .claude/rules/hook-tests.md and by basename hook-tests.md in tests/): the existing
+      readers (tests.test_destructive_guard_merge_allow.TestAC6ExistingCasesAndDocs,
+      tests.test_loop_command_guard.TestDocumentationMatchesRegistration,
+      tests.test_codex_hook_interactive_guard.TestRulesDocument) pin the cwd / batch / 4 要素目
+      phrases and the other guards' sections, not the `rule` key, so none detects a missing
+      `rule` description.
+  AC-2:
+    tests:
+      - tests.test_hook_tests_rule_key_doc.TestMalformedCases.test_ac2_the_three_malformed_shapes_stop_the_run
+    red_confirmed: true
+    red_reason: >-
+      Before editing the rule document it failed with "no sentence of the fourth-element
+      description names the malformed shapes": the document said nothing about an unknown key,
+      a `rule` that is not a string, an empty `rule`, or a malformed case.
+  AC-3:
+    tests:
+      - tests.test_hook_tests_rule_key_doc.TestMixedCaseGuidance.test_ac3_a_case_combining_a_recursive_delete_with_a_non_rm_check_carries_rule
+      - tests.test_hook_tests_rule_key_doc.TestMixedCaseGuidance.test_ac3_a_recursive_delete_deny_wins_over_a_non_rm_ask_in_either_order
+      - tests.test_hook_tests_rule_key_doc.TestMixedCaseGuidance.test_ac3_a_protected_target_in_the_same_statement_keeps_the_self_modification_ask
+      - tests.test_hook_tests_rule_key_doc.TestMixedCaseGuidance.test_ac3_the_batch_demotion_comes_after_the_precedence
+    red_confirmed: true
+    red_reason: >-
+      Before editing the rule document all four failed with "expected one mixed-case guidance
+      bullet, found 0": no bullet of the Rules list told a case that combines a recursive
+      delete with a non-rm check to carry `rule`.
+  AC-4:
+    tests:
+      - tests.test_hook_tests_rule_key_doc.TestLaterSectionsStayInPlace.test_ac4_the_later_sections_keep_their_order
+      - tests.test_hook_tests_rule_key_doc.TestLaterSectionsStayInPlace.test_ac4_the_rule_key_is_not_described_after_the_rules_list
+      - tests.test_hook_tests_rule_key_doc.TestLaterSectionsStayInPlace.test_ac4_the_phrases_other_tests_require_stay_in_the_destructive_guard_part
+      - tests.test_destructive_guard_merge_allow.TestAC6ExistingCasesAndDocs.test_ac6_case_format_rule_describes_the_optional_element
+      - tests.test_destructive_guard_merge_allow.TestTask0012AC7Docs.test_ac7_the_rule_describes_the_placeholder_and_the_fixture
+      - tests.test_loop_command_guard.TestDocumentationMatchesRegistration.test_hook_tests_rule_has_a_loop_command_guard_section
+      - tests.test_loop_command_guard.TestDocumentationMatchesRegistration.test_hook_tests_rule_describes_the_case_format
+      - tests.test_codex_hook_interactive_guard.TestRulesDocument
+    red_confirmed: false
+    red_reason: >-
+      The criterion is an invariant (the text after the destructive-guard Rules list is
+      unchanged, and the tests that read the document still pass). It held before any edit, so
+      no red state can occur for text that is not changed; a dedicated byte-comparison module is
+      out of scope, but the existing tests listed here pin the phrases of the document that
+      other features need, and the three new structural tests in the new module check the order
+      of the later sections and that the `rule` key is not described after the Rules list. No
+      red state occurred for this change. The byte comparison itself was made once with
+      sha256sum over the span from the "## Rationale" heading to the end of the file: identical
+      (e80c754c94959dec...) at the task's base and after the edit, and git diff of
+      .claude/rules/hook-tests.md has hunks only before the "## Rationale" heading.
