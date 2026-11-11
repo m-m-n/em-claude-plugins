@@ -437,6 +437,13 @@ class Tok(str):
     deferred task0008): check_rm()'s safe-delete exception reads the target
     as bash passes it on, those carriage returns included — set after
     construction, never via this constructor.
+    `.fd_prefix` (destructive-guard-heredoc-literal) is True only for an
+    unquoted word of ASCII digits that the lexer saw directly followed, with
+    no blank between, by `<` or `>`: the file-descriptor number of a
+    redirect. split_redirects() lifts a digit word that precedes a redirect
+    operator out of the words whether or not they touch, so `python3 2 >f`
+    (the script `2`) and `python3 2>f` give the same redirect list; only this
+    flag tells them apart (_python_program_redirects()).
     Every consumer besides split_redirects()/check_rm()/
     read_command_name_evidence()/_shape_leading() treats it as an ordinary
     str; every attribute but `.trailing_cr` (empty: nothing was taken off)
@@ -450,6 +457,7 @@ class Tok(str):
     raw_substitution_body = None
     quoted = False
     trailing_cr = ""
+    fd_prefix = False
 
     def __new__(
         cls, value, is_operator=False, unresolved=False, substitution_only=False,
@@ -3857,13 +3865,25 @@ def _tokenize_marked(marked, layout=True):
         while start < size and view[start] in whitespace:
             start += 1
         previous_end = end
+        # A redirect's file-descriptor number is a word of digits that the
+        # redirect operator touches (Tok.fd_prefix).
+        touches_redirect = end < size and view[end] in "<>"
         if cuts:
             first = original(start)
             last = original(end - 1) + 1 if end > start else first
             start, end = first, last
         value = marked.restore(raw, start, end)
         quoted = lex.last_was_quoted or marked.touches_quote(start, end)
-        out.append((Tok(value, lex.last_was_operator, quoted=quoted), start, end))
+        tok = Tok(value, lex.last_was_operator, quoted=quoted)
+        if (
+            touches_redirect
+            and not quoted
+            and not tok.is_operator
+            and value.isascii()
+            and value.isdigit()
+        ):
+            tok.fd_prefix = True
+        out.append((tok, start, end))
     return out
 
 
@@ -4544,12 +4564,13 @@ class _StmtInfo:
 
     __slots__ = (
         "word", "pipeline_sink", "pipeline_undetermined", "has_process_sub",
-        "is_assignment_only", "parse_failed",
+        "is_assignment_only", "parse_failed", "python_program",
     )
 
     def __init__(
         self, word=None, pipeline_sink=False, pipeline_undetermined=False,
         has_process_sub=False, is_assignment_only=False, parse_failed=False,
+        python_program=False,
     ):
         self.word = word
         self.pipeline_sink = pipeline_sink
@@ -4557,6 +4578,9 @@ class _StmtInfo:
         self.has_process_sub = has_process_sub
         self.is_assignment_only = is_assignment_only
         self.parse_failed = parse_failed
+        # PYTHON_PROGRAM: the statement runs a Python interpreter on its one
+        # heredoc as the program (_python_program_statement()).
+        self.python_program = python_program
 
 
 # `git`/`gh` are in DATA_COMMANDS on the premise that their stdin/arguments
@@ -5172,6 +5196,205 @@ def _extract_heredoc_body_substitutions(text):
     return [(_span_inner(text, span)[0], span[0]) for span in top_spans], False
 
 
+# --- destructive-guard-heredoc-literal: a heredoc that is a Python program --
+#
+# The body of a heredoc whose host statement runs a Python interpreter on it
+# is a Python program, and a closed ordinary string literal in that program is
+# data: a destructive command quoted there is not run by any shell. The
+# destination decision gains one outcome for such a heredoc, "python", which
+# statements() answers by reading the body with the content of those literals
+# masked (_mask_python_literals()). Every condition below is fail-closed: a
+# shape that a condition does not positively recognise fails it, and the
+# heredoc is then decided exactly as it was before this outcome existed.
+
+# A short-option cluster: one `-` and letters only.
+_PYTHON_SHORT_OPTIONS = re.compile(r"-[A-Za-z]+")
+
+# The redirect operators that write to a file.
+_OUTPUT_REDIRECT_OPERATORS = frozenset({">", ">>", ">|", "&>", "&>>"})
+
+# The character a masked literal's content is replaced by: not a quote, a
+# backslash, `$`, a backtick, `#`, a shell operator character or whitespace,
+# and not a letter, so that no sink name can be spelled across it.
+_LITERAL_FILLER = "_"
+
+# The prefix letters of an ordinary (non-f, non-t) Python string literal.
+_ORDINARY_LITERAL_PREFIX_LETTERS = "rRbBuU"
+
+
+def _is_python_name(word):
+    """Whether WORD -- a command word -- is matched by the Python alternative
+    of SINK_WORD_RE (`python`, `python3`, `python3.12`, ...). The vocabulary is
+    that pattern's own, so it cannot drift from the sink words."""
+    match = SINK_WORD_RE.match(word)
+    return bool(match) and match.group(1).startswith("python")
+
+
+def _python_program_redirects(redirects):
+    """Whether REDIRECTS -- split_redirects()'s flat [digit?, operator,
+    target, ...] list for a statement -- leave a heredoc as the one thing
+    Python reads its program from: exactly one `<<`, on standard input (no
+    file-descriptor number, or 0), and every other redirect an output
+    redirect to a file (`>`, `>>`, `>|`, `&>`, `&>>`) on a descriptor other
+    than 0. A here-string, an input redirect, a duplication, move or close of
+    a descriptor (every `<&` and `>&` form) fails it.
+
+    split_redirects() lifts a word of digits in front of an operator whether
+    or not the two touch, so a script operand (`python3 0 <<'PY'`) arrives
+    looking like a descriptor number; only a word the lexer saw touching the
+    operator (Tok.fd_prefix) is one. Any other digit word fails."""
+    heredocs = 0
+    i = 0
+    n = len(redirects)
+    while i < n:
+        fd = None
+        if re.fullmatch(r"[0-9]+", redirects[i]):
+            if not getattr(redirects[i], "fd_prefix", False):
+                return False
+            fd = int(redirects[i])
+            i += 1
+        if i + 1 >= n or not getattr(redirects[i], "is_operator", False):
+            return False
+        operator = redirects[i]
+        i += 2
+        if operator == "<<":
+            heredocs += 1
+            if heredocs > 1 or (fd is not None and fd != 0):
+                return False
+        elif operator in _OUTPUT_REDIRECT_OPERATORS:
+            if fd == 0:
+                return False
+        else:
+            return False
+    return heredocs == 1
+
+
+def _holds_substitution_residue(word):
+    """Whether WORD -- a shaped token -- is built from, or has text next to, a
+    command substitution (_strip_unresolved_marks() flags such a token), so
+    that what the shell passes on is not the text read."""
+    return bool(
+        getattr(word, "substitution_only", False) or getattr(word, "unresolved", False)
+    )
+
+
+def _python_program_statement(shaped_words, redirects):
+    """Whether the lexed statement with SHAPED_WORDS (its words from its
+    wrappers and assignments on) and REDIRECTS takes the Python program it
+    runs from its one heredoc and from nothing else (TM-3): the command word
+    is read statically, the words after it are only the lone `-` and
+    letter-only short-option clusters without `c` or `m`, and the redirects
+    pass _python_program_redirects(). A script operand, `-c`, `-m`, a long
+    option, an option value written as its own word and a named descriptor
+    (`{fd}`) are words that fail it."""
+    index, saw_substitution, _last = _skip_to_command_word(shaped_words)
+    if saw_substitution or index >= len(shaped_words):
+        return False
+    command = shaped_words[index]
+    if _holds_substitution_residue(command) or not re.fullmatch(
+        r"[A-Za-z0-9_.+/-]+", command
+    ):
+        return False
+    for word in shaped_words[index + 1 :]:
+        if _holds_substitution_residue(word):
+            return False
+        if word == "-":
+            continue
+        if (
+            _PYTHON_SHORT_OPTIONS.fullmatch(word)
+            and "c" not in word
+            and "m" not in word
+        ):
+            continue
+        return False
+    return _python_program_redirects(redirects)
+
+
+def _mask_python_literals(body):
+    """BODY -- a heredoc body that is a Python program -- with the content of
+    every closed ordinary string literal replaced, or None when the extent of
+    a literal cannot be settled (the caller then reads the body as it always
+    did). Nothing in BODY is evaluated, compiled, executed or imported, and
+    Python's own tokenizer and parser are not used: this is one left-to-right
+    pass over the characters.
+
+    The result has BODY's length with every line feed where it was. A
+    character outside a literal's content -- the quote characters, the prefix
+    letters, comments and all code between literals -- is unchanged; every
+    other character of the content is _LITERAL_FILLER.
+
+    Rules:
+    - Outside a literal `#` starts a comment that ends at the next line feed;
+      a quote in a comment opens nothing.
+    - Outside a literal `'` or `"` opens a literal, triple-quoted when the
+      next two characters are the same quote. The prefix is the run of
+      letters, digits and `_` just before the quote. An empty prefix, or one
+      made of r, b and u in any case, is an ordinary literal; any other
+      prefix (every f- and t-prefix included) makes the body undecidable: an
+      f-string or t-string may nest quotes of its own kind inside a
+      replacement field, so its extent is never guessed.
+    - A backslash inside a literal, raw or not, consumes the next character
+      (a line feed included) when the closing quote is looked for.
+    - A single-line literal closes at the next unconsumed quote of its kind;
+      an unconsumed line feed first makes the body undecidable. A
+      triple-quoted literal closes at the next unconsumed run of its three
+      quotes and may span lines.
+    - The end of BODY inside a literal makes the body undecidable.
+    Whether BODY is valid Python is not checked."""
+    size = len(body)
+    out = list(body)
+    i = 0
+    run_start = None  # where the identifier run that ends at I began
+    while i < size:
+        ch = body[i]
+        if ch == "#":
+            newline = body.find("\n", i)
+            if newline == -1:
+                break
+            i = newline
+            run_start = None
+            continue
+        if ch != "'" and ch != '"':
+            if ch.isalnum() or ch == "_":
+                if run_start is None:
+                    run_start = i
+            else:
+                run_start = None
+            i += 1
+            continue
+        prefix = "" if run_start is None else body[run_start:i]
+        if prefix.strip(_ORDINARY_LITERAL_PREFIX_LETTERS):
+            return None
+        quote = ch
+        closer = quote * 3
+        triple = body.startswith(closer, i)
+        opening = 3 if triple else 1
+        content = i + opening
+        j = content
+        while True:
+            if j >= size:
+                return None
+            c = body[j]
+            if c == "\\":
+                j += 2
+            elif triple:
+                if body.startswith(closer, j):
+                    break
+                j += 1
+            elif c == quote:
+                break
+            elif c == "\n":
+                return None
+            else:
+                j += 1
+        for k in range(content, j):
+            if body[k] != "\n":
+                out[k] = _LITERAL_FILLER
+        i = j + opening
+        run_start = None
+    return "".join(out)
+
+
 # --- Component 3: chunk statement analysis, built once per chunk -----------
 
 
@@ -5184,7 +5407,7 @@ class _Stmt:
     __slots__ = (
         "toks", "lexed", "sep", "shaped_words", "redirects", "word",
         "has_process_sub", "is_assignment_only", "opens_group",
-        "closes_group", "is_compound_keyword",
+        "closes_group", "is_compound_keyword", "python_program",
     )
 
     def __init__(self, **kw):
@@ -5415,14 +5638,29 @@ def _build_statement_table(chunk, marked_chunk):
                 raw_index < len(stripped)
                 and stripped[raw_index] in COMPOUND_STATEMENT_KEYWORDS
             )
+            has_process_sub = _has_process_substitution(stripped)
+            # destructive-guard-heredoc-literal: whether this statement runs
+            # a Python interpreter on its one heredoc as the program (TM-2,
+            # TM-3). The skipped-word rule above is applied here to the
+            # Python word too, which it passes over as a sink.
+            python_program = (
+                word is not None
+                and _is_python_name(word)
+                and not has_process_sub
+                and not _skipped_words_make_undetermined(
+                    words_only, lead, shaped_words, word, args
+                )
+                and _python_program_statement(shaped_words, redirects)
+            )
             table.append(_Stmt(
                 toks=stripped, lexed=True, sep=sep, shaped_words=shaped_words,
                 redirects=redirects, word=word,
-                has_process_sub=_has_process_substitution(stripped),
+                has_process_sub=has_process_sub,
                 is_assignment_only=_is_assignment_only(words_only),
                 opens_group=_leading_group_opener_char(stripped),
                 closes_group=_leading_group_closer(stripped, case_stack_before),
                 is_compound_keyword=is_compound_keyword,
+                python_program=python_program,
             ))
         else:
             fallback_words, redirects = split_redirects(stripped, lexed)
@@ -5431,7 +5669,7 @@ def _build_statement_table(chunk, marked_chunk):
                 toks=stripped, lexed=False, sep=sep, shaped_words=shaped_words,
                 redirects=redirects, word=None, has_process_sub=False,
                 is_assignment_only=False, opens_group=None, closes_group=None,
-                is_compound_keyword=False,
+                is_compound_keyword=False, python_program=False,
             ))
     return table, starts, operators
 
@@ -5597,6 +5835,7 @@ def _stmt_destination_info(table, idx, group_closer_of, open_groups_at, memo):
         pipeline_undetermined=pipeline_undetermined,
         has_process_sub=stmt.has_process_sub,
         is_assignment_only=stmt.is_assignment_only,
+        python_program=stmt.python_program,
     )
 
 
@@ -5635,6 +5874,46 @@ def _decide_destination(chain):
             return "undetermined"
 
     return "data"
+
+
+def _is_python_program_chain(chain):
+    """Whether a heredoc that _decide_destination() judged 'sink' from CHAIN
+    (the same chain: the host statement first, its enclosing statements after
+    it, each with its own pipeline/group levels folded in) is the program a
+    Python interpreter runs and goes nowhere else (destructive-guard-heredoc-
+    literal, FR2, TM-1):
+    - the host statement runs a Python interpreter on its one heredoc
+      (_Stmt.python_program), is lexed and holds no process substitution;
+    - its downstream pipeline, the downstream of any group open at it
+      included, has no sink stage and no undetermined stage;
+    - every enclosing statement is lexed, has no sink command word, has no
+      sink or undetermined stage downstream, holds no process substitution,
+      and either only assigns or is headed by a DATA_COMMANDS word.
+    A shape none of these positively recognises is not a Python program, and
+    the heredoc stays 'sink'."""
+    host = chain[0]
+    if (
+        host.parse_failed
+        or not host.python_program
+        or host.has_process_sub
+        or host.pipeline_sink
+        or host.pipeline_undetermined
+    ):
+        return False
+    for level in chain[1:]:
+        if (
+            level.parse_failed
+            or level.has_process_sub
+            or level.pipeline_sink
+            or level.pipeline_undetermined
+            or (level.word is not None and SINK_WORD_RE.match(level.word))
+        ):
+            return False
+        if level.is_assignment_only:
+            continue
+        if level.word is None or level.word not in DATA_COMMANDS:
+            return False
+    return True
 
 
 def _statement_holds_operator(operators, idx, marked_pos):
@@ -5736,8 +6015,10 @@ def _walk_enclosing_chain(chunk, cur_span, parent_of, tables_cache):
 
 
 def _heredoc_destinations(chunk, records, chunk_scan):
-    """{index into RECORDS: 'sink'/'data'/'undetermined'} for every heredoc
-    strip_heredocs() found in CHUNK -- the single entry point statements()
+    """{index into RECORDS: 'sink'/'python'/'data'/'undetermined'} for every
+    heredoc strip_heredocs() found in CHUNK ('python' is a 'sink' whose body
+    is the program a Python interpreter runs and goes nowhere else,
+    _is_python_program_chain()) -- the single entry point statements()
     calls, once per popped chunk, before that chunk's own substitution
     bodies are queued. CHUNK_SCAN is CHUNK's own Component 1 scan result
     (scan_structure(chunk, mode="shell", checkpoints=[r.op_start for r in
@@ -5770,7 +6051,10 @@ def _heredoc_destinations(chunk, records, chunk_scan):
             chain.extend(
                 _walk_enclosing_chain(chunk, containing, parent_of, tables_cache)
             )
-        destinations[index] = _decide_destination(chain)
+        destination = _decide_destination(chain)
+        if destination == "sink" and _is_python_program_chain(chain):
+            destination = "python"
+        destinations[index] = destination
     return destinations
 
 
@@ -6941,6 +7225,18 @@ def statements(command, unsettled=None):
                     continue  # a blank body is never queued, as before this task
                 destination = destinations.get(index, "undetermined")
                 defer_data = False
+                masked_body = None
+                if destination == "python":
+                    # destructive-guard-heredoc-literal: the body is a Python
+                    # program, read with the content of its closed ordinary
+                    # string literals masked. A command-name override seen
+                    # already (TM-2), or a literal whose extent cannot be
+                    # settled (FR6), reads it as the sink body it was
+                    # before this outcome existed.
+                    if not override_seen:
+                        masked_body = _mask_python_literals(record.body)
+                    if masked_body is None:
+                        destination = "sink"
                 if destination == "data":
                     if override_seen:
                         destination = "undetermined"
@@ -6949,7 +7245,12 @@ def statements(command, unsettled=None):
                 queued_whole = destination == "sink" or (
                     destination == "undetermined" and chunk_sink_fallback
                 )
-                if queued_whole or defer_data or not record.quoted:
+                if (
+                    queued_whole
+                    or defer_data
+                    or masked_body is not None
+                    or not record.quoted
+                ):
                     if heredoc_ended_by is None:
                         heredoc_ended_by = _statements_ended_by(
                             chunk, marked_chunk, seg_ends, chunk_scan[3]
@@ -6959,6 +7260,15 @@ def statements(command, unsettled=None):
                     )
                 if defer_data:
                     deferred_data_bodies.append((record.body, body_anchor, None))
+                if masked_body is not None:
+                    # The masked text is the only version of the body that is
+                    # read as statements, in place of the body. The original
+                    # is parked for a command-name override seen later in
+                    # this command (TM-2), queued whole then through the
+                    # same deferral a data body uses; the flag is raised
+                    # once, so it is queued at most once.
+                    deferred_data_bodies.append((record.body, body_anchor, None))
+                    pending.append((masked_body, body_anchor, None))
                 if queued_whole:
                     pending.append((record.body, body_anchor, None))
                 elif not record.quoted:
