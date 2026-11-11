@@ -100,8 +100,8 @@ workflow:
 - id: create-spec
   artifacts:
   - SPEC.md
-  status: in_progress
-  completed_at_commit: 3b81558c3fb2a85efaede48661fc7d302b83bf25
+  status: completed
+  completed_at_commit: 7cf136d42254cd2d2ce3f9fb7abb33e261ca8ccd
 - id: design
   artifacts:
   - DESIGN.md
@@ -296,6 +296,13 @@ requirements:
     - TS-25
     - TS-26
     - TS-27
+  FR9:
+    title: 名前や状態を変えうる文があれば読まない扱いを止める
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
   NFR1:
     title: 静的解析のみ
     status: ok
@@ -334,6 +341,13 @@ requirements:
     tests:
     - TS-16
     - TS-22
+  NFR5:
+    title: 語彙の定義を 1 か所にする
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
 batch:
   review_rework_count: 1
   verify_rework:

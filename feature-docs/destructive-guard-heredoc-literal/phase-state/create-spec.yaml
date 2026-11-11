@@ -1,11 +1,11 @@
 schema_version: 1
 feature: destructive-guard-heredoc-literal
 phase: create-spec
-status: dispatching
+status: completed
 generation: 2
 base_revision: 81b56126c
 last_input_digest: sha256:a346abaac6c9b6756af7664c4f5bae796a2a752b6f0212e3241c51f8f992d257
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets: {}
 answers:
   requirement.assumption-review:
@@ -19,6 +19,17 @@ answers:
       はパイプ形を宛先不明形と区別して記述。
     normalized_answer: f-string / t-string を除外対象から外す（FR4）。A-3 を既知の制約として記録。パイプ形は現実装どおり
       sink 宛て判定のまま変更しない。
+  rework.spec-change.ac6-print-form:
+    packet_id: rework-q0001
+    answered_at: '2026-11-11T22:32:33+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - change-spec
+    freeform: null
+    normalized_answer: SPEC を書き換える（AC-6 / TS-9 / TS-10 の print 形は変更前の判定で固定し、deny 境界は
+      probe 形で固定）。round1 の残る high 2 件を FR9 / NFR5 / AC-10〜AC-12 / TS-28〜TS-32 / A-5
+      として SPEC に追加
 worker_runs:
 - request_id: create-spec-run-0001
   status: completed
@@ -29,12 +40,17 @@ worker_runs:
   self_write_set:
   - feature-docs/destructive-guard-heredoc-literal/SPEC.md
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: null
+- request_id: create-spec-run-0004
+  status: completed
+  input_digest: null
+  self_write_set:
+  - feature-docs/destructive-guard-heredoc-literal/SPEC.md
 artifacts:
 - path: feature-docs/destructive-guard-heredoc-literal/SPEC.md
-  sha256: sha256:9f9c9bc2587e10b9f19a33100727fbb99b561712afd50427737158ce0636e577
-  produced_by: create-spec-run-0002
+  sha256: sha256:24ef2ecd1ea424f1e0edcb0be032e04cec976eeb11c5db1a778117989e0d4f8d
+  produced_by: create-spec-run-0004
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
