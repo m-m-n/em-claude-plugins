@@ -297,7 +297,7 @@ specification. If the user chooses to change the specification, the
 orchestrator's follow-up sequence is fixed to these five steps:
 
 1. Set the `create-spec` step to `needs_update`.
-2. Set the `create-plan` / `implement` / `review` steps to `pending`.
+2. Set the `create-plan` / `implement` / `review` / `verify` steps to `pending`.
 3. Preserve `workflow.implement.base_commit`.
 4. Record the `spec_change` record in the `rework.yaml` phase-state —
    `reason`, `origin_kind`, `origin_id`, `recorded_at_commit` and

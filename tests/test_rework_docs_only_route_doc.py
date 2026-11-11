@@ -20,7 +20,8 @@ Covers task0001 Acceptance Criteria
   documents per the cited contract, requirement test references change
   through the cited tests replacement, only the origin step returns to
   `pending`, and a sentence of its own states that `implement` does not
-  return to `pending`; Invariant 1's text is unchanged.
+  return to `pending`; Invariant 1 is not reworded by this route (its text is
+  pinned below as amended by spec-change-rework-reentry).
 - AC-4: the mixed-round split is stated; `payload.doc_corrections` is cited
   without restating its shape.
 - AC-5 (TM-7): every change the route makes keeps the changed document
@@ -36,6 +37,12 @@ Every assertion reads only `em-workflow/references/rework-task-synthesis.md`
 (and this module's own source for the import check). Wording that may wrap is
 compared whitespace-normalized; the byte-identity pins of AC-2 and the
 Invariant 1 pin of AC-3 compare raw text so a reflow is caught.
+
+The Invariant 1 pin and the Section 11 SHA-256 pin hold the wording as amended
+by the spec-change-rework-reentry feature (Invariant 1 gained a statement that
+it does not govern the SPEC-change transition; Invariants 2 to 11 are
+unchanged). The meaning kept is that Invariant 1 and all eleven invariants are
+pinned byte for byte.
 """
 
 import ast
@@ -105,7 +112,7 @@ NEW_LABELS = (
 # Classification-gate verdict literals owned by references/question-resolution.md.
 GATE_VERDICTS = ("goal_not_met", "spec_gap", "not_applicable")
 
-# --- Literal text of the base revision (byte-identity pins, AC-2 / AC-3) ---
+# --- Literal text pinned byte for byte (AC-2 / AC-3) ---
 
 BASE_WORDING_INTRO = (
     "Before a needed change to `IMPLEMENTATION.md` or `VERIFICATION.md` is routed\n"
@@ -135,7 +142,10 @@ BASE_WORDING_OUTCOME = (
     "to `needs_update`, and no workflow patch touching planning is produced.\n"
 )
 
-BASE_INVARIANT_1 = (
+# Invariant 1 as amended by spec-change-rework-reentry: the base revision's
+# lines unchanged, followed by the statement that it does not govern the
+# SPEC-change transition.
+INVARIANT_1_AS_AMENDED = (
     "1. For a rework-derived transition (Section 10), before `implement`\n"
     "   returns to `pending`, at least one new rework task is registered in\n"
     "   workflow.yaml. The develop skill's own batch infra auto-resume\n"
@@ -144,13 +154,19 @@ BASE_INVARIANT_1 = (
     "   registers no task; this invariant does not govern it — its precondition\n"
     "   is `references/implement-phase.md`'s Step I.0 (cited, not restated\n"
     "   here).\n"
+    "   The SPEC-change transition (Section 10, the\n"
+    "   `**When rework needs a SPEC.md change**` block) also returns `implement` to\n"
+    "   `pending`, but registers no task (Invariant 9); this invariant does not\n"
+    "   govern it either, although Section 10 describes it — its re-entry\n"
+    "   precondition is `references/implement-phase.md`'s Step I.0 (cited, not\n"
+    "   restated here).\n"
 )
 
 # SHA-256 of the whole Section 11 block (heading through the line before
-# `## 12. Validation`) of the base revision: the eleven invariants keep their
-# text byte for byte.
-BASE_SECTION_11_SHA256 = (
-    "b051003f0dae9883889934d4a8dae52552ccebc53e9340bce4fe349f9856e857"
+# `## 12. Validation`) as amended by spec-change-rework-reentry: the eleven
+# invariants keep their text byte for byte.
+SECTION_11_SHA256_AS_AMENDED = (
+    "7bb6cb5a905e490e63c6a68ebe117d0fd59e544636fd25f243ce9eeb5862aa0b"
 )
 
 BASE_SECTION_2_STATEMENT = (
@@ -532,7 +548,7 @@ class TestDocsOnlyRoundResult(_DocTestCase):
         self.assertTrue(_has_standalone_implement_sentence(sample))
 
     def test_invariant_1_is_not_reworded(self):
-        self.assertIn(BASE_INVARIANT_1, self.text)
+        self.assertIn(INVARIANT_1_AS_AMENDED, self.text)
 
     def test_invariant_1_is_stated_as_not_engaged_by_this_route(self):
         self.assertRegex(
@@ -543,7 +559,7 @@ class TestDocsOnlyRoundResult(_DocTestCase):
     def test_all_eleven_invariants_keep_their_text(self):
         section_11 = _slice(self.text, SECTION_11_HEADING, SECTION_12_HEADING)
         digest = hashlib.sha256(section_11.encode("utf-8")).hexdigest()
-        self.assertEqual(digest, BASE_SECTION_11_SHA256)
+        self.assertEqual(digest, SECTION_11_SHA256_AS_AMENDED)
 
     def test_section_11_digest_would_detect_an_edited_invariant(self):
         # Non-vacuity proof for the digest pin above.
@@ -552,7 +568,7 @@ class TestDocsOnlyRoundResult(_DocTestCase):
         self.assertNotEqual(edited, section_11)
         self.assertNotEqual(
             hashlib.sha256(edited.encode("utf-8")).hexdigest(),
-            BASE_SECTION_11_SHA256,
+            SECTION_11_SHA256_AS_AMENDED,
         )
 
 

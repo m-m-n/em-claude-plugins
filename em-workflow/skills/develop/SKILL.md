@@ -1009,7 +1009,11 @@ verify step の status 遷移は対話時と変わらない）:
    どちらか一方でも到達していれば rework を回さず、
    `verify.status` は `failed` のまま走行を停止せず retrospect フェーズへ
    進む。残った `failed_items` に `deferred` を与えない）。
-   いずれの分岐も workflow.yaml 更新後に commit-docs.sh でコミットする
+   いずれの分岐も workflow.yaml 更新後に commit-docs.sh でコミットする。
+   rework-planner が `gate_id` `rework.spec-change` を返して SPEC 変更が
+   選ばれた場合は、`${CLAUDE_PLUGIN_ROOT}/references/rework-task-synthesis.md`
+   Section 10 の遷移が `verify` も `pending` に戻す（interactive でも
+   batch でも同じ）。
 
 **batch 自動 rework の系譜 cap**: batch モードの verify 失敗時、自動
 rework を回すかどうかは次の 2 つの独立した判定で決める。どちらか一方でも

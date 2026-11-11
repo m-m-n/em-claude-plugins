@@ -1,0 +1,61 @@
+task_id: task0002
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 15802 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 15832 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_spec_change_invariant_scope.TestAC1InvariantOneDoesNotGovernTheSpecChangeTransition.test_invariant_1_states_the_carve_out
+      - tests.test_spec_change_invariant_scope.TestAC1InvariantOneDoesNotGovernTheSpecChangeTransition.test_carve_out_is_added_after_the_pre_existing_lines
+    red_confirmed: true
+    red_reason: "Run against the unedited document, both failed. test_invariant_1_states_the_carve_out raised AssertionError: Lists differ, the missing-elements list held all eight elements (starting with 'names the SPEC-change transition') instead of []; test_carve_out_is_added_after_the_pre_existing_lines failed because the unedited Invariant 1 has no appended lines naming the SPEC-change transition. Both pass after the Section 11 edit."
+  AC-2:
+    tests:
+      - tests.test_spec_change_invariant_scope.TestAC2InvariantOneNamesNoRecordField.test_invariant_1_contains_none_of_the_record_fields
+      - tests.test_spec_change_invariant_scope.TestNegativeProofsOfTheAC2Matcher.test_each_forbidden_field_is_flagged_on_its_own
+      - tests.test_spec_change_invariant_scope.TestNegativeProofsOfTheAC2Matcher.test_a_capitalized_field_is_flagged
+      - tests.test_spec_change_invariant_scope.TestNegativeProofsOfTheAC2Matcher.test_clean_text_is_not_flagged
+    red_confirmed: false
+    red_reason: "The absence check passed against the unedited document, because Invariant 1 held none of the four fields before the edit; no red state occurred for this change. It is a guard on the new lines. The matcher is proved by the negative-proof tests, which flag each field in a synthetic Invariant 1 and pass clean text."
+  AC-3:
+    tests:
+      - tests.test_spec_change_invariant_scope.TestAC3PreExistingTextIsByteIdentical.test_section_11_has_exactly_eleven_numbered_invariants
+      - tests.test_spec_change_invariant_scope.TestAC3PreExistingTextIsByteIdentical.test_every_pre_existing_line_of_invariant_1_is_kept
+      - tests.test_spec_change_invariant_scope.TestAC3PreExistingTextIsByteIdentical.test_invariants_2_to_11_are_byte_identical_to_the_base_revision
+      - tests.test_spec_change_invariant_scope.TestVerbatimConstants.test_constants_reassemble_to_the_base_section_11_digest
+    red_confirmed: false
+    red_reason: "The three identity checks passed against the unedited document, because the base revision is its own prefix and holds eleven invariants; no red state occurred for this change. They guard the edit (lines appended, none reflowed). The negative-proof tests (TestNegativeProofsOfTheAC3Matchers) reject a twelfth or missing invariant, a reflowed or inserted pre-existing line and an edited or reflowed later invariant, and the reassembly digest test proves the verbatim constants equal the base revision."
+  AC-4:
+    tests:
+      - tests.test_spec_change_invariant_scope.TestNegativeProofsOfTheAC1Matcher.test_pre_change_invariant_1_is_rejected
+      - tests.test_spec_change_invariant_scope.TestNegativeProofsOfTheAC1Matcher.test_each_element_is_required_on_its_own
+      - tests.test_spec_change_invariant_scope.TestNegativeProofsOfTheAC1Matcher.test_a_mention_without_the_statement_is_rejected
+      - tests.test_spec_change_invariant_scope.TestNegativeProofsOfTheAC1Matcher.test_synthetic_statement_is_accepted
+      - tests.test_spec_change_invariant_scope.TestNegativeProofsOfTheAC1Matcher.test_the_auto_resume_sentence_alone_has_no_carve_out
+      - tests.test_spec_change_invariant_scope.TestNegativeProofsOfTheAC3Matchers.test_a_reflowed_pre_existing_line_breaks_the_prefix_check
+      - tests.test_spec_change_invariant_scope.TestNegativeProofsOfTheAC5Matcher.test_each_kind_of_leak_is_flagged
+    red_confirmed: true
+    red_reason: "The module was written before the Section 11 edit and run against the unedited document: the same AC-1 matcher that rejects the verbatim pre-change Invariant 1 in test_pre_change_invariant_1_is_rejected failed test_invariant_1_states_the_carve_out on the unedited document (AssertionError: Lists differ, all eight elements missing). The negative-proof tests are self-contained and passed on their first run, so their own red is not separately observable; the red observed is the module failing on the pre-change wording."
+  AC-5:
+    tests:
+      - tests.test_spec_change_invariant_scope.TestAC5NoNotionUrlAndNoHomePath.test_document_holds_no_notion_url_and_no_home_path
+      - tests.test_spec_change_invariant_scope.TestNegativeProofsOfTheAC5Matcher.test_each_kind_of_leak_is_flagged
+      - tests.test_spec_change_invariant_scope.TestNegativeProofsOfTheAC5Matcher.test_clean_text_is_not_flagged
+    red_confirmed: false
+    red_reason: "The check passed against the unedited document, because rework-task-synthesis.md held no Notion URL and no /home/ path before the edit; no red state occurred for this change. It is a guard on the new lines. The matcher is proved by the negative-proof tests, which flag each of notion.so, notion.site, notion.com and /home/ in synthetic text."
+  AC-6:
+    tests:
+      - tests.test_rework_docs_only_route_doc.TestDocsOnlyRoundResult.test_invariant_1_is_not_reworded
+      - tests.test_rework_docs_only_route_doc.TestDocsOnlyRoundResult.test_all_eleven_invariants_keep_their_text
+      - tests.test_rework_docs_only_route_doc.TestDocsOnlyRoundResult.test_section_11_digest_would_detect_an_edited_invariant
+    red_confirmed: true
+    red_reason: "After the two pins were updated to the amended wording and before the document edit, test_all_eleven_invariants_keep_their_text failed (AssertionError: 'b051003f0dae9883889934d4a8dae52552ccebc53e9340bce4fe349f9856e857' != '7bb6cb5a905e490e63c6a68ebe117d0fd59e544636fd25f243ce9eeb5862aa0b') and test_invariant_1_is_not_reworded failed (assertIn of the amended Invariant 1 text). Both pass after the edit; the digest non-vacuity test passes before and after. The module docstring statement that the pins follow this feature's wording has no executable check; it is verified by reading."
+  AC-7:
+    tests:
+      - tests.test_rework_synthesis_contract.TestReworkSynthesisSSOTInvariants.test_invariant_list_has_eleven_items
+      - tests.test_rework_synthesis_contract.TestReworkSynthesisSSOTInvariants.test_invariant_1_scoped_to_rework_derived_transitions
+      - tests.test_rework_synthesis_contract.TestReworkSynthesisSSOTInvariants.test_invariant_1_names_auto_resume_as_out_of_scope
+      - tests.test_failed_kind_resume_reentry.TestAC2Invariant1ScopedToReworkTransitions.test_invariant_1_names_auto_resume_as_out_of_scope
+      - tests.test_failed_kind_resume_reentry.TestAC2Invariant1ScopedToReworkTransitions.test_invariant_1_cites_step_i0_for_auto_resume_precondition
+      - tests.test_failed_kind_resume_reentry.TestAC2Invariant1ScopedToReworkTransitions.test_other_ten_invariants_and_count_unchanged
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope: the existing Invariant 1 pins of tests.test_rework_synthesis_contract and tests.test_failed_kind_resume_reentry detect a reflow of the pinned lines; no red state occurred for this change (they passed before and after, because no pinned line is reflowed). The outcome of this criterion is the full suite (python3 -m unittest discover -s tests) and the build (python3 em-workflow/scripts/check-plugin-invariants.py .) both passing; neither was observed failing before the implementation."

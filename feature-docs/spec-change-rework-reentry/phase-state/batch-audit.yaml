@@ -1,0 +1,25 @@
+schema_version: 1
+feature: spec-change-rework-reentry
+records:
+- gate_id: create-spec.requirement-clarification
+  question_id: create-spec.reentry-identification
+  answered_at: '2026-11-11T00:14:11+09:00'
+  source: codex
+  selected_option_ids:
+  - A
+  resolution_note: 'Options: (A) add SPEC-change re-entry route to implement Step
+    I.0 + scope Invariant 1 + verify back to pending; (B) set implement completed
+    right after create-plan when re-plan adds zero tasks. Chosen A (Codex consulted;
+    Opus escalation not run). Key points: completion stays in Step I.3; B leaves the
+    same stop if interrupted between the two writes; re-entry identified only from
+    committed facts incl. ancestry of recorded_at_commit vs prior completed_at_commit;
+    tier upgrade writes the same spec_change record so flags alone are insufficient.'
+- gate_id: create-spec.command-approval
+  question_id: create-spec.command-approval
+  answered_at: '2026-11-11T00:18:17+09:00'
+  source: policy
+  selected_option_ids:
+  - auto_record
+  resolution_note: 'All workflow.yaml commands were already approved; nothing newly
+    recorded. Commands: "python3 em-workflow/scripts/check-plugin-invariants.py ."
+    (build_command), "python3 -m unittest discover -s tests" (test_command).'

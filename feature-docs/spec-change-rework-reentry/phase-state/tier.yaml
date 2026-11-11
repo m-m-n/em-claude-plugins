@@ -1,0 +1,75 @@
+schema_version: 2
+feature: spec-change-rework-reentry
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.28
+    confidence: 0.71
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.01
+      '1': 0.71
+      '2': 0.28
+      '3': 0.0
+  observed_at: '2026-11-11T00:04:16+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.23
+    confidence: 0.77
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.77
+      '2': 0.23
+      '3': 0.0
+  observed_at: '2026-11-11T00:04:16+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/references/implement-phase.md
+  - em-workflow/references/rework-task-synthesis.md
+  - em-workflow/references/contracts/rework-planner-contract.md
+  - em-workflow/agents/rework-planner.md
+  - tests/test_rework_synthesis_contract.py
+  - tests/test_worker_contracts_planning.py
+  - tests/test_failed_kind_resume_reentry.py
+  - tests/test_rework_docs_only_route_doc.py
+  changed_lines_approx: 120
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules:
+  - em-workflow/agents/rework-planner.md
+  - tests/test_failed_kind_resume_reentry.py
+  - tests/test_rework_docs_only_route_doc.py
+  work_still_required: true
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 6
+  body_change_kind: wording_or_rule_addition
+  change_containment: multiple_modules
+  caller_and_dependency_count: 4
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: em-workflow/references/implement-phase.md:164-183 は pending/failed タスクなしの再突入を
+    ABORT と規定。em-workflow/references/rework-task-synthesis.md:351-358 は新規タスクを要求する一方、382-383
+    は SPEC-change 時の作成を禁止。同:325、em-workflow/references/contracts/rework-planner-contract.md:300、em-workflow/agents/rework-planner.md:147-148
+    の pending 復帰対象に verify はない。em-workflow/skills/develop/SKILL.md:546-548 は実行対象 step
+    の failed で停止。tests/test_rework_docs_only_route_doc.py:543-546 は Invariants 節全体のハッシュを固定
+decided_at: '2026-11-11T00:04:16+09:00'

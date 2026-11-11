@@ -11,13 +11,18 @@ four statements.
 Covers task0006 Acceptance Criteria
 (feature-docs/implement-failed-kind/tasks/task0006.md):
 
-- AC-1: `implement-phase.md` Step I.0 names three entry routes into
-  `implement: pending`, states the auto-resume route's own satisfying
-  condition (at least one task whose reconciled state is `failed`) and that
-  no `pending` task is required on it; the fresh-first-pass route, the
-  rework route and the immediate ABORT for a state satisfying neither
-  condition are otherwise unchanged; the auto-resume branch is cited to the
-  develop skill, not restated.
+- AC-1: `implement-phase.md` Step I.0 names the entry routes into
+  `implement: pending` (three when this task was written; four since the
+  SPEC-change re-entry was added by spec-change-rework-reentry task0003,
+  which is why the opening and ABORT constants below carry that wording),
+  states the auto-resume route's own satisfying condition (at least one
+  task whose reconciled state is `failed`) and that no `pending` task is
+  required on it; the fresh-first-pass route, the rework route and the
+  immediate ABORT for a non-fresh entry that is not a SPEC-change re-entry
+  and satisfies neither condition are otherwise unchanged; the auto-resume
+  branch is cited to the develop skill, not restated. The class and test
+  names keep their original "three" wording because other records
+  reference those test IDs.
 - AC-2: `rework-task-synthesis.md` Invariant 1 is scoped to rework-derived
   transitions and names the infra auto-resume as a transition outside its
   scope, citing the implement phase's Step I.0 for that route's
@@ -79,20 +84,25 @@ def _section(text, start_marker, end_marker):
 
 
 # ---------------------------------------------------------------------
-# AC-1: implement-phase.md Step I.0 -- three entry routes
+# AC-1: implement-phase.md Step I.0 -- the entry routes
 # ---------------------------------------------------------------------
 
 STEP_I0_HEADING = "## Step I.0: Preconditions"
 STEP_I1_HEADING = "## Step I.1: Confirm the integration worktree"
 
-THREE_ROUTES_OPENING = (
+PRE_SPEC_CHANGE_THREE_ROUTES_OPENING = (
     "Step I.0 recognises three entry routes into\n   `implement: pending` "
     "— a fresh first pass, a rework re-entry, and the\n   develop skill's "
     "batch infra auto-resume"
 )
+FOUR_ROUTES_OPENING = (
+    "Step I.0 recognises four entry routes into\n   `implement: pending` "
+    "— a fresh first pass, a rework re-entry, the\n   SPEC-change "
+    "re-entry, and the develop skill's batch infra auto-resume"
+)
 AUTO_RESUME_CITED_NOT_RESTATED = (
-    "(`skills/develop/SKILL.md`, the\n   auto-resume block; its own "
-    "precondition and write set are stated there,\n   not restated here)"
+    "(`skills/develop/SKILL.md`, the auto-resume block; its own "
+    "precondition\n   and write set are stated there, not restated here)"
 )
 FRESH_FIRST_PASS_NO_CONDITION = "A fresh first pass carries no further condition"
 REWORK_ROUTE_UNCHANGED = (
@@ -106,8 +116,14 @@ AUTO_RESUME_NO_PENDING_REQUIRED = (
     "no `pending` task is required on this\n   route, since the "
     "auto-resume's write set registers no task"
 )
-ABORT_NEITHER_CONDITION = (
+PRE_SPEC_CHANGE_ABORT_NEITHER_CONDITION = (
     "A non-fresh entry satisfying neither condition — every task "
+    "`merged`\n   (or otherwise none `pending`), and no task whose "
+    "reconciled state is\n   `failed` — is therefore a protocol error"
+)
+ABORT_NEITHER_CONDITION = (
+    "A non-fresh entry that is not a SPEC-change re-entry and satisfies\n"
+    "   neither the rework nor the auto-resume condition — every task "
     "`merged`\n   (or otherwise none `pending`), and no task whose "
     "reconciled state is\n   `failed` — is therefore a protocol error"
 )
@@ -122,7 +138,7 @@ class ImplementPhaseDocTestCase(unittest.TestCase):
 
 class TestAC1ThreeEntryRoutes(ImplementPhaseDocTestCase):
     def test_names_three_entry_routes(self):
-        self.assertTrue(_contains(self.step_i0, THREE_ROUTES_OPENING))
+        self.assertTrue(_contains(self.step_i0, FOUR_ROUTES_OPENING))
 
     def test_auto_resume_route_cited_to_develop_skill_not_restated(self):
         self.assertTrue(_contains(self.step_i0, AUTO_RESUME_CITED_NOT_RESTATED))
@@ -156,7 +172,7 @@ class TestAC1ThreeEntryRoutes(ImplementPhaseDocTestCase):
             "Entering this phase with every task `merged` (or otherwise "
             "none `pending`) is therefore a protocol error."
         )
-        self.assertFalse(_contains(synthetic, THREE_ROUTES_OPENING))
+        self.assertFalse(_contains(synthetic, FOUR_ROUTES_OPENING))
         self.assertFalse(_contains(synthetic, AUTO_RESUME_CITED_NOT_RESTATED))
         self.assertFalse(_contains(synthetic, AUTO_RESUME_SATISFYING_CONDITION))
         self.assertFalse(_contains(synthetic, AUTO_RESUME_NO_PENDING_REQUIRED))
@@ -165,6 +181,28 @@ class TestAC1ThreeEntryRoutes(ImplementPhaseDocTestCase):
         # still present in the synthetic text -- proving the matcher can
         # also correctly PASS, not just fail.
         self.assertTrue(_contains(synthetic, REWORK_ROUTE_UNCHANGED))
+
+    def test_negative_proof_pre_spec_change_wording_fails_opening_and_abort(self):
+        # The opening and ABORT wording from before the SPEC-change
+        # re-entry was added is rejected by the updated matchers and is
+        # absent from the live document.
+        self.assertFalse(
+            _contains(
+                PRE_SPEC_CHANGE_THREE_ROUTES_OPENING, FOUR_ROUTES_OPENING
+            )
+        )
+        self.assertFalse(
+            _contains(
+                PRE_SPEC_CHANGE_ABORT_NEITHER_CONDITION,
+                ABORT_NEITHER_CONDITION,
+            )
+        )
+        self.assertFalse(
+            _contains(self.step_i0, PRE_SPEC_CHANGE_THREE_ROUTES_OPENING)
+        )
+        self.assertFalse(
+            _contains(self.step_i0, PRE_SPEC_CHANGE_ABORT_NEITHER_CONDITION)
+        )
 
 
 # ---------------------------------------------------------------------
