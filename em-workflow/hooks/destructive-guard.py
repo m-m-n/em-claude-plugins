@@ -4565,13 +4565,20 @@ class _StmtInfo:
     __slots__ = (
         "word", "pipeline_sink", "pipeline_undetermined", "has_process_sub",
         "is_assignment_only", "parse_failed", "python_program",
+        "plain_assignment", "downstream_safe",
     )
 
     def __init__(
         self, word=None, pipeline_sink=False, pipeline_undetermined=False,
         has_process_sub=False, is_assignment_only=False, parse_failed=False,
-        python_program=False,
+        python_program=False, plain_assignment=False, downstream_safe=False,
     ):
+        # PLAIN_ASSIGNMENT: only plain scalar NAME=value / NAME+=value words
+        # (no subscript, no arithmetic). DOWNSTREAM_SAFE: every downstream
+        # pipeline stage is a literal-argument filter (grep/head/tail/wc/
+        # cat/tee) and no compound group is open at the statement.
+        self.plain_assignment = plain_assignment
+        self.downstream_safe = downstream_safe
         self.word = word
         self.pipeline_sink = pipeline_sink
         self.pipeline_undetermined = pipeline_undetermined
@@ -5836,7 +5843,63 @@ def _stmt_destination_info(table, idx, group_closer_of, open_groups_at, memo):
         has_process_sub=stmt.has_process_sub,
         is_assignment_only=stmt.is_assignment_only,
         python_program=stmt.python_program,
+        plain_assignment=_is_plain_assignment(stmt),
+        downstream_safe=(
+            open_groups_at[idx] is None and _downstream_stages_safe(table, idx)
+        ),
     )
+
+
+_PLAIN_ASSIGNMENT_WORD_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\+?=")
+_SAFE_DOWNSTREAM_WORDS = frozenset({"grep", "head", "tail", "wc", "cat", "tee"})
+
+
+def _token_is_literal(tok):
+    """Whether TOK holds no expansion or substitution of any kind."""
+    return not (
+        "$" in tok or "`" in tok or _holds_substitution_residue(tok)
+    )
+
+
+def _is_plain_assignment(stmt):
+    """Whether STMT consists only of plain scalar assignments (NAME=value,
+    NAME+=value) -- no subscript, no declaration command, no arithmetic."""
+    if not stmt.lexed or not stmt.is_assignment_only or stmt.redirects:
+        return False
+    if not stmt.toks:
+        return False
+    for tok in stmt.toks:
+        if "((" in tok or "[" in tok.split("=", 1)[0]:
+            return False
+    return all(
+        _PLAIN_ASSIGNMENT_WORD_RE.match(tok) for tok in stmt.toks
+    )
+
+
+def _downstream_stages_safe(table, idx):
+    """Whether every pipeline stage after TABLE[IDX] is a grep/head/tail/wc/
+    cat/tee command whose tokens hold no expansion or substitution. Anything
+    else is not positively safe."""
+    n = len(table)
+    i = idx
+    while i < n and _is_pipe_sep(table[i].sep):
+        j = i + 1
+        while j < n and table[j].lexed and not table[j].toks:
+            j += 1
+        if j >= n:
+            return True
+        stmt = table[j]
+        if (
+            not stmt.lexed
+            or stmt.word not in _SAFE_DOWNSTREAM_WORDS
+            or stmt.has_process_sub
+            or stmt.opens_group is not None
+            or stmt.is_compound_keyword
+            or not all(_token_is_literal(t) for t in stmt.toks)
+        ):
+            return False
+        i = j
+    return True
 
 
 # --- Component 4: destination decision --------------------------------------
@@ -5898,9 +5961,12 @@ def _is_python_program_chain(chain):
         or host.has_process_sub
         or host.pipeline_sink
         or host.pipeline_undetermined
+        or not host.downstream_safe
     ):
         return False
     for level in chain[1:]:
+        if not level.plain_assignment or not level.downstream_safe:
+            return False
         if (
             level.parse_failed
             or level.has_process_sub
@@ -6664,6 +6730,12 @@ def _overrides_command_name(words, lead, shaped_words):
     """
     if _defines_function(words, lead):
         return True
+    # BASH_CMDS holds the hashed command paths: any statement that names it
+    # in any word (`BASH_CMDS[python3]=/bin/bash`, `BASH_CMDS=(...)`,
+    # `declare -A BASH_CMDS`, `declare -n r=BASH_CMDS`, ...) may change what
+    # a command name runs (fail-closed, substring match on every word).
+    if any("BASH_CMDS" in w for w in words):
+        return True
     if any(PATH_ASSIGNMENT.match(w) for w in words[:lead]):
         return True
     if shaped_words and PATH_ASSIGNMENT.match(shaped_words[0]):
@@ -6683,6 +6755,8 @@ def _overrides_command_name_unlexed(toks, shaped_words):
     lex (an unbalanced quote): no operator/quote provenance exists, so the
     same constructs are read from plain words, and a PATH assignment
     anywhere in the statement counts (the stricter reading)."""
+    if any("BASH_CMDS" in t for t in toks):
+        return True
     word, args = head(shaped_words)
     if word in OVERRIDE_BUILTINS:
         return True
