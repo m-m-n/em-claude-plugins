@@ -322,7 +322,9 @@ task. Instead it returns `status: needs_user_input` with
 change, the orchestrator's transition is fixed:
 
 1. `create-spec` step → `needs_update`
-2. `create-plan` / `implement` / `review` steps → `pending`
+2. `create-plan` / `implement` / `review` / `verify` steps → `pending`
+   (only these steps' `status` is written; `verify`'s `result` and
+   `failed_items` stay until the next verify run overwrites them)
 3. `workflow[implement].base_commit` is preserved unchanged
 4. phase-state `rework.yaml` records `reason`, `origin_kind`, `origin_id`,
    `recorded_at_commit`, and `replan_authorized: true` (field definitions

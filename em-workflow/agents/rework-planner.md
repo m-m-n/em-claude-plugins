@@ -145,9 +145,10 @@ When a rework decision requires a SPEC.md change, create no task. Return
 `status: needs_user_input` with `gate_id: rework.spec-change` instead. Once
 the user selects the SPEC change, the orchestrator drives a fixed five-step
 sequence: `create-spec` step → `needs_update`; `create-plan` / `implement` /
-`review` steps → `pending`; `workflow[implement].base_commit` preserved
-unchanged; phase-state `rework.yaml` records the interruption reason and the
-finding's `stable_id`; the develop state machine re-enters at `create-spec`.
+`review` / `verify` steps → `pending`; `workflow[implement].base_commit`
+preserved unchanged; phase-state `rework.yaml` records the interruption
+reason and the finding's `stable_id`; the develop state machine re-enters at
+`create-spec`.
 **You trigger this sequence only by returning the question** — you never
 perform any of its five steps yourself.
 

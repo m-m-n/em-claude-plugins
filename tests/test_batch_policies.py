@@ -127,6 +127,24 @@ ARTIFACT_OVERWRITE_FAMILY = [
 # non-packet gate — it is a deliberate fail-closed omission).
 INTENTIONAL_FALLBACK_EXCEPTION = "rework.spec-change"
 
+# develop/SKILL.md "verify フェーズ" item 6 names `rework.spec-change` once, to
+# cite rework-task-synthesis.md Section 10 (spec-change-rework-reentry FR6);
+# that citation is not batch gate resolution. It is the only place in the
+# owned files outside the policy file where the gate may be named.
+VERIFY_ITEM6_START = "6. fail → verify を `failed` にし"
+VERIFY_ITEM6_END = "**batch 自動 rework の系譜 cap**"
+
+
+def without_verify_item6(text):
+    """`text` with the span of develop/SKILL.md's verify-phase item 6 removed;
+    `text` unchanged when that span is absent."""
+    start = text.find(VERIFY_ITEM6_START)
+    end = text.find(VERIFY_ITEM6_END, start) if start >= 0 else -1
+    if start < 0 or end < 0:
+        return text
+    return text[:start] + text[end:]
+
+
 # gate_ids that remain in batch-policies.yaml (packet-or-orchestrator gates)
 # but whose only referrer is a file this task does not own (create-spec-
 # phase.md, create-plan-phase.md) — sibling tasks own those concurrently.
@@ -729,7 +747,25 @@ class TestGateIdCoverageWithinOwnedFiles(unittest.TestCase):
 
     def test_intentional_exception_excluded_from_both_directions(self):
         self.assertNotIn(INTENTIONAL_FALLBACK_EXCEPTION, self.gate_policies)
-        self.assertNotIn(INTENTIONAL_FALLBACK_EXCEPTION, self.other_owned_text)
+        self.assertNotIn(
+            INTENTIONAL_FALLBACK_EXCEPTION,
+            without_verify_item6(self.other_owned_text),
+        )
+
+    def test_item6_exclusion_hides_only_a_name_inside_item6(self):
+        gate = INTENTIONAL_FALLBACK_EXCEPTION
+        inside = f"head\n{VERIFY_ITEM6_START} {gate}\n\n{VERIFY_ITEM6_END} tail"
+        before = f"{gate} head\n{VERIFY_ITEM6_START} body\n\n{VERIFY_ITEM6_END} tail"
+        after = f"head\n{VERIFY_ITEM6_START} body\n\n{VERIFY_ITEM6_END} {gate} tail"
+        self.assertNotIn(gate, without_verify_item6(inside))
+        self.assertIn(gate, without_verify_item6(before))
+        self.assertIn(gate, without_verify_item6(after))
+
+    def test_item6_exclusion_hides_nothing_without_the_item6_span(self):
+        gate = INTENTIONAL_FALLBACK_EXCEPTION
+        only_start = f"head\n{VERIFY_ITEM6_START} {gate}\n"
+        self.assertIn(gate, without_verify_item6(only_start))
+        self.assertIn(gate, without_verify_item6(f"no span {gate}"))
 
 
 # task0001 (batch-policy-option-id-consistency) AC-5: the pinned, explicit
