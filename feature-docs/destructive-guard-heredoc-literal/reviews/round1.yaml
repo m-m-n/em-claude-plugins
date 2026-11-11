@@ -1,0 +1,654 @@
+round: 1
+executed_at: '2026-11-11T22:27:11+09:00'
+scope:
+  review_mode: diff
+  base_commit: 3bc92433819350a326de40721b6401ea97f53910
+  head_commit: ffdea5f51a68ec728c59867e04a25c436484b66b
+  changed_files:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/destructive-guard-heredoc-literal/task0001.tests.yaml
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary:
+  - perspective: performance
+    reason: フックの実行経路に heredoc 本文の字句解析が加わり、NFR2 の時間予算を満たすかを見る必要がある
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: comprehensive#loop1.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#loop1.0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+  model: gpt-6-astra
+- run_id: architecture#loop1.0
+  perspective: architecture
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: spec#loop1.0
+  perspective: spec
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: performance#loop1.0
+  perspective: performance
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: comprehensive#loop2.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#loop2.0
+  perspective: security
+  role: primary
+  source: codex
+  status: skipped
+  model: gpt-6-astra
+  skip_reason: harness_unavailable
+- run_id: security#loop2.1
+  perspective: security
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: architecture#loop2.0
+  perspective: architecture
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: spec#loop2.0
+  perspective: spec
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: performance#loop2.0
+  perspective: performance
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: comprehensive#loop3.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#loop3.0
+  perspective: security
+  role: primary
+  source: codex
+  status: skipped
+  model: gpt-6-astra
+  skip_reason: harness_unavailable
+- run_id: security#loop3.1
+  perspective: security
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: architecture#loop3.0
+  perspective: architecture
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: spec#loop3.0
+  perspective: spec
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: performance#loop3.0
+  perspective: performance
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 5914
+  title: 外側の文が printf -v / read だと、Python の出力が配列添字として bash に再評価されるのに本文のリテラルを隠す
+  description: '_is_python_program_chain() は外側の文が DATA_COMMANDS の語で始まれば通す。DATA_COMMANDS は「標準入力や引数をプログラムとして実行しない」前提の一覧で、引数を再評価しないことまでは保証しない。printf は -v の代入先の配列添字を、read は代入先の名前の配列添字を bash が算術評価し、その中の $( ) を実行する。printf -v "$(python3 <<''PY''\nprint(''a[$(git branch -D example)]'')\nPY\n)" x は、変更前は本文の単一引用符内の $( ) が候補として queue されて deny、変更後はリテラルが _ で埋まり allow になる（コードを読んで確認: printf は DATA_COMMANDS に含まれ、外側の段に -v の扱いは無い）。実行するのは Python ではなく外側の bash なので SPEC A-3 の受け入れ範囲外で、FR2(c)（外側の文に sink が無い）の意図に反する。既存ケース opt=-v; printf "$opt" ''a[$(git branch -D example)]'' x が deny で固定している経路と同じもの。評価者の読解で、read "$(python3 …)" <<< x も同じ再評価を起こすことを足しておく。'
+  suggestion: 外側の文の許可を DATA_COMMANDS 全体から、引数を名前や添字として評価しない語に絞る（read は外す。printf は -v を取りうる形、つまり先頭以外の引数位置も含めて静的に -v が無いと確かめられない形を外す）。配列添字への代入だけの文（a["$(python3 …)"]=1 など）も同じ再評価を起こしうるので、代入だけの文を通す条件も確かめる。printf -v と read の deny ケースを destructive-guard-cases.json に足す。
+  sources:
+  - codex:security
+  confidence: 85
+  reproduction: 'tool_name=Bash の tool_input.command に次を指定する:
+
+    printf -v "$(python3 <<''PY''
+
+    print(''a[$(git branch -D example)]'')
+
+    PY
+
+    )" x
+
+    基準コミットでは deny、変更後では allow になる。実行確認だけでは、Bash に git() { printf ''INTERCEPTED git %s\n'' "$*" >&2; } を定義してから同じコマンドを実行すると、INTERCEPTED git branch -D example が出力される。この無害な代替関数はフックへ渡す入力には含めない'
+  stable_id: 89688847f43dbfea
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: fixed
+  resolution_reason: auto-applied loop 1
+- severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 5254
+  title: 長い記述子番号の int() 変換で未処理例外になり、フックが判定を出さずに終わる
+  description: '_python_program_redirects() は fd_prefix の付いた数字列を長さの制限なく int() に渡す。Python 3.11 以降は既定で 4300 桁を超える整数文字列の変換が ValueError になる（この環境は Python 3.14.4）。run() と _judge_under() は _Decided / LexBudgetExceeded / SystemExit しか捕捉しないので、例外はそのまま抜け、フックは判定を出さずに非 0 で終わる。PreToolUse フックの非 0 終了（2 以外）は実行を止めないため、同じコマンドの後続行（例: git reset --hard HEAD）がガードを通らずに実行される。変更前は deny。この経路は宛先判定の表を作る時点（_build_statement_table）で必ず通るので、python3 宛ての heredoc に数字列を付けるだけで届く。comprehensive#0 も同じ箇所を 0 の 4301 桁で報告している。偶発では起きない形だが、ガード全体が素通りになる失敗の仕方なので high にした。'
+  suggestion: 'int() を使わず、記述子が 0 かどうかを文字列で判定する（例: 数字列が 0 だけでできているか）。0 と 9 の長い数字列のケースを deny 側で足す。'
+  sources:
+  - codex:security
+  confidence: 100
+  reproduction: Python 式 "python3 " + "9" * 4301 + "<<'PY'\nprint('ok')\nPY\ngit reset --hard HEAD" で command を作り、tool_name=Bash の tool_input.command としてフックへ渡す。基準コミットでは git-reset-hard による deny、変更後では ValueError が発生し、標準出力に判定が出ない。Git を無害な関数へ差し替えた Bash 実行でも、先頭コマンドの失敗後に git reset --hard HEAD が呼ばれることを確認した
+  stable_id: 1a931d8661af70b2
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: fixed
+  resolution_reason: auto-applied loop 1
+- severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7236
+  title: os.system などに渡す文字列リテラルのバッククォートが検査されなくなる（SPEC A-3 の既知の制約）
+  description: Python 宛ての本文で、os.system("echo `git branch -D example`") のようにシェルへ渡すリテラルも中身が隠れ、変更前の deny が allow になる。読解で再現を確認した。ただしこの挙動は SPEC の Security Considerations と A-3 が「既知の制約として受け入れる」と明記している形そのもので、実装の欠陥ではない。再現手順付きの security 指摘なので契約に従って carry し、重大度を medium に下げた。
+  suggestion: SPEC A-3 で受け入れ済みなので、コード変更は求めない。declined として記録する。受け入れを見直す場合は、リテラルの外に os.system / os.popen / subprocess / pty / __import__ などシェルを起動する名前がある本文はマスクせず従来どおり読む、といった fail-closed の条件を SPEC に足してから扱う。
+  sources:
+  - codex:security
+  confidence: 100
+  reproduction: 'tool_name=Bash の tool_input.command に次を指定してフックへ渡す:
+
+    python3 <<''PY''
+
+    import os
+
+    os.system("echo `git branch -D example`")
+
+    PY
+
+    基準コミットでは git-branch-force-delete による deny、変更後では allow になる。本文を Python の監査フックで os.system の実行直前に停止させると、シェルへ渡される引数が echo `git branch -D example` であることを確認できる。実際の削除は実行していない'
+  stable_id: d7dea4b08fe33300
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: declined
+  resolution_reason: SPEC A-3 が既知の制約として受け入れている形（Python がシェルへ渡す文字列）。コード変更を求めない
+- severity: high
+  category: spec
+  file: em-workflow/hooks/tests/destructive-guard-cases.json
+  line: 1239
+  title: SPEC の TS-9 / TS-10（print 形）を allow で固定しており、AC-6 の deny と食い違う
+  description: SPEC の TS-9（python3 <<'PY' | bash と print("git reset --hard HEAD")）と TS-10（bash -c "$(python3 <<'PY' … print('git reset --hard HEAD') … )"）は deny、AC-6 は「deny のまま」と書いているが、ケース表は 1239 行と 1241 行でこの 2 形を allow で固定している。実装はこの 2 形を新しい経路に入れない（host.pipeline_sink、外側の文の sink 語で _is_python_program_chain() が False）ので判定は変更前のままで、task0001.tests.yaml の記録でも変更前の判定は allow だった。つまり AC-6 の「のまま」という前提が誤っており、実装は FR7 に従って判定を変えていない。境界は 1240 行と 1242 行の probe 形（リテラル内のバッククォート、deny）が固定している。それでも AC-6 と TS-9 / TS-10 は書かれたとおりには満たされず、Success Criteria の「TS-1〜TS-16 がすべて通る」も満たせない。
+  suggestion: ガードに検知を足して print 形を deny にはしない（変更範囲外で、FR7 の「判定を今と変えない」に反する）。SPEC の AC-6 と TS-9 / TS-10 を、print 形は変更前の判定（allow）のまま固定すること、deny の境界はリテラル内にバッククォートを置いた probe 形で固定することに書き直す。SPEC の書き換えに承認が要るなら、その判断を人に渡す。
+  sources:
+  - litellm:muse-spark-contributor:spec
+  confidence: 90
+  reproduction: null
+  stable_id: afb35a8836e267bd
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: unresolved
+  resolution_reason: spec 観点は auto-fix 対象外。SPEC の AC-6 / TS-9 / TS-10 の記述と実装・ケース表の不一致
+- severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 5303
+  title: -x（先頭行を読み飛ばす）を許しているのに、リテラルの走査は先頭行から数えている
+  description: _python_program_statement() は c と m を含まない英字だけの短いオプション群を通すので、-x も通る。Python は -x のとき本文の先頭行を読み飛ばすが、_mask_python_literals() は先頭行から走査する。先頭行が ''' だと、続く行の実コードを、コメント内の ''' までリテラルとして隠してしまう。f-string を見つけたときに従来の読み方へ戻す処理（FR4）も、リテラルの外を今どおり読むこと（FR3）も、この形では効かない。読解で基盤を確認した。ただし実害の経路は Python のコードがシェルへ文字列を渡す場合に限られ、SPEC A-3 で受け入れた類と同じなので、high から medium に下げた。
+  suggestion: _python_program_statement() で x を含むオプション群を通さない（fail-closed）。python3 -x <<'PY' で先頭行が ''' の本文を deny 側のケースとして足す。
+  sources:
+  - codex:comprehensive
+  confidence: 80
+  reproduction: null
+  stable_id: 9e2f6086c1ce63f1
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix 対象外'
+- severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 5313
+  title: 文字コード宣言でソースの読み方が変わる本文も、そのまま走査してリテラルを隠す
+  description: '_mask_python_literals() は本文の文字をそのまま走査する。Python は先頭 2 行の文字コード宣言（例: # coding: unicode_escape）に従ってソースを復号するので、\x27 のような並びが復号後に引用符になり、走査が見るリテラルの範囲と Python が実行するコードがずれる。走査がリテラルの中だと思った範囲に、実際には f-string やシェル呼び出しのコードが入りうる（FR3 / FR4 が効かない）。comprehensive#0 は 7236 行（呼び出し側）で報告したが、直す場所は走査関数なのでここに置いた。実害の経路は -x と同じく A-3 の類に限られるので、high から medium に下げた。'
+  suggestion: '本文の先頭 2 行に PEP 263 の文字コード宣言（coding[:=]）があれば、_mask_python_literals() は None を返して従来の読み方に戻す（utf-8 だけ通す形でもよい）。# coding: unicode_escape を含む本文を deny 側のケースとして足す。'
+  sources:
+  - codex:comprehensive
+  confidence: 75
+  reproduction: null
+  stable_id: 6fc6944b3691828f
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix 対象外'
+- severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 3875
+  title: 逆斜線で引用した数字（\0）を記述子番号と見なしている
+  description: _tokenize_marked() の fd_prefix は quoted が偽であることを条件にしているが、quoted は引用符の領域（単一・二重・ANSI-C・ロケール）と shlex の引用状態だけを見ており、逆斜線のエスケープでは立たない。shlex は \0 を 0 として返すので、python3 \0<<'PY' で 0 に fd_prefix が付く。bash は逆斜線で引用した数字を記述子番号として扱わず、0 をスクリプトのオペランドとして python3 に渡すので、heredoc はスクリプト 0 の標準入力になる。ガードはこれを fd 0 の heredoc と読んでリテラルを隠し、変更前の deny が allow になる。python3 0 <<'PY' を deny で固定したケースと同じ不変条件が崩れている。読解で基盤を確認した。
+  suggestion: fd_prefix は、トークンの元の範囲のテキストが ASCII 数字だけ（逆斜線を含まない）のときだけ立てる。python3 \0<<'PY' を deny 側のケースとして足す。
+  sources:
+  - codex:comprehensive
+  confidence: 80
+  reproduction: null
+  stable_id: 01ed2951cef84cc8
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix 対象外'
+- stable_id: f68232ce4da95ec6
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 5918
+  title: パイプ下流の printf から破壊的コマンドを実行できる
+  description: 下流の printf -v が Python の出力を配列添字として再評価するのに本文がマスクされる
+  suggestion: 下流の段にも再評価の検査を適用する
+  reproduction: 'python3 - <<''PY'' | printf -v "$(cat)" x
+
+    print(''a[$(git branch -D example)]'')
+
+    PY
+
+    基準 deny / 変更後 allow（オーケストレーターがフック判定で再現を確認）'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+- stable_id: 7f05ed317346570e
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 5912
+  title: 算術展開を介してマスクされたコマンドを実行できる
+  description: 算術展開が Python の出力を a[...] 添字として再評価するのに本文がマスクされる
+  suggestion: 算術展開などの評価位置ではマスクしない
+  reproduction: ': $(( $(python3 <<''PY''
+
+    print(''a[$(git branch -D example)]'')
+
+    PY
+
+    ) ))
+
+    基準 deny / 変更後 allow（再現確認済み）'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+- stable_id: 6bac20678ababd9a
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7240
+  title: BASH_CMDS による実行先の差し替えで検査を回避できる
+  description: BASH_CMDS への代入を差し替えとして検出しない
+  suggestion: BASH_CMDS への代入を差し替えとして扱う
+  reproduction: 'BASH_CMDS[python3]=/bin/bash; python3 -s <<''PY''
+
+    x="`git branch -D example`"
+
+    PY
+
+    基準 deny / 変更後 allow（再現確認済み）'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+- stable_id: 7f05ed317346570e
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 5912
+  title: 算術評価に渡す置換までデータ用途として許可している
+  description: 外側が echo や代入でも算術展開内の置換の文字列を隠してしまう
+  suggestion: 算術展開や配列添字の中ではマスクしない
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+- stable_id: 18990a8150eede6d
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 5914
+  title: Git の実行用設定に渡す出力をデータとして扱っている
+  description: git -c core.editor に渡す Python の出力までマスクする
+  suggestion: 実行用設定へ渡す場合は従来の検査を維持する
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+- stable_id: b8f45afc2a2d4179
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 5254
+  title: Redirect adjacency carried as Tok side-channel drifts from split_redirects SSOT
+  description: fd 隣接の情報を Tok の属性で運んでおり、split_redirects() の戻り値と二重化している
+  suggestion: 隣接を split_redirects() の戻り値に含める
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - litellm:muse-spark-contributor:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix 対象外'
+- stable_id: 8b2b51dd0f807363
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 5916
+  title: Destination layer duplicates printf/read data-word policy
+  description: printf/read の除外を宛先判定の層に直書きしている
+  suggestion: 共有の分類器に移す
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - litellm:muse-spark-contributor:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix 対象外'
+- stable_id: 4451636b46d3a248
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 5214
+  title: Hardcoded output-redirect set drifts from REDIRECT canonical
+  description: _OUTPUT_REDIRECT_OPERATORS が REDIRECT 正規表現と別に綴りを持つ
+  suggestion: REDIRECT から導出するか共通の判定を使う
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - litellm:muse-spark-contributor:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix 対象外'
+- stable_id: 277c9b80d697be1d
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 5313
+  title: Python-grammar responsibility embedded in god file with wide flag threading
+  description: 巨大なフックに Python の字句走査と多数のフラグが加わった
+  suggestion: 狭いインターフェースの裏に隔離する
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - litellm:muse-spark-contributor:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix 対象外'
+- stable_id: 2132661659860c58
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 5871
+  title: 整数属性の変数への代入で、実行されるコマンドを隠してしまう
+  description: declare -i や RANDOM / OPTIND への代入は値を算術式として再評価する
+  suggestion: 属性を持ちうる代入先ではマスクしない
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 3
+- stable_id: e0bb28d8975e039f
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 6733
+  title: BASH_CMDS の単なる表示で、無関係な文書出力まで拒否される
+  description: BASH_CMDS の部分一致で echo BASH_CMDS も差し替えと扱い、cat のヒアドキュメントまで再走査して deny になる
+  suggestion: 変更しうる構文と読み取りを区別する
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix 対象外'
+- stable_id: e8e555f4fbca3b89
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 6744
+  title: Hidden alias via variable-expanded command word bypasses python masking
+  description: 命令語が変数展開の alias 定義を差し替えとして検出しない
+  suggestion: 静的に読めない命令語を差し替えとして扱う
+  reproduction: 'a=alias; $a python3=bash
+
+    python3 <<''PY''
+
+    x="`git branch -D example`"
+
+    PY
+
+    基準 deny / 変更後 allow（再現確認済み）'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - litellm:muse-spark-contributor:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 3
+- stable_id: 81a87baa6ce41a23
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 6739
+  title: Hidden PATH override via variable-expanded export bypasses python masking
+  description: export $n=... の動的な PATH 差し替えを検出しない
+  suggestion: 動的な宣言・代入の対象を差し替えとして扱う
+  reproduction: 'n=PATH; export $n=/tmp/bin
+
+    python3 <<''PY''
+
+    x="`git branch -D example`"
+
+    PY
+
+    基準 deny / 変更後 allow（再現確認済み）'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - litellm:muse-spark-contributor:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 3
+- stable_id: 2465ff48268e7ad4
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 460
+  title: Lexer token carries parser adjacency flag on str subclass without propagation guarantee
+  description: fd_prefix を str のサブクラスの属性で運んでおり、複製で黙って失われうる
+  suggestion: フラグを保つ複製の補助関数か、明示的な戻り値にする
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - litellm:muse-spark-contributor:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix 対象外'
+- stable_id: 517a7f94dc8a5b7c
+  severity: high
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 6779
+  title: Duplicated shell-state mutation vocabularies for override versus python masking
+  description: 差し替え検出（_overrides_command_name 系）と Python マスク用（PYTHON_MASK_STATE_BUILTINS / _python_mask_unsafe_words）の 2 つの語彙と 2 組のフラグ・退避キューが並立し、片方だけの更新で判定が食い違う
+  suggestion: 1 つの SSOT に統合するか、両者の一致を確かめるテストを置く
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - litellm:muse-spark-contributor:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: auto-fix ループ上限（3）に到達
+- stable_id: e63d3a1c12adfc7c
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 6801
+  title: 入れ子の builtin が整数属性の検出を回避する
+  description: builtin の展開が 1 段だけなので builtin builtin declare -i x を状態変更として検出しない
+  suggestion: builtin / command を入れ子の末尾まで解釈する
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: auto-fix ループ上限（3）に到達
+- stable_id: a27d22e16d633976
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7547
+  title: Python の変数名をシェルの状態変更命令と誤認する
+  description: マスク済みの Python 本文にも _python_mask_unsafe_words() が適用され、source = "..." や set([1, 2]) を状態変更と誤認して本文全体を再走査し deny になる
+  suggestion: Python 本文の文をシェルの状態変更として扱わない
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix 対象外'
+- stable_id: 68706ae97f89dd23
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 5877
+  title: 大文字の通常変数への代入を誤って拒否する
+  description: 小文字を含まない変数名を一律に除外するため RESULT=... のような通常の代入も従来の検査に戻る
+  suggestion: 既知の特殊変数と検出した整数属性に基づいて判定する
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix 対象外'
+evaluation:
+  round_summary: 'Round 1（diff、cross_validation=true）。5 run とも completed で、reviewer 出力に注入の試みは無かった。security#0 の printf -v の添字（5914）と長い記述子番号の int()（5254）は読解で reproduced。os.system（7236）は reproduced だが SPEC A-3 が既知の制約として受け入れている形なので medium で carry。comprehensive#0 の -x と文字コード宣言の 2 件は実害の経路が A-3 と同じ類に限られるので medium に下げた。comprehensive#0 の os.system（5390）は security の 7236 と重複。spec#0 の TS-9 / TS-10 は実装が判定を変えていないことを読解で確かめ、AC-6 の前提が誤りという SPEC 側の不一致として high で carry（1241 行は 1239 行に統合）。カバレッジ: comprehensive=corroborated、security=findings、architecture=corroborated、spec=corroborated、performance=corroborated。'
+  recommended_action: auto_fix
+  action_rationale: high のうち printf -v / read の外側の語と int() のクラッシュは、新しい経路の許可条件を fail-closed 側に絞る局所修正とケース追加で済む。medium の \0、-x、文字コード宣言も同じ関数群への条件追加で済む。spec の TS-9 / TS-10 はコードではなく SPEC の AC-6 / TS-9 / TS-10 を直すもの。os.system の件は SPEC A-3 で受け入れ済みなので declined として記録する。
+dismissed_sites:
+- file: em-workflow/hooks/destructive-guard.py
+  line: 5390
+  run_id: comprehensive#0
+  reason: duplicate of another finding
+- file: em-workflow/hooks/destructive-guard.py
+  line: 7236
+  run_id: comprehensive#0
+  reason: duplicate of another finding
+- file: em-workflow/hooks/destructive-guard.py
+  line: 5254
+  run_id: comprehensive#0
+  reason: duplicate of another finding
+- file: em-workflow/hooks/tests/destructive-guard-cases.json
+  line: 1241
+  run_id: spec#0
+  reason: duplicate of another finding
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 3
+  applied_total: 6
+  termination: loop-cap
+residual_critical_high: 3
+rework_required: true
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-destructive-guard-heredoc-literal-20261111T132537Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
