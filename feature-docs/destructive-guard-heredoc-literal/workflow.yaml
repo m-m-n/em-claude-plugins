@@ -156,6 +156,16 @@ tasks:
     branch: em-workflow/destructive-guard-heredoc-literal/task0001
 review:
   status: pending
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary:
+    - perspective: performance
+      reason: フックの実行経路に heredoc 本文の字句解析が加わり、NFR2 の時間予算を満たすかを見る必要がある
+    cross_validation: true
 requirements:
   FR1:
     title: Python 宛ての heredoc 本文の中の閉じた通常文字列リテラルを読まない
