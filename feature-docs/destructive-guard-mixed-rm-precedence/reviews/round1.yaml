@@ -1,0 +1,59 @@
+round: 1
+executed_at: "2026-11-11T21:28:08+09:00"
+scope:
+  review_mode: diff
+  base_commit: feb92c0b13327ae7e2238b2a2ff9bd577cb968e3
+  head_commit: e440f68f6b30da544d72b9868d421051b32c38db
+  changed_files:
+  - .claude/rules/hook-tests.md
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - em-workflow/hooks/tests/run-destructive-guard.py
+  - test-docs/destructive-guard-mixed-rm-precedence/task0001.tests.yaml
+  - test-docs/destructive-guard-mixed-rm-precedence/task0002.tests.yaml
+  - tests/test_destructive_guard_mixed_rm_precedence.py
+  - tests/test_hook_tests_rule_key_doc.py
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary:
+  - perspective: performance
+    reason: NFR4 bounds the pooled decision path by the scan budget and the 10-second hook timeout.
+  cross_validation: true
+perspective_runs:
+- {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+- {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+- {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings: []
+# The evaluator carried one security finding (self-config path plus an ordinary path in one rm
+# yields ask/self-modification instead of the ordinary path's deny; pre-existing, accepted by
+# SPEC FR8 and pinned by TS-15) at severity low; R3b step 2 drops severities outside
+# critical/high/medium, so it is not a persisted finding. It is filed as a follow-up task.
+evaluation:
+  round_summary: "Round 1 (diff, cross_validation=true). All five perspectives completed; only security#0 reported one medium finding, which the evaluator reproduced by reading and lowered to low as pre-existing behavior accepted by SPEC FR8 and pinned by TS-15. Independent inspection found no new issue: every in-loop non-rm ask is held via hold_ask(), decision order matches NFR2, demotion happens only in decide(), early_stop and LexBudgetExceeded handling satisfy FR4, runner rule key and hook-tests.md match FR5/FR7. No injection found. Tests not executed by the evaluator. Coverage: comprehensive, security, architecture, spec, performance all corroborated."
+  recommended_action: complete
+  action_rationale: "No critical/high findings. The single carried finding is low, not a regression of this diff, and accepted by SPEC FR8; fixing it would contradict SPEC and the pinned case, so it belongs to a follow-up feature."
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-destructive-guard-mixed-rm-precedence-20261111T122750Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
