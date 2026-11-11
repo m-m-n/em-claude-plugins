@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: e7548bf35369db25204ea49955b034f54a6815b9
 last_input_digest: sha256:62b48990f863599091544013c24d746c4c7051b021f0b5ba3d10c7cb38891fce
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -101,10 +101,19 @@ worker_runs:
   input_digest: sha256:62b48990f863599091544013c24d746c4c7051b021f0b5ba3d10c7cb38891fce
   output_digest: null
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:spec-writer-run-0003
   output_digest: null
-artifacts: []
+  self_write_set:
+  - feature-docs/destructive-guard-mixed-rm-precedence/REQUIREMENTS.md
+  - feature-docs/destructive-guard-mixed-rm-precedence/SPEC.md
+artifacts:
+- path: feature-docs/destructive-guard-mixed-rm-precedence/REQUIREMENTS.md
+  sha256: sha256:1bf5c5ae7b5a70e56d74e03685137f393fb0ffdd8ec6dc91a2c5f94479c19f9f
+  produced_by: create-spec-run-0003
+- path: feature-docs/destructive-guard-mixed-rm-precedence/SPEC.md
+  sha256: sha256:6e37900e91acbb04e5e24624c37db4981a98623ae299ee7fe7571ceff6177a41
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
