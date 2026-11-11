@@ -39,3 +39,13 @@ records:
     bound set に security 指摘を含むため batch 緩和ルートで Codex 相談に合流; classifier: codex (1 turn, harness codex);
     verdict: spec_gap; evidence: FR2, FR7, AC-6, TS-9, TS-10; Claude も同意（print 形の変更前判定は allow を実測、FR2/FR7
     が判定維持を要求）; opus_escalation: false; classification 記録 1 件目'
+- question_id: create-plan.planner-open-items.fr9-expansion-words
+  packet_id: null
+  answered_at: '2026-11-11T23:20:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - stop-for-spec-change
+  freeform: null
+  normalized_answer: 計画（create-plan-p0002）を適用せずに停止し、FR9 (3) の改訂を人の判断に委ねる
+  resolution_note: 'gate: create-plan planner open items (unlisted, orchestrator-raised); 論点: パス名展開・波括弧展開でしか状態変更や差し替えの組み込みにならないコマンド語（{declare,-i} x、decl?re -i x、builtin {hash,-p,/bin/bash,python3}）が FR9 (3) の外; options: A 計画どおり適用し別タスク起票 / B1 FR9 (3) を広く解釈する仮定で再計画 / B2 適用せず停止し SPEC 改訂へ; chosen: B2; codex_consulted: true (2 回); opus_escalation: false; 要点: Codex が {declare,-i} x と配列添字の組み合わせで変更前 deny が現状 allow になる検出漏れを確認、波括弧展開は一致ファイル不要で hash による Python 名の差し替えも成立、FR9 (3) の括弧書きは列挙で assume で広げる根拠が弱い、review の rework 上限は消費済みで A では後段で拾えない; 計画成果物は破棄し、検証を通った写しはプロジェクトの tmp に保存'
