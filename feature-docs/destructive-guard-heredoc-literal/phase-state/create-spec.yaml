@@ -1,7 +1,7 @@
 schema_version: 1
 feature: destructive-guard-heredoc-literal
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 76f1024e2bd89174cf7c602a5b6f63c9f3be5f12
 last_input_digest: sha256:a346abaac6c9b6756af7664c4f5bae796a2a752b6f0212e3241c51f8f992d257
