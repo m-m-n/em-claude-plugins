@@ -1,0 +1,65 @@
+schema_version: 1
+feature: destructive-guard-mixed-rm-precedence
+records:
+- gate_id: create-spec.requirement-clarification
+  question_id: create-spec.reverse-order
+  answered_at: '2026-11-11T20:08:19+09:00'
+  source: codex
+  selected_option_ids:
+  - A
+  resolution_note: 'Options: (A) both orders deny/rm-recursive by deferring non-rm
+    asks; (B) rm-first order only. Chosen A (Codex consulted; Opus escalation not
+    run). Key points: B leaves the deny hidden by merely swapping segment order; existing
+    D6 cases already let a later rm deny beat an earlier rm ask.'
+- gate_id: create-spec.requirement-clarification
+  question_id: create-spec.deny-vs-deny
+  answered_at: '2026-11-11T20:08:19+09:00'
+  source: codex
+  selected_option_ids:
+  - A
+  resolution_note: 'Options: (A) keep current first-firing non-rm deny; (B) pool all
+    and pick a deterministic winner. Chosen A (Codex consulted; Opus escalation not
+    run). Key points: outcome is already deny; no need to re-rank deny reasons.'
+- gate_id: create-spec.requirement-clarification
+  question_id: create-spec.ask-tiebreak
+  answered_at: '2026-11-11T20:08:19+09:00'
+  source: codex
+  selected_option_ids:
+  - A
+  resolution_note: 'Options: (A) keep current reason IDs when no deny; (B) change.
+    Chosen A (Codex consulted; Opus escalation not run). Key points: statements()
+    order differs from source order, so changing selection would shift reasons without
+    benefit.'
+- gate_id: create-spec.requirement-clarification
+  question_id: create-spec.midscan-ask
+  answered_at: '2026-11-11T20:08:19+09:00'
+  source: codex
+  selected_option_ids:
+  - A
+  resolution_note: 'Options: (A) scan/lex-budget asks also yield to a pooled rm deny;
+    (B) leave. Chosen A (Codex consulted; Opus escalation not run). Key points: these
+    asks exit inside statements()/_judge_under and skip the pooled rm decision; unclosed-subscript
+    asks already prefer pooled rm deny.'
+- gate_id: create-spec.requirement-clarification
+  question_id: create-spec.rule-key
+  answered_at: '2026-11-11T20:08:19+09:00'
+  source: codex
+  selected_option_ids:
+  - A
+  resolution_note: 'Options: (A) optional "rule" key in the 4th-element case object;
+    (B) separate test file. Chosen A (Codex consulted; Opus escalation not run). Key
+    points: verdict() already returns the reason; one table keeps cwd/batch/rule together.'
+- gate_id: create-spec.requirement-clarification
+  question_id: create-spec.same-statement-self-modification
+  answered_at: '2026-11-11T20:08:19+09:00'
+  source: codex
+  selected_option_ids:
+  - B
+  resolution_note: 'Options: (A) flip existing case rm -rf ~/.claude/skills/foo to
+    deny; (B) same-statement self-modification ask on the rm own protected target
+    keeps precedence over that statement rm decision, strongest-wins across statements
+    only; (C) other. Chosen B (Codex consulted; Opus escalation not run). Key points:
+    A rewrites an existing case; check_self_modification runs before check_rm in the
+    same statement; "same statement" = one yield of statements() in main, not string/line
+    equality; a single rm listing both a protected path and another deny target stays
+    ask.'
