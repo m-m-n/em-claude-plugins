@@ -179,6 +179,10 @@ tasks:
 review:
   status: pending
   rounds_completed: 0
+  plan:
+    floor: [comprehensive, security, architecture, spec]
+    discretionary: []
+    cross_validation: true
 requirements:
   FR1:
     title: The SPEC-change transition also returns verify to pending
