@@ -101,7 +101,7 @@ workflow:
   failed_items: []
   completed_at_commit: f72e40794875f88a8df56ab387e83f1ab3ee1655
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: SPEC-change transition returns verify to pending
