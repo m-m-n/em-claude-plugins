@@ -136,7 +136,8 @@ tasks:
     - NFR4
     - NFR5
     - NFR6
-    status: pending
+    status: in_progress
+    branch: em-workflow/destructive-guard-mixed-rm-precedence/task0001
   task0002:
     title: Describe the rule key and the mixed-case guidance in the hook-tests rule
     plan: tasks/task0002.md
@@ -149,7 +150,8 @@ tasks:
     complexity: low
     requirements:
     - FR7
-    status: pending
+    status: in_progress
+    branch: em-workflow/destructive-guard-mixed-rm-precedence/task0002
 review:
   status: pending
   rounds_completed: 0
