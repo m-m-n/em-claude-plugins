@@ -1,5 +1,5 @@
 feature: destructive-guard-mixed-rm-precedence
-collected_at: "2026-11-11T21:50:00+09:00"
+collected_at: "2026-11-11T21:42:00+09:00"
 session_ids: [01a1caa0-e594-755d-ac02-5359a6560406.jsonl]
 signals:
   review_critical_high: []
