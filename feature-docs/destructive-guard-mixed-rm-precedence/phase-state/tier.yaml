@@ -1,0 +1,65 @@
+schema_version: 2
+feature: destructive-guard-mixed-rm-precedence
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.58
+    confidence: 0.57
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.43
+      '2': 0.57
+      '3': 0.0
+  observed_at: '2026-11-11T19:52:34+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.54
+    confidence: 0.53
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.46
+      '2': 0.53
+      '3': 0.01
+  observed_at: '2026-11-11T19:55:45+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/run-destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  changed_lines_approx: 0
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  work_still_required_evidence: 現行ツリーで再現した。CLAUDE_BATCH 未設定では、rm -rf /home/user/valuable
+    単独は deny / rm-recursive だった。後ろに指定の5コマンドを接続すると、それぞれ ask / git-amend、chmod-broad、terraform、kubectl-destructive、cloud-iam
+    になった。順序を逆にした5形も同じ非rm理由のaskだった。CLAUDE_BATCH=1では先行rmの5形がdenyになったが、理由は非rm側だった。check_rmは判定を返すだけで、main:9498で集約する前に非rmのcheckがdecideへ到達して走査を終了する。既存D6の3ケースは通ったが、指定5コマンドとrmを混在させたケースはなく、実行器のjudgeは判定段だけを比較し理由IDを検証していない。全件実行は一時ディレクトリを作成するため実施していない。変更行数0は今回の実変更数であり、修正量の見積りではない。追加10ケースは指定5形の両順序に対応する。呼出元数13は調査対象7関数を直接呼ぶ関数の実測数を示す。
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 10
+  body_change_kind: new_logic
+  change_containment: single_module
+  caller_and_dependency_count: 13
+  changes_external_contract: false
+  changes_behavior: true
+decided_at: '2026-11-11T19:55:56+09:00'
