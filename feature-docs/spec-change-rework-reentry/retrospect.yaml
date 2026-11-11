@@ -1,0 +1,31 @@
+feature: spec-change-rework-reentry
+collected_at: "2026-11-11T09:33:49+09:00"
+session_ids: [01a1c805-c466-7132-9ade-76d2c6769714.jsonl]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "The final description_plus_code read put most weight on bucket 1 (rule addition with test addition, 0.77) with bucket 2 at 0.23; the evaluator selected full."
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.28, confidence: 0.71}
+        observed_at: "2026-11-11T00:04:16+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.23, confidence: 0.77}
+        observed_at: "2026-11-11T00:04:16+09:00"
+    pre_survey_estimate:
+      changed_lines_approx: 120
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      change_containment: multiple_modules
+      changes_external_contract: false
+      changes_behavior: true
+      work_still_required: true
+follow_up_drafts: []
+lessons_candidates:
+  - "Review round 1 reported 3 medium findings; the evaluator withdrew all 3 as false positives or out of SPEC scope. One low finding (tests/test_batch_policies.py:134, rework.spec-change exclusion covers all of verify item 6 rather than the single FR6 sentence) was dropped by the severity gate."
