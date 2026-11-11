@@ -63,3 +63,13 @@ records:
     same statement; "same statement" = one yield of statements() in main, not string/line
     equality; a single rm listing both a protected path and another deny target stays
     ask.'
+- gate_id: create-spec.command-approval
+  question_id: create-spec.command-approval
+  answered_at: '2026-11-11T20:14:17+09:00'
+  source: policy
+  selected_option_ids:
+  - auto_record
+  resolution_note: 'All workflow.yaml commands were already approved; nothing newly
+    recorded. Commands: "python3 em-workflow/scripts/check-plugin-invariants.py ."
+    (build_command), "python3 em-workflow/hooks/tests/run-destructive-guard.py &&
+    python3 -m unittest discover -s tests" (test_command).'

@@ -1,0 +1,219 @@
+schema_version: 1
+feature: destructive-guard-mixed-rm-precedence
+created: '2026-11-11'
+base_branch: main
+goal: |
+  # destructive-guard: D6 の遅延発火で後続セグメントの非 rm ask が先行する rm deny を飲み込む
+
+  ## 現象
+  `destructive-guard.py` の D6（rm 判定をプールしてループ後に `strongest_rm_decision()` で 1 度だけ発火させる仕組み）により、後続セグメントの非 rm の `ask` が、先行セグメントの rm の `deny` を飲み込む。
+
+  `check_rm()` だけが発火を遅延する一方、`check_git` / `check_external` / `check_permissions` / `check_file_destruction` は従来どおりループ内で `decide()` → `sys.exit(0)` するため、プールされた rm の deny が発火する前にプロセスが終わる。
+
+  `CLAUDE_BATCH` 未設定での実測:
+
+  | コマンド列 | 以前 | 現在 |
+  | --- | --- | --- |
+  | rm -r 系の deny 対象 `;` git commit --amend | deny | ask (git-amend) |
+  | rm -r 系の deny 対象 `;` chmod -R 777 /etc | deny | ask (chmod-broad) |
+  | rm -r 系の deny 対象 `&&` terraform destroy | deny | ask (terraform) |
+  | rm -r 系の deny 対象 `;` kubectl delete pod x | deny | ask (kubectl-destructive) |
+  | rm -r 系の deny 対象 `;` gcloud projects add-iam-policy-binding | deny | ask (cloud-iam) |
+
+  同じ露出を持つ他の非 rm ask 源: git-worktree-force-remove、terraform destroy、kubectl delete/drain/cordon、chmod -R 777、sed -i archive-overwrite、gcloud IAM bindings。
+
+  ## 再現手順
+  1. main を用意する
+  2. `CLAUDE_BATCH` を未設定にする
+  3. 「単独なら deny になる再帰削除の対象」に続けて `; git commit --amend` を付けた 1 本のコマンド文字列を `em-workflow/hooks/destructive-guard.py` に渡す
+  4. `permissionDecision` が `ask`、理由が `git-amend` になる（単独なら `deny` / `rm-recursive`）
+
+  ## 期待する挙動
+  複合コマンドのどこかに deny 相当の再帰削除があるなら、セグメントの順序や他の check の有無に関わらず、最も強い段とその理由が発火する。
+
+  ## 完了の定義
+  - 再現手順で現象が起きない（上表の 5 形が deny になり、理由が再帰削除側になる）
+  - 再発を検出するテストがある（「rm の deny 対象 ; 非 rm の ask コマンド」と、セグメント順序を逆にした形の両方をケース表に追加し、判定段と理由 ID を固定する）
+  - `python3 em-workflow/hooks/tests/run-destructive-guard.py` が全件通る
+
+  ## 該当箇所
+  `em-workflow/hooks/destructive-guard.py` の `strongest_rm_decision()` の発火点、非 rm check のループ内 exit、`check_git`。発火点直前のコメントは「先行する非 rm の deny が先に exit する」場合しか説明しておらず、このケースを説明していない。
+
+  修正の方向: ask/deny を出しうるすべての check の (判定段, 規則, 文言) を 1 つのプールに集め、ループ後に最強段を 1 度だけ発火させる。それが大きすぎるなら、少なくとも非 rm の check が exit する前に収集済みの rm 判定と段を比較し、強い方を発火させる。
+
+  ## 実害・発生条件
+  対話では deny が ask に落ちてゲートが弱まる。`CLAUDE_BATCH` 下では ask が deny に降格されるため判定段は一致するが、発火する理由は依然 git-amend / chmod-broad などであり、再帰削除の対象とその書き換え案が、無人エージェントが自己修正のために読む判定文から消える。
+
+  非対称は順序依存で、非 rm を先に置いた形は以前も ask のため退行しない。ケース表の D6 ケースはすべて rm + rm であり、rm と非 rm を混ぜたケースが 1 件も無いため、スイートでは検出できない。
+
+  ## 補足
+  review で検出された high finding 2 件（同一欠陥）。D6 以前は最初の rm セグメントで deny してから 2 つ目のセグメントに到達しなかったため、D6 が持ち込んだ退行。
+parent_branch: em-workflow/destructive-guard-mixed-rm-precedence/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.43
+      '2': 0.57
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.46
+      '2': 0.53
+      '3': 0.01
+  at: '2026-11-11T19:55:56+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: python3 em-workflow/scripts/check-plugin-invariants.py .
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 29a516c9cfb6275260c8936ffb08ad13aef1e533
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: Python hook and test-runner changes only; no user interface.
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: 後ろの rm 以外の ask より、先に集めた rm の deny を優先する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: 順序を逆にしても同じ判定にする
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: 優先を決めてから降格する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: 走査の途中で出る ask も、集めた rm の deny には勝たない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: ケースの 4 要素目に理由 ID を固定するキーを足す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: 退行を検出するケースを足す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: コメントとドキュメントを今の制御の流れに合わせる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: 同じ文の self-modification は、その文の rm 判定より優先する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 検出力を下げない（既存ケースを消さず書き換えない）
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: deny の無いコマンドの判定段と理由 ID を変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: 強くなる方向の変化だけを許す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: scan budget と GUARD_TIMEOUT_SECONDS（10 秒）の中に収まる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: 判定はコマンド文字列だけで決まる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR6:
+    title: plugin.json / marketplace.json の version を触らない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
