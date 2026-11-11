@@ -1,0 +1,144 @@
+task_id: task0003
+baseline_failures: []          # python3 -m unittest discover -s tests before any edit: Ran 15802 tests, OK (skipped=1)
+final_failures: []             # full suite re-run after the implementation and after this record was written
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_spec_change_implement_reentry.TestAC1NamesTheRoute.test_step_i0_names_four_routes_and_does_not_abort_on_the_new_one
+      - tests.test_spec_change_implement_reentry.TestAC1NegativeProofs.test_four_routes_without_the_no_abort_statement_is_rejected
+      - tests.test_spec_change_implement_reentry.TestAC1NegativeProofs.test_definition_without_the_section_10_citation_is_rejected
+      - tests.test_failed_kind_resume_reentry.TestAC1ThreeEntryRoutes.test_names_three_entry_routes
+    red_confirmed: true
+    red_reason: >-
+      The new module run against the unedited implement-phase.md raised
+      "AC-1: missing statement: Step I.0 recognises four entry routes into
+      `implement: pending` ..." in test_step_i0_names_four_routes_and_does_not_abort_on_the_new_one.
+      The updated test_names_three_entry_routes (opening constant now naming
+      four routes) also failed against the unedited document (document edit
+      stashed, module re-run, edit restored). The two TestAC1NegativeProofs
+      tests are detector-capability checks on synthetic text and were already
+      green before the edit.
+  AC-2:
+    tests:
+      - tests.test_spec_change_implement_reentry.TestAC2Identification.test_five_conditions_committed_facts_inputs_and_resume_are_stated
+      - tests.test_spec_change_implement_reentry.TestAC2Identification.test_section_10_is_cited_for_the_definition_not_restated
+      - tests.test_spec_change_implement_reentry.TestAC2Identification.test_record_fields_are_cited_to_phase_state_not_defined
+      - tests.test_spec_change_implement_reentry.TestAC2NegativeProofs.test_record_fields_listed_without_the_phase_state_citation_are_rejected
+      - tests.test_spec_change_implement_reentry.TestAC2NegativeProofs.test_identification_without_the_inputs_statement_is_rejected
+      - tests.test_spec_change_implement_reentry.TestAC2NegativeProofs.test_identification_without_the_tier_upgrade_evidence_is_rejected
+      - tests.test_spec_change_implement_reentry.TestAC2NegativeProofs.test_identification_without_the_non_empty_all_merged_condition_is_rejected
+    red_confirmed: true
+    red_reason: >-
+      Against the unedited document test_five_conditions_committed_facts_inputs_and_resume_are_stated
+      raised "AC-2: missing statement: 'only when ALL of the following hold'"
+      and test_section_10_is_cited_for_the_definition_not_restated raised
+      "missing text: '`references/rework-task-synthesis.md` Section 10'". The
+      tier-upgrade-evidence and non-empty/all-merged mutation proofs failed
+      too, because the statements they remove did not exist yet. The
+      citation-lacking and inputs-lacking synthetic samples are
+      detector-capability checks and were already green;
+      test_record_fields_are_cited_to_phase_state_not_defined asserts an
+      absence that already held before the edit.
+  AC-3:
+    tests:
+      - tests.test_spec_change_implement_reentry.TestAC3ZeroTaskPath.test_zero_task_route_runs_i1_skips_i2_and_completes_through_i3
+      - tests.test_spec_change_implement_reentry.TestAC3NegativeProofs.test_route_that_still_launches_through_step_i2_is_rejected
+      - tests.test_spec_change_implement_reentry.TestAC3NegativeProofs.test_zero_task_path_without_the_new_task_branch_is_rejected
+    red_confirmed: true
+    red_reason: >-
+      Against the unedited document the matcher raised "AC-3: missing
+      statement: 'With no `pending` task, Step I.1 runs as usual (the
+      gitignore guard, `base_commit` preserved, the `implement` ->
+      `in_progress` commit)'", and the new-task-branch mutation proof failed
+      because that sentence did not exist yet. The launches-through-Step-I.2
+      synthetic sample is a detector-capability check and was already green.
+  AC-4:
+    tests:
+      - tests.test_spec_change_implement_reentry.TestAC4AbortRemains.test_abort_remains_for_every_other_non_fresh_entry_in_order
+      - tests.test_spec_change_implement_reentry.TestAC4NegativeProofs.test_synthetic_step_i0_naming_the_route_without_an_abort_is_rejected
+      - tests.test_spec_change_implement_reentry.TestAC4NegativeProofs.test_abort_without_the_not_a_spec_change_carve_out_is_rejected
+      - tests.test_spec_change_implement_reentry.TestAC4NegativeProofs.test_abort_placed_before_the_spec_change_paragraph_is_rejected
+      - tests.test_spec_change_implement_reentry.TestAC4NegativeProofs.test_abort_placed_after_the_step_a6_paragraph_is_rejected
+      - tests.test_failed_kind_resume_reentry.TestAC1ThreeEntryRoutes.test_abort_covers_neither_condition
+      - tests.test_write_rejection_parent_docs.TestAC7Restart.test_restart_sentence_follows_the_abort_text_of_step_i0
+    red_confirmed: true
+    red_reason: >-
+      Against the unedited document the matcher raised "AC-4: missing
+      statement: 'A non-fresh entry that is not a SPEC-change re-entry and
+      satisfies neither the rework nor the auto-resume condition'", and the
+      two ordering mutation proofs failed because the markers did not exist
+      yet. The updated test_abort_covers_neither_condition also failed against
+      the unedited document. test_restart_sentence_follows_the_abort_text_of_step_i0
+      keeps passing on both texts (it pins "with nothing to launch" before the
+      Step A.6 citation) and the two other negative-proof samples are
+      detector-capability checks that were already green.
+  AC-5:
+    tests:
+      - tests.test_spec_change_implement_reentry.TestAC5CommitValueShapeCheck.test_commit_values_are_shape_checked_before_any_git_command
+      - tests.test_spec_change_implement_reentry.TestAC5NegativeProofs.test_ancestry_check_named_without_any_shape_check_is_rejected
+      - tests.test_spec_change_implement_reentry.TestAC5NegativeProofs.test_shape_check_without_the_fail_closed_consequence_is_rejected
+      - tests.test_spec_change_implement_reentry.TestAC5NegativeProofs.test_sanitising_instead_of_rejecting_is_rejected
+    red_confirmed: true
+    red_reason: >-
+      Against the unedited document the matcher raised "AC-5: missing
+      statement: 'before a commit value read from `workflow.yaml` or from the
+      `spec_change` record appears in any git command, it is checked against
+      the shape of a full hexadecimal commit object id'". The three
+      TestAC5NegativeProofs samples (ancestry check without a shape check,
+      shape check without the fail-closed consequence, sanitising instead of
+      rejecting) are detector-capability checks and were already green.
+  AC-6:
+    tests:
+      - tests.test_spec_change_implement_reentry.TestAC6UnchangedParts.test_unchanged_sentence_and_paragraphs_are_intact
+      - tests.test_spec_change_implement_reentry.TestAC6UnchangedParts.test_no_fenced_command_block_is_added_to_step_i0
+      - tests.test_spec_change_implement_reentry.TestAC6UnchangedParts.test_document_holds_no_notion_url_and_no_home_path
+      - tests.test_spec_change_implement_reentry.TestAC6UnchangedParts.test_pre_change_constant_is_what_the_kept_parts_are_cut_from
+      - tests.test_spec_change_implement_reentry.TestAC6NegativeProofs.test_reflowed_rework_paragraph_is_rejected
+      - tests.test_spec_change_implement_reentry.TestAC6NegativeProofs.test_dropped_step_a6_paragraph_is_rejected
+      - tests.test_spec_change_implement_reentry.TestAC6NegativeProofs.test_a_fenced_block_in_step_i0_is_rejected
+      - tests.test_spec_change_implement_reentry.TestAC6NegativeProofs.test_pre_change_item_5_satisfies_the_unchanged_parts_matcher
+      - tests.test_failed_kind_resume_reentry.TestAC1ThreeEntryRoutes.test_fresh_first_pass_route_unchanged
+      - tests.test_failed_kind_resume_reentry.TestAC1ThreeEntryRoutes.test_rework_route_condition_unchanged
+      - tests.test_failed_kind_resume_reentry.TestAC1ThreeEntryRoutes.test_auto_resume_route_cited_to_develop_skill_not_restated
+      - tests.test_write_rejection_parent_docs.TestAC7Restart.test_step_i0_treats_the_failed_entry_as_the_rework_route
+      - tests.test_recycled_task_id_consistency.TestProtectedRawLiteralsSurvive.test_step_i0_pending_literal_survives
+    red_confirmed: false
+    red_reason: >-
+      This criterion states what stays unchanged, so no executable red exists:
+      the behaviour pre-existed. The module's retention checks were green
+      against the unedited document (they were absent from the 11 failures
+      of the red run). Existing tests that pin the same kept parts
+      (test_fresh_first_pass_route_unchanged, test_rework_route_condition_unchanged,
+      test_auto_resume_route_cited_to_develop_skill_not_restated,
+      test_step_i0_treats_the_failed_entry_as_the_rework_route and
+      test_step_i0_pending_literal_survives) detect a change to them; no red
+      state occurred for this change. The TestAC6NegativeProofs samples show
+      the matchers reject a reflowed paragraph, a dropped Step A.6 paragraph
+      and an added fenced block.
+  AC-7:
+    tests:
+      - tests.test_spec_change_implement_reentry.TestAC7PreChangeItem5IsRejected.test_ac1_matcher_rejects_the_pre_change_item_5
+      - tests.test_spec_change_implement_reentry.TestAC7PreChangeItem5IsRejected.test_ac2_matcher_rejects_the_pre_change_item_5
+      - tests.test_spec_change_implement_reentry.TestAC7PreChangeItem5IsRejected.test_ac3_matcher_rejects_the_pre_change_item_5
+      - tests.test_spec_change_implement_reentry.TestAC7PreChangeItem5IsRejected.test_ac4_matcher_rejects_the_pre_change_item_5
+      - tests.test_spec_change_implement_reentry.TestAC7PreChangeItem5IsRejected.test_ac5_matcher_rejects_the_pre_change_item_5
+      - tests.test_failed_kind_resume_reentry.TestAC1ThreeEntryRoutes.test_names_three_entry_routes
+      - tests.test_failed_kind_resume_reentry.TestAC1ThreeEntryRoutes.test_abort_covers_neither_condition
+      - tests.test_failed_kind_resume_reentry.TestAC1ThreeEntryRoutes.test_negative_proof_pre_spec_change_wording_fails_opening_and_abort
+      - tests.test_write_rejection_parent_docs.TestAC6ExistingHandlingKept.test_step_i0_opening_and_resume_guard_bullets_are_retained
+    red_confirmed: true
+    red_reason: >-
+      Run against the unedited document the new module failed 11 tests, and
+      with the document edit stashed the updated existing pins failed 4 tests
+      (test_names_three_entry_routes, test_abort_covers_neither_condition,
+      test_negative_proof_pre_spec_change_wording_fails_opening_and_abort in
+      tests.test_failed_kind_resume_reentry, and
+      test_step_i0_opening_and_resume_guard_bullets_are_retained in
+      tests.test_write_rejection_parent_docs). The five
+      TestAC7PreChangeItem5IsRejected tests check the verbatim pre-change
+      constant against the matchers and were already green before the edit;
+      they keep the red proof inside the suite. The outcome that
+      `python3 -m unittest discover -s tests` and
+      `python3 em-workflow/scripts/check-plugin-invariants.py .` both pass is
+      a command result, not a test that can be made to fail first, and is
+      recorded in final_failures and the report.
