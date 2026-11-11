@@ -18,11 +18,16 @@ python3 em-workflow/hooks/tests/run-destructive-guard.py \
 
 - ケースは `em-workflow/hooks/tests/destructive-guard-cases.json` に
   `[期待する判定, ラベル, コマンド]` の 3 要素で並べる。
-- 作業ディレクトリや `CLAUDE_BATCH` で判定が変わるケースだけ、4 要素目に
-  `{"cwd": "<絶対パス>", "batch": true}` を足す。どちらのキーも省略できる。
+- 作業ディレクトリ、`CLAUDE_BATCH`、期待する理由 ID のどれかを決めたいケースだけ、4 要素目に
+  `{"cwd": "<絶対パス>", "batch": true, "rule": "<理由 ID>"}` を足す。3 つのキーはどれも省略できる。
   `cwd` はペイロードの作業ディレクトリ、
   `batch` はそのケースだけ `CLAUDE_BATCH` を立てる。4 要素目が無いケースは作業ディレクトリを
   渡さず、`CLAUDE_BATCH` を外して判定する。
+    - `rule` は空でない文字列。期待する理由 ID を書き、permissionDecisionReason の先頭
+      `[destructive-guard/<rule>]` の `<rule>` と比べる。
+    - 判定と理由 ID のどちらかが違うケースは失敗する。FAIL の行には得られた理由 ID も出る。
+    - `rule` が無いケースは、これまでどおり判定だけで合否を決める。
+    - 知らないキー、文字列でない `rule`、空の `rule` があると、malformed case としてランナーが実行を止める。
 - 作業ディレクトリがディスク上の実体を要るケース（`gh pr merge` の正規形の許可は、
   integration worktree の登録をディスクで確かめる）は、`cwd` に `{merge_fixture}` を書く。
   ランナーが実行ごとに 1 回、一時ディレクトリに git リポジトリを作り、`{merge_fixture}` を
@@ -36,6 +41,11 @@ python3 em-workflow/hooks/tests/run-destructive-guard.py \
       同じ形だが worktree として登録されていない通常のディレクトリ
 - `{merge_fixture}` を使わない `cwd` はそのまま渡す。実在しなくてよい。
   ケースにマシン固有のパスやホームディレクトリのパスを書かない。
+- 再帰削除と rm 以外の check を組み合わせたケースには `rule` を付け、判定と理由 ID の両方を固定する。
+  そのようなケースが固定する優先順位は次のとおり。
+    - 再帰削除の `deny` は、他の check の `ask` に、順序に関係なく勝つ。
+    - 同じ文の rm の削除対象が保護された自己設定パスのときは、代わりに self-modification の `ask` が残る。
+    - `CLAUDE_BATCH` による降格は、優先順位を決めた後に行う。
 - `em-workflow/hooks/merge_pr_allow.py`（`gh pr merge` の正規形の許可を決める、
   `destructive-guard.py` の隣のモジュール）を変更したときも、同じテストを走らせる。
 - 誤爆（本来 allow なのに ask / deny になった）を見つけたら、直す前にケースを足す。
