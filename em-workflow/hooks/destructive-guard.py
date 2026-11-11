@@ -5251,7 +5251,7 @@ def _python_program_redirects(redirects):
         if re.fullmatch(r"[0-9]+", redirects[i]):
             if not getattr(redirects[i], "fd_prefix", False):
                 return False
-            fd = int(redirects[i])
+            fd = 0 if not redirects[i].strip("0") else 1
             i += 1
         if i + 1 >= n or not getattr(redirects[i], "is_operator", False):
             return False
@@ -5912,6 +5912,10 @@ def _is_python_program_chain(chain):
         if level.is_assignment_only:
             continue
         if level.word is None or level.word not in DATA_COMMANDS:
+            return False
+        # printf -v and read evaluate an argument as a variable name / array
+        # subscript, re-running any $( ) in it: never a plain data host here.
+        if level.word in ("printf", "read"):
             return False
     return True
 
