@@ -154,6 +154,29 @@ tasks:
     - NFR4
     status: merged
     branch: em-workflow/destructive-guard-heredoc-literal/task0001
+  task0002:
+    title: Stop literal masking on name- or state-changing statements read through
+      nested builtin / command
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    - auth
+    complexity: high
+    requirements:
+    - FR7
+    - FR8
+    - FR9
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    status: pending
 review:
   status: pending
   rounds_completed: 1
@@ -259,10 +282,12 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-11
     - TS-12
     - TS-19
+    - TS-31
   FR8:
     title: テストケース
     status: ok
@@ -270,6 +295,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-1
     - TS-2
@@ -296,13 +322,46 @@ requirements:
     - TS-25
     - TS-26
     - TS-27
+    - TS-28
+    - TS-29
+    - TS-30
+    - TS-31
+    - TS-33
+    - TS-34
+    - TS-35
+    - TS-36
+    - TS-37
+    - TS-38
+    - TS-39
+    - TS-40
+    - TS-41
+    - TS-42
+    - TS-43
+    - TS-44
   FR9:
     title: 名前や状態を変えうる文があれば読まない扱いを止める
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS-28
+    - TS-29
+    - TS-30
+    - TS-33
+    - TS-34
+    - TS-35
+    - TS-36
+    - TS-37
+    - TS-38
+    - TS-39
+    - TS-40
+    - TS-41
+    - TS-42
+    - TS-43
+    - TS-44
+    - TS-45
   NFR1:
     title: 静的解析のみ
     status: ok
@@ -310,8 +369,10 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-24
+    - TS-45
   NFR2:
     title: 時間予算
     status: ok
@@ -319,9 +380,11 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-16
     - TS-24
+    - TS-45
   NFR3:
     title: 変更範囲
     status: ok
@@ -329,6 +392,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-23
   NFR4:
@@ -338,6 +402,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-16
     - TS-22
@@ -346,8 +411,12 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS-30
+    - TS-31
+    - TS-32
 batch:
   review_rework_count: 1
   verify_rework:

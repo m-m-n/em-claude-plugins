@@ -22,11 +22,13 @@ answers:
     selected_option_ids:
     - change-spec
     freeform: null
-    normalized_answer: SPEC を書き換える（AC-6 / TS-9 / TS-10 の print 形は変更前の判定で固定し、deny 境界は probe 形で固定）
-    resolution_note: 'gate: rework.spec-change; routed arm → classification gate; direction 2 は round1
-      の bound set に security 指摘を含むため batch 緩和ルートで Codex 相談に合流; classifier: codex (1 turn, harness codex);
-      verdict: spec_gap; evidence: FR2, FR7, AC-6, TS-9, TS-10; Claude も同意（print 形の変更前判定は allow を実測、FR2/FR7
-      が判定維持を要求）; opus_escalation: false; classification 記録 1 件目'
+    normalized_answer: SPEC を書き換える（AC-6 / TS-9 / TS-10 の print 形は変更前の判定で固定し、deny 境界は
+      probe 形で固定）
+    resolution_note: 'gate: rework.spec-change; routed arm → classification gate;
+      direction 2 は round1 の bound set に security 指摘を含むため batch 緩和ルートで Codex 相談に合流;
+      classifier: codex (1 turn, harness codex); verdict: spec_gap; evidence: FR2,
+      FR7, AC-6, TS-9, TS-10; Claude も同意（print 形の変更前判定は allow を実測、FR2/FR7 が判定維持を要求）;
+      opus_escalation: false; classification 記録 1 件目'
 worker_runs:
 - request_id: rework-run-0001
   status: needs_user_input
@@ -51,14 +53,14 @@ stale_redispatch_count: 0
 resolved_input_cache: {}
 last_error: null
 spec_change:
-  reason: SPEC AC-6 / TS-9 / TS-10 が print 形を deny と書くが、FR2 / FR7 によりこの 2 形の判定は変更前の allow のまま。AC-6 / TS-9
-    / TS-10 を書き換え、print 形は変更前の判定で固定し deny 境界は probe 形で固定する。あわせて review round 1 の残る high（状態変更の語彙の二重化、入れ子
-    builtin による整数属性検出の回避）を作り直す計画で扱う
+  reason: SPEC AC-6 / TS-9 / TS-10 が print 形を deny と書くが、FR2 / FR7 によりこの 2 形の判定は変更前の
+    allow のまま。AC-6 / TS-9 / TS-10 を書き換え、print 形は変更前の判定で固定し deny 境界は probe 形で固定する。あわせて
+    review round 1 の残る high（状態変更の語彙の二重化、入れ子 builtin による整数属性検出の回避）を作り直す計画で扱う
   origin_kind: review
   origin_id: afb35a8836e267bd
   recorded_at_commit: cd173173f4f31b833bfa911275752b505c6dcc98
   consumed: true
-  replan_authorized: true
+  replan_authorized: false
 classification:
 - classifier: codex
   verdict: spec_gap
