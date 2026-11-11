@@ -176,7 +176,8 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
+    branch: em-workflow/destructive-guard-heredoc-literal/task0002
 review:
   status: pending
   rounds_completed: 1
