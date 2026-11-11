@@ -1,11 +1,11 @@
 schema_version: 1
 feature: destructive-guard-heredoc-literal
 phase: create-spec
-status: completed
-generation: 1
-base_revision: 76f1024e2bd89174cf7c602a5b6f63c9f3be5f12
+status: dispatching
+generation: 2
+base_revision: 81b56126c
 last_input_digest: sha256:a346abaac6c9b6756af7664c4f5bae796a2a752b6f0212e3241c51f8f992d257
-active_request_id: null
+active_request_id: create-spec-run-0003
 packets: {}
 answers:
   requirement.assumption-review:
@@ -28,6 +28,9 @@ worker_runs:
   input_digest: null
   self_write_set:
   - feature-docs/destructive-guard-heredoc-literal/SPEC.md
+- request_id: create-spec-run-0003
+  status: dispatched
+  input_digest: null
 artifacts:
 - path: feature-docs/destructive-guard-heredoc-literal/SPEC.md
   sha256: sha256:9f9c9bc2587e10b9f19a33100727fbb99b561712afd50427737158ce0636e577
