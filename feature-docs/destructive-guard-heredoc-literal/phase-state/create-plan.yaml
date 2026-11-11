@@ -1,11 +1,11 @@
 schema_version: 1
 feature: destructive-guard-heredoc-literal
 phase: create-plan
-status: completed
-generation: 1
-base_revision: 9ef4bab6a9c29543eeff157aabd63e20df118ac1
-last_input_digest: sha256:ee7fd635fb4d0f1a815be3f4b963e7779a4bba3aafb56277a526da993cf6ba8b
-active_request_id: null
+status: dispatching
+generation: 2
+base_revision: 71258145072a3f0e1a5c107fa892b05559355c28
+last_input_digest: sha256:1c9510d5339bd650dfbd874dc5344157a4a157a35b37507d6f83a8f7028e6046
+active_request_id: create-plan-run-0002
 packets: {}
 answers: {}
 worker_runs:
@@ -27,6 +27,24 @@ worker_runs:
   - feature-docs/destructive-guard-heredoc-literal/THREAT-MODEL.md
   - feature-docs/destructive-guard-heredoc-literal/VERIFICATION.md
   - feature-docs/destructive-guard-heredoc-literal/tasks/task0001.md
+- request_id: create-plan-run-0002
+  status: dispatched
+  input_digest: sha256:1c9510d5339bd650dfbd874dc5344157a4a157a35b37507d6f83a8f7028e6046
+  output_digest: null
+  dispatch_digest_inputs:
+    feature-docs/destructive-guard-heredoc-literal/SPEC.md: sha256:24ef2ecd1ea424f1e0edcb0be032e04cec976eeb11c5db1a778117989e0d4f8d
+    feature-docs/destructive-guard-heredoc-literal/THREAT-MODEL.md: sha256:b5094a4d9503cb390450a2f44dfe312912591948dda7e67d3a6204f09d0ffb0f
+    feature-docs/destructive-guard-heredoc-literal/VERIFICATION.md: sha256:dc75141b822374a73b77afa4caa0b0353c0d71cd12793122e7942b30229bd647
+    feature-docs/destructive-guard-heredoc-literal/tasks/task0001.md: sha256:208ebac8e9aca30b027c0fe0f6f4673aec1df9434b99d08c32417ce69813e75f
+    feature-docs/destructive-guard-heredoc-literal/workflow.yaml: sha256:001c01ecb59d07aa06c84e62ea93d8394166848f4b6fe53d8b15577f84288711
+    plugin:references/contracts/planner-contract.md: sha256:df2bf3f0321c2627a31b878a14adb176ee7c2131638245112e5d3bb27f7a3682
+    plugin:references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    plugin:references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    plugin:references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    plugin:references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    plugin:references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
+    plugin:references/workflow-schema.md: sha256:5db914a170c0bd97886671160a2c3498127ffd83f0814bc8fb67407f4dc563ee
+    plugin:skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
 artifacts:
 - path: feature-docs/destructive-guard-heredoc-literal/THREAT-MODEL.md
   sha256: sha256:b5094a4d9503cb390450a2f44dfe312912591948dda7e67d3a6204f09d0ffb0f
