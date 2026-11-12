@@ -1,0 +1,810 @@
+round: 2
+executed_at: '2026-11-12T21:26:33+09:00'
+scope:
+  review_mode: diff
+  base_commit: 3bc92433819350a326de40721b6401ea97f53910
+  head_commit: e4a8f3971a4e745f9a236f66371cd52b84871ca9
+  changed_files:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/destructive-guard-heredoc-literal/task0001.tests.yaml
+  - test-docs/destructive-guard-heredoc-literal/task0002.tests.yaml
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary:
+  - perspective: performance
+    reason: フックの実行経路に heredoc 本文の字句解析が加わり、NFR2 の時間予算を満たすかを見る必要がある
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+  model: gpt-6-astra
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: comprehensive#loop1.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#loop1.0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+  model: gpt-6-astra
+- run_id: architecture#loop1.0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#loop1.0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: performance#loop1.0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: comprehensive#loop2.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#loop2.0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+  model: gpt-6-astra
+- run_id: architecture#loop2.0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#loop2.0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: performance#loop2.0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: comprehensive#loop3.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: skipped
+  skip_reason: harness_unavailable
+- run_id: comprehensive#loop3.1
+  perspective: comprehensive
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: security#loop3.0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+  model: gpt-6-astra
+- run_id: architecture#loop3.0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#loop3.0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: performance#loop3.0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 6817
+  title: trap の実行文字列や printf -v の間接代入で python3 の実行先を差し替えても、リテラルを読まない扱いが止まらない
+  description: '読解で再現を確認した。読まない扱いを止める判定（_masking_stop_reached() と _overrides_command_name()）は、文のコマンド語と各語の文字列しか見ない。(1) `trap ''hash -p /bin/bash python3'' DEBUG` はコマンド語が trap で、STOP_COMMAND_WORDS に無い。trap の実行文字列を文として読み直す処理もガードのどこにも無い（trap を扱う箇所が無い）。そのため、中の hash は差し替えとして検出されない。(2) `n=BASH_; n+=CMDS; printf -v "$n[python3]" /bin/bash` では、どの語にも BASH_CMDS が現れない（STOP_VARIABLE_NAMES の部分一致に掛からない）。`n+=CMDS` と printf も停止語ではない。どちらの形でも、続く `python3 -s <<''PY''` は短いオプション群の条件（c も m も含まない）を満たすので、本文のリテラルが隠されて allow になる。変更前は本文を丸ごと読んで deny だった。bash は単純コマンドの探索より前に DEBUG trap を実行し、BASH_CMDS への代入はハッシュ表に入る。そのため実際には /bin/bash が本文を実行する。THREAT-MODEL の TM-2・TM-8・TM-9 は「差し替えや状態変更の文はどこにあっても読まない扱いを止める」と主張しているが、それが成り立たない。補足: コマンドを操れる攻撃者には、SPEC A-3（os.system 経由）というもっと簡単な迂回がすでに受け入れ済み。このため実害の増分は限られる。ただし FR9 は同じ程度に作為的な形（波括弧展開やチルダのコマンド語）まで塞ぐ基準を取っているので、この基準に照らして high のままとした。'
+  suggestion: '読まない扱いを止める文に次の 2 つを加える。(a) trap: 実行文字列をシェルの文として読み直すか、trap そのものを停止語にする。(b) 名前で変数に書き込む組み込み: printf -v、read、mapfile / readarray、getopts。printf を丸ごと停止語にすると誤爆が増えるので、-v のときに限る。FR9 (2) の列挙と TM-9 の更新を伴うので、SPEC で語彙の範囲を決めてから直す。2 つの形を deny 側のケースとして足す。'
+  sources:
+  - security#0
+  confidence: 85
+  reproduction: 'tool_name=Bash の tool_input.command に「trap ''hash -p /bin/bash python3'' DEBUG
+
+    python3 -s <<''PY''
+
+    x="`git branch -D example`"
+
+    PY」を設定する。変更前は deny、変更後は allow になる。DEBUG trap が python3 の実行先を Bash に変更し、本文の命令置換が実行される。先頭行を「n=BASH_; n+=CMDS; printf -v "$n[python3]" /bin/bash」に変更しても同じ判定になる。両方とも削除命令を printf GUARD_BYPASS >&2 に置き換えた無害な実行で、GUARD_BYPASS の出力を確認した。'
+  stable_id: 01287171864299d7
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: fixed
+  resolution_reason: auto-applied loop 1
+- severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7205
+  title: Python 本文の文頭にある識別子（source、set、hash、eval など）で、リテラルを読まない扱いが止まる
+  description: 読解で確認した。Python 本文のチャンクで _masking_stop_reached() が免除するのは、静的に確定できない語だけ。停止語との照合と、statements() で OR される差し替えの読み方（7988〜7996 行）はそのまま適用される。そのため `source = "safe"`、`set([1, 2])`、`hash = hashlib.sha256()`、`eval(...)`、`local = ...`、`alias = ...` のような、Python としてありふれた文頭が停止語として読まれる。すると同じコマンドのすべての Python 本文で読まない扱いが止まり、deny に戻る。変更前（deny）より悪くはならない。しかし、機能の目的（無人 batch をここで止めない）が普通の Python 本文で効かなくなる。この挙動は SPEC どおりで、FR9 の最終段落は本文の読み直しに (3) だけを免除し、TM-10 も (1)(2) を全チャンクに適用すると定めている。直すには SPEC の判断が要る。round 1 の a27d22e16d633976（unresolved）と同じ指摘。
+  suggestion: 引用符付き区切り語の Python 本文チャンク（PY_BODY）では、読まない扱いを止める判定に FR9 (1)(2) も適用しないよう SPEC を改める。FR7 の差し替えフラグは今のまま立てる。区切り語に引用符が無い本文の置換から作ったチャンクには、引き続き全項目を適用する。`source = "safe"` や `hash = 1` の後にリテラル内のバッククォートを置いた形を allow 側のケースとして足す。
+  sources:
+  - comprehensive#0
+  confidence: 90
+  reproduction: null
+  stable_id: 12d7ee19adbd08e5
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: unresolved
+  resolution_reason: null
+- severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 5414
+  title: シェル実行に渡される Python 文字列まで隠している
+  description: 通常の文字列でも os.system の引数はシェルが実行する。再現入力では実行される git branch -D がマスクされ、基準コミットの deny が現状では allow になる
+  suggestion: Python 本文内のシェル実行先も考慮し、そこへ渡される文字列は検査対象に残す。os.system と subprocess の shell=True を回帰ケースに追加する
+  sources:
+  - comprehensive#loop1.0
+  confidence: 60
+  reproduction: null
+  stable_id: 3f8881916613c363
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+- severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7219
+  title: 展開で指定される printf -v を見落としている
+  description: 生のトークンに -v がある場合しか停止しないため、"$opt" が -v になる入力を見落とす。再現入力は BASH_CMDS の python3 を /bin/bash に変更するが、後続本文が Python としてマスクされ、基準コミットの deny が allow になる。無害な置換による実行先変更も確認した
+  suggestion: printf のオプション位置に展開があり、-v を否定できない場合はマスクを停止する。動的なオプションと宛先変数名の組み合わせを回帰ケースに追加する
+  sources:
+  - comprehensive#loop1.0
+  confidence: 75
+  reproduction: null
+  stable_id: aee47a9fde06ff10
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+- severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 6823
+  title: Python の変数名 read がマスクを停止させる
+  description: 追加された停止語は Python 本文にも適用されるため、read = 1 という通常の代入がシェルの read と判定される。再現入力は安全な文字列代入だけだが、退避した本文が再検査され、自動修正前の allow が deny になる
+  suggestion: Python 本文の変数名と、実際に評価されるシェル命令を区別する。追加した停止語を Python の変数名に使うケースを検証する
+  sources:
+  - comprehensive#loop1.0
+  confidence: 60
+  reproduction: null
+  stable_id: f7c205d76810320c
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: unresolved
+  resolution_reason: null
+- severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7219
+  title: 展開された printf -v が停止判定を回避する
+  description: 修正は展開前のトークンだけを検査するため、printf "$option" や printf $'-v' を見逃す。実行時に BASH_CMDS[python3] を /bin/bash に変更でき、Python と判定された本文が Bash で実行されても文字列が隠されたままになる。修正対象の回避経路が残っており、変更前は deny だった入力が現在も allow になる。
+  suggestion: printf のオプションを元の表記から復元し、-v の場合と展開後の値を確定できない場合にはマスキングを停止する。変数展開と ANSI-C 引用符の回帰試験を追加する。
+  sources:
+  - security#loop1.0
+  confidence: 75
+  reproduction: '次の文字列を tool_input.command に設定した Bash 用 JSON をフックの標準入力に渡す:
+
+    prefix=BASH; option=-v; printf "$option" "${prefix}_CMDS[python3]" %s /bin/bash; python3 -s <<''PY''
+
+    x="`git branch -D example`"
+
+    PY
+
+    現在の permissionDecision は allow になる。"$option" を直接 -v にすると deny になる。安全な実行確認として、git branch -D example を printf GUARD_BYPASS >&2 に置き換えた文字列だけを /bin/bash --noprofile --norc -c で実行すると、標準エラーに GUARD_BYPASS が出力され、本文内のコマンド置換が実行されたことを確認できる。$''-v'' でも同じ回避が成立する。'
+  stable_id: aee47a9fde06ff10
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+- severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 6002
+  title: 代入後の算術展開で隠されたコマンドが実行される
+  description: 通常の変数代入を安全な出力先として許可する一方、その変数を後続の算術展開で再評価する経路が停止条件に含まれていない。Python が出力した配列添字内のコマンド置換は Bash の算術評価で実行されるため、declare や eval を使わずに破壊的コマンドを通せる。変更前は deny だった入力が現在は allow になる。
+  suggestion: 後続文を含むコマンド全体で算術展開や [[ -v ]] による再評価を検出した場合は、マスキングを停止して元の本文を再検査する。代入と再評価が別の文にあるケースを追加する。
+  sources:
+  - security#loop1.0
+  confidence: 60
+  reproduction: '次の文字列を tool_input.command に設定した Bash 用 JSON をフックの標準入力に渡す:
+
+    x="$(python3 <<''PY''
+
+    print(''a[$(git branch -D example)]'')
+
+    PY
+
+    )"; echo "$((x))"
+
+    現在の permissionDecision は allow になる。Python の出力が x に保存され、後続の算術展開が配列添字内のコマンド置換を実行する。安全な確認として、git branch -D example を printf ARITH_BYPASS >&2 に置き換えた文字列だけを /bin/bash --noprofile --norc -c で実行すると、標準エラーに ARITH_BYPASS が出力される。末尾を [[ -v "$x" ]] にした場合も再現する。'
+  stable_id: aec0effc7bd0dea2
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+- severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 5370
+  title: 別名で読み込んだ実行APIが検査をすり抜ける
+  description: 実行APIの検出が os.system という表記に依存しており、from os import system や import os as o を見逃すため、実際にはシェルが実行する破壊コマンドまで文字列として隠され、allow になる
+  suggestion: import の別名と from import を考慮し、実行APIに渡す文字列を検査対象に残す
+  sources:
+  - comprehensive#loop2.0
+  confidence: 75
+  reproduction: null
+  stable_id: 4017af30877daaa0
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: fixed
+  resolution_reason: auto-applied loop 3
+- severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7223
+  title: 引数として書かれた算術・条件式の記号で誤拒否する
+  description: 引用符を除去した全トークンを検索するため、echo '[[' の通常の引数も条件式と判断され、後続のPython本文で文字列の除外が解除されて deny になる
+  suggestion: 引用の状態と構文上の位置を確認し、実際の算術展開や条件式だけを検出する
+  sources:
+  - comprehensive#loop2.0
+  confidence: 75
+  reproduction: null
+  stable_id: f0499405cd17702f
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: unresolved
+  resolution_reason: null
+- severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7256
+  title: 通常のprintf書式にあるバックスラッシュで誤拒否する
+  description: printf の書式に含まれるバックスラッシュや引用符を値が不明な証拠として扱うため、一般的な printf '%s\n' ok でも文字列の除外が停止し、後続の無害なPython本文を deny にする
+  suggestion: 元のトークンを使って値を復元し、静的に確定した書式内の記号を展開と誤認しないようにする
+  sources:
+  - comprehensive#loop2.0
+  confidence: 75
+  reproduction: null
+  stable_id: 4a02249957367896
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: fixed
+  resolution_reason: auto-applied loop 3
+- severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 6000
+  title: 外側がechoの場合も文字列の除外を拒否する
+  description: 囲んでいる文すべてに plain_assignment を要求するため、出力を表示するだけの echo も拒否され、後続にある DATA_COMMANDS の許可条件へ到達できず、Pythonの文字列だけに含まれる破壊コマンドで deny になる
+  suggestion: 単純代入の確認と、安全なデータ用コマンドの確認を分け、echo などの安全な外側の文を許可する
+  sources:
+  - comprehensive#loop2.0
+  confidence: 60
+  reproduction: null
+  stable_id: 223f8988265c6477
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: unresolved
+  resolution_reason: null
+- severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7258
+  title: printf の波括弧展開でマスク停止を回避できる
+  description: オプションを復元できなくても処理を続け、`{-v,}` を書式文字列と判断してマスクを継続する。Bash ではこれが `-v` に展開されるため、分割して組み立てた BASH_CMDS に書き込み、python3 を /bin/bash に差し替えられる。その結果、隠されたヒアドキュメント内の破壊的コマンドが実行される。指定ベースでは deny、現在は allow になることを確認した。
+  suggestion: 元の Tok を復元関数に渡し、オプション位置の語を確定できなければマスクを停止する。波括弧展開で -v を生成する回帰テストを追加する。
+  sources:
+  - security#loop2.0
+  confidence: 75
+  reproduction: '次の文字列を Bash PreToolUse の tool_input.command に渡す:
+
+    n=BASH_; n+=CMDS; printf {-v,} "${n}[python3]" %s /bin/bash
+
+    python3 <<''PY''
+
+    x="`git branch -D example`"
+
+    PY
+
+    現在の permissionDecision は allow。printf がコマンドの対応先を変更し、続く本文は Bash に渡される。破壊的コマンドを `printf REVIEW_EXECUTED >&2` に置き換えた実行では、標準エラーに REVIEW_EXECUTED が出力された。破壊的コマンド自体は実行していない。'
+  stable_id: 4a02249957367896
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: fixed
+  resolution_reason: auto-applied loop 3
+- severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7223
+  title: 配列添字による算術評価がマスク停止の対象から漏れる
+  description: 追加された検出は `$((`、`$[`、`((`、`[[` に限定され、配列添字や部分文字列展開の算術評価を検出しない。Python の出力を通常の変数 x に保存してから `y[x]=0` とすると、Bash が x の値を再評価し、隠されたコマンド置換を実行する。小文字を含む変数への代入に限定する修正でも、この後続処理は防げない。指定ベースでは deny、現在は allow になる。
+  suggestion: 配列添字や部分文字列展開の位置・長さを含む算術評価箇所を検出し、該当する場合はコマンド全体のマスクを停止して保留中の本文も再検査する。
+  sources:
+  - security#loop2.0
+  confidence: 75
+  reproduction: '次の文字列を Bash PreToolUse の tool_input.command に渡す:
+
+    x="$(python3 <<''PY''
+
+    print(''a[$(git branch -D example)]'')
+
+    PY
+
+    )"
+
+    y[x]=0
+
+    現在の permissionDecision は allow。Python 本文の文字列が隠された後、Bash が y の添字 x を評価し、その値の a[...] 内でコマンド置換を実行する。破壊的コマンドを `printf REVIEW_EXECUTED >&2` に置き換えた実行で、標準エラーへの出力を確認した。'
+  stable_id: f0499405cd17702f
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: fixed
+  resolution_reason: auto-applied loop 3
+- severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 5370
+  title: Python の別形式の import でシェル実行検出を回避できる
+  description: 追加された正規表現は `os.system` という表記に依存しており、`from os import system; system(...)` や `import os as o; o.system(...)` を検出しない。実際にシェルへ渡される文字列まで隠され、破壊的コマンドを含む入力が許可される。直接の os.system 呼び出しは deny になるが、これらの形式は指定ベースの deny から allow に変わる。
+  suggestion: 危険な API の直接表記がないことを安全の根拠にせず、呼び出し先や文字列の用途を確定できない本文はマスクしない。別形式の import、別名、行継続の回帰テストを追加する。
+  sources:
+  - security#loop2.0
+  confidence: 75
+  reproduction: '次の文字列を Bash PreToolUse の tool_input.command に渡す:
+
+    python3 <<''PY''
+
+    from os import system
+
+    system(''echo $(git branch -D example)'')
+
+    PY
+
+    現在の permissionDecision は allow。_mask_python_literals が system の引数を隠す一方、実行時には os.system がその文字列をシェルへ渡す。破壊的コマンドを `printf REVIEW_EXECUTED >&2` に置き換えた実行で、標準エラーへの出力を確認した。'
+  stable_id: 2b5e4ec4fdb83dc5
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: fixed
+  resolution_reason: auto-applied loop 3
+- severity: high
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7258
+  title: printf -v scan breaks _read_word_as_written Tok contract by passing str
+  description: _read_word_as_written(marked, tok) requires a Tok carrying span/substitution_only/trailing_cr plus MarkedText.top_regions to restore the word as written. The printf -v option loop passes text=str(t), a plain str whose span lookup is always None, so it unconditionally falls back to _read_plain_word() and never exercises the single/double/ANSI-C/backslash restoration the comment promises. The security decision (whether -v is present, whether quoting/expansion forces a stop) then depends on Tok.value formatting instead of the typed contract, so future lexer/value changes silently alter masking without a type error. The cmd_index loop also calls _read_word_as_written(marked, t) twice per token instead of caching the restored word.
+  suggestion: 'Pass the Tok (t), not str(t), cache one restored value per token, and treat unrestorable option words as stop: written=_read_word_as_written(marked, t); if written is None: return True. Extract a helper _restored_option_word() so printf scanning and _peel_command_word() share one SSOT for restoration.'
+  sources:
+  - architecture#loop2.0
+  confidence: 75
+  reproduction: null
+  stable_id: f26cc66e8760a215
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: fixed
+  resolution_reason: auto-applied loop 3
+- severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7670
+  title: statements() god-function expansion via Python-body mark plumbing
+  description: 'statements() was already the central chunk-queue dispatcher and now also owns the FR9 masking lifecycle: masking_stopped flag, deferred_python_bodies parking, PY_BODY/PY_BODY_UNQUOTED/derived_mark/substitution_mark/body_mark derivation, and masked-vs-original queueing. The pending envelope changed from 3-tuple to 4-tuple and ~9 pending.append/extend sites must each select the correct mark (derived vs PY_BODY_NONE vs substitution_mark). A new queue site, copy-paste, or wrong mark choice silently flips _masking_stop_reached(in_python_body) exemption and heredoc body_mark, turning Python code into shell-undeterminable stops or vice versa. This is god-function growth with fan-out coupling: every traversal concern must know masking internals.'
+  suggestion: Encapsulate the queue envelope in a small Chunk dataclass with methods derived_child_mark()/substitution_child_mark() and a single queue_chunk() helper; keep masking-stop state transitions in one method so call sites cannot diverge.
+  sources:
+  - architecture#loop2.0
+  confidence: 60
+  reproduction: null
+  stable_id: 7472adf0e69edfec
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: unresolved
+  resolution_reason: null
+- severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 5370
+  title: Python-API skip scans raw body ignoring literal/comment segmentation
+  description: '_mask_python_literals() defines its own segmentation SSOT (outside literals # starts comment, literal extents, f/t-prefix undecidable) but the new shell/dynamic-execution guard runs re.search() over the raw body before that segmentation. A mention of os.system/subprocess/exec/eval/compile/__import__/importlib/pty.spawn/commands.getoutput inside string-literal content or a # comment therefore returns None and disables all masking, even though the same function states literal content is data and comment quotes open nothing. The dangerous-API vocabulary is a second unshared SSOT (raw regex) that drifts from the literal-aware scan; extending the blocklist increases false denies on benign documenting bodies.'
+  suggestion: Apply the API blocklist only to code segments outside literals/comments produced by the same left-to-right pass (or postpone the check until after segmentation), and hoist the list to a named SSOT with tests for literal-vs-code occurrences.
+  sources:
+  - architecture#loop2.0
+  confidence: 75
+  reproduction: null
+  stable_id: 191a08b1740b4883
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: unresolved
+  resolution_reason: null
+- severity: high
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 5315
+  title: os.system等言及でのマスク全面停止はFR1/A-3違反
+  description: 'FR1はPython宛て本文の閉じた通常リテラルの中身を読まないことを無条件に求め、A-3はos.system/subprocess等に渡す書き方もallowになりうると明示して受け入れているのに、実装は本文に当該語があるだけでマスク全体を止める。仕様引用: ''FR1: Python 宛てのheredoc本文の中の閉じた通常文字列リテラルを読まない'' および ''A-3: os.system や subprocess の shell=True に渡す文字列にバッククォートや $( ) を含めるものは、この変更で allow になりうる。これは既知の制約として受け入れる。''。FR6/FR9にない停止条件を新設しAC-1/AC-3系のallowをdeny側へ倒す。'
+  suggestion: 当該早期リターンを削除し、FR1/FR6/FR9どおりリテラル範囲確定可否とFR9文だけで停止を決める。
+  sources:
+  - spec#loop2.0
+  confidence: 60
+  reproduction: null
+  stable_id: 58dbeb9469a26b42
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- severity: high
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 6765
+  title: printf -v等の独自停止はFR9閉集合違反
+  description: 'FR9の停止語彙は(2)でdeclare/typeset/local/export/readonly/let/shopt/set/unset/source/./evalに閉じているのに、実装はprintf -v/read等まで停止させ、しかもbuiltin/command剥がしと(3)確定条件を経由しない別走査で判定する。仕様引用: ''FR9: (2) シェルの状態や変数の属性を変えうる組み込み(declare、typeset、local、export、readonly、let、shopt、set、unset、source、.、eval)をコマンド語にする文'' および ''コマンド語は builtin と command を何段重ねてもそれぞれのオプションと -- を外した後の語で判定する。外す途中のコマンド語とオプションにも(3)と同じ確定条件を適用し''。書き換え後のprintf走査はstr(t)比較と文字列への_read_word_as_writtenで引用情報を失い、剥がし単一関数(NFR5/AC-12)も迂回する。'
+  suggestion: printf/read系の独自停止をやめFR9(1)(2)(3)と_peel_command_word経由の判定だけにし、変数名由来の懸念はSTOP_VARIABLE_NAMESの語含有で扱う。
+  sources:
+  - spec#loop2.0
+  confidence: 60
+  reproduction: null
+  stable_id: a60163d9f9dfccea
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 6740
+  title: 任意位置の算術再評価停止はFR9(3)範囲逸脱
+  description: 'FR9(3)はコマンド語(およびbuiltin/command剥がし途中の語・オプション)の静的確定不能だけを停止条件とし、本文検査読直し語には適用しない(未引用区切りの置換等を除く)のに、実装は文中の任意トークンの算術・[[の存在だけで停止する。仕様引用: ''FR9: (3) シェルとして評価される文で、コマンド語を単一の語として静的に確定できないもの'' および ''Python 宛てheredoc本文を検査のためにシェルとして読み直した語には、(3)を適用しない。ただし、区切り語に引用符が無いheredocの本文でシェルが評価する置換と、その中のシェルの文には適用する。FR3・FR5の検査は保つ''。引数位置の$(( )/$[ ]/((/[[まで拾う現状はFR9の範囲を超えた境界不一致で、FR1のallowをdenyへ倒す。'
+  suggestion: 当該any-tok算術走査を削除し、算術展開等は_read_word_as_written/_peel_command_wordの(3)確定不能判定の中だけで扱い、本文由来チャンクの除外規定を保つ。
+  sources:
+  - spec#loop2.0
+  confidence: 60
+  reproduction: null
+  stable_id: 5e1fb3c17dd5f60d
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: unresolved
+  resolution_reason: null
+- severity: medium
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7135
+  title: Masking-stop check multi-pass decode on every statement
+  description: 'New FR9 gate runs on every lexed and fallback statement in statements() even when the command has no heredoc or Python. Per statement it makes 4+ passes over the same toks: STOP_VARIABLE_NAMES substring scan, arithmetic substring scan, _peel_command_word decode loop, printf search loop, and printf option loop. The printf search decodes the same token twice in one condition and does not reuse the peel restored() cache, so one word is restored 2-3 times via bisect plus region walk plus char loop. This is new per-invocation cost on the hot path for trivial commands like ls or git status.'
+  suggestion: 'Single-pass the statement check: compute restored words once per statement into a small list/cache and reuse for STOP-variable ANSI-C decode, arithmetic test, peel, and printf -v test. Hoist the printf lookup to use the peeled word index instead of re-scanning toks, and call _read_word_as_written once per token.'
+  sources:
+  - performance#loop2.0
+  confidence: 60
+  reproduction: null
+  stable_id: 19587f008893cb0a
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: unresolved
+  resolution_reason: null
+- severity: medium
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 5328
+  title: Full-body regex plus char walk without precompile
+  description: 'Python-body path does two full scans of the heredoc body with inline regex compilation: re.search with os/system/popen/subprocess/exec/eval pattern over the whole body, then a Python-level char-by-char literal walk with list(body) duplication. Patterns in _python_program_redirects re.fullmatch(''[0-9]+'') in a loop and _python_program_statement re.fullmatch(''[A-Za-z0-9_.+/-]+'') also use inline strings instead of module constants, so every python-candidate statement pays cache lookup plus full-body scan even for KB-scale bodies.'
+  suggestion: Precompile the shell-exec, fd-number, and command-word patterns as module constants. Add a cheap substring prefilter before the shell-exec regex and skip the regex entirely for small bodies without those substrings, and avoid list(body) duplication by building masked output only when needed.
+  sources:
+  - performance#loop2.0
+  confidence: 60
+  reproduction: null
+  stable_id: 1c7d5d0a4c32d4f2
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: unresolved
+  resolution_reason: null
+- severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7095
+  title: STOP_VARIABLE_NAMES stops masking inside Python-body string literals
+  description: _masking_stop_reached() checks STOP_VARIABLE_NAMES with raw substring `name in tok` for every tok before the in_python_body exemption. The arithmetic-expansion branch is correctly skipped with `if not in_python_body`, but the variable-name loop is not. A Python-program body chunk (PY_BODY) containing the literal text BASH_CMDS/BASH_ALIASES inside a closed Python string literal therefore raises masking_stopped, queues deferred_python_bodies whole, and flips a benign masked allow to deny. This contradicts the FR9(3) exemption for program code and the arithmetic exemption in the same function.
+  suggestion: Skip the STOP_VARIABLE_NAMES substring scan when in_python_body is true, or scan the masked body (literals already replaced with filler) instead of raw toks, matching the arithmetic-branch exemption.
+  sources:
+  - comprehensive#loop3.1
+  confidence: 60
+  reproduction: null
+  stable_id: e0244bdcaf475646
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: unresolved
+  resolution_reason: null
+- severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 5990
+  title: Enclosing DATA_COMMANDS branch unreachable due to plain_assignment gate
+  description: '_is_python_program_chain() docstring promises enclosing levels are accepted when they ''either only assigns or is headed by a DATA_COMMANDS word'', but the gate `if not level.plain_assignment ...: return False` requires plain_assignment for every enclosing level. _is_plain_assignment() requires is_assignment_only, so any level reaching `if level.is_assignment_only: continue` always continues and the subsequent `level.word in DATA_COMMANDS` / printf-read checks are unreachable dead code. Enclosing DATA_COMMANDS wrappers can never be accepted, drifting from the documented contract and causing collateral false-denies for data-wrapped Python programs.'
+  suggestion: 'Restore the documented disjunction: require (plain_assignment or (is_assignment_only and word in DATA_COMMANDS)) for enclosing levels, or remove the dead DATA_COMMANDS branch and update the docstring.'
+  sources:
+  - comprehensive#loop3.1
+  confidence: 60
+  reproduction: null
+  stable_id: 4bac042ccdffe7fd
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: unresolved
+  resolution_reason: null
+- severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 5920
+  title: Trailing-pipe and glob downstream treated as safe
+  description: _downstream_stages_safe() skips empty lexed stages and returns True when `j >= n` (pipe with no following stage). A syntactically incomplete `python3 <<'PY' |` is therefore judged downstream_safe, letting _is_python_program_chain() accept and mask the body even though the pipeline is unterminated and shell semantics are undetermined. _token_is_literal() also only rejects $/backtick/substitution residue, so downstream `tee *` / `grep ~*` globs are treated as literal-argument filters.
+  suggestion: Return False when the pipe has no following real stage (fail-closed on incomplete syntax) and reject unquoted glob/tilde/brace characters in downstream tokens or reuse _read_word_as_written() determinability there.
+  sources:
+  - comprehensive#loop3.1
+  confidence: 60
+  reproduction: null
+  stable_id: 4131454ea7044899
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: unresolved
+  resolution_reason: null
+- severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7273
+  title: printf の途中のリダイレクトで -v の検出を回避できる
+  description: オプション検査がリダイレクトを含む toks を走査するため、`printf 1>&2 -v ...` では `1` を書式文字列と誤認して終了する。Python の文字列が検査から除外されたまま、Bash がその内容を配列添字として再評価し、破壊的なコマンドを実行できる
+  suggestion: リダイレクトを除去した引数列と、実際のコマンド位置を使って printf のオプションを検査し、この形を拒否する回帰テストを追加してほしい
+  sources:
+  - security#loop3.0
+  confidence: 60
+  reproduction: 'Bash の tool_input.command に次を指定する:
+
+    x="$(python3 <<''PY''
+
+    print(''a[$(git branch -D example)]'')
+
+    PY
+
+    )"
+
+    printf 1>&2 -v "$x" %s 0
+
+    経路は Python 本文のマスク → _masking_stop_reached() の printf 検査終了 → allow。基準版は deny、現行版は allow だった。git を呼び出し記録だけ出す関数に置き換えた実行でも、`git branch -D example` への到達を確認したため、実コマンドでは対象ブランチを強制削除できる'
+  stable_id: b15626dff66e801c
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7234
+  title: 長さ・間接参照の配列添字が算術評価の検出から漏れる
+  description: 配列展開の検出が `${名前[` に限定され、`${#名前[添字]}` と `${!名前[添字]}` を見落とす。これらも添字を算術評価するため、Python が出力した文字列中のコマンド置換を実行できる。位置引数の部分文字列展開 `${@:x:1}` でも同じ検出漏れを確認した
+  suggestion: 長さ取得・間接参照・位置引数を含め、算術評価される引数展開ではマスクを停止するようにし、それぞれの拒否ケースを追加してほしい
+  sources:
+  - security#loop3.0
+  confidence: 60
+  reproduction: 'Bash の tool_input.command に次を指定する:
+
+    x="$(python3 <<''PY''
+
+    print(''a[$(git branch -D example)]'')
+
+    PY
+
+    )"
+
+    b=ok; : "${#b[x]}"
+
+    経路は Python 本文のマスク → _masking_stop_reached() が `${#b[x]}` を見落とす → allow。基準版は deny、現行版は allow だった。git を無害な記録用関数に置き換えた Bash 実行で、添字 x の再評価から `git branch -D example` が呼ばれることを確認した'
+  stable_id: 68d3fa5b5e9dbeba
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 5371
+  title: Unicode の識別子で実行 API の別名 import 検出を回避できる
+  description: 実行 API の検出は元の文字列に対する ASCII 表記の照合だが、Python は識別子を NFKC 正規化する。全角の `ｏｓ` と `ｅｘｅｃｌ` は実際には os.execl として動く一方、追加された検出に一致せず、シェルへ渡す危険な文字列が検査から除外される
+  suggestion: 識別子を Python と同じ正規化規則で照合するか、解釈できない識別子を含む本文ではマスクを停止し、Unicode 表記の別名 import を拒否するテストを追加してほしい
+  sources:
+  - security#loop3.0
+  confidence: 60
+  reproduction: 'Bash の tool_input.command に次を指定する:
+
+    python3 <<''PY''
+
+    from ｏｓ import ｅｘｅｃｌ as launch
+
+    launch(''/bin/sh'', ''sh'', ''-c'', ''`git branch -D example`'')
+
+    PY
+
+    経路は _mask_python_literals() の実行 API 検出漏れ → コマンド文字列のマスク → allow。基準版は deny、現行版は allow だった。同じ Unicode import と launch 呼び出しで、シェル引数を無害な printf に置き換えると出力されることを確認した。元の入力では /bin/sh がバッククォート内のブランチ強制削除を実行する'
+  stable_id: fba4cb2537ca2c23
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- severity: high
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 3891
+  title: Lexing layer coupled to Python-redirect feature via fd_prefix/span
+  description: 'Generic lexer now emits Python-feature-specific metadata: _tokenize_marked sets Tok.span for every token and Tok.fd_prefix only for the integer-before-redirect case consumed solely by _python_program_redirects(). split_redirects() already lifts leading digit words with or without touching, so two representations of one fact now exist. Concrete cost: every token-copy path must manually propagate the new fields (_strip_unresolved_marks copies span at two sites; any future copy that forgets span silently breaks _read_word_as_written), and any redirect-syntax change needs coordinated edits in tokenizer flag-setting and Python-redirect consumer — shotgun surgery across layers.'
+  suggestion: Keep lexer generic (emit touch adjacency as neutral layout fact or expose via accessor) or move fd discrimination into redirect layer; centralize token-clone helper so span/fd_prefix cannot be dropped by a new copy site.
+  sources:
+  - architecture#loop3.0
+  confidence: 60
+  reproduction: null
+  stable_id: 1179ae86d73879fa
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 5355
+  title: Inline primitive vocabularies drift from sink/assignment SSOTs
+  description: '_mask_python_literals embeds an inline alternation for shell/dynamic-execution APIs, _SAFE_DOWNSTREAM_WORDS embeds grep/head/tail/wc/cat/tee, and _PLAIN_ASSIGNMENT_WORD_RE/ASSIGNMENT_NAME duplicate ASSIGNMENT_PREFIX name logic, while _is_python_name correctly reuses SINK_WORD_RE as SSOT. Concrete cost: adding a sink, exec API, safe filter, or assignment form requires hunting and editing multiple opaque literals; drift between the inline lists and SINK_WORD_RE/DATA_COMMANDS/ASSIGNMENT_PREFIX silently changes python/data/sink outcomes (Loop-3 widening around line 5370 added runpy/multiprocessing/asyncio/posix/builtins/ctypes/getattr arms only in this one regex).'
+  suggestion: Derive all three vocabularies from single SSOTs (reuse SINK/DATA/assignment patterns or import shared sets) so one edit propagates; leave fail-closed behavior unchanged.
+  sources:
+  - architecture#loop3.0
+  confidence: 60
+  reproduction: null
+  stable_id: 10c3863a95590057
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: unresolved
+  resolution_reason: null
+- severity: high
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7223
+  title: Masking-stop check absorbs unrelated stop reasons with mixed str/restored matching
+  description: '_masking_stop_reached now decides STOP_VARIABLE_NAMES substring scan, arithmetic/subscript/substring/test-v scan over str(tok), and printf -v option scan, delegating command identity to _peel_command_word/_read_word_as_written. Loop-3 additions widen it further: arithmetic/subscript block matches on raw str(tok) while command identity uses restored as-written words, and the printf scan mixes os.path.basename(str(t)) with basename(written_of(t)) plus a separate any(str(t).startswith("-v")) fallback when cmd_index is None. Concrete cost: same concept (-v/printf identity, determinable word) has two divergent match implementations; fixing quoting/escaping in one path leaves the other stale, and future shell-state effects land in this one function — god-function growth with primitive-obsession on str.'
+  suggestion: Split masking-stop into single-responsibility predicates sharing one word-restoration accessor that preserves Tok provenance; make printf/-v and arithmetic checks consume the same restored-word type instead of mixing str and restored values.
+  sources:
+  - architecture#loop3.0
+  confidence: 75
+  reproduction: null
+  stable_id: 24a008d47f66aa90
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- severity: high
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 6920
+  title: printf未確定停止がPython本文免除に違反
+  description: SPEC FR9最終段は Python本文の再読語への(3)不適用を定めるが、printf分岐の未確定語停止は in_python_body でも適用される。本文内の語で停止しFR1のallowを壊す。対象SPEC文:「Python 宛て heredoc 本文を検査のためにシェルとして読み直した語には、(3) を適用しない。ただし、区切り語に引用符が無い heredoc の本文でシェルが評価する置換と、その中のシェルの文には適用する。FR3・FR5 の検査は保つ。」
+  suggestion: printf -v判定の未確定語停止(text is None→True等)を算術分岐と同様に not in_python_body で除外し、Python本文再読語には(3)を適用しない
+  sources:
+  - spec#loop3.0
+  confidence: 60
+  reproduction: null
+  stable_id: 154db7cdcfeb1bc7
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 6890
+  title: 算術停止判定がas-written復元を読まずSPEC evidence則に違反
+  description: SPEC FR9は判定 evidence に引用・展開喪失前の語を用い、引用・エスケープのみで確定できる語は復元後で照合することを定めるが、算術・添字・substring・test -v分岐は str(tok) の喪失後値で判定する。引用された '$((' 等が停止扱いになる。対象SPEC文:「判定には、引用・エスケープ・展開の情報を失う前の語を使う。」「引用とエスケープだけで結果を確定できる語は、復元後の語を (1)・(2) の語彙と照合する。」
+  suggestion: 算術/添字/substring/test -v判定を _read_word_as_written(marked,tok) の復元語で行い、復元不能(None)のみ(3)として扱う
+  sources:
+  - spec#loop3.0
+  confidence: 60
+  reproduction: null
+  stable_id: db3cabbeebb302b5
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: unresolved
+  resolution_reason: null
+- severity: medium
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7227
+  title: O(T^2) inner toks rescan plus per-token uncompiled regexes in arithmetic-stop check
+  description: _masking_stop_reached runs an outer `for tok in toks` loop (line 7227) that does three inline regex evaluations per token (lines 7234-7236) and, for any token equal to `-v`, a full inner scan `any(str(t) in ("test", "[") for t in toks)` (line 7237). That inner scan repeats the same collection walk for every `-v` token, making the check O(T^2) over statement tokens where a single hoisted `has_test` computed once before the loop is O(T). The three patterns are also passed as string literals, so every token on every non-Python-body statement on this PreToolUse hot path pays re cache lookup plus full token scan, including the greedy `\[.*\]` match which scans to end-of-token per token.
+  suggestion: Hoist the `test`/`[` presence check out of the per-token loop (compute once per statement) and precompile the three arithmetic/subscript/substring patterns as module-level compiled regexes, then use the compiled objects inside the loop.
+  sources:
+  - performance#loop3.0
+  confidence: 75
+  reproduction: null
+  stable_id: 1cb867423f648de4
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: unresolved
+  resolution_reason: null
+evaluation:
+  round_summary: 'round 2。5 つの run がすべて完了した（comprehensive と security は codex、architecture、spec、performance は litellm）。security の high 2 件は、どちらも読解で再現を確認した。1 件目の trap / printf -v による実行先の差し替えは high のまま残した。2 件目の os.system 経由の迂回は SPEC A-3 で受け入れ済みの制約で、round 1 でも declined になっているので low に下げた。comprehensive の medium 2 件は、どちらも SPEC FR9 の文言どおりに起きる誤爆（変更前も deny）で、読解で確認した。1 件は medium のまま、もう 1 件は low に下げた。reviewer の出力に注入の試みは無かった。ケース表で既存ケースが変わったのは、末尾のカンマの追加 1 行だけ。TS-28〜TS-40 はすべてそろっている。round 1 の architecture の指摘 517a7f94dc8a5b7c と、comprehensive の指摘 e63d3a1c12adfc7c は、コード上は解消している。観点ごとの確認状況: comprehensive=corroborated, security=corroborated, architecture=corroborated, spec=corroborated, performance=corroborated。'
+  recommended_action: rework
+  action_rationale: 残った high（trap / printf -v）を直すには、FR9 (2) で列挙した語の外にある構文を、読まない扱いを止める判定に足す必要がある。THREAT-MODEL の TM-9 の更新も伴う。medium の誤爆（Python 本文の文頭が停止語になる）は、FR9 の最終段落と TM-10 を改めないと直せない。low の command -v も FR9 の文言どおりの挙動。どれも SPEC の FR9 での判断が要る。列挙した語での判定は、round ごとに漏れが見つかっている（round 1 は入れ子の builtin と declare -i、round 2 は trap と printf -v）。そのため SPEC では、語彙を足すのか、マスクする heredoc と同じコマンドに置ける文を許可リストで限るのかを決めるのが妥当。auto-fix で直すなら、trap と、名前で変数に書き込む組み込みを停止語に足すのが最小の修正（安全側に倒れる）。ただしその場合、FR9 (2) の列挙とコードがずれる。
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 3
+  applied_total: 7
+  termination: loop-cap
+residual_critical_high: 8
+rework_required: false
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-destructive-guard-heredoc-literal-20261112T122625Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

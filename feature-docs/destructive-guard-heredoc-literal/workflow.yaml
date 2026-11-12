@@ -121,7 +121,8 @@ workflow:
   base_commit: 3bc92433819350a326de40721b6401ea97f53910
   completed_at_commit: d6498f678987234ab202ce06502fa6e70f301254
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: e4a8f3971a4e745f9a236f66371cd52b84871ca9
 - id: verify
   status: pending
 - id: retrospect
@@ -181,16 +182,16 @@ tasks:
     notes: 'batch-retry-consumed: 1 (first failure: launching session ended, journal
       failed reason orphaned; retried on the kept worktree)'
 review:
-  status: pending
-  rounds_completed: 1
+  status: completed
+  rounds_completed: 2
   perspectives:
   - comprehensive
   - security
   - architecture
   - spec
   - performance
-  residual_critical_high: 3
-  needs_rework: true
+  residual_critical_high: 8
+  needs_rework: false
   plan:
     floor:
     - comprehensive
