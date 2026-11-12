@@ -2,8 +2,10 @@
 
 ## Overview
 Regression tests that pin destructive-guard's positional designations when one or
-more recursive deletes carry two or more substitution-only targets. The plan has one
-task (task0001); the hook changes only when a new test fails on the current hook
+more recursive deletes carry two or more substitution-only targets (task0001, merged),
+and a change to how `tests/test_destructive_guard_mixed_rm_precedence.py` selects its
+own cases from the case table, so that the full test suite passes again (task0002,
+SPEC.md FR12). The hook changes only when a new test fails on the current hook
 (SPEC.md FR6).
 
 ## Technology Stack
@@ -14,14 +16,16 @@ task (task0001); the hook changes only when a new test fails on the current hook
 
 ## Layer Structure
 Not applicable: the feature adds one test module that runs the existing hook as a
-child process.
+child process, and changes the case selection of one existing test module.
 
 ## Shared Components
-None. The plan has a single task, so no component is used across tasks.
+None. task0001 and task0002 use no component of each other and declare no common file.
 
 ## Conventions
-No cross-task conventions: the plan has a single task, and its plan carries the
-conventions it follows.
+- Pre-existing test files stay unchanged (SPEC.md FR4), with exactly one exception:
+  `tests/test_destructive_guard_mixed_rm_precedence.py`, which only task0002 changes,
+  and only within FR12's scope.
+- No task changes `em-workflow/hooks/tests/destructive-guard-cases.json`.
 
 ## Cross-task Design Decisions
 None.
@@ -29,8 +33,9 @@ None.
 ## Risk Assessment
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
-| A new test fails on the current hook, so the hook has to change (FR6) | Low: SPEC.md A1 and A6 record that the expected designations were confirmed by running the hook | Medium: the hook is a security guard (THREAT-MODEL.md TM-2) | task0001 changes the hook only after a new test fails, under the constraints its plan states, and both test suites must pass |
-| The test outcome depends on the runner's environment (an unattended run sets CLAUDE_BATCH) | Medium | Low: a false failure, not a missed regression | task0001 builds the child environment explicitly (NFR1, its AC-1) |
+| A mixed-rm-precedence case that task0002's label selection keeps fails against the current hook (a decision change made after that feature merged) | Low: SPEC.md A7 attributes every verify round 1 failure in that module to the cases after its own 33 | Medium: it would be a real guard regression (THREAT-MODEL.md TM-3) | task0002 changes neither the hook nor any expectation; it reports the failing case as a plan deviation, which becomes a new task |
+| A check of the mixed-rm-precedence module other than the two selections still fails after the change | Low: SPEC.md A8 records that the head-of-table check passes today | Low | task0002 leaves that check unchanged and reports a plan deviation (FR12 limits the change) |
+| A test outcome depends on the runner's environment (an unattended run sets CLAUDE_BATCH) | Medium | Low: a false failure, not a missed regression | task0001 builds the child environment explicitly (NFR1, its AC-1) |
 
 ## Open Questions
 - None.
