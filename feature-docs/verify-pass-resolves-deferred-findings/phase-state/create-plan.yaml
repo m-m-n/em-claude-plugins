@@ -1,0 +1,32 @@
+schema_version: 1
+feature: verify-pass-resolves-deferred-findings
+phase: create-plan
+status: dispatched
+generation: 1
+base_revision: 89ff0802eea1eec3ba30123ff9297ed33b4ed353
+last_input_digest: sha256:5f9b8d9dc4d3ebf8198869d22bfe41eae56b3e3381ac21e6f8d7176c6024a0ed
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:5f9b8d9dc4d3ebf8198869d22bfe41eae56b3e3381ac21e6f8d7176c6024a0ed
+  output_digest: null
+  dispatch_digest_inputs:
+    feature-docs/verify-pass-resolves-deferred-findings/REQUIREMENTS.md: sha256:dcbca70afa61da607fb18013e05ca0f34ec515de32fe1a5390b2696e38a49ae4
+    feature-docs/verify-pass-resolves-deferred-findings/SPEC.md: sha256:200772e1fe063f1766fb2b40bbc500dd8b1c4c5dbadcb4ff50fda3254c6286ea
+    feature-docs/verify-pass-resolves-deferred-findings/workflow.yaml: sha256:a1fa105a177b1a4cb1446a4dd8cbe3cad348669154339e6e81c3cf7d6fc5fc67
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/workflow-schema.md: sha256:5db914a170c0bd97886671160a2c3498127ffd83f0814bc8fb67407f4dc563ee
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    em-workflow/references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
+    em-workflow/references/contracts/planner-contract.md: sha256:df2bf3f0321c2627a31b878a14adb176ee7c2131638245112e5d3bb27f7a3682
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
