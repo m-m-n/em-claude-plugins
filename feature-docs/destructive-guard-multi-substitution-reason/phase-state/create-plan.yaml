@@ -1,11 +1,11 @@
 schema_version: 1
 feature: destructive-guard-multi-substitution-reason
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 2
 base_revision: daf966d7e1d3691453daf48d209d44429b9ef9da
 last_input_digest: sha256:57441aca4b7fbd07c8603d2dbb5a5c60b390bf2efb8d88268451fed3037653f7
-active_request_id: create-plan-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
