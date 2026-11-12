@@ -444,6 +444,12 @@ class Tok(str):
     operator out of the words whether or not they touch, so `python3 2 >f`
     (the script `2`) and `python3 2>f` give the same redirect list; only this
     flag tells them apart (_python_program_redirects()).
+    `.span` (destructive-guard-heredoc-literal) is the (start, end) offsets
+    of the token's characters in the text the lexer read, a _MarkedText's
+    TEXT: set by _tokenize_marked() and kept by _strip_unresolved_marks(),
+    it is what _read_word_as_written() restores the word as written from.
+    None on a token no tokenizer read (an operator piece split off a fused
+    token, a plain split word).
     Every consumer besides split_redirects()/check_rm()/
     read_command_name_evidence()/_shape_leading() treats it as an ordinary
     str; every attribute but `.trailing_cr` (empty: nothing was taken off)
@@ -458,6 +464,7 @@ class Tok(str):
     quoted = False
     trailing_cr = ""
     fd_prefix = False
+    span = None
 
     def __new__(
         cls, value, is_operator=False, unresolved=False, substitution_only=False,
@@ -3670,6 +3677,10 @@ class _MarkedText:
       `single-quote` regions). VIEW itself keeps them; _tokenize_marked()
       reads VIEW without them and reports offsets of TEXT (round 2 deferred,
       task0007).
+    - TOP_REGIONS: the lexer's regions of SOURCE that sit at its top level
+      (no enclosing region), in order of start, and TOP_STARTS their starts.
+      _read_word_as_written() reads a word's regions from them, in SOURCE
+      offsets (destructive-guard-heredoc-literal).
 
     Built from the lexer's map of SOURCE alone: no stage that reads VIEW
     classifies a character itself."""
@@ -3677,7 +3688,7 @@ class _MarkedText:
     __slots__ = (
         "source", "text", "posmap", "view", "mask_char", "mask_ranges",
         "subscript_ranges", "tail_start", "pairs", "_mask_starts",
-        "_quote_starts", "_quote_ends",
+        "_quote_starts", "_quote_ends", "top_regions", "top_starts",
     )
 
     def __init__(self, source, text, posmap):
@@ -3690,8 +3701,11 @@ class _MarkedText:
         quoted = []
         subscripts = []
         single_quoted = []
+        top_regions = []
         for region in lexmap.regions:
             kind = region.kind
+            if region.parent is None:
+                top_regions.append(region)
             if kind in LEX_MASKED_KINDS:
                 masked.append((region.start, region.end))
                 if kind == "array-subscript":
@@ -3742,6 +3756,8 @@ class _MarkedText:
         self.pairs = _continuation_pairs(
             self.view, _map_copy_ranges(posmap, _merge_ranges(single_quoted))
         )
+        self.top_regions = top_regions
+        self.top_starts = [region.start for region in top_regions]
         self.mask_char = mask_char
         self.mask_ranges = mask_ranges
         self.subscript_ranges = subscript_ranges
@@ -3875,6 +3891,7 @@ def _tokenize_marked(marked, layout=True):
         value = marked.restore(raw, start, end)
         quoted = lex.last_was_quoted or marked.touches_quote(start, end)
         tok = Tok(value, lex.last_was_operator, quoted=quoted)
+        tok.span = (start, end)
         if (
             touches_redirect
             and not quoted
@@ -6386,16 +6403,17 @@ def _strip_unresolved_marks(toks, chunk_subs=None):
                 quoted=getattr(t, "quoted", False),
             )
             new_tok.raw_substitution_body = raw_body
+            new_tok.span = getattr(t, "span", None)
             out.append(new_tok)
             continue
-        out.append(
-            Tok(
-                cleaned,
-                getattr(t, "is_operator", False),
-                unresolved=True,
-                quoted=getattr(t, "quoted", False),
-            )
+        new_tok = Tok(
+            cleaned,
+            getattr(t, "is_operator", False),
+            unresolved=True,
+            quoted=getattr(t, "quoted", False),
         )
+        new_tok.span = getattr(t, "span", None)
+        out.append(new_tok)
     return out
 
 
@@ -6685,6 +6703,11 @@ def _register_marker_positions(marker_pos, marked, anchor, statement_index):
 # command position.
 OVERRIDE_BUILTINS = frozenset({"alias", "hash", "enable"})
 
+# The variable that holds the hashed command paths. The one definition of its
+# name: both forms of the override reading below and the masking-stop
+# vocabulary (STOP_VARIABLE_NAMES) refer to it.
+OVERRIDE_VARIABLE_NAME = "BASH_CMDS"
+
 # An assignment to PATH, `PATH=` or `PATH+=`. (The latter is not an
 # ASSIGNMENT_PREFIX match, so it surfaces as the command word itself.)
 PATH_ASSIGNMENT = re.compile(r"^PATH\+?=")
@@ -6737,11 +6760,11 @@ def _overrides_command_name(words, lead, shaped_words):
     """
     if _defines_function(words, lead):
         return True
-    # BASH_CMDS holds the hashed command paths: any statement that names it
-    # in any word (`BASH_CMDS[python3]=/bin/bash`, `BASH_CMDS=(...)`,
-    # `declare -A BASH_CMDS`, `declare -n r=BASH_CMDS`, ...) may change what
-    # a command name runs (fail-closed, substring match on every word).
-    if any("BASH_CMDS" in w for w in words):
+    # The override variable holds the hashed command paths: any statement
+    # that names it in any word (an element assignment, an array assignment,
+    # `declare -A NAME`, `declare -n r=NAME`, ...) may change what a command
+    # name runs (fail-closed, substring match on every word).
+    if any(OVERRIDE_VARIABLE_NAME in w for w in words):
         return True
     if any(PATH_ASSIGNMENT.match(w) for w in words[:lead]):
         return True
@@ -6762,7 +6785,7 @@ def _overrides_command_name_unlexed(toks, shaped_words):
     lex (an unbalanced quote): no operator/quote provenance exists, so the
     same constructs are read from plain words, and a PATH assignment
     anywhere in the statement counts (the stricter reading)."""
-    if any("BASH_CMDS" in t for t in toks):
+    if any(OVERRIDE_VARIABLE_NAME in t for t in toks):
         return True
     word, args = head(shaped_words)
     if word in OVERRIDE_BUILTINS:
@@ -6776,35 +6799,413 @@ def _overrides_command_name_unlexed(toks, shaped_words):
     return any(PATH_ASSIGNMENT.match(t) for t in toks)
 
 
-# Python-program masking only (not part of the FR7 override flag): commands
-# that can change shell state, names or PATH in ways the literal checks of
-# _overrides_command_name() cannot see (fail closed).
-PYTHON_MASK_STATE_BUILTINS = frozenset({
+# --- destructive-guard-heredoc-literal FR9: what stops literal masking ------
+#
+# The Python-program masking path (statements()) reads the content of closed
+# string literals as data. It stops, for the rest of the command, when a
+# statement the traversal reads may have replaced what a command name runs,
+# changed the shell state or the attributes of a variable, or has a command
+# word that cannot be fixed statically as a single word. This check raises
+# only the masking-stop flag, never the FR7 override flag above.
+#
+# The two vocabularies below are derived from the FR7 override vocabulary
+# (OVERRIDE_BUILTINS, OVERRIDE_VARIABLE_NAME): a word added there stops
+# masking too, and so does every statement the override reading flags (NFR5).
+
+# The command words that stop masking: the override builtins and the builtins
+# that change shell state or variable attributes (FR9 (2)).
+STOP_COMMAND_WORDS = OVERRIDE_BUILTINS | frozenset({
     "declare", "typeset", "local", "export", "readonly", "let", "shopt",
     "set", "unset", "source", ".", "eval",
 })
 
+# The variable names that stop masking wherever a word of a statement holds
+# one: the override variable and the aliases variable (FR9 (2)).
+STOP_VARIABLE_NAMES = (OVERRIDE_VARIABLE_NAME, "BASH_ALIASES")
 
-def _python_mask_unsafe_words(toks, shaped_words):
-    """Whether a statement may have changed what a command name runs or the
-    shell state, read fail-closed for the python-program masking path: a
-    BASH_ALIASES / BASH_CMDS word, a command word that is not statically
-    readable ($, backtick, substitution leftover), or a state-changing
-    builtin (also behind `builtin` / `command`) as the command word."""
-    if any("BASH_ALIASES" in t or "BASH_CMDS" in t for t in toks):
+# Python-body mark of a queued chunk (Component 5; statements()). PY_BODY_NONE:
+# not marked. PY_BODY: a chunk of a "Python program" heredoc body, or derived
+# from one; FR9 (3) is not applied to its statements. PY_BODY_UNQUOTED: marked
+# as well, but the heredoc's delimiter is unquoted, so the substitution bodies
+# and unclosed command forms found in it are the shell's to evaluate before
+# Python reads the body: they, and everything derived from them, are not marked.
+PY_BODY_NONE = 0
+PY_BODY = 1
+PY_BODY_UNQUOTED = 2
+
+# The escapes of an ANSI-C quote that stand for one fixed character. The
+# decoder supports these, `\nnn`, `\xHH`, `\uHHHH` and `\UHHHHHHHH`; any other
+# escape makes the word undeterminable.
+_ANSI_C_SIMPLE_ESCAPES = {
+    "a": "\a", "b": "\b", "e": "\x1b", "E": "\x1b", "f": "\f", "n": "\n",
+    "r": "\r", "t": "\t", "v": "\v", "\\": "\\", "'": "'", '"': '"',
+    "?": "?",
+}
+_OCTAL_DIGITS = "01234567"
+_HEX_DIGITS = "0123456789abcdefABCDEF"
+
+# The name of an assignment word, for the subscripted form (_is_assignment_word()).
+ASSIGNMENT_NAME = re.compile(r"[A-Za-z_]\w*")
+
+# What a plain word (no as-written reading, Component 1 rule 2) may not hold.
+_PLAIN_WORD_UNREADABLE = frozenset("\"'\\$`*?[{}(")
+
+
+def _decode_ansi_c(body):
+    """BODY -- the content of an ANSI-C quote (`$'...'`) -- as bash decodes
+    it, or None when an escape in it is not one this decoder supports and
+    decodes as bash does. A character outside ASCII and NUL (which ends a
+    word in bash) are not decoded: they give None. Nothing is evaluated; the
+    characters of BODY are read once, left to right."""
+    out = []
+    i, size = 0, len(body)
+    while i < size:
+        ch = body[i]
+        i += 1
+        if ch != "\\":
+            out.append(ch)
+            continue
+        if i >= size:
+            return None
+        esc = body[i]
+        i += 1
+        simple = _ANSI_C_SIMPLE_ESCAPES.get(esc)
+        if simple is not None:
+            out.append(simple)
+            continue
+        if esc in _OCTAL_DIGITS:
+            digits, limit, base, allowed = esc, 3, 8, _OCTAL_DIGITS
+        elif esc == "x":
+            digits, limit, base, allowed = "", 2, 16, _HEX_DIGITS
+        elif esc in "uU":
+            digits, limit, base, allowed = "", 4 if esc == "u" else 8, 16, _HEX_DIGITS
+        else:
+            return None
+        while i < size and len(digits) < limit and body[i] in allowed:
+            digits += body[i]
+            i += 1
+        if not digits:
+            return None
+        code = int(digits, base)
+        if base == 8:
+            code &= 0xFF
+        if not 0 < code < 0x80:
+            return None
+        out.append(chr(code))
+    return "".join(out)
+
+
+def _read_double_quoted(body):
+    """BODY -- the content of a double-quoted region -- with a backslash
+    before `$`, a backtick, `"`, `\\` or a newline resolved (a backslash and a
+    newline vanish), or None when it holds an unescaped `$` or backtick."""
+    out = []
+    i, size = 0, len(body)
+    while i < size:
+        ch = body[i]
+        if ch == "\\":
+            if i + 1 >= size:
+                return None
+            nxt = body[i + 1]
+            if nxt == "\n":
+                i += 2
+                continue
+            if nxt in '$`"\\':
+                out.append(nxt)
+                i += 2
+                continue
+        elif ch in "$`":
+            return None
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+
+def _word_source_bounds(marked, start, end):
+    """The offsets (lo, hi) in MARKED.source of the word that MARKED.text
+    holds at START..END, or None when its first character has no counterpart
+    there (a substitution's residue). HI is the end of the replaced range when
+    the word's last character is a substitution's residue."""
+    first = marked.posmap.to_old(start)
+    if first[0] != "copy":
+        return None
+    last = marked.posmap.to_old(end - 1)
+    return first[1], (last[1] + 1 if last[0] == "copy" else last[2])
+
+
+def _read_word_as_written(marked, tok):
+    """Component 1 of the masking-stop check (FR9 (3)): the word TOK as the
+    shell passes it on, or None when it cannot be fixed statically ("undeter-
+    minable"). The word is read from the characters it was written with in
+    MARKED (the _MarkedText its statement was lexed from) and the lexer's
+    top-level region kinds over them -- never from TOK's own value, which has
+    lost the quotes and cannot tell `'decl?re'` (one fixed word) from `decl?re`
+    (a pattern). Nothing is evaluated, executed or imported.
+
+    Left to right: a single-quoted region is its content; a double-quoted
+    region is its content with `\\$`, `` \\` ``, `\\"`, `\\\\` and backslash-
+    newline resolved; an ANSI-C quote is decoded (_decode_ansi_c()); a
+    backslash outside quotes keeps the next character, and with a newline
+    after it vanishes. Undeterminable: a locale quote, any other region kind
+    (a substitution, a parameter or arithmetic expansion, an array subscript),
+    an unquoted `$` or backtick, an unquoted `*` or `?`, an unquoted `[` with
+    a later unquoted `]`, an unquoted `{` with a later unquoted `}`, an
+    unquoted `~` as the first character, an unquoted `?`, `*`, `+`, `@` or `!`
+    that ends the word directly before a `(` (an extended-glob pattern, which
+    the tokenizer splits at the parenthesis), a word that holds marker residue
+    of a substitution, and a region the word does not hold whole.
+
+    A word without a span (a token no tokenizer read) or without MARKED (the
+    parse-failure fallback's plain split) has no as-written reading: it is
+    undeterminable unless _read_plain_word() accepts it."""
+    if getattr(tok, "substitution_only", False) or getattr(tok, "unresolved", False):
+        return None
+    span = getattr(tok, "span", None)
+    if marked is None or span is None:
+        return _read_plain_word(tok)
+    start, end = span
+    text = marked.text
+    cr = getattr(tok, "trailing_cr", "")
+    if cr and text.startswith(cr, end - len(cr)):
+        end -= len(cr)  # bash passes the CR on; the check disregards it
+    word = text[start:end]
+    if (
+        not word
+        or UNRESOLVED_MARK in word
+        or QUOTED_MARK in word
+        or _MARK_TERMINATOR in word
+    ):
+        return None
+    bounds = _word_source_bounds(marked, start, end)
+    if bounds is None or bounds[1] - bounds[0] != end - start:
+        return None
+    lo, hi = bounds
+    regions = marked.top_regions
+    by_start = {}
+    k = max(bisect.bisect_right(marked.top_starts, lo) - 1, 0)
+    while k < len(regions) and regions[k].start < hi:
+        region = regions[k]
+        k += 1
+        if region.end <= lo:
+            continue
+        if region.start < lo or region.end > hi or not region.closed:
+            return None
+        by_start[region.start] = region
+    source = marked.source
+    chars = []  # the restored characters
+    bare = []  # parallel: whether the character stands unquoted and unescaped
+    pos = lo
+    while pos < hi:
+        region = by_start.get(pos)
+        if region is not None:
+            if region.kind == "single-quote":
+                opener, closer, skip = "'", "'", 1
+            elif region.kind == "double-quote":
+                opener, closer, skip = '"', '"', 1
+            elif region.kind == "ansi-c-quote":
+                opener, closer, skip = "$'", "'", 2
+            else:
+                return None
+            if not source.startswith(opener, pos) or source[region.end - 1] != closer:
+                return None
+            body = source[pos + skip:region.end - 1]
+            if region.kind == "double-quote":
+                body = _read_double_quoted(body)
+            elif region.kind == "ansi-c-quote":
+                body = _decode_ansi_c(body)
+            if body is None:
+                return None
+            chars.extend(body)
+            bare.extend([False] * len(body))
+            pos = region.end
+            continue
+        ch = source[pos]
+        if ch == "\\":
+            if pos + 1 >= hi or pos + 1 in by_start:
+                return None
+            if source[pos + 1] != "\n":
+                chars.append(source[pos + 1])
+                bare.append(False)
+            pos += 2
+            continue
+        if ch in "$`":
+            return None
+        chars.append(ch)
+        bare.append(True)
+        pos += 1
+    if not chars:
+        return ""
+    for opener, closer in (("[", "]"), ("{", "}")):
+        opened = False
+        for ch, free in zip(chars, bare):
+            if not free:
+                continue
+            if ch == opener:
+                opened = True
+            elif ch == closer and opened:
+                return None
+    if any(free and ch in "*?" for ch, free in zip(chars, bare)):
+        return None
+    if bare[0] and chars[0] == "~":
+        return None
+    if bare[-1] and chars[-1] in "?*+@!" and text[end:end + 1] == "(":
+        return None
+    return "".join(chars)
+
+
+def _read_plain_word(word):
+    """A word with no as-written reading (Component 1 rule 2): the word as it
+    stands, or None unless it holds no quote character, backslash, `$`,
+    backtick, `*`, `?`, `[`, `{`, `}` or `(`, and does not begin with `~`."""
+    if word.startswith("~") or any(ch in _PLAIN_WORD_UNREADABLE for ch in word):
+        return None
+    return str(word)
+
+
+def _is_assignment_word(marked, tok):
+    """Whether TOK is an assignment word: where the command-word reading
+    recognises one (`NAME=value`), and also a `NAME[subscript]=value` or
+    `NAME[subscript]+=value` whose subscript the lexer read as one. Whatever
+    the subscript and the value hold."""
+    if ASSIGNMENT_PREFIX.match(tok):
         return True
-    word, args = head(shaped_words)
-    if not word:
+    span = getattr(tok, "span", None)
+    if marked is None or span is None or "[" not in tok:
         return False
-    if "$" in word or "`" in word or UNRESOLVED_MARK in word:
-        return True
-    if word in ("builtin", "command"):
-        if not args:
-            return False
-        word = args[0]
-        if "$" in word or "`" in word or UNRESOLVED_MARK in word:
+    bounds = _word_source_bounds(marked, span[0], span[1])
+    if bounds is None:
+        return False
+    lo, hi = bounds
+    source = marked.source
+    name = ASSIGNMENT_NAME.match(source, lo, hi)
+    if name is None:
+        return False
+    at = bisect.bisect_left(marked.top_starts, name.end())
+    if at >= len(marked.top_starts) or marked.top_starts[at] != name.end():
+        return False
+    region = marked.top_regions[at]
+    return (
+        region.kind == "array-subscript"
+        and region.closed
+        and region.end < hi
+        and (source.startswith("=", region.end) or source.startswith("+=", region.end))
+    )
+
+
+def _bang_before_paren(marked, tok):
+    """Whether TOK is an unquoted `!` written directly before a `(` (no blank
+    between): an extended-glob pattern, whatever statement shaping made of
+    the `!`."""
+    span = getattr(tok, "span", None)
+    return (
+        marked is not None
+        and span is not None
+        and tok == "!"
+        and not getattr(tok, "quoted", False)
+        and not getattr(tok, "is_operator", False)
+        and marked.text[span[1]:span[1] + 1] == "("
+    )
+
+
+def _peel_command_word(marked, consumed, words):
+    """Component 2 of the masking-stop check (FR9): the effective command word
+    of one statement, as (determinable, word). (False, None) is
+    "undeterminable"; (True, None) is "no word left"; otherwise WORD is the
+    restored command word.
+
+    WORDS are the statement's words from its command position, as statement
+    shaping leaves them; CONSUMED are the words shaping consumed before it.
+    In one loop, each word visited once, any number of levels deep, the peel
+    passes over assignment words (_is_assignment_word(); not judged), wrapper
+    words of the command-word reading's vocabulary (WRAPPERS, with the options
+    and the value word of each value-taking option, WRAPPER_VALUE_FLAGS; the
+    value is not judged), mise / asdf `exec` prefixes, and `builtin` /
+    `command` words with their options (a word that begins with `-` and is not
+    `-` alone; a `--` is passed over and ends them). Every other word the loop
+    reads -- a possible command word, the name of a wrapper, `builtin` or
+    `command`, an option of one of them -- is read through
+    _read_word_as_written() first, and the first undeterminable one ends the
+    peel; so does a word built entirely from a command substitution at a
+    command-word position, which the command-word reading passes over. An
+    unquoted `!` among CONSUMED written directly before a `(` is an
+    extended-glob pattern, so undeterminable too. The names are compared with
+    the restored word.
+
+    This is the only place the masking-stop check removes `builtin` /
+    `command`. The command-word reading and the override reading's one-level
+    `builtin` reading are not replaced by it."""
+    if any(_bang_before_paren(marked, tok) for tok in consumed):
+        return False, None
+    size = len(words)
+    read = {}
+
+    def restored(k):
+        if k not in read:
+            read[k] = _read_word_as_written(marked, words[k])
+        return read[k]
+
+    i = 0
+    while i < size:
+        if _is_assignment_word(marked, words[i]):
+            i += 1
+            continue
+        name = restored(i)
+        if name is None:
+            return False, None
+        i += 1
+        if name == "builtin" or name in WRAPPERS:
+            value_flags = WRAPPER_VALUE_FLAGS.get(name, ())
+            while i < size and not _is_assignment_word(marked, words[i]):
+                option = restored(i)
+                if option is None:
+                    return False, None
+                if option == "--":
+                    i += 1
+                    break
+                if option == "-" or not option.startswith("-"):
+                    break
+                i += 1
+                if option in value_flags:
+                    i += 1  # the option's value word: not judged
+            continue
+        if name in ("mise", "asdf") and i < size and str(words[i]) == "exec":
+            i += 1
+            while i < size and str(words[i]) != "--":
+                i += 1
+            i += 1
+            continue
+        return True, name
+    return True, None
+
+
+def _masking_stop_reached(marked, toks, consumed, shaped_words, in_python_body):
+    """Component 4 of the masking-stop check (FR9): whether this statement
+    stops literal masking for the rest of the command, besides the statements
+    the override reading flags (the caller ORs those in). TOKS are the
+    statement's tokens, CONSUMED the words statement shaping consumed before
+    its command position, SHAPED_WORDS the rest. MARKED is the _MarkedText the
+    statement was lexed from, None for a statement of the parse-failure
+    fallback. IN_PYTHON_BODY says the statement stands in a chunk marked as a
+    Python-program body, where a command word that cannot be fixed statically
+    is the program's code (a pattern, a bracket, a brace, a tilde) and stops
+    nothing.
+
+    True when a word holds one of STOP_VARIABLE_NAMES (as it is written, or
+    restored when it holds an ANSI-C quote), or when the peeled command word
+    is one of STOP_COMMAND_WORDS (by its last path segment, as the
+    command-word reading compares a command word), or is undeterminable
+    outside a Python-body chunk."""
+    for tok in toks:
+        if any(name in tok for name in STOP_VARIABLE_NAMES):
             return True
-    return word in PYTHON_MASK_STATE_BUILTINS
+        if "$'" in tok:
+            decoded = _read_word_as_written(marked, tok)
+            if decoded is not None and any(name in decoded for name in STOP_VARIABLE_NAMES):
+                return True
+    determinable, word = _peel_command_word(marked, consumed, shaped_words)
+    if not determinable:
+        return not in_python_body
+    return word is not None and os.path.basename(word) in STOP_COMMAND_WORDS
 
 
 # destructive-guard-false-deny FR2: which single-quote candidates of the
@@ -7195,12 +7596,17 @@ def statements(command, unsettled=None):
     beyond what this loop already performs, just string processing over
     CHUNK alone plus one running list.
     """
-    # Each entry is (chunk text, anchor, substitution index): the anchor is
-    # the chunk's origin-position prefix (see "Origin positions" above); the
-    # substitution index is the run-global ALL_SUBS index of the substitution
-    # a body chunk was queued for (None for every other chunk), which lets
-    # the anchor be refined at pop time from MARKER_POS.
-    pending = [(command, (), None)]
+    # Each entry is (chunk text, anchor, substitution index, Python-body
+    # mark): the anchor is the chunk's origin-position prefix (see "Origin
+    # positions" above); the substitution index is the run-global ALL_SUBS
+    # index of the substitution a body chunk was queued for (None for every
+    # other chunk), which lets the anchor be refined at pop time from
+    # MARKER_POS. The Python-body mark (PY_BODY_NONE, PY_BODY,
+    # PY_BODY_UNQUOTED; destructive-guard-heredoc-literal Component 5) says
+    # whether the chunk is the body of a "Python program" heredoc, or derived
+    # from one; the masking-stop check reads it (_masking_stop_reached()) and
+    # nothing else does.
+    pending = [(command, (), None, PY_BODY_NONE)]
     # {ALL_SUBS index: origin position of that substitution's marker}, kept
     # by _register_marker_positions(); a later (deeper) registration
     # replaces an earlier one.
@@ -7239,16 +7645,26 @@ def statements(command, unsettled=None):
     # so each parked body is queued at most once.
     override_seen = False
     deferred_data_bodies = []
-    # Python-masking only: raised by _python_mask_unsafe_words() (a statement
-    # whose effect on names / state cannot be read statically). Stops further
-    # masking and queues the parked originals of already masked bodies; data
-    # judgments are not affected.
-    python_unsafe_seen = False
+    # The masking-stop flag (destructive-guard-heredoc-literal FR9): raised by
+    # the statement check below -- _masking_stop_reached(), or a statement the
+    # override reading flags -- for a statement whose effect on command names
+    # or shell state cannot be read statically, wherever it stands relative to
+    # the heredoc. Stops further masking and queues the parked originals of
+    # already masked bodies; data judgments and the FR7 flag are not affected.
+    masking_stopped = False
     deferred_python_bodies = []
     command_chunk = True
     while pending:
-        chunk, anchor, sub_index = pending.pop()
+        chunk, anchor, sub_index, py_mark = pending.pop()
         is_command, command_chunk = command_chunk, False
+        # What a chunk derived from this one carries (Component 5): the mark
+        # as it stands, except that the substitution bodies and unclosed
+        # command forms of an unquoted-delimiter Python body are the shell's
+        # to evaluate before Python reads the body, so they carry none.
+        derived_mark = PY_BODY if py_mark else PY_BODY_NONE
+        substitution_mark = (
+            PY_BODY_NONE if py_mark == PY_BODY_UNQUOTED else derived_mark
+        )
         if sub_index is not None:
             anchor = marker_pos.get(sub_index, anchor)
         scanned_chars += len(chunk)
@@ -7348,14 +7764,20 @@ def statements(command, unsettled=None):
                 destination = destinations.get(index, "undetermined")
                 defer_data = False
                 masked_body = None
+                # The mark of the chunks queued from this body whole
+                # (Component 5): a Python program's body is marked, and with
+                # an unquoted delimiter its own substitutions are not; any
+                # other body derives from this chunk.
+                body_mark = derived_mark
                 if destination == "python":
+                    body_mark = PY_BODY if record.quoted else PY_BODY_UNQUOTED
                     # destructive-guard-heredoc-literal: the body is a Python
                     # program, read with the content of its closed ordinary
                     # string literals masked. A command-name override seen
                     # already (TM-2), or a literal whose extent cannot be
                     # settled (FR6), reads it as the sink body it was
                     # before this outcome existed.
-                    if not override_seen and not python_unsafe_seen:
+                    if not override_seen and not masking_stopped:
                         masked_body = _mask_python_literals(record.body)
                     if masked_body is None:
                         destination = "sink"
@@ -7381,7 +7803,9 @@ def statements(command, unsettled=None):
                         _heredoc_body_step(chunk, heredoc_ended_by, record, index),
                     )
                 if defer_data:
-                    deferred_data_bodies.append((record.body, body_anchor, None))
+                    deferred_data_bodies.append(
+                        (record.body, body_anchor, None, body_mark)
+                    )
                 if masked_body is not None:
                     # The masked text is the only version of the body that is
                     # read as statements, in place of the body. The original
@@ -7389,10 +7813,12 @@ def statements(command, unsettled=None):
                     # this command (TM-2), queued whole then through the
                     # same deferral a data body uses; the flag is raised
                     # once, so it is queued at most once.
-                    deferred_python_bodies.append((record.body, body_anchor, None))
-                    pending.append((masked_body, body_anchor, None))
+                    deferred_python_bodies.append(
+                        (record.body, body_anchor, None, body_mark)
+                    )
+                    pending.append((masked_body, body_anchor, None, body_mark))
                 if queued_whole:
-                    pending.append((record.body, body_anchor, None))
+                    pending.append((record.body, body_anchor, None, body_mark))
                 elif not record.quoted:
                     # An unquoted delimiter (`<<EOF`, not `<<'EOF'`/
                     # `<<"EOF"`) means the shell itself expands
@@ -7428,7 +7854,7 @@ def statements(command, unsettled=None):
                         # extracted as a discrete substitution; treat the
                         # whole body as the scan target rather than silently
                         # dropping it.
-                        pending.append((record.body, body_anchor, None))
+                        pending.append((record.body, body_anchor, None, PY_BODY_NONE))
                         # An unclosed command form `${ cmd` in the body stays
                         # inspected as well, read as the body reads it (a
                         # quote or `#` before it opens nothing there), not
@@ -7439,7 +7865,12 @@ def statements(command, unsettled=None):
                         ):
                             if inner.strip():
                                 pending.append(
-                                    (inner, body_anchor + ((opener, 0, 0),), None)
+                                    (
+                                        inner,
+                                        body_anchor + ((opener, 0, 0),),
+                                        None,
+                                        PY_BODY_NONE,
+                                    )
                                 )
                     else:
                         for body, offset_in_body in bodies:
@@ -7449,6 +7880,7 @@ def statements(command, unsettled=None):
                                         body,
                                         body_anchor + ((offset_in_body, 0, 0),),
                                         None,
+                                        PY_BODY_NONE,
                                     )
                                 )
         # TOP_SPANS (Component 1, computed once above) already reflects true
@@ -7497,6 +7929,7 @@ def statements(command, unsettled=None):
                         body,
                         anchor + ((_AFTER_EVERYTHING, _AFTER_EVERYTHING, i),),
                         offset + i,
+                        substitution_mark,
                     )
                 )
         for k, (body, _opener) in enumerate(unclosed_forms):
@@ -7507,6 +7940,7 @@ def statements(command, unsettled=None):
                         anchor
                         + ((_AFTER_EVERYTHING, _AFTER_EVERYTHING, len(chunk_subs) + k),),
                         None,
+                        substitution_mark,
                     )
                 )
         all_subs.extend(chunk_subs)
@@ -7521,6 +7955,7 @@ def statements(command, unsettled=None):
                 words_only, redirects = split_redirects(fused, lexed)
                 lead = _shape_leading(words_only, case_stack, in_tail[seg_index])
                 shaped_words = _shaped_remainder(words_only, lead)
+                stop_source, stop_consumed = marked_chunk, words_only[:lead]
                 statement_overrides = not override_seen and _overrides_command_name(
                     words_only, lead, shaped_words
                 )
@@ -7536,6 +7971,7 @@ def statements(command, unsettled=None):
             else:
                 fallback_words, redirects = split_redirects(toks, lexed)
                 shaped_words = _shape_fallback(fallback_words)
+                stop_source, stop_consumed = None, []
                 statement_overrides = (
                     not override_seen
                     and _overrides_command_name_unlexed(toks, shaped_words)
@@ -7544,14 +7980,18 @@ def statements(command, unsettled=None):
                 override_seen = True
                 pending.extend(deferred_data_bodies)
                 deferred_data_bodies = []
-            if (
-                (statement_overrides or not python_unsafe_seen)
-                and (
-                    statement_overrides
-                    or _python_mask_unsafe_words(toks, shaped_words)
+            # The masking-stop check (FR9): every statement the override
+            # reading flags stops masking, and so does one that
+            # _masking_stop_reached() flags -- in a lexed or a fallback
+            # statement alike, in a Python-body chunk too (where only its
+            # statically undeterminable command word is let through).
+            if not masking_stopped and (
+                statement_overrides
+                or _masking_stop_reached(
+                    stop_source, toks, stop_consumed, shaped_words, bool(py_mark)
                 )
             ):
-                python_unsafe_seen = True
+                masking_stopped = True
                 pending.extend(deferred_python_bodies)
                 deferred_python_bodies = []
 
@@ -7588,6 +8028,7 @@ def statements(command, unsettled=None):
                                 anchor
                                 + ((seg_index, _token_index(marked, payload_word), 0),),
                                 None,
+                                derived_mark,
                             )
                         )
         # The unclosed command forms of this chunk: every level of a nest of
