@@ -4,8 +4,8 @@ phase: create-spec
 status: in_progress
 generation: 2
 base_revision: e29ee4ad37943a39d4466379826f9666c6e4dfdc
-last_input_digest: sha256:aa1d6b6999c69ae5403c8d7db897cc0ec636166666e6846e620291b1d43eea4f
-active_request_id: create-spec-run-0005
+last_input_digest: sha256:b6bb2f5c2532fa3dae612d20233d2598d5b889bb5c4b0e2bcc123a957072f008
+active_request_id: null
 packets: {}
 answers:
   create-spec.requirement-clarification:
@@ -51,10 +51,16 @@ worker_runs:
   status: completed
   input_digest: sha256:08ab34ee786a9dc0ea921324071445acbcba4de71d67ed2ba447bf96a42138c6
   output_digest: null
+- request_id: create-spec-run-0005
+  status: completed
+  input_digest: sha256:b6bb2f5c2532fa3dae612d20233d2598d5b889bb5c4b0e2bcc123a957072f008
+  output_digest: null
+  self_write_set:
+  - feature-docs/destructive-guard-multi-substitution-reason/SPEC.md
 artifacts:
 - path: feature-docs/destructive-guard-multi-substitution-reason/SPEC.md
-  sha256: sha256:7bd60a2b11ab9815ec6c071bea540c9e422c4d81ed7ace717103d4797ee5080d
-  produced_by: create-spec-run-0003
+  sha256: sha256:c38661d3755c80571418161e4c7780cfd345b6c63877663ef98816bc079e3b30
+  produced_by: create-spec-run-0005
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0

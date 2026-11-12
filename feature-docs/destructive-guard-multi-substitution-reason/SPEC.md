@@ -9,6 +9,7 @@
 
 - 1 つの再帰削除に、コマンド置換だけでできた削除対象が 2 つ以上あるとき、destructive-guard の理由文を読んだ人間やエージェントが、どの対象が引っかかったのかを判別できる
 - この判別できる状態が後の変更で崩れたら、テストで検出できる
+- goal の完了の定義どおり、`python3 em-workflow/hooks/tests/run-destructive-guard.py` と `python3 -m unittest discover -s tests` がどちらも全件通る
 
 ## User Stories
 
@@ -29,7 +30,8 @@ As a destructive-guard の理由文を読む人間やエージェント, I want 
 As a destructive-guard を変更する人間やエージェント, I want to 理由文で置換対象を判別できる状態が崩れたらテストで検出したい, so that この状態を後の変更で失わない.
 
 **Acceptance Criteria:**
-- [ ] AC-4: 既存テストを変更せずに `python3 em-workflow/hooks/tests/run-destructive-guard.py` と `python3 -m unittest discover -s tests` が全件通る。（FR4, FR5）
+- [ ] AC-4: tests/test_destructive_guard_mixed_rm_precedence.py（FR12 の範囲の変更）を除く既存テストを変更せずに、`python3 em-workflow/hooks/tests/run-destructive-guard.py` と `python3 -m unittest discover -s tests` が全件通る。（FR4, FR5, FR12）
+- [ ] AC-10: `python3 -m unittest tests.test_destructive_guard_mixed_rm_precedence` が failures 0 / errors 0 で通る。そのファイルは自分の feature のケースを `[PRE_EXISTING_CASE_COUNT:]` で取り出さず、ラベルが `destructive-guard-mixed-rm-precedence ` で始まるケース（現在のケース表で 33 件）を取り出し、それらが PRE_EXISTING_CASE_COUNT 番目から連続していることを確かめる。PRE_EXISTING_CASE_COUNT / PRE_EXISTING_CASES_DIGEST の値と各シナリオの期待件数は変わっていない。em-workflow/hooks/tests/destructive-guard-cases.json は変更されていない。（FR12, FR4）
 
 ## Technical Requirements
 
@@ -37,7 +39,7 @@ As a destructive-guard を変更する人間やエージェント, I want to 理
 - **FR1:** 1 つの rm に置換だけの対象が 2 つある場合の回帰テスト。`rm -rf $(cat a) $(cat b)` を PreToolUse JSON でフックに渡すテストを追加する。判定は ask、理由 ID は rm-unresolvable、理由文から取り出した対象の指定がこの順で [`` 1番目のrmの1番目の対象[`$(...)`] ``, `` 1番目のrmの2番目の対象[`$(...)`] ``] であり、2 つが互いに異なり、それぞれ 1 回だけ出ることを固定する。理由文に置換の本文（`cat a` / `cat b`）が含まれないことも固定する。
 - **FR2:** 置換だけの対象が別々の rm 呼び出しにある場合の回帰テスト。`rm -rf $(cat a); rm -rf $(cat b)` について、理由文の対象の指定が [`` 1番目のrmの1番目の対象[`$(...)`] ``, `` 2番目のrmの1番目の対象[`$(...)`] ``] で、それぞれ 1 回だけ出ることを固定するテストを追加する。
 - **FR3:** 無人実行で降格したときも指定が区別できる。FR1 のコマンドを CLAUDE_BATCH を立てて実行したとき、判定は deny、理由 ID は rm-unresolvable のままで、理由文に FR1 と同じ 2 つの異なる指定がそれぞれ 1 回だけ含まれることを固定するテストを追加する。
-- **FR4:** 単一対象の理由文は変えない。置換だけの対象が 1 つのときの理由文（例: `rm -rf $(printf /x)` の全文）は変更しない。既存テストは変更せずに通す。
+- **FR4:** 単一対象の理由文は変えない。置換だけの対象が 1 つのときの理由文（例: `rm -rf $(printf /x)` の全文）は変更しない。既存テストは変更せずに通す。例外は FR12 の tests/test_destructive_guard_mixed_rm_precedence.py の 1 ファイルだけで、FR12 の範囲に限って変更する。
 - **FR5:** SUBSTITUTION_STANDIN を変えない。`SUBSTITUTION_STANDIN` の値 `$(...)` と、そのコメントに挙げた不活性条件（先頭が `-` でない、REDIRECT の形に一致しない、安全なルート名と一致しない、制御文字を含まない）は変えない。
 - **FR6:** フック本体の変更は、テストが失敗した場合に限る。現在のフックはすでに位置による指定で対象を区別している（Assumptions A1）。FR1〜FR3 と FR7〜FR11 のテストが現在のフックで通るなら、`em-workflow/hooks/destructive-guard.py` は変更しない。通らない場合に限り、FR1〜FR5 と FR7〜FR11 を満たすようにフックを直す。
 - **FR7:** バッククォート置換が 2 つの場合の回帰テスト。`` rm -rf `cat a` `cat b` `` について、判定が ask / rm-unresolvable で、理由文の指定がこの順で [`` 1番目のrmの1番目の対象[`$(...)`] ``, `` 1番目のrmの2番目の対象[`$(...)`] ``] であり、互いに異なり、それぞれ 1 回だけ出ることを固定するテストを追加する（バッククォートの対象にも固定の標準テキスト `$(...)` が付く）。
@@ -45,6 +47,7 @@ As a destructive-guard を変更する人間やエージェント, I want to 理
 - **FR9:** プロセス置換が 2 つの場合の回帰テスト。`rm -rf <(cat a) <(cat b)` について、判定が ask / rm-unresolvable で、理由文の指定がこの順で [`` 1番目のrmの1番目の対象[`$(...)`] ``, `` 1番目のrmの2番目の対象[`$(...)`] ``] であり、互いに異なり、それぞれ 1 回だけ出ることを固定するテストを追加する（`<(` と `)` は対象として数えない）。
 - **FR10:** 置換の対象の間に静的に決まる対象を挟んだ場合の回帰テスト。`rm -rf $(cat a) /tmp/scratch $(cat b)` について、判定が ask / rm-unresolvable で、理由文の指定がこの順で [`` 1番目のrmの1番目の対象[`$(...)`] ``, `` 1番目のrmの3番目の対象[`$(...)`] ``] であり（番号は元のコマンドでの対象の位置）、互いに異なり、それぞれ 1 回だけ出ること、「1番目のrmの2番目の対象」が理由文に出ないことを固定するテストを追加する。
 - **FR11:** 置換の本文に固有の文字列を入れても理由文に出ない。2 つの置換の本文に、ほかでは使わない固有の文字列を入れたコマンド（例: `rm -rf $(printf MULTISUBBODYALPHA) $(printf MULTISUBBODYBETA)`）について、判定が ask / rm-unresolvable で、どちらの固有文字列も理由文に含まれず、理由文の指定が [`` 1番目のrmの1番目の対象[`$(...)`] ``, `` 1番目のrmの2番目の対象[`$(...)`] ``] でそれぞれ 1 回だけ出ることを固定するテストを追加する。
+- **FR12:** mixed-rm-precedence のテストが自分の feature のケースを位置ではなくラベルで見分ける。tests/test_destructive_guard_mixed_rm_precedence.py の TestCaseTable.setUpClass と TestScenarioCasesPassAgainstTheHook.setUpClass は、自分の feature のケースを `[PRE_EXISTING_CASE_COUNT:]`（1208 番目以降すべて）という固定の位置で取り出している。これを、ラベル（各ケースの 2 番目の要素）が `destructive-guard-mixed-rm-precedence `（feature 名と空白 1 つ）で始まるケースを取り出す方法に変える。あわせて、取り出したケースがケース表の中で連続しており、その先頭がケース表の PRE_EXISTING_CASE_COUNT 番目の位置（0 始まり）にあることを確かめる検査を TestCaseTable に足す。このファイルで変えるのはこの取り出し方とこの検査の追加だけで、ほかの検査と期待値（PRE_EXISTING_CASE_COUNT と PRE_EXISTING_CASES_DIGEST による既存ケースの検査、各シナリオの件数を含む）は変えない。em-workflow/hooks/tests/destructive-guard-cases.json と、ほかの既存テストは変更しない。
 
 ### Non-Functional Requirements
 - **NFR1 - テストの書き方:** テストは標準ライブラリの unittest だけを使い、フックをサブプロセスとして起動し、標準入力に PreToolUse JSON を渡す。HOME と PATH はテストが明示的に渡し、実行するマシンに左右されない（test/README.md と既存の tests/test_destructive_guard_rm_reason*.py の書き方に合わせる）。
@@ -107,7 +110,8 @@ destructive-guard.py
 
 ```
 tests/
-└── test_destructive_guard_multi_substitution_reason.py   # 新規。FR1〜FR3、FR7〜FR11 の回帰テスト
+├── test_destructive_guard_multi_substitution_reason.py   # 新規。FR1〜FR3、FR7〜FR11 の回帰テスト
+└── test_destructive_guard_mixed_rm_precedence.py         # FR12 の範囲だけ変更
 em-workflow/hooks/
 └── destructive-guard.py                                  # FR6 の条件を満たすときだけ変更
 ```
@@ -144,6 +148,7 @@ em-workflow/hooks/
 - [ ] TS-7: `rm -rf <(cat a) <(cat b)`（CLAUDE_BATCH なし） - ask / rm-unresolvable、指定の並び [`` 1番目のrmの1番目の対象[`$(...)`] ``, `` 1番目のrmの2番目の対象[`$(...)`] ``]（AC-7）
 - [ ] TS-8: `rm -rf $(cat a) /tmp/scratch $(cat b)`（CLAUDE_BATCH なし） - ask / rm-unresolvable、指定の並び [`` 1番目のrmの1番目の対象[`$(...)`] ``, `` 1番目のrmの3番目の対象[`$(...)`] ``]、「1番目のrmの2番目の対象」が無い（AC-8）
 - [ ] TS-9: `rm -rf $(printf MULTISUBBODYALPHA) $(printf MULTISUBBODYBETA)`（CLAUDE_BATCH なし） - ask / rm-unresolvable、指定の並び [`` 1番目のrmの1番目の対象[`$(...)`] ``, `` 1番目のrmの2番目の対象[`$(...)`] ``]、MULTISUBBODYALPHA と MULTISUBBODYBETA が理由文に無い（AC-9）
+- [ ] TS-12: `python3 -m unittest tests.test_destructive_guard_mixed_rm_precedence` - failures 0 / errors 0。自分の feature のケースの取り出しがラベルによる（33 件）こと、それらが PRE_EXISTING_CASE_COUNT 番目から連続していること、`[PRE_EXISTING_CASE_COUNT:]` による取り出しが残っていないこと、PRE_EXISTING_CASE_COUNT / PRE_EXISTING_CASES_DIGEST と各シナリオの期待件数が変わっていないこと、destructive-guard-cases.json に差分が無いこと（AC-10）
 
 ### E2E Tests
 **Existing E2E tests**: なし
@@ -183,12 +188,16 @@ em-workflow/hooks/
 - **A4:** em-workflow/hooks/tests/destructive-guard-cases.json のランナーは判定と理由 ID しか比べず、理由文は比べないので、この回帰はそこでは固定できない。ケースの追加は必須にしない。回答（Q2）で同意済み。
 - **A5:** 回答（Q3）により、回帰テストにバッククォート 2 つ、$() とバッククォートの混在、プロセス置換 2 つ、静的対象を挟んだ場合の位置番号、本文が出ないことの 5 ケースを加え、各ケースで 2 つの指定が互いに異なりそれぞれ 1 回だけ出ることを確かめる（FR7〜FR11）。
 - **A6:** FR7〜FR11 の期待する指定はコードを読んで導き、オーケストレーターがフックを実行して一致を確かめた。バッククォートは `$( … )` と同じく置換全体が印に置き換わり、置換だけの語は SUBSTITUTION_STANDIN `$(...)` の substitution_only トークンになる（_mark_substitutions, _strip_unresolved_marks）。プロセス置換は本文だけが印になり、`<(` と `)` は演算子トークンとして残る。`<(` は REDIRECT に完全一致しないので引数に残るが、_number_rm_operands は演算子トークンを数えず、`)` は _shaped_remainder が落とす（_substitution_body_range, _tokenize_marked, split_redirects）。`/tmp/scratch` は safe_delete_target() で安全とされ記録を作らないが、対象番号 2 を占める（既存テスト test_single_winner_text_is_exactly_the_single_target_text と同じ扱い）。
+- **A7:** verify round 1 の TS-4 の失敗（unittest discover で failures=96 errors=7）は、すべて tests/test_destructive_guard_mixed_rm_precedence.py から出ており、merge-base 78c6db0ed の main でも同じく再現する既存の失敗である。原因は、そのテストが自分の feature のケースを `cases[1208:]` で取り出していることにある。ケース表では destructive-guard-mixed-rm-precedence の 33 件の後ろに、後の feature（destructive-guard-heredoc-literal、3 要素のケースを含む）の 96 件が足されている。
+- **A8:** test_every_existing_case_is_present_unchanged_and_first（cases[:1208] の件数とダイジェスト）は現在も通っている（オーケストレーターが実行して確認した）。このため FR12 ではこの検査を変えない。
+- **A9:** ケースに含まれる情報のうち、feature ごとに一意な目印はラベルの先頭の feature 名だけなので、見分け方はラベルの先頭一致（`destructive-guard-mixed-rm-precedence ` に空白まで含める）にする。
+- **A10:** ラベルの先頭一致だけでは「既存ケースの直後に連続して置かれている」ことを確かめなくなるため、連続性と開始位置の検査を足す（Codex 相談で、位置の固定窓や先頭一致のみより比較的よいと判断）。
 
 ## Success Criteria
 
 - [ ] All functional requirements are implemented and tested
 - [ ] All test scenarios pass
-- [ ] AC-1〜AC-9 を満たす
+- [ ] AC-1〜AC-10 を満たす
 - [ ] Code review is completed
 
 ## Open Questions
