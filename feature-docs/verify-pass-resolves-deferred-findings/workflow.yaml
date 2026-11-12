@@ -129,7 +129,8 @@ tasks:
     - NFR3
     - NFR5
     - NFR6
-    status: pending
+    status: in_progress
+    branch: em-workflow/verify-pass-resolves-deferred-findings/task0001
   task0002:
     title: verify フェーズの round / passed_ids 記録と verify pass 解決手順
     plan: tasks/task0002.md
@@ -154,7 +155,8 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
+    branch: em-workflow/verify-pass-resolves-deferred-findings/task0002
   task0003:
     title: round 記録の verify_resolution 定義と batch 報告
     plan: tasks/task0003.md
@@ -173,7 +175,8 @@ tasks:
     - NFR2
     - NFR3
     - NFR5
-    status: pending
+    status: in_progress
+    branch: em-workflow/verify-pass-resolves-deferred-findings/task0003
 review:
   status: pending
 requirements:
