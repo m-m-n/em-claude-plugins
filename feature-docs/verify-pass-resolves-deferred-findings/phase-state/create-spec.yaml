@@ -1,0 +1,20 @@
+schema_version: 1
+feature: verify-pass-resolves-deferred-findings
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: 7a7f1a4a517a75e7fb6fd921cf81c5b46ff02dc2
+last_input_digest: sha256:83d6781332513d5ae83475271bc867b9ba0c2809f72f9fbc31d8b4c8f703ff23
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: dispatched
+    input_digest: sha256:83d6781332513d5ae83475271bc867b9ba0c2809f72f9fbc31d8b4c8f703ff23
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
