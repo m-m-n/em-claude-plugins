@@ -1,11 +1,11 @@
 schema_version: 1
 feature: verify-pass-resolves-deferred-findings
 phase: create-spec
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: 7a7f1a4a517a75e7fb6fd921cf81c5b46ff02dc2
 last_input_digest: sha256:8af1a9b02f3cc8a37532a2005a081074753a151f15b5a119524f917b27268692
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -138,9 +138,18 @@ worker_runs:
   status: completed
   input_digest: sha256:b694199eef2fde241def583c4127ffff66ba2f13f59fc7ead416d85e94367e40
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:8af1a9b02f3cc8a37532a2005a081074753a151f15b5a119524f917b27268692
-artifacts: []
+  self_write_set:
+  - feature-docs/verify-pass-resolves-deferred-findings/REQUIREMENTS.md
+  - feature-docs/verify-pass-resolves-deferred-findings/SPEC.md
+artifacts:
+- path: feature-docs/verify-pass-resolves-deferred-findings/REQUIREMENTS.md
+  sha256: sha256:dcbca70afa61da607fb18013e05ca0f34ec515de32fe1a5390b2696e38a49ae4
+  produced_by: create-spec-run-0003
+- path: feature-docs/verify-pass-resolves-deferred-findings/SPEC.md
+  sha256: sha256:200772e1fe063f1766fb2b40bbc500dd8b1c4c5dbadcb4ff50fda3254c6286ea
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
