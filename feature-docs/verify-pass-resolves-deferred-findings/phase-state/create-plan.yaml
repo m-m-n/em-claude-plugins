@@ -1,7 +1,7 @@
 schema_version: 1
 feature: verify-pass-resolves-deferred-findings
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 89ff0802eea1eec3ba30123ff9297ed33b4ed353
 last_input_digest: sha256:5f9b8d9dc4d3ebf8198869d22bfe41eae56b3e3381ac21e6f8d7176c6024a0ed
