@@ -5,7 +5,7 @@ status: in_progress
 generation: 2
 base_revision: e29ee4ad37943a39d4466379826f9666c6e4dfdc
 last_input_digest: sha256:aa1d6b6999c69ae5403c8d7db897cc0ec636166666e6846e620291b1d43eea4f
-active_request_id: create-spec-run-0004
+active_request_id: create-spec-run-0005
 packets: {}
 answers:
   create-spec.requirement-clarification:
@@ -23,6 +23,16 @@ answers:
       1 回だけ出ることを確かめる。'
     normalized_answer: A1〜A4 に同意。回帰テストに (1) バッククォート 2 つ (2) $() とバッククォートの混在 (3) プロセス置換
       2 つ (4) 静的対象を挟んだ場合の位置番号 (5) 本文が出ないこと、を追加
+  create-spec.precedence-test-selection:
+    packet_id: null
+    answered_at: '2026-11-13T01:35:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - label-prefix-plus-contiguity
+    freeform: null
+    normalized_answer: FR12 の取り出しはラベルの先頭一致とし、取り出したケースが PRE_EXISTING_CASE_COUNT 番目から連続していることの検査を足す
+    resolution_note: 'Codex 相談: (A) 先頭一致のみ / (B) 先頭一致 + 連続性と開始位置の検査 / (C) 固定窓 [1208:1241] から B を採用。A は既存ケース直後への配置を検証しなくなり、C は位置と件数の固定値に依存して追加ケースを見落とすため'
 worker_runs:
 - request_id: create-spec-run-0001
   status: completed
@@ -38,7 +48,7 @@ worker_runs:
   output_digest: null
   self_write_set: []
 - request_id: create-spec-run-0004
-  status: dispatched
+  status: completed
   input_digest: sha256:08ab34ee786a9dc0ea921324071445acbcba4de71d67ed2ba447bf96a42138c6
   output_digest: null
 artifacts:
