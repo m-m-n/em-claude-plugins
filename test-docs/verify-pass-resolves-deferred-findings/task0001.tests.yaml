@@ -1,0 +1,81 @@
+task_id: task0001
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 15990 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 16035 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_resolve_verified_findings.TestAc1ResolvesAnEligibleFinding.test_ac1_preflight_stops_before_and_proceeds_after_the_script
+      - tests.test_resolve_verified_findings.TestAc1ResolvesAnEligibleFinding.test_ac1_critical_severity_is_eligible_too
+      - tests.test_resolve_verified_findings.TestAc1ResolvesAnEligibleFinding.test_ac1_several_criteria_are_joined_and_deduplicated_in_mapping_order
+      - tests.test_resolve_verified_findings.TestAc1ResolvesAnEligibleFinding.test_ac1_previous_reason_is_null_when_the_finding_had_none
+      - tests.test_resolve_verified_findings.TestAc1ResolvesAnEligibleFinding.test_ac1_verified_commit_may_be_a_64_character_object_name
+      - tests.test_resolve_verified_findings.TestAc1ResolvesAnEligibleFinding.test_ac1_options_may_be_given_in_the_equals_form
+      - tests.test_resolve_verified_findings.TestAc1ResolvesAnEligibleFinding.test_ac1_an_all_digit_stable_id_stays_a_string
+      - tests.test_resolve_verified_findings.TestAc1ResolvesAnEligibleFinding.test_ac1_only_the_three_values_change_and_key_order_is_kept
+      - tests.test_resolve_verified_findings.TestAc1ResolvesAnEligibleFinding.test_ac1_untouched_values_and_non_ascii_text_survive_the_rewrite
+      - tests.test_resolve_verified_findings.TestAc1ResolvesAnEligibleFinding.test_ac1_the_file_mode_of_the_record_is_kept
+    red_confirmed: true
+    red_reason: "Run before em-workflow/scripts/resolve-verified-findings.py existed, every test failed at the run step with AssertionError: 2 != 0 (python3: can't open file 'em-workflow/scripts/resolve-verified-findings.py': No such file or directory). In test_ac1_preflight_stops_before_and_proceeds_after_the_script the 'before' assertion (merge-preflight.py returns unresolved_findings naming the stable_id on the committed branch) passed first, which is SPEC AC9: the same fixture fails the preflight without the script. The 'after' assertion (outcome proceed) passes only once the script has run."
+  AC-2:
+    tests:
+      - tests.test_resolve_verified_findings.TestAc2IneligibleEntriesChangeNothing.test_ac2_each_ineligible_entry_leaves_its_finding_untouched
+      - tests.test_resolve_verified_findings.TestAc2IneligibleEntriesChangeNothing.test_ac2_one_round_with_every_ineligible_kind_stays_deferred_and_blocks_the_preflight
+      - tests.test_resolve_verified_findings.TestAc2IneligibleEntriesChangeNothing.test_ac2_findings_that_cannot_be_matched_to_exactly_one_entry_are_not_applied
+      - tests.test_resolve_verified_findings.TestAc2IneligibleEntriesChangeNothing.test_ac2_only_the_eligible_entries_change_when_mixed_with_ineligible_ones
+      - tests.test_resolve_verified_findings.TestAc2IneligibleEntriesChangeNothing.test_ac2_an_empty_mapping_object_is_valid_and_writes_nothing
+    red_confirmed: true
+    red_reason: "Run before the script existed, all five failed at the run step with AssertionError: 2 != 0 (python3: can't open file ... resolve-verified-findings.py). The tests also fail against deliberately weakened scripts: removing the category check, the severity check, the deferred check, the unique-match rule, the all-members rule, the non-empty rule or the token check on the key was each observed to fail the test module."
+  AC-3:
+    tests:
+      - tests.test_resolve_verified_findings.TestAc3NonPassVerifyChangesNothing.test_ac3_result_fail
+      - tests.test_resolve_verified_findings.TestAc3NonPassVerifyChangesNothing.test_ac3_result_null
+      - tests.test_resolve_verified_findings.TestAc3NonPassVerifyChangesNothing.test_ac3_result_absent
+      - tests.test_resolve_verified_findings.TestAc3NonPassVerifyChangesNothing.test_ac3_round_zero
+      - tests.test_resolve_verified_findings.TestAc3NonPassVerifyChangesNothing.test_ac3_round_absent_is_read_as_zero
+      - tests.test_resolve_verified_findings.TestAc3NonPassVerifyChangesNothing.test_ac3_control_the_same_fixture_with_result_pass_is_rewritten
+    red_confirmed: true
+    red_reason: "Run before the script existed, all six failed at the run step with AssertionError: 2 != 0 (python3: can't open file ... resolve-verified-findings.py). A script that ignores the verify result, or ignores the round, was observed to fail the test module."
+  AC-4:
+    tests:
+      - tests.test_resolve_verified_findings.TestAc4OtherFindingsAndOlderRoundsAreKept.test_ac4_findings_that_are_not_deferred_keep_all_their_values
+      - tests.test_resolve_verified_findings.TestAc4OtherFindingsAndOlderRoundsAreKept.test_ac4_an_older_round_is_never_rewritten
+      - tests.test_resolve_verified_findings.TestAc4OtherFindingsAndOlderRoundsAreKept.test_ac4_the_older_round_stays_byte_identical_when_the_latest_is_rewritten
+      - tests.test_resolve_verified_findings.TestAc4OtherFindingsAndOlderRoundsAreKept.test_ac4_the_latest_round_is_the_numerically_largest
+      - tests.test_resolve_verified_findings.TestAc4OtherFindingsAndOlderRoundsAreKept.test_ac4_files_that_are_not_round_records_do_not_count_as_rounds
+    red_confirmed: true
+    red_reason: "Run before the script existed, all five failed at the run step with AssertionError: 2 != 0 (python3: can't open file ... resolve-verified-findings.py). A script that picks the latest round lexicographically (round9 over round10), or that drops the deferred check, was observed to fail the test module."
+  AC-5:
+    tests:
+      - tests.test_resolve_verified_findings.TestAc5Idempotence.test_ac5_a_second_run_with_the_same_inputs_changes_nothing
+      - tests.test_resolve_verified_findings.TestAc5Idempotence.test_ac5_a_finding_already_fixed_in_the_same_verify_round_is_not_touched
+      - tests.test_resolve_verified_findings.TestAc5Idempotence.test_ac5_a_run_that_resumes_after_a_partial_commit_rewrites_only_what_is_left
+    red_confirmed: true
+    red_reason: "Run before the script existed, all three failed at the run step with AssertionError: 2 != 0 (python3: can't open file ... resolve-verified-findings.py). A script that writes the record even when nothing was rewritten was observed to fail the test module: the fixture's leading YAML comment is dropped by any re-dump, so the bytes differ."
+  AC-6:
+    tests:
+      - tests.test_resolve_verified_findings.TestAc6StructuralErrorsWriteNothing.test_ac6_control_the_unbroken_fixture_is_rewritten
+      - tests.test_resolve_verified_findings.TestAc6StructuralErrorsWriteNothing.test_ac6_each_broken_input_fails_with_its_code_and_writes_nothing
+      - tests.test_resolve_verified_findings.TestAc6StructuralErrorsWriteNothing.test_ac6_a_malformed_verified_commit_fails_and_writes_nothing
+      - tests.test_resolve_verified_findings.TestAc6StructuralErrorsWriteNothing.test_ac6_missing_or_malformed_arguments_fail_and_write_nothing
+      - tests.test_resolve_verified_findings.TestAc6StructuralErrorsWriteNothing.test_ac6_a_feature_directory_that_does_not_exist_fails
+      - tests.test_resolve_verified_findings.TestAc6StructuralErrorsWriteNothing.test_ac6_a_record_that_cannot_be_replaced_is_left_as_it_was
+      - tests.test_resolve_verified_findings.TestAc6StructuralErrorsWriteNothing.test_ac6_a_symbolic_link_record_target_is_left_alone
+    red_confirmed: true
+    red_reason: "Run before the script existed, every broken-input case failed on the exact stderr assertion (the fixed error code expected; python3 printed can't open file ... resolve-verified-findings.py instead), and the control failed with AssertionError: 2 != 0. The control rewrites the same fixture when unbroken, so the byte-identical results of the broken cases are not vacuous. A script that replaces the record in place instead of through a temporary file, and one that follows a symbolic-link record, were observed to fail the test module."
+  AC-7:
+    tests:
+      - tests.test_resolve_verified_findings.TestAc7UnsafeInputAndOutputDiscipline.test_ac7a_a_round_record_with_a_python_tag_is_refused
+      - tests.test_resolve_verified_findings.TestAc7UnsafeInputAndOutputDiscipline.test_ac7a_a_workflow_with_a_python_tag_is_refused
+      - tests.test_resolve_verified_findings.TestAc7UnsafeInputAndOutputDiscipline.test_ac7a_a_python_tag_on_a_key_the_script_reads_is_refused_too
+      - tests.test_resolve_verified_findings.TestAc7UnsafeInputAndOutputDiscipline.test_ac7b_a_successful_run_never_echoes_free_text
+      - tests.test_resolve_verified_findings.TestAc7UnsafeInputAndOutputDiscipline.test_ac7b_a_failing_run_never_echoes_free_text
+      - tests.test_resolve_verified_findings.TestAc7UnsafeInputAndOutputDiscipline.test_ac7c_only_the_latest_round_record_changes_and_no_file_is_added
+    red_confirmed: true
+    red_reason: "Run before the script existed, all six failed (stderr was python3's can't open file message, not a fixed error code; the successful-run tests failed with AssertionError: 2 != 0). A script that loads YAML with the unsafe loader was observed to fail the tag tests: the marker directory named by the tag was created."
+  AC-8:
+    tests:
+      - tests.test_merge_preflight
+      - tests.test_resolve_verified_findings.TestAc8PreflightIsUnchanged.test_ac8_a_deferred_blocking_finding_stops_the_unchanged_preflight
+      - tests.test_resolve_verified_findings.TestAc8PreflightIsUnchanged.test_ac8_a_deferred_medium_finding_does_not_stop_the_preflight
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope for the change-set half, but the existing tests.test_merge_preflight (found by searching tests/ for the path em-workflow/scripts/merge-preflight.py and the basename merge-preflight.py) detects behavior changes of merge-preflight.py; no red state occurred for this change, because this task adds a script and changes neither merge-preflight.py nor tests/test_merge_preflight.py. The two TestAc8 tests pin the property the unchanged preflight must keep (a deferred critical/high finding blocks, a deferred medium one does not) and passed before and after. That the full suite passes is a whole-suite run (python3 -m unittest discover -s tests) with no failing check to observe beforehand, and the change-set check is git diff against the base commit, which is not run inside the suite."
