@@ -1,18 +1,18 @@
 schema_version: 1
 feature: verify-pass-resolves-deferred-findings
 phase: create-plan
-status: dispatched
+status: applying_patch
 generation: 1
 base_revision: 89ff0802eea1eec3ba30123ff9297ed33b4ed353
 last_input_digest: sha256:5f9b8d9dc4d3ebf8198869d22bfe41eae56b3e3381ac21e6f8d7176c6024a0ed
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:5f9b8d9dc4d3ebf8198869d22bfe41eae56b3e3381ac21e6f8d7176c6024a0ed
-  output_digest: null
+  output_digest: sha256:612e6424be3c5cc0d9d7395956f1d6167b8e688e456bd6fcbf3a8711433603b3
   dispatch_digest_inputs:
     feature-docs/verify-pass-resolves-deferred-findings/REQUIREMENTS.md: sha256:dcbca70afa61da607fb18013e05ca0f34ec515de32fe1a5390b2696e38a49ae4
     feature-docs/verify-pass-resolves-deferred-findings/SPEC.md: sha256:200772e1fe063f1766fb2b40bbc500dd8b1c4c5dbadcb4ff50fda3254c6286ea
@@ -25,8 +25,37 @@ worker_runs:
     em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
     em-workflow/references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
     em-workflow/references/contracts/planner-contract.md: sha256:df2bf3f0321c2627a31b878a14adb176ee7c2131638245112e5d3bb27f7a3682
-artifacts: []
-patches: []
+  self_write_set:
+  - feature-docs/verify-pass-resolves-deferred-findings/IMPLEMENTATION.md
+  - feature-docs/verify-pass-resolves-deferred-findings/THREAT-MODEL.md
+  - feature-docs/verify-pass-resolves-deferred-findings/VERIFICATION.md
+  - feature-docs/verify-pass-resolves-deferred-findings/tasks/task0001.md
+  - feature-docs/verify-pass-resolves-deferred-findings/tasks/task0002.md
+  - feature-docs/verify-pass-resolves-deferred-findings/tasks/task0003.md
+artifacts:
+- path: feature-docs/verify-pass-resolves-deferred-findings/IMPLEMENTATION.md
+  sha256: sha256:39eb0fcc0f766c756dfa41fb534a42e17533a61939f8c43148005ac37f77272d
+  produced_by: create-plan-run-0001
+- path: feature-docs/verify-pass-resolves-deferred-findings/VERIFICATION.md
+  sha256: sha256:3aafa2930b0c370c1566e7fb26faa4d39b6b42ee485d293ad0efaeeaceb9ead4
+  produced_by: create-plan-run-0001
+- path: feature-docs/verify-pass-resolves-deferred-findings/THREAT-MODEL.md
+  sha256: sha256:1f720066ad4ac0bf2ba51b827212153b7bb14ab93327ed819964464cbbd90899
+  produced_by: create-plan-run-0001
+- path: feature-docs/verify-pass-resolves-deferred-findings/tasks/task0001.md
+  sha256: sha256:72d6a9b45d1e52f812b3e072907ed6517081d27db115b0f31e65f58bbc742196
+  produced_by: create-plan-run-0001
+- path: feature-docs/verify-pass-resolves-deferred-findings/tasks/task0002.md
+  sha256: sha256:b58ff88321a2ca4ef5450ea6d5ce8fd6d87ec7196769303662db6461760ab936
+  produced_by: create-plan-run-0001
+- path: feature-docs/verify-pass-resolves-deferred-findings/tasks/task0003.md
+  sha256: sha256:48ecffe7102cbfba0fffbaf50e0a3649efab2b3146683766abf4c4cf52c03875
+  produced_by: create-plan-run-0001
+patches:
+- patch_id: create-plan-p0001
+  status: pending
+  base_input_digest: sha256:5f9b8d9dc4d3ebf8198869d22bfe41eae56b3e3381ac21e6f8d7176c6024a0ed
+  base_workflow_blob: e2ad291ef147c71a8941533803b10b65ea44a17d
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
