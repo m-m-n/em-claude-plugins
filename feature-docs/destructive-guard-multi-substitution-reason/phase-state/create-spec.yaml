@@ -1,7 +1,7 @@
 schema_version: 1
 feature: destructive-guard-multi-substitution-reason
 phase: create-spec
-status: in_progress
+status: completed
 generation: 2
 base_revision: e29ee4ad37943a39d4466379826f9666c6e4dfdc
 last_input_digest: sha256:b6bb2f5c2532fa3dae612d20233d2598d5b889bb5c4b0e2bcc123a957072f008

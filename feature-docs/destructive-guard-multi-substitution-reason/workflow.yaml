@@ -70,8 +70,8 @@ workflow:
 - id: create-spec
   artifacts:
   - SPEC.md
-  status: in_progress
-  completed_at_commit: fb18714b496cf34c967e23562b746af3c30c912f
+  status: completed
+  completed_at_commit: 1dce21e6320bb9d34dfeaedcb278b7d3bbf803a8
 - id: design
   artifacts:
   - DESIGN.md
@@ -275,6 +275,13 @@ requirements:
     - task0001
     tests:
     - TS-9
+  FR12:
+    title: mixed-rm-precedence のテストが自分の feature のケースを位置ではなくラベルで見分ける
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
   NFR1:
     title: テストの書き方
     status: ok
