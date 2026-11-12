@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: e29ee4ad37943a39d4466379826f9666c6e4dfdc
 last_input_digest: sha256:aa1d6b6999c69ae5403c8d7db897cc0ec636166666e6846e620291b1d43eea4f
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets: {}
 answers:
   create-spec.requirement-clarification:
@@ -33,10 +33,14 @@ worker_runs:
   input_digest: sha256:36cdd51458e9fda2dfbeeef8a585ced45db1bea97245be02a6041b14fffcd01c
   output_digest: null
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:aa1d6b6999c69ae5403c8d7db897cc0ec636166666e6846e620291b1d43eea4f
   output_digest: null
-artifacts: []
+  self_write_set: []
+artifacts:
+- path: feature-docs/destructive-guard-multi-substitution-reason/SPEC.md
+  sha256: sha256:7bd60a2b11ab9815ec6c071bea540c9e422c4d81ed7ace717103d4797ee5080d
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
