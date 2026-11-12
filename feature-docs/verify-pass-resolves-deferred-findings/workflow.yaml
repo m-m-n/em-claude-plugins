@@ -103,7 +103,75 @@ workflow:
   status: pending
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: verify pass で deferred 指摘を fixed にするスクリプト
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/resolve-verified-findings.py
+    - tests/test_resolve_verified_findings.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    - data-persistence
+    - external-io
+    complexity: high
+    requirements:
+    - FR4
+    - FR5
+    - FR7
+    - FR8
+    - FR11
+    - NFR1
+    - NFR3
+    - NFR5
+    - NFR6
+    status: pending
+  task0002:
+    title: verify フェーズの round / passed_ids 記録と verify pass 解決手順
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/skills/develop/SKILL.md
+    - em-workflow/references/workflow-schema.md
+    - tests/test_verify_pass_resolution_procedure.py
+    skills: []
+    domains:
+    - input-handling
+    - data-persistence
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR6
+    - FR7
+    - FR9
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    status: pending
+  task0003:
+    title: round 記録の verify_resolution 定義と batch 報告
+    plan: tasks/task0003.md
+    files:
+    - em-workflow/references/review-phase.md
+    - em-workflow/references/batch-mode.md
+    - tests/test_verify_resolution_record_docs.py
+    skills: []
+    domains:
+    - data-persistence
+    complexity: medium
+    requirements:
+    - FR5
+    - FR10
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR5
+    status: pending
 review:
   status: pending
 requirements:
@@ -112,7 +180,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0002
     tests:
     - TS-7
   FR2:
@@ -120,7 +189,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0002
     tests:
     - TS-7
   FR3:
@@ -128,7 +198,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0002
     tests:
     - TS-7
   FR4:
@@ -136,7 +207,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-2
@@ -148,7 +220,9 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0003
     tests:
     - TS-1
     - TS-7
@@ -157,7 +231,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0002
     tests:
     - TS-1
     - TS-7
@@ -166,7 +241,9 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
     tests:
     - TS-5
   FR8:
@@ -174,7 +251,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-2
     - TS-3
@@ -184,37 +262,49 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS-11
   FR10:
     title: batch 報告
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0003
+    tests:
+    - TS-9
   FR11:
     title: merge-preflight 不変
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-2
+    - TS-12
   NFR1:
     title: 信頼できない入力の扱い
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    tests:
+    - TS-10
   NFR2:
     title: 既存テストが固定する文言の維持
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0002
+    - task0003
     tests:
     - TS-8
   NFR3:
@@ -222,30 +312,42 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
     tests:
     - TS-8
+    - TS-12
   NFR4:
     title: 新しいゲートを追加しない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS-11
   NFR5:
     title: プラグインの version を変えない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    tests:
+    - TS-12
   NFR6:
     title: YAML の safe load と書き込み先の限定
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-10
 batch:
   review_rework_count: 0
   verify_rework:
