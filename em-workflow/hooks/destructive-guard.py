@@ -5369,8 +5369,11 @@ def _mask_python_literals(body):
     # string literals to a shell or interpreter: leave it unmasked.
     if re.search(
         r"\b(?:os\s*\.\s*(?:system|popen|exec\w*|spawn\w*)|subprocess"
-        r"|exec|eval|compile|__import__|importlib|pty\s*\.\s*spawn"
-        r"|commands\s*\.\s*getoutput)\b",
+        r"|exec\w*|eval|compile|__import__|importlib|pty\s*\.\s*spawn"
+        r"|commands\s*\.\s*getoutput"
+        r"|system|popen|spawn\w*|getattr|__builtins__|builtins|ctypes"
+        r"|runpy|multiprocessing|asyncio|posix"
+        r"|(?:import|from)\s+(?:os|pty|posix|commands|shlex))\b",
         body,
     ):
         return None
@@ -7225,6 +7228,15 @@ def _masking_stop_reached(marked, toks, consumed, shaped_words, in_python_body):
             text = str(tok)
             if "$((" in text or "$[" in text or text in ("((", "[["):
                 return True
+            # Array-subscript assignment, subscripted or substring expansion,
+            # and the -v operand of test / [ also evaluate arithmetically.
+            if (
+                re.match(r"[A-Za-z_][A-Za-z0-9_]*\[.*\]\+?=", text)
+                or re.search(r"\$\{[A-Za-z_][A-Za-z0-9_]*\[", text)
+                or re.search(r"\$\{[A-Za-z_][A-Za-z0-9_]*:[^-=+?]", text)
+                or (text == "-v" and any(str(t) in ("test", "[") for t in toks))
+            ):
+                return True
     determinable, word = _peel_command_word(marked, consumed, shaped_words)
     if not determinable:
         return not in_python_body
@@ -7243,25 +7255,27 @@ def _masking_stop_reached(marked, toks, consumed, shaped_words, in_python_body):
     # to `--` or the first non-option word (the format string). Words are
     # restored from their written form; a word whose value cannot be fixed
     # statically (expansion, quoting) stops masking.
+    def written_of(t):
+        if marked is None:
+            return str(t)
+        return _read_word_as_written(marked, t)
+
     cmd_index = None
     for i, t in enumerate(toks):
+        w = written_of(t)
         if os.path.basename(str(t)) == "printf" or (
-            _read_word_as_written(marked, t) is not None
-            and os.path.basename(_read_word_as_written(marked, t)) == "printf"
+            w is not None and os.path.basename(w) == "printf"
         ):
             cmd_index = i
             break
     if cmd_index is None:
         return any(str(t).startswith("-v") for t in toks)
     for t in toks[cmd_index + 1:]:
-        text = str(t)
-        written = _read_word_as_written(marked, text) if marked is not None else None
-        if written is not None:
-            text = written
+        text = written_of(t)
+        if text is None:
+            return True
         if text == "--":
             return False
-        if any(ch in text for ch in "$`\"'\\"):
-            return True
         if not text.startswith("-"):
             return False
         if text.startswith("-v"):
