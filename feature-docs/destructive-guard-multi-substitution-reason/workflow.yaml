@@ -1,0 +1,216 @@
+schema_version: 1
+feature: destructive-guard-multi-substitution-reason
+created: '2026-11-13'
+base_branch: main
+goal: |
+  # destructive-guard: 複数のコマンド置換対象が理由文で同じ $(...) に潰れる
+
+  種別: バグ / 優先度: 低
+
+  ## 現象
+  再帰削除の対象が複数のコマンド置換で構成されているとき、`destructive-guard.py` の理由文が「複数対象」と述べながら 1 個しか対象を挙げない。`SUBSTITUTION_STANDIN` が固定文字列 `$(...)` なので、異なる置換が同じトークン値に潰れ、`strongest_rm_decision()` の名前重複除去（`em-workflow/hooks/destructive-guard.py:1145-1147`）で 2 つの対象が 1 つに畳まれる。
+
+  実測（feature `destructive-guard-command-substitution` の review round 1、Opus 評価者の独立検査）: 対象を 2 つの別々のコマンド置換で与えた再帰削除に対して、理由文は「再帰削除の複数対象が同じ強さの判定に達した: `$(...)`。」となった。
+
+  ## 再現手順
+  1. `em-workflow/hooks/destructive-guard.py` に PreToolUse JSON を渡し、再帰削除の対象として 2 つの異なるコマンド置換（例: `$(cat a)` と `$(cat b)`）を並べたコマンドを判定させる。
+  2. 返ってくる理由文を読む。
+  3. 「複数対象」と書かれているのに、挙がっている対象が `$(...)` 1 個しか無いことを確認する。
+
+  ## 期待する挙動
+  FR3 の「どの削除対象が問題かを読み手が判別できる形でレンダリングする」を複数対象のケースでも満たす。標準テキストに出現順の識別子を付ける（`$(...)#1` / `$(...)#2` 等）か、元の置換本文の先頭数文字を控えめに含める。いずれの場合も `SUBSTITUTION_STANDIN` のコメントに列挙された不活性条件（先頭 `-` を持たない、`REDIRECT` 形に一致しない、safe root 名と一致しない、制御文字を含まない）を維持すること。
+
+  単一対象のときの挙動は現状のままでよい。
+
+  ## 完了の定義
+  - 再現手順で現象が起きない
+  - 再発を検出するテストがある
+  - `python3 em-workflow/hooks/tests/run-destructive-guard.py` が全件通る
+  - `python3 -m unittest discover -s tests` が全件通る
+
+  ## 該当箇所
+  `em-workflow/hooks/destructive-guard.py:1144` 付近（`strongest_rm_decision()` の重複除去）と、`SUBSTITUTION_STANDIN` の定義（同ファイル冒頭の定数群）。
+
+  ## 実害・発生条件
+  理由文を読んだ人間・エージェントが、どの対象が引っかかったのかを判別できない。発生条件は「1 つの再帰削除コマンドに、コマンド置換だけで構成された削除対象が 2 つ以上あること」。severity は low（判定そのものは正しく、可読性の問題）。
+parent_branch: em-workflow/destructive-guard-multi-substitution-reason/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+  - basis: description_only
+    probabilities:
+      '0': 0.0
+      '1': 0.96
+      '2': 0.04
+      '3': 0.0
+  - basis: description_plus_code
+    probabilities:
+      '0': 0.06
+      '1': 0.81
+      '2': 0.13
+      '3': 0.0
+  at: '2026-11-12T23:54:04+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: fb18714b496cf34c967e23562b746af3c30c912f
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'UI も見た目も持たないフックの理由文の回帰テスト（design-step 推奨: skipped。tier reduced でも design は削減対象）'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  round: 0
+  passed_ids: []
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: 1 つの rm に置換だけの対象が 2 つある場合の回帰テスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: 置換だけの対象が別々の rm 呼び出しにある場合の回帰テスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: 無人実行で降格したときも指定が区別できる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: 単一対象の理由文は変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: SUBSTITUTION_STANDIN を変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: フック本体の変更は、テストが失敗した場合に限る
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: バッククォート置換が 2 つの場合の回帰テスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: $() とバッククォートが混在する場合の回帰テスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR9:
+    title: プロセス置換が 2 つの場合の回帰テスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR10:
+    title: 置換の対象の間に静的に決まる対象を挟んだ場合の回帰テスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR11:
+    title: 置換の本文に固有の文字列を入れても理由文に出ない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: テストの書き方
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 決定性
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: version
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: 指定の取り出しと比較
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
