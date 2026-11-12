@@ -131,7 +131,7 @@ workflow:
   excluded: []
   summary: destructive-guard runner 1305/1305 passed (1304 cases + unattended demotion, no TIMEOUT); unittest 15925 tests OK (1 skipped); TS-22 base cases all kept (1208 kept, 96 new, all 3-element); TS-23 changed files limited to destructive-guard.py and its case file; TS-24/TS-32/TS-45 code reading passed (single-pass same-length literal mask, no eval/import added, STOP_COMMAND_WORDS derived from OVERRIDE_BUILTINS, Python-body mark inherited except unquoted-body substitutions)
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: Read closed string literals in Python-program heredoc bodies as data
