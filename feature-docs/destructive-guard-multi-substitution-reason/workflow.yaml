@@ -90,7 +90,7 @@ workflow:
   base_commit: 391d5ed04ea1c09d9a99749606fc799dddcfa0f9
   completed_at_commit: dedb0e1796b627da0843673f3d1fa8e6049b8d3c
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -132,6 +132,13 @@ tasks:
 review:
   status: pending
   rounds_completed: 0
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - spec
+    discretionary: []
+    cross_validation: false
 requirements:
   FR1:
     title: 1 つの rm に置換だけの対象が 2 つある場合の回帰テスト
