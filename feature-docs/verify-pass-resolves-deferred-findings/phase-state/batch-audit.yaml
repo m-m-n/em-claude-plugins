@@ -14,3 +14,15 @@ records:
     category); codex_consulted: true (entry: codex, 1 turn); codex suggested spec-only;
     orchestrator mapped to option_id spec-only; opus_escalation: not run; recorded
     as assumption; reason: 仕様適合の検証で解決を確認できる範囲に限定する'
+- question_id: implement.deviation-auto-addition
+  packet_id: null
+  answered_at: '2026-11-12T21:37:00+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: declined
+  normalized_answer: declined
+  resolution_note: 'task_id: task0003; path: tests/test_tier_record_schema_v2.py;
+    declined: missing evidence part (identifier of an acceptance criterion or registered
+    requirement that would otherwise be dropped); the containment check handles it
+    as an ordinary deviation'
