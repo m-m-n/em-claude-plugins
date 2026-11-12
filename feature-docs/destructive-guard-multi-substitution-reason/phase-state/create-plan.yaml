@@ -1,11 +1,11 @@
 schema_version: 1
 feature: destructive-guard-multi-substitution-reason
 phase: create-plan
-status: completed
-generation: 1
-base_revision: 4448ac245d1356a6d757558eaddcfcc6906f3f66
-last_input_digest: sha256:16d4bf9c10b116df113c1a4ef95fe53913e2bad680795a67b66c3dd95efe2fcc
-active_request_id: null
+status: dispatching
+generation: 2
+base_revision: 5b8a68a524a2f3972df20e83581ef61f5fe3ec33
+last_input_digest: sha256:57441aca4b7fbd07c8603d2dbb5a5c60b390bf2efb8d88268451fed3037653f7
+active_request_id: create-plan-run-0002
 packets: {}
 answers: {}
 worker_runs:
@@ -29,6 +29,25 @@ worker_runs:
   - feature-docs/destructive-guard-multi-substitution-reason/THREAT-MODEL.md
   - feature-docs/destructive-guard-multi-substitution-reason/VERIFICATION.md
   - feature-docs/destructive-guard-multi-substitution-reason/tasks/task0001.md
+- request_id: create-plan-run-0002
+  status: dispatched
+  input_digest: sha256:57441aca4b7fbd07c8603d2dbb5a5c60b390bf2efb8d88268451fed3037653f7
+  output_digest: null
+  dispatch_digest_inputs:
+    feature-docs/destructive-guard-multi-substitution-reason/IMPLEMENTATION.md: sha256:3e52a49e7ad276e376d98dbbf97333844b7c20506cb375693396c7137b9cc0c0
+    feature-docs/destructive-guard-multi-substitution-reason/SPEC.md: sha256:c38661d3755c80571418161e4c7780cfd345b6c63877663ef98816bc079e3b30
+    feature-docs/destructive-guard-multi-substitution-reason/THREAT-MODEL.md: sha256:9f98bf64172c757fe43ae15eb75e4740d9cd9c41e1ff0cac79434a8378b26ac1
+    feature-docs/destructive-guard-multi-substitution-reason/VERIFICATION.md: sha256:cdb484022b571bff67e7f1e3c9f186190a312811f8c331a47cc115cf14159efc
+    feature-docs/destructive-guard-multi-substitution-reason/tasks/task0001.md: sha256:0b40f260e957b0f6b11477037c10e87cf592549c37e3b74565da681587e5aceb
+    feature-docs/destructive-guard-multi-substitution-reason/workflow.yaml: sha256:e0f83c6fc2ce06e0eeb3467b4ae0f22281fc46840702a1bbec0b123bc3dcd130
+    plugin:references/contracts/planner-contract.md: sha256:df2bf3f0321c2627a31b878a14adb176ee7c2131638245112e5d3bb27f7a3682
+    plugin:references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    plugin:references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    plugin:references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    plugin:references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    plugin:references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
+    plugin:references/workflow-schema.md: sha256:e7f6fe6f01e107217ab47c620a3f22df5582d0d203a8ed8999807381734551f5
+    plugin:skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
 artifacts:
 - path: feature-docs/destructive-guard-multi-substitution-reason/IMPLEMENTATION.md
   sha256: sha256:3e52a49e7ad276e376d98dbbf97333844b7c20506cb375693396c7137b9cc0c0
