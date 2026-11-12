@@ -129,7 +129,7 @@ tasks:
     - NFR3
     - NFR5
     - NFR6
-    status: in_progress
+    status: merged
     branch: em-workflow/verify-pass-resolves-deferred-findings/task0001
   task0002:
     title: verify フェーズの round / passed_ids 記録と verify pass 解決手順
