@@ -1,0 +1,101 @@
+task_id: task0002
+baseline_failures:
+  - tests.test_destructive_guard_mixed_rm_precedence.TestCaseTable.test_each_scenario_has_its_case
+  - tests.test_destructive_guard_mixed_rm_precedence.TestCaseTable.test_every_new_case_is_rule_pinned_and_named_after_the_feature
+  - tests.test_destructive_guard_mixed_rm_precedence.TestScenarioCasesPassAgainstTheHook.test_ac1_the_rm_first_forms_deny_with_rm_recursive
+  - tests.test_destructive_guard_mixed_rm_precedence.TestScenarioCasesPassAgainstTheHook.test_ac2_the_non_rm_first_forms_deny_with_rm_recursive
+  - tests.test_destructive_guard_mixed_rm_precedence.TestScenarioCasesPassAgainstTheHook.test_ac3_batch_and_root_forms
+  - tests.test_destructive_guard_mixed_rm_precedence.TestScenarioCasesPassAgainstTheHook.test_ac4_the_scan_budget_early_stop
+  - tests.test_destructive_guard_mixed_rm_precedence.TestScenarioCasesPassAgainstTheHook.test_ac5_the_protected_self_config_exclusion
+  - tests.test_destructive_guard_mixed_rm_precedence.TestScenarioCasesPassAgainstTheHook.test_ac6_the_no_deny_commands_keep_their_reason_ids
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_mixed_rm_precedence.TestCaseTable.test_every_new_case_is_rule_pinned_and_named_after_the_feature
+      - tests.test_destructive_guard_mixed_rm_precedence.TestCaseTable.test_each_scenario_has_its_case
+      - tests.test_destructive_guard_mixed_rm_precedence.TestScenarioCasesPassAgainstTheHook.test_ac1_the_rm_first_forms_deny_with_rm_recursive
+      - tests.test_destructive_guard_mixed_rm_precedence.TestScenarioCasesPassAgainstTheHook.test_ac2_the_non_rm_first_forms_deny_with_rm_recursive
+      - tests.test_destructive_guard_mixed_rm_precedence.TestScenarioCasesPassAgainstTheHook.test_ac3_batch_and_root_forms
+      - tests.test_destructive_guard_mixed_rm_precedence.TestScenarioCasesPassAgainstTheHook.test_ac4_the_scan_budget_early_stop
+      - tests.test_destructive_guard_mixed_rm_precedence.TestScenarioCasesPassAgainstTheHook.test_ac5_the_protected_self_config_exclusion
+      - tests.test_destructive_guard_mixed_rm_precedence.TestScenarioCasesPassAgainstTheHook.test_ac6_the_no_deny_commands_keep_their_reason_ids
+    red_confirmed: true
+    red_reason: >
+      Observed in the baseline run before any edit, with the open-ended
+      position selection still in both setUpClass methods (which also took
+      the 96 cases the heredoc-literal feature appended). The six
+      TestScenarioCasesPassAgainstTheHook.test_ac* methods errored with
+      AttributeError: 'NoneType' object has no attribute 'group' in
+      scenario_number (a heredoc-literal label that names no TS-N of this
+      feature). TestCaseTable.test_each_scenario_has_its_case errored with
+      IndexError: list index out of range (a later case with three
+      elements). TestCaseTable.test_every_new_case_is_rule_pinned_and_named_after_the_feature
+      failed 96 subtests, each AssertionError: 3 != 4 or a label that does
+      not start with the feature name. After the label-based selection all
+      eight pass, and the selection yields 33 cases. That the text
+      `[PRE_EXISTING_CASE_COUNT:]` is gone from the file is checked by a
+      text search (zero matches), not by a test.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_mixed_rm_precedence.TestCaseTable.test_the_feature_cases_form_one_run_right_after_the_existing_cases
+    red_confirmed: false
+    red_reason: >
+      The check is new and passes on the current case table the first time
+      it runs, so no failing run of it occurred. It is not vacuous: with a
+      temporary probe that is not committed (the positions of the selected
+      cases replaced before the check runs), it fails with "condition 2
+      failed" when the selected positions start one after
+      PRE_EXISTING_CASE_COUNT (1209) or one before it (1207), with
+      "condition 3 failed" and the offending position for a gap in the
+      middle, a dropped case and a case moved to the end, and with
+      "condition 1 failed" for an empty selection. It passes for the real
+      positions 1208 to 1240 and for a single case at 1208. No existing test
+      checks the contiguity of the selected run: the tests found by searching
+      tests/ for destructive-guard-cases.json (by path and by file name) are
+      test_destructive_guard_mixed_rm_precedence,
+      test_destructive_guard_extglob_units,
+      test_destructive_guard_lexer_agreement,
+      test_destructive_guard_command_substitution,
+      test_destructive_guard_merge_allow and test_muse_guard, and none of
+      them asserts positions of a feature's cases.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_mixed_rm_precedence.TestCaseTable.test_every_new_case_is_rule_pinned_and_named_after_the_feature
+      - tests.test_destructive_guard_mixed_rm_precedence.TestCaseTable.test_each_scenario_has_its_case
+      - tests.test_destructive_guard_mixed_rm_precedence.TestScenarioCasesPassAgainstTheHook.test_ac1_the_rm_first_forms_deny_with_rm_recursive
+      - tests.test_destructive_guard_mixed_rm_precedence.TestScenarioCasesPassAgainstTheHook.test_ac6_the_no_deny_commands_keep_their_reason_ids
+    red_confirmed: true
+    red_reason: >
+      The module run before the change reported failures 96 and errors 7
+      (the full-suite baseline: 16149 tests, failures=96, errors=7,
+      skipped=1, every one of them in this module). After the change
+      python3 -m unittest tests.test_destructive_guard_mixed_rm_precedence
+      ran 53 tests with OK, failures 0 and errors 0.
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_mixed_rm_precedence.TestCaseTable.test_every_existing_case_is_present_unchanged_and_first
+    red_confirmed: false
+    red_reason: >
+      AC-4 is a diff check against the commit the task starts from
+      (git diff shows only the new helper, the two selection lines and the
+      added check; PRE_EXISTING_CASE_COUNT, PRE_EXISTING_CASES_DIGEST, every
+      scenario count and the case table file are untouched), so there is no
+      executable check that can be made to fail first. The existing
+      test_every_existing_case_is_present_unchanged_and_first detects a
+      change to the head of the case table (its count and digest); no red
+      state occurred for this change.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_mixed_rm_precedence.TestScenarioCasesPassAgainstTheHook.test_ac5_the_protected_self_config_exclusion
+      - tests.test_destructive_guard_mixed_rm_precedence.TestCaseTable.test_every_new_case_is_rule_pinned_and_named_after_the_feature
+    red_confirmed: true
+    red_reason: >
+      The outcome is the exit status of the two project commands, which are
+      not test IDs: python3 em-workflow/hooks/tests/run-destructive-guard.py
+      (1338/1338 passed, exit 0 both before and after) and
+      python3 -m unittest discover -s tests, which exited 1 in the baseline
+      run (failures=96, errors=7, all in the mixed-rm-precedence module) and
+      exits 0 after the change. The two test IDs listed are among those whose
+      failure made the discover run exit 1. em-workflow/hooks/destructive-guard.py
+      is not modified by this task.

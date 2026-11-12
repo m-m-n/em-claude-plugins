@@ -137,6 +137,14 @@ def normalized(text):
     return re.sub(r"\s+", " ", text or "")
 
 
+def feature_case_positions(cases):
+    """The 0-based positions in CASES of this feature's cases: the cases whose
+    label (second element) begins with the feature name and one space. A label
+    of another feature whose name merely begins with FEATURE is not one."""
+    prefix = FEATURE + " "
+    return [i for i, case in enumerate(cases) if case[1].startswith(prefix)]
+
+
 # --- AC-3: the reason of a winning rm deny is the rm reason ----------------
 
 
@@ -369,7 +377,25 @@ class TestCaseTable(unittest.TestCase):
     def setUpClass(cls):
         with open(CASES_PATH, encoding="utf-8") as f:
             cls.cases = json.load(f)
-        cls.new = cls.cases[PRE_EXISTING_CASE_COUNT:]
+        cls.positions = feature_case_positions(cls.cases)
+        cls.new = [cls.cases[i] for i in cls.positions]
+
+    def test_the_feature_cases_form_one_run_right_after_the_existing_cases(self):
+        positions = self.positions
+        self.assertTrue(positions, "condition 1 failed: no case is selected")
+        self.assertEqual(
+            positions[0],
+            PRE_EXISTING_CASE_COUNT,
+            "condition 2 failed: the first selected case is at position "
+            f"{positions[0]}, not right after the existing cases",
+        )
+        for before, after in zip(positions, positions[1:]):
+            self.assertEqual(
+                after,
+                before + 1,
+                f"condition 3 failed: the selected case at position {after} "
+                f"does not follow the one at position {before}",
+            )
 
     def test_every_existing_case_is_present_unchanged_and_first(self):
         existing = self.cases[:PRE_EXISTING_CASE_COUNT]
@@ -468,7 +494,8 @@ class TestScenarioCasesPassAgainstTheHook(unittest.TestCase):
     def setUpClass(cls):
         cls.runner = load_runner([str(RUNNER_PATH), str(GUARD_PATH)])
         with open(CASES_PATH, encoding="utf-8") as f:
-            cls.new = json.load(f)[PRE_EXISTING_CASE_COUNT:]
+            cases = json.load(f)
+        cls.new = [cases[i] for i in feature_case_positions(cases)]
 
     def scenarios(self, numbers, rm_first=None):
         found = [case for case in self.new if scenario_number(case) in numbers]
