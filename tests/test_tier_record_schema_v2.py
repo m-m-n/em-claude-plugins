@@ -496,8 +496,11 @@ class TestRetrospectTierDecisionBlock(unittest.TestCase):
 # Refreshed by task0003 of muse-guard-deny-recovery (FR3, FR4): Phase R2b
 # gained the `contributor_consent_missing` routing row, the note on that row
 # and the precedence statement after the harness-level paragraph.
+# Refreshed by task0003 of verify-pass-resolves-deferred-findings (FR5): Phase
+# R5 gained the `verify_resolution` field definition of a finding fixed by
+# verify pass.
 REVIEW_PHASE_SHA256 = (
-    "ad57fbdbd9056b5551200078df003c2148ce7cf06382f35e88a78208c00d0ff2"
+    "ba925ee8ae76edce8d1681f83987546d7750aafa7e2dc5ab5ee7bac900fee882"
 )
 REVIEW_RULES_SHA256 = (
     "56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931"

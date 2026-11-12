@@ -1,0 +1,69 @@
+task_id: task0003
+baseline_failures: []          # python3 -m unittest discover -s tests before any edit: 15990 tests, OK (skipped=1)
+final_failures: []             # same command re-run after the implementation and after refreshing the review-phase.md digest pin in tests/test_tier_record_schema_v2.py: no failure
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_verify_resolution_record_docs.TestAC1VerifyResolutionDefinition.test_verify_resolution_has_exactly_the_five_keys
+      - tests.test_verify_resolution_record_docs.TestAC1VerifyResolutionDefinition.test_each_key_has_its_type_and_meaning
+      - tests.test_verify_resolution_record_docs.TestAC1VerifyResolutionDefinition.test_the_resolution_reason_sentence_is_given
+      - tests.test_verify_resolution_record_docs.TestAC1VerifyResolutionDefinition.test_the_writer_and_the_only_round_rewritten_are_named
+    red_confirmed: true
+    red_reason: >-
+      Run before review-phase.md was edited. The five-keys test and the
+      key-type test failed with "ValueError: substring not found" (the
+      "Findings fixed by verify pass" block did not exist in Phase R5), the
+      reason-sentence test and the writer test failed with "AssertionError:
+      False is not true".
+  AC-2:
+    tests:
+      - tests.test_verify_resolution_record_docs.TestAC2R5WordingStays.test_completion_gate_paragraph_is_unchanged
+      - tests.test_verify_resolution_record_docs.TestAC2R5WordingStays.test_r5_gains_neither_a_gate_id_nor_a_batch_policy_reference
+      - tests.test_review_phase_coverage_record.TestAC5GateAndDisclosureOnly.test_completion_gate_paragraph_is_unchanged
+      - tests.test_review_phase_coverage_record.TestAC5GateAndDisclosureOnly.test_no_gate_identifier_or_batch_policy_reference_is_added
+    red_confirmed: false
+    red_reason: >-
+      The criterion pins wording that must stay as it is; the existing
+      test_review_phase_coverage_record detects a change to the Completion
+      gate paragraph and the new module repeats that check, but no red
+      state occurred for this change because the pinned text was already in
+      place and the edit leaves it untouched. The new module's
+      negative-proof tests show the matchers reject a forged gate paragraph
+      and a forged gate_id / batch-policies.yaml reference.
+  AC-3:
+    tests:
+      - tests.test_verify_resolution_record_docs.TestAC3ReportingDeferredFindingsItem.test_reporting_names_the_structured_fields
+      - tests.test_verify_resolution_record_docs.TestAC3ReportingDeferredFindingsItem.test_the_fixed_by_verify_pass_group_is_shown_apart_from_the_deferred_one
+      - tests.test_verify_resolution_record_docs.TestAC3ReportingDeferredFindingsItem.test_free_text_is_not_transcribed
+    red_confirmed: true
+    red_reason: >-
+      Run before batch-mode.md was edited. The names test failed for each of
+      verify_resolution, verify_round, criteria_ids and
+      previous_resolution_reason (not in the Reporting section); the group
+      test and the free-text test failed with "ValueError: substring not
+      found" (the deferred-findings item paragraph did not exist).
+  AC-4:
+    tests:
+      - tests.test_verify_resolution_record_docs.TestAC4AuditItemSourceMap.test_the_fixed_by_verify_pass_group_has_its_source
+      - tests.test_verify_resolution_record_docs.TestAC4AuditItemSourceMap.test_the_still_deferred_group_keeps_its_source
+    red_confirmed: true
+    red_reason: >-
+      Run before batch-mode.md was edited. Both failed with "AssertionError:
+      False is not true": the deferred-findings row of the source map named
+      neither the fixed-by-verify-pass group nor the still-deferred group's
+      split. The row was extended instead of a new row being added because
+      tests/test_batch_quiet_output_discipline.py pins the source map to one
+      row per Reporting item.
+  AC-5:
+    tests:
+      - tests.test_verify_resolution_record_docs.TestAC5NoCapNumeralInBatchMode.test_batch_mode_places_no_digit_1_or_3_near_the_cap_vocabulary
+      - tests.test_verify_resolution_record_docs.TestAC5NoCapNumeralInBatchMode.test_the_new_text_of_this_task_adds_no_such_digit
+      - tests.test_verify_rework_lineage_cap.TestVerifyCapNumeralIsSkillOnly.test_batch_mode_has_no_verify_cap_numeral
+    red_confirmed: false
+    red_reason: >-
+      The criterion pins an absence in batch-mode.md. The existing
+      test_verify_rework_lineage_cap detects a digit 1 or 3 near the
+      keywords, and the new module repeats that scan; no red state occurred
+      for this change because no such digit existed before the edit and none
+      was added. The new module's negative-proof tests show the scan rejects
+      a forged text with a digit near the keywords.
