@@ -1,0 +1,33 @@
+feature: verify-pass-resolves-deferred-findings
+collected_at: "2026-11-12T22:11:00+09:00"
+session_ids: [01a1cfe1-4047-7316-924f-3e8708a66968]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses:
+    - task: task0003
+      files: [tests/test_tier_record_schema_v2.py]
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の判定でバケット 1（0.51）と 2（0.49）が拮抗し、Codex 事前調査で複数モジュールにまたがる変更と見込まれたため full とした"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.18, confidence: 0.82, probabilities: {'0': 0.0, '1': 0.82, '2': 0.18, '3': 0.0}}
+        observed_at: "2026-11-12T20:26:46+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.49, confidence: 0.51, probabilities: {'0': 0.0, '1': 0.51, '2': 0.49, '3': 0.0}}
+        observed_at: "2026-11-12T20:29:38+09:00"
+    pre_survey_estimate:
+      changed_lines_approx: 180
+      new_files_needed: 0
+      change_containment: multiple_modules
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 8
+      work_still_required: true
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 の medium 指摘 3 件（90645ff9e87ed50d / 45e98feb8f3cd3b2 / cc3ea79e666d0a2d）が unresolved のまま残った"
+  - "事前調査は新規ファイル 0 と見込んだが、実装では新規スクリプト resolve-verified-findings.py が追加された"

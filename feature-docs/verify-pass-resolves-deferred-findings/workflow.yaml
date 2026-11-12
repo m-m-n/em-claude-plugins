@@ -110,7 +110,8 @@ workflow:
   failed_items: []
   excluded: []
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: fb88dd080cd26a4196bac28a3a24617abc32a617
 tasks:
   task0001:
     title: verify pass で deferred 指摘を fixed にするスクリプト
