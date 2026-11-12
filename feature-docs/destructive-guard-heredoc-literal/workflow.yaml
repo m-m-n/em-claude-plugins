@@ -176,7 +176,7 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: in_progress
+    status: merged
     branch: em-workflow/destructive-guard-heredoc-literal/task0002
     notes: 'batch-retry-consumed: 1 (first failure: launching session ended, journal
       failed reason orphaned; retried on the kept worktree)'
