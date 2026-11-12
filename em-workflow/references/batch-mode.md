@@ -141,6 +141,14 @@ The external service relays this to the human evaluator — it is the only
 confirmation surface batch mode has. See `## Batch quiet output`'s
 audit-item source map for where each of these items is persisted.
 
+The deferred-findings item is shown in two groups, apart from each other.
+Group (a) is the findings fixed by verify pass: each is given with its
+`stable_id`, its verify round (`verify_resolution.verify_round`) and its
+criteria IDs (`verify_resolution.criteria_ids`). Group (b) is the findings
+still deferred, each given with its `stable_id`. The item carries only those
+structured values: `resolution_reason`, `previous_resolution_reason` and
+finding text are not transcribed.
+
 Per `references/batch-terminal-line.md`, every item above is carried in
 full inside the result's human-facing description value, and the
 stop-recovery guidance above is carried in full inside the result's
@@ -217,7 +225,7 @@ resolves to a persisted source:
 | Every auto-approved command string | `create-spec.command-approval` gate resolution recorded to `feature-docs/{feature}/phase-state/batch-audit.yaml` `records[]` / `records[].resolution_note`, written by Step A.5's batch branch when it auto-records (`references/phase-state.md`'s batch audit record file) |
 | Every assumption recorded during create-spec/planning | `feature-docs/{feature}/phase-state/*.yaml` `answers` / resolution notes |
 | Auto-rework rounds consumed (review / verify) | `workflow.yaml`'s `batch` block |
-| Any deferred findings with their stable_ids | `feature-docs/{feature}/reviews/roundN.yaml` `resolution` / `stable_id` |
+| Any deferred findings with their stable_ids | `feature-docs/{feature}/reviews/roundN.yaml` `resolution` / `stable_id`: the still-deferred group is the findings with resolution `deferred`; the fixed-by-verify-pass group is the latest review round record's findings with `resolution: fixed` and a `verify_resolution` (`stable_id`, `verify_resolution.verify_round`, `verify_resolution.criteria_ids`; `references/review-phase.md` Phase R5) |
 | Every unlisted-gate fallback resolution | `feature-docs/{feature}/phase-state/batch-audit.yaml` `records[]` / `records[].resolution_note` (`references/phase-state.md`'s batch audit record file) |
 | Every autonomous fail-closed-route resolution | `feature-docs/{feature}/phase-state/batch-audit.yaml` `records[]` / `records[].resolution_note` (`references/phase-state.md`'s batch audit record file) |
 | Every review round's `unreviewed_perspectives` and `partially_reviewed_perspectives` | `feature-docs/{feature}/reviews/roundN.yaml` `unreviewed_perspectives` / `partially_reviewed_perspectives` (`references/review-phase.md` Phase R5) |

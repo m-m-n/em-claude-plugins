@@ -1157,6 +1157,7 @@ findings:                    # post-dedupe, post-sanitize; FULL detail
     confidence: 95
     resolution: fixed        # fixed | declined | deferred | unresolved
     resolution_reason: "auto-applied loop 1"   # declined は理由必須
+    # verify_resolution: only on a finding fixed by verify pass (defined below)
 evaluation:                   # evaluator's round_summary/recommended_action/action_rationale; present, fields empty/null when absent
   round_summary: "..."        # gated through R3b step 4's 4096-byte cap before persist
   recommended_action: "..."
@@ -1251,6 +1252,35 @@ R3b, "Rescue-run findings") is recorded the same way: `resolution: unresolved`
 with a `resolution_reason` beginning `unverified`, not counted in
 `residual_critical_high`, not among the residual findings rework-planner
 receives, and not re-marked `deferred` by the batch rework-cap step.
+
+**Findings fixed by verify pass**: the verify phase can rewrite a finding of
+the latest round record from `deferred` to `fixed`. The procedure — when the
+rewrite is made and under which conditions — is defined in
+`skills/develop/SKILL.md`「verify フェーズ」 and is not restated here. Such a
+finding carries `verify_resolution`, an optional field present only on a
+finding fixed by verify pass. It is a mapping with exactly these five keys:
+
+- `verify_round`: integer; the verify step's `round` at the time of the run.
+- `verified_commit`: string; the integration-branch commit at the time the
+  verify commands ran, a full lowercase hexadecimal object name.
+- `criteria_ids`: list of strings; the IDs of the passed acceptance criteria
+  of which the finding is the non-attainment, in the order of the mapping
+  entry with duplicates removed.
+- `previous_resolution`: string; `deferred`.
+- `previous_resolution_reason`: the finding's `resolution_reason` before the
+  rewrite, or null when it had none.
+
+The `resolution` of such a finding is `fixed`, and its `resolution_reason` is
+exactly the sentence
+`resolved by verify round {N}: acceptance criteria {IDs} passed`, where `{N}`
+is `verify_resolution.verify_round` and `{IDs}` is
+`verify_resolution.criteria_ids` joined with a comma and one space. Every
+other key of the finding keeps its value.
+
+The writer is `em-workflow/scripts/resolve-verified-findings.py`, run during
+the verify phase. It rewrites the latest round record only; no earlier round
+record is rewritten. Such a finding counts as resolved for the merge preflight
+because its `resolution` is `fixed`; the preflight's rule is unchanged.
 
 The round record also persists the evaluation's `round_summary`,
 `recommended_action`, and `action_rationale` under a root `evaluation`
