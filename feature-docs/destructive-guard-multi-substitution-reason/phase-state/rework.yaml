@@ -1,18 +1,34 @@
 schema_version: 1
 feature: destructive-guard-multi-substitution-reason
 phase: rework
-status: in_progress
+status: completed
 generation: 1
-base_revision: 925fa1086f363f88f00bd4fae76853a477df6ed7
+base_revision: 6cf7d014d655a0f3a710bfb70cc943dc4b26a3ef
 last_input_digest: sha256:2fae25ccd99cecbc703eeda3d1c22ba2e9d3ece5508f5fad6ecb2d7b8d4a3747
-active_request_id: rework-run-0001
-packets: {}
-answers: {}
+active_request_id: null
+packets:
+  rework-q0001:
+    status: answered
+    issued_at: '2026-11-13T01:10:39+09:00'
+    questions:
+    - question_id: rework.spec-change.ts4-preexisting-failure
+      status: answered
+answers:
+  rework.spec-change.ts4-preexisting-failure:
+    packet_id: rework-q0001
+    answered_at: '2026-11-13T01:10:39+09:00'
+    source: batch-classification-gate
+    answer_mode: single_select
+    selected_option_ids:
+    - allow-fix-precedence-test
+    freeform: null
+    normalized_answer: FR4 と AC-4 に例外を 1 つ足し、tests/test_destructive_guard_mixed_rm_precedence.py だけは自分の feature のケースを固定の位置ではない方法で見分けるよう直すことを認める
+    resolution_note: 'classification gate pass 1: verdict spec_gap (classifier codex, evidence FR4, AC-4), decision proceed; see classification[0]. goal の完了の定義は unittest discover の全件成功のみで既存テスト無変更を求めておらず、FR4/AC-4 の無変更条件が既存不具合（merge-base 78c6db0ed で再現）の修正を妨げている。narrow-ac4-to-no-new-failures と keep-spec は goal の完了の定義を満たさないため不採用'
 worker_runs:
 - request_id: rework-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:2fae25ccd99cecbc703eeda3d1c22ba2e9d3ece5508f5fad6ecb2d7b8d4a3747
-  output_digest: null
+  output_digest: sha256:4abeed0c88be0580ed74ffc427d300a9b1d58ee0ca1a01da62b38f743c3e6a9a
   dispatch_digest_inputs:
     em-workflow/references/contracts/rework-planner-contract.md: sha256:0c9f82099c3546b6b675856539d8244628b7170ce7a4442ec951e13e16577ec3
     em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
@@ -25,9 +41,24 @@ worker_runs:
     feature-docs/destructive-guard-multi-substitution-reason/VERIFICATION.md: sha256:cdb484022b571bff67e7f1e3c9f186190a312811f8c331a47cc115cf14159efc
     feature-docs/destructive-guard-multi-substitution-reason/tasks/task0001.md: sha256:0b40f260e957b0f6b11477037c10e87cf592549c37e3b74565da681587e5aceb
     feature-docs/destructive-guard-multi-substitution-reason/workflow.yaml: sha256:95ee9393ad21835de75d72342c97afc0fc374bd5820059ceada36b855aa46ea2
+  self_write_set: []
 artifacts: []
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
 last_error: null
+spec_change:
+  reason: 'verify round 1: TS-4 (AC-4) が merge-base 時点の既存失敗 (tests/test_destructive_guard_mixed_rm_precedence.py failures=96 errors=7) で通らず、FR4/AC-4 の既存テスト無変更条件の下では解決できない'
+  origin_kind: verify
+  origin_id: TS-4
+  recorded_at_commit: 6cf7d014d655a0f3a710bfb70cc943dc4b26a3ef
+  consumed: false
+  replan_authorized: true
+classification:
+- classifier: codex
+  verdict: spec_gap
+  evidence_ids:
+  - FR4
+  - AC-4
+  decision: proceed
