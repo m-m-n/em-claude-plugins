@@ -1,0 +1,48 @@
+feature: destructive-guard-multi-substitution-reason
+collected_at: "2026-11-13T02:55:49+09:00"
+session_ids: [01a1d0e6-17a7-770d-ba67-30f7467de1c8.jsonl]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: "description_plus_code の最終読みでバケット 1（ルール追加 + テスト追加）が確率 0.81 で最有力となり、閾値表から reduced を採用した"
+    bases:
+      - basis: description_only
+        score:
+          type: score
+          score: 1.04
+          confidence: 0.96
+          probabilities: {'0': 0.0, '1': 0.96, '2': 0.04, '3': 0.0}
+        observed_at: "2026-11-12T23:49:54+09:00"
+      - basis: description_plus_code
+        score:
+          type: score
+          score: 1.07
+          confidence: 0.81
+          probabilities: {'0': 0.06, '1': 0.81, '2': 0.13, '3': 0.0}
+        observed_at: "2026-11-12T23:53:47+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - tests/test_destructive_guard_rm_reason_positions.py
+      changed_lines_approx: 20
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: false
+      spillover_modules: []
+      work_still_required: true
+      test_change_kind: extend_existing_one_to_one
+      added_test_cases_approx: 2
+      body_change_kind: wording_or_rule_addition
+      change_containment: single_function
+      caller_and_dependency_count: 3
+      changes_external_contract: false
+      changes_behavior: false
+follow_up_drafts: []
+lessons_candidates:
+  - "事前調査では本体変更不要（位置番号で既に区別済み）と見積もったが、計画は destructive-guard.py も files に含めた。見積もりと計画の差は /retrospect で確認する"
