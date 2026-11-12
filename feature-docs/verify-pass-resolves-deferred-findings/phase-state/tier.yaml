@@ -1,0 +1,71 @@
+schema_version: 2
+feature: verify-pass-resolves-deferred-findings
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.18
+    confidence: 0.82
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.82
+      '2': 0.18
+      '3': 0.0
+  observed_at: '2026-11-12T20:28:00+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.49
+    confidence: 0.51
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.51
+      '2': 0.49
+      '3': 0.0
+  observed_at: '2026-11-12T20:36:00+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/skills/develop/SKILL.md
+  - em-workflow/references/review-phase.md
+  - em-workflow/references/workflow-schema.md
+  - tests/test_develop_skill_rewiring.py
+  - tests/test_merge_preflight.py
+  changed_lines_approx: 180
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules:
+  - retrospect（review 記録の resolution を参照する）
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 8
+  body_change_kind: wording_or_rule_addition
+  change_containment: multiple_modules
+  caller_and_dependency_count: 3
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: em-workflow/skills/develop/SKILL.md:960,997 は検証結果と完了状態を更新するが、review 指摘の解決更新を定めていない。em-workflow/references/review-phase.md:1374
+    は上限到達時に deferred を記録し、:1158 に resolution と resolution_reason がある。em-workflow/references/workflow-schema.md:99
+    は verify の result と failed_items を定義し、成功条件と検証回の記録は未定義。em-workflow/scripts/merge-preflight.py:90,354,375
+    は最新 round の fixed/declined だけを解決済みと判定する。tests/test_merge_preflight.py:719,848
+    は deferred の停止を検査するが、verify による解決更新は対象外。review-phase.md:107 と develop/SKILL.md:1055
+    も review 記録を参照する
+decided_at: '2026-11-12T20:37:00+09:00'
