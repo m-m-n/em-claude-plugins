@@ -168,7 +168,8 @@ tasks:
     requirements:
     - FR4
     - FR12
-    status: pending
+    status: in_progress
+    branch: em-workflow/destructive-guard-multi-substitution-reason/task0002
 review:
   status: completed
   rounds_completed: 1
