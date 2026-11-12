@@ -1,0 +1,33 @@
+schema_version: 1
+feature: destructive-guard-multi-substitution-reason
+phase: rework
+status: in_progress
+generation: 1
+base_revision: 925fa1086f363f88f00bd4fae76853a477df6ed7
+last_input_digest: sha256:2fae25ccd99cecbc703eeda3d1c22ba2e9d3ece5508f5fad6ecb2d7b8d4a3747
+active_request_id: rework-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: rework-run-0001
+  status: dispatched
+  input_digest: sha256:2fae25ccd99cecbc703eeda3d1c22ba2e9d3ece5508f5fad6ecb2d7b8d4a3747
+  output_digest: null
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/rework-planner-contract.md: sha256:0c9f82099c3546b6b675856539d8244628b7170ce7a4442ec951e13e16577ec3
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/destructive-guard-multi-substitution-reason/IMPLEMENTATION.md: sha256:3e52a49e7ad276e376d98dbbf97333844b7c20506cb375693396c7137b9cc0c0
+    feature-docs/destructive-guard-multi-substitution-reason/SPEC.md: sha256:7bd60a2b11ab9815ec6c071bea540c9e422c4d81ed7ace717103d4797ee5080d
+    feature-docs/destructive-guard-multi-substitution-reason/VERIFICATION.md: sha256:cdb484022b571bff67e7f1e3c9f186190a312811f8c331a47cc115cf14159efc
+    feature-docs/destructive-guard-multi-substitution-reason/tasks/task0001.md: sha256:0b40f260e957b0f6b11477037c10e87cf592549c37e3b74565da681587e5aceb
+    feature-docs/destructive-guard-multi-substitution-reason/workflow.yaml: sha256:95ee9393ad21835de75d72342c97afc0fc374bd5820059ceada36b855aa46ea2
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
