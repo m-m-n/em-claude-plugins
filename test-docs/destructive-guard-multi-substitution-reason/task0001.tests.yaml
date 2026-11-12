@@ -1,0 +1,109 @@
+task_id: task0001
+baseline_failures:
+  - tests.test_destructive_guard_mixed_rm_precedence.TestCaseTable.test_each_scenario_has_its_case
+  - tests.test_destructive_guard_mixed_rm_precedence.TestCaseTable.test_every_new_case_is_rule_pinned_and_named_after_the_feature
+  - tests.test_destructive_guard_mixed_rm_precedence.TestScenarioCasesPassAgainstTheHook.test_ac1_the_rm_first_forms_deny_with_rm_recursive
+  - tests.test_destructive_guard_mixed_rm_precedence.TestScenarioCasesPassAgainstTheHook.test_ac2_the_non_rm_first_forms_deny_with_rm_recursive
+  - tests.test_destructive_guard_mixed_rm_precedence.TestScenarioCasesPassAgainstTheHook.test_ac3_batch_and_root_forms
+  - tests.test_destructive_guard_mixed_rm_precedence.TestScenarioCasesPassAgainstTheHook.test_ac4_the_scan_budget_early_stop
+  - tests.test_destructive_guard_mixed_rm_precedence.TestScenarioCasesPassAgainstTheHook.test_ac5_the_protected_self_config_exclusion
+  - tests.test_destructive_guard_mixed_rm_precedence.TestScenarioCasesPassAgainstTheHook.test_ac6_the_no_deny_commands_keep_their_reason_ids
+final_failures:
+  - tests.test_destructive_guard_mixed_rm_precedence.TestCaseTable.test_each_scenario_has_its_case
+  - tests.test_destructive_guard_mixed_rm_precedence.TestCaseTable.test_every_new_case_is_rule_pinned_and_named_after_the_feature
+  - tests.test_destructive_guard_mixed_rm_precedence.TestScenarioCasesPassAgainstTheHook.test_ac1_the_rm_first_forms_deny_with_rm_recursive
+  - tests.test_destructive_guard_mixed_rm_precedence.TestScenarioCasesPassAgainstTheHook.test_ac2_the_non_rm_first_forms_deny_with_rm_recursive
+  - tests.test_destructive_guard_mixed_rm_precedence.TestScenarioCasesPassAgainstTheHook.test_ac3_batch_and_root_forms
+  - tests.test_destructive_guard_mixed_rm_precedence.TestScenarioCasesPassAgainstTheHook.test_ac4_the_scan_budget_early_stop
+  - tests.test_destructive_guard_mixed_rm_precedence.TestScenarioCasesPassAgainstTheHook.test_ac5_the_protected_self_config_exclusion
+  - tests.test_destructive_guard_mixed_rm_precedence.TestScenarioCasesPassAgainstTheHook.test_ac6_the_no_deny_commands_keep_their_reason_ids
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_multi_substitution_reason.TestRunnerEnvironmentIsNotInherited.test_runner_with_claude_batch_set_still_gets_ask_for_the_non_batch_case
+      - tests.test_destructive_guard_multi_substitution_reason.TestRunnerEnvironmentIsNotInherited.test_runner_without_claude_batch_still_gets_deny_for_the_batch_case
+      - tests.test_destructive_guard_multi_substitution_reason.TestRunnerEnvironmentIsNotInherited.test_the_child_environment_is_exactly_what_the_module_builds
+    red_confirmed: false
+    red_reason: >
+      The behaviour these tests pin (the hook's decision does not depend on
+      anything but the command and the child environment the module builds)
+      pre-exists in the unmodified hook, so no red state occurred; the tests
+      passed on their first run. Non-vacuity was probed once, not committed:
+      the same module run against a throwaway copy of the hook whose
+      designation text always names target 1 failed ten of its twelve tests,
+      among them the first two of these (the third does not run the hook; it
+      replaces subprocess.run and compares the child environment as a whole
+      dictionary, so it is not affected by a hook change).
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_multi_substitution_reason.TestTwoSubstitutionTargetsOfOneRm.test_ts1_ask_names_each_target_by_position_and_renders_no_body
+      - tests.test_destructive_guard_multi_substitution_reason.TestTwoSubstitutionTargetsOfOneRm.test_ts3_batch_denies_with_the_same_designations_and_the_same_rule
+      - tests.test_destructive_guard_multi_substitution_reason.TestTwoSubstitutionTargetsOfOneRm.test_the_two_designations_differ
+    red_confirmed: false
+    red_reason: >
+      The two distinct positional designations for two substitution-only
+      targets of one rm already exist in the unmodified hook (SPEC.md A1, A6),
+      so these tests passed on their first run and no red state occurred.
+      Probed once, not committed: against a throwaway copy of the hook whose
+      designation text always names target 1, test_ts1 and test_ts3 failed
+      with "['1番目のrmの1番目の対象[`$(...)`]'] != ['1番目のrmの1番目の対象[`$(...)`]',
+      '1番目のrmの2番目の対象[`$(...)`]']"; a probe that fed the assertions a
+      reason containing the body text "cat a" failed the absent-text check.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_multi_substitution_reason.TestOneSubstitutionTargetPerRm.test_ts2_two_rm_statements_get_one_ordinal_each
+    red_confirmed: false
+    red_reason: >
+      Two rm statements with one substitution target each already get the
+      designations 1番目のrmの1番目の対象 and 2番目のrmの1番目の対象 on the
+      unmodified hook, so the test passed on its first run and no red state
+      occurred. Probed once, not committed: against a throwaway copy of the
+      hook whose designation text always names the 1番目のrm (the invocation
+      ordinal reused for every statement) this was the only test of the
+      module that failed, with 2番目のrmの1番目の対象 missing from the
+      extracted list.
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_multi_substitution_reason.TestSubstitutionForms.test_ts5_backtick_substitutions
+      - tests.test_destructive_guard_multi_substitution_reason.TestSubstitutionForms.test_ts6_dollar_paren_then_backtick_substitution
+      - tests.test_destructive_guard_multi_substitution_reason.TestSubstitutionForms.test_ts7_process_substitutions
+    red_confirmed: false
+    red_reason: >
+      Backtick, mixed and process-substitution targets already receive their
+      own positional designations on the unmodified hook (SPEC.md A6), so the
+      tests passed on their first run and no red state occurred. Against the
+      throwaway collapsed-target copy of the hook all three failed with a
+      single designation where two are required.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_multi_substitution_reason.TestStaticTargetBetweenSubstitutions.test_ts8_static_target_keeps_its_position
+    red_confirmed: false
+    red_reason: >
+      The static target /tmp/scratch already occupies target position 2 on the
+      unmodified hook, so the substitution targets are named 1 and 3 and the
+      test passed on its first run; no red state occurred. Against the
+      throwaway collapsed-target copy of the hook it failed (both designations
+      named target 1).
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_multi_substitution_reason.TestBodyTextNeverRendered.test_ts9_marker_strings_in_the_bodies_are_absent
+    red_confirmed: false
+    red_reason: >
+      No substitution body text reaches the reason on the unmodified hook, so
+      the test passed on its first run and no red state occurred. Against the
+      throwaway collapsed-target copy of the hook it failed on the designation
+      list; the absent-text check itself was probed with a reason that
+      contained the body text, and failed as required.
+  AC-7:
+    tests:
+      - tests.test_destructive_guard_rm_reason_positions.TestVerdictsPinnedBeforeEditing.test_verdict_and_rule_id_equal_the_recorded_values
+      - tests.test_destructive_guard_rm_reason_positions.TestCombinedReasonTemplates.test_single_winner_text_is_exactly_the_single_target_text
+    red_confirmed: false
+    red_reason: >
+      The criterion is verified by the project's two suites exiting 0 and by
+      the hook staying identical to the base commit; a dedicated new module
+      is out of scope, but the existing
+      tests.test_destructive_guard_rm_reason_positions tests detect a changed
+      verdict, rule id or single-target reason text; no red state occurred for
+      this change because every new test passed on the unmodified hook and the
+      hook was not edited.
