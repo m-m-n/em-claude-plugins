@@ -5365,6 +5365,15 @@ def _mask_python_literals(body):
       quotes and may span lines.
     - The end of BODY inside a literal makes the body undecidable.
     Whether BODY is valid Python is not checked."""
+    # A body that calls a shell-executing or dynamic-execution API hands its
+    # string literals to a shell or interpreter: leave it unmasked.
+    if re.search(
+        r"\b(?:os\s*\.\s*(?:system|popen|exec\w*|spawn\w*)|subprocess"
+        r"|exec|eval|compile|__import__|importlib|pty\s*\.\s*spawn"
+        r"|commands\s*\.\s*getoutput)\b",
+        body,
+    ):
+        return None
     size = len(body)
     out = list(body)
     i = 0
@@ -7206,6 +7215,16 @@ def _masking_stop_reached(marked, toks, consumed, shaped_words, in_python_body):
             decoded = _read_word_as_written(marked, tok)
             if decoded is not None and any(name in decoded for name in STOP_VARIABLE_NAMES):
                 return True
+    # An arithmetic expansion or evaluation (`$(( ))`, `$[ ]`, `(( ))`, and the
+    # `[[ ]]` test, whose -v / -eq operands are evaluated arithmetically)
+    # re-evaluates a variable's value, running any `$( )` in an array
+    # subscript it holds. Not applied inside a Python-program body, where
+    # these characters are the program's code.
+    if not in_python_body:
+        for tok in toks:
+            text = str(tok)
+            if "$((" in text or "$[" in text or text in ("((", "[["):
+                return True
     determinable, word = _peel_command_word(marked, consumed, shaped_words)
     if not determinable:
         return not in_python_body
@@ -7214,11 +7233,40 @@ def _masking_stop_reached(marked, toks, consumed, shaped_words, in_python_body):
     base = os.path.basename(word)
     if base in STOP_COMMAND_WORDS:
         return True
+    if not in_python_body and base in ("((", "[["):
+        return True
     # `printf -v NAME` writes a variable chosen by name at run time (it can
     # build BASH_CMDS from pieces); plain printf stops nothing.
-    return base == "printf" and any(
-        str(t) == "-v" or str(t).startswith("-v") for t in toks
-    )
+    if base != "printf":
+        return False
+    # Look only at the option positions: the words after the command word up
+    # to `--` or the first non-option word (the format string). Words are
+    # restored from their written form; a word whose value cannot be fixed
+    # statically (expansion, quoting) stops masking.
+    cmd_index = None
+    for i, t in enumerate(toks):
+        if os.path.basename(str(t)) == "printf" or (
+            _read_word_as_written(marked, t) is not None
+            and os.path.basename(_read_word_as_written(marked, t)) == "printf"
+        ):
+            cmd_index = i
+            break
+    if cmd_index is None:
+        return any(str(t).startswith("-v") for t in toks)
+    for t in toks[cmd_index + 1:]:
+        text = str(t)
+        written = _read_word_as_written(marked, text) if marked is not None else None
+        if written is not None:
+            text = written
+        if text == "--":
+            return False
+        if any(ch in text for ch in "$`\"'\\"):
+            return True
+        if not text.startswith("-"):
+            return False
+        if text.startswith("-v"):
+            return True
+    return False
 
 
 # destructive-guard-false-deny FR2: which single-quote candidates of the
