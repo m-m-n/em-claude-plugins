@@ -1,0 +1,81 @@
+round: 1
+executed_at: '2026-11-13T00:50:52+09:00'
+scope:
+  review_mode: diff
+  base_commit: 391d5ed04ea1c09d9a99749606fc799dddcfa0f9
+  head_commit: ef43e45325e5ab1d019229918cd31863ba5d104e
+  changed_files:
+  - test-docs/destructive-guard-multi-substitution-reason/task0001.tests.yaml
+  - tests/test_destructive_guard_multi_substitution_reason.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - spec
+  discretionary: []
+  cross_validation: false
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+  model: gpt-6-astra
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 237db48a6f2ed4e3
+  severity: medium
+  category: security
+  file: tests/test_destructive_guard_multi_substitution_reason.py
+  line: 174
+  title: 'TM-2: TS-2（rm 文 2 つ）で判定と理由 ID を固定していない'
+  description: THREAT-MODEL.md の TM-2 の緩和策は「全複数置換ケースで判定 ask（CLAUDE_BATCH 時は deny）と理由 ID rm-unresolvable を固定する」と書いている。TS-2（`rm -rf $(cat a); rm -rf $(cat b)`、174-179 行）は check() に decision_expected / rule_expected を渡していない。check()（105-125 行）は値が None のとき判定と理由 ID の比較を省くので、判定が allow に退行しても位置表記の並びさえ合えば TS-2 は通る。TM-2 の Verified by 欄は TS-2 を挙げておらず、SPEC FR2 も判定を固定しないため、SPEC 違反ではなく脅威モデルの緩和文に対する検証の穴。
+  suggestion: TS-2 の check に decision_expected="ask" と rule_expected="rm-unresolvable" を渡す。さらに同じコマンドを batch=True で実行し、判定が deny、理由 ID が rm-unresolvable、指定の並びが同じになることを確かめるケースを 1 つ足す。
+  reproduction: ファイルを変更せず、run_guard の戻り値をメモリ内で差し替えて TS-2 を実行した。入力は rm -rf $(cat a); rm -rf $(cat b)。check に渡す JSON を permissionDecision="allow"、permissionDecisionReason="[destructive-guard/unexpected-rule] 1番目のrmの1番目の対象[`$(...)`] 2番目のrmの1番目の対象[`$(...)`]" とすると、testsRun=1、failures=[]、errors=[] で成功した。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 80
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix 対象外'
+evaluation:
+  round_summary: 'round 1（diff）。変更はテストの追加 1 ファイルとテスト記録 1 ファイルだけで、フック本体（em-workflow/hooks/）は基準コミットから変わっていない。security#0 の medium 1 件（TS-2 で判定と理由 ID を固定していない）は読解で reproduced。評価者起点の spec low 1 件（task0001.tests.yaml の AC-7 red_reason と final_failures に残る既存 8 件の失敗の食い違い、SPEC AC-4 の全件成功との関係は verify 段で判断）は severity フロアで findings から外れた。critical/high の報告は無く、dismissed_sites は空。注入の試みは無かった。観点ごとの確認状況: security=corroborated, comprehensive=corroborated, spec=findings（low のみ）。'
+  recommended_action: auto_fix
+  action_rationale: critical/high は無い。medium 1 件はテストファイルの TS-2 に引数を足し batch ケースを 1 つ足せば直る局所修正。low 1 件はテスト記録の文言修正で済む。
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-destructive-guard-multi-substitution-reason-20261112T155011Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
