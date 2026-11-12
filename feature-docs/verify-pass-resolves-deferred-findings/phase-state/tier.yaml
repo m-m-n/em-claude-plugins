@@ -20,7 +20,7 @@ bases:
       '1': 0.82
       '2': 0.18
       '3': 0.0
-  observed_at: '2026-11-12T20:28:00+09:00'
+  observed_at: '2026-11-12T20:26:46+09:00'
 - basis: description_plus_code
   score:
     type: score
@@ -39,7 +39,7 @@ bases:
       '1': 0.51
       '2': 0.49
       '3': 0.0
-  observed_at: '2026-11-12T20:36:00+09:00'
+  observed_at: '2026-11-12T20:29:38+09:00'
 pre_survey_estimate:
   files_expected:
   - em-workflow/skills/develop/SKILL.md
@@ -68,4 +68,4 @@ pre_survey_estimate:
     は最新 round の fixed/declined だけを解決済みと判定する。tests/test_merge_preflight.py:719,848
     は deferred の停止を検査するが、verify による解決更新は対象外。review-phase.md:107 と develop/SKILL.md:1055
     も review 記録を参照する
-decided_at: '2026-11-12T20:37:00+09:00'
+decided_at: '2026-11-12T20:29:42+09:00'
