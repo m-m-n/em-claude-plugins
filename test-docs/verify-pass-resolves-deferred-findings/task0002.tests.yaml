@@ -1,0 +1,107 @@
+task_id: task0002
+baseline_failures: []          # python3 -m unittest discover -s tests before any edit: Ran 15990 tests, OK (skipped=1)
+final_failures: []             # same command after the implementation: Ran 16045 tests, OK (skipped=1), re-run after this record was written
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_verify_pass_resolution_procedure.TestAC1RecordingRule.test_ac1_subsection_is_inside_verify_section_one_level_below
+      - tests.test_verify_pass_resolution_procedure.TestAC1RecordingRule.test_ac1_subsection_follows_the_step_that_records_the_result
+      - tests.test_verify_pass_resolution_procedure.TestAC1RecordingRule.test_ac1_names_round_passed_ids_excluded_and_task_md
+      - tests.test_verify_pass_resolution_procedure.TestAC1RecordingRule.test_ac1_round_increases_by_one_on_pass_and_fail
+      - tests.test_verify_pass_resolution_procedure.TestAC1RecordingRule.test_ac1_round_is_recorded_in_the_same_write_as_result
+      - tests.test_verify_pass_resolution_procedure.TestAC1RecordingRule.test_ac1_passed_ids_holds_only_pass_outcome_ids_and_is_replaced
+      - tests.test_verify_pass_resolution_procedure.TestAC1RecordingRule.test_ac1_excluded_and_unevaluated_ids_are_left_out
+      - tests.test_verify_pass_resolution_procedure.TestAC1RecordingRule.test_ac1_minimal_tier_set_is_built_from_expected_result
+      - tests.test_verify_pass_resolution_procedure.TestAC1RecordingRule.test_ac1_cites_the_schema_section_as_definition_owner
+    red_confirmed: true
+    red_reason: >-
+      Run before any edit to SKILL.md or workflow-schema.md: the class
+      errored in setUpClass with "AssertionError: heading not found:
+      '#### verify pass による deferred 指摘の解決'" (the subsection did
+      not exist).
+  AC-2:
+    tests:
+      - tests.test_verify_pass_resolution_procedure.TestAC2MappingRule.test_ac2_names_the_candidate_filter_tokens
+      - tests.test_verify_pass_resolution_procedure.TestAC2MappingRule.test_ac2_candidates_are_deferred_critical_or_high_spec_findings
+      - tests.test_verify_pass_resolution_procedure.TestAC2MappingRule.test_ac2_mapping_is_built_only_when_result_is_pass
+      - tests.test_verify_pass_resolution_procedure.TestAC2MappingRule.test_ac2_candidates_come_from_the_latest_round_record
+      - tests.test_verify_pass_resolution_procedure.TestAC2MappingRule.test_ac2_content_must_be_the_non_attainment_itself
+      - tests.test_verify_pass_resolution_procedure.TestAC2MappingRule.test_ac2_an_id_appearing_in_the_text_is_not_enough
+      - tests.test_verify_pass_resolution_procedure.TestAC2MappingRule.test_ac2_ambiguous_and_mixed_content_findings_are_left_out
+      - tests.test_verify_pass_resolution_procedure.TestAC2MappingRule.test_ac2_cites_untrusted_input_handling_of_worker_envelope
+      - tests.test_verify_pass_resolution_procedure.TestAC2MappingRule.test_ac2_treats_finding_text_and_documents_as_untrusted
+    red_confirmed: true
+    red_reason: >-
+      Run before any edit to SKILL.md: the class errored in setUpClass with
+      "AssertionError: heading not found: '#### verify pass による deferred
+      指摘の解決'". The test added to the module afterwards,
+      test_ac2_candidates_are_deferred_critical_or_high_spec_findings, was
+      not run in that pre-implementation state; it sits in the same
+      setUpClass-gated class.
+  AC-3:
+    tests:
+      - tests.test_verify_pass_resolution_procedure.TestAC3ScriptRun.test_ac3_names_script_and_three_options_and_commit_docs
+      - tests.test_verify_pass_resolution_procedure.TestAC3ScriptRun.test_ac3_verified_commit_is_captured_when_verify_commands_run
+      - tests.test_verify_pass_resolution_procedure.TestAC3ScriptRun.test_ac3_mapping_file_lives_outside_the_integration_worktree
+      - tests.test_verify_pass_resolution_procedure.TestAC3ScriptRun.test_ac3_script_runs_only_for_a_non_empty_mapping_with_a_round_record
+      - tests.test_verify_pass_resolution_procedure.TestAC3ScriptRun.test_ac3_script_runs_after_the_workflow_write_and_before_the_commit
+      - tests.test_verify_pass_resolution_procedure.TestAC3ScriptRun.test_ac3_round_record_change_goes_into_the_same_commit
+      - tests.test_verify_pass_resolution_procedure.TestAC3ScriptRun.test_ac3_zero_exit_keeps_the_round_record_change
+      - tests.test_verify_pass_resolution_procedure.TestAC3ScriptRun.test_ac3_non_zero_exit_leaves_findings_deferred_and_the_run_continues
+      - tests.test_verify_pass_resolution_procedure.TestAC3ScriptRun.test_ac3_resume_rerun_changes_nothing_further
+    red_confirmed: true
+    red_reason: >-
+      Run before any edit to SKILL.md: the class errored in setUpClass with
+      "AssertionError: heading not found: '#### verify pass による deferred
+      指摘の解決'".
+  AC-4:
+    tests:
+      - tests.test_verify_pass_resolution_procedure.TestAC4SchemaFields.test_ac4_full_structure_verify_step_shows_round_and_passed_ids
+      - tests.test_verify_pass_resolution_procedure.TestAC4SchemaFields.test_ac4_full_structure_comments_point_at_the_new_section
+      - tests.test_verify_pass_resolution_procedure.TestAC4SchemaFields.test_ac4_new_section_exists
+      - tests.test_verify_pass_resolution_procedure.TestAC4SchemaFields.test_ac4_section_states_the_meaning_of_both_fields
+      - tests.test_verify_pass_resolution_procedure.TestAC4SchemaFields.test_ac4_section_states_the_absent_key_reading_and_no_migration
+      - tests.test_verify_pass_resolution_procedure.TestAC4SchemaFields.test_ac4_section_names_the_orchestrator_as_the_only_writer
+      - tests.test_verify_pass_resolution_procedure.TestAC4SchemaFields.test_ac4_section_states_the_id_token_format
+      - tests.test_verify_pass_resolution_procedure.TestAC4SchemaFields.test_ac4_section_cites_the_procedure_owner_in_the_develop_skill
+      - tests.test_verify_pass_resolution_procedure.TestAC4SchemaFields.test_ac4_section_does_not_restate_the_procedure
+    red_confirmed: true
+    red_reason: >-
+      Run before any edit to workflow-schema.md: 9 failures, e.g. "Regex
+      didn't match: '(?m)^    round:' not found" over the verify step block
+      and "AssertionError: heading not found: '## `round` and
+      `passed_ids`'".
+  AC-5:
+    tests:
+      - tests.test_verify_pass_resolution_procedure.TestAC5ModesAndGates.test_ac5_same_in_interactive_and_batch_and_no_gate_tokens
+      - tests.test_verify_pass_resolution_procedure.TestAC5ModesAndGates.test_ac5_states_no_new_gate_question_or_batch_non_packet_gate
+      - tests.test_verify_pass_resolution_procedure.TestAC5ModesAndGates.test_ac5_none_of_the_gate_tokens_appear
+    red_confirmed: true
+    red_reason: >-
+      Run before any edit to SKILL.md: the TestAC5ModesAndGates class
+      errored in setUpClass with "AssertionError: heading not found:
+      '#### verify pass による deferred 指摘の解決'".
+  AC-6:
+    tests:
+      - tests.test_verify_pass_resolution_procedure.TestAC6PinnedWording.test_ac6_verify_section_keeps_the_pinned_phrases
+      - tests.test_verify_pass_resolution_procedure.TestAC6PinnedWording.test_ac6_subsection_has_none_of_the_forbidden_assignment_phrases
+      - tests.test_verify_pass_resolution_procedure.TestAC6PinnedWording.test_ac6_whole_verify_section_has_none_of_the_forbidden_phrases
+      - tests.test_verify_pass_resolution_procedure.TestAC6PinnedWording.test_ac6_schema_places_no_cap_digit_near_the_cap_keywords
+      - tests.test_verify_rework_lineage_cap.TestSkillCapReachedOutcome.test_deferred_negation_sentence_is_present
+      - tests.test_verify_rework_lineage_cap.TestSkillCapReachedOutcome.test_no_deferred_assignment_for_verify_leftovers
+      - tests.test_verify_rework_lineage_cap.TestVerifyCapNumeralIsSkillOnly.test_workflow_schema_has_no_verify_cap_numeral
+      - tests.test_develop_skill_rewiring.TestVerifyReworkBranchesReferenceSSOT.test_batch_counter_cap_is_retained
+      - tests.test_develop_docs_only_rework_doc.TestVerifyCapParagraphUnchanged.test_cap_block_is_byte_identical_to_the_base_revision
+    red_confirmed: false
+    red_reason: >-
+      Non-regression criterion: the pinned wording (the phrases kept in the
+      verify section, the absence of digits 1 and 3 near the cap keywords in
+      workflow-schema.md) existed before this change, and the existing
+      tests/test_verify_rework_lineage_cap.py and
+      tests/test_develop_skill_rewiring.py modules detect a break of it; no
+      red state occurred for this change. The new TestAC6PinnedWording class
+      did error before the implementation, but only in setUpClass because
+      the new subsection was absent, not on the pinned-wording claims, so
+      that observation is not recorded as a red for this criterion. The
+      forbidden-phrase and digit-window helpers are proven able to fail by
+      TestHelpersCanFail.
