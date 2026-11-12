@@ -1,0 +1,16 @@
+schema_version: 1
+feature: verify-pass-resolves-deferred-findings
+records:
+- question_id: correspondence.eligible-categories
+  packet_id: create-spec-q0001
+  answered_at: '2026-11-12T20:37:43+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - spec-only
+  freeform: null
+  normalized_answer: 仕様適合の検証で解決を確認できる範囲に限定する
+  resolution_note: 'gate: create-spec.requirement-clarification; route: relaxed (security
+    category); codex_consulted: true (entry: codex, 1 turn); codex suggested spec-only;
+    orchestrator mapped to option_id spec-only; opus_escalation: not run; recorded
+    as assumption; reason: 仕様適合の検証で解決を確認できる範囲に限定する'

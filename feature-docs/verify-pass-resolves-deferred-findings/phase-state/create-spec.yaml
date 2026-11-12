@@ -1,17 +1,139 @@
 schema_version: 1
 feature: verify-pass-resolves-deferred-findings
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: 7a7f1a4a517a75e7fb6fd921cf81c5b46ff02dc2
 last_input_digest: sha256:83d6781332513d5ae83475271bc867b9ba0c2809f72f9fbc31d8b4c8f703ff23
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-11-12T20:37:43+09:00'
+    questions:
+    - question_id: correspondence.mechanism
+      status: answered
+    - question_id: correspondence.eligible-categories
+      status: answered
+    - question_id: evidence.record-shape
+      status: answered
+    - question_id: evidence.verify-round-id
+      status: answered
+    - question_id: scope.modes
+      status: answered
+    - question_id: scope.backfill
+      status: answered
+    - question_id: timing.partial-pass
+      status: answered
+    - question_id: design-step
+      status: answered
+answers:
+  correspondence.mechanism:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-12T20:37:43+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - orchestrator-judgment-script-validated
+    freeform: null
+    normalized_answer: 対応関係の意味判断は orchestrator、更新条件の機械的な検査はスクリプトに分けられる
+    resolution_note: 'gate: create-spec.requirement-clarification; route: policy codex_consultation;
+      codex_consulted: true (entry: codex, 1 turn); codex suggested orchestrator-judgment-script-validated;
+      orchestrator mapped to option_id orchestrator-judgment-script-validated; opus_escalation:
+      not run; recorded as assumption; reason: 対応関係の意味判断は orchestrator、更新条件の機械的な検査はスクリプトに分けられる'
+  correspondence.eligible-categories:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-12T20:37:43+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - spec-only
+    freeform: null
+    normalized_answer: 仕様適合の検証で解決を確認できる範囲に限定する
+    resolution_note: 'gate: create-spec.requirement-clarification; route: relaxed
+      (security category); codex_consulted: true (entry: codex, 1 turn); codex suggested
+      spec-only; orchestrator mapped to option_id spec-only; opus_escalation: not
+      run; recorded as assumption; reason: 仕様適合の検証で解決を確認できる範囲に限定する'
+  evidence.record-shape:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-12T20:37:43+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - reason-plus-structured
+    freeform: null
+    normalized_answer: 検証の証拠と変更前の保留理由を両方残せる
+    resolution_note: 'gate: create-spec.requirement-clarification; route: policy codex_consultation;
+      codex_consulted: true (entry: codex, 1 turn); codex suggested reason-plus-structured;
+      orchestrator mapped to option_id reason-plus-structured; opus_escalation: not
+      run; recorded as assumption; reason: 検証の証拠と変更前の保留理由を両方残せる'
+  evidence.verify-round-id:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-12T20:37:43+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - new-verify-counter-and-commit
+    freeform: null
+    normalized_answer: 両モードで verify の実行を識別でき、同じコミットの再検証も区別できる
+    resolution_note: 'gate: create-spec.requirement-clarification; route: policy codex_consultation;
+      codex_consulted: true (entry: codex, 1 turn); codex suggested new-verify-counter-and-commit;
+      orchestrator mapped to option_id new-verify-counter-and-commit; opus_escalation:
+      not run; recorded as assumption; reason: 両モードで verify の実行を識別でき、同じコミットの再検証も区別できる'
+  scope.modes:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-12T20:37:43+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - both-modes
+    freeform: null
+    normalized_answer: 両モードで判断を統一し、対話時の受容理由も履歴に残る
+    resolution_note: 'gate: create-spec.requirement-clarification; route: policy codex_consultation;
+      codex_consulted: true (entry: codex, 1 turn); codex suggested both-modes; orchestrator
+      mapped to option_id both-modes; opus_escalation: not run; recorded as assumption;
+      reason: 両モードで判断を統一し、対話時の受容理由も履歴に残る'
+  scope.backfill:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-12T20:37:43+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - no-backfill
+    freeform: null
+    normalized_answer: 過去の合格記録には対応関係を検査する証拠が無い
+    resolution_note: 'gate: create-spec.requirement-clarification; route: policy codex_consultation;
+      codex_consulted: true (entry: codex, 1 turn); codex suggested no-backfill; orchestrator
+      mapped to option_id no-backfill; opus_escalation: not run; recorded as assumption;
+      reason: 過去の合格記録には対応関係を検査する証拠が無い'
+  timing.partial-pass:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-12T20:37:43+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - overall-pass-only
+    freeform: null
+    normalized_answer: 検証全体が失敗している間の解決更新を避け、更新条件を明確にする
+    resolution_note: 'gate: create-spec.requirement-clarification; route: policy codex_consultation;
+      codex_consulted: true (entry: codex, 1 turn); codex suggested overall-pass-only;
+      orchestrator mapped to option_id overall-pass-only; opus_escalation: not run;
+      recorded as assumption; reason: 検証全体が失敗している間の解決更新を避け、更新条件を明確にする'
+  design-step:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-12T20:37:43+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - skip
+    freeform: null
+    normalized_answer: design step を skip する（UI を持たない変更）
+    resolution_note: 'gate: create-spec.design-step; batch policy decide_autonomously
+      -> analyst recommendation skip'
 worker_runs:
-  - request_id: create-spec-run-0001
-    status: dispatched
-    input_digest: sha256:83d6781332513d5ae83475271bc867b9ba0c2809f72f9fbc31d8b4c8f703ff23
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:83d6781332513d5ae83475271bc867b9ba0c2809f72f9fbc31d8b4c8f703ff23
 artifacts: []
 patches: []
 progress_fingerprint: null
