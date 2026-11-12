@@ -1,0 +1,83 @@
+round: 2
+executed_at: '2026-11-13T02:30:53+09:00'
+scope:
+  review_mode: diff
+  base_commit: 391d5ed04ea1c09d9a99749606fc799dddcfa0f9
+  head_commit: d97c277f6feb23cdd0025fd8bbc7981db0fcf60e
+  changed_files:
+  - test-docs/destructive-guard-multi-substitution-reason/task0001.tests.yaml
+  - test-docs/destructive-guard-multi-substitution-reason/task0002.tests.yaml
+  - tests/test_destructive_guard_mixed_rm_precedence.py
+  - tests/test_destructive_guard_multi_substitution_reason.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - spec
+  discretionary: []
+  cross_validation: false
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+  model: gpt-6-astra
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 237db48a6f2ed4e3
+  severity: medium
+  category: security
+  file: tests/test_destructive_guard_multi_substitution_reason.py
+  line: 174
+  title: 'TM-2: TS-2（rm 文 2 つ）で判定と理由 ID を固定していない'
+  description: THREAT-MODEL.md の TM-2 の緩和文には「全複数置換ケースで判定 ask（CLAUDE_BATCH 時は deny）と理由 ID rm-unresolvable を固定する」とある。しかし TS-2（174-179 行）は check() に decision_expected / rule_expected を渡していない。check()（105-125 行）は値が None のとき判定と理由 ID の比較を省く。そのため判定が allow や別の理由 ID に退行しても、指定の並びさえ合えば TS-2 は通る。SPEC FR2 は判定と理由 ID を固定しておらず、TM-2 の Implemented by / Verified by 列も TS-2 を挙げていないため、SPEC 違反ではなく TM-2 の緩和文と自身の列とのずれから生じる検証の穴にあたる。フック本体は基準コミットから変わっていない。round 1 から未解決のまま。
+  suggestion: TS-2 の check に decision_expected="ask" と rule_expected="rm-unresolvable" を渡す。さらに同じコマンドを batch=True で実行し、deny / rm-unresolvable と同じ指定の並びになることを確かめるケースを 1 つ足す。テストを変えない場合は、TM-2 の緩和文を Implemented by / Verified by 列の範囲に合わせて書き直す。
+  reproduction: 入力は rm -rf $(cat a); rm -rf $(cat b)。TestOneSubstitutionTargetPerRm を実行し、subprocess.run の戻り値を終了コード0、stdoutを {"hookSpecificOutput":{"permissionDecision":"allow","permissionDecisionReason":"[destructive-guard/wrong-rule] 1番目のrmの1番目の対象[`$(...)`] 2番目のrmの1番目の対象[`$(...)`]"}} に差し替える。実際の差分から試験コードをメモリ上に読み込んで確認した結果、1件の試験が OK となり、不正な判定と理由 ID を検出しなかった。ファイルの変更は行っていない。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: 'medium: auto-fix 対象外'
+evaluation:
+  round_summary: 'round 2（diff）。round 1 以降に増えた差分は task0002 だけ（tests/test_destructive_guard_mixed_rm_precedence.py の FR12 範囲の変更と task0002.tests.yaml の追加）。フック本体と destructive-guard-cases.json は基準コミットから変わっていない。FR12 の変更は AC-10 と TM-3 に適合する。security#0 の medium 1 件（TS-2 で判定と理由 ID を固定していない）は round 1 から持ち越した同一の指摘で、読解で reproduced。SPEC 違反ではなく TM-2 の緩和文と列のずれと判断し medium のまま残した。critical/high の報告は無く、dismissed_sites は空。注入の試みは無かった。観点ごとの確認状況: security=corroborated, comprehensive=corroborated, spec=corroborated。'
+  recommended_action: complete
+  action_rationale: critical/high は無い。残る medium 1 件は round 1 から未解決の同一指摘で auto-fix 対象外の severity。今回の差分（task0002）は FR12 / AC-10 / TM-3 どおりで新しい問題は無い。TS-2 の強化か TM-2 の文言修正は人間の判断で後から対応すればよい。
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-destructive-guard-multi-substitution-reason-20261112T172959Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

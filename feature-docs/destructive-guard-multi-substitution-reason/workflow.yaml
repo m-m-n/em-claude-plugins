@@ -90,8 +90,8 @@ workflow:
   base_commit: 391d5ed04ea1c09d9a99749606fc799dddcfa0f9
   completed_at_commit: de76dd09a09ae08ce9a1f0c72465fc99762c1b94
 - id: review
-  status: in_progress
-  completed_at_commit: ef43e45325e5ab1d019229918cd31863ba5d104e
+  status: completed
+  completed_at_commit: d97c277f6feb23cdd0025fd8bbc7981db0fcf60e
 - id: verify
   status: pending
   result: fail
@@ -172,7 +172,7 @@ tasks:
     branch: em-workflow/destructive-guard-multi-substitution-reason/task0002
 review:
   status: completed
-  rounds_completed: 1
+  rounds_completed: 2
   perspectives:
   - comprehensive
   - security
