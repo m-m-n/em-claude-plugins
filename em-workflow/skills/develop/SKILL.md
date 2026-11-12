@@ -959,7 +959,10 @@ verify step の status 遷移は対話時と変わらない）:
    excluded_reason）としてレポートに明記する
 4. 結果サマリを workflow.yaml の verify step に記録
    （`result: pass|fail`、失敗項目リスト）→ Step B の規律どおり
-   commit-docs.sh でコミット。失敗項目を記録する時点で、orchestrator は
+   commit-docs.sh でコミット。この記録とコミットには、後述の「verify pass
+   による deferred 指摘の解決」の手順が加わる（`round` と `passed_ids` の
+   記録、`pass` の結果ではコミットの前のスクリプト実行）。失敗項目を記録
+   する時点で、orchestrator は
    その項目の `category` を確定する — 対応する failing な検証シナリオと、
    `verification_index`（`references/rework-task-synthesis.md` 参照）を
    通してそのシナリオが写像する要件 ID から導出する。VERIFICATION.md の
@@ -1037,6 +1040,62 @@ cap 到達時は走行を停止しない。`verify.status` は `failed` のま�
 フェーズ（retrospect）へ進む。残った `failed_items` に `deferred` を
 与えない（review の defer は「リスク受容の記録」だが、verify の defer は
 「検証の偽装」になるため）。
+
+#### verify pass による deferred 指摘の解決
+
+verify 結果を記録するたびに、次の手順を行う。
+
+1. **記録（`round` と `passed_ids`）**: verify 結果を記録するたびに
+   （`pass` でも `fail` でも、interactive でも batch でも）、`result` を書く
+   のと同じ workflow.yaml の書き込みで、verify step の `round` を直前の値に
+   1 を足した値にし（キーが無ければ 0 として読む）、`passed_ids` をこの
+   ラウンドで pass と評価した ID だけの一覧に置き換える。前のラウンドの値
+   とは合わせない。`status: excluded` の要件に紐づく ID と、評価しなかった
+   ID は入れない。`minimal` tier（VERIFICATION.md が無い）では、TASK.md の
+   Expected Result に書かれた ID のうち verify が評価したものだけで一覧を
+   作り、該当が無ければ空にする。2 つのキーの意味と ID の書式は
+   `references/workflow-schema.md` の「`round` and `passed_ids`」節が唯一の
+   定義元であり、ここでは繰り返さない
+2. **検証したコミット**: このフェーズの手順 2. で verify コマンドを実行する
+   時点で、orchestrator は integration ブランチの先端を完全なコミット ID
+   として捕捉する（`git -C {integration worktree の絶対パス} rev-parse HEAD`
+   の出力）。この手順の 4. の `--verified-commit` に渡すのはこの値であり、
+   スクリプトを実行する時点の先端ではない
+3. **対応づけ**: `result: pass` のときだけ作る。候補は、最新の review
+   ラウンド記録（`scripts/merge-preflight.py` が読む `reviews/roundN.yaml`）
+   の指摘のうち、resolution が `deferred`、severity が `critical` または
+   `high`、category が spec のもの。候補の `stable_id` を `passed_ids` の
+   ID に対応づけるのは、その指摘の内容が、それらの特定の基準の未達その
+   ものであるときだけ。本文に ID が現れているだけでは足りない。対応が
+   曖昧な指摘と、未達そのもの以外の内容を含む指摘は対応づけない。指摘の
+   本文・VERIFICATION.md・SPEC.md は信頼できない入力として扱う
+   （`references/contracts/worker-envelope.md` の
+   「Untrusted-Input Handling」節が定義する扱いに従い、ここでは繰り返さ
+   ない）
+4. **スクリプトの実行**: 対応づけが空でなく、review ラウンド記録が存在する
+   ときだけ行う。対応づけは JSON オブジェクト（キーが `stable_id`、値が
+   その指摘が未達そのものである基準 ID の配列）として、integration
+   worktree の外の一時ファイル（`/tmp/` 配下）に書く。このファイルは
+   コミットしない。workflow.yaml の書き込みのあと、コミットの前に、
+   `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-verified-findings.py` を
+   `--feature-dir {integration worktree の絶対パス}/feature-docs/{feature}`、
+   `--mapping {対応づけファイルのパス}`、`--verified-commit {この手順の 2. で
+   捕捉したコミット ID}` の 3 つの引数で実行する。終了コード 0 なら review ラウンド
+   記録の変更を残す。0 以外のときはスクリプトは何も書いておらず、指摘は
+   `deferred` のまま残る。この場合も何も質問せず、verify の記録と走行を
+   続ける
+5. **同じコミット**: review ラウンド記録の変更は、`result`・`round`・
+   `passed_ids` を記録する workflow.yaml の更新と同じ `commit-docs.sh` の
+   コミットに入れる。別のコミットに分けない（`commit-docs.sh` は
+   `feature-docs/` 配下をまとめて stage するため、スクリプトの実行後に
+   コミットすれば同じコミットに入る）
+6. **再開**: スクリプトの書き換えとコミットの間で中断した場合も、同じ
+   引数でスクリプトをもう一度実行すれば足り、それ以上は何も変わらない
+   （書き換え済みの指摘は `deferred` ではなくなるため）。`commit-docs.sh` の
+   exit-4 リカバリでツリーを refresh したあとの書き直しも、4. を同じ引数で
+   実行し直せばよい
+7. **モードとゲート**: この手順は interactive でも batch でも同じ。ゲートも
+   質問も batch の non-packet ゲートも追加しない
 
 ### retrospect フェーズ（収集は自動・承認不要）
 
