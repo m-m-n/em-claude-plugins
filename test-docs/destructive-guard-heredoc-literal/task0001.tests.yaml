@@ -1,0 +1,96 @@
+task_id: task0001
+baseline_failures: []          # python3 em-workflow/hooks/tests/run-destructive-guard.py -> 1209/1209 passed; python3 -m unittest discover -s tests -> Ran 15923 tests, OK (skipped=1); both run on the untouched worktree before any edit
+final_failures: []             # re-executed on the final tree: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests exited 0 (runner N/N passed with N = case count + 1; unittest OK)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >-
+      Observed with the real runner pointed at a copy of the base commit's
+      destructive-guard.py and the new case table: "FAIL allow" lines for
+      TS-1, TS-2, TS-3, TS-5, TS-6 and TS-17, each "got=deny" with
+      [destructive-guard/git-branch-force-delete] (TS-3:
+      [destructive-guard/git-reset-hard]); summary "1239/1250 passed", exit 1.
+      The TS-4 case (a triple-quoted literal spanning lines) printed "ok" on
+      the unchanged guard: the shell reads its quotes as one quoted word, so
+      it was already allow and shows no red state of its own.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >-
+      Same run against the unchanged guard: "FAIL allow" for the three TS-18
+      cases (assignment-enclosed substitution, downstream grep, `-I -`
+      option cluster) and for TS-27 (output redirect to a file), plus the
+      implementer-added `2>/dev/null` case, each "got=deny" with
+      [destructive-guard/git-branch-force-delete].
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: false
+    red_reason: >-
+      The unchanged guard already denies TS-7 and TS-8 (a sink body is read
+      whole), so both printed "ok deny" before the change; no red state
+      occurred. The cases pin the guard against the new masking: with the
+      original-body substitution extraction removed (one-off mutation of a
+      scratch copy of the guard, not committed) both flipped to allow.
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: false
+    red_reason: >-
+      The probe forms of TS-9 and TS-10, TS-11 and TS-12 are denied by the
+      unchanged guard, and the SPEC forms of TS-9 and TS-10 (both allow) and
+      the four TS-19 cases (all deny) were fixed from a run of the unchanged
+      guard, so every one printed "ok" before the change; no red state
+      occurred. With the pipeline and enclosing-statement conditions removed
+      (one-off mutation of a scratch copy of the guard, not committed) the
+      two probe forms flipped to allow.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: false
+    red_reason: >-
+      The unchanged guard reads every sink body whole, so the TS-20, TS-21
+      and TS-26 cases printed "ok deny" before the change; no red state
+      occurred. One-off mutations of a scratch copy of the guard (not
+      committed) flipped them: without the skipped-word rule TS-20 (env -S)
+      went to allow, without the parked original body TS-20 (override after
+      the heredoc) went to allow, and without the argument and redirect
+      shape conditions TS-21 (fd 3) and the TS-26 cases went to allow.
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: false
+    red_reason: >-
+      TS-13 and TS-25 (deny) and TS-14 and TS-15 (fixed at the unchanged
+      guard's decision, deny) printed "ok" before the change; no red state
+      occurred. With every literal prefix accepted (one-off mutation of a
+      scratch copy of the guard, not committed) TS-15 and TS-25 flipped to
+      allow.
+  AC-7:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_every_pre_task_command_preserved_with_only_named_changes
+    red_confirmed: true
+    red_reason: >-
+      The runner run against the unchanged guard with the new case table
+      ended "1239/1250 passed" and exit status 1, so the first half of the
+      command did not exit 0 before the implementation. The comparison with
+      the base commit (every existing case with the same decision, label and
+      command; every new case three elements; changed files) was a one-off
+      script check and is not a committed test.
+  AC-8:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestSourceHygieneAndDeterminism.test_module_uses_only_standard_library
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing
+      tests.test_destructive_guard_command_substitution.TestSourceHygieneAndDeterminism.test_module_uses_only_standard_library
+      detects a non-standard-library import in the guard; no red state
+      occurred for this change. That the literal scan is one left-to-right
+      pass, that the masked text has the body's length with every line feed
+      in place, and that no part of a heredoc body is evaluated, compiled,
+      executed or imported has no executable check that can be made to
+      fail; it was read in the diff of the guard.

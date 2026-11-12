@@ -1,0 +1,51 @@
+schema_version: 1
+feature: destructive-guard-heredoc-literal
+records:
+- question_id: create-spec.requirement-clarification
+  packet_id: null
+  answered_at: '2026-11-11T20:07:13+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: A-2 は Codex の代替案を採用（f-string / t-string を対象外）。他は同意
+  normalized_answer: A-2 代替案採用、A-1/A-3/A-4 同意
+  resolution_note: 'gate: create-spec.requirement-clarification (analyst assumptions A-1..A-4); options:
+    analyst 原案 / Codex 代替案; chosen: Codex 代替案（A-2）と原案（他）; codex_consulted: true; opus_escalation: false;
+    要点: 本文一律除外は既存 deny と両立しない、f-string は式評価があるため除外しない、リテラル経由のシェル渡しは既知の制約'
+- question_id: create-plan.planner-open-items
+  packet_id: null
+  answered_at: '2026-11-11T20:38:17+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 論点1 A（適用条件の絞り込みを採用）、論点2 A（SPEC の TS-9/TS-10 形は変更前の判定で固定し、バッククォート入り probe 形で保護を確認）。Codex 指摘の穴
+    2 件を計画に反映
+  normalized_answer: planner 方針どおり + f-string 判定不能化 + heredoc 単一・fd 操作なし条件を追加
+  resolution_note: 'gate: create-plan planner open items (unlisted, orchestrator-raised); options: A 計画どおり
+    / B SPEC 文言どおり・新規検知追加; chosen: A/A; codex_consulted: true; opus_escalation: false; 要点: Python 名だけでは実行先を確定できず絞り込みが検知低下を防ぐ、現行
+    guard で SPEC 形は allow・probe 形は deny を実測、新規検知は変更範囲を広げる。追加の穴: f-string 内の入れ子引用符で通常リテラルと誤認しうる（→ f/t 前置子のリテラルで本文を判定不能に）、python3
+    <<DATA 3<&0 <<PY で DATA 本文をプログラム扱いしうる（→ heredoc 1 つ・入力系や fd 複製のリダイレクトなしを条件に）。残る制約: 2>&1 付きや f-string
+    を含む本文の誤 deny は今のまま'
+- question_id: rework.spec-change.ac6-print-form
+  packet_id: rework-q0001
+  answered_at: '2026-11-11T22:32:33+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - change-spec
+  freeform: null
+  normalized_answer: SPEC を書き換える（AC-6 / TS-9 / TS-10 の print 形は変更前の判定で固定し、deny 境界は probe 形で固定）
+  resolution_note: 'gate: rework.spec-change; routed arm → classification gate; direction 2 は round1 の
+    bound set に security 指摘を含むため batch 緩和ルートで Codex 相談に合流; classifier: codex (1 turn, harness codex);
+    verdict: spec_gap; evidence: FR2, FR7, AC-6, TS-9, TS-10; Claude も同意（print 形の変更前判定は allow を実測、FR2/FR7
+    が判定維持を要求）; opus_escalation: false; classification 記録 1 件目'
+- question_id: create-plan.planner-open-items.fr9-expansion-words
+  packet_id: null
+  answered_at: '2026-11-11T23:20:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - stop-for-spec-change
+  freeform: null
+  normalized_answer: 計画（create-plan-p0002）を適用せずに停止し、FR9 (3) の改訂を人の判断に委ねる
+  resolution_note: 'gate: create-plan planner open items (unlisted, orchestrator-raised); 論点: パス名展開・波括弧展開でしか状態変更や差し替えの組み込みにならないコマンド語（{declare,-i} x、decl?re -i x、builtin {hash,-p,/bin/bash,python3}）が FR9 (3) の外; options: A 計画どおり適用し別タスク起票 / B1 FR9 (3) を広く解釈する仮定で再計画 / B2 適用せず停止し SPEC 改訂へ; chosen: B2; codex_consulted: true (2 回); opus_escalation: false; 要点: Codex が {declare,-i} x と配列添字の組み合わせで変更前 deny が現状 allow になる検出漏れを確認、波括弧展開は一致ファイル不要で hash による Python 名の差し替えも成立、FR9 (3) の括弧書きは列挙で assume で広げる根拠が弱い、review の rework 上限は消費済みで A では後段で拾えない; 計画成果物は破棄し、検証を通った写しはプロジェクトの tmp に保存'
