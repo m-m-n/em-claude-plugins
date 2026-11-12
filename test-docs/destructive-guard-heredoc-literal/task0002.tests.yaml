@@ -1,0 +1,92 @@
+task_id: task0002
+baseline_failures: []          # python3 em-workflow/hooks/tests/run-destructive-guard.py -> 1265/1265 passed; python3 -m unittest discover -s tests -> Ran 15924 tests, OK (skipped=1); both run on the untouched committed tree (the uncommitted changes the worktree held at the start were set aside for the run and restored afterwards)
+final_failures: []             # re-executed on the final tree: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests exited 0 (runner 1305/1305 passed, N = case count + 1; unittest Ran 15925 tests, OK (skipped=1); the extra test over the baseline is the record check this file adds)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >-
+      Observed with the real runner pointed at a copy of the guard as it
+      stood at the task's start commit and the new case table: "FAIL deny"
+      for all six cases (TS-28a, TS-28b, TS-28c, TS-28d, TS-30a, TS-30b), the
+      run ending "1277/1305 passed" with exit status 1.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >-
+      Same run against the unchanged guard: "FAIL deny" for TS-29, TS-33,
+      TS-34a to TS-34c, TS-35a to TS-35d, TS-36a to TS-36e, TS-37a, TS-37b,
+      TS-39, TS-41a and TS-41b (19 cases). TS-41c printed "ok deny" before
+      the change (the unchanged check already stops on a `$` in the word
+      after `builtin`), so it shows no red state of its own.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >-
+      Same run against the unchanged guard: "FAIL deny" for TS-38f
+      (`builtin 'builtin' de"cl"are`, behind a quoted `builtin`) and "FAIL
+      allow" for TS-44a (`$'echo' ok`, which the unchanged check stopped on
+      for its `$`). TS-38a to TS-38e, TS-40a, TS-44b and TS-44c printed "ok"
+      before the change: the unchanged check read the token value, which
+      already equals the restored word for the backslash, double-quote and
+      single-quote spellings (TS-38a to TS-38c, TS-40a, TS-44b, TS-44c) and
+      holds a `$` for the ANSI-C and locale spellings (TS-38d, TS-38e); no red
+      state of their own. A one-off mutation of a scratch copy of the guard (not
+      committed) that decides determinability from the token value instead
+      of the word as written flipped TS-36a, TS-36c and TS-44a.
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >-
+      Same run against the unchanged guard: "FAIL deny" for TS-42 (a
+      substitution evaluated in the body of an unquoted-delimiter Python
+      heredoc). TS-40b and TS-43 printed "ok allow" before the change (the
+      unchanged check never saw those words as undeterminable); they pin the
+      new check against the Python-body mark: with the exemption removed
+      (one-off mutation of a scratch copy, not committed) TS-43 flipped to
+      deny, and with the FR5-extracted chunks of an unquoted body carrying
+      the body's mark TS-42 flipped to allow.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: false
+    red_reason: >-
+      TS-31 was fixed at the decision of the guard at workflow.implement.base_commit
+      (allow), which equals the decision of the guard at this task's start
+      (allow), so it printed "ok allow" before the change; no red state
+      occurred. A one-off mutation of a scratch copy of the guard (not
+      committed) in which the masking-stop check also raises the FR7 override
+      flag flipped TS-31 to deny.
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestSourceHygieneAndDeterminism.test_module_uses_only_standard_library
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing
+      tests.test_destructive_guard_command_substitution.TestSourceHygieneAndDeterminism.test_module_uses_only_standard_library
+      detects a non-standard-library import in the guard (AC-6 (c)); no red
+      state occurred for this change. That exactly one function removes
+      `builtin` / `command` for the masking-stop check, that the stop
+      vocabularies are derived from the override vocabulary by name with
+      BASH_CMDS written once, that the former separate state-builtin list is
+      gone, that determinability is decided from the word as written, and that
+      each character of a word is read a bounded number of times have no
+      executable check that can be made to fail; they were read in the diff
+      of the guard.
+  AC-7:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_every_pre_task_command_preserved_with_only_named_changes
+    red_confirmed: true
+    red_reason: >-
+      The runner run against the unchanged guard with the new case table
+      ended "1277/1305 passed" and exit status 1, so the first half of the
+      command did not exit 0 before the implementation. The comparison with
+      workflow.implement.base_commit and with the task's starting commit
+      (every existing case with the same decision, label and command; every
+      new case three elements; changed files) was a one-off script check and
+      is not a committed test.
