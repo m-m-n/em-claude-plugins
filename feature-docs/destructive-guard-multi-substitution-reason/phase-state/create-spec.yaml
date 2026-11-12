@@ -1,11 +1,11 @@
 schema_version: 1
 feature: destructive-guard-multi-substitution-reason
 phase: create-spec
-status: completed
-generation: 1
+status: in_progress
+generation: 2
 base_revision: e29ee4ad37943a39d4466379826f9666c6e4dfdc
 last_input_digest: sha256:aa1d6b6999c69ae5403c8d7db897cc0ec636166666e6846e620291b1d43eea4f
-active_request_id: null
+active_request_id: create-spec-run-0004
 packets: {}
 answers:
   create-spec.requirement-clarification:
@@ -37,6 +37,10 @@ worker_runs:
   input_digest: sha256:aa1d6b6999c69ae5403c8d7db897cc0ec636166666e6846e620291b1d43eea4f
   output_digest: null
   self_write_set: []
+- request_id: create-spec-run-0004
+  status: dispatched
+  input_digest: sha256:08ab34ee786a9dc0ea921324071445acbcba4de71d67ed2ba447bf96a42138c6
+  output_digest: null
 artifacts:
 - path: feature-docs/destructive-guard-multi-substitution-reason/SPEC.md
   sha256: sha256:7bd60a2b11ab9815ec6c071bea540c9e422c4d81ed7ace717103d4797ee5080d
