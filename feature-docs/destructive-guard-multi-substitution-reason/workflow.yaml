@@ -93,13 +93,14 @@ workflow:
   status: completed
   completed_at_commit: d97c277f6feb23cdd0025fd8bbc7981db0fcf60e
 - id: verify
-  status: in_progress
-  result: fail
-  round: 1
+  status: completed
+  result: pass
+  round: 2
   passed_ids:
   - TS-1
   - TS-2
   - TS-3
+  - TS-4
   - TS-5
   - TS-6
   - TS-7
@@ -107,24 +108,16 @@ workflow:
   - TS-9
   - TS-10
   - TS-11
-  - TM-1
+  - TS-12
+  - SC-1
+  - SC-2
+  - SC-3
   - SC-4
-  failed_items:
-  - id: TS-4
-    note: 'pre-existing failure: unittest discover reports failures=96 errors=7, all in tests/test_destructive_guard_mixed_rm_precedence.py (reproduced identically on main at merge-base 78c6db0ed); the 12 new tests pass'
-    category: comprehensive
-  - id: SC-1
-    note: FR4/FR5/NFR1/NFR2 coverage via TS-4 fails (see TS-4)
-    category: comprehensive
-  - id: SC-2
-    note: Test Verification command exits 1 (see TS-4)
-    category: comprehensive
-  - id: SC-3
-    note: AC-4 does not hold (see TS-4)
-    category: comprehensive
-  - id: TM-2
-    note: existing suites do not pass unchanged (see TS-4)
-    category: comprehensive
+  - TM-1
+  - TM-2
+  - TM-3
+  failed_items: []
+  completed_at_commit: 903c6ca557560621b22bc36e29f0e6e8bb24927f
 - id: retrospect
   status: pending
 tasks:
