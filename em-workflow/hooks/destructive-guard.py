@@ -6817,6 +6817,10 @@ def _overrides_command_name_unlexed(toks, shaped_words):
 STOP_COMMAND_WORDS = OVERRIDE_BUILTINS | frozenset({
     "declare", "typeset", "local", "export", "readonly", "let", "shopt",
     "set", "unset", "source", ".", "eval",
+    # `trap` runs a string as a statement later; `read`, `mapfile`,
+    # `readarray` and `getopts` write variables chosen by name at run time.
+    # (`printf -v` is handled in _masking_stop_reached().)
+    "trap", "read", "mapfile", "readarray", "getopts",
 })
 
 # The variable names that stop masking wherever a word of a statement holds
@@ -7205,7 +7209,16 @@ def _masking_stop_reached(marked, toks, consumed, shaped_words, in_python_body):
     determinable, word = _peel_command_word(marked, consumed, shaped_words)
     if not determinable:
         return not in_python_body
-    return word is not None and os.path.basename(word) in STOP_COMMAND_WORDS
+    if word is None:
+        return False
+    base = os.path.basename(word)
+    if base in STOP_COMMAND_WORDS:
+        return True
+    # `printf -v NAME` writes a variable chosen by name at run time (it can
+    # build BASH_CMDS from pieces); plain printf stops nothing.
+    return base == "printf" and any(
+        str(t) == "-v" or str(t).startswith("-v") for t in toks
+    )
 
 
 # destructive-guard-false-deny FR2: which single-quote candidates of the
