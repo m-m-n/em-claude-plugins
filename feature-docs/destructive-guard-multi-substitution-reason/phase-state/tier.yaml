@@ -1,0 +1,63 @@
+schema_version: 2
+feature: destructive-guard-multi-substitution-reason
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.04
+    confidence: 0.96
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.96
+      '2': 0.04
+      '3': 0.0
+  observed_at: '2026-11-12T23:49:54+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.07
+    confidence: 0.81
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.06
+      '1': 0.81
+      '2': 0.13
+      '3': 0.0
+  observed_at: '2026-11-12T23:53:47+09:00'
+pre_survey_estimate:
+  files_expected:
+  - tests/test_destructive_guard_rm_reason_positions.py
+  changed_lines_approx: 20
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 2
+  body_change_kind: wording_or_rule_addition
+  change_containment: single_function
+  caller_and_dependency_count: 3
+  changes_external_contract: false
+  changes_behavior: false
+  evidence: em-workflow/hooks/destructive-guard.py:9172 は対象ごとに位置番号を付け、同ファイル:9302 の名称に使用している。実行確認では
+    $(cat a) $(cat b) が別々に列挙され、現象は再現しなかった。定数は同ファイル:143 のまま。tests/test_destructive_guard_rm_reason_positions.py:374
+    の複数対象検査は $A $B のみで、複数の置換対象を直接検査する例は見つからなかった。数値は既存検査に $() とバッククォートの2入力を追加する場合の概算。本体変更は不要。関連する既存テスト4件は成功。全件実行は一時ファイル作成を伴うため未実施（em-workflow/hooks/tests/run-destructive-guard.py:156）。ファイル変更は行っていない
+decided_at: '2026-11-12T23:54:04+09:00'
