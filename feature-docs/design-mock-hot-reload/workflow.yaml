@@ -132,7 +132,8 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
+    branch: em-workflow/design-mock-hot-reload/task0001
     notes: null
   task0002:
     title: State switch in designer.md's mock rules
@@ -150,7 +151,8 @@ tasks:
     - FR4
     - FR6
     - NFR2
-    status: pending
+    status: in_progress
+    branch: em-workflow/design-mock-hot-reload/task0002
     notes: null
 review:
   status: pending
