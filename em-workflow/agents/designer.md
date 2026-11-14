@@ -55,7 +55,18 @@ SHARED SSOT — the `/em-workflow:design` command follows these rules too.
   named after the token (`--color-primary`). One screen per file; represent
   states as sibling sections (`data-state="empty"` / `"error"` / …). Every
   state SPEC.md mentions for the screen (empty / error / loading / boundary)
-  is MANDATORY; further states are your judgment. Mockups are design specs,
+  is MANDATORY; further states are your judgment. State switch: one small
+  inline plain JavaScript is allowed in the mock, for the state switch only
+  (still no JS frameworks, still no external requests). It reads the URL
+  query `?state=<name>` and shows only the sections whose `data-state` value
+  equals the query value. The query value is used only in a literal equality
+  comparison with each section's `data-state` value; it is never inserted
+  into the document, and no markup, selector or code is composed from it.
+  With no query, or with a value that matches no section, every state
+  section is shown side by side, exactly as in a mock without the switch;
+  nothing is hidden unless at least one section matches. Reload: the mock
+  file holds no reload code. A browser update on edit is the dev server's
+  job and is not part of the file. Mockups are design specs,
   NOT implementation: implementers never read them and their markup/CSS is
   never copied into product code — visual intent reaches implementers only
   via the planner (task plans + token references).

@@ -1,0 +1,49 @@
+task_id: task0002
+baseline_failures: []          # 4a, run before any edit: python3 -m unittest discover -s tests -> Ran 16151 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 16177 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_designer_mock_state_switch.TestAC1QueryStateShowsOnlyMatchingSections.test_ac1_names_the_state_query
+      - tests.test_designer_mock_state_switch.TestAC1QueryStateShowsOnlyMatchingSections.test_ac1_shows_only_sections_whose_data_state_equals_the_value
+      - tests.test_designer_mock_state_switch.TestAC1QueryStateShowsOnlyMatchingSections.test_ac1_value_is_used_only_in_a_literal_equality_comparison
+      - tests.test_designer_mock_state_switch.TestAC1QueryStateShowsOnlyMatchingSections.test_ac1_value_is_never_inserted_into_the_document
+      - tests.test_designer_mock_state_switch.TestAC1QueryStateShowsOnlyMatchingSections.test_ac1_nothing_is_composed_from_the_value
+    red_confirmed: true
+    red_reason: "All five failed against the unchanged designer.md, before the Mockups item was edited. First one: AssertionError: '?state=<name>' not found in '- **Mockups**: self-contained single-file HTML (inline CSS, ...'. The other four: AssertionError: Regex didn't match: '<required phrase>' not found in the same unchanged Mockups item."
+  AC-2:
+    tests:
+      - tests.test_designer_mock_state_switch.TestAC2FallbackShowsEveryState.test_ac2_no_query_or_unmatched_value_shows_every_state_section
+      - tests.test_designer_mock_state_switch.TestAC2FallbackShowsEveryState.test_ac2_nothing_is_hidden_unless_a_section_matches
+    red_confirmed: true
+    red_reason: "Both failed against the unchanged designer.md: AssertionError: Regex didn't match: 'with no query, or with a value that matches no section, every state section is shown side by side' (and 'nothing is hidden unless at least one section matches') not found in the unchanged Mockups item."
+  AC-3:
+    tests:
+      - tests.test_designer_mock_state_switch.TestAC3ScriptAllowanceAndNoReloadCode.test_ac3_allows_one_small_inline_plain_javascript
+      - tests.test_designer_mock_state_switch.TestAC3ScriptAllowanceAndNoReloadCode.test_ac3_script_is_for_the_state_switch_only
+      - tests.test_designer_mock_state_switch.TestAC3ScriptAllowanceAndNoReloadCode.test_ac3_keeps_no_js_frameworks
+      - tests.test_designer_mock_state_switch.TestAC3ScriptAllowanceAndNoReloadCode.test_ac3_keeps_no_external_requests
+      - tests.test_designer_mock_state_switch.TestAC3ScriptAllowanceAndNoReloadCode.test_ac3_mock_file_holds_no_reload_code
+      - tests.test_designer_mock_state_switch.TestAC3ScriptAllowanceAndNoReloadCode.test_ac3_browser_update_on_edit_belongs_to_the_dev_server
+    red_confirmed: true
+    red_reason: "Four failed against the unchanged designer.md: the script allowance (one small inline plain JavaScript), for the state switch only, the mock file holds no reload code, and the dev server's job wording each gave AssertionError: Regex didn't match ... not found in the unchanged Mockups item. test_ac3_keeps_no_js_frameworks and test_ac3_keeps_no_external_requests passed before the change because those two points already stood in the Mockups item; they guard that the edit keeps them."
+  AC-4:
+    tests:
+      - tests.test_designer_mock_state_switch.TestAC4KeptMockPoints.test_ac4_requires_self_contained_single_file_html
+      - tests.test_designer_mock_state_switch.TestAC4KeptMockPoints.test_ac4_keeps_the_inline_css_no_requests_no_frameworks_group
+      - tests.test_designer_mock_state_switch.TestAC4KeptMockPoints.test_ac4_embeds_tokens_as_css_custom_properties
+      - tests.test_designer_mock_state_switch.TestAC4KeptMockPoints.test_ac4_states_are_sibling_sections_with_data_state
+      - tests.test_designer_mock_state_switch.TestAC4KeptMockPoints.test_ac4_every_state_spec_mentions_is_mandatory
+      - tests.test_designer_mock_state_switch.TestAC4KeptMockPoints.test_ac4_mockups_remain_design_specs_not_implementation
+    red_confirmed: false
+    red_reason: "The behavior pre-existed: the three points (self-contained single file, tokens as CSS custom properties, every SPEC state) already stood in the Mockups item, so all six tests passed against the unchanged designer.md and no red state occurred. A search of tests/ by path (em-workflow/agents/designer.md) and basename (designer.md) found no existing test of the Mockups item; tests/test_refitted_worker_agents.py reads designer.md but does not pin Mockups wording. These tests guard that the edit keeps the points."
+  AC-5:
+    tests:
+      - tests.test_designer_mock_state_switch.TestAC5DesignerStaysServerFree.test_ac5_tools_line_is_unchanged
+      - tests.test_designer_mock_state_switch.TestAC5DesignerStaysServerFree.test_ac5_tools_do_not_gain_bash
+      - tests.test_designer_mock_state_switch.TestAC5DesignerStaysServerFree.test_ac5_no_server_lifecycle_step_anywhere_in_designer_md
+      - tests.test_designer_mock_state_switch.TestAC5DesignerStaysServerFree.test_ac5_dev_server_is_named_only_inside_the_mockups_item
+      - tests.test_refitted_worker_agents
+      - tests.test_planner_designer_worktree_docs.TestDesignerWorktreePaths.test_designer_delegates_commit_to_orchestrator
+    red_confirmed: false
+    red_reason: "The behavior pre-existed: the tools line was already Read, Write, Glob, Grep and designer.md already held no server step, so the new tests passed against the unchanged designer.md and no red state occurred; the existing tests/test_refitted_worker_agents.py (pinned phrases) and tests/test_planner_designer_worktree_docs.py (no Bash) detect those behaviors. The full-suite pass is the run recorded in final_failures. That the change set contains neither em-workflow/.claude-plugin/plugin.json nor .claude-plugin/marketplace.json has no executable check; it was verified by git diff --name-only against the implement base commit."
