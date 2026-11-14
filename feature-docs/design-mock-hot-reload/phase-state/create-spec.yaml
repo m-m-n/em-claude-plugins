@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: c49b9a99b8e8a6b02e9b7e622179db5c851ad8bd
 last_input_digest: sha256:e7f99cd8a5896902be4e171bf1d2ee8d475e8bc60564770b4cc166f192cbe051
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets: {}
 answers:
   create-spec.dev-server-fallback:
@@ -78,9 +78,18 @@ worker_runs:
   input_digest: sha256:fb909b14a3732ecb37d83c11d41b54ebbc14b64471a7316a586628235f69c462
   output_digest: sha256:88869fe7fd0117c750f016c15c9d6e4ad02c38596bcc8d2df0cca538c6aa2cd5
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:e7f99cd8a5896902be4e171bf1d2ee8d475e8bc60564770b4cc166f192cbe051
-artifacts: []
+  self_write_set:
+  - feature-docs/design-mock-hot-reload/REQUIREMENTS.md
+  - feature-docs/design-mock-hot-reload/SPEC.md
+artifacts:
+- path: feature-docs/design-mock-hot-reload/REQUIREMENTS.md
+  sha256: sha256:38d3b0244bc252f2df315cf43c95cb48c8577a08f208f4848106dfad04e2453e
+  produced_by: create-spec-run-0002
+- path: feature-docs/design-mock-hot-reload/SPEC.md
+  sha256: sha256:a188191472b57c7e218d1df917630863c06d5d7aa15f7ed78b9496671499f606
+  produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
