@@ -103,7 +103,7 @@ workflow:
   status: completed
   completed_at_commit: a8cf33283dc6f5834bcf9ed5ff4d273d64e2d192
 - id: verify
-  status: pending
+  status: in_progress
   result: null
   round: 0
   passed_ids: []
