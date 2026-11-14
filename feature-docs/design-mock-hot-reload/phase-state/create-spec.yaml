@@ -5,13 +5,78 @@ status: dispatching
 generation: 1
 base_revision: c49b9a99b8e8a6b02e9b7e622179db5c851ad8bd
 last_input_digest: sha256:fb909b14a3732ecb37d83c11d41b54ebbc14b64471a7316a586628235f69c462
-active_request_id: create-spec-run-0001
+active_request_id: null
 packets: {}
-answers: {}
+answers:
+  create-spec.dev-server-fallback:
+    packet_id: null
+    answered_at: '2026-11-14T12:02:56+09:00'
+    source: batch_codex
+    answer_mode: select
+    selected_option_ids:
+    - fallback_to_direct_open
+    freeform: null
+    normalized_answer: bun が無い・起動に失敗したときは質問せず現行手順（モックのパスを案内し直接開いてもらい、手で再読み込み）に戻る
+  create-spec.dev-server-port:
+    packet_id: null
+    answered_at: '2026-11-14T12:02:56+09:00'
+    source: batch_codex
+    answer_mode: select
+    selected_option_ids:
+    - read_url_from_output
+    freeform: null
+    normalized_answer: ポートは決め打ちせず、サーバー出力の url / Routes 行から URL を読んで案内する
+  create-spec.state-switch-mechanism:
+    packet_id: null
+    answered_at: '2026-11-14T12:02:56+09:00'
+    source: batch_codex
+    answer_mode: select
+    selected_option_ids:
+    - inline_vanilla_script_query
+    freeform: null
+    normalized_answer: モック内の小さなインラインの素の script が ?state=<name> を読み、一致する data-state
+      セクションだけを表示。無指定・未知の値は全状態表示
+  create-spec.new-mock-midloop:
+    packet_id: null
+    answered_at: '2026-11-14T12:02:56+09:00'
+    source: batch_codex
+    answer_mode: select
+    selected_option_ids:
+    - restart_with_all_mocks
+    freeform: null
+    normalized_answer: ループ途中でモックが増えたら TaskStop で止め、その feature の全モックを起動対象にして 1 つのサーバーとして起動し直す。複数のモックを渡すと各モックは
+      /<ファイル名から拡張子を除いた名前> で配信される（Bun 1.4.4 で確認）
+  create-spec.designer-server-duty:
+    packet_id: null
+    answered_at: '2026-11-14T12:02:56+09:00'
+    source: batch_codex
+    answer_mode: select
+    selected_option_ids:
+    - no_server_duty
+    freeform: null
+    normalized_answer: designer エージェントはサーバーを起動しない。クエリ切り替えの規則に沿ったモックを書くだけ
+  create-spec.dev-client-injection:
+    packet_id: null
+    answered_at: '2026-11-14T12:02:56+09:00'
+    source: orchestrator_observation
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: null
+    normalized_answer: 開発用サーバーが配信時に差し込む更新用スクリプトはモックのファイルには含まれない。モック規律の外部リクエストなしはファイルの中身に対する規則として保つ
+  create-spec.tokens-html-in-server:
+    packet_id: null
+    answered_at: '2026-11-14T12:02:56+09:00'
+    source: orchestrator
+    answer_mode: select
+    selected_option_ids:
+    - exclude
+    freeform: null
+    normalized_answer: tokens.html はサーバーの対象に含めず、これまでどおり直接開いてもらう（Codex は含める案を挙げたが、タスクの対象がモックであり範囲を広げないほうを採った）
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:fb909b14a3732ecb37d83c11d41b54ebbc14b64471a7316a586628235f69c462
+  output_digest: sha256:88869fe7fd0117c750f016c15c9d6e4ad02c38596bcc8d2df0cca538c6aa2cd5
 artifacts: []
 patches: []
 progress_fingerprint: null

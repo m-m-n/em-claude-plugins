@@ -1,0 +1,45 @@
+schema_version: 1
+feature: design-mock-hot-reload
+records:
+- gate_id: create-spec.dev-server-fallback
+  source: batch_codex
+  selected_option_ids:
+  - fallback_to_direct_open
+  resolution_note: bun が無い・起動に失敗したときは質問せず現行手順（モックのパスを案内し直接開いてもらい、手で再読み込み）に戻る
+  recorded_at: '2026-11-14T12:02:56+09:00'
+- gate_id: create-spec.dev-server-port
+  source: batch_codex
+  selected_option_ids:
+  - read_url_from_output
+  resolution_note: ポートは決め打ちせず、サーバー出力の url / Routes 行から URL を読んで案内する
+  recorded_at: '2026-11-14T12:02:56+09:00'
+- gate_id: create-spec.state-switch-mechanism
+  source: batch_codex
+  selected_option_ids:
+  - inline_vanilla_script_query
+  resolution_note: モック内の小さなインラインの素の script が ?state=<name> を読み、一致する data-state セクションだけを表示。無指定・未知の値は全状態表示
+  recorded_at: '2026-11-14T12:02:56+09:00'
+- gate_id: create-spec.new-mock-midloop
+  source: batch_codex
+  selected_option_ids:
+  - restart_with_all_mocks
+  resolution_note: ループ途中でモックが増えたら TaskStop で止め、その feature の全モックを起動対象にして 1 つのサーバーとして起動し直す。複数のモックを渡すと各モックは
+    /<ファイル名から拡張子を除いた名前> で配信される（Bun 1.4.4 で確認）
+  recorded_at: '2026-11-14T12:02:56+09:00'
+- gate_id: create-spec.designer-server-duty
+  source: batch_codex
+  selected_option_ids:
+  - no_server_duty
+  resolution_note: designer エージェントはサーバーを起動しない。クエリ切り替えの規則に沿ったモックを書くだけ
+  recorded_at: '2026-11-14T12:02:56+09:00'
+- gate_id: create-spec.dev-client-injection
+  source: orchestrator_observation
+  selected_option_ids: []
+  resolution_note: 開発用サーバーが配信時に差し込む更新用スクリプトはモックのファイルには含まれない。モック規律の外部リクエストなしはファイルの中身に対する規則として保つ
+  recorded_at: '2026-11-14T12:02:56+09:00'
+- gate_id: create-spec.tokens-html-in-server
+  source: orchestrator
+  selected_option_ids:
+  - exclude
+  resolution_note: tokens.html はサーバーの対象に含めず、これまでどおり直接開いてもらう（Codex は含める案を挙げたが、タスクの対象がモックであり範囲を広げないほうを採った）
+  recorded_at: '2026-11-14T12:02:56+09:00'
