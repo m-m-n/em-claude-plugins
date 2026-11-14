@@ -122,7 +122,7 @@ workflow:
   failed_items: []
   completed_at_commit: 850f3f651dec12754717d3d58d78f2cb4559ecd6
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: Dev server in the design skill's agreement loop
