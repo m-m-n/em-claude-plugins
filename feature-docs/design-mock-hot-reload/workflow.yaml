@@ -100,7 +100,7 @@ workflow:
   base_commit: 87d515e293aa254e6a98c6c08da4c1a8c720a4ac
   completed_at_commit: 5be0178a23eb125007b847d0101a7a42557add72
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -156,7 +156,7 @@ tasks:
     branch: em-workflow/design-mock-hot-reload/task0002
     notes: null
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
   plan: null
   perspectives: {}
