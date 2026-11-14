@@ -1,0 +1,182 @@
+schema_version: 1
+feature: design-mock-hot-reload
+created: '2026-11-14'
+base_branch: main
+goal: |
+  # em-workflow の design スキルで、モックをホットリロードで確認しながら直せるようにする
+
+  ## やりたいこと
+  `/em-workflow:design` で、ブラウザでモックを確認 → チャットで指示 → 修正がホットリロードで即反映、の流れを回せるようにする。あわせて、モックの表示状態を URL で切り替えられるようにする。
+
+  ## 背景・なぜ
+  現状の Step 4（合意ループ）は「モックはブラウザで開いてもらう」とだけ書かれており、修正のたびにユーザーが手で開き直す必要がある。また SPEC の状態（空・エラー等）を確認するための切り替え手段が決まっていない。
+
+  ## 受け入れ条件 / 完了の定義
+  - `em-workflow/skills/design/SKILL.md` の合意ループに、モックを配信するローカルの開発用サーバー（例: `bun ./<mock>.html`）を起動し、URL をユーザーに案内する手順がある
+  - サーバーは `run_in_background` で起動し、締め（Step 6）で `TaskStop` で止める手順になっている
+  - モックを書き換えるとブラウザ側が自動で更新される
+  - モックの表示状態を URL のクエリ（例: `?state=error`）で切り替えられることが、`em-workflow/agents/designer.md` のモック規律に入っている
+  - モック規律（1 ファイルで完結・トークンの CSS 変数を使う・SPEC の状態を網羅）を崩していない
+  - 開発用サーバーのコマンドが無い環境での扱いが決まっている
+
+  ## スコープ外
+  WebMCP への対応（モックが LLM 向けの道具を公開する）。使う側の対応が固まってから検討する。
+
+  ## 制約・前提
+  - プロセスを止めるシグナル送出コマンドを使わない。停止は `TaskStop` のみ
+  - version は触らない（Actions が上げる）
+parent_branch: em-workflow/design-mock-hot-reload/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.27
+      '1': 0.15
+      '2': 0.54
+      '3': 0.04
+    description_plus_code:
+      '0': 0.01
+      '1': 0.21
+      '2': 0.65
+      '3': 0.13
+  at: '2026-11-14T11:55:56+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 60dfe9d0b48b2bb20e1dcea3ba8861c642af7460
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: このリポジトリの成果物は Markdown のスキル・エージェント定義と Python のテストだけで、この feature で作る UI が無い
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: 87d515e293aa254e6a98c6c08da4c1a8c720a4ac
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  round: 0
+  passed_ids: []
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  plan: null
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: 合意ループでの開発用サーバー起動と URL 案内
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: 締めでの TaskStop による停止
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: 書き換え時の自動更新
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: URL クエリによる表示状態の切り替え
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: 開発用サーバーのコマンドが無い環境での扱い
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: モック規律の維持
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: プロセス停止は TaskStop のみ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: version を触らない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: 対話の質問数を増やさない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: 書き込み範囲の境界
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: ローカルだけで配信する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

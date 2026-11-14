@@ -1,7 +1,7 @@
 schema_version: 1
 feature: design-mock-hot-reload
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: c49b9a99b8e8a6b02e9b7e622179db5c851ad8bd
 last_input_digest: sha256:e7f99cd8a5896902be4e171bf1d2ee8d475e8bc60564770b4cc166f192cbe051
