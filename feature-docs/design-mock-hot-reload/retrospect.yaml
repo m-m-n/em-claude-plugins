@@ -1,0 +1,51 @@
+feature: design-mock-hot-reload
+collected_at: "2026-11-14T13:15:00+09:00"
+session_ids:
+  - 01a1d842-46f7-728c-9758-55a49336a305
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の読み（score 1.9、confidence 0.64）で full と決まった"
+    bases:
+      - basis: description_only
+        score:
+          type: score
+          score: 1.35
+          confidence: 0.27
+          legend: {'0': '0', '1': '1', '2': '2', '3': '3'}
+          probabilities: {'0': 0.27, '1': 0.15, '2': 0.54, '3': 0.04}
+        observed_at: "2026-11-14T11:55:56+09:00"
+      - basis: description_plus_code
+        score:
+          type: score
+          score: 1.9
+          confidence: 0.64
+          legend: {'0': '0', '1': '1', '2': '2', '3': '3'}
+          probabilities: {'0': 0.01, '1': 0.21, '2': 0.65, '3': 0.13}
+        observed_at: "2026-11-14T11:55:56+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/skills/design/SKILL.md
+        - em-workflow/agents/designer.md
+        - tests/test_refitted_worker_agents.py
+      changed_lines_approx: 80
+      new_functions_needed: 0
+      new_files_needed: 0
+      work_still_required: true
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 8
+      body_change_kind: wording_or_rule_addition
+      change_containment: multiple_modules
+      caller_and_dependency_count: 2
+      changes_external_contract: true
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "TS-7（ブラウザの自動更新）はヘッドレスでは確認できず、passed_ids にも failed_items にも入れなかった"
+  - "review の medium 1 件（22f3f33f5d80a6ab: 切り替えを持たない既存モックへの ?state= 案内）が deferred のまま残った"
