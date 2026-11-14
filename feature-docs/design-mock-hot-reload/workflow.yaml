@@ -103,11 +103,24 @@ workflow:
   status: completed
   completed_at_commit: a8cf33283dc6f5834bcf9ed5ff4d273d64e2d192
 - id: verify
-  status: in_progress
-  result: null
-  round: 0
-  passed_ids: []
+  status: completed
+  result: pass
+  round: 1
+  passed_ids:
+  - TS-1
+  - TS-2
+  - TS-3
+  - TS-4
+  - TS-5
+  - TS-6
+  - TS-8
+  - TS-9
+  - TS-10
+  - TM-1
+  - TM-2
+  - TM-3
   failed_items: []
+  completed_at_commit: 850f3f651dec12754717d3d58d78f2cb4559ecd6
 - id: retrospect
   status: pending
 tasks:

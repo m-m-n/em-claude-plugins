@@ -52,3 +52,9 @@ records:
     系の指定を書かない）の再計画を要することを踏まえて、現計画のまま（例は bun ./<mock>.html、待ち受け指定なし、出力のローカル URL だけ案内）の案
     A を推した。A を採用し、計画は変えない
   recorded_at: '2026-11-14T12:24:12+09:00'
+- gate_id: verify.ts7-manual-headless
+  source: batch_codex
+  selected_option_ids:
+  - not_runnable_here
+  resolution_note: TS-7（ブラウザが手動再読み込みなしで更新される）は、bun 1.4.4 を run_in_background で起動し、配信 HTML に /_bun/hmr へ WebSocket で繋ぐ更新用クライアントが差し込まれること、モック編集直後に配信内容が変わること、TaskStop で停止できることを確認した。ブラウザは操作していないため、合格（A）・実行不可（B）・不合格（C）を Codex に相談し、ブラウザでの表示更新は未確認として B を採った。TS-7 は passed_ids に入れず、failed_items にも入れない
+  recorded_at: '2026-11-14T13:20:00+09:00'
