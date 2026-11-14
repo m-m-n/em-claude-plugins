@@ -1,0 +1,62 @@
+schema_version: 2
+feature: design-mock-hot-reload
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.35
+    confidence: 0.27
+    legend:
+      '0': '0'
+      '1': '1'
+      '2': '2'
+      '3': '3'
+    probabilities:
+      '0': 0.27
+      '1': 0.15
+      '2': 0.54
+      '3': 0.04
+  observed_at: '2026-11-14T11:55:56+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.9
+    confidence: 0.64
+    legend:
+      '0': '0'
+      '1': '1'
+      '2': '2'
+      '3': '3'
+    probabilities:
+      '0': 0.01
+      '1': 0.21
+      '2': 0.65
+      '3': 0.13
+  observed_at: '2026-11-14T11:55:56+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/skills/design/SKILL.md
+  - em-workflow/agents/designer.md
+  - tests/test_refitted_worker_agents.py
+  changed_lines_approx: 80
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed:
+  - Bun（起動コマンドとして採用する場合の実行環境）
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 8
+  body_change_kind: wording_or_rule_addition
+  change_containment: multiple_modules
+  caller_and_dependency_count: 2
+  changes_external_contract: true
+  changes_behavior: true
+  evidence: em-workflow/skills/design/SKILL.md:7 はTaskStopを許可しておらず、:48-59、:68-73 にサーバー起動・URL通知・自動再読み込み・停止手順はない。em-workflow/agents/designer.md:53-61
+    は単一HTML・token CSS変数・SPEC状態網羅を規定するが、クエリ切替は未規定。tests/test_refitted_worker_agents.py:173-262
+    は入力・書込範囲・自律性を検査し、今回の動作は未検査。既存テストへの約8件追加を想定し、行数は概算、関数数は実行コードのみを数えた。呼出・依存数2はdesign→designer規律（SKILL.md:17）とdevelop→designer（em-workflow/skills/develop/SKILL.md:889）。外部契約変更はstateクエリの追加を指す。designer-contract.md:29-74
+    の入出力・書込契約、em-workflow/scripts/check-plugin-invariants.py:1454-1469 の検査項目に変更必須の箇所は見当たらない。起動コマンドが利用不可なら理由を通知して中断し、自動導入しない扱いを推奨する。em-workflow/skills/merge/SKILL.md:183-200、:593
+    に背景タスクID保持とTaskStop停止の既存例がある。自動再読み込みの実動作は未検証。ファイル変更・テスト実行はしていない
+decided_at: '2026-11-14T11:55:56+09:00'
