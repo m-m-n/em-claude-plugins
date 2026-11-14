@@ -100,7 +100,8 @@ workflow:
   base_commit: 87d515e293aa254e6a98c6c08da4c1a8c720a4ac
   completed_at_commit: 5be0178a23eb125007b847d0101a7a42557add72
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: a8cf33283dc6f5834bcf9ed5ff4d273d64e2d192
 - id: verify
   status: pending
   result: null
@@ -156,8 +157,8 @@ tasks:
     branch: em-workflow/design-mock-hot-reload/task0002
     notes: null
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
   plan:
     floor:
     - comprehensive
@@ -167,7 +168,12 @@ review:
     - spec
     discretionary: []
     cross_validation: true
-  perspectives: {}
+  perspectives:
+    comprehensive: completed
+    security: completed
+    performance: completed
+    architecture: completed
+    spec: completed
   residual_critical_high: 0
   needs_rework: false
 requirements:

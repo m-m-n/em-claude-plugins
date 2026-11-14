@@ -1,0 +1,109 @@
+round: 1
+executed_at: '2026-11-14T12:58:22+09:00'
+scope:
+  review_mode: diff
+  base_commit: 87d515e293aa254e6a98c6c08da4c1a8c720a4ac
+  head_commit: a8cf33283dc6f5834bcf9ed5ff4d273d64e2d192
+  changed_files:
+  - em-workflow/agents/designer.md
+  - em-workflow/skills/design/SKILL.md
+  - test-docs/design-mock-hot-reload/task0001.tests.yaml
+  - test-docs/design-mock-hot-reload/task0002.tests.yaml
+  - tests/test_design_skill_dev_server.py
+  - tests/test_designer_mock_state_switch.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 22f3f33f5d80a6ab
+  severity: medium
+  category: comprehensive
+  file: em-workflow/skills/design/SKILL.md
+  line: 85
+  title: 状態切り替えを持たない既存モックにも ?state= が効くと案内してしまう
+  description: 85-87 行は、モックの URL に ?state=<name> を付けると 1 つの状態だけを表示できると、条件なしでユーザーに伝える。しかし、この変更より前の
+    designer.md の規律で作られた既存モックには切り替えスクリプトが無い。既存モックを更新しない場合（DESIGN.md だけ直す等）や、更新しても切り替えを足さない場合、案内した
+    ?state=error は効かず、全状態が並んだまま表示される。無指定・不一致のときは全表示なので画面は壊れないが、この機能より前に作られたモックでは約束が成り立たない。SPEC
+    FR5 も既存モックの扱いを決めていない。
+  suggestion: 案内の前に、対象モックが切り替えスクリプトを持つかを Read で確かめる手順を Step 4 に足す。持たないモックは、合意ループでそのモックを更新するときに
+    designer.md の規則どおり切り替えを足す。足していないモックには ?state= を案内しない。質問は増やさない。tests/test_design_skill_dev_server.py
+    が固定している語句は崩さない。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium severity: not an auto-fix candidate (gate requires critical/high);
+    left for a follow-up task'
+evaluation:
+  round_summary: 第 1 ラウンド、cross_validation 有効。critical/high は 0 件。comprehensive#0
+    の medium 2 件を採用し、うち URL の読み取り元を url / Routes 行に限る件は、失敗の判定条件（出力に URL が無いときだけ失敗）と
+    SPEC の確認済みの決定を踏まえて low に下げた（low は R3b の severity ゲートで除外）。他の 4 観点の空の結果は評価者の読み込みで裏付けた。注入の試みは見当たらない。開始時にモックが
+    0 件でサーバーを起動しなかった feature で、ループ中に最初のモックができたときの見せ方が決まっていない点は SPEC の Data Flow どおりのため所見にしていない。
+  recommended_action: auto_fix
+  action_rationale: critical/high は無い。残った medium 1 件と low 1 件は design SKILL.md の Step
+    4 に文言を 1〜2 行足せば直る。
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-design-mock-hot-reload-20261114T035801Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
