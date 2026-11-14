@@ -151,7 +151,7 @@ tasks:
     - FR4
     - FR6
     - NFR2
-    status: in_progress
+    status: merged
     branch: em-workflow/design-mock-hot-reload/task0002
     notes: null
 review:
