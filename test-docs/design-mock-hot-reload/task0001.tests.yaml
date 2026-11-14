@@ -1,0 +1,68 @@
+task_id: task0001
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 16151 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 16191 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_design_skill_dev_server.TestAc1DevServerStartAndGuide.test_step4_starts_the_server_through_bash_with_run_in_background
+      - tests.test_design_skill_dev_server.TestAc1DevServerStartAndGuide.test_step4_gives_the_example_command_form
+      - tests.test_design_skill_dev_server.TestAc1DevServerStartAndGuide.test_step4_guides_the_url_read_from_the_url_and_routes_lines
+      - tests.test_design_skill_dev_server.TestAc1DevServerStartAndGuide.test_step4_presents_the_server_as_local_development_use
+      - tests.test_design_skill_dev_server.TestAc1DevServerStartAndGuide.test_step4_states_that_the_port_is_not_fixed
+      - tests.test_design_skill_dev_server.TestAc1DevServerStartAndGuide.test_step4_no_longer_only_asks_the_user_to_open_the_mock
+      - tests.test_design_skill_dev_server.TestAc1DevServerStartAndGuide.test_file_holds_no_widened_listening_address_or_port_option
+    red_confirmed: true
+    red_reason: "Run against the unchanged design SKILL.md (base text fed to the tests in memory) six of the seven failed: AssertionError: 'run_in_background' not found in the Step 4 text; 'bun ./<mock>.html' not found; no Step 4 item reads the URL from url / Routes; 'ローカル' not found; 'ポートは決め打ちしない' not found; 'モックはブラウザで開いてもらう' unexpectedly found in Step 4. The seventh (no 0.0.0.0, --host, --port) is a negative guard that already held on the base text and still holds."
+  AC-2:
+    tests:
+      - tests.test_design_skill_dev_server.TestAc2StartScopeAndRestart.test_server_starts_only_with_a_mock_and_not_in_system_wide_scope
+      - tests.test_design_skill_dev_server.TestAc2StartScopeAndRestart.test_tokens_html_is_not_given_to_the_server_and_is_opened_directly
+      - tests.test_design_skill_dev_server.TestAc2StartScopeAndRestart.test_added_mock_stops_the_task_and_restarts_one_server_with_all_mocks
+      - tests.test_design_skill_dev_server.TestAc2StartScopeAndRestart.test_each_mock_is_served_at_its_file_name_without_extension
+      - tests.test_design_skill_dev_server.TestAc2StartScopeAndRestart.test_several_mocks_go_to_one_server_together
+    red_confirmed: true
+    red_reason: "All five failed against the unchanged design SKILL.md: AssertionError: [] is not true : no Step 4 item says nothing starts system-wide / keeps tokens.html off the server / covers a mock added in the loop; AssertionError: '/<ファイル名から拡張子を除いた名前>' not found in the Step 4 text."
+  AC-3:
+    tests:
+      - tests.test_design_skill_dev_server.TestAc3StepSixStopsTheServer.test_step6_stops_the_server_task_with_taskstop
+      - tests.test_design_skill_dev_server.TestAc3StepSixStopsTheServer.test_step6_does_nothing_when_no_server_was_started
+      - tests.test_design_skill_dev_server.TestAc3StepSixStopsTheServer.test_step6_continues_closing_when_the_task_has_already_ended
+      - tests.test_design_skill_dev_server.TestAc3StepSixStopsTheServer.test_frontmatter_allowed_tools_lists_taskstop_and_bash
+    red_confirmed: true
+    red_reason: "All four failed against the unchanged design SKILL.md: AssertionError: [] is not true : no Step 6 item stops the Step 4 task with TaskStop / covers the no-server case / covers the already-ended task; AssertionError: 'TaskStop' not found in ['Read', 'Write', 'Edit', 'Glob', 'Grep', 'Bash', 'AskUserQuestion'] (the frontmatter allowed-tools)."
+  AC-4:
+    tests:
+      - tests.test_design_skill_dev_server.TestAc4FallbackAndStateSwitch.test_step4_checks_the_command_exists_with_a_bash_timeout_parameter
+      - tests.test_design_skill_dev_server.TestAc4FallbackAndStateSwitch.test_step4_does_not_use_a_shell_timeout_command
+      - tests.test_design_skill_dev_server.TestAc4FallbackAndStateSwitch.test_missing_command_or_failed_start_guides_the_file_path_to_open_directly
+      - tests.test_design_skill_dev_server.TestAc4FallbackAndStateSwitch.test_fallback_asks_no_question_and_the_loop_continues
+      - tests.test_design_skill_dev_server.TestAc4FallbackAndStateSwitch.test_step4_adds_no_literal_interactive_question_tool_name
+      - tests.test_design_skill_dev_server.TestAc4FallbackAndStateSwitch.test_state_switch_is_told_to_the_user_and_points_to_designer_md
+      - tests.test_design_skill_dev_server.TestAc4FallbackAndStateSwitch.test_state_switch_applies_with_and_without_the_server
+      - tests.test_design_skill_dev_server.TestAc4FallbackAndStateSwitch.test_step4_does_not_restate_the_state_switch_rule
+    red_confirmed: true
+    red_reason: "Six of the eight failed against the unchanged design SKILL.md: AssertionError: [] is not true : no Step 4 item checks the command with a timeout / states the fallback / says that no question is asked / tells the user about ?state=<name>, and the same empty-list failure for the shell-timeout and with-and-without-server checks. The other two (no AskUserQuestion literal in Step 4; Step 4 does not restate data-state) are negative guards that already held on the base text and still hold."
+  AC-5:
+    tests:
+      - tests.test_design_skill_dev_server.TestAc5ReloadStanceAndMockDiscipline.test_browser_updates_through_the_dev_servers_own_update_feature
+      - tests.test_design_skill_dev_server.TestAc5ReloadStanceAndMockDiscipline.test_no_reload_code_is_written_into_the_mock_file
+      - tests.test_design_skill_dev_server.TestAc5ReloadStanceAndMockDiscipline.test_step4_keeps_the_mock_discipline_summary
+    red_confirmed: true
+    red_reason: "The two reload-stance tests failed against the unchanged design SKILL.md: AssertionError: [] is not true : no Step 4 item names the server's update feature / Step 4 does not forbid reload code in the mock file. The mock-discipline summary test is a preservation guard that already held on the base text and still holds."
+  AC-6:
+    tests:
+      - tests.test_design_skill_dev_server.TestAc6TaskStopIsTheOnlyStopMeans.test_no_signal_sending_command_name_appears_as_a_word_anywhere
+      - tests.test_design_skill_dev_server.TestAc6TaskStopIsTheOnlyStopMeans.test_no_other_means_of_stopping_a_process_is_named
+      - tests.test_design_skill_dev_server.TestAc6TaskStopIsTheOnlyStopMeans.test_taskstop_is_named_for_the_restart_and_for_the_closing_step
+      - tests.test_design_skill_dev_server.TestAc6TaskStopIsTheOnlyStopMeans.test_no_other_stop_means_is_allowed_after_a_taskstop_failure
+      - tests.test_design_skill_dev_server.TestHelpers.test_signal_matcher_catches_the_three_names_in_any_case
+      - tests.test_design_skill_dev_server.TestHelpers.test_signal_matcher_catches_a_name_inside_a_hyphenated_name
+      - tests.test_design_skill_dev_server.TestHelpers.test_signal_matcher_ignores_words_that_only_contain_the_letters
+    red_confirmed: true
+    red_reason: "The positive half failed against the unchanged design SKILL.md: AssertionError: 'TaskStop' not found in the Step 4 text; AssertionError: [] is not true : Step 6 does not rule out other stopping means. The two whole-file negative checks (no kill / pkill / killall word, no other stop means) and the three matcher proofs held on the base text; the matcher proofs show the whole-word, case-insensitive matcher catches kill, pkill, killall and kill-guard and ignores TaskStop, skills, killer."
+  AC-7:
+    tests:
+      - tests.test_design_skill_dev_server.TestAc7ProtectedWording.test_interactive_question_tool_name_occurs_exactly_twice
+      - tests.test_muse_consent_no_new_questions.TestInteractiveQuestionBudgetIsNotExceeded.test_no_develop_or_review_document_exceeds_its_pinned_budget
+    red_confirmed: false
+    red_reason: "The existing tests.test_muse_consent_no_new_questions budget test and the new count test detect a change in the AskUserQuestion occurrence count of design SKILL.md; no red state occurred for this change because the count was never raised. The 境界 section and the change set (no plugin.json or marketplace.json) have no executable test: they are checked by diff against the base commit (git diff of the 境界 section is empty; the change set is the design SKILL.md, the new test module and this record). The whole suite run is the final check."
