@@ -1,16 +1,16 @@
 schema_version: 1
 feature: design-mock-hot-reload
 phase: create-plan
-status: dispatched
+status: completed
 generation: 1
 base_revision: 1452797272baf1575f5cdb540c347f9e74194eef
 last_input_digest: sha256:e501467b6a82cef4239145925cce39cfb5e380acf3825f2680ca21d187d7c058
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:e501467b6a82cef4239145925cce39cfb5e380acf3825f2680ca21d187d7c058
   dispatch_digest_inputs:
     feature-docs/design-mock-hot-reload/REQUIREMENTS.md: sha256:38d3b0244bc252f2df315cf43c95cb48c8577a08f208f4848106dfad04e2453e
@@ -24,6 +24,32 @@ worker_runs:
     plugin:references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
     plugin:references/workflow-schema.md: sha256:e7f6fe6f01e107217ab47c620a3f22df5582d0d203a8ed8999807381734551f5
     plugin:skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
-artifacts: []
+  output_digest: sha256:bf5a5b0d2eb5d022130d5c71189dade7a3703b03025c6825650a27466de5589f
+  self_write_set:
+  - feature-docs/design-mock-hot-reload/IMPLEMENTATION.md
+  - feature-docs/design-mock-hot-reload/THREAT-MODEL.md
+  - feature-docs/design-mock-hot-reload/VERIFICATION.md
+  - feature-docs/design-mock-hot-reload/tasks/task0001.md
+  - feature-docs/design-mock-hot-reload/tasks/task0002.md
+artifacts:
+- path: feature-docs/design-mock-hot-reload/IMPLEMENTATION.md
+  sha256: sha256:b3486fa805c1f9c9550615b64d12765422d3ac92e3e9828e08ae1e19e1dc5fa7
+  produced_by: create-plan-run-0001
+- path: feature-docs/design-mock-hot-reload/VERIFICATION.md
+  sha256: sha256:a7ff146af5165d13588f6dd8e8e282be33f2fd785a43dbc8b024d268816740a0
+  produced_by: create-plan-run-0001
+- path: feature-docs/design-mock-hot-reload/THREAT-MODEL.md
+  sha256: sha256:8c85627922011029f9a90cb81f33176af04b981f2d81a8537afa0ca7a26fbed1
+  produced_by: create-plan-run-0001
+- path: feature-docs/design-mock-hot-reload/tasks/task0001.md
+  sha256: sha256:386ae5494b8659a7366e1a1654fd5028adc605d646dad5113608ba2cc59275d6
+  produced_by: create-plan-run-0001
+- path: feature-docs/design-mock-hot-reload/tasks/task0002.md
+  sha256: sha256:daec1f97d3c5578108eacf4c53c2efe20a23def25f40828d9c0f9c133fad953c
+  produced_by: create-plan-run-0001
 other_feature_doc_fixes: []
-patches: []
+patches:
+- patch_id: design-mock-hot-reload-p0001
+  status: applied
+  base_input_digest: sha256:e501467b6a82cef4239145925cce39cfb5e380acf3825f2680ca21d187d7c058
+  base_workflow_blob: f8c4f5ace38b1e7acd66e73b6861a6e65e535d35

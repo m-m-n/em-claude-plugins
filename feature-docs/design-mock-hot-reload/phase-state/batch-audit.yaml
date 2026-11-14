@@ -43,3 +43,12 @@ records:
   - exclude
   resolution_note: tokens.html はサーバーの対象に含めず、これまでどおり直接開いてもらう（Codex は含める案を挙げたが、タスクの対象がモックであり範囲を広げないほうを採った）
   recorded_at: '2026-11-14T12:02:56+09:00'
+- gate_id: create-plan.dev-server-listen-address
+  source: batch_codex
+  selected_option_ids:
+  - keep_default_local_example
+  resolution_note: 計画の未解決点（例の開発用サーバーがローカルだけで待ち受けるか）を Codex に 2 回相談した。1 回目は待ち受け先を --hostname=localhost
+    で明示する案 B を推した。2 回目は、bun ./<file>.html は既定で localhost に待ち受けること、B は task0001 AC-1・TM-1（--host
+    系の指定を書かない）の再計画を要することを踏まえて、現計画のまま（例は bun ./<mock>.html、待ち受け指定なし、出力のローカル URL だけ案内）の案
+    A を推した。A を採用し、計画は変えない
+  recorded_at: '2026-11-14T12:24:12+09:00'
