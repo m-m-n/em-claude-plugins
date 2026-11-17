@@ -1,0 +1,207 @@
+schema_version: 1
+feature: declared-command-edge-fold
+created: '2026-11-18'
+base_branch: main
+goal: |
+  # bash_guard の宣言照合で端の改行文字が混在・連続すると YAML 解析後の形が漏れ、未承認コマンドの拒否が後退する
+
+  種別: セキュリティ (severity: medium)
+
+  ## 脆弱性の概要
+  `bash_guard.py` の `declared_commands` は宣言ごとに 2 つの形（スペース・タブだけを除いた形と、YAML 改行文字を端から除いた形）しか宣言集合に入れない。端の改行文字の種類が混在・連続する宣言では、PyYAML 解析後の形がフックのトリム後にどちらの形とも一致せず、宣言済み未承認コマンドの deny が判定なしに後退する。
+
+  ## 参照
+  - CVE / GHSA ID: 該当なし
+  - 現在のバージョン: em-workflow 0.4.x（declared-command-yaml-breaks の integration ブランチ）
+  - 修正済みバージョン: 無し
+
+  ## 攻撃シナリオ
+  リポジトリを書き換えられる者が workflow.yaml のコマンドを、二重引用符内の先頭に実際の U+0085、末尾に実際の U+2028（または U+2029）を置いた値にする（例: "<U+0085>./unapproved<U+2028>"）。PyYAML は先頭の U+0085 だけを空白に変え、末尾の U+2028 は残す。解析結果 ` ./unapproved<U+2028>` がコマンドとして渡ると、フックはスペースだけを除いて `./unapproved<U+2028>` にし、宣言集合の `<U+0085>./unapproved<U+2028>` にも `./unapproved` にも一致しないため判定なしで終わる。同じ端に改行文字が連続する場合（U+0085 U+0085 → LF、U+0085 U+2028 → U+2028 など）も同様に漏れる。シングルクォートも同じ折り畳みを受ける。
+
+  ## 影響範囲
+  宣言済み・未承認のコマンドが、フックの deny ではなく通常の権限確認に回る。既存の Bash 許可や auto モードの判定によっては、承認記録なしで実行され得る。許可側の範囲は広がっていない（TM-2 は維持）。
+
+  ## 完了の定義
+  - [ ] 攻撃シナリオが成立しない
+  - [ ] 修正版に追随している（修正版が無い場合は暫定緩和策の欄に対応を記載）
+  - [ ] 先頭 U+0085・末尾 U+2028 / U+2029、その逆、同じ端での U+0085 U+0085 と U+0085 U+2028 の各宣言について、YAML 解析結果の形が deny される回帰テストがある
+
+  ## 該当箇所
+  - `em-workflow/hooks/bash_guard.py:227`（`declared_commands`）
+  - `em-workflow/hooks/bash_guard.py` の `hook_main` で宣言集合と照合する箇所
+  - feature-docs/declared-command-yaml-breaks/SPEC.md の FR1（2 つの形）
+  - feature-docs/approval-unicode-whitespace/SPEC.md の FR8、THREAT-MODEL.md の TM-5
+  - 詳細: integration ブランチ `em-workflow/declared-command-yaml-breaks/integration` の `feature-docs/declared-command-yaml-breaks/reviews/round1.yaml`（stable_id `99609d9a91a78c9d`）
+
+  ## 暫定緩和策
+  拒否側だけで吸収する。案 1: `hook_main` で宣言集合と照合するときに、受け取ったコマンドの両端から U+0020・U+0009・LF・U+0085・U+2028・U+2029 を除いた形も照合する。案 2: `declared_commands` で PyYAML と同じ端ごとの折り畳みを当てた 3 つ目の形を入れる。exact と cd 前置形による許可、`trim_blanks`、`is_matchable` は変えない。
+
+  ## 追加指示
+  - 不明点は Codex に相談し、比較的良いと判断した案を採用する。
+parent_branch: em-workflow/declared-command-edge-fold/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.78
+      '2': 0.22
+      '3': 0.0
+  at: '2026-11-18T00:14:45+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: e256efe4e52691c698fe98db73a5a068238f225b
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI や見た目を伴わない、フック内部の照合の変更とテスト・文書の追記
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  perspectives: []
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: hook_main で、両端から 6 文字を除いた形も宣言集合と照合する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-2
+    - TS-6
+    - TS-7
+    - TS-8
+  FR2:
+    title: declared_commands と許可の範囲を変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-7
+  FR3:
+    title: 広がった拒否の範囲
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-3
+  FR4:
+    title: 回帰テスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-2
+    - TS-4
+  FR5:
+    title: 文書への追記
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 依存
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+  NFR2:
+    title: classification pin
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+  NFR3:
+    title: 関数の並び
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+  NFR4:
+    title: ソースの文字
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+  NFR5:
+    title: docstring
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+  NFR6:
+    title: テスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+  NFR7:
+    title: Version
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

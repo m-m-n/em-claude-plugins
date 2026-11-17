@@ -1,7 +1,7 @@
 schema_version: 1
 feature: declared-command-edge-fold
 phase: create-spec
-status: applying_patch
+status: completed
 generation: 1
 base_revision: da4e2ee3fcf7cde758b94f4c65efbd9250976971
 last_input_digest: sha256:072ac59dd1329518c33024cac4b732339f126acef0ea9ba933d965126edd86a7
