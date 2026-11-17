@@ -126,7 +126,31 @@ workflow:
   status: completed
   completed_at_commit: bc2369ab566ac06d20825fb4d09573d2ab9bdbe6
 - id: verify
-  status: in_progress
+  status: completed
+  completed_at_commit: 8b7e986c18440a7d1aa14ec1a467eeede7c2d33c
+  result: pass
+  failed_items: []
+  round: 1
+  passed_ids:
+  - TS-1
+  - TS-2
+  - TS-3
+  - TS-4
+  - TS-5
+  - TS-6
+  - TS-7
+  - TS-8
+  - TS-9
+  - AC1
+  - AC2
+  - AC3
+  - AC4
+  - AC5
+  - AC6
+  - AC7
+  - AC8
+  - AC9
+  - AC10
 - id: retrospect
   status: pending
 tasks:
