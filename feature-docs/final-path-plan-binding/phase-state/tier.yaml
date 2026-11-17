@@ -1,0 +1,71 @@
+schema_version: 2
+feature: final-path-plan-binding
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.34
+    confidence: 0.54
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.06
+      '1': 0.54
+      '2': 0.4
+      '3': 0.0
+  observed_at: '2026-11-18T00:12:19+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.72
+    confidence: 0.72
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.28
+      '2': 0.72
+      '3': 0.0
+  observed_at: '2026-11-18T00:15:14+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/scripts/validate-worker-output.py
+  - em-workflow/references/implement-phase.md
+  - em-workflow/references/workflow-patch.md
+  - tests/test_final_path_correction.py
+  - tests/test_final_path_correction_docs.py
+  changed_lines_approx: 80
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  work_still_required_evidence: 現在の検証・参照先の不一致は残っている。em-workflow/scripts/validate-worker-output.py:2293-2303
+    は entry.plan のみを読み、canonical_correction_plan と比較している。tasks/{T}.md との照合はない。em-workflow/references/implement-phase.md:518
+    は task_plan_path を tasks/{T}.md に固定している一方、em-workflow/references/phases/create-plan-phase.md:103-107
+    は tasks.{T}.plan を参照する規則を定めている。em-workflow/agents/implementer.md:77 は渡された task_plan_path
+    を読むため、未検査の計画書が読まれる経路が文書上残っている。実際の起動でどちらの規則が採用されるかは確定できない。tests/test_final_path_correction.py:1313-1331
+    には正規本文の検証テストがある。変更対象・変更行数・追加テスト数は、参照先の照合と文書の統一を行う場合の提案値であり、実測差分ではない。caller_and_dependency_count
+    は _correction_entries_errors の直接呼び出し元1関数と同一ファイル内の直接依存先10関数を数えた
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 5
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  caller_and_dependency_count: 11
+  changes_external_contract: true
+  changes_behavior: true
+decided_at: '2026-11-18T00:15:27+09:00'
