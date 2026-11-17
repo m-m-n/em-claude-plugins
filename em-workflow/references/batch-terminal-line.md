@@ -251,6 +251,17 @@ condition 3. This stop binds to the `stop-condition-3` row,
 this one stop only; it is not a general rule for other current-run routes
 that write `implement: failed` / `failed_kind: decision`.
 
+The batch stop raised by the Plan-path check of Step I.2.a in
+`references/implement-phase.md` is a second named exception to the
+`stop-condition-3` row's current-run exclusion above, on the same terms as
+the Control-character check's exception in the paragraph above. In the
+current run, that check writes `implement: failed` /
+`failed_kind: decision`, the stop has no phase-specific row of its own, and
+control returns through develop's stop condition 3. This stop binds to the
+`stop-condition-3` row, `step_needs_intervention`, and not to
+`unmapped_stop`. The exception covers this one stop only; the table above
+gains no row and no code.
+
 The batch abort that the Same-cause write rejection paragraph of Step I.2.c
 in `references/implement-phase.md` raises binds to the
 `implement-second-failure` row, `implement_task_failed`, though the task
