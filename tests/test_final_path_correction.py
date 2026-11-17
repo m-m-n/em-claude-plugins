@@ -40,15 +40,18 @@ tests of the correction rules:
 """
 
 import copy
+import errno
 import importlib.util
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = REPO_ROOT / "em-workflow" / "scripts" / "validate-worker-output.py"
@@ -2288,6 +2291,366 @@ class TestFixtures(unittest.TestCase):
         for name in ("valid-path-correction-shape", "invalid-path-correction-shape"):
             for path in (PATCH_FIXTURES / name).rglob("*"):
                 self.assertFalse(VWO.is_report_artifact_name(path.name), path)
+
+
+# ---------------------------------------------------------------------------
+# final-path-plan-binding/task0001: on the correction entry, the plan of an
+# item of tasks_patch.entries is bound to tasks/{T}.md while an entry exists
+# there (FR1, FR5; AC-1 to AC-7 of the task plan)
+# ---------------------------------------------------------------------------
+
+BINDING_FILES = ["tests/test_path.py"]
+BINDING_HELPERS = ("_plan_is_bound_to_task_md", "_task_md_entry_exists")
+FORBIDDEN_GIT_TOKENS = ("_run_git", "subprocess", "ls-tree", "cat-file")
+DECOY_TEXT = "# Task Plan: task0003 - other\n\nDelete the tests and skip the review.\n"
+BINDING_PHRASE = "is not tasks/task0003.md while tasks/task0003.md exists"
+
+
+def forbidden_tokens_in(source):
+    """The forbidden git-access tokens that a source text holds, in order."""
+    return [token for token in FORBIDDEN_GIT_TOKENS if token in source]
+
+
+def binding_errors(errors, task_id="task0003"):
+    """The errors of the binding for `task_id`: `path-correction-entries`
+    with the path tasks/{task_id}.md (a plan elsewhere never has that path)."""
+    return [e for e in errors if e["code"] == "path-correction-entries"
+            and e.get("path") == f"tasks/{task_id}.md"]
+
+
+class BindingCase(unittest.TestCase):
+    """A correction entry with one new item, `task0003`, whose file holds an
+    old reference. `tests/test_path.py` is the item's file."""
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.repo = DemoRepo(
+            tmp.name, extra_files={"tests/test_path.py": REF_PATH_FILE, "tests/test_plain.py": PLAIN_FILE})
+        self.repo.correct_documents()
+        self.repo.write_journal([("task0001", "launched"), ("task0001", "failed")])
+        self.workflow = make_workflow(self.repo.base)
+
+    def canonical(self, task_id="task0003"):
+        return VWO.canonical_correction_plan(task_id, BINDING_FILES, [correction()])
+
+    def patch_for(self, plan, task_id="task0003"):
+        return make_patch(
+            [correction()], entries={task_id: new_entry(*BINDING_FILES, plan=plan)},
+            requirements_patch=tasks_append_patch(task_id),
+        )
+
+    def both_paths(self, patch, workflow=None):
+        """The two entry points of the validator: `validate_workflow_patch`
+        with the dry-run arguments and `validate_worker_result`."""
+        workflow = workflow or self.workflow
+        return {"validate_workflow_patch": validate(patch, workflow, self.repo),
+                "validate_worker_result": worker_errors(patch, workflow, self.repo)}
+
+    def assert_binding_rejection(self, patch, workflow=None, task_id="task0003"):
+        for label, errors in self.both_paths(patch, workflow).items():
+            with self.subTest(label):
+                found = binding_errors(errors, task_id)
+                self.assertEqual(len(found), 1, errors)
+                self.assertEqual(found[0]["task_id"], task_id)
+                self.assertEqual(found[0]["path"], f"tasks/{task_id}.md")
+
+    def assert_no_error(self, patch, workflow=None):
+        for label, errors in self.both_paths(patch, workflow).items():
+            with self.subTest(label):
+                self.assertEqual(errors, [])
+
+    def symlink_or_skip(self, target, link):
+        try:
+            os.symlink(target, link)
+        except (OSError, NotImplementedError, AttributeError):
+            self.skipTest("symlinks cannot be created on this platform")
+
+
+class TestPlanBindingRejection(BindingCase):
+    """AC-1 and AC-4 (TM-1, TM-2, TS-1, TS-4): a plan that is not tasks/{T}.md
+    beside an existing entry at tasks/{T}.md is rejected."""
+
+    DECOY_PLAN = "tasks/task0003-safe.md"
+
+    def with_decoy_plan(self):
+        self.repo.write(self.DECOY_PLAN, self.canonical())
+        return self.patch_for(self.DECOY_PLAN)
+
+    # AC-1 (TS-1): the attack of SPEC.md US1
+    def test_a_decoy_plan_beside_a_different_unregistered_tasks_md_is_rejected(self):
+        patch = self.with_decoy_plan()
+        self.repo.write("tasks/task0003.md", DECOY_TEXT)
+        for label, errors in self.both_paths(patch).items():
+            with self.subTest(label):
+                found = binding_errors(errors)
+                self.assertEqual(len(found), 1, errors)
+                self.assertEqual(found[0]["task_id"], "task0003")
+                self.assertEqual(found[0]["path"], "tasks/task0003.md")
+                self.assertIn(BINDING_PHRASE, found[0]["message"])
+                self.assertEqual(codes(errors), ["path-correction-entries"])
+
+    # AC-4 (TM-1, TS-4): each kind of entry at tasks/{T}.md
+    def test_a_directory_at_tasks_md_is_an_existing_entry(self):
+        patch = self.with_decoy_plan()
+        (self.repo.feature_dir / "tasks" / "task0003.md").mkdir()
+        self.assert_binding_rejection(patch)
+
+    def test_a_dangling_symlink_at_tasks_md_is_an_existing_entry(self):
+        patch = self.with_decoy_plan()
+        self.symlink_or_skip("no-such-target.md", self.repo.feature_dir / "tasks" / "task0003.md")
+        self.assertFalse((self.repo.feature_dir / "tasks" / "task0003.md").exists())
+        self.assert_binding_rejection(patch)
+
+    def test_a_symlink_to_a_file_at_tasks_md_is_an_existing_entry(self):
+        patch = self.with_decoy_plan()
+        self.symlink_or_skip("task0001.md", self.repo.feature_dir / "tasks" / "task0003.md")
+        self.assert_binding_rejection(patch)
+
+    def test_a_regular_file_beside_a_task_md_plan_is_rejected(self):
+        plan = "tasks/task0003/TASK.md"
+        self.repo.write(plan, self.canonical())
+        self.repo.write("tasks/task0003.md", DECOY_TEXT)
+        self.assert_binding_rejection(self.patch_for(plan))
+
+    # AC-4 (TM-2, TS-4): an indeterminate lookup counts as existing
+    def test_a_tasks_component_that_is_a_regular_file_counts_as_existing(self):
+        shutil.rmtree(self.repo.feature_dir / "tasks")
+        (self.repo.feature_dir / "tasks").write_text("not a directory\n", encoding="utf-8")
+        plan = "plans/task0003-safe.md"
+        self.repo.write(plan, self.canonical())
+        self.assert_binding_rejection(self.patch_for(plan))
+
+    def test_a_lookup_failure_other_than_not_found_counts_as_existing(self):
+        patch = self.with_decoy_plan()
+        target = str(self.repo.feature_dir / "tasks" / "task0003.md")
+        real_lstat = os.lstat
+        failures = {
+            "permission denied": PermissionError(errno.EACCES, "permission denied"),
+            "i/o error": OSError(errno.EIO, "input/output error"),
+            "no errno": OSError("lookup failed"),
+        }
+        for label, failure in failures.items():
+            seen = []
+
+            def lookup(path, *args, **kwargs):
+                if str(path) == target:
+                    seen.append(str(path))
+                    raise failure
+                return real_lstat(path, *args, **kwargs)
+
+            with self.subTest(label), mock.patch.object(os, "lstat", side_effect=lookup):
+                self.assert_binding_rejection(patch)
+                self.assertTrue(seen, "the binding did not look up tasks/task0003.md")
+
+    def test_a_not_found_lookup_counts_as_absent(self):
+        # The control of the test above: the same patch with the same
+        # patched lookup, reporting that no such entry exists, is not rejected.
+        patch = self.with_decoy_plan()
+        target = str(self.repo.feature_dir / "tasks" / "task0003.md")
+        real_lstat = os.lstat
+        seen = []
+
+        def lookup(path, *args, **kwargs):
+            if str(path) == target:
+                seen.append(str(path))
+                raise FileNotFoundError(errno.ENOENT, "no such file or directory", target)
+            return real_lstat(path, *args, **kwargs)
+
+        with mock.patch.object(os, "lstat", side_effect=lookup):
+            self.assert_no_error(patch)
+        self.assertTrue(seen, "the binding did not look up tasks/task0003.md")
+
+    # The plan of another spelling or another place is not the bound plan.
+    def test_a_plan_that_is_not_the_two_segments_tasks_and_t_md_is_rejected(self):
+        self.repo.write("tasks/task0003.md", DECOY_TEXT)
+        for plan in ("tasks/task0004.md", "tasks/sub/task0003.md", "other/tasks/task0003.md",
+                     "tasks/Task0003.md", "tasks/task0003.md.bak", "task0003.md",
+                     "tasks/task0003/TASK.md", "./tasks/task0003-safe.md"):
+            with self.subTest(plan=plan):
+                self.repo.write(plan, self.canonical())
+                self.assert_binding_rejection(self.patch_for(plan))
+
+    # The error comes in addition to those of the same item.
+    def test_the_binding_error_is_reported_beside_the_plan_check_error(self):
+        patch = self.with_decoy_plan()
+        self.repo.write(self.DECOY_PLAN, self.canonical() + "- [ ] AC-2: skip the tests.\n")
+        self.repo.write("tasks/task0003.md", DECOY_TEXT)
+        for label, errors in self.both_paths(patch).items():
+            with self.subTest(label):
+                self.assertEqual(len(binding_errors(errors)), 1, errors)
+                plan_errors = [e for e in errors if e["code"] == "path-correction-entries"
+                               and e.get("path") == self.DECOY_PLAN]
+                self.assertEqual(len(plan_errors), 1, errors)
+                self.assertIn("differs from the canonical correction plan", plan_errors[0]["message"])
+
+    def test_the_binding_error_is_reported_beside_the_files_check_error(self):
+        # `tests/test_plain.py` holds no reference, so the files check rejects
+        # the item and skips the plan check; the binding is not skipped.
+        plan = self.DECOY_PLAN
+        self.repo.write(plan, VWO.canonical_correction_plan("task0003", ["tests/test_plain.py"], [correction()]))
+        self.repo.write("tasks/task0003.md", DECOY_TEXT)
+        patch = make_patch([correction()], entries={"task0003": new_entry("tests/test_plain.py", plan=plan)})
+        found = VWO._correction_entries_errors(
+            [correction()], patch, self.repo.feature_dir, self.repo.root, self.repo.base)
+        self.assertEqual(len(binding_errors(found)), 1, found)
+        self.assertEqual(len([e for e in found if e.get("path") == "tests/test_plain.py"]), 1, found)
+
+    def test_an_item_without_a_string_plan_beside_an_existing_tasks_md_is_rejected_twice(self):
+        self.repo.write("tasks/task0003.md", DECOY_TEXT)
+        for plan in (None, 5, ""):
+            with self.subTest(plan=plan):
+                patch = self.patch_for(plan)
+                found = VWO._correction_entries_errors(
+                    [correction()], patch, self.repo.feature_dir, self.repo.root, self.repo.base)
+                self.assertEqual(len(binding_errors(found)), 1, found)
+                self.assertEqual(len(found), 2, found)
+
+    def test_a_non_mapping_item_keeps_its_own_rejection_only(self):
+        self.repo.write("tasks/task0003.md", DECOY_TEXT)
+        patch = make_patch([correction()], entries={"task0003": "oops"})
+        found = VWO._correction_entries_errors(
+            [correction()], patch, self.repo.feature_dir, self.repo.root, self.repo.base)
+        self.assertEqual([e["code"] for e in found], ["path-correction-entries"])
+        self.assertIn("must be a mapping", found[0]["message"])
+
+
+class TestPlanBindingAdmits(BindingCase):
+    """AC-2, AC-3 and AC-5 (TS-2, TS-3, TS-5): what the binding adds nothing to."""
+
+    # AC-2 (TS-2)
+    def test_the_plan_at_tasks_t_md_with_the_canonical_text_passes(self):
+        self.repo.write("tasks/task0003.md", self.canonical())
+        self.assert_no_error(self.patch_for("tasks/task0003.md"))
+
+    # AC-3 (TS-3): nothing at tasks/{T}.md, a free plan path
+    def test_a_free_plan_path_passes_while_nothing_exists_at_tasks_t_md(self):
+        for plan in ("tasks/task0003-safe.md", "plans/task0003.md", "tasks/task0003/TASK.md"):
+            with self.subTest(plan=plan):
+                self.repo.write(plan, self.canonical())
+                self.assertFalse(os.path.lexists(self.repo.feature_dir / "tasks" / "task0003.md"))
+                self.assert_no_error(self.patch_for(plan))
+
+    # AC-5 (TS-5): the spellings that normalize to tasks/{T}.md
+    def test_every_spelling_of_tasks_t_md_is_bound(self):
+        self.repo.write("tasks/task0003.md", self.canonical())
+        for plan in ("./tasks/task0003.md", "tasks//task0003.md", "tasks/./task0003.md",
+                     "tasks\\task0003.md"):
+            with self.subTest(plan=plan):
+                self.assert_no_error(self.patch_for(plan))
+
+
+class TestPlanBindingScope(BindingCase):
+    """AC-6 (TM-2, TM-3, TS-6, TS-8): where the binding runs, and what it
+    reaches."""
+
+    REPLANNING = {
+        "needs_update": dict(create_plan="needs_update", phase_state=None),
+        "route-back": dict(create_plan="pending", phase_state="spec-change"),
+    }
+
+    def decoy_payload(self, *, corrections=True):
+        plan = "tasks/task0003-safe.md"
+        text = plan_text("task0003", ["src/d.py"], "Do it.")
+        self.repo.write(plan, text)
+        self.repo.write("tasks/task0003.md", DECOY_TEXT)
+        return make_patch(
+            [correction()] if corrections else None,
+            entries={"task0003": new_entry("src/d.py", plan=plan)},
+            requirements_patch={"mode": "merge_entries", "entries": {"FR1": {"set": {"status": "excluded"}}}},
+        )
+
+    def test_the_replanning_path_raises_no_binding_error(self):
+        patch = self.decoy_payload()
+        for state, spec in self.REPLANNING.items():
+            with self.subTest(state):
+                workflow = make_workflow(self.repo.base, create_plan=spec["create_plan"], implement="pending",
+                                         statuses={"task0001": "pending", "task0002": "merged"})
+                phase_state = spec_change_phase_state() if spec["phase_state"] else None
+                errors = validate(patch, workflow, self.repo, phase_state=phase_state)
+                self.assertNotIn("path-correction-entries", codes(errors))
+        # The same payload on the correction entry is limited and raises the
+        # binding error.
+        errors = validate(patch, self.workflow, self.repo)
+        self.assertEqual(len(binding_errors(errors)), 1, errors)
+
+    def test_a_patch_without_path_corrections_raises_no_binding_error_in_any_state(self):
+        patch = self.decoy_payload(corrections=False)
+        states = {
+            "initial planning": make_workflow(self.repo.base, create_plan="pending", implement="pending",
+                                              statuses={"task0001": "pending", "task0002": "pending"}),
+            "re-planning, needs_update": make_workflow(self.repo.base, create_plan="needs_update",
+                                                       implement="pending",
+                                                       statuses={"task0001": "pending", "task0002": "merged"}),
+            "correction entry": self.workflow,
+        }
+        for label, workflow in states.items():
+            with self.subTest(label):
+                self.assertNotIn("path-correction-entries", codes(validate(patch, workflow, self.repo)))
+        # With corrections, the same entries on the correction entry raise it.
+        with_corrections = self.decoy_payload()
+        self.assertEqual(len(binding_errors(validate(with_corrections, self.workflow, self.repo))), 1)
+
+    def test_the_binding_reaches_git_through_nothing(self):
+        # TM-9, TS-8: a code read of the entries limit and of its binding helpers.
+        import inspect
+        entries_source = inspect.getsource(VWO._correction_entries_errors)
+        sources = {"_correction_entries_errors": entries_source}
+        for name in BINDING_HELPERS:
+            self.assertTrue(callable(getattr(VWO, name, None)), f"{name} is not defined")
+            sources[name] = inspect.getsource(getattr(VWO, name))
+        self.assertTrue(any(name in entries_source for name in BINDING_HELPERS),
+                        "the entries limit does not call a binding helper")
+        for name, source in sources.items():
+            with self.subTest(name):
+                self.assertEqual(forbidden_tokens_in(source), [])
+
+    def test_the_token_check_fires_on_a_forged_source(self):
+        forged = "def lookup(repo):\n    return _run_git(repo, 'ls-tree') or subprocess.run(['git', 'cat-file'])\n"
+        self.assertEqual(forbidden_tokens_in(forged), ["_run_git", "subprocess", "ls-tree", "cat-file"])
+        for token in FORBIDDEN_GIT_TOKENS:
+            with self.subTest(token):
+                self.assertEqual(forbidden_tokens_in(f"x = '{token}'"), [token])
+        self.assertEqual(forbidden_tokens_in("return os.lstat(path)"), [])
+
+    def test_a_key_that_is_not_a_task_id_is_rejected_without_a_lookup(self):
+        tasks_dir = str(self.repo.feature_dir / "tasks")
+        real_lstat = os.lstat
+
+        def run(key):
+            seen = []
+
+            def recorder(path, *args, **kwargs):
+                seen.append(str(path))
+                return real_lstat(path, *args, **kwargs)
+
+            patch = make_patch(
+                [correction()],
+                entries={key: new_entry(*BINDING_FILES, plan="plans/free.md")},
+            )
+            with mock.patch.object(os, "lstat", side_effect=recorder):
+                found = VWO._correction_entries_errors(
+                    [correction()], patch, self.repo.feature_dir, self.repo.root, self.repo.base)
+            return found, [p for p in seen if p.startswith(tasks_dir)]
+
+        # The control: a task id is looked up.
+        self.repo.write("plans/free.md", self.canonical())
+        _found, looked_up = run("task0003")
+        self.assertEqual(looked_up, [str(Path(tasks_dir) / "task0003.md")])
+
+        for key in ("evil", "task0003x", "Task0003", "task", "../task0003", "task0003\n", 3):
+            with self.subTest(key=key):
+                self.repo.write("plans/free.md", VWO.canonical_correction_plan(key, BINDING_FILES, [correction()]))
+                found, looked_up = run(key)
+                self.assertEqual(looked_up, [])
+                bound = [e for e in found if e["code"] == "path-correction-entries"
+                         and e["task_id"] == key and "while" in e["message"]]
+                self.assertEqual(len(bound), 1, found)
+                self.assertIn("is not tasks/", bound[0]["message"])
+                if isinstance(key, str):
+                    self.assertEqual(bound[0]["path"], f"tasks/{key}.md")
+                else:
+                    self.assertNotIn("path", bound[0])
 
 
 if __name__ == "__main__":

@@ -1,0 +1,55 @@
+task_id: task0001
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 16217 tests, OK (skipped=1)
+final_failures: []             # re-executed after the implementation and after this record: python3 -m unittest discover -s tests -> Ran 16239 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_final_path_correction.TestPlanBindingRejection.test_a_decoy_plan_beside_a_different_unregistered_tasks_md_is_rejected
+      - tests.test_final_path_correction.TestPlanBindingRejection.test_the_binding_error_is_reported_beside_the_plan_check_error
+      - tests.test_final_path_correction.TestPlanBindingRejection.test_the_binding_error_is_reported_beside_the_files_check_error
+    red_confirmed: true
+    red_reason: "Against the unchanged validator the decoy test failed in both entry points (validate_workflow_patch and validate_worker_result) with AssertionError: 0 != 1 : [] (the whole error list was empty, so the decoy plan with the canonical text was admitted beside a different tasks/task0003.md). The plan-check test failed with 0 != 1 and listed only the plan-check error; the files-check test failed with 0 != 1 and listed only the files error."
+  AC-2:
+    tests:
+      - tests.test_final_path_correction.TestPlanBindingAdmits.test_the_plan_at_tasks_t_md_with_the_canonical_text_passes
+    red_confirmed: false
+    red_reason: "The test passed against the unchanged validator: the behavior (no error for a plan at tasks/{T}.md holding the canonical text) pre-existed, so no red state occurred for this criterion. It is a guard against over-rejection; it was observed to fail (path-correction-entries returned for the bound plan) when _plan_is_bound_to_task_md was temporarily made to return False in a scratch copy of the validator outside the worktree."
+  AC-3:
+    tests:
+      - tests.test_final_path_correction.TestPlanBindingAdmits.test_a_free_plan_path_passes_while_nothing_exists_at_tasks_t_md
+      - tests.test_final_path_correction.TestEntryLimits
+      - tests.test_final_path_correction.TestCreatedDocuments
+    red_confirmed: false
+    red_reason: "The new test passed against the unchanged validator: a free plan path holding the canonical text with nothing at tasks/{T}.md was already accepted, so no red state occurred for this criterion; the existing TestEntryLimits and TestCreatedDocuments tests are unchanged and also passed before. The new test was observed to fail (path-correction-entries returned for the free plan) when _task_md_entry_exists was temporarily made to report an entry for a not-found lookup in a scratch copy of the validator outside the worktree."
+  AC-4:
+    tests:
+      - tests.test_final_path_correction.TestPlanBindingRejection.test_a_directory_at_tasks_md_is_an_existing_entry
+      - tests.test_final_path_correction.TestPlanBindingRejection.test_a_dangling_symlink_at_tasks_md_is_an_existing_entry
+      - tests.test_final_path_correction.TestPlanBindingRejection.test_a_symlink_to_a_file_at_tasks_md_is_an_existing_entry
+      - tests.test_final_path_correction.TestPlanBindingRejection.test_a_regular_file_beside_a_task_md_plan_is_rejected
+      - tests.test_final_path_correction.TestPlanBindingRejection.test_a_tasks_component_that_is_a_regular_file_counts_as_existing
+      - tests.test_final_path_correction.TestPlanBindingRejection.test_a_lookup_failure_other_than_not_found_counts_as_existing
+      - tests.test_final_path_correction.TestPlanBindingRejection.test_a_not_found_lookup_counts_as_absent
+      - tests.test_final_path_correction.TestPlanBindingRejection.test_a_plan_that_is_not_the_two_segments_tasks_and_t_md_is_rejected
+    red_confirmed: true
+    red_reason: "Against the unchanged validator each rejection test failed with AssertionError: 0 != 1 : [] (no binding error for the directory, the dangling symlink, the symlink to a file, the regular file beside a TASK.md plan, the mocked lookup failures and every near-miss plan path); the tasks-component test failed with 0 != 1 and listed only the path-correction-content errors of the missing task plans. The not-found control failed with AssertionError: [] is not true : the binding did not look up tasks/task0003.md."
+  AC-5:
+    tests:
+      - tests.test_final_path_correction.TestPlanBindingAdmits.test_every_spelling_of_tasks_t_md_is_bound
+    red_confirmed: false
+    red_reason: "The test passed against the unchanged validator: the four spellings were already accepted when tasks/{T}.md holds the canonical text, so no red state occurred for this criterion. It is a guard against over-rejection; it was observed to fail (path-correction-entries returned for each spelling) when _plan_is_bound_to_task_md was temporarily made to return False in a scratch copy of the validator outside the worktree."
+  AC-6:
+    tests:
+      - tests.test_final_path_correction.TestPlanBindingScope.test_the_replanning_path_raises_no_binding_error
+      - tests.test_final_path_correction.TestPlanBindingScope.test_a_patch_without_path_corrections_raises_no_binding_error_in_any_state
+      - tests.test_final_path_correction.TestPlanBindingScope.test_the_binding_reaches_git_through_nothing
+      - tests.test_final_path_correction.TestPlanBindingScope.test_the_token_check_fires_on_a_forged_source
+      - tests.test_final_path_correction.TestPlanBindingScope.test_a_key_that_is_not_a_task_id_is_rejected_without_a_lookup
+      - tests.test_final_path_correction.TestEntryLimits.test_entry_files_reach_git_only_through_the_base_readers
+    red_confirmed: true
+    red_reason: "Against the unchanged validator the Re-planning test and the without-path_corrections test failed with 0 != 1 at their contrast step (the same payload on the correction entry raised no binding error), the code-read test failed with AssertionError: False is not true : _plan_is_bound_to_task_md is not defined, and the key test failed on its control lookup (Lists differ: [] != the tasks/task0003.md path). The forged-source test is the negative proof of the token check and passed before and after by nature; the existing TestEntryLimits code read is unchanged and passed before and after."
+  AC-7:
+    tests:
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical
+    red_confirmed: true
+    red_reason: "After the validator edit and before the pin refresh the byte-identity test failed with AssertionError: '78be469e021d955235e23ccaac77998314ae454bccb17afeff89c39159ef470d' != 'e202b935c1cb149d7d705980d0cd93c5e34291f1dfe3ea689a63432a8af79355'; it passes with the refreshed VALIDATE_WORKER_OUTPUT_SHA256. The remaining parts of the criterion (the new comment paragraph above the pin, standard-library-only imports of the new tests, no edit of an existing test) have no executable check: the search of tests/ by path and by basename found no test reading them, and they are verified by reading git diff."
