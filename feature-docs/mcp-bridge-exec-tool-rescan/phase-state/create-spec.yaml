@@ -4,8 +4,8 @@ phase: create-spec
 status: dispatching
 generation: 1
 base_revision: 054c812a12bd5cc55e3dc480ac2680296d353699
-last_input_digest: sha256:57fa02b311dfb160670a4dfc1978af7cbd77e26551840648995ed5f5980b19e6
-active_request_id: create-spec-run-0002
+last_input_digest: sha256:80c7a51fc61ee83f131f585030a9cdc78b82985a07038382bb9a59501f6365d1
+active_request_id: create-spec-run-0003
 packets:
   create-spec-q0001:
     status: answered
@@ -69,9 +69,9 @@ worker_runs:
     test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
   self_write_set: []
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:57fa02b311dfb160670a4dfc1978af7cbd77e26551840648995ed5f5980b19e6
-  output_digest: null
+  output_digest: sha256:bdd6c0c43d664dbf46783369ad97659e9abd07e65fc3f00021a92f346e877969
   dispatch_digest_inputs:
     .claude/rules/hook-tests.md: sha256:a8c15bde31bb53748497dff8e9607b8348edf39279c8b99bf543a29ad60eb3b5
     CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
@@ -82,6 +82,15 @@ worker_runs:
     feature-docs/destructive-guard-false-deny/SPEC.md: sha256:99addc85406eab0b496582b5f744e02400f8b4a05a5267ca5445980e7a5c71e4
     feature-docs/destructive-guard-false-deny/THREAT-MODEL.md: sha256:292e617f500a6ddb670287d794580c9b63a3c97263141506aeb02e807b9e4a5c
     test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+  self_write_set: []
+- request_id: create-spec-run-0003
+  status: dispatched
+  input_digest: sha256:80c7a51fc61ee83f131f585030a9cdc78b82985a07038382bb9a59501f6365d1
+  output_digest: null
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/spec-writer-contract.md: sha256:1e63f69687c6850e890f66b5ca92af7f3b0d02645cc464fca88455ad2269d671
+    em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
+    em-workflow/references/templates/spec-document.md: sha256:a5d0106c39a5df7dc2365357a9546588275ed6c7a1651c866e75fa327a7fa592
 artifacts: []
 patches: []
 progress_fingerprint: null
