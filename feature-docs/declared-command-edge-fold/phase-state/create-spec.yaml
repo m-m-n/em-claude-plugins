@@ -1,11 +1,11 @@
 schema_version: 1
 feature: declared-command-edge-fold
 phase: create-spec
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: da4e2ee3fcf7cde758b94f4c65efbd9250976971
 last_input_digest: sha256:072ac59dd1329518c33024cac4b732339f126acef0ea9ba933d965126edd86a7
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -81,14 +81,23 @@ worker_runs:
   output_digest: null
   dispatch_digest_inputs: *id001
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:072ac59dd1329518c33024cac4b732339f126acef0ea9ba933d965126edd86a7
-  output_digest: null
+  output_digest: sha256:e000d8c28b375f649233536b703313907d5c6d2df245c66812fd41575f8d5f37
   dispatch_digest_inputs:
     em-workflow/references/contracts/spec-writer-contract.md: sha256:1e63f69687c6850e890f66b5ca92af7f3b0d02645cc464fca88455ad2269d671
     em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
     em-workflow/references/templates/spec-document.md: sha256:a5d0106c39a5df7dc2365357a9546588275ed6c7a1651c866e75fa327a7fa592
-artifacts: []
+  self_write_set:
+  - feature-docs/declared-command-edge-fold/REQUIREMENTS.md
+  - feature-docs/declared-command-edge-fold/SPEC.md
+artifacts:
+- path: feature-docs/declared-command-edge-fold/REQUIREMENTS.md
+  sha256: sha256:3c9440caeac9e01814a5482b8812b0605059d915812da51cfb7d9a6d5ff9b735
+  produced_by: create-spec-run-0003
+- path: feature-docs/declared-command-edge-fold/SPEC.md
+  sha256: sha256:de9441c2a712a5bd29fba83dc82d9f99810e935e5e5af8711e166476129b7e2d
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
