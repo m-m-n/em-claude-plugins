@@ -485,6 +485,34 @@ without waiting for the tasks launched by an earlier refill, and those tasks
 are neither cancelled nor rolled back. Control then returns to the user
 through develop's stop condition 3.
 
+**Plan-path check**: once the Control-character check above has passed, and
+before any implementer launch prompt is built, check the stored
+`tasks.{T}.plan` value of each task selected in this entry, not only the
+first one. `task_plan_path` is derived from `workflow.yaml` yet is placed
+before the untrusted-data label of the payload below, among the trusted
+fields; it reaches the payload only after this check passes. When the value
+of one or more selected tasks fails, the phase aborts with the terminal
+handling of the Control-character check above, cited and not restated here:
+report the IDs of the failing tasks, build no launch prompt for any selected
+task and launch no implementer, and make one write that sets the `implement`
+step's `status` to `failed` together with `failed_kind` valued `decision`,
+committed with `commit-docs.sh`. Nothing is repaired, stripped or replaced,
+and nothing falls back to `tasks/{T}.md`. Tasks launched by an earlier refill
+are not waited for, not cancelled and not rolled back. Control then returns
+to the user through develop's stop condition 3. A value is admitted only
+when all four rules hold:
+- The stored value is a string that is a safe relative path in the sense of
+  `is_safe_relative_path` of `scripts/validate-worker-output.py` (cited, not
+  restated here), and it names at least one segment once `path_segments`
+  normalization is applied.
+- Joined to the integration worktree's `feature-docs/{feature}` directory,
+  no component of the path, intermediate ones included, is a symlink.
+- The realpath of the joined path lies inside the realpath of
+  `feature-docs/{feature}`.
+- Neither the stored value nor the resolved absolute path holds a character
+  of Unicode category Cc, U+2028 or U+2029, the set the Control-character
+  check above rejects.
+
 Before launching, verify every `project_commands` string (build/test/format)
 used by the selected tasks is in the approval store (`bash_guard.py
 --list`; command-execution-protocol.md). Anything unapproved: run the
@@ -515,7 +543,7 @@ Prompt payload per task:
 # Task assignment
 task_id: {T}
 worktree_path: {canonical worktree_path: the strict realpath of $WT_ROOT/{T}}
-task_plan_path: {absolute path to the integration worktree's feature-docs/{feature}/tasks/{T}.md}
+task_plan_path: {absolute path to the integration worktree's feature-docs/{feature}/ joined with the stored tasks.{T}.plan value, the value the Plan-path check admitted}
 implementation_md_path: {absolute path to the integration worktree's feature-docs/{feature}/IMPLEMENTATION.md}
 lessons_path: {absolute path to the MAIN working tree's feature-docs/LESSONS.md; OMIT this line when the file does not exist — LESSONS.md is the one cross-feature artifact that stays outside the integration worktree}
 parent_branch: em-workflow/{feature}/integration

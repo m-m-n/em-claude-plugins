@@ -98,8 +98,13 @@ This document does not restate the shapes it builds on — it cites them:
 Which artifacts the `minimal` tier subtracts is defined by the develop
 skill's reduction table (`skills/develop/SKILL.md`) — cited here, never
 restated. Subtracting the task split is not subtracting the task record:
-`implementation-planner` still registers exactly one task entry, with
-`plan` pointing at the task document (`feature-docs/{feature}/TASK.md`).
+`implementation-planner` still registers exactly one task entry, whose
+`plan` names the task document. The stored `tasks.{T}.plan` value is
+relative to `feature-docs/{feature}`: `TASK.md` at the `minimal` tier,
+`tasks/taskNNNN.md` otherwise. The implement phase resolves it to the
+absolute path of the integration worktree's `feature-docs/{feature}/`
+joined with that value, behind the Plan-path check of
+`references/implement-phase.md` (cited, not restated here).
 This registered `tasks.{T}.plan` value is authoritative for every
 downstream consumer: the implement phase resolves the plan document to
 read from `tasks.{T}.plan` in `workflow.yaml`, not from a fixed
