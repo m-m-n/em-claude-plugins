@@ -1,6 +1,6 @@
 task_id: task0002
 baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 16217 tests, OK (skipped=1)
-final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 16227 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 16229 tests, OK (skipped=1)
 acceptance_tests:
   AC-1:
     tests:
@@ -71,16 +71,23 @@ acceptance_tests:
       one appended to each real module, and on a relative import.
   AC-5:
     tests:
-      - test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_workflow_patch_md_byte_identical
-      - test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical
-      - test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_pinned_validator_test_line_unchanged
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_workflow_patch_md_byte_identical
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical
+      - tests.test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_pinned_validator_test_line_unchanged
+      - tests.test_feature_docs_correction_patch_docs.TestRulesAndPins.test_the_pin_comment_names_this_task
+      - tests.test_feature_docs_correction_patch_docs.TestRulesAndPins.test_negative_a_pin_without_the_task_comment_is_rejected
     red_confirmed: true
     red_reason: >-
       After workflow-patch.md was edited and before WORKFLOW_PATCH_SHA256 was
       refreshed, test_workflow_patch_md_byte_identical failed with
-      "AssertionError: '767434ab...' != 'b2502b43...'". The test IDs of this
-      module are selected from the tests directory (python3 -m unittest
-      discover -s tests -p test_gate_option_vocabulary.py), because the module
-      imports _gate_vocabulary by its bare name. The other two tests are the
-      unchanged assertions of the same class (validator pin untouched by this
-      task) and are green before and after.
+      "AssertionError: '767434ab...' != 'b2502b43...'". After the refresh added
+      its comment paragraph directly above the assignment, the full suite run
+      showed test_the_pin_comment_names_this_task failing with "the comment
+      above the pin does not start with 'Refreshed again by
+      plan-feature-docs-route/task0007'": that test of another feature read
+      only the last comment paragraph. Its helper _pin_comment_defects now
+      reads every paragraph of the comment run above the pin (a deviation from
+      the planned files), and its negative proof still fires when the task0007
+      paragraph is renamed. The other two tests of the module are the unchanged
+      assertions of the same class (validator pin untouched by this task) and
+      are green before and after.

@@ -786,21 +786,32 @@ class TestSectionInputsApplicationAndOwnership(unittest.TestCase):
 
 
 def _pin_comment_defects(test_text):
-    """The comment paragraph directly above `WORKFLOW_PATCH_SHA256 = (` (the
-    comment lines after the last bare `#` separator) names this task."""
+    """The comment run directly above `WORKFLOW_PATCH_SHA256 = (` holds the
+    paragraph that names this task. The run is the consecutive `#` lines above
+    the assignment, its paragraphs separated by a bare `#`; a later refresh adds
+    its own paragraph below this one and this one stays."""
     marker = "    WORKFLOW_PATCH_SHA256 = ("
     if test_text.count(marker) != 1:
         return ["WORKFLOW_PATCH_SHA256 is not assigned exactly once"]
+    paragraphs = []
     block = []
     for line in reversed(test_text.split(marker, 1)[0].splitlines()):
         stripped = line.strip()
-        if not stripped.startswith("#") or stripped == "#":
+        if not stripped.startswith("#"):
             break
-        block.append(stripped)
-    comment = _norm(" ".join(reversed(block)))
-    if not comment.startswith("# Refreshed again by plan-feature-docs-route/task0007"):
+        if stripped == "#":
+            paragraphs.append(block)
+            block = []
+        else:
+            block.append(stripped)
+    paragraphs.append(block)
+    comments = [_norm(" ".join(reversed(p))) for p in paragraphs if p]
+    if not any(
+        c.startswith("# Refreshed again by plan-feature-docs-route/task0007")
+        for c in comments
+    ):
         return [
-            "the comment above the pin does not start with "
+            "no paragraph of the comment above the pin starts with "
             "'Refreshed again by plan-feature-docs-route/task0007'"
         ]
     return []
