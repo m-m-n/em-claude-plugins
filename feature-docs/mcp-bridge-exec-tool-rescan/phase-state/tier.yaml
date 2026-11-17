@@ -1,0 +1,13 @@
+schema_version: 2
+feature: mcp-bridge-exec-tool-rescan
+tier: full
+bases:
+  - basis: description_only
+    score:
+      type: score
+      score: 1.2
+      confidence: 0.8
+      probabilities: {"0": 0.0, "1": 0.8, "2": 0.2, "3": 0.0}
+    observed_at: "2026-11-18T08:44:30+09:00"
+decided_at: "2026-11-18T08:47:18+09:00"
+fallback_reason: "fallback_matrix:jev_only_usable: Codex pre-survey unusable; the final Jev call is skipped"
