@@ -1,0 +1,72 @@
+schema_version: 2
+feature: mixed-rm-self-config-deny
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.14
+    confidence: 0.86
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.86
+      '2': 0.14
+      '3': 0.0
+  observed_at: '2026-11-18T08:46:47+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.22
+    confidence: 0.78
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.79
+      '2': 0.2
+      '3': 0.01
+  observed_at: '2026-11-18T08:48:56+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - tests/test_destructive_guard_mixed_rm_precedence.py
+  - feature-docs/destructive-guard-mixed-rm-precedence/SPEC.md
+  - feature-docs/destructive-guard-mixed-rm-precedence/REQUIREMENTS.md
+  - feature-docs/destructive-guard-mixed-rm-precedence/VERIFICATION.md
+  changed_lines_approx: 55
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  work_still_required_evidence: em-workflow/hooks/destructive-guard.py:9430 と :9489
+    は対象番号付きの rm-root と rm-recursive の deny を生成する。同ファイルの :10364–10371 は自己設定パスに一致する対象が一つでもあれば真を返し、:10550–10555
+    と :10584–10588 は通常経路とコマンド置換経路の両方で、その rm の全記録を判定候補から外す。:10617–10621 は残った rm の deny
+    を優先し、なければ保持した ask を選ぶ。:418–432 はバッチ実行時に ask を deny に変え、理由 ID を引き継ぐ。em-workflow/hooks/tests/destructive-guard-cases.json:1249
+    と tests/test_destructive_guard_mixed_rm_precedence.py:271–275、:449 は混在時の ask /
+    self-modification を固定している。feature-docs/destructive-guard-mixed-rm-precedence/SPEC.md:52、:183、同ディレクトリの
+    REQUIREMENTS.md:334 と VERIFICATION.md:37 もこの期待値を記載している。テストランナーは一時ファイルを作成するため実行せず、ソースを読んで確認した（em-workflow/hooks/tests/run-destructive-guard.py:146–156、:248–259）。
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 2
+  body_change_kind: new_logic
+  change_containment: single_module
+  caller_and_dependency_count: 7
+  changes_external_contract: false
+  changes_behavior: true
+decided_at: '2026-11-18T08:48:59+09:00'
