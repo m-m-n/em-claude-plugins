@@ -59,6 +59,8 @@ Depth: deep (auth, input-handling)
 
 Note on TM-5: `declared_commands` also puts into the declared set, in addition to the value trimmed of spaces and tabs, the value with every leading and trailing U+0020, U+0009, U+0085, U+2028 and U+2029 removed, when that result is not empty. Mismatches produced by YAML escape notation, by block scalars, and by characters inside the value are out of scope; such invocations reach the normal permission prompt.
 
+Further note on TM-5: at the three places where `hook_main` consults the declared set (the early return taken when the command is not declared and the approval store file is absent, the workflow-relevance check, and the unapproved deny), the hook also matches the received command with every leading and trailing U+0020, U+0009, LF (U+000A), U+0085, U+2028 and U+2029 removed, when that result is not empty. No allow comes from this form. As a result, a command that pads a declared value at either end with LF, U+0085, U+2028 or U+2029 (alone or mixed with spaces and tabs) is denied as unapproved even when the value itself is approved; in a repository without that declaration it still gets no decision. The parsed result of a declaration made only of line-break characters (empty once both ends are removed), YAML escape notation, block scalars, and mismatches caused by characters inside the value remain out of scope; such invocations reach the normal permission prompt.
+
 ### TB-3: approval-gate input and the stored approval set
 Crossing: command lines that the orchestrator passes on stdin to
 `bash_guard.py --record` / `--remove` (text derived from a

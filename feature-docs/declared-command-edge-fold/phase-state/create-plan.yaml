@@ -1,7 +1,7 @@
 schema_version: 1
 feature: declared-command-edge-fold
 phase: create-plan
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: e3da8a93fcd598a81143e2f57e134de6b1a9a3cd
 last_input_digest: sha256:34011b3dde6a4cb19aae03cf479d081613c466c5a678a5ab083b3e362cc183e5
@@ -27,9 +27,9 @@ worker_runs:
     plugin:skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
   self_write_set: []
 - request_id: create-plan-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:34011b3dde6a4cb19aae03cf479d081613c466c5a678a5ab083b3e362cc183e5
-  output_digest: null
+  output_digest: sha256:f4ff3223cc5eb2c98f9fe4b41acfb5bd337df7da310a9c0aa518e624b5e473ac
   dispatch_digest_inputs:
     feature-docs/approval-unicode-whitespace/SPEC.md: sha256:add56939732b15cd6ede90587cba2adafb0895fd223a3316f53f977db6b0f66e
     feature-docs/approval-unicode-whitespace/THREAT-MODEL.md: sha256:9c6d5a431080baa767c89a53ce33557993ccad707c7f7d65e19b8a02c0c353a2
@@ -46,9 +46,73 @@ worker_runs:
     plugin:references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
     plugin:references/workflow-schema.md: sha256:e7f6fe6f01e107217ab47c620a3f22df5582d0d203a8ed8999807381734551f5
     plugin:skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
-artifacts: []
-patches: []
+  self_write_set:
+  - feature-docs/approval-unicode-whitespace/SPEC.md
+  - feature-docs/approval-unicode-whitespace/THREAT-MODEL.md
+  - feature-docs/declared-command-edge-fold/IMPLEMENTATION.md
+  - feature-docs/declared-command-edge-fold/THREAT-MODEL.md
+  - feature-docs/declared-command-edge-fold/VERIFICATION.md
+  - feature-docs/declared-command-edge-fold/tasks/task0001.md
+  - feature-docs/declared-command-yaml-breaks/SPEC.md
+  - feature-docs/declared-command-yaml-breaks/THREAT-MODEL.md
+artifacts:
+- path: feature-docs/declared-command-edge-fold/IMPLEMENTATION.md
+  sha256: sha256:b72168200155fe8772e11441406e945714a57496def3214f71f5836d7792da4b
+  produced_by: create-plan-run-0002
+- path: feature-docs/declared-command-edge-fold/VERIFICATION.md
+  sha256: sha256:c574109b9ed5f104c6accfb658acca03b44f1f33f8f3119f41f4e7d9c29b68db
+  produced_by: create-plan-run-0002
+- path: feature-docs/declared-command-edge-fold/THREAT-MODEL.md
+  sha256: sha256:f08fee1cd45763d8912a351b3ccb006f8bc0b411f0e234f4d6dc39bd0e58fc5f
+  produced_by: create-plan-run-0002
+- path: feature-docs/declared-command-edge-fold/tasks/task0001.md
+  sha256: sha256:751f378af9966d56d0f3dd7ccc2041c461e4500e9ade86e30df430d2cc54c109
+  produced_by: create-plan-run-0002
+- path: feature-docs/approval-unicode-whitespace/SPEC.md
+  sha256: sha256:62e007f739c48eb060ce9555c8348a19ac90960244f3e10503f3a4a9340ebe4c
+  produced_by: create-plan-run-0002
+- path: feature-docs/approval-unicode-whitespace/THREAT-MODEL.md
+  sha256: sha256:97b7a82a2d154bd4fa3481aa15d13da93038ca705983f21439803c58adc3aeae
+  produced_by: create-plan-run-0002
+- path: feature-docs/declared-command-yaml-breaks/SPEC.md
+  sha256: sha256:1f96cd827dcfbe22ee8fb5e2eb647c9100b64eed9424976a3f663135a6b822c2
+  produced_by: create-plan-run-0002
+- path: feature-docs/declared-command-yaml-breaks/THREAT-MODEL.md
+  sha256: sha256:acbf4f7c81c7d3c9d69e803b1f028061756bbd0bb4cb3bec7edc87153356c455
+  produced_by: create-plan-run-0002
+patches:
+- patch_id: create-plan-p0001
+  status: validated
+  base_input_digest: sha256:34011b3dde6a4cb19aae03cf479d081613c466c5a678a5ab083b3e362cc183e5
+  base_workflow_blob: 801a90072b896809bd2669c5e0cfe1cef5d02971
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
 last_error: null
+other_feature_doc_fixes:
+- path: feature-docs/approval-unicode-whitespace/SPEC.md
+  change: 'Inserted three sub-bullets at the end of FR8 (no existing line changed):
+    the hook_main end-stripped declared match, the widened deny, and the out-of-scope
+    cases.'
+  reason: declared-command-edge-fold FR5 / SPEC.md AC9 requires appending these three
+    points to approval-unicode-whitespace SPEC.md FR8.
+  produced_by: create-plan-run-0002
+- path: feature-docs/approval-unicode-whitespace/THREAT-MODEL.md
+  change: Inserted a 'Further note on TM-5' paragraph after the existing 'Note on
+    TM-5' (no existing line changed), stating the same three points.
+  reason: declared-command-edge-fold FR5 / SPEC.md AC9 requires appending these three
+    points to approval-unicode-whitespace THREAT-MODEL.md TM-5.
+  produced_by: create-plan-run-0002
+- path: feature-docs/declared-command-yaml-breaks/SPEC.md
+  change: 'Inserted three sub-bullets at the end of FR1 (no existing line changed):
+    the hook_main end-stripped declared match (forms (a)/(b) unchanged), the widened
+    deny, and the out-of-scope cases.'
+  reason: declared-command-edge-fold FR5 / SPEC.md AC9 requires appending these three
+    points to declared-command-yaml-breaks SPEC.md FR1.
+  produced_by: create-plan-run-0002
+- path: feature-docs/declared-command-yaml-breaks/THREAT-MODEL.md
+  change: Inserted a 'Note on TM-1' paragraph after the TB-1 table (no existing line
+    changed), stating the same three points.
+  reason: declared-command-edge-fold FR5 / SPEC.md AC9 requires appending these three
+    points to declared-command-yaml-breaks THREAT-MODEL.md TM-1.
+  produced_by: create-plan-run-0002
