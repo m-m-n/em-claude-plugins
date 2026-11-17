@@ -1,0 +1,86 @@
+task_id: task0002
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 16217 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 16227 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_final_path_correction_docs.TestEntriesBulletStatesTheBindingRejection.test_the_bullet_states_every_part_of_the_binding_rejection
+      - tests.test_final_path_correction_docs.TestEntriesBulletStatesTheBindingRejection.test_the_slice_is_the_entries_bullet_with_its_canonical_text_rule
+    red_confirmed: true
+    red_reason: >-
+      Run against workflow-patch.md before it was edited,
+      test_the_bullet_states_every_part_of_the_binding_rejection failed with
+      "Lists differ: ['existing-entry-at-the-task-file',
+      'kinds-and-dangling-symlink', ...] != []" (all six matchers reported
+      missing). The slice test is green before and after by design: it pins
+      that the matched text is the path-correction-entries bullet and keeps its
+      canonical-text rule.
+  AC-2:
+    tests:
+      - tests.test_final_path_correction_docs.TestEntriesBulletStatesTheBindingRejection.test_negative_every_matcher_fails_on_the_pre_change_bullet
+      - tests.test_final_path_correction_docs.TestEntriesBulletStatesTheBindingRejection.test_negative_each_matcher_fails_on_a_copy_that_drops_its_phrase
+      - tests.test_final_path_correction_docs.TestEntriesBulletStatesTheBindingRejection.test_negative_the_rule_stated_outside_the_bullet_is_not_accepted
+      - tests.test_final_path_correction_docs.TestEntriesBulletStatesTheBindingRejection.test_negative_a_limits_text_without_the_entries_bullet_is_rejected
+    red_confirmed: true
+    red_reason: >-
+      Run against workflow-patch.md before it was edited,
+      test_negative_each_matcher_fails_on_a_copy_that_drops_its_phrase failed
+      for all six matchers ("assertNotEqual(forged, bullet)": the phrase was not
+      in the bullet, so there was nothing to drop). The other three negative
+      proofs work on the verbatim pre-change bullet constant
+      (PRE_BINDING_ENTRIES_BULLET) or on forged text, so they are green before
+      and after by design; they show that each matcher fails on the pre-change
+      text, that the rule stated outside the bullet is not accepted, and that a
+      limits text without the bullet raises.
+  AC-3:
+    tests:
+      - tests.test_final_path_correction_docs.TestMediumFixesLimitsOutsideTheConditions.test_the_limits_state_both_codes_and_the_fr1_rules
+      - tests.test_final_path_correction_docs.TestMediumFixesLimitsOutsideTheConditions.test_the_limits_add_no_numbered_item
+      - tests.test_final_path_correction_docs.TestMediumFixesLimitsOutsideTheConditions.test_the_limits_sit_between_the_comparison_and_ownership
+      - tests.test_final_path_correction_docs.TestMediumFixesConditionWording.test_the_numbered_conditions_stay_five_and_carry_their_codes
+      - tests.test_final_path_correction_docs.TestMediumFixesRetainedWording.test_no_sentence_says_both_versions_are_normalized_to_one_text
+      - tests.test_final_path_correction_docs.TestMediumFixesRetainedWording.test_every_retained_phrase_is_still_present
+      - tests.test_final_path_correction_docs.TestNewTextCarriesNoForbiddenContent.test_new_sections_have_no_notion_url_home_path_or_regex
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing classes
+      TestMediumFixesLimitsOutsideTheConditions,
+      TestMediumFixesConditionWording, TestMediumFixesRetainedWording and
+      TestNewTextCarriesNoForbiddenContent in
+      tests/test_final_path_correction_docs.py detect a lost LIMITS_NEEDLES
+      string, a numbered item in the limits text, a sentence that says both
+      versions are normalized to one text, and a home path or an external URL;
+      no red state occurred for this change. The document edit adds sentences
+      to the bullet and removes none of the pinned wording.
+  AC-4:
+    tests:
+      - tests.test_final_path_correction_docs.TestFinalPathCorrectionModulesImportOnlyTheStandardLibrary.test_each_module_imports_only_the_standard_library
+      - tests.test_final_path_correction_docs.TestFinalPathCorrectionModulesImportOnlyTheStandardLibrary.test_negative_the_check_fires_on_a_forged_third_party_import
+      - tests.test_final_path_correction_docs.TestFinalPathCorrectionModulesImportOnlyTheStandardLibrary.test_negative_a_third_party_import_added_to_a_real_module_is_found
+      - tests.test_final_path_correction_docs.TestFinalPathCorrectionModulesImportOnlyTheStandardLibrary.test_negative_a_relative_import_is_not_allowed_unless_named
+      - tests.test_final_path_correction_docs.TestFinalPathCorrectionModulesImportOnlyTheStandardLibrary.test_negative_the_check_is_quiet_on_standard_library_imports
+    red_confirmed: false
+    red_reason: >-
+      The property pre-existed: tests/test_final_path_correction.py and
+      tests/test_final_path_correction_docs.py already import standard-library
+      modules only, so the new class was green from its first run and no red
+      state occurred. No existing test checks the imports of these two modules
+      (a search of tests/ by the path and by the basename test_final_path_correction
+      found only the docs test itself and tests that read it as text). The
+      negative proofs show the check fires on a forged third-party import, on
+      one appended to each real module, and on a relative import.
+  AC-5:
+    tests:
+      - test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_workflow_patch_md_byte_identical
+      - test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_validate_worker_output_py_byte_identical
+      - test_gate_option_vocabulary.TestFrozenMachineReadSurface.test_pinned_validator_test_line_unchanged
+    red_confirmed: true
+    red_reason: >-
+      After workflow-patch.md was edited and before WORKFLOW_PATCH_SHA256 was
+      refreshed, test_workflow_patch_md_byte_identical failed with
+      "AssertionError: '767434ab...' != 'b2502b43...'". The test IDs of this
+      module are selected from the tests directory (python3 -m unittest
+      discover -s tests -p test_gate_option_vocabulary.py), because the module
+      imports _gate_vocabulary by its bare name. The other two tests are the
+      unchanged assertions of the same class (validator pin untouched by this
+      task) and are green before and after.
