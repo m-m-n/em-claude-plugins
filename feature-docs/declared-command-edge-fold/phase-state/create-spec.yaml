@@ -1,12 +1,20 @@
 schema_version: 1
 feature: declared-command-edge-fold
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: da4e2ee3fcf7cde758b94f4c65efbd9250976971
 last_input_digest: sha256:51d1ea45db41fde30121531d91187de4085a3cf19afa8c2277be123511ce300b
 active_request_id: create-spec-run-0001
-packets: {}
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-11-18T00:25:00+09:00'
+    questions:
+    - question_id: mitigation.edge-fold.approach
+      status: answered
+    - question_id: design.step.recommendation
+      status: answered
 answers:
   create-spec.feature-identity:
     packet_id: null
@@ -17,9 +25,39 @@ answers:
     - derive_from_task_description
     freeform: null
     normalized_answer: 'feature name derived from the task description: declared-command-edge-fold'
+  mitigation.edge-fold.approach:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-18T00:30:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - hook_side_end_strip
+    freeform: null
+    normalized_answer: '案1: hook_main の宣言集合との照合 3 か所すべてで、元の照合に加えて、受け取ったコマンドの両端から U+0020・U+0009・LF・U+0085・U+2028・U+2029
+      を除いた形も宣言集合と照合する。受け取ったコマンド自体は書き換えず、exact と cd 前置形の許可条件と判定順序は変えない。declared_commands
+      の 2 つの形は変えない。拒否範囲の拡大（宣言値の端に改行文字を付けた形は承認済みの値でも未承認として deny）を文書に明記する。両端除去後に空になる宣言（改行文字だけの値）の解析結果は対象外として記録する。'
+    resolution_note: 'gate: create-spec.requirement-clarification; analyst tentative
+      position hook_side_end_strip; codex_consulted: true (harness entry: codex, 1
+      turn); Codex chose hook_side_end_strip because it avoids re-implementing PyYAML
+      folding and covers mixed/repeated edge characters; orchestrator mapped it to
+      hook_side_end_strip because it closes every attack form independent of the YAML
+      reader, keeps allow unchanged (TM-2), and needs one existing test expectation
+      change versus about three for the other option; Codex caveat (values empty after
+      stripping are not covered) recorded as out of scope; opus_escalation: not run'
+  design.step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-18T00:30:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design step skipped per requirements-analyst recommendation
+      (UI の無いフック内部の照合変更)
+    resolution_note: 'gate: create-spec.design-step; batch policy select decide_autonomously'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:51d1ea45db41fde30121531d91187de4085a3cf19afa8c2277be123511ce300b
   output_digest: null
   dispatch_digest_inputs:

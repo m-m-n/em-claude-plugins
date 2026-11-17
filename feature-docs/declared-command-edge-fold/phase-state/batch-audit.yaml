@@ -1,0 +1,22 @@
+schema_version: 1
+feature: declared-command-edge-fold
+records:
+- question_id: mitigation.edge-fold.approach
+  packet_id: create-spec-q0001
+  answered_at: '2026-11-18T00:30:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - hook_side_end_strip
+  freeform: null
+  normalized_answer: '案1: hook_main の宣言集合との照合 3 か所すべてで、元の照合に加えて、受け取ったコマンドの両端から U+0020・U+0009・LF・U+0085・U+2028・U+2029
+    を除いた形も宣言集合と照合する。受け取ったコマンド自体は書き換えず、exact と cd 前置形の許可条件と判定順序は変えない。declared_commands
+    の 2 つの形は変えない。拒否範囲の拡大（宣言値の端に改行文字を付けた形は承認済みの値でも未承認として deny）を文書に明記する。両端除去後に空になる宣言（改行文字だけの値）の解析結果は対象外として記録する。'
+  resolution_note: 'gate: create-spec.requirement-clarification; analyst tentative
+    position hook_side_end_strip; codex_consulted: true (harness entry: codex, 1 turn);
+    Codex chose hook_side_end_strip because it avoids re-implementing PyYAML folding
+    and covers mixed/repeated edge characters; orchestrator mapped it to hook_side_end_strip
+    because it closes every attack form independent of the YAML reader, keeps allow
+    unchanged (TM-2), and needs one existing test expectation change versus about
+    three for the other option; Codex caveat (values empty after stripping are not
+    covered) recorded as out of scope; opus_escalation: not run'
