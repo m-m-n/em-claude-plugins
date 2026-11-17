@@ -1,11 +1,11 @@
 schema_version: 1
 feature: declared-command-edge-fold
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: e3da8a93fcd598a81143e2f57e134de6b1a9a3cd
 last_input_digest: sha256:34011b3dde6a4cb19aae03cf479d081613c466c5a678a5ab083b3e362cc183e5
-active_request_id: create-plan-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -82,7 +82,7 @@ artifacts:
   produced_by: create-plan-run-0002
 patches:
 - patch_id: create-plan-p0001
-  status: validated
+  status: applied
   base_input_digest: sha256:34011b3dde6a4cb19aae03cf479d081613c466c5a678a5ab083b3e362cc183e5
   base_workflow_blob: 801a90072b896809bd2669c5e0cfe1cef5d02971
 progress_fingerprint: null
