@@ -154,7 +154,7 @@ tasks:
     - NFR5
     - NFR6
     - NFR7
-    status: in_progress
+    status: merged
     branch: em-workflow/declared-command-edge-fold/task0001
     notes: null
 review:
