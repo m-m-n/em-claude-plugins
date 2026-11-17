@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 054c812a12bd5cc55e3dc480ac2680296d353699
 last_input_digest: sha256:80c7a51fc61ee83f131f585030a9cdc78b82985a07038382bb9a59501f6365d1
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -84,14 +84,23 @@ worker_runs:
     test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
   self_write_set: []
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:80c7a51fc61ee83f131f585030a9cdc78b82985a07038382bb9a59501f6365d1
-  output_digest: null
+  output_digest: sha256:d75aa49a20b3a7341109f37cd0acc123bb925ced573f0d11da9342ba25fff214
   dispatch_digest_inputs:
     em-workflow/references/contracts/spec-writer-contract.md: sha256:1e63f69687c6850e890f66b5ca92af7f3b0d02645cc464fca88455ad2269d671
     em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
     em-workflow/references/templates/spec-document.md: sha256:a5d0106c39a5df7dc2365357a9546588275ed6c7a1651c866e75fa327a7fa592
-artifacts: []
+  self_write_set:
+  - feature-docs/mcp-bridge-exec-tool-rescan/REQUIREMENTS.md
+  - feature-docs/mcp-bridge-exec-tool-rescan/SPEC.md
+artifacts:
+- path: feature-docs/mcp-bridge-exec-tool-rescan/REQUIREMENTS.md
+  sha256: sha256:045f3523d2d04d09e83c6b3266190532a28dfe47b368c6c66e5e4cf8309da09b
+  produced_by: create-spec-run-0003
+- path: feature-docs/mcp-bridge-exec-tool-rescan/SPEC.md
+  sha256: sha256:dd0f8da5fb6cbfc84d298bccd608c380aae1b627c1b6cc174ca4944cb0b1b9f6
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
