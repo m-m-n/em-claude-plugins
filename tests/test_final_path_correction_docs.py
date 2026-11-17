@@ -1521,6 +1521,205 @@ class TestMediumFixesLimitsOutsideTheConditions(unittest.TestCase):
         self.assertNotEqual(_missing(forged, LIMITS_NEEDLES), [])
 
 
+# The `path-correction-entries` bullet of the limits as it stood at the base
+# revision, before final-path-plan-binding/task0002 (verbatim, captured from
+# the base revision of em-workflow/references/workflow-patch.md).
+PRE_BINDING_ENTRIES_BULLET = (
+    "- `path-correction-entries` — every item of `tasks_patch.entries` has a\n"
+    "  non-empty `files`, and every file is a regular file at the base commit whose\n"
+    "  text holds an old path or a bare old file name of the patch's corrections\n"
+    "  (an occurrence as defined above). A file that cannot be read as text within\n"
+    "  the existing read limit is rejected. Each file of an entry, and each old\n"
+    "  path and new path rendered into its plan, passes the form check of\n"
+    "  condition 4. The plan of an entry is byte-equal to the canonical text that\n"
+    "  the validator renders from the task's id, its `files` and the corrections\n"
+    "  whose old path or bare old file name occurs in those files at the base\n"
+    "  commit: a title, the Files section, and one acceptance criterion for each\n"
+    "  such correction stating that the old reference is replaced by the new one,\n"
+    "  and nothing else, a plan named TASK.md included."
+)
+# (label, phrase) of each part of the binding rejection that the bullet states.
+# The phrases do not overlap, so dropping one leaves the others in place.
+BINDING_MATCHERS = (
+    (
+        "existing-entry-at-the-task-file",
+        "an entry of any kind exists now at `tasks/{T}.md` under the feature directory",
+    ),
+    (
+        "kinds-and-dangling-symlink",
+        "(a regular file, a directory, or a symlink, a dangling one included)",
+    ),
+    (
+        "plan-compared-after-path-segments",
+        "the item's `plan`, compared after `path_segments` normalization, "
+        "is not `tasks/{T}.md`",
+    ),
+    (
+        "indeterminate-counts-as-existing",
+        "A state of `tasks/{T}.md` that cannot be determined counts as existing",
+    ),
+    (
+        "error-names-task-and-path",
+        "The error carries the task id and the path `tasks/{T}.md`",
+    ),
+    (
+        "no-requirement-without-an-entry",
+        "does not require `tasks/{T}.md` for a plan when no such entry exists",
+    ),
+)
+
+
+def _entries_bullet(limits):
+    """The `path-correction-entries` bullet of the limits text (normalized):
+    from its opening marker up to the next blank line. Raises ValueError when
+    the bullet is absent."""
+    start = limits.index("- `path-correction-entries`")
+    blank = re.search(r"\n\s*\n", limits[start:])
+    end = start + blank.start() if blank else len(limits)
+    return _norm(limits[start:end])
+
+
+def _binding_defects(bullet):
+    """The labels of the binding-rejection parts the bullet does not state."""
+    flat = _norm(bullet)
+    return [label for label, phrase in BINDING_MATCHERS if _norm(phrase) not in flat]
+
+
+class TestEntriesBulletStatesTheBindingRejection(unittest.TestCase):
+    """AC-1 and AC-2 of final-path-plan-binding/task0002 (TS-10): the
+    `path-correction-entries` bullet states the binding rejection of the
+    correction entry, and every matcher fails on the bullet's pre-change text
+    and on a copy with its phrase removed."""
+
+    @classmethod
+    def setUpClass(cls):
+        section = _correction_section()
+        cls.limits = _between(section, "**Limits on entries", "**Ownership.**")
+        cls.bullet = _entries_bullet(cls.limits)
+
+    def test_the_bullet_states_every_part_of_the_binding_rejection(self):
+        self.assertEqual(_binding_defects(self.bullet), [])
+
+    def test_the_slice_is_the_entries_bullet_with_its_canonical_text_rule(self):
+        self.assertTrue(self.bullet.startswith("- `path-correction-entries`"))
+        self.assertNotIn("`path-correction-requirements`", self.bullet)
+        self.assertIn("a plan named TASK.md included", self.bullet)
+
+    # -- negative proofs ----------------------------------------------------
+
+    def test_negative_every_matcher_fails_on_the_pre_change_bullet(self):
+        self.assertEqual(
+            _entries_bullet(PRE_BINDING_ENTRIES_BULLET), _norm(PRE_BINDING_ENTRIES_BULLET)
+        )
+        self.assertEqual(
+            _binding_defects(PRE_BINDING_ENTRIES_BULLET),
+            [label for label, _phrase in BINDING_MATCHERS],
+        )
+
+    def test_negative_each_matcher_fails_on_a_copy_that_drops_its_phrase(self):
+        for label, phrase in BINDING_MATCHERS:
+            with self.subTest(matcher=label):
+                forged = self.bullet.replace(_norm(phrase), "")
+                self.assertNotEqual(forged, self.bullet)
+                self.assertEqual(_binding_defects(forged), [label])
+
+    def test_negative_the_rule_stated_outside_the_bullet_is_not_accepted(self):
+        phrases = " ".join(phrase for _label, phrase in BINDING_MATCHERS)
+        forged_limits = (
+            PRE_BINDING_ENTRIES_BULLET
+            + "\n\nThe Re-planning path is not limited.\n\n"
+            + phrases
+            + "\n"
+        )
+        self.assertEqual(_missing(forged_limits, [p for _l, p in BINDING_MATCHERS]), [])
+        self.assertEqual(
+            _binding_defects(_entries_bullet(forged_limits)),
+            [label for label, _phrase in BINDING_MATCHERS],
+        )
+
+    def test_negative_a_limits_text_without_the_entries_bullet_is_rejected(self):
+        with self.assertRaises(ValueError):
+            _entries_bullet("- `path-correction-requirements` — x\n\nThe Re-planning path.")
+
+
+# Relative or local imports that the two final-path-correction test modules may
+# carry. None: both import standard-library modules by absolute name only.
+ALLOWED_LOCAL_IMPORTS = frozenset()
+FINAL_PATH_CORRECTION_TEST_MODULES = (
+    REPO_ROOT / "tests" / "test_final_path_correction.py",
+    REPO_ROOT / "tests" / "test_final_path_correction_docs.py",
+)
+
+
+def _hygiene_imported_modules(source):
+    """The top-level module of every import statement of `source`, at any
+    depth. A relative import is reported as its dots plus its module."""
+    # Imported here so that the import block of this module stays untouched.
+    import ast
+
+    found = set()
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.Import):
+            found.update(alias.name.split(".")[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom):
+            if node.level:
+                found.add("." * node.level + (node.module or ""))
+            else:
+                found.add(node.module.split(".")[0])
+    return found
+
+
+def _hygiene_non_standard_imports(source):
+    """The imported top-level modules that are neither in the standard library
+    of the running interpreter nor named in ALLOWED_LOCAL_IMPORTS."""
+    import sys
+
+    return (
+        _hygiene_imported_modules(source)
+        - set(sys.stdlib_module_names)
+        - ALLOWED_LOCAL_IMPORTS
+    )
+
+
+class TestFinalPathCorrectionModulesImportOnlyTheStandardLibrary(unittest.TestCase):
+    """AC-4 of final-path-plan-binding/task0002 (TS-11, NFR3): the two
+    final-path-correction test modules import only the standard library. The
+    modules are read as text and parsed; they are not imported."""
+
+    def test_each_module_imports_only_the_standard_library(self):
+        for path in FINAL_PATH_CORRECTION_TEST_MODULES:
+            with self.subTest(module=path.name):
+                source = _read(path)
+                self.assertTrue(_hygiene_imported_modules(source))
+                self.assertEqual(_hygiene_non_standard_imports(source), set())
+
+    # -- negative proofs ----------------------------------------------------
+
+    def test_negative_the_check_fires_on_a_forged_third_party_import(self):
+        self.assertEqual(_hygiene_non_standard_imports("import requests\n"), {"requests"})
+        self.assertEqual(
+            _hygiene_non_standard_imports("from yaml import safe_load\n"), {"yaml"}
+        )
+        self.assertEqual(
+            _hygiene_non_standard_imports("def f():\n    import numpy.linalg\n"), {"numpy"}
+        )
+
+    def test_negative_a_third_party_import_added_to_a_real_module_is_found(self):
+        for path in FINAL_PATH_CORRECTION_TEST_MODULES:
+            with self.subTest(module=path.name):
+                forged = _read(path) + "\nimport requests\n"
+                self.assertEqual(_hygiene_non_standard_imports(forged), {"requests"})
+
+    def test_negative_a_relative_import_is_not_allowed_unless_named(self):
+        self.assertEqual(_hygiene_non_standard_imports("from . import helper\n"), {"."})
+        self.assertEqual(_hygiene_non_standard_imports("from .util import x\n"), {".util"})
+        self.assertEqual(ALLOWED_LOCAL_IMPORTS, frozenset())
+
+    def test_negative_the_check_is_quiet_on_standard_library_imports(self):
+        source = "import os.path\nimport json\nfrom pathlib import Path\nimport importlib.util\n"
+        self.assertEqual(_hygiene_non_standard_imports(source), set())
+
+
 class TestMediumFixesRetainedWording(unittest.TestCase):
     """AC-5 of task0003: the pinned phrases stay."""
 

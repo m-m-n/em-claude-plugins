@@ -642,7 +642,14 @@ outside the five numbered conditions, each under its own code:
   whose old path or bare old file name occurs in those files at the base
   commit: a title, the Files section, and one acceptance criterion for each
   such correction stating that the old reference is replaced by the new one,
-  and nothing else, a plan named TASK.md included.
+  and nothing else, a plan named TASK.md included. An item with key T is also
+  rejected when an entry of any kind exists now at `tasks/{T}.md` under the
+  feature directory (a regular file, a directory, or a symlink, a dangling one
+  included) and the item's `plan`, compared after `path_segments`
+  normalization, is not `tasks/{T}.md`. A state of `tasks/{T}.md` that cannot
+  be determined counts as existing. The error carries the task id and the path
+  `tasks/{T}.md`. The rule does not require `tasks/{T}.md` for a plan when no
+  such entry exists.
 
 The Re-planning path is not limited.
 
