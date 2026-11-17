@@ -136,7 +136,8 @@ workflow:
   - TM-7
   failed_items: []
 - id: retrospect
-  status: pending
+  status: completed
+  completed_at_commit: 671566ab6f943faf62599b9be4f9321bd4a9217e
 tasks:
   task0001:
     title: Bind the correction entry's plan to tasks/{T}.md in the validator
