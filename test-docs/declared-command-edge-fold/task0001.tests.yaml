@@ -1,0 +1,111 @@
+task_id: task0001
+# python3 -m unittest discover -s tests before any change in this worktree:
+# Ran 16217 tests, OK (skipped=1).
+baseline_failures: []
+# python3 -m unittest discover -s tests after the implementation and after this
+# record: no failure; subset of the baseline.
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_bash_guard_declared_edge_fold.TestAc1OppositeEnds.test_ac1_the_yaml_parsed_form_is_denied_as_unapproved
+      - tests.test_bash_guard_declared_edge_fold.TestAc1OppositeEnds.test_ac1_the_raw_form_and_the_bare_command_stay_denied_as_unapproved
+    red_confirmed: true
+    red_reason: >-
+      Before the hook change the YAML-parsed form of each of rows one to four
+      got no decision: "AssertionError: 'silent' != 'deny'" for each row. The
+      raw form and ./unapproved were already denied; that second test is the
+      guard and passed before and after.
+  AC-2:
+    tests:
+      - tests.test_bash_guard_declared_edge_fold.TestAc2RepeatedAndMixedEnds.test_ac2_the_yaml_parsed_form_is_denied_as_unapproved
+      - tests.test_bash_guard_declared_edge_fold.TestAc2RepeatedAndMixedEnds.test_ac2_the_denial_holds_for_every_command_key
+    red_confirmed: true
+    red_reason: >-
+      Before the hook change the YAML-parsed form of each of rows five to ten
+      got no decision ("AssertionError: 'silent' != 'deny'"), and so did row
+      five under each of the four command keys.
+  AC-3:
+    tests:
+      - tests.test_bash_guard_declared_edge_fold.TestAc3SingleQuotesAndMissingStore.test_ac3_single_quoted_declarations_deny_the_yaml_parsed_form
+      - tests.test_bash_guard_declared_edge_fold.TestAc3SingleQuotesAndMissingStore.test_ac3_a_missing_approval_store_still_denies_the_yaml_parsed_form
+      - tests.test_bash_guard_declared_edge_fold.TestAc3SingleQuotesAndMissingStore.test_ac3_a_missing_approval_store_gets_no_decision_without_a_declaration
+    red_confirmed: true
+    red_reason: >-
+      Before the hook change the single-quoted declarations of all ten rows and
+      the early-return case (approval store file absent, row one) got no
+      decision: "AssertionError: 'silent' != 'deny'". The no-declaration test
+      is the control and passed before and after.
+  AC-4:
+    tests:
+      - tests.test_bash_guard_declared_edge_fold.TestAc4NoWidenedAllow.test_ac4_without_a_declaration_every_yaml_parsed_form_gets_no_decision
+      - tests.test_bash_guard_declared_edge_fold.TestAc4NoWidenedAllow.test_ac4_no_form_is_allowed_with_or_without_the_declaration
+      - tests.test_bash_guard_declared_edge_fold.TestAc4NoWidenedAllow.test_ac4_the_approved_command_is_allowed_in_both_kinds_of_repository
+      - tests.test_bash_guard_declared_edge_fold.TestAc4NoWidenedAllow.test_ac4_no_break_space_padding_gets_no_decision_in_a_declaring_repository
+      - tests.test_bash_guard_declared_edge_fold.TestAc4NoWidenedAllow.test_ac4_a_declaration_of_newline_characters_only_gets_no_decision
+      - tests.test_bash_guard_declared_edge_fold.TestAc4NoWidenedAllow.test_ac4_the_cd_prefixed_approved_command_with_a_trailing_u2028_keeps_its_verdict
+    red_confirmed: false
+    red_reason: >-
+      These are regression guards for behavior the change must not alter
+      (no decision, no allow, the approved command's allow, U+00A0 padding, an
+      empty end-stripped form, and the cd-prefixed form). All six passed
+      against the unchanged hook; no red state occurs for them. The verdict of
+      the unchanged hook for the cd-prefixed command with a trailing U+2028 was
+      recorded before the hook was edited: no decision.
+  AC-5:
+    tests:
+      - tests.test_bash_guard_declared_edge_fold.TestAc5ApprovedCommandPaddedAtAnEnd.test_ac5_the_padded_forms_are_denied_where_the_command_is_declared
+      - tests.test_bash_guard_declared_edge_fold.TestAc5ApprovedCommandPaddedAtAnEnd.test_ac5_the_padded_forms_get_no_decision_without_a_declaration
+    red_confirmed: true
+    red_reason: >-
+      Before the hook change the four padded forms of the approved command
+      (trailing LF, leading U+0085, trailing U+2028, trailing U+2029) got no
+      decision where the command is declared: "AssertionError: 'silent' !=
+      'deny'". The no-declaration test is the control and passed before and
+      after.
+  AC-6:
+    tests:
+      - tests.test_bash_guard_declared_edge_fold.TestAc6DeclaredCommandsIsUnchanged.test_ac6_a_declaration_of_row_one_adds_exactly_the_raw_value_and_the_bare_command
+      - tests.test_bash_guard_declared_yaml_breaks.TestAc4OtherQuotingAndEmptyResults.test_ac4_single_quoted_and_unquoted_declarations_put_both_forms_into_the_set
+      - tests.test_bash_guard_declared_yaml_breaks.TestAc4OtherQuotingAndEmptyResults.test_ac4_a_value_that_is_empty_after_end_stripping_adds_no_form_b_entry
+      - tests.test_bash_guard_declared_yaml_breaks.TestAc4OtherQuotingAndEmptyResults.test_ac4_blanks_around_a_break_only_value_are_trimmed_for_form_a_only
+      - tests.test_bash_guard_declared_yaml_breaks.TestAc4OtherQuotingAndEmptyResults.test_ac4_a_value_without_removable_ends_contributes_one_entry
+      - tests.test_bash_guard_declared_yaml_breaks.TestAc5OtherWhitespaceIsNotRemoved.test_ac5_other_whitespace_at_an_end_of_a_quoted_value_is_not_removed
+      - tests.test_bash_guard_declared_yaml_breaks.TestAc5OtherWhitespaceIsNotRemoved.test_ac5_removal_stops_at_the_first_character_outside_the_set
+      - tests.test_bash_guard_declared_yaml_breaks.TestAc6NoAllowPathIsWidened.test_ac6_no_padded_or_end_stripped_unapproved_command_is_allowed
+    red_confirmed: true
+    red_reason: >-
+      Only the changed expectation of test_ac6_no_padded_or_end_stripped_
+      unapproved_command_is_allowed went red: run against the hook as it was
+      before the change, the forms padded at both ends with U+0085, U+2028 and
+      U+2029 gave "AssertionError: 'silent' != 'deny'". The direct
+      declared_commands call and the set-comparison tests of the existing file
+      are guards for unchanged behavior and passed before and after; they are
+      unmodified. No existing deny case was removed.
+  AC-7:
+    tests:
+      - tests.test_bash_guard_declared_edge_fold.TestAc7SourceConstraints.test_ac7_exactly_one_module_level_constant_holds_the_six_characters
+      - tests.test_bash_guard_declared_edge_fold.TestAc7SourceConstraints.test_ac7_the_five_character_declared_end_strip_is_unchanged
+      - tests.test_bash_guard_declared_edge_fold.TestAc7SourceConstraints.test_ac7_the_constant_is_not_placed_between_the_declared_helper_definitions
+      - tests.test_bash_guard_declared_edge_fold.TestAc7SourceConstraints.test_ac7_the_helpers_are_defined_once_and_in_order
+      - tests.test_bash_guard_declared_edge_fold.TestAc7SourceConstraints.test_ac7_only_hook_main_uses_the_constant
+      - tests.test_bash_guard_declared_edge_fold.TestAc7SourceConstraints.test_ac7_the_hook_source_has_no_raw_next_line_or_separator_character
+      - tests.test_bash_guard_declared_edge_fold.TestAc7SourceConstraints.test_ac7_the_hook_imports_only_standard_library_modules
+      - tests.test_bash_guard_declared_edge_fold.TestAc7SourceConstraints.test_ac7_the_module_docstring_names_the_characters_and_keeps_its_pinned_phrases
+      - tests.test_bash_guard_declared_edge_fold.TestAc7SourceConstraints.test_ac7_this_module_imports_only_standard_library_modules
+      - tests.test_bash_guard_declared_edge_fold.TestAc7SourceConstraints.test_ac7_this_module_source_has_only_ascii_characters
+      - tests.test_bash_guard_unicode_whitespace.TestAc7Documentation.test_ac7_the_hook_source_has_no_status_substring
+      - tests.test_bash_guard_unicode_whitespace.TestAc7Documentation.test_ac7_the_docstring_states_the_space_and_tab_only_trim
+    red_confirmed: true
+    red_reason: >-
+      Before the hook change the constant test failed ("0 != 1": no
+      module-level constant of the six characters), the usage test and the
+      placement test failed for the same reason, and the docstring test failed
+      for U+0085, U+2028, U+2029 and end-stripped (those phrases were absent
+      from the module docstring). The remaining source tests
+      (imports, raw characters, ordering, ASCII-only, no status substring, the
+      pinned phrases) are guards that passed before and after. That the
+      comments of hook_main describe the match, and the wording of the
+      docstring beyond the code points, are checked in review. The no
+      plugin.json / marketplace.json edit is not executable here; the diff
+      touches neither.

@@ -9,7 +9,10 @@ Hook mode (no arguments; stdin = PreToolUse JSON):
   - refusal pattern in the command        -> deny (even if approved)
   - exact match in the approval store     -> allow
   - cd "<path>" && <approved command>     -> allow (see "cd prefix" below)
-  - declared in workflow.yaml, unapproved -> deny (run the approval gate)
+  - declared in workflow.yaml, unapproved -> deny (run the approval gate);
+    declared also matches the end-stripped form (U+0020, U+0009, U+000A,
+    U+0085, U+2028 and U+2029 removed from both ends; an empty one is not
+    declared); no allow ever comes from that form
   - anything else                         -> no decision (exit 0, no output;
                                              normal permission flow applies)
 
@@ -26,6 +29,15 @@ no-break space and the like). Such a command is denied as unapproved when a
 workflow.yaml declares it and gets no decision otherwise. A command that is
 empty after the removal gets no decision. Whitespace inside the command is
 never normalized.
+
+The declared check also matches the end-stripped form of the command: the
+command with every leading and trailing occurrence of U+0020, U+0009, U+000A,
+U+0085, U+2028 and U+2029 removed, in any number and any mix; no other
+character is removed. An empty end-stripped form is not declared. Only the
+declared checks use that form (the early return, the workflow-relevance check
+and the unapproved deny). The refusal check, the exact allow and the cd prefix
+allow keep judging the command after the space and tab trim, so no allow ever
+comes from the end-stripped form.
 
 cd prefix: a subagent's working directory does not survive between Bash
 calls, so an implementer runs an approved command as one call of the form
@@ -486,6 +498,13 @@ def emit(decision, reason, additional_context=None):
     json.dump(output, sys.stdout, ensure_ascii=False)
 
 
+# The six characters removed from both ends of the received command for the
+# declared check: U+0020, U+0009, U+000A, U+0085, U+2028 and U+2029. Only
+# hook_main uses it; no other character is removed, and it is separate from
+# DECLARED_END_STRIP, which keeps its five characters.
+DECLARED_MATCH_EDGE_CHARS = " \t\n\u0085\u2028\u2029"
+
+
 def hook_main():
     try:
         data = json.load(sys.stdin)
@@ -515,16 +534,23 @@ def hook_main():
             roots.append(candidate)
 
     declared = declared_commands(roots)
+    # Declared check (shared by the three places below): the command, or its
+    # end-stripped form when that is not empty, is in the declared set. Only
+    # the declared checks use the end-stripped form; no allow comes from it.
+    end_stripped = command.strip(DECLARED_MATCH_EDGE_CHARS)
+    is_declared = command in declared or (bool(end_stripped) and end_stripped in declared)
     store_path = approvals_path()
-    if command not in declared and not os.path.isfile(store_path):
-        return 0
+    if not is_declared and not os.path.isfile(store_path):
+        return 0  # declared check 1: not declared and no approval store file
 
     common_dir = git_common_dir(cwd)
     key = common_dir or os.path.realpath(cwd)
     approved = approved_for(load_store(store_path), key)
     exact = matchable and command in approved
     cd_candidate = matchable and is_cd_prefixed_approved(command, approved, common_dir)
-    if command not in declared and not exact and not cd_candidate:
+    # Declared check 2: a command declared through its end-stripped form is
+    # workflow-relevant too.
+    if not is_declared and not exact and not cd_candidate:
         return 0  # not workflow-relevant: stay silent
 
     reason = refusal_reason(command)
@@ -543,7 +569,9 @@ def hook_main():
             "em-workflow guard: 承認済みコマンドの worktree への cd 前置形"
             "（cd より後ろが approvals.json に完全一致）",
         )
-    elif command in declared:
+    elif is_declared:
+        # Declared check 3: the unapproved deny, also for the end-stripped
+        # form. The allows above judge the command itself, never that form.
         emit(
             "deny",
             "em-workflow guard: workflow.yaml 由来のコマンドが未承認だよ。コマンド承認ゲートを実行してから再試行して",
