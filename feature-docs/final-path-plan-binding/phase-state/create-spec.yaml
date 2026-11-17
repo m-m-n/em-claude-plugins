@@ -1,7 +1,7 @@
 schema_version: 1
 feature: final-path-plan-binding
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 14923a562128455fec925b77e5cb7b66c7359c61
 last_input_digest: sha256:7440fcae9ab131d28d61b22360391895b7333aab1a0401329d85c3659a161373
