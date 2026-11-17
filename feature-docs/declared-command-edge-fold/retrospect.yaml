@@ -1,0 +1,33 @@
+feature: declared-command-edge-fold
+collected_at: "2026-11-18T02:06:16+09:00"
+session_ids: [01a1ea78-a60b-709d-a321-b78bed58d1f2]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "fallback_matrix:jev_only_usable: Codex pre-survey unusable; the final Jev call is skipped"
+    bases:
+      - basis: description_only
+        score:
+          type: score
+          score: 1.22
+          confidence: 0.78
+          legend:
+            '0': '0'
+            '1': '1'
+            '2': '2'
+            '3': '3'
+          probabilities:
+            '0': 0.0
+            '1': 0.78
+            '2': 0.22
+            '3': 0.0
+        observed_at: '2026-11-18T00:11:58+09:00'
+follow_up_drafts: []
+lessons_candidates:
+  - "Review round 1 dismissed all 4 reviewer findings (1 false positive on FR5 documents edited before the diff base, architecture findings demoted as spec-mandated); diff-mode review does not see create-plan doc edits that precede base_commit."

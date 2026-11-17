@@ -152,7 +152,8 @@ workflow:
   - AC9
   - AC10
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: 778105caf663839f8e5c808a5cda1abc6c8eedf1
 tasks:
   task0001:
     title: hook_main six-character end-strip declared match and regression tests
