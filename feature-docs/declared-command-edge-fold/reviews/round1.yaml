@@ -1,0 +1,52 @@
+round: 1
+executed_at: "2026-11-18T01:42:45+09:00"
+scope:
+  review_mode: diff
+  base_commit: f35cc3df1f958b0c22e919b30c9805bdd994cf81
+  head_commit: bc2369ab566ac06d20825fb4d09573d2ab9bdbe6
+  changed_files:
+    - em-workflow/hooks/bash_guard.py
+    - test-docs/declared-command-edge-fold/task0001.tests.yaml
+    - tests/test_bash_guard_declared_edge_fold.py
+    - tests/test_bash_guard_declared_yaml_breaks.py
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings: []
+evaluation:
+  round_summary: "Round 1 (diff mode, cross_validation=true). Of the 4 reviewer findings, none is carried forward (1 high, 3 medium). spec#0 'FR5 additions to the 4 documents are missing' is a false positive: the 3 points were appended to approval-unicode-whitespace SPEC.md FR8 / THREAT-MODEL.md TM-5 and declared-command-yaml-breaks SPEC.md FR1 / THREAT-MODEL.md TM-1 in create-plan commit f91568c49, an ancestor of diff base f35cc3df, append-only; round1.yaml and command-execution-protocol.md unchanged, so AC9 is met. architecture#0 'hook_main god function' is a false positive: is_declared is computed once and reused at all three sites; SPEC NFR3 allows FR1 inside hook_main. architecture#0 'split SSOT for edge-strip sets' is demoted: SPEC FR2 keeps DECLARED_END_STRIP unchanged and AC-7 requires a separate six-character constant; the comment records the intentional difference. architecture#0 'tests coupled to private source layout' (high) is demoted: the TestAc7SourceConstraints assertions encode SPEC NFR1-NFR5 and task AC-7 following existing project practice; maintenance friction, not a correctness or security defect. Independent check: trim_blanks precedes the 6-char strip, the empty end-stripped form is guarded, exact and cd-prefix allows never consult the end-stripped form (TM-2 holds). No injection attempt found. Coverage: comprehensive, security, architecture, spec corroborated."
+  recommended_action: "complete"
+  action_rationale: "No critical/high/medium finding survives evaluation. The spec gap is already met by append-only document changes made before the diff base. The architecture findings are a false positive or spec-mandated design choices. Independent inspection confirmed that FR1-FR4 behave as specified with no widened allow path."
+dismissed_sites:
+  - {file: tests/test_bash_guard_declared_edge_fold.py, line: 410, run_id: "architecture#0", reason: "demoted"}
+  - {file: em-workflow/hooks/bash_guard.py, line: 504, run_id: "architecture#0", reason: "demoted"}
+  - {file: em-workflow/hooks/bash_guard.py, line: 540, run_id: "architecture#0", reason: "false positive"}
+  - {file: feature-docs/approval-unicode-whitespace/SPEC.md, line: null, run_id: "spec#0", reason: "false positive"}
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-declared-command-edge-fold-20261117T164225Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

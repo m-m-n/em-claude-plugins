@@ -123,7 +123,8 @@ workflow:
   base_commit: f35cc3df1f958b0c22e919b30c9805bdd994cf81
   completed_at_commit: b1bb4dc0687fedb97f6c60333aa61c9d4967af7d
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: bc2369ab566ac06d20825fb4d09573d2ab9bdbe6
 - id: verify
   status: pending
 - id: retrospect
@@ -159,8 +160,8 @@ tasks:
     branch: em-workflow/declared-command-edge-fold/task0001
     notes: null
 review:
-  status: pending
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
   plan:
     floor:
     - comprehensive
@@ -169,7 +170,11 @@ review:
     - spec
     discretionary: []
     cross_validation: true
-  perspectives: []
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
   residual_critical_high: 0
   needs_rework: false
 requirements:
