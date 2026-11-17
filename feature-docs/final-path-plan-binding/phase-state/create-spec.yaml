@@ -1,0 +1,33 @@
+schema_version: 1
+feature: final-path-plan-binding
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: e47df1aacc64fc6372258f45ea906bdbde4ccbd7
+last_input_digest: sha256:970d147b621444b9ddaa451fcbc4c6d1f606d816b8382b2a6bbd8b79390364e0
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:970d147b621444b9ddaa451fcbc4c6d1f606d816b8382b2a6bbd8b79390364e0
+  output_digest: null
+  dispatch_digest_inputs:
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    em-workflow/agents/implementer.md: sha256:51310a154978d5ace8930b494f6ef4a0bfd2cd9b9e761a7f3116b42690b01dfd
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
+    em-workflow/references/implement-phase.md: sha256:bb3620c2a72245e8e71595d292395bc7f752157a44db01b794b1e7003938e9fc
+    em-workflow/references/phases/create-plan-phase.md: sha256:c86e90a1a296315bc4bcf7f639defc13cd83fbd0dd1377823a80869602e2d0c3
+    em-workflow/references/workflow-patch.md: sha256:b2502b4348774853bb8c85f1da614823c64e8e66ce2a1e90196a451ac8f0b166
+    em-workflow/scripts/validate-worker-output.py: sha256:e202b935c1cb149d7d705980d0cd93c5e34291f1dfe3ea689a63432a8af79355
+    em-workflow/skills/worktree-task-workflow/SKILL.md: sha256:a6a537d252572ed3fc65322f8d95af5c7244da732475f5b5bf5764cc8a281995
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+    tests/test_final_path_correction.py: sha256:2727322fd2a9f909fdb5b196ea1582ce185c8f5ad29320c348c69140928048d0
+    tests/test_final_path_correction_docs.py: sha256:f32e197700b9de61caf012eab54a30272faf101f7e0e3b49bd15690c41c5a19c
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
