@@ -91,7 +91,8 @@ workflow:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: bd106810963c8baf6f48ce8dbd8d7f55b89d44a8
 - id: implement
   status: pending
   base_commit: 53b90c2665ec89fdaa3ec2604ead6943e834e06f
@@ -105,7 +106,75 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Bind the correction entry's plan to tasks/{T}.md in the validator
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/validate-worker-output.py
+    - tests/test_final_path_correction.py
+    - tests/test_gate_option_vocabulary.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    - external-io
+    - api-contract
+    complexity: high
+    requirements:
+    - FR1
+    - FR5
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    status: pending
+    notes: null
+  task0002:
+    title: State the binding rejection in workflow-patch.md
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/references/workflow-patch.md
+    - tests/test_final_path_correction_docs.py
+    - tests/test_gate_option_vocabulary.py
+    skills: []
+    domains:
+    - api-contract
+    complexity: medium
+    requirements:
+    - FR4
+    - NFR3
+    - NFR4
+    - NFR5
+    status: pending
+    notes: null
+  task0003:
+    title: Resolve the implementer's plan from tasks.{T}.plan behind a fail-closed Plan-path check
+    plan: tasks/task0003.md
+    files:
+    - em-workflow/references/implement-phase.md
+    - em-workflow/references/phases/create-plan-phase.md
+    - em-workflow/references/batch-terminal-line.md
+    - em-workflow/references/workflow-schema.md
+    - tests/test_final_path_correction_docs.py
+    - tests/test_workflow_schema_journal_readers_doc_contract.py
+    skills: []
+    domains:
+    - input-handling
+    - external-io
+    - api-contract
+    complexity: high
+    requirements:
+    - FR2
+    - FR3
+    - FR5
+    - FR6
+    - NFR3
+    - NFR4
+    - NFR5
+    status: pending
+    notes: null
 review:
   status: pending
   rounds_completed: 0
@@ -115,7 +184,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-2
@@ -128,7 +198,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0003
     tests:
     - TS-7
   FR3:
@@ -136,22 +207,28 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0003
     tests:
     - TS-7
+    - TS-13
   FR4:
     title: Contract text for the new rejection
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS-10
   FR5:
     title: Regression tests
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0003
     tests:
     - TS-1
     - TS-2
@@ -163,7 +240,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0003
     tests:
     - TS-9
   NFR1:
@@ -171,7 +249,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-8
   NFR2:
@@ -179,7 +258,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-4
   NFR3:
@@ -187,21 +267,32 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    tests:
+    - TS-11
   NFR4:
     title: No change to plugin version fields
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    tests:
+    - TS-12
   NFR5:
     title: Existing final-path-correction tests keep passing unchanged
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
     tests:
     - TS-3
 batch:
