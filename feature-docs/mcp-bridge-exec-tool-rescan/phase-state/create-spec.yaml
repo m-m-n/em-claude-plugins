@@ -1,12 +1,20 @@
 schema_version: 1
 feature: mcp-bridge-exec-tool-rescan
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: 054c812a12bd5cc55e3dc480ac2680296d353699
 last_input_digest: sha256:008e7ceed9b90f515e6cca1213c7f8ac29e08cbecfd2b67807c140e63fb953b6
-active_request_id: create-spec-run-0001
-packets: {}
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-11-18T08:56:00+09:00'
+    questions:
+    - question_id: requirement.allowlist-scope
+      status: answered
+    - question_id: requirement.tm1-amend
+      status: answered
 answers:
   create-spec.feature-identity:
     packet_id: null
@@ -18,11 +26,37 @@ answers:
     freeform: null
     normalized_answer: feature name mcp-bridge-exec-tool-rescan derived from the task
       description
+  requirement.allowlist-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-18T08:58:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - notion-create-comment-only
+    freeform: null
+    normalized_answer: Allowlist only the pair --mcp notion / --tool notion-create-comment;
+      every other pair is re-scanned as before.
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted:
+      true (codex entry, 1 turn); opus_escalation: not run; Codex: only pair verifiably
+      non-executing and the one all existing allow cases use; not chosen: notion-any-tool'
+  requirement.tm1-amend:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-18T08:58:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - own-feature-only
+    freeform: null
+    normalized_answer: Do not edit the other feature's THREAT-MODEL TM-1; record the
+      condition in this feature's SPEC and THREAT-MODEL.
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted:
+      true (codex entry, 1 turn); opus_escalation: not run; Codex: documenting in
+      this feature''s SPEC/THREAT-MODEL suffices; not chosen: amend-tm1'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:008e7ceed9b90f515e6cca1213c7f8ac29e08cbecfd2b67807c140e63fb953b6
-  output_digest: null
+  output_digest: sha256:e986088a40218435f3d6f59f12db7e09ae4fdf4205ab47f5b3da4457b0260029
   dispatch_digest_inputs:
     .claude/rules/hook-tests.md: sha256:a8c15bde31bb53748497dff8e9607b8348edf39279c8b99bf543a29ad60eb3b5
     CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
@@ -33,6 +67,7 @@ worker_runs:
     feature-docs/destructive-guard-false-deny/SPEC.md: sha256:99addc85406eab0b496582b5f744e02400f8b4a05a5267ca5445980e7a5c71e4
     feature-docs/destructive-guard-false-deny/THREAT-MODEL.md: sha256:292e617f500a6ddb670287d794580c9b63a3c97263141506aeb02e807b9e4a5c
     test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+  self_write_set: []
 artifacts: []
 patches: []
 progress_fingerprint: null
