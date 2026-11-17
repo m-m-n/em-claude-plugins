@@ -24,3 +24,19 @@ records:
     tasks) that do not hold uniformly, Codex additionally flagged symlink/realpath
     parity with the validator, full Cc set, and the batch stop binding in batch-terminal-line.md;
     codex_consulted: true (harness entry: codex, 1 turn); opus_escalation: not run'
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-11-18T02:05:00+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'declined files deviation tests/test_feature_docs_correction_patch_docs.py
+    for task0002'
+  normalized_answer: 'task0002 deviation tests/test_feature_docs_correction_patch_docs.py
+    not auto-added to tasks.task0002.files'
+  resolution_note: 'task_id: task0002; path: tests/test_feature_docs_correction_patch_docs.py;
+    missing evidence part: the identifier of the acceptance criterion or requirement
+    that would otherwise be dropped (the report names no AC-n of the task plan and
+    no registered requirement id; it cites the plan''s pin-refresh convention only).
+    Shape check and control-path check pass. Left to the containment check as an
+    ordinary deviation.'
