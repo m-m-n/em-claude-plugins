@@ -129,7 +129,7 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: in_progress
+    status: merged
     branch: em-workflow/final-path-plan-binding/task0001
     notes: null
   task0002:
