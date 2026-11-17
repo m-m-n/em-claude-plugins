@@ -1,11 +1,11 @@
 schema_version: 1
 feature: declared-command-edge-fold
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: da4e2ee3fcf7cde758b94f4c65efbd9250976971
-last_input_digest: sha256:51d1ea45db41fde30121531d91187de4085a3cf19afa8c2277be123511ce300b
-active_request_id: create-spec-run-0001
+last_input_digest: sha256:7aca97935f3a94fce0a3d1d30feb115bc64d2f36bd41f14b5f529e86e1a7f6c8
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     status: answered
@@ -60,7 +60,7 @@ worker_runs:
   status: needs_user_input
   input_digest: sha256:51d1ea45db41fde30121531d91187de4085a3cf19afa8c2277be123511ce300b
   output_digest: null
-  dispatch_digest_inputs:
+  dispatch_digest_inputs: &id001
     CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
     em-workflow/hooks/bash_guard.py: sha256:d4952a012f3e1584695820663a43e4f95f4a4c6643c2c9647e065938b56fc250
     em-workflow/references/command-execution-protocol.md: sha256:ce434c3a323b5e76273841e10905856a363bb79079c5ea08b3c14fb5f72f0e43
@@ -75,6 +75,11 @@ worker_runs:
     tests/test_bash_guard_declared_yaml_breaks.py: sha256:6772f3c014b8ddef14fc64775349016c3ba6bb6111f17a8c1d08ca7b65347358
     tests/test_bash_guard_store_unicode_whitespace.py: sha256:44c81f104d3e601dcfeb56afe22c8be56f4f38396b6e9044e5e7a6615510d429
     tests/test_bash_guard_unicode_whitespace.py: sha256:201bad19a2b8a79bced9e0ac28e056fd20adf4b0084ebc65af2189c820bf1586
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:7aca97935f3a94fce0a3d1d30feb115bc64d2f36bd41f14b5f529e86e1a7f6c8
+  output_digest: null
+  dispatch_digest_inputs: *id001
 artifacts: []
 patches: []
 progress_fingerprint: null
