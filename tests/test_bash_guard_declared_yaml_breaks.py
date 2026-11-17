@@ -454,12 +454,15 @@ class TestAc6NoAllowPathIsWidened(HookCase):
 
     def test_ac6_no_padded_or_end_stripped_unapproved_command_is_allowed(self):
         repo = FIX.repo([declaration(value) for value in self.DECLARED_VALUES])
-        denied_forms = set(self.DECLARED_VALUES) | {UNAPPROVED}
         for label, command in self.padded_commands(UNAPPROVED):
             with self.subTest(form=label):
                 decision, output = self.decision(command, repo)
                 self.assertNotEqual(decision, ALLOW, repr(command))
-                if command.strip(" \t") in denied_forms:
+                # The hook also matches the command with U+0020, U+0009, LF,
+                # U+0085, U+2028 and U+2029 removed from both ends, so every
+                # padding except U+00A0 is denied. A U+00A0 at an end keeps
+                # the form out of the declared set: no decision.
+                if "U+00A0" not in label:
                     self.assertEqual(decision, DENY, repr(command))
                     self.assertIn(
                         UNAPPROVED_MARKER, output["permissionDecisionReason"], repr(command)
