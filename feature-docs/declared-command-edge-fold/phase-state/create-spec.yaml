@@ -4,8 +4,8 @@ phase: create-spec
 status: dispatching
 generation: 1
 base_revision: da4e2ee3fcf7cde758b94f4c65efbd9250976971
-last_input_digest: sha256:7aca97935f3a94fce0a3d1d30feb115bc64d2f36bd41f14b5f529e86e1a7f6c8
-active_request_id: create-spec-run-0002
+last_input_digest: sha256:072ac59dd1329518c33024cac4b732339f126acef0ea9ba933d965126edd86a7
+active_request_id: create-spec-run-0003
 packets:
   create-spec-q0001:
     status: answered
@@ -80,6 +80,14 @@ worker_runs:
   input_digest: sha256:7aca97935f3a94fce0a3d1d30feb115bc64d2f36bd41f14b5f529e86e1a7f6c8
   output_digest: null
   dispatch_digest_inputs: *id001
+- request_id: create-spec-run-0003
+  status: dispatched
+  input_digest: sha256:072ac59dd1329518c33024cac4b732339f126acef0ea9ba933d965126edd86a7
+  output_digest: null
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/spec-writer-contract.md: sha256:1e63f69687c6850e890f66b5ca92af7f3b0d02645cc464fca88455ad2269d671
+    em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
+    em-workflow/references/templates/spec-document.md: sha256:a5d0106c39a5df7dc2365357a9546588275ed6c7a1651c866e75fa327a7fa592
 artifacts: []
 patches: []
 progress_fingerprint: null
