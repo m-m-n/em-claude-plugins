@@ -1,0 +1,22 @@
+schema_version: 2
+feature: declared-command-edge-fold
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.22
+    confidence: 0.78
+    legend:
+      '0': '0'
+      '1': '1'
+      '2': '2'
+      '3': '3'
+    probabilities:
+      '0': 0.0
+      '1': 0.78
+      '2': 0.22
+      '3': 0.0
+  observed_at: '2026-11-18T00:11:58+09:00'
+decided_at: '2026-11-18T00:14:45+09:00'
+fallback_reason: 'fallback_matrix:jev_only_usable: Codex pre-survey unusable; the final Jev call is skipped'
