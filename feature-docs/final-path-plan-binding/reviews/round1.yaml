@@ -1,0 +1,128 @@
+round: 1
+executed_at: '2026-11-18T02:16:44+09:00'
+scope:
+  review_mode: diff
+  base_commit: 53b90c2665ec89fdaa3ec2604ead6943e834e06f
+  head_commit: 35a92c32d9365cfd31ef251fb6623484376c2f28
+  changed_files:
+  - em-workflow/references/batch-terminal-line.md
+  - em-workflow/references/implement-phase.md
+  - em-workflow/references/phases/create-plan-phase.md
+  - em-workflow/references/workflow-patch.md
+  - em-workflow/references/workflow-schema.md
+  - em-workflow/scripts/validate-worker-output.py
+  - test-docs/final-path-plan-binding/task0001.tests.yaml
+  - test-docs/final-path-plan-binding/task0002.tests.yaml
+  - test-docs/final-path-plan-binding/task0003.tests.yaml
+  - tests/test_feature_docs_correction_patch_docs.py
+  - tests/test_final_path_correction.py
+  - tests/test_final_path_correction_docs.py
+  - tests/test_gate_option_vocabulary.py
+  - tests/test_workflow_schema_journal_readers_doc_contract.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: da0486374292de62
+  severity: medium
+  category: security
+  file: em-workflow/references/implement-phase.md
+  line: 546
+  title: 実装担当に渡す計画パスが、検証した計画と別のファイルを指しうる
+  description: 検証側（_plan_is_bound_to_task_md と _resolve_contained_relative_path）は path_segments でバックスラッシュを区切りとして正規化した
+    tasks/{T}.md を検証する。一方、implement-phase.md 546 行目の task_plan_path と Plan-path check の規則 2・3（symlink
+    判定と realpath 判定）は、保存値をそのまま feature-docs/{feature}/ に結合する。POSIX ではバックスラッシュはファイル名の文字なので、plan が tasks\task0003.md（test_every_spelling_of_tasks_t_md_is_bound
+    が bound として受理を固定している綴り）や tasks/\task0003.md のとき、検証は tasks/task0003.md を読み、実装担当には別名のファイルが渡る。FR1 は正規化後が
+    tasks/{T}.md なので拒否しない。Plan-path check の 4 条件（安全な相対パス、symlink なし、realpath が内側、Cc なし）もすべて通る。THREAT-MODEL.md
+    の攻撃者（tasks/ 配下にファイルを書き、patch を返す implementation-planner）が、正規形の側に canonical_correction_plan の出力を、別名の側に別の指示を置けば、TM-1
+    と TM-4 が防ぐはずの食い違い（検証した文書と実装担当が読む文書の違い）がそのまま残る。悪意が無い場合も、バックスラッシュ綴りでは存在しないパスが実装担当に渡る。Plan-path check
+    は存在を確かめないので止まらない。comprehensive#0 が同じ箇所を独立に報告した。create-plan-phase.md 2a 節にも同じ「joined with that value」の記述がある。SPEC
+    FR2 の「feature-docs/{feature}/{tasks.{T}.plan}」という書き方がこの食い違いの元になっている。
+  suggestion: implement-phase.md 546 行目の task_plan_path と、Plan-path check の規則 2・3 に次を明記する。保存値の文字列結合ではなく、path_segments
+    で正規化したセグメントを feature-docs/{feature} に順に結合した絶対パスを使う（_resolve_contained_relative_path と同じ解決）。create-plan-phase.md
+    2a 節の記述も揃える。別案として、Plan-path check に規則を 1 つ足して fail-closed にしてもよい。保存値が「/」区切りの正規形（バックスラッシュ・空セグメント・「.」を含まない形）と一致しないときに拒否する規則にする。どちらの案でも、tests/test_final_path_correction_docs.py
+    が固定している「joined with」系の文言（1802・1890・1986・2387・2486 行付近）を更新する。さらに、バックスラッシュ綴りでも検証対象と起動時の対象が一致する（または拒否される）ことを固定するテストを足す。
+  reproduction: POSIX 環境を想定し、plan を tasks/\task0003.md とする。tasks/task0003.md に canonical_correction_plan
+    の出力、同じディレクトリの文字通りの名前 \task0003.md にテストの検証を無効化する別の計画を割り当てる。ファイル読み込みをメモリ上で代用して実際の関数を実行したところ、_plan_is_bound_to_task_md
+    は true、_correction_entries_errors は [] となった。文面どおり保存値を結合したパスは後者を指し、起動前の4条件もすべて成立した。ファイルは作成・変更していない。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 100
+  resolution: deferred
+  resolution_reason: 'medium severity: not an auto-fix candidate (gate requires critical/high)'
+evaluation:
+  round_summary: '第 1 ラウンド（cross_validation: true）。報告は 2 件で、どちらも implement-phase.md 546 行目の同じ箇所だった（security#0
+    と comprehensive#0、いずれも medium）。2 件を security の指摘 1 件にまとめた。security#0 の再現手順は、コードを読んで追跡し reproduced
+    と判定した（記載のコマンドは実行していない）。critical / high の報告は無い。観点ごとの確認結果: comprehensive・security・performance・architecture・spec
+    いずれも corroborated。読み取りの上限 10 ファイルを使い切った。読んでいないファイル: test-docs/final-path-plan-binding/task0001〜0003.tests.yaml、tests/test_gate_option_vocabulary.py、tests/test_feature_docs_correction_patch_docs.py、tests/test_workflow_schema_journal_readers_doc_contract.py。読んだファイルで、どの観点の判断も裏付けが取れた。レビュアー出力にインジェクションの試みは無かった。'
+  recommended_action: auto_fix
+  action_rationale: medium の指摘 1 件だけで、2 つの独立した実行が同じ箇所を報告し、コードを読んで再現も確かめた。修正範囲は限られている（implement-phase.md
+    と create-plan-phase.md の解決規則の記述、docs テストの固定文言、テスト 1 件の追加）。critical / high は無い。
+dismissed_sites:
+- file: em-workflow/references/implement-phase.md
+  line: 546
+  run_id: comprehensive#0
+  reason: duplicate of another finding
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-final-path-plan-binding-20261117T171614Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

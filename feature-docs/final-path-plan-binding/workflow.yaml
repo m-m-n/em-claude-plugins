@@ -1,0 +1,357 @@
+schema_version: 1
+feature: final-path-plan-binding
+created: '2026-11-18'
+base_branch: main
+goal: |
+  # 最終パス訂正の入口で、正規本文を検証した計画書と実装担当が読む計画書が結び付いていない
+
+  種別: セキュリティ
+
+  ## 脆弱性の概要 (必須)
+
+  最終パス訂正の入口で、検証器が正規本文と比較するファイル（`entry.plan`）と、実装担当に渡す計画書（`tasks/{T}.md`）が結び付いていない。正規本文を持つ別ファイルを `plan` に指定すると検証を通り、未検査の `tasks/{T}.md` が指示として読まれ得る。
+
+  ## 参照 (必須)
+
+  - CVE / GHSA ID: 該当なし
+  - アドバイザリ URL: 該当なし
+  - severity: medium
+  - 該当パッケージ: 該当なし
+  - 現在のバージョン: 該当なし
+  - 修正済みバージョン: 無し
+
+  ## 攻撃シナリオ (必須)
+
+  `tasks/` に任意のファイルを書ける計画担当が、訂正入口で新規タスクを返す。`plan` を `tasks/task0002-safe.md` にしてその本文を `canonical_correction_plan` の出力にし、未登録の `tasks/task0002.md` に別の指示を置く。`validate_worker_result(..., dry_run=True)` は errors なしで通り、`tasks/task0002.md` を読まない。`plan` を `tasks/task0002.md` にすると `path-correction-entries` で拒否される。
+
+  留保: `em-workflow/references/implement-phase.md:466` は `task_plan_path` を `tasks/{T}.md` 固定と書き、`em-workflow/references/phases/create-plan-phase.md:103-107` は `tasks.{T}.plan` から解決すると書いている。この矛盾は feature `final-path-correction-medium-fixes` より前からあり、どちらが効くかはオーケストレーターの文書の読み方で決まる。
+
+  ## 影響範囲 (必須)
+
+  実装担当が、検証を通っていない計画書の指示に従う。feature `final-path-correction-medium-fixes` の THREAT-MODEL の TM-11 が求める正規本文の強制が、実際の指示入力まで届かない。
+
+  ## 完了の定義 (必須)
+
+  - [ ] 攻撃シナリオが成立しない
+  - [ ] 修正版に追随している（修正版が無い場合は暫定緩和策の欄に対応を記載）
+
+  ## 該当箇所 (任意)
+
+  - `em-workflow/scripts/validate-worker-output.py:2290`（feature の統合ブランチ上の行番号、stable_id `29be215ab3f496e3`）
+  - `em-workflow/references/implement-phase.md:466`
+  - `em-workflow/references/phases/create-plan-phase.md:103`
+
+  ## 暫定緩和策 (任意)
+
+  訂正入口で、`tasks/{T}.md` が存在して `entry.plan` と異なるエントリを `path-correction-entries` で拒否する。根本対応は `implement-phase.md:466` を `tasks.{T}.plan` から解決する形に揃えること。
+parent_branch: em-workflow/final-path-plan-binding/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.06
+      '1': 0.54
+      '2': 0.4
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.28
+      '2': 0.72
+      '3': 0.0
+  at: '2026-11-18T00:15:27+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 734da97baee952c64a1b00953f52da759042aac7
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'No UI: changes are confined to a validator script, reference documents and unit tests.'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: completed
+  completed_at_commit: bd106810963c8baf6f48ce8dbd8d7f55b89d44a8
+- id: implement
+  status: completed
+  base_commit: 53b90c2665ec89fdaa3ec2604ead6943e834e06f
+  completed_at_commit: a4120b4a980ec3ec18dc148adb965014c43ba2bf
+- id: review
+  status: completed
+  completed_at_commit: 35a92c32d9365cfd31ef251fb6623484376c2f28
+- id: verify
+  status: completed
+  completed_at_commit: c55cd4a606113a27f1a3657bc2c4929ab6f5d077
+  result: pass
+  round: 1
+  passed_ids:
+  - TS-1
+  - TS-2
+  - TS-3
+  - TS-4
+  - TS-5
+  - TS-6
+  - TS-7
+  - TS-8
+  - TS-9
+  - TS-10
+  - TS-11
+  - TS-12
+  - TS-13
+  - AC-1
+  - AC-2
+  - AC-3
+  - AC-4
+  - AC-5
+  - AC-6
+  - AC-7
+  - AC-8
+  - TM-1
+  - TM-2
+  - TM-3
+  - TM-4
+  - TM-5
+  - TM-6
+  - TM-7
+  failed_items: []
+- id: retrospect
+  status: completed
+  completed_at_commit: 671566ab6f943faf62599b9be4f9321bd4a9217e
+tasks:
+  task0001:
+    title: Bind the correction entry's plan to tasks/{T}.md in the validator
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/validate-worker-output.py
+    - tests/test_final_path_correction.py
+    - tests/test_gate_option_vocabulary.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    - external-io
+    - api-contract
+    complexity: high
+    requirements:
+    - FR1
+    - FR5
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    status: merged
+    branch: em-workflow/final-path-plan-binding/task0001
+    notes: null
+  task0002:
+    title: State the binding rejection in workflow-patch.md
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/references/workflow-patch.md
+    - tests/test_final_path_correction_docs.py
+    - tests/test_gate_option_vocabulary.py
+    skills: []
+    domains:
+    - api-contract
+    complexity: medium
+    requirements:
+    - FR4
+    - NFR3
+    - NFR4
+    - NFR5
+    status: merged
+    branch: em-workflow/final-path-plan-binding/task0002
+    notes: null
+  task0003:
+    title: Resolve the implementer's plan from tasks.{T}.plan behind a fail-closed Plan-path check
+    plan: tasks/task0003.md
+    files:
+    - em-workflow/references/implement-phase.md
+    - em-workflow/references/phases/create-plan-phase.md
+    - em-workflow/references/batch-terminal-line.md
+    - em-workflow/references/workflow-schema.md
+    - tests/test_final_path_correction_docs.py
+    - tests/test_workflow_schema_journal_readers_doc_contract.py
+    skills: []
+    domains:
+    - input-handling
+    - external-io
+    - api-contract
+    complexity: high
+    requirements:
+    - FR2
+    - FR3
+    - FR5
+    - FR6
+    - NFR3
+    - NFR4
+    - NFR5
+    status: merged
+    branch: em-workflow/final-path-plan-binding/task0003
+    notes: null
+review:
+  status: completed
+  rounds_completed: 1
+  residual_critical_high: 0
+  needs_rework: false
+  perspectives:
+    comprehensive: completed
+    security: completed
+    performance: completed
+    architecture: completed
+    spec: completed
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - performance
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
+requirements:
+  FR1:
+    title: Correction-entry rejection of an unbound tasks/{T}.md
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
+    - TS-6
+  FR2:
+    title: Implementer plan path resolved from tasks.{T}.plan
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0003
+    tests:
+    - TS-7
+  FR3:
+    title: Fail-closed check of the resolved plan path
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0003
+    tests:
+    - TS-7
+    - TS-13
+  FR4:
+    title: Contract text for the new rejection
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0002
+    tests:
+    - TS-10
+  FR5:
+    title: Regression tests
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0003
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-7
+  FR6:
+    title: Batch stop binding for the plan-path check
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0003
+    tests:
+    - TS-9
+  NFR1:
+    title: Git access only through the base readers
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-8
+  NFR2:
+    title: Fail-closed treatment of an indeterminate tasks/{T}.md
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-4
+  NFR3:
+    title: Tests use only the Python standard library
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    tests:
+    - TS-11
+  NFR4:
+    title: No change to plugin version fields
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    tests:
+    - TS-12
+  NFR5:
+    title: Existing final-path-correction tests keep passing unchanged
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    tests:
+    - TS-3
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

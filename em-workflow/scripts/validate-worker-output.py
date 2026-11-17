@@ -2206,6 +2206,42 @@ def _correction_requirements_errors(workflow, patch):
     return errors
 
 
+def _plan_is_bound_to_task_md(task_id, plan):
+    """The binding rule of the correction entry (final-path-plan-binding FR1),
+    first half: an item is bound when `task_id` is a string matching the
+    task-id pattern, `plan` is a safe relative path, and the segments of
+    `plan` after `path_segments` normalization are exactly `tasks` and
+    `{task_id}.md`. So `tasks/{T}.md`, `./tasks/{T}.md`, `tasks//{T}.md`,
+    `tasks/./{T}.md` and the backslash spelling are all bound."""
+    if not isinstance(task_id, str) or TASK_ID_RE.fullmatch(task_id) is None:
+        return False
+    if not isinstance(plan, str) or not is_safe_relative_path(plan):
+        return False
+    return path_segments(plan) == ["tasks", f"{task_id}.md"]
+
+
+def _task_md_entry_exists(feature_dir, task_id):
+    """The binding rule of the correction entry, second half: whether an entry
+    of any kind exists now at `tasks/{task_id}.md` under the feature
+    directory. The lookup is of the working tree, never of the base commit,
+    and does not follow a final symlink. Only a lookup that reports that no
+    such entry exists gives False; a regular file, a directory, a symlink (a
+    dangling one too) and any other kind of entry give True, and so does any
+    other lookup failure (permission denied, a `tasks` component that is not
+    a directory, any other operating-system error). A `task_id` that is not a
+    string matching the task-id pattern is not looked up and counts as
+    existing."""
+    if not isinstance(task_id, str) or TASK_ID_RE.fullmatch(task_id) is None:
+        return True
+    try:
+        os.lstat(Path(feature_dir) / "tasks" / f"{task_id}.md")
+    except FileNotFoundError:
+        return False
+    except OSError:
+        return True
+    return True
+
+
 def _correction_entries_errors(corrections, patch, feature_dir, target_repo, base_commit):
     """FR1 (b) to (d): each item of `tasks_patch.entries` on the correction
     entry is rejected with `path-correction-entries`, one error per rejected
@@ -2224,7 +2260,19 @@ def _correction_entries_errors(corrections, patch, feature_dir, target_repo, bas
       corrections that have an occurrence in those files. This holds for a
       TASK.md plan too.
 
-    The plan check runs only once every file passed."""
+    The plan check runs only once every file passed.
+
+    Binding of the plan to `tasks/{T}.md` (final-path-plan-binding FR1): every
+    item that is a mapping is also rejected, with the same code, the task id
+    and the path `tasks/{T}.md`, when an entry of any kind exists now at
+    `tasks/{T}.md` under the feature directory and the item's plan, after
+    `path_segments` normalization, is not `tasks/{T}.md`
+    (`_plan_is_bound_to_task_md`, `_task_md_entry_exists`). An indeterminate
+    lookup counts as existing, and a key that is not a task id is rejected
+    without a lookup. This rejection comes in addition to the others of the
+    item: it runs before, and independently of, the files check, the rendering
+    check and the plan check, and it requires `tasks/{T}.md` for no plan when
+    no such entry exists."""
     entries = (patch.get("tasks_patch") or {}).get("entries") or {}
     if not entries:
         return []
@@ -2243,6 +2291,13 @@ def _correction_entries_errors(corrections, patch, feature_dir, target_repo, bas
         if not isinstance(entry, dict):
             reject(task_id, "must be a mapping")
             continue
+        bound_plan = entry.get("plan")
+        if not _plan_is_bound_to_task_md(task_id, bound_plan) and _task_md_entry_exists(feature_dir, task_id):
+            reject(
+                task_id,
+                f"plan {bound_plan!r} is not tasks/{task_id}.md while tasks/{task_id}.md exists",
+                f"tasks/{task_id}.md" if isinstance(task_id, str) else None,
+            )
         files = entry.get("files")
         if not isinstance(files, list) or not files:
             reject(task_id, "files must be a non-empty list of the files that hold an old reference")

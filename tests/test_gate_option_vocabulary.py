@@ -1174,8 +1174,18 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # eighteen, `## Final-path correction` stays directly before
     # `## Ownership boundary`, and the protocol-error sentence is
     # unchanged. Same rationale: refresh, don't remove.
+    #
+    # Refreshed again by final-path-plan-binding/task0002 (FR4): the
+    # `path-correction-entries` limit of `## Final-path correction` gains the
+    # binding rule of the correction entry: an item is also rejected when an
+    # entry of any kind exists now at `tasks/{T}.md` and its `plan`, compared
+    # after `path_segments` normalization, is not `tasks/{T}.md`; a state that
+    # cannot be determined counts as existing, and the error carries the task
+    # id and the path `tasks/{T}.md`. The numbered application rules stay
+    # eighteen and the five numbered conditions are unchanged. Same
+    # rationale: refresh, don't remove.
     WORKFLOW_PATCH_SHA256 = (
-        "b2502b4348774853bb8c85f1da614823c64e8e66ce2a1e90196a451ac8f0b166"
+        "767434ab50a41457f682d1388dcf7168ed41e7ee3121e477108c8645bfbf0ac3"
     )
     # Updated by goal-vs-spec-divergence/task0016 (review round1 rework),
     # which the user's SPEC.md/REQUIREMENTS.md Declared Change Set extension
@@ -1467,8 +1477,22 @@ class TestFrozenMachineReadSurface(unittest.TestCase):
     # CLI exit codes and the scenario-ID form check are unchanged.
     # PINNED_VALIDATOR_TEST_LINE below is unaffected and still asserted. Same
     # rationale: refresh, don't remove.
+    #
+    # Refreshed again by final-path-plan-binding/task0001 (FR1): the limit on
+    # `tasks_patch.entries` of the final-path correction entry gains the
+    # binding of the plan. An item that is a mapping is rejected with
+    # `path-correction-entries`, its `task_id` and the path `tasks/{T}.md`
+    # when an entry of any kind exists now at `tasks/{T}.md` and the item's
+    # plan, after `path_segments` normalization, is not `tasks/{T}.md`; an
+    # indeterminate lookup counts as existing, and a key that is not a task id
+    # is rejected without a lookup. The new helpers
+    # `_plan_is_bound_to_task_md` and `_task_md_entry_exists` reach no git.
+    # The other checks of the entries limit (the files check, the rendering
+    # check and the plan check), the requirements_patch limit and the
+    # Re-planning path are unchanged. PINNED_VALIDATOR_TEST_LINE below is
+    # unaffected and still asserted. Same rationale: refresh, don't remove.
     VALIDATE_WORKER_OUTPUT_SHA256 = (
-        "e202b935c1cb149d7d705980d0cd93c5e34291f1dfe3ea689a63432a8af79355"
+        "78be469e021d955235e23ccaac77998314ae454bccb17afeff89c39159ef470d"
     )
     # Refreshed again by goal-vs-spec-divergence/task0017 (review round 2
     # rework): TestReplanningReentrySignalHelper gains the tightened-

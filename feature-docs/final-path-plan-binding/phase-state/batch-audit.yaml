@@ -1,0 +1,42 @@
+schema_version: 1
+feature: final-path-plan-binding
+records:
+- question_id: create-spec.requirement-clarification
+  packet_id: null
+  answered_at: '2026-11-18T00:23:26+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'Q1 scope: a (interim mitigation FR1 + root fix FR2/FR3). Q2 plan base:
+    a (feature-dir-relative, validator authoritative). Q3 FR3 abort: a (reuse control-character
+    check terminal handling).'
+  normalized_answer: Scope covers FR1+FR2+FR3; tasks.{T}.plan is feature-docs/{feature}-relative;
+    FR3 abort reuses the control-character check's terminal handling; FR3 also rejects
+    symlink components, checks realpath containment and the full Cc/U+2028/U+2029
+    set; new FR6 binds the FR3 batch stop to step_needs_intervention.
+  resolution_note: 'gate: create-spec.requirement-clarification (orchestrator-opened
+    after the analyst completed with assumptions A1/A2/A5 open to judgement); options:
+    Q1 a=both/b=FR1 only/c=FR2+FR3 only, Q2 a=feature-dir-relative/b=repo-relative/c=both
+    forms, Q3 a=reuse control-char abort/b=route back to create-plan/c=per-task failure;
+    chosen: a/a/a; not chosen: Q1 b,c Q2 b,c Q3 b,c; key points: FR1 alone leaves
+    the implement-phase vs create-plan-phase contradiction, schema workflow-schema.md:117
+    states plan is feature-docs-relative, route-back has preconditions (merged/in-flight
+    tasks) that do not hold uniformly, Codex additionally flagged symlink/realpath
+    parity with the validator, full Cc set, and the batch stop binding in batch-terminal-line.md;
+    codex_consulted: true (harness entry: codex, 1 turn); opus_escalation: not run'
+- question_id: implement.wake-decline
+  packet_id: null
+  answered_at: '2026-11-18T02:05:00+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'declined files deviation tests/test_feature_docs_correction_patch_docs.py
+    for task0002'
+  normalized_answer: 'task0002 deviation tests/test_feature_docs_correction_patch_docs.py
+    not auto-added to tasks.task0002.files'
+  resolution_note: 'task_id: task0002; path: tests/test_feature_docs_correction_patch_docs.py;
+    missing evidence part: the identifier of the acceptance criterion or requirement
+    that would otherwise be dropped (the report names no AC-n of the task plan and
+    no registered requirement id; it cites the plan''s pin-refresh convention only).
+    Shape check and control-path check pass. Left to the containment check as an
+    ordinary deviation.'

@@ -1,0 +1,60 @@
+task_id: task0003
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 16217 tests, OK (skipped=1), before any file was touched
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 16275 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_final_path_correction_docs.TestPlanPathPayloadLine.test_the_live_payload_block_is_sound
+      - tests.test_final_path_correction_docs.TestPlanPathPayloadLine.test_the_line_gives_the_feature_directory_joined_with_the_stored_value
+      - tests.test_final_path_correction_docs.TestPlanPathPayloadLine.test_no_text_of_the_payload_block_names_the_fixed_task_document
+    red_confirmed: true
+    red_reason: "Run against the unchanged implement-phase.md. The soundness test failed with AssertionError: Lists differ, four problems: the task_plan_path line lacked 'joined with', 'tasks.{T}.plan' and 'the value the Plan-path check admitted', and the payload block named tasks/{T}.md. The two content tests failed on the same missing wording. The one-line-before-the-label structure was already true of the old payload and is covered by test_exactly_one_task_plan_path_line_before_the_untrusted_data_label, which passed before the change."
+  AC-2:
+    tests:
+      - tests.test_final_path_correction_docs.TestPlanPathCheckParagraph.test_the_paragraph_exists_and_sits_between_its_neighbours
+      - tests.test_final_path_correction_docs.TestPlanPathCheckParagraph.test_it_runs_after_the_control_character_check_over_each_selected_task
+      - tests.test_final_path_correction_docs.TestPlanPathCheckParagraph.test_it_states_why_the_path_may_stand_in_the_trusted_part
+      - tests.test_final_path_correction_docs.TestPlanPathCheckParagraph.test_it_states_the_four_rules_as_four_bullets_of_one_sentence_each
+      - tests.test_final_path_correction_docs.TestPlanPathCheckParagraph.test_the_symlink_rule_and_the_containment_rule_are_separate_bullets
+      - tests.test_final_path_correction_docs.TestPlanPathCheckWording.test_the_paragraph_holds_none_of_the_neighbours_phrases
+      - tests.test_final_path_correction_docs.TestPlanPathCheckWording.test_the_control_character_check_locator_stays_unique_in_step_i2a
+    red_confirmed: true
+    red_reason: "Run against the unchanged implement-phase.md. The placement test failed with AssertionError: unexpectedly None (no Plan-path check paragraph exists), and the content and wording tests of the paragraph errored with TypeError: expected string or bytes-like object, got 'NoneType', for the same reason. The locator-uniqueness guard is a check that the new text leaves the Control-character check locator alone; it held before the change and is kept as a non-vacuity guard, not as a red."
+  AC-3:
+    tests:
+      - tests.test_final_path_correction_docs.TestPlanPathCheckAbort.test_the_paragraph_states_the_abort
+      - tests.test_final_path_correction_docs.TestPlanPathCheckAbort.test_the_paragraph_cites_the_terminal_handling_and_does_not_restate_it
+      - tests.test_final_path_correction_docs.TestPlanPathCheckAbort.test_negative_each_abort_element_is_needed
+      - tests.test_final_path_correction_docs.TestPlanPathCheckAbort.test_negative_a_fallback_to_the_fixed_task_document_is_flagged
+    red_confirmed: true
+    red_reason: "Run against the unchanged implement-phase.md. The abort tests errored with TypeError: expected string or bytes-like object, got 'NoneType', because no Plan-path check paragraph existed to hold the abort."
+  AC-4:
+    tests:
+      - tests.test_final_path_correction_docs.TestPlanPathSection2a.test_the_live_section_is_sound
+      - tests.test_final_path_correction_docs.TestPlanPathSection2a.test_the_stored_value_names_the_file_of_each_tier
+      - tests.test_final_path_correction_docs.TestPlanPathSection2a.test_the_resolution_is_cited_from_the_implement_phase
+      - tests.test_final_path_correction_docs.TestPlanPathSection2a.test_the_listed_phrases_stay
+    red_confirmed: true
+    red_reason: "Run against the unchanged create-plan-phase.md. The soundness test failed with AssertionError: Lists differ, five problems: section 2a lacked 'The stored `tasks.{T}.plan` value is relative to `feature-docs/{feature}`', '`TASK.md` at the `minimal` tier', '`tasks/taskNNNN.md` otherwise', the resolved-path sentence and the citation of the Plan-path check. test_the_listed_phrases_stay passed before the change; it is the guard that the reword keeps every listed phrase."
+  AC-5:
+    tests:
+      - tests.test_final_path_correction_docs.TestPlanPathBatchStopBinding.test_the_live_binding_is_sound
+      - tests.test_final_path_correction_docs.TestPlanPathBatchStopBinding.test_the_stop_binds_to_stop_condition_3_and_not_to_unmapped_stop
+      - tests.test_final_path_correction_docs.TestPlanPathBatchStopBinding.test_the_precedence_rule_paragraph_is_byte_identical
+      - tests.test_final_path_correction_docs.TestPlanPathBatchStopBinding.test_the_table_keeps_its_rows_and_gains_no_row
+    red_confirmed: true
+    red_reason: "Run against the unchanged batch-terminal-line.md. The class setUpClass errored, because no paragraph of the coverage section names the Plan-path check, so every test of the class errored. The byte-identity and the fourteen-row checks are guards that the new paragraph leaves the Precedence rule paragraph and the table alone."
+  AC-6:
+    tests:
+      - tests.test_workflow_schema_journal_readers_doc_contract.TestFailedKindSectionByteIdentical.test_failed_kind_section_unchanged
+    red_confirmed: true
+    red_reason: "The capture constant was refreshed to 'Five write paths' first. Against the unchanged workflow-schema.md the test failed with AssertionError: the document section had 'Four write paths make such a' where the capture had 'Five write paths make such a'. It passes once the document counts five."
+  AC-7:
+    tests:
+      - tests.test_final_path_correction_docs.TestPlanBindingTestsUseOnlyTheStandardLibrary.test_every_import_of_this_module_is_a_standard_library_module
+      - tests.test_final_path_correction_docs.TestPlanBindingTestsUseOnlyTheStandardLibrary.test_negative_a_third_party_import_is_detected
+      - tests.test_final_path_correction_docs.TestPlanPathPayloadLine.test_negative_the_pre_change_block_is_flagged
+      - tests.test_final_path_correction_docs.TestPlanPathSection2a.test_negative_the_pre_change_wording_is_flagged
+      - tests.test_final_path_correction_docs.TestPlanPathBatchStopBinding.test_negative_a_document_without_the_paragraph_is_flagged
+    red_confirmed: false
+    red_reason: "AC-7 is a property of the new tests (a negative proof for every matcher, standard library only, full suite green) and not of a document. The negative proofs against the verbatim pre-change constants and against forged copies pass by construction, and the module already imported only the standard library; no check of this criterion was observed to fail on its own before the documents changed. The matchers that read the live documents were observed red under AC-1 to AC-5. The full-suite result is recorded in final_failures."
