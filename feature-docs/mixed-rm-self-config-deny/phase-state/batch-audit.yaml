@@ -1,0 +1,40 @@
+schema_version: 1
+feature: mixed-rm-self-config-deny
+records:
+- gate_id: create-spec.requirement-clarification
+  question_id: requirement.self-config-exclusion-normalized-form
+  options:
+  - normalized_only
+  - raw_or_normalized
+  selected_option_ids:
+  - raw_or_normalized
+  source: batch-codex-consultation
+  codex_consulted: true
+  opus_escalation: false
+  resolution_note: 'analyst は normalized_only を推奨。Codex は raw_or_normalized を推した:
+    SELF_CONFIG の絶対パス照合は /home 配下に限られ、HOME=/root 等では正規化のみにすると単体の自己設定削除まで deny に変わる。オーケストレーターはこの退行の危険を重く見て
+    raw_or_normalized を採用。`..` で外に出る形は範囲外として別タスクに回す。'
+- gate_id: create-spec.requirement-clarification
+  question_id: requirement.prior-feature-docs-scope
+  options:
+  - spec_only
+  - spec_and_requirements
+  - all_three
+  selected_option_ids:
+  - spec_only
+  source: batch-codex-consultation
+  codex_consulted: true
+  opus_escalation: false
+  resolution_note: analyst・Codex とも spec_only。依頼が名指ししたのは SPEC のみで、REQUIREMENTS / VERIFICATION
+    は当時の記録として残す。
+- gate_id: create-spec.design-step
+  question_id: design-step.decision
+  options:
+  - decide_autonomously
+  - ask_user
+  selected_option_ids:
+  - decide_autonomously
+  source: batch-decision-table
+  codex_consulted: false
+  opus_escalation: false
+  resolution_note: batch-policies.yaml に従い design step を省く。

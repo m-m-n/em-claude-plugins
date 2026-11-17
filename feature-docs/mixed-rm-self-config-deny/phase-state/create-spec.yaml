@@ -6,12 +6,52 @@ generation: 1
 base_revision: 04f2b01753c70c6b31ecca43a3290f38fb89b1de
 last_input_digest: sha256:6a499cffa0754a4ee1a3236ac065d764c7a62460902a90aea93bcb219cb1cbdb
 active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-11-18T09:05:00+09:00'
+    questions:
+    - question_id: requirement.self-config-exclusion-normalized-form
+      status: answered
+    - question_id: requirement.prior-feature-docs-scope
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+answers:
+  requirement.self-config-exclusion-normalized-form:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-18T09:05:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - raw_or_normalized
+    freeform: null
+    normalized_answer: 自己設定パスの判定は現行の rm_operands_name_self_config() と同じ（生の形か正規化後の形のどちらかが
+      SELF_CONFIG に一致）。除外の単位だけを対象単位に改める。正規化後の形だけにすると HOME が /home 配下でない環境で単体の自己設定削除が
+      ask から deny に変わるため。`~/.claude/skills/../../valuable` の形はこの feature の範囲外とし、別タスクで扱う。
+  requirement.prior-feature-docs-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-18T09:05:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - spec_only
+    freeform: null
+    normalized_answer: 旧 feature の SPEC.md の FR8（わかっている影響）・AC9・TS-15 だけを改める。REQUIREMENTS.md
+      と VERIFICATION.md は当時の記録として残す。
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-18T09:05:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design step は提案どおり省く（UI が無い）。
 worker_runs:
-  - request_id: create-spec-run-0001
-    status: dispatched
-    input_digest: sha256:6a499cffa0754a4ee1a3236ac065d764c7a62460902a90aea93bcb219cb1cbdb
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:6a499cffa0754a4ee1a3236ac065d764c7a62460902a90aea93bcb219cb1cbdb
 artifacts: []
 patches: []
 progress_fingerprint: null
@@ -19,5 +59,13 @@ stale_redispatch_count: 0
 resolved_input_cache:
   reference_scan_targets:
     resolved_at_generation: 1
-    paths: ["em-workflow/hooks/destructive-guard.py", "em-workflow/hooks/tests/destructive-guard-cases.json", "em-workflow/hooks/tests/run-destructive-guard.py", "tests/test_destructive_guard_mixed_rm_precedence.py", "feature-docs/destructive-guard-mixed-rm-precedence/SPEC.md", "feature-docs/destructive-guard-mixed-rm-precedence/REQUIREMENTS.md", "feature-docs/destructive-guard-mixed-rm-precedence/VERIFICATION.md", ".claude/rules/hook-tests.md"]
+    paths:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - em-workflow/hooks/tests/run-destructive-guard.py
+    - tests/test_destructive_guard_mixed_rm_precedence.py
+    - feature-docs/destructive-guard-mixed-rm-precedence/SPEC.md
+    - feature-docs/destructive-guard-mixed-rm-precedence/REQUIREMENTS.md
+    - feature-docs/destructive-guard-mixed-rm-precedence/VERIFICATION.md
+    - .claude/rules/hook-tests.md
 last_error: null
