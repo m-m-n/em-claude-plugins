@@ -12,11 +12,20 @@ fixture is committed on the integration branch and merge-preflight.py runs on
 that committed state. Neither script is imported, so no bytecode cache is
 written under em-workflow/. The fixture files are produced with PyYAML, which
 the script itself requires.
+
+The classes from TestAc1FeatureDirectoryLink on cover AC-1..AC-9 of
+feature-docs/resolve-findings-parent-symlink/tasks/task0001.md: a symbolic link
+at the feature directory, at `reviews` or at the round record is refused, and
+every access after `reviews` is opened is relative to that handle. Their races
+run in a child process whose wrapper swaps an entry once, at a fixed call, so
+that no CPU load, loop or sleep decides the outcome.
 """
 
+import ast
 import json
 import os
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -164,7 +173,8 @@ def make_round(n, findings):
 
 
 def tree(root, skip=()):
-    """Every entry below root: path -> ('file', bytes) | ('dir',) | ('link', target)."""
+    """Every entry below root: path -> ('file', bytes) | ('dir',) | ('link', target)
+    | ('special', kind). A special file (FIFO, socket, device) is never opened."""
     snap = {}
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [d for d in dirnames if d not in skip]
@@ -175,11 +185,15 @@ def tree(root, skip=()):
         for name in filenames:
             path = os.path.join(dirpath, name)
             rel = os.path.relpath(path, root)
-            if os.path.islink(path):
+            mode = os.lstat(path).st_mode
+            if stat.S_ISLNK(mode):
                 snap[rel] = ("link", os.readlink(path))
-            else:
+            elif stat.S_ISREG(mode):
                 with open(path, "rb") as fh:
                     snap[rel] = ("file", fh.read())
+            else:
+                # A FIFO would block the read: a special file is recorded by its kind.
+                snap[rel] = ("special", stat.S_IFMT(mode))
     return snap
 
 
@@ -293,7 +307,7 @@ class ResolveBase(unittest.TestCase):
 
     # -- running ------------------------------------------------------------
 
-    def run_script(self, argv=None, commit=COMMIT, feature_dir=None, mapping=None):
+    def run_script(self, argv=None, commit=COMMIT, feature_dir=None, mapping=None, timeout=None):
         if argv is None:
             argv = [
                 "--feature-dir",
@@ -309,6 +323,7 @@ class ResolveBase(unittest.TestCase):
             env=self.env,
             capture_output=True,
             text=True,
+            timeout=timeout,
         )
 
     def preflight(self):
@@ -868,6 +883,25 @@ def _remove_reviews(t):
     shutil.rmtree(t.reviews_dir)
 
 
+def _make_regular_file_reviews(t):
+    shutil.rmtree(t.reviews_dir)
+    t.reviews_dir.write_text("not a directory\n", encoding="utf-8")
+
+
+def _make_reviews_link_outside(t):
+    outside = t.tmp / f"outside-{SENTINEL}"
+    shutil.rmtree(outside, ignore_errors=True)
+    outside.mkdir()
+    (outside / "round2.yaml").write_bytes(t.round_path(2).read_bytes())
+    shutil.rmtree(t.reviews_dir)
+    t.reviews_dir.symlink_to(outside)
+
+
+def _make_reviews_link_dangling(t):
+    shutil.rmtree(t.reviews_dir)
+    t.reviews_dir.symlink_to(t.tmp / f"missing-{SENTINEL}")
+
+
 def _only_unrelated_files(t):
     t.round_path(2).unlink()
     for name in ("round0.yaml", "round01.yaml", "round2.yml", "round2.yaml.bak", "notes.yaml"):
@@ -990,6 +1024,12 @@ BROKEN_INPUTS = {
     ),
     # -- no round record --
     "reviews directory is absent": ("missing-round-record", _remove_reviews),
+    "reviews is a regular file": ("missing-round-record", _make_regular_file_reviews),
+    "reviews is a symbolic link to a directory outside the repository": (
+        "invalid-round-record",
+        _make_reviews_link_outside,
+    ),
+    "reviews is a dangling symbolic link": ("invalid-round-record", _make_reviews_link_dangling),
     "only unrelated files in reviews": ("missing-round-record", _only_unrelated_files),
 }
 
@@ -1299,6 +1339,504 @@ class TestAc8PreflightIsUnchanged(ResolveBase):
         self.commit_feature()
         result = self.preflight()
         self.assertEqual(result["outcome"], "proceed", result)
+
+
+
+# -- links at the feature directory, `reviews` and the round record ----------------
+#
+# Covers AC-1..AC-9 of
+# feature-docs/resolve-findings-parent-symlink/tasks/task0001.md.
+
+CURRENT = "current"
+
+# The child program of the race tests. It runs with the running interpreter in
+# no-bytecode mode: it installs one wrapper, sets the script's arguments as its
+# command line and runs the script file as the main module. The wrapper swaps
+# exactly once, at a fixed call (never by load, loops or sleeps), and then calls
+# the original. Nothing is written to stdout or stderr here, so the script's own
+# output stays the only output of the run.
+RACE_CHILD = r"""
+import builtins, json, os, runpy, sys
+
+spec = json.loads(sys.argv[1])
+state = {"fired": False}
+
+if spec["mode"] == "serializer":
+    import yaml
+
+    original_dump = yaml.safe_dump
+
+    def dump_wrapper(*args, **kwargs):
+        if not state["fired"]:
+            state["fired"] = True
+            os.rename(spec["current_reviews"], spec["aside"])
+            os.symlink(spec["other_reviews"], spec["current_reviews"])
+        return original_dump(*args, **kwargs)
+
+    yaml.safe_dump = dump_wrapper
+else:
+    original_os_open = os.open
+    original_open = builtins.open
+
+    def swap_if_record(path):
+        if state["fired"] or not isinstance(path, (str, bytes, os.PathLike)):
+            return
+        if os.path.basename(os.fsdecode(path)) != spec["record_name"]:
+            return
+        state["fired"] = True
+        os.rename(spec["record"], spec["aside"])
+        if spec["mode"] == "record-to-link":
+            os.symlink(spec["other_record"], spec["record"])
+        else:
+            os.mkfifo(spec["record"])
+
+    def os_open_wrapper(path, flags, *args, **kwargs):
+        swap_if_record(path)
+        return original_os_open(path, flags, *args, **kwargs)
+
+    def open_wrapper(file, *args, **kwargs):
+        swap_if_record(file)
+        return original_open(file, *args, **kwargs)
+
+    os.open = os_open_wrapper
+    builtins.open = open_wrapper
+
+script = spec["script"]
+sys.argv = [script] + spec["argv"]
+runpy.run_path(script, run_name="__main__")
+"""
+
+# A run takes a fraction of a second; this is only the bound after which a
+# script that waits (for a FIFO writer) counts as failed.
+CHILD_TIMEOUT = 30
+
+
+def assert_clean_failure(test, proc, code):
+    """`assert_fails`, and the sentinel string appears nowhere in the output."""
+    test.assert_fails(proc, code)
+    test.assertNotIn(SENTINEL, proc.stdout)
+    test.assertNotIn(SENTINEL, proc.stderr)
+
+
+def leftover_temporaries(directory):
+    return [name for name in os.listdir(directory) if name.startswith(".resolve-")]
+
+
+class LinkBase(ResolveBase):
+    """Two features in one fixture.
+
+    `demo` (the default feature of ResolveBase) is the victim, "other": the
+    existing preflight helper checks it unchanged. `current` is the feature the
+    script is pointed at.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.other_dir = self.feature_dir
+        self.other_reviews = self.other_dir / "reviews"
+        self.current_dir = self.repo / "feature-docs" / CURRENT
+        self.current_reviews = self.current_dir / "reviews"
+        self.outside_dir = self.tmp / f"outside-{SENTINEL}"
+
+    def build_other(self, round_number=2):
+        """The victim: a valid workflow.yaml and one eligible deferred finding."""
+        self.write_workflow(verify_round=2, passed_ids=["AC-1"])
+        self.write_round(round_number, [make_finding(sid(1))])
+        self.write_mapping({sid(1): ["AC-1"]})
+
+    def write_current_workflow(self):
+        self.write_file(
+            self.current_dir / "workflow.yaml",
+            dump_yaml(make_workflow(verify_round=2, passed_ids=["AC-1"])),
+        )
+
+    def write_current_round(self, n=2):
+        self.write_file(
+            self.current_reviews / f"round{n}.yaml",
+            ROUND_COMMENT + dump_yaml(make_round(n, [make_finding(sid(1))])),
+        )
+
+    def build_current(self):
+        """A real `current` feature with its own eligible round record."""
+        self.write_current_workflow()
+        self.write_current_round()
+
+    def current_arg(self, suffix=""):
+        return str(self.current_dir) + suffix
+
+    def run_child(self, spec, timeout=CHILD_TIMEOUT):
+        spec = dict(
+            spec,
+            script=str(SCRIPT),
+            argv=[
+                "--feature-dir",
+                self.current_arg(),
+                "--mapping",
+                str(self.mapping_path),
+                "--verified-commit",
+                COMMIT,
+            ],
+        )
+        try:
+            return subprocess.run(
+                [sys.executable, "-B", "-c", RACE_CHILD, json.dumps(spec)],
+                cwd=str(self.tmp),
+                env=self.env,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+            )
+        except subprocess.TimeoutExpired:
+            self.fail(f"the script waited for more than {timeout} seconds")
+
+
+class TestAc1FeatureDirectoryLink(LinkBase):
+    """AC-1 (TS-3, TS-8; FR2, FR7; TM-2)."""
+
+    def setUp(self):
+        super().setUp()
+        self.build_other()
+        os.symlink(FEATURE, self.current_dir)  # feature-docs/current -> demo
+
+    def test_ac1_a_link_as_the_final_element_is_refused_with_every_trailing_spelling(self):
+        for label, suffix in (("plain", ""), ("one slash", "/"), ("two slashes", "//")):
+            with self.subTest(label):
+                before = self.feature_tree()
+                proc = self.run_script(feature_dir=self.current_arg(suffix))
+                assert_clean_failure(self, proc, "invalid-workflow")
+                self.assertEqual(self.feature_tree(), before)
+
+    def test_ac1_the_refusal_comes_before_workflow_yaml_and_the_mapping_are_read(self):
+        # With workflow.yaml read first, the broken mapping would be reported instead.
+        self.write_mapping_text("{not json")
+        before = self.feature_tree()
+        proc = self.run_script(feature_dir=self.current_arg())
+        assert_clean_failure(self, proc, "invalid-workflow")
+        self.assertEqual(self.feature_tree(), before)
+
+    def test_ac1_a_link_whose_name_and_target_carry_the_sentinel_is_not_echoed(self):
+        target = self.tmp / f"target-{SENTINEL}"
+        shutil.copytree(self.other_dir, target, symlinks=True)
+        named = self.repo / "feature-docs" / f"link-{SENTINEL}"
+        os.symlink(target, named)
+        before = tree(target)
+        proc = self.run_script(feature_dir=str(named) + "/")
+        assert_clean_failure(self, proc, "invalid-workflow")
+        self.assertEqual(tree(target), before)
+
+
+class TestAc2ReviewsLink(LinkBase):
+    """AC-2 (TS-1, TS-2; FR1; TM-1)."""
+
+    def setUp(self):
+        super().setUp()
+        self.write_current_workflow()
+
+    def test_ac2_a_link_to_another_features_reviews_is_refused_and_preflight_still_stops(self):
+        self.build_other(round_number=1)
+        os.symlink(os.path.join("..", FEATURE, "reviews"), self.current_reviews)
+        self.commit_feature()
+        stopped = self.preflight()
+        self.assertEqual(stopped["reason"], "unresolved_findings", stopped)
+
+        other_before = self.feature_tree()
+        current_before = tree(self.current_dir)
+        proc = self.run_script(feature_dir=self.current_arg())
+        assert_clean_failure(self, proc, "invalid-round-record")
+        self.assertEqual(self.feature_tree(), other_before)
+        self.assertEqual(tree(self.current_dir), current_before)
+
+        # The orchestrator commits whatever the script left on disk. A run that
+        # had rewritten the other feature's record would let the preflight through.
+        self.git("add", "-A")
+        self.git("commit", "-q", "--allow-empty", "-m", "after the script")
+        after = self.preflight()
+        self.assertEqual(after["outcome"], "stop", after)
+        self.assertEqual(after["reason"], "unresolved_findings", after)
+        self.assertIn(sid(1), after["detail"])
+
+    def test_ac2_a_link_to_a_directory_outside_the_repository_is_refused(self):
+        self.build_other()
+        for n in (1, 2):
+            self.write_file(
+                self.outside_dir / f"round{n}.yaml",
+                ROUND_COMMENT + dump_yaml(make_round(n, [make_finding(sid(1))])),
+            )
+        os.symlink(self.outside_dir, self.current_reviews)
+        feature_before = tree(self.current_dir)
+        outside_before = tree(self.outside_dir)
+        proc = self.run_script(feature_dir=self.current_arg())
+        assert_clean_failure(self, proc, "invalid-round-record")
+        self.assertEqual(tree(self.current_dir), feature_before)
+        self.assertEqual(tree(self.outside_dir), outside_before)
+
+    def test_ac2_a_dangling_link_is_refused(self):
+        self.build_other()
+        missing = self.tmp / f"missing-{SENTINEL}"
+        os.symlink(missing, self.current_reviews)
+        before = tree(self.current_dir)
+        proc = self.run_script(feature_dir=self.current_arg())
+        assert_clean_failure(self, proc, "invalid-round-record")
+        self.assertEqual(tree(self.current_dir), before)
+        self.assertFalse(os.path.lexists(missing), "the link target was created")
+
+    def test_ac2_a_link_to_a_regular_file_is_refused_as_a_link_not_as_a_missing_record(self):
+        self.build_other()
+        target = self.tmp / f"file-{SENTINEL}"
+        target.write_text("not a directory\n", encoding="utf-8")
+        os.symlink(target, self.current_reviews)
+        before = tree(self.current_dir)
+        proc = self.run_script(feature_dir=self.current_arg())
+        assert_clean_failure(self, proc, "invalid-round-record")
+        self.assertEqual(tree(self.current_dir), before)
+        self.assertEqual(target.read_text(encoding="utf-8"), "not a directory\n")
+
+    def test_ac2_a_link_at_reviews_still_gives_way_to_the_earlier_checks(self):
+        # The mapping and workflow.yaml are read before `reviews` is opened.
+        self.build_other()
+        os.symlink(os.path.join("..", FEATURE, "reviews"), self.current_reviews)
+        self.write_mapping_text("{not json")
+        assert_clean_failure(self, self.run_script(feature_dir=self.current_arg()), "invalid-mapping")
+        self.write_mapping({sid(1): ["AC-1"]})
+        (self.current_dir / "workflow.yaml").write_text("workflow: [unclosed\n", encoding="utf-8")
+        assert_clean_failure(self, self.run_script(feature_dir=self.current_arg()), "invalid-workflow")
+
+
+class TestAc3ReviewsSwappedBeforeTheWrite(LinkBase):
+    """AC-3 (TS-4; FR3; TM-3)."""
+
+    def setUp(self):
+        super().setUp()
+        self.build_other()  # the victim's round2.yaml has the name the script writes
+        self.build_current()
+        self.aside = self.current_dir / "reviews-moved-aside"
+
+    def test_ac3_a_swap_at_the_serializer_never_reaches_the_other_features_reviews(self):
+        other_before = self.feature_tree()
+        proc = self.run_child(
+            {
+                "mode": "serializer",
+                "current_reviews": str(self.current_reviews),
+                "aside": str(self.aside),
+                "other_reviews": str(self.other_reviews),
+            }
+        )
+
+        # The wrapper really swapped; the exit status of the run is not fixed.
+        self.assertTrue(os.path.islink(self.current_reviews), "the wrapper did not swap `reviews`")
+        self.assertTrue(self.aside.is_dir())
+        self.assertEqual(self.feature_tree(), other_before)
+        self.assertEqual(leftover_temporaries(self.other_reviews), [])
+        self.assertEqual(leftover_temporaries(self.aside), [])
+        self.assertNotIn(SENTINEL, proc.stdout + proc.stderr)
+
+    def test_ac3_control_the_same_run_without_a_swap_rewrites_the_current_record(self):
+        summary = self.assert_ok(self.run_script(feature_dir=self.current_arg()))
+        self.assertEqual(len(summary["fixed"]), 1)
+        record = parse_yaml((self.current_reviews / "round2.yaml").read_text(encoding="utf-8"))
+        self.assertEqual(record["findings"][0]["resolution"], "fixed")
+
+
+class TestAc4RecordSwappedBeforeTheOpen(LinkBase):
+    """AC-4 (TS-10; FR8; TM-4)."""
+
+    def setUp(self):
+        super().setUp()
+        self.build_other()
+        self.build_current()
+        self.record = self.current_reviews / "round2.yaml"
+        self.aside = self.current_reviews / "record-moved-aside"
+
+    def test_ac4_a_record_swapped_for_a_link_after_the_check_is_refused(self):
+        other_before = self.feature_tree()
+        proc = self.run_child(
+            {
+                "mode": "record-to-link",
+                "record_name": "round2.yaml",
+                "record": str(self.record),
+                "aside": str(self.aside),
+                "other_record": str(self.round_path(2)),
+            }
+        )
+        self.assertTrue(self.aside.is_file(), "the wrapper did not swap the record")
+        assert_clean_failure(self, proc, "invalid-round-record")
+        self.assertEqual(self.feature_tree(), other_before)
+        self.assertEqual(leftover_temporaries(self.current_reviews), [])
+
+
+class TestAc5FifoRecord(LinkBase):
+    """AC-5 (TS-11; FR8; TM-5)."""
+
+    def setUp(self):
+        super().setUp()
+        self.build_other()
+        self.build_current()
+        self.record = self.current_reviews / "round2.yaml"
+
+    def test_ac5_a_fifo_record_fails_without_waiting_for_a_writer(self):
+        os.unlink(self.record)
+        os.mkfifo(self.record)
+        before = tree(self.current_dir)
+        self.assertEqual(before["reviews/round2.yaml"][0], "special")
+        try:
+            proc = self.run_script(feature_dir=self.current_arg(), timeout=CHILD_TIMEOUT)
+        except subprocess.TimeoutExpired:
+            self.fail("the script waited for a writer on the FIFO")
+        assert_clean_failure(self, proc, "invalid-round-record")
+        self.assertEqual(tree(self.current_dir), before)
+
+    def test_ac5_a_record_swapped_for_a_fifo_after_the_check_fails_without_waiting(self):
+        proc = self.run_child(
+            {
+                "mode": "record-to-fifo",
+                "record_name": "round2.yaml",
+                "record": str(self.record),
+                "aside": str(self.current_reviews / "record-moved-aside"),
+            }
+        )
+        self.assertTrue(stat.S_ISFIFO(os.lstat(self.record).st_mode), "the wrapper did not swap the record")
+        assert_clean_failure(self, proc, "invalid-round-record")
+        self.assertEqual(leftover_temporaries(self.current_reviews), [])
+
+
+class TestAc6LegitimatePathsAreStillRewritten(LinkBase):
+    """AC-6 (TS-5, TS-9; FR5, FR7)."""
+
+    def finding_after(self):
+        record = parse_yaml(self.round_path(2).read_text(encoding="utf-8"))
+        self.assertEqual(len(record["findings"]), 1)
+        return record["findings"][0]
+
+    def test_ac6_a_link_among_the_ancestors_is_not_checked(self):
+        self.build_eligible()
+        alias = self.tmp / "alias-of-the-repository"
+        os.symlink(self.repo, alias)
+        proc = self.run_script(feature_dir=str(alias / "feature-docs" / FEATURE))
+        self.assertEqual(len(self.assert_ok(proc)["fixed"]), 1)
+        self.assertEqual(self.finding_after()["resolution"], "fixed")
+
+    def test_ac6_a_link_followed_by_dot_names_dot_as_the_final_element(self):
+        self.build_eligible()
+        os.symlink(FEATURE, self.current_dir)  # feature-docs/current -> demo
+        proc = self.run_script(feature_dir=self.current_arg("/."))
+        self.assertEqual(len(self.assert_ok(proc)["fixed"]), 1)
+        self.assertEqual(self.finding_after()["resolution"], "fixed")
+
+    def test_ac6_trailing_separators_on_a_real_directory_give_the_result_of_the_plain_path(self):
+        summaries = {}
+        for label, suffix in (("plain", ""), ("one slash", "/"), ("two slashes", "//")):
+            with self.subTest(label):
+                self.build_eligible()
+                proc = self.run_script(feature_dir=str(self.feature_dir) + suffix)
+                summaries[label] = self.assert_ok(proc)
+                self.assertEqual(len(summaries[label]["fixed"]), 1)
+                self.assertEqual(self.finding_after()["resolution"], "fixed")
+        self.assertEqual(summaries["one slash"], summaries["plain"])
+        self.assertEqual(summaries["two slashes"], summaries["plain"])
+
+    def test_ac6_the_equals_form_accepts_a_trailing_separator_too(self):
+        self.build_eligible()
+        proc = self.run_script(
+            argv=[
+                f"--feature-dir={self.feature_dir}/",
+                f"--mapping={self.mapping_path}",
+                f"--verified-commit={COMMIT}",
+            ]
+        )
+        self.assertEqual(len(self.assert_ok(proc)["fixed"]), 1)
+
+
+class TestAc7UnchangedContract(ResolveBase):
+    """AC-7 (FR4, NFR4; TM-6): behaviour that must not move."""
+
+    def test_ac7_reviews_that_is_a_regular_file_is_a_missing_record(self):
+        self.build_eligible()
+        shutil.rmtree(self.reviews_dir)
+        self.reviews_dir.write_text("not a directory\n", encoding="utf-8")
+        before = self.feature_tree()
+        assert_clean_failure(self, self.run_script(), "missing-round-record")
+        self.assertEqual(self.feature_tree(), before)
+
+    @unittest.skipIf(os.geteuid() == 0, "a mode-0 directory does not stop root")
+    def test_ac7_reviews_that_cannot_be_opened_is_a_missing_record(self):
+        self.build_eligible()
+        os.chmod(self.reviews_dir, 0)
+        self.addCleanup(os.chmod, self.reviews_dir, 0o755)
+        assert_clean_failure(self, self.run_script(), "missing-round-record")
+
+    def test_ac7_a_feature_directory_that_is_a_regular_file_fails_with_invalid_workflow(self):
+        self.build_eligible()
+        plain = self.tmp / "not-a-directory"
+        plain.write_text("x\n", encoding="utf-8")
+        assert_clean_failure(self, self.run_script(feature_dir=str(plain)), "invalid-workflow")
+        assert_clean_failure(self, self.run_script(feature_dir=str(plain) + "/"), "invalid-workflow")
+
+    def test_ac7_a_link_at_workflow_yaml_itself_is_still_followed(self):
+        self.build_eligible()
+        elsewhere = self.tmp / "workflow-elsewhere.yaml"
+        elsewhere.write_bytes(self.workflow_path.read_bytes())
+        self.workflow_path.unlink()
+        os.symlink(elsewhere, self.workflow_path)
+        self.assertEqual(len(self.assert_ok(self.run_script())["fixed"]), 1)
+        self.assertTrue(self.workflow_path.is_symlink())
+
+    def test_ac7_the_record_keeps_its_mode_and_no_temporary_file_is_left(self):
+        self.build_eligible()
+        os.chmod(self.round_path(2), 0o600)
+        self.assert_ok(self.run_script(feature_dir=str(self.feature_dir) + "/"))
+        self.assertEqual(os.stat(self.round_path(2)).st_mode & 0o777, 0o600)
+        self.assertEqual(sorted(os.listdir(self.reviews_dir)), ["round2.yaml"])
+
+
+def imported_modules(path):
+    modules = set()
+    for node in ast.walk(ast.parse(Path(path).read_text(encoding="utf-8"))):
+        if isinstance(node, ast.Import):
+            modules.update(alias.name.split(".")[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.level == 0:
+            modules.add(node.module.split(".")[0])
+    return modules
+
+
+class TestAc8Docstring(unittest.TestCase):
+    """AC-8 (FR6): the Boundaries section of the module docstring."""
+
+    def boundaries(self):
+        docstring = ast.get_docstring(ast.parse(SCRIPT.read_text(encoding="utf-8")))
+        self.assertIn("Boundaries:", docstring)
+        return " ".join(docstring.split("Boundaries:", 1)[1].split())
+
+    def test_ac8_the_three_refused_links_and_their_codes_are_named(self):
+        section = self.boundaries()
+        self.assertIn("symbolic link", section)
+        self.assertRegex(section, r"symbolic link[^;]*--feature-dir[^;]*one or more[^;]*invalid-workflow")
+        self.assertRegex(section, r";[^;]*`reviews`[^;]*invalid-round-record")
+        self.assertRegex(section, r";[^;]*round record[^;]*invalid-round-record")
+
+    def test_ac8_every_read_and_write_is_stated_to_be_relative_to_the_directory_handle(self):
+        self.assertRegex(self.boundaries(), r"relative to (that|the) directory handle")
+
+
+class TestAc9Constraints(unittest.TestCase):
+    """AC-9 (NFR1, NFR3, NFR5): what a test can pin about the change itself.
+
+    The races above are triggered from wrapper hooks at fixed calls, with no
+    load, loops or sleeps. That neither SKILL.md, merge-preflight.py nor
+    tests/test_merge_preflight.py changed is a diff against the base commit made
+    during verification, not a test in the suite.
+    """
+
+    def stdlib(self):
+        names = getattr(sys, "stdlib_module_names", None)
+        if names is None:
+            self.skipTest("sys.stdlib_module_names is not available")
+        return set(names)
+
+    def test_ac9_the_script_imports_the_standard_library_and_pyyaml_only(self):
+        self.assertEqual(imported_modules(SCRIPT) - self.stdlib(), {"yaml"})
+
+    def test_ac9_this_module_imports_the_standard_library_only(self):
+        self.assertEqual(imported_modules(__file__) - self.stdlib(), set())
 
 
 if __name__ == "__main__":
