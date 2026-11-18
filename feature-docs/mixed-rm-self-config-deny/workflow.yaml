@@ -105,7 +105,8 @@ workflow:
   base_commit: 3336c9fc059e9837a964c74521e7e0dcf7d65f9b
   completed_at_commit: e4bbd4dbde04dd12e179aa4b08d3738517c93429
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: e5e7e8725d28785833e21e836976964971d07d5a
 - id: verify
   status: pending
 - id: retrospect
@@ -155,8 +156,13 @@ tasks:
     branch: em-workflow/mixed-rm-self-config-deny/task0002
     notes: null
 review:
-  status: pending
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
   plan:
     floor:
     - comprehensive

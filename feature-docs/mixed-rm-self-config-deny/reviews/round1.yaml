@@ -1,0 +1,108 @@
+round: 1
+executed_at: '2026-11-18T20:08:20+09:00'
+scope:
+  review_mode: diff
+  base_commit: 3336c9fc059e9837a964c74521e7e0dcf7d65f9b
+  head_commit: e5e7e8725d28785833e21e836976964971d07d5a
+  changed_files:
+  - .claude/rules/hook-tests.md
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/mixed-rm-self-config-deny/task0001.tests.yaml
+  - test-docs/mixed-rm-self-config-deny/task0002.tests.yaml
+  - tests/test_destructive_guard_mixed_rm_precedence.py
+  - tests/test_hook_tests_rule_key_doc.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: skipped
+  skip_reason: harness_unavailable
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: comprehensive#1
+  perspective: comprehensive
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: f6526f456a861ab6
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 10373
+  title: 親ディレクトリ参照で保護範囲の外に出る rm 対象も保護パス扱いで外れ、再帰削除の deny が self-modification の ask に置き換わる（既存動作、SPEC で範囲外）
+  description: rm_protected_operand_numbers() は、生のオペランドと normalize_candidate() の形のどちらかが SELF_CONFIG に一致すれば、その対象を保護パスとみなす。このため `/home/user/.claude/skills/../../valuable`（実体は /home/user/valuable）も外れ、残るのは保持された self-modification の ask だけになる。変更前の rm_operands_name_self_config() でも同じ ask になっており、この差分が持ち込んだ退行ではない。SPEC の Edge Cases と Assumption A2 がこの形を範囲外・別タスクと明記している。
+  suggestion: この feature では直さず、別タスクとして起票する。直すときは FR2・A1 と両立させ、生の形が一致しても正規化後の形が保護範囲の外に出る対象は保護パスとみなさない案を検討する。`rm -rf ~/.claude/skills/../../valuable` 単体の形と、保護パスと並べた形の回帰ケースを rule 付きで足す。
+  reproduction: CLAUDE_BATCH=0 で destructive-guard.py の標準入力に {"tool_name":"Bash","tool_input":{"command":"rm -rf /home/user/.claude/skills/foo /home/user/.claude/skills/../../valuable"}} を渡すと、permissionDecision が ask、理由が self-modification になる。第2対象を /home/user/valuable に変えると deny / rm-recursive になる。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 85
+  resolution: deferred
+  resolution_reason: medium, pre-existing behavior; SPEC Edge Cases and Assumption A2 put it out of scope for this feature. Filed as a separate task.
+evaluation:
+  round_summary: Round 1（diff、cross_validation=true）。comprehensive#0 は harness_unavailable で skip し、comprehensive#1（litellm）で完了。security#0 の medium 1 件は reproduced だが差分以前からの動作で SPEC 範囲外。spec#0 の 2 件は誤り（FR7 の旧 SPEC 修正は base より前のコミットで済んでいる。'resolution step' は strongest_rm_decision( 直前のコメントブロック先頭に残っている）で dismissed。architecture・comprehensive は corroborated。注入の試みは無し。
+  recommended_action: complete
+  action_rationale: critical/high は残っていない。残る medium 1 件は既存動作で SPEC が範囲外と明記しているため、別タスクとして起票しこの feature は完了にする。
+dismissed_sites:
+- file: feature-docs/destructive-guard-mixed-rm-precedence/SPEC.md
+  line: 183
+  run_id: spec#0
+  reason: false positive
+- file: em-workflow/hooks/destructive-guard.py
+  line: 10620
+  run_id: spec#0
+  reason: false positive
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
