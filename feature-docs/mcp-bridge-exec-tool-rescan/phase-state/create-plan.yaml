@@ -1,0 +1,35 @@
+schema_version: 1
+feature: mcp-bridge-exec-tool-rescan
+phase: create-plan
+status: dispatched
+generation: 1
+base_revision: 194390fc9af9c42409233284439a3441cb93bdfd
+last_input_digest: sha256:3991252029b3e6e46b80f05fd7a3512e98b6a5910a84efa4f52ae2eb8fa8ff50
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:3991252029b3e6e46b80f05fd7a3512e98b6a5910a84efa4f52ae2eb8fa8ff50
+  dispatch_digest_inputs:
+    feature-docs/mcp-bridge-exec-tool-rescan/REQUIREMENTS.md: sha256:045f3523d2d04d09e83c6b3266190532a28dfe47b368c6c66e5e4cf8309da09b
+    feature-docs/mcp-bridge-exec-tool-rescan/SPEC.md: sha256:dd0f8da5fb6cbfc84d298bccd608c380aae1b627c1b6cc174ca4944cb0b1b9f6
+    feature-docs/mcp-bridge-exec-tool-rescan/workflow.yaml: sha256:6ae34966831a3025ca0422c2564c1fa9286f900c350604b1b1a3a9c0296afc03
+    plugin:references/contracts/planner-contract.md: sha256:df2bf3f0321c2627a31b878a14adb176ee7c2131638245112e5d3bb27f7a3682
+    plugin:references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    plugin:references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    plugin:references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    plugin:references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    plugin:references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
+    plugin:references/workflow-schema.md: sha256:5bd8500c203c4f17cde4193ee43d561073fe7f47099d61a55eb593e098881d87
+    plugin:skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+  output_digest: null
+  self_write_set: []
+artifacts: []
+other_feature_doc_fixes: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
