@@ -50,3 +50,19 @@ records:
   resolution_note: project.components の 2 コマンド `python3 -m unittest discover -s tests`
     と `python3 em-workflow/hooks/tests/run-destructive-guard.py` はどちらも bash_guard
     に承認済み。新たな自動承認は無い。
+- gate_id: create-plan.open-question
+  question_id: plan.non-recursive-protected-plus-root-rm
+  options:
+  - per_target_uniform
+  - keep_ask_for_non_recursive
+  selected_option_ids:
+  - per_target_uniform
+  source: batch-codex-consultation
+  codex_consulted: true
+  opus_escalation: false
+  resolution_note: 'planner が IMPLEMENTATION.md の Open Questions に挙げた点。再帰でない rm に保護パスと
+    root 形の対象を並べた形（rm ~/.claude/skills/foo ~）は現状 ask / self-modification だが、rm ~ 単独は
+    deny / rm-root。SPEC FR3 末尾の「rm が再帰でないとき」は字面上 ask 維持を示す。Codex は per_target_uniform
+    を推した: check_rm() は再帰フラグで打ち切る前に rm-root を記録するので rm ~ 単独と同じ判定が残る、保護パスで deny を隠す穴を塞ぐ本
+    feature の目的に合う、ask から deny への変化は NFR1 の許す向き、非再帰専用の分岐が要らない。FR3 の当該句は「保護パスを除いた後に
+    deny が残らない場合」と読む（TS-8 はこれを満たす）。計画の task0001 はこの読み方で書かれているため計画は変えずに採用。Codex はこの形を固定するケースの追加も推奨したが、計画には含まれていない。'

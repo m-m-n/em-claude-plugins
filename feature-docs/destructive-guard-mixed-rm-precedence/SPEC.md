@@ -22,7 +22,7 @@ As an em-workflow の利用者, I want to 再帰削除と rm 以外の ask 源�
 - [ ] AC2: 同じ 5 つの形で順序を逆にしても deny / rm-recursive になる。
 - [ ] AC4: rm -rf ~ ; git commit --amend は deny / rm-root になる。
 - [ ] AC5: rm -rf /home/user/valuable ; echo x > ~/.claude/settings.json は deny / rm-recursive になる。
-- [ ] AC9: `rm -rf ~/.claude/skills/foo` は ask / self-modification のまま。`rm -rf ~/.claude/skills/foo ; rm -rf /home/user/valuable` は deny / rm-recursive。`rm -rf ~/.claude/skills/foo /home/user/valuable` は ask / self-modification。CLAUDE_BATCH を立てた `rm -rf ~/.claude/skills/foo` は deny / self-modification（降格は優先を決めた後）。
+- [ ] AC9: `rm -rf ~/.claude/skills/foo` は ask / self-modification のまま。`rm -rf ~/.claude/skills/foo ; rm -rf /home/user/valuable` は deny / rm-recursive。`rm -rf ~/.claude/skills/foo /home/user/valuable` は deny / rm-recursive。CLAUDE_BATCH を立てた `rm -rf ~/.claude/skills/foo` は deny / self-modification（降格は優先を決めた後）。
 - [ ] AC10: rm -rf /home/user/valuable の後に、scan budget を超えるか lex を確定できない部分が続く形を作れるなら、それは deny / rm-recursive になる。
 
 ### US2: 無人実行の判定文に再帰削除の対象と書き換え案が残る
@@ -49,7 +49,7 @@ As a フックの開発者, I want to ケースに期待する理由 ID を書�
 - **FR5:** ケースの 4 要素目に理由 ID を固定するキーを足す。run-destructive-guard.py はケースの 4 要素目に任意の `rule`（空でない文字列）を受け付ける。`rule` があるケースでは、permissionDecisionReason の先頭 `[destructive-guard/<rule>]` から取り出した理由 ID も期待値と比べる。判定段か理由 ID のどちらかが違えば FAIL にする。FAIL の行には得られた理由 ID も出す。`rule` が無いケースは今までどおり判定段だけを比べる。3 要素のケースと、cwd / batch だけの 4 要素のケースは今と同じ結果になる。`rule` が文字列でない、または知らないキーがあるときは、今までどおり malformed case として実行を止める。
 - **FR6:** 退行を検出するケースを足す。destructive-guard-cases.json に、少なくとも次のケースを `rule` 付きで足す。(a) task に挙がっている 5 つの形（rm の deny 対象 ; git commit --amend / ; chmod -R 777 /etc / && terraform destroy / ; kubectl delete pod x / ; gcloud projects add-iam-policy-binding ...）を、rm を先に置いた順と後ろに置いた順の両方で、それぞれ deny / rm-recursive に固定する。(b) 少なくとも 1 つの形の batch:true 版を deny / rm-recursive に固定する。(c) rm-root の形（rm -rf ~ ; git commit --amend）を deny / rm-root に固定する。(d) 別の文の self-modification との組み合わせと、FR8 の 3 つの例（TS-9・TS-12・TS-13）を固定する。対象パスは既存ケースと同じ汎用の例（/home/user/valuable など）にし、マシン固有のパスは書かない。
 - **FR7:** コメントとドキュメントを今の制御の流れに合わせる。main() で strongest_rm_decision() を呼ぶ直前のコメント、statements() の「a deny among them has been given」、route_substitution_headed_statement() の docstring の check_git() が exit するという記述、run-destructive-guard.py のモジュール docstring と case_options() のエラーメッセージ、`.claude/rules/hook-tests.md` のケース形式の説明を、修正後の動作（FR8 の例外も含む）と `rule` キーに合わせて書き換える。
-- **FR8:** 同じ文の self-modification は、その文の rm 判定より優先する。rm の呼び出しの削除対象そのものが保護された自己設定パス（SELF_CONFIG）なために self-modification の ask が出たとき、その ask は同じ文の rm 判定より優先する。ここでの「文」は、main() のループで statements() が 1 回 yield した単位を指す。ループの 1 回ごとに区別し、文字列や行が同じかどうかでは決めない。別に yield されるコマンド置換の本文や bash -c の payload には広げない。その文の rm 判定（rm-recursive / rm-root / rm-unresolvable）は、プールで勝ちを決める候補から外す。self-modification の ask は他の ask と同じく走査の最後まで後回しにする。他の文の rm の deny は、順序に関係なくこの ask に勝つ。CLAUDE_BATCH による降格は、優先を決めた後に行う。例: `rm -rf ~/.claude/skills/foo` は ask / self-modification のまま（既存ケース 42 行目）。`rm -rf /home/user/valuable ; echo x > ~/.claude/settings.json` は deny / rm-recursive。`rm -rf ~/.claude/skills/foo ; rm -rf /home/user/valuable` は deny / rm-recursive。わかっている影響: 1 つの rm に保護パスと /home/user/valuable を並べた形（`rm -rf ~/.claude/skills/foo /home/user/valuable`）は ask / self-modification のままになる。
+- **FR8:** 同じ文の self-modification は、その文の rm 判定より優先する。rm の呼び出しの削除対象そのものが保護された自己設定パス（SELF_CONFIG）なために self-modification の ask が出たとき、その ask は同じ文の rm 判定より優先する。ここでの「文」は、main() のループで statements() が 1 回 yield した単位を指す。ループの 1 回ごとに区別し、文字列や行が同じかどうかでは決めない。別に yield されるコマンド置換の本文や bash -c の payload には広げない。その文の rm 判定（rm-recursive / rm-root / rm-unresolvable）は、プールで勝ちを決める候補から外す。self-modification の ask は他の ask と同じく走査の最後まで後回しにする。他の文の rm の deny は、順序に関係なくこの ask に勝つ。CLAUDE_BATCH による降格は、優先を決めた後に行う。例: `rm -rf ~/.claude/skills/foo` は ask / self-modification のまま（既存ケース 42 行目）。`rm -rf /home/user/valuable ; echo x > ~/.claude/settings.json` は deny / rm-recursive。`rm -rf ~/.claude/skills/foo ; rm -rf /home/user/valuable` は deny / rm-recursive。1 つの rm に保護パスと /home/user/valuable を並べた形（`rm -rf ~/.claude/skills/foo /home/user/valuable`）は、候補から外すのが保護パスの対象の rm 判定だけなので、deny / rm-recursive になる（mixed-rm-self-config-deny で変更）。
 
 ### Non-Functional Requirements
 - **NFR1 - 検出力:** 検出力を下げない。今 deny のコマンドは、修正後もすべて deny のまま。既存の deny / ask ケースは消さず、書き換えもしない（hook-tests.md のルール）。42 行目の `rm -rf ~/.claude/skills/foo`（ask）も含む。
@@ -180,7 +180,7 @@ TS-1〜TS-16 は `destructive-guard-cases.json` に `rule` 付きのケースと
 - [ ] TS-12: `rm -rf ~/.claude/skills/foo`（既存の 42 行目と同じ形を `rule` 付きでもう 1 件足す。既存ケースは書き換えない） - [ask, self-modification]
 - [ ] TS-13: `rm -rf ~/.claude/skills/foo ; rm -rf /home/user/valuable` - [deny, rm-recursive]
 - [ ] TS-14: `rm -rf /home/user/valuable ; rm -rf ~/.claude/skills/foo`（TS-13 の逆順） - [deny, rm-recursive]
-- [ ] TS-15: `rm -rf ~/.claude/skills/foo /home/user/valuable`（わかっている影響を固定する） - [ask, self-modification]
+- [ ] TS-15: `rm -rf ~/.claude/skills/foo /home/user/valuable`（保護パスの対象だけを候補から外す。mixed-rm-self-config-deny で変更） - [deny, rm-recursive]
 - [ ] TS-16: `rm -rf ~/.claude/skills/foo`（batch:true。優先を決めた後に降格する） - [deny, self-modification]
 - [ ] TS-17: `rule` 付きのケースで理由 ID が違うとき（例: rule を git-amend にしたケースを修正後のフックで動かす） - run-destructive-guard.py が FAIL にする。`rule` が無いケースは判定段だけで判定する（AC6）
 
