@@ -1,0 +1,68 @@
+task_id: task0001
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 16375 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 16402 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_resolve_verified_findings.TestAc1FeatureDirectoryLink.test_ac1_a_link_as_the_final_element_is_refused_with_every_trailing_spelling
+      - tests.test_resolve_verified_findings.TestAc1FeatureDirectoryLink.test_ac1_the_refusal_comes_before_workflow_yaml_and_the_mapping_are_read
+      - tests.test_resolve_verified_findings.TestAc1FeatureDirectoryLink.test_ac1_a_link_whose_name_and_target_carry_the_sentinel_is_not_echoed
+    red_confirmed: true
+    red_reason: "Against the old script every spelling (current, current/, current//) followed the link and exited 0 where invalid-workflow was expected (AssertionError: 0 == 0 with the stdout summary; the first run had already rewritten the other feature's record, the later ones reported not_applied 1); with a broken mapping the old script reported invalid-mapping instead of invalid-workflow ('invalid-mapping\\n' != 'invalid-workflow\\n'), which shows the link check did not come before workflow.yaml and the mapping were read."
+  AC-2:
+    tests:
+      - tests.test_resolve_verified_findings.TestAc2ReviewsLink.test_ac2_a_link_to_another_features_reviews_is_refused_and_preflight_still_stops
+      - tests.test_resolve_verified_findings.TestAc2ReviewsLink.test_ac2_a_link_to_a_directory_outside_the_repository_is_refused
+      - tests.test_resolve_verified_findings.TestAc2ReviewsLink.test_ac2_a_dangling_link_is_refused
+      - tests.test_resolve_verified_findings.TestAc2ReviewsLink.test_ac2_a_link_to_a_regular_file_is_refused_as_a_link_not_as_a_missing_record
+      - tests.test_resolve_verified_findings.TestAc6StructuralErrorsWriteNothing.test_ac6_each_broken_input_fails_with_its_code_and_writes_nothing
+    red_confirmed: true
+    red_reason: "Against the old script a reviews link to another feature's reviews and to an outside directory was followed and the record behind it was rewritten (exit 0, fixed 1 where invalid-round-record was expected: AssertionError: 0 == 0); a dangling link and a link to a regular file gave 'missing-round-record\\n' != 'invalid-round-record\\n'. The two new broken-input table entries (outside link, dangling link) failed as subTests of the table test."
+  AC-3:
+    tests:
+      - tests.test_resolve_verified_findings.TestAc3ReviewsSwappedBeforeTheWrite.test_ac3_a_swap_at_the_serializer_never_reaches_the_other_features_reviews
+      - tests.test_resolve_verified_findings.TestAc3ReviewsSwappedBeforeTheWrite.test_ac3_control_the_same_run_without_a_swap_rewrites_the_current_record
+    red_confirmed: true
+    red_reason: "With the wrapper swapping reviews for a link when the serializer is called, the old script replaced the other feature's round2.yaml: the tree comparison failed (the other feature's record held the rewritten bytes instead of the hand-kept comment and original content). The control test (no swap, current record rewritten) passes before and after and guards that the red is not a broken fixture."
+  AC-4:
+    tests:
+      - tests.test_resolve_verified_findings.TestAc4RecordSwappedBeforeTheOpen.test_ac4_a_record_swapped_for_a_link_after_the_check_is_refused
+    red_confirmed: true
+    red_reason: "With the wrapper swapping the record for a link to the other feature's record when the record is opened (it wraps os.open and the builtin open, acting once on the name round2.yaml), the old script followed the link and exited 0 (AssertionError: 0 == 0 with the stdout summary) where invalid-round-record was expected."
+  AC-5:
+    tests:
+      - tests.test_resolve_verified_findings.TestAc5FifoRecord.test_ac5_a_fifo_record_fails_without_waiting_for_a_writer
+      - tests.test_resolve_verified_findings.TestAc5FifoRecord.test_ac5_a_record_swapped_for_a_fifo_after_the_check_fails_without_waiting
+    red_confirmed: false
+    red_reason: "A round record that is a FIFO from the start was already refused by the old script's no-follow status check before any open, so test_ac5_a_fifo_record_fails_without_waiting_for_a_writer passed before the change; no red state occurred for the criterion as written. The added variant, a record swapped for a FIFO after that check, did fail against the old script (it waited past the 30 second child timeout: 'the script waited for more than 30 seconds') and guards the non-blocking open."
+  AC-6:
+    tests:
+      - tests.test_resolve_verified_findings.TestAc6LegitimatePathsAreStillRewritten.test_ac6_a_link_among_the_ancestors_is_not_checked
+      - tests.test_resolve_verified_findings.TestAc6LegitimatePathsAreStillRewritten.test_ac6_a_link_followed_by_dot_names_dot_as_the_final_element
+      - tests.test_resolve_verified_findings.TestAc6LegitimatePathsAreStillRewritten.test_ac6_trailing_separators_on_a_real_directory_give_the_result_of_the_plain_path
+      - tests.test_resolve_verified_findings.TestAc6LegitimatePathsAreStillRewritten.test_ac6_the_equals_form_accepts_a_trailing_separator_too
+    red_confirmed: false
+    red_reason: "Preservation criterion: the old script resolved the whole path by name, so an ancestor link, a trailing separator and current/. all worked before the change; these tests passed before and no red state occurred. They guard that opening the final element without following a link does not break those spellings."
+  AC-7:
+    tests:
+      - tests.test_resolve_verified_findings.TestAc6StructuralErrorsWriteNothing.test_ac6_each_broken_input_fails_with_its_code_and_writes_nothing
+      - tests.test_resolve_verified_findings.TestAc7UnchangedContract.test_ac7_reviews_that_is_a_regular_file_is_a_missing_record
+      - tests.test_resolve_verified_findings.TestAc7UnchangedContract.test_ac7_reviews_that_cannot_be_opened_is_a_missing_record
+      - tests.test_resolve_verified_findings.TestAc7UnchangedContract.test_ac7_a_feature_directory_that_is_a_regular_file_fails_with_invalid_workflow
+      - tests.test_resolve_verified_findings.TestAc7UnchangedContract.test_ac7_a_link_at_workflow_yaml_itself_is_still_followed
+      - tests.test_resolve_verified_findings.TestAc7UnchangedContract.test_ac7_the_record_keeps_its_mode_and_no_temporary_file_is_left
+      - tests.test_resolve_verified_findings.TestAc1FeatureDirectoryLink.test_ac1_a_link_whose_name_and_target_carry_the_sentinel_is_not_echoed
+    red_confirmed: true
+    red_reason: "Partly red: the broken-input table test failed against the old script on its two new link entries (reviews linked to an outside directory and a dangling reviews link), and the sentinel-named link case failed because the old script exited 0. The case that reviews is a regular file (missing-round-record), the unreadable reviews, the regular-file feature directory, the followed workflow.yaml link and the kept mode were green before the change (behaviour that pre-existed, pinned so that the handle-relative reads keep it); no red state occurred for those. Every existing test of the module is kept unchanged and listed by the unchanged module run."
+  AC-8:
+    tests:
+      - tests.test_resolve_verified_findings.TestAc8Docstring.test_ac8_the_three_refused_links_and_their_codes_are_named
+      - tests.test_resolve_verified_findings.TestAc8Docstring.test_ac8_every_read_and_write_is_stated_to_be_relative_to_the_directory_handle
+    red_confirmed: true
+    red_reason: "The old Boundaries section did not name a symbolic link: AssertionError: 'symbolic link' not found in 'YAML is read with safe load only, ...', and the relative-to-the-directory-handle pattern was not found."
+  AC-9:
+    tests:
+      - tests.test_resolve_verified_findings.TestAc9Constraints.test_ac9_the_script_imports_the_standard_library_and_pyyaml_only
+      - tests.test_resolve_verified_findings.TestAc9Constraints.test_ac9_this_module_imports_the_standard_library_only
+    red_confirmed: false
+    red_reason: "Preservation criterion: the script and the test module imported only the standard library (plus PyYAML in the script) before the change, so these two tests passed before and no red state occurred. The wrapper-hook swaps (no load, loops or sleeps) are exercised by the AC-3, AC-4 and AC-5 tests; that skills/develop/SKILL.md, scripts/merge-preflight.py and tests/test_merge_preflight.py have no diff against the base commit is a git diff made at verification, not a test."
