@@ -102,7 +102,7 @@ workflow:
   completed_at_commit: 6447b4cccc5f21524f65aa290cae423500bae7b4
   base_commit: 643f7aa1d72ee10884a9b279b77c900d934ba98a
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -142,8 +142,17 @@ tasks:
     notes: null
     branch: em-workflow/resolve-findings-parent-symlink/task0001
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - performance
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
 requirements:
   FR1:
     title: reviews ディレクトリがシンボリックリンクなら拒否する
