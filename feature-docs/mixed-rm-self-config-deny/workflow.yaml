@@ -135,7 +135,8 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
+    branch: em-workflow/mixed-rm-self-config-deny/task0001
     notes: null
   task0002:
     title: Describe the per-target exclusion in the hook-tests rule
@@ -149,7 +150,8 @@ tasks:
     complexity: low
     requirements:
     - FR8
-    status: pending
+    status: in_progress
+    branch: em-workflow/mixed-rm-self-config-deny/task0002
     notes: null
 review:
   status: pending
