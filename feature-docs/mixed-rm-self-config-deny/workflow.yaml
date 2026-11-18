@@ -150,7 +150,7 @@ tasks:
     complexity: low
     requirements:
     - FR8
-    status: in_progress
+    status: merged
     branch: em-workflow/mixed-rm-self-config-deny/task0002
     notes: null
 review:
