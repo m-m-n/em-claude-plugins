@@ -4,13 +4,13 @@ phase: create-spec
 status: in_progress
 generation: 1
 base_revision: 0d0225d4cfc43b81f8e5b8e99271366c055f6b5f
-last_input_digest: sha256:12c955eb28b3251fb6f15ee8a6794c9d042a3d81b01b64b076b2410ad87e3439
-active_request_id: create-spec-run-0001
+last_input_digest: sha256:141ec1303f35498c16c7a65514c74403b8cba79c56d7d063fac110fb1c655038
+active_request_id: create-spec-run-0002
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:12c955eb28b3251fb6f15ee8a6794c9d042a3d81b01b64b076b2410ad87e3439
   dispatch_digest_inputs:
     .claude/rules/core-plugin-structure.md: sha256:62e2ad8531369d37f83ad5458d3f5077b4ca3edf7584ecba83b4be044909fd56
@@ -26,6 +26,15 @@ worker_runs:
     test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
     tests/test_final_path_correction.py: sha256:d5ea53555995ae812cabef72721a914a31e439808d1c6e1ed83fe22eaf68cb8c
     tests/test_final_path_correction_docs.py: sha256:ef67850e2da712d22fd5b9c5d5ba86076f6355e4be1f59a2cc0cb7fdbe729aef
+  output_digest: sha256:c4655627deb5fe5a0a987f32b8c74aa6afef295fd3fcdc76c44af1faaeb09a4d
+  self_write_set: []
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:141ec1303f35498c16c7a65514c74403b8cba79c56d7d063fac110fb1c655038
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/spec-writer-contract.md: sha256:1e63f69687c6850e890f66b5ca92af7f3b0d02645cc464fca88455ad2269d671
+    em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
+    em-workflow/references/templates/spec-document.md: sha256:a5d0106c39a5df7dc2365357a9546588275ed6c7a1651c866e75fa327a7fa592
 artifacts: []
 patches: []
 progress_fingerprint: null
