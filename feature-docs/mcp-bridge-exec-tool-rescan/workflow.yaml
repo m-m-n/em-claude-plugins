@@ -134,7 +134,7 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: failed
+    status: in_progress
     notes: 'batch-retry-consumed: 1 (prior failure: implementer stopped without a merged event)'
     branch: em-workflow/mcp-bridge-exec-tool-rescan/task0001
 review:
