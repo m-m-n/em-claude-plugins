@@ -1,0 +1,43 @@
+task_id: task0002
+baseline_failures: []          # before any edit: python3 -m unittest discover -s tests -> Ran 16337 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after writing this record: python3 -m unittest discover -s tests, no failure
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_hook_tests_rule_key_doc.TestMixedCaseGuidance.test_per_target_exclusion_leaves_out_only_the_protected_targets
+    red_confirmed: true
+    red_reason: >-
+      Run before editing the rule document, the new test failed with "no sentence says that
+      only the protected targets are left out of the candidates": the nested bullet still said
+      that a protected deletion target of the same statement's rm makes the self-modification
+      `ask` stand instead, with no sentence about leaving out only the protected targets or
+      about the deny of the same rm's other targets winning.
+  AC-2:
+    tests:
+      - tests.test_hook_tests_rule_key_doc.TestLaterSectionsStayInPlace.test_ac4_the_later_sections_keep_their_order
+      - tests.test_hook_tests_rule_key_doc.TestLaterSectionsStayInPlace.test_ac4_the_rule_key_is_not_described_after_the_rules_list
+      - tests.test_hook_tests_rule_key_doc.TestLaterSectionsStayInPlace.test_ac4_the_phrases_other_tests_require_stay_in_the_destructive_guard_part
+    red_confirmed: false
+    red_reason: >-
+      The criterion is an invariant (every other line of the rule document is byte-identical to
+      the task's base); it held before any edit, so no red state can occur. A dedicated
+      byte-comparison module is out of scope, but the existing structure tests
+      (path .claude/rules/hook-tests.md, basename hook-tests.md, searched in tests/) detect a
+      moved or dropped section and a lost required phrase; no red state occurred for this
+      change. The byte-for-byte part is checked with git diff against the task's base: the
+      diff of .claude/rules/hook-tests.md touches only the second nested bullet of the
+      recursive-delete bullet.
+  AC-3:
+    tests:
+      - tests.test_hook_tests_rule_key_doc.TestMixedCaseGuidance.test_per_target_exclusion_leaves_out_only_the_protected_targets
+      - tests.test_hook_tests_rule_key_doc.TestMixedCaseGuidance.test_ac3_a_protected_target_in_the_same_statement_keeps_the_self_modification_ask
+      - tests.test_destructive_guard_merge_allow.TestAC6ExistingCasesAndDocs.test_ac6_case_format_rule_describes_the_optional_element
+      - tests.test_destructive_guard_merge_allow.TestTask0012AC7Docs.test_ac7_the_rule_describes_the_placeholder_and_the_fixture
+      - tests.test_loop_command_guard.TestDocumentationMatchesRegistration.test_hook_tests_rule_has_a_loop_command_guard_section
+      - tests.test_loop_command_guard.TestDocumentationMatchesRegistration.test_hook_tests_rule_describes_the_case_format
+      - tests.test_codex_hook_interactive_guard.TestRulesDocument
+    red_confirmed: true
+    red_reason: >-
+      The new test is the one this criterion adds; it was watched failing before the rule
+      document was edited (see AC-1). The other listed tests are existing tests of the document
+      that must keep passing; they passed before and after the edit.
