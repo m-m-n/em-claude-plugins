@@ -1,7 +1,7 @@
 schema_version: 1
 feature: mcp-bridge-exec-tool-rescan
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 054c812a12bd5cc55e3dc480ac2680296d353699
 last_input_digest: sha256:80c7a51fc61ee83f131f585030a9cdc78b82985a07038382bb9a59501f6365d1

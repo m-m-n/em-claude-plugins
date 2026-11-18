@@ -1,0 +1,215 @@
+schema_version: 1
+feature: mcp-bridge-exec-tool-rescan
+created: '2026-11-18'
+base_branch: main
+goal: |
+  # destructive-guard が mcp-bridge run --args-json の本文を実行先の MCP ツールを問わず再走査から外し、シェル実行型ツール経由の破壊的コマンドを通す
+
+  ## 脆弱性の概要 (必須)
+
+  `em-workflow/hooks/destructive-guard.py` は、静的な単一の `mcp-bridge run` コマンドの `--args-json` の値を、実行先の MCP サーバー・ツールを問わず「実行されないデータ」として扱い、単一引用符内のコマンド置換候補を再走査しない。引数をシェルで実行する MCP ツールを呼ぶ場合、破壊的なコマンドが検知されずに通る。
+
+  ## 参照 (必須)
+
+  - CVE / GHSA ID: 該当なし
+  - アドバイザリ URL: 該当なし
+  - severity: medium
+  - 該当パッケージ: 該当なし
+  - 現在のバージョン: feature destructive-guard-false-deny（PR #84）の時点
+  - 修正済みバージョン: 無し
+
+  ## 攻撃シナリオ (必須)
+
+  シェルを実行する MCP ツール（例: desktop-commander の `start_process`）が mcp-bridge に登録された環境で、次のコマンドを Bash から実行する。
+
+  ```txt
+  mcp-bridge run --mcp desktop-commander --tool start_process --args-json '{"command":"echo $(git branch -D example)","shell":"bash"}'
+  ```
+
+  変更前のフックは deny、変更後は allow になる。`--args-json` の値は MCP ツール側で bash に渡され、置換部分が実行される（review round 2 の security 観点で読解により再現。実サーバーでの削除は未実施）。
+
+  ## 影響範囲 (必須)
+
+  destructive-guard が止めるべき破壊的な git 操作・ファイル削除が、シェル実行型 MCP ツール経由で素通りする。置換で包まない平文の形は変更前から allow だったため、新たに開いたのは置換で包んだ形のみ。
+
+  ## 完了の定義 (必須)
+
+  - [ ] 攻撃シナリオが成立しない
+  - [ ] 修正版に追随している（修正版が無い場合は暫定緩和策の欄に対応を記載）
+  - [ ] 再走査を省く対象を、引数を実行しないと分かっている `--mcp` / `--tool` の組（例: notion の `notion-create-comment`）に限る。または THREAT-MODEL の TM-1 に受け入れた残存リスクとして記録する
+  - [ ] `em-workflow/hooks/tests/destructive-guard-cases.json` に上記シナリオのケースを追加する
+
+  ## 該当箇所 (任意)
+
+  - `em-workflow/hooks/destructive-guard.py` の FR2 判定関数（`mcp-bridge` の `--args-json` をデータ語として集める箇所）
+  - `feature-docs/destructive-guard-false-deny/THREAT-MODEL.md` の TM-1
+  - review の stable\_id: 717acb1e7d66bc83
+
+  ## 暫定緩和策 (任意)
+
+  シェルを実行する MCP ツールを mcp-bridge に登録しない。
+parent_branch: em-workflow/mcp-bridge-exec-tool-rescan/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.8
+      '2': 0.2
+      '3': 0.0
+  at: '2026-11-18T08:47:18+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+    destructive-guard:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: ddd9ec711ba1aa377783e2208e417c19cf3b7064
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'No UI: hook-internal static-analysis change and test cases only.'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: 0d02fb18734163225066f9514a3f9428196615fe
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  round: 0
+  passed_ids: []
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: Limit the mcp-bridge arm to the notion / notion-create-comment pair
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
+    - TS-6
+    - TS-7
+    - TS-8
+    - TS-9
+    - TS-10
+  FR2:
+    title: Leave the other skip conditions unchanged
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-10
+  FR3:
+    title: Leave candidate marking unchanged
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: Case suite additions
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
+    - TS-6
+    - TS-7
+    - TS-8
+    - TS-9
+  FR5:
+    title: In-code explanation update
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: Record the condition in this feature's documents only
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: Performance
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: Fail-closed
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: Test procedure
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: Version
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
