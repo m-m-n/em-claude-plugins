@@ -137,7 +137,7 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/resolve-findings-parent-symlink/task0001
 review:
