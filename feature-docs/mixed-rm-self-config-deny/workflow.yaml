@@ -135,7 +135,7 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: in_progress
+    status: merged
     branch: em-workflow/mixed-rm-self-config-deny/task0001
     notes: null
   task0002:
