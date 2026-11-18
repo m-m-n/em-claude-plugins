@@ -1,0 +1,29 @@
+feature: mcp-bridge-exec-tool-rescan
+collected_at: "2026-11-18T21:17:23+09:00"
+session_ids: [01a1ee96-6661-74b9-a69e-b3aba42ef90d]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses:
+    - task: task0001
+      files:
+        - test-docs/mcp-bridge-exec-tool-rescan/task0001.tests.yaml
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "fallback_matrix:jev_only_usable: Codex pre-survey unusable; the final Jev call is skipped"
+    bases:
+      - basis: description_only
+        score:
+          type: score
+          score: 1.2
+          confidence: 0.8
+          probabilities: {"0": 0.0, "1": 0.8, "2": 0.2, "3": 0.0}
+        observed_at: "2026-11-18T08:44:30+09:00"
+follow_up_drafts: []
+lessons_candidates:
+  - "task0001 の 1 回目の implementer が merged イベントを出さずに停止し、batch の自動 retry を 1 回消費した"
+  - "create-plan で mcp-bridge run の Go flag 文法（-mcp / --mcp= / 最後勝ち / -- 終端）が FR1 の文言より広い迂回面を持つと判明し、Codex 相談で完全なフラグ列の検査（Option B）を採った。orchestrator 起点の SPEC 変更を create-plan で通す経路が無い"
+  - "review の medium 2 件（553233b6be6ecdc3: JSON エスケープした置換の再走査漏れ、87b049d8d9ba6e8b: TM-2 の形の単独ケース不足）が未解決のまま残った"
