@@ -1,0 +1,33 @@
+feature: resolve-findings-parent-symlink
+collected_at: "2026-11-18T21:55:00+09:00"
+session_ids: [01a1eeb8-3bf8-709c-95d0-6ca14218536e]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の最終読みは bucket 1 が 0.83 で、評価器は full を採用した"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.33, confidence: 0.67}
+        observed_at: "2026-11-18T20:33:46+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.17, confidence: 0.83}
+        observed_at: "2026-11-18T20:35:39+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/scripts/resolve-verified-findings.py
+        - tests/test_resolve_verified_findings.py
+      changed_lines_approx: 75
+      new_functions_needed: 1
+      change_containment: single_module
+      changes_external_contract: false
+follow_up_drafts: []
+lessons_candidates:
+  - "task0001 は 1 回目の implementer が merged イベントを残さずに止まり（journal: failed）、batch の自動 retry 1 回で merged に達した"
+  - "review round 1 は 5 観点すべて完了し、critical/high は 0 件。comprehensive の medium 2 件は評価者が demoted / false positive として載せなかった"
+  - "create-spec の Codex 相談で、末尾に区切り文字を付けた --feature-dir では O_NOFOLLOW がリンクを辿る点が見つかり、FR7 として要件に加わった"
