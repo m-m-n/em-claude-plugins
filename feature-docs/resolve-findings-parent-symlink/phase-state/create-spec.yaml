@@ -1,7 +1,7 @@
 schema_version: 1
 feature: resolve-findings-parent-symlink
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 2b31f11d42cdc5c25df0be7a77d1fcdeeaf7dee0
 last_input_digest: sha256:e91178dc174e371ad88d474bb5047e9339ffab59be75c234508e8e0b44e98b72

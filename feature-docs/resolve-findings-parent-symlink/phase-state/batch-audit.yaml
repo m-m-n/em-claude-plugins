@@ -28,3 +28,25 @@ records:
   resolution_note: 'Codex が懸念として挙げた点: --feature-dir の末尾に区切り文字があると、O_NOFOLLOW を付けても
     open がリンクを辿る。analyst の要件にはこの形が無かったため、オーケストレーターは末尾の区切り文字付きの引数でもリンクを拒否する要件として加えることにし、analyst
     に再調査を依頼した。'
+- gate_id: create-spec.design-step
+  question_id: design-step.decision
+  options:
+  - decide_autonomously
+  - ask_user
+  selected_option_ids:
+  - decide_autonomously
+  source: batch-decision-table
+  codex_consulted: false
+  opus_escalation: false
+  resolution_note: 'batch-policies.yaml に従い design step を省く（UI が無い）。design system
+    候補は 0 件のため kind: none。'
+- gate_id: create-spec.command-approval
+  question_id: create-spec.command-approval
+  options:
+  - approve
+  selected_option_ids:
+  - approve
+  source: batch-decision-table
+  codex_consulted: false
+  opus_escalation: false
+  resolution_note: project.components のコマンド  は bash_guard に承認済み。新たな自動承認は無い。
