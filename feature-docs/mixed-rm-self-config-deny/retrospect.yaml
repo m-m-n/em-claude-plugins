@@ -1,5 +1,5 @@
 feature: mixed-rm-self-config-deny
-collected_at: "2026-11-18T20:35:00+09:00"
+collected_at: "2026-11-18T20:29:00+09:00"
 session_ids: [01a1ee6a-8dae-728b-9111-931bdde2f19c.jsonl]
 signals:
   review_critical_high: []
