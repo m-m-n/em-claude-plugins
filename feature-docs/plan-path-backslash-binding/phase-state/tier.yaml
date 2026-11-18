@@ -1,0 +1,58 @@
+schema_version: 2
+feature: plan-path-backslash-binding
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.74
+    confidence: 0.73
+    legend:
+      '0': '0'
+      '1': '1'
+      '2': '2'
+      '3': '3'
+    probabilities:
+      '0': 0.0
+      '1': 0.26
+      '2': 0.73
+      '3': 0.01
+  observed_at: '2026-11-19T08:49:20+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.57
+    confidence: 0.56
+    legend:
+      '0': '0'
+      '1': '1'
+      '2': '2'
+      '3': '3'
+    probabilities:
+      '0': 0.0
+      '1': 0.43
+      '2': 0.56
+      '3': 0.01
+  observed_at: '2026-11-19T08:51:19+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/references/implement-phase.md
+  - em-workflow/references/phases/create-plan-phase.md
+  - tests/test_final_path_correction_docs.py
+  changed_lines_approx: 25
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  work_still_required_evidence: 検証器は `path_segments` で正規化する。`implement-phase.md` の起動前検査と
+    `task_plan_path` は保存値を直接結合するため、POSIX では別ファイルを指し得る。2a 節と既存テストも直接結合を前提としている。変更見込みは起動側で同じ正規化を使う場合に基づく
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 1
+  body_change_kind: wording_or_rule_addition
+  change_containment: multiple_modules
+  caller_and_dependency_count: 4
+  changes_external_contract: false
+  changes_behavior: true
+decided_at: '2026-11-19T08:52:00+09:00'
