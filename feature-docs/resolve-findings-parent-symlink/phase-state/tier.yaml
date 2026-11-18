@@ -1,0 +1,65 @@
+schema_version: 2
+feature: resolve-findings-parent-symlink
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.33
+    confidence: 0.67
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.67
+      '2': 0.33
+      '3': 0.0
+  observed_at: '2026-11-18T20:33:46+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.17
+    confidence: 0.83
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.83
+      '2': 0.17
+      '3': 0.0
+  observed_at: '2026-11-18T20:35:39+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/scripts/resolve-verified-findings.py
+  - tests/test_resolve_verified_findings.py
+  changed_lines_approx: 75
+  new_functions_needed: 1
+  new_files_needed: []
+  new_dependencies_needed: []
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 2
+  body_change_kind: new_logic
+  change_containment: single_module
+  caller_and_dependency_count: 6
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: em-workflow/scripts/resolve-verified-findings.py:210 は reviews をパスで列挙し、同:237
+    の lstat は末尾だけを検査する。同:317 と同:330 の一時ファイル作成と置換は親リンクをたどる。tests/test_resolve_verified_findings.py:1089
+    は記録ファイル自体のリンクだけを検査する。直接呼び出しは同:306 と em-workflow/skills/develop/SKILL.md:1080 の2件で、対象処理の依存は
+    os、stat、tempfile、yaml の4件。em-workflow/scripts/merge-preflight.py:355 はコミット済み記録を読む。行数は親をリンク追跡なしで開き、そのディレクトリを基準に読み書きする案の概算。調査は静的読解のみ。
+decided_at: '2026-11-18T20:35:42+09:00'
