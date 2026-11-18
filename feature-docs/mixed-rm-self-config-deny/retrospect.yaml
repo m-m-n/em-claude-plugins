@@ -1,0 +1,32 @@
+feature: mixed-rm-self-config-deny
+collected_at: "2026-11-18T20:35:00+09:00"
+session_ids: [01a1ee6a-8dae-728b-9111-931bdde2f19c.jsonl]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の最終読み（score 1.22、confidence 0.78）と事前調査（body_change_kind: new_logic、changes_behavior: true）から評価器が full を返した"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.14, confidence: 0.86}
+        observed_at: "2026-11-18T08:46:47+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.22, confidence: 0.78}
+        observed_at: "2026-11-18T08:48:56+09:00"
+    pre_survey_estimate:
+      changed_lines_approx: 55
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      body_change_kind: new_logic
+      change_containment: single_module
+      changes_external_contract: false
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 で medium の security 指摘 f6526f456a861ab6（親ディレクトリ参照で保護範囲の外に出る rm 対象も保護パス扱いで外れる。既存動作で SPEC 範囲外）が deferred のまま残った"
+  - "review の comprehensive#0（codex）が harness_unavailable で skip し、litellm の comprehensive#1 で補った"
