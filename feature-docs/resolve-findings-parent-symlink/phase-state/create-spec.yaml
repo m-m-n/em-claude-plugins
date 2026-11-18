@@ -4,8 +4,8 @@ phase: create-spec
 status: dispatching
 generation: 1
 base_revision: 2b31f11d42cdc5c25df0be7a77d1fcdeeaf7dee0
-last_input_digest: sha256:59be05f68296c557e4c5c7891917b5dfdcd2449985fc69a03c953e814a50260d
-active_request_id: create-spec-run-0002
+last_input_digest: sha256:e91178dc174e371ad88d474bb5047e9339ffab59be75c234508e8e0b44e98b72
+active_request_id: create-spec-run-0003
 packets:
   create-spec-q0001:
     status: answered
@@ -55,9 +55,9 @@ worker_runs:
     tests/test_resolve_verified_findings.py: sha256:e79e0c3b17acabf9f8a39e7ab202211f2b77babdf0e0d321d94627d087110f33
   self_write_set: []
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:59be05f68296c557e4c5c7891917b5dfdcd2449985fc69a03c953e814a50260d
-  output_digest: null
+  output_digest: sha256:48e3487671bb6ebb7ba5f890fd4345a252f32f0f9699c6b18c6160bc16c90e5b
   dispatch_digest_inputs:
     .claude/rules/core-plugin-structure.md: sha256:62e2ad8531369d37f83ad5458d3f5077b4ca3edf7584ecba83b4be044909fd56
     .claude/rules/hook-tests.md: sha256:e7913b4c8ef8280818a8f8bfc1ad75b82a4d6a4da83f3f304317dfdce736ae32
@@ -68,6 +68,15 @@ worker_runs:
     em-workflow/skills/develop/SKILL.md: sha256:5ef5e9158f3130795897632d20cbf30518b57963369c6bff6e05f8eaf6f6d1f8
     test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
     tests/test_resolve_verified_findings.py: sha256:e79e0c3b17acabf9f8a39e7ab202211f2b77babdf0e0d321d94627d087110f33
+  self_write_set: []
+- request_id: create-spec-run-0003
+  status: dispatched
+  input_digest: sha256:e91178dc174e371ad88d474bb5047e9339ffab59be75c234508e8e0b44e98b72
+  output_digest: null
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/spec-writer-contract.md: sha256:1e63f69687c6850e890f66b5ca92af7f3b0d02645cc464fca88455ad2269d671
+    em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
+    em-workflow/references/templates/spec-document.md: sha256:a5d0106c39a5df7dc2365357a9546588275ed6c7a1651c866e75fa327a7fa592
 artifacts: []
 patches: []
 progress_fingerprint: null
