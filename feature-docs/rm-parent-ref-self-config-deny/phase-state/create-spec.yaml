@@ -1,14 +1,27 @@
 schema_version: 1
 feature: rm-parent-ref-self-config-deny
 phase: create-spec
-status: initialized
+status: dispatching
 generation: 1
 base_revision: 0eee4a67cf490a3164fd0d9d31f0e9d19bbcd93d
-last_input_digest: null
+last_input_digest: sha256:e2c59074a3c0ca968eaa0f9906915a496bc9e2a0efca902ceed53c78df1c4d01
 active_request_id: null
 packets: {}
 answers: {}
-worker_runs: []
+worker_runs:
+- request_id: create-spec-run-0001
+  status: completed
+  input_digest: sha256:e2c59074a3c0ca968eaa0f9906915a496bc9e2a0efca902ceed53c78df1c4d01
+  output_digest: sha256:1f13d768157ea2d8d64aec116b4dfaa07ddcaf6271835586254c26ebae5fffb8
+  dispatch_digest_inputs:
+    .claude/rules/hook-tests.md: sha256:e7913b4c8ef8280818a8f8bfc1ad75b82a4d6a4da83f3f304317dfdce736ae32
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    em-workflow/hooks/destructive-guard.py: sha256:843140fa6780f95a93b0f86ee582f848c3c5b1a04fa78b3fb5404e97e31f01b1
+    em-workflow/hooks/tests/destructive-guard-cases.json: sha256:7971f7356b448060ae833d59344a05aaea373aa87e674893147b3341b1635815
+    em-workflow/hooks/tests/run-destructive-guard.py: sha256:b0a03dbaf2c8f0b466be8c735cba283ff50492832599bdabac2bdc4c23a880a2
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+  self_write_set: []
 artifacts: []
 patches: []
 progress_fingerprint: null
