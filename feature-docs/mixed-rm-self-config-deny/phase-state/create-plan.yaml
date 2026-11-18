@@ -4,13 +4,13 @@ phase: create-plan
 status: dispatching
 generation: 1
 base_revision: e616b7a2613ac349016a70fbe32f87b9cfc97e5c
-last_input_digest: sha256:e4fca71844d393526c705fc31a4659ee241c0749da05e5d04e0d17feb634f5db
-active_request_id: create-plan-run-0001
+last_input_digest: sha256:a200f6dd05536a2d9a09363f9bec4694f568a94df02366fd362dcbea1c33befd
+active_request_id: create-plan-run-0002
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:e4fca71844d393526c705fc31a4659ee241c0749da05e5d04e0d17feb634f5db
   dispatch_digest_inputs:
     em-workflow/references/contracts/planner-contract.md: sha256:df2bf3f0321c2627a31b878a14adb176ee7c2131638245112e5d3bb27f7a3682
@@ -21,6 +21,23 @@ worker_runs:
     em-workflow/references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
     em-workflow/references/workflow-schema.md: sha256:5bd8500c203c4f17cde4193ee43d561073fe7f47099d61a55eb593e098881d87
     em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/mixed-rm-self-config-deny/REQUIREMENTS.md: sha256:14b247f3a3b4189708b30810b507f12a7d61867ca7e71ce2912d854001caef16
+    feature-docs/mixed-rm-self-config-deny/SPEC.md: sha256:2f43e97f62681d0213d19572de7f563bd01fdb0021ddb5da227cfdb174b0bd81
+    feature-docs/mixed-rm-self-config-deny/workflow.yaml: sha256:e8130b8754c801f9bded3ff5c88919e6879173f9ce76262f3faa61de7ee2a1d1
+  self_write_set: []
+- request_id: create-plan-run-0002
+  status: dispatched
+  input_digest: sha256:a200f6dd05536a2d9a09363f9bec4694f568a94df02366fd362dcbea1c33befd
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/planner-contract.md: sha256:df2bf3f0321c2627a31b878a14adb176ee7c2131638245112e5d3bb27f7a3682
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
+    em-workflow/references/workflow-schema.md: sha256:5bd8500c203c4f17cde4193ee43d561073fe7f47099d61a55eb593e098881d87
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/destructive-guard-mixed-rm-precedence/SPEC.md: sha256:6e37900e91acbb04e5e24624c37db4981a98623ae299ee7fe7571ceff6177a41
     feature-docs/mixed-rm-self-config-deny/REQUIREMENTS.md: sha256:14b247f3a3b4189708b30810b507f12a7d61867ca7e71ce2912d854001caef16
     feature-docs/mixed-rm-self-config-deny/SPEC.md: sha256:2f43e97f62681d0213d19572de7f563bd01fdb0021ddb5da227cfdb174b0bd81
     feature-docs/mixed-rm-self-config-deny/workflow.yaml: sha256:e8130b8754c801f9bded3ff5c88919e6879173f9ce76262f3faa61de7ee2a1d1
