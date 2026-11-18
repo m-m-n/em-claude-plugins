@@ -1,0 +1,33 @@
+schema_version: 1
+feature: mcp-bridge-exec-tool-rescan
+records:
+- question_id: requirement.fr1.mcp-bridge-flag-grammar
+  packet_id: null
+  answered_at: '2026-11-18T09:40:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 'Option B: the notion pair counts as determined only when the words after run form
+    a complete sequence of known mcp-bridge run flags, each in the exact double-dash "--name
+    value" form (--dry-run alone), with no "--" terminator, no positional word, no single-dash
+    or "=" form of any flag, and --mcp, --tool and --args-json each exactly once. Anything else
+    is undeterminable and re-scanned.'
+  normalized_answer: 'Under FR1''s "判定できない" clause and NFR2, treat as undeterminable (re-scan)
+    every form whose effective --mcp/--tool value cannot be fixed from the words: mcp-bridge
+    run parses its arguments with Go''s standard flag package, which accepts -mcp / --mcp /
+    -mcp=X / --mcp=X, lets the last occurrence win, and stops at "--" or the first positional
+    word. Add deny cases: (1) the notion pair followed by -mcp desktop-commander -tool start_process;
+    (2) desktop-commander pair, --args-json, then "--" and the notion pair; (3) the same with
+    a positional word instead of "--". Keep TS-2 and TS-10 allow. Record the widened undeterminable
+    set in IMPLEMENTATION.md and THREAT-MODEL.md (TM-2); SPEC.md A2 / Data Flow wording is not
+    rewritten in this run.'
+  resolution_note: 'gate: create-plan orchestrator-raised clarification (planner open question
+    on option-name abbreviation); options: A keep FR1 as written and record residual risk /
+    B full flag-grammar walk / C prefix match on -mcp,--mcp,-tool,--tool; chosen: B; not chosen:
+    A (leaves a known bypass), C (cannot tell flag values from flags or words after parsing
+    stops); key points: Go flag semantics verified from mcp-bridge src/lib/run.go, three bypass
+    forms remain under FR1 as written; Codex judged a SPEC change formally preferable, but no
+    protocol route exists for an orchestrator-raised SPEC change at create-plan (spec_change
+    origin_kind is review|verify only), so it is carried as a plan-level reading of FR1''s undeterminable
+    clause and NFR2; codex_consulted: true (harness entry: codex, 1 turn); opus_escalation:
+    not run'
