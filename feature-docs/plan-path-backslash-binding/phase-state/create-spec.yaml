@@ -5,9 +5,19 @@ status: in_progress
 generation: 1
 base_revision: 0d0225d4cfc43b81f8e5b8e99271366c055f6b5f
 last_input_digest: sha256:141ec1303f35498c16c7a65514c74403b8cba79c56d7d063fac110fb1c655038
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets: {}
-answers: {}
+answers:
+  requirement.assumption-a1-confirmation:
+    packet_id: null
+    answered_at: '2026-11-19T09:05:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - root_only
+    freeform: null
+    normalized_answer: 根本対応のみ（task_plan_path と Plan-path check 規則 2・3 を path_segments
+      で正規化したセグメントの結合パスに揃える）。正規形でない保存値を拒否する暫定規則は足さない。
 worker_runs:
 - request_id: create-spec-run-0001
   status: completed
@@ -29,13 +39,23 @@ worker_runs:
   output_digest: sha256:c4655627deb5fe5a0a987f32b8c74aa6afef295fd3fcdc76c44af1faaeb09a4d
   self_write_set: []
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:141ec1303f35498c16c7a65514c74403b8cba79c56d7d063fac110fb1c655038
   dispatch_digest_inputs:
     em-workflow/references/contracts/spec-writer-contract.md: sha256:1e63f69687c6850e890f66b5ca92af7f3b0d02645cc464fca88455ad2269d671
     em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
     em-workflow/references/templates/spec-document.md: sha256:a5d0106c39a5df7dc2365357a9546588275ed6c7a1651c866e75fa327a7fa592
-artifacts: []
+  output_digest: sha256:d65ed5c121cdda764281ac8b8696e454fa473d1a71a8b3cce4047f4f2a24605e
+  self_write_set:
+  - feature-docs/plan-path-backslash-binding/REQUIREMENTS.md
+  - feature-docs/plan-path-backslash-binding/SPEC.md
+artifacts:
+- path: feature-docs/plan-path-backslash-binding/REQUIREMENTS.md
+  sha256: sha256:14f622128c701404d7fe8f2c31a8113028ca303add983a93f83029c3f4db8e80
+  produced_by: create-spec-run-0002
+- path: feature-docs/plan-path-backslash-binding/SPEC.md
+  sha256: sha256:398fbcd6aa62a8ed0bd4d35582ff686eb184ab29d5bd864bc0dc8c9f88c5b0ac
+  produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
