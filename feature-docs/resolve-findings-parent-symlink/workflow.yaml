@@ -129,7 +129,7 @@ workflow:
   failed_items: []
   summary: 'python3 -m unittest discover -s tests: 16402 tests OK (skipped=1). tests.test_resolve_verified_findings: 70 tests OK. NFR5 unchanged-files diff exit 0. NFR1 imports standard library only. TS-7 docstring Boundaries names the refused links (feature directory incl. trailing separators, reviews, round record) with their codes. No excluded requirements.'
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: Handle-based reads and writes in resolve-verified-findings.py
