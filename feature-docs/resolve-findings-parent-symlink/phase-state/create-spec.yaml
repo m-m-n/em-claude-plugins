@@ -3,15 +3,60 @@ feature: resolve-findings-parent-symlink
 phase: create-spec
 status: dispatching
 generation: 1
-base_revision: 5fbd4939cee0d2c729d6b8f4f4c71ce1e4a980ff
-last_input_digest: sha256:84dc72969b835c5ce7e152c496ab6e128031250204328b85d46f18952f69065e
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+base_revision: 2b31f11d42cdc5c25df0be7a77d1fcdeeaf7dee0
+last_input_digest: sha256:59be05f68296c557e4c5c7891917b5dfdcd2449985fc69a03c953e814a50260d
+active_request_id: create-spec-run-0002
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-11-18T20:42:17+09:00'
+    questions:
+    - question_id: requirement.feature-dir-trailing-separator
+      status: answered
+    - question_id: requirement.decision-points-confirmation
+      status: answered
+answers:
+  requirement.feature-dir-trailing-separator:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-18T20:42:17+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - normalize_then_nofollow
+    freeform: null
+    normalized_answer: --feature-dir の末尾に区切り文字（/）が付いていても、最後の要素がシンボリックリンクなら FR-2 と同じく
+      invalid-workflow で拒否する。末尾の区切り文字を付けた引数でリンクを辿らせる回避を塞ぐ（open は末尾 / があると O_NOFOLLOW
+      でもリンクを辿るため）。リンクでない正当なディレクトリに末尾 / を付けた場合はこれまでどおり動く。
+  requirement.decision-points-confirmation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-18T20:42:17+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - adopt_analyst_choices
+    freeform: null
+    normalized_answer: 修正方式（dir_fd 基準）、reviews がリンクのときの invalid-round-record、feature
+      ディレクトリがリンクのときの invalid-workflow、祖先のリンクは検査しない、workflow.yaml とマッピングファイルは現状どおり辿る、の
+      5 点は analyst の判断どおり採用する。
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:84dc72969b835c5ce7e152c496ab6e128031250204328b85d46f18952f69065e
+  output_digest: sha256:a5d1b97e55d14dbc88d06ae5d9c972865b9a0280894d8be7bdbb3d5c2ff3c921
+  dispatch_digest_inputs:
+    .claude/rules/core-plugin-structure.md: sha256:62e2ad8531369d37f83ad5458d3f5077b4ca3edf7584ecba83b4be044909fd56
+    .claude/rules/hook-tests.md: sha256:e7913b4c8ef8280818a8f8bfc1ad75b82a4d6a4da83f3f304317dfdce736ae32
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
+    em-workflow/scripts/merge-preflight.py: sha256:793425e9190877a64c2fd7eb9535e887e0b45c6ce785ffff01d409334ca1ec26
+    em-workflow/scripts/resolve-verified-findings.py: sha256:af51df9f165a917734dad9a184e05cb97333b6dcb37bbb1d9d2e1344ab0e60fe
+    em-workflow/skills/develop/SKILL.md: sha256:5ef5e9158f3130795897632d20cbf30518b57963369c6bff6e05f8eaf6f6d1f8
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+    tests/test_resolve_verified_findings.py: sha256:e79e0c3b17acabf9f8a39e7ab202211f2b77babdf0e0d321d94627d087110f33
+  self_write_set: []
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:59be05f68296c557e4c5c7891917b5dfdcd2449985fc69a03c953e814a50260d
   output_digest: null
   dispatch_digest_inputs:
     .claude/rules/core-plugin-structure.md: sha256:62e2ad8531369d37f83ad5458d3f5077b4ca3edf7584ecba83b4be044909fd56
@@ -27,5 +72,12 @@ artifacts: []
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
-resolved_input_cache: {}
+resolved_input_cache:
+  reference_scan_targets:
+    resolved_at_generation: 1
+    paths:
+    - em-workflow/scripts/resolve-verified-findings.py
+    - tests/test_resolve_verified_findings.py
+    - em-workflow/skills/develop/SKILL.md
+    - em-workflow/scripts/merge-preflight.py
 last_error: null

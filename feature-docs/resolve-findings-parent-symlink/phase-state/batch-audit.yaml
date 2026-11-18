@@ -1,0 +1,30 @@
+schema_version: 1
+feature: resolve-findings-parent-symlink
+records:
+- gate_id: create-spec.requirement-clarification
+  question_id: requirement.decision-points-confirmation
+  options:
+  - adopt_analyst_choices
+  - alternative_choices
+  selected_option_ids:
+  - adopt_analyst_choices
+  source: batch-codex-consultation
+  codex_consulted: true
+  opus_escalation: false
+  resolution_note: 'analyst は要件確認なしで completed を返した。依頼の指示に従い判断点 5 つ（修正方式・reviews がリンクのときのエラーコード・feature
+    ディレクトリがリンクのときの扱い・祖先のリンク・読み取り専用入力のリンク）を Codex に相談した。Codex は 5 点とも analyst と同じ案を推した:
+    dir_fd 基準なら確認と書き込みの間の差し替えも防げる（realpath の包含確認は同じツリー内の別 feature を通してしまう）、既存テストの期待するエラーコードと整合する、通常の呼び出しは統合
+    worktree の絶対パスを渡すため祖先のリンクを許しても既存の呼び出しを壊さない。オーケストレーターは analyst 案をそのまま採用した。'
+- gate_id: create-spec.requirement-clarification
+  question_id: requirement.feature-dir-trailing-separator
+  options:
+  - normalize_then_nofollow
+  - leave_unspecified
+  selected_option_ids:
+  - normalize_then_nofollow
+  source: batch-codex-consultation
+  codex_consulted: true
+  opus_escalation: false
+  resolution_note: 'Codex が懸念として挙げた点: --feature-dir の末尾に区切り文字があると、O_NOFOLLOW を付けても
+    open がリンクを辿る。analyst の要件にはこの形が無かったため、オーケストレーターは末尾の区切り文字付きの引数でもリンクを拒否する要件として加えることにし、analyst
+    に再調査を依頼した。'
