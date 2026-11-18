@@ -2,31 +2,52 @@ schema_version: 1
 feature: resolve-findings-parent-symlink
 created: '2026-11-18'
 base_branch: main
-goal: |
-  # resolve-verified-findings.py が親ディレクトリのシンボリックリンク経由で対象外の review 記録を書き換えられる
+goal: '# resolve-verified-findings.py が親ディレクトリのシンボリックリンク経由で対象外の review 記録を書き換えられる
+
 
   種別: セキュリティ / severity: medium
 
+
   ## 脆弱性の概要
-  `resolve-verified-findings.py` は書き換え対象ファイル自体のシンボリックリンクは拒否するが、親ディレクトリ（`feature-docs/{feature}/reviews` など）のシンボリックリンクは検査しない。リンク経由で対象外の feature の review 記録を書き換えられる。
+
+  `resolve-verified-findings.py` は書き換え対象ファイル自体のシンボリックリンクは拒否するが、親ディレクトリ（`feature-docs/{feature}/reviews`
+  など）のシンボリックリンクは検査しない。リンク経由で対象外の feature の review 記録を書き換えられる。
+
 
   ## 参照
+
   - CVE / GHSA ID: 該当なし
+
   - 現在のバージョン: feature `verify-pass-resolves-deferred-findings`（PR #95）の時点
+
   - 修正済みバージョン: 無し
 
+
   ## 攻撃シナリオ
-  `feature-docs/current/reviews` を別 feature の `reviews` へのリンクにし、`--feature-dir` に `current` を渡して実行すると、別 feature の `reviews/round1.yaml` の deferred 指摘（high、spec）が `fixed` に書き換わる。review round 1 の指摘 `cc3ea79e666d0a2d`（security、TM-5）。リポジトリ内のファイルを置ける者が対象。
+
+  `feature-docs/current/reviews` を別 feature の `reviews` へのリンクにし、`--feature-dir` に
+  `current` を渡して実行すると、別 feature の `reviews/round1.yaml` の deferred 指摘（high、spec）が
+  `fixed` に書き換わる。review round 1 の指摘 `cc3ea79e666d0a2d`（security、TM-5）。リポジトリ内のファイルを置ける者が対象。
+
 
   ## 影響範囲
+
   別 feature の review 記録の未解決指摘が解決扱いになり、自動マージの事前チェック（`merge-preflight.py`）を不正に通る。
 
+
   ## 完了の定義
+
   - [ ] 攻撃シナリオが成立しない
+
   - [ ] 修正版に追随している（修正版が無い場合は暫定緩和策の欄に対応を記載）
 
+
   ## 該当箇所
-  `em-workflow/scripts/resolve-verified-findings.py`（`reviews` ディレクトリの解決、`lstat`、`mkstemp`、`os.replace`）。`realpath` で worktree 配下に収まることを確かめるか、`O_DIRECTORY|O_NOFOLLOW` で開いた `dir_fd` 基準で読み書きする。
+
+  `em-workflow/scripts/resolve-verified-findings.py`（`reviews` ディレクトリの解決、`lstat`、`mkstemp`、`os.replace`）。`realpath`
+  で worktree 配下に収まることを確かめるか、`O_DIRECTORY|O_NOFOLLOW` で開いた `dir_fd` 基準で読み書きする。
+
+  '
 parent_branch: em-workflow/resolve-findings-parent-symlink/integration
 tier: full
 tier_decision:
@@ -74,7 +95,8 @@ workflow:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: 77c797a0dbaed8a5044f9878b09956bb4a4d462a
 - id: implement
   status: pending
 - id: review
@@ -87,7 +109,35 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Handle-based reads and writes in resolve-verified-findings.py
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/resolve-verified-findings.py
+    - tests/test_resolve_verified_findings.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    - external-io
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - FR8
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    status: pending
+    notes: null
 review:
   status: pending
   rounds_completed: 0
@@ -97,7 +147,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-2
@@ -106,7 +157,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-3
     - TS-8
@@ -115,7 +167,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-4
   FR4:
@@ -123,7 +176,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-6
   FR5:
@@ -131,7 +185,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-5
   FR6:
@@ -139,7 +194,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-7
   FR7:
@@ -147,7 +203,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-8
     - TS-9
@@ -156,7 +213,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-10
     - TS-11
@@ -165,35 +223,47 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests: []
   NFR2:
     title: 対象プラットフォーム
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-6
   NFR3:
     title: 競合テストの決定性
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-4
+    - TS-10
   NFR4:
     title: 出力に出す値
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-8
   NFR5:
     title: 変更しないファイル
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests: []
 batch:
   review_rework_count: 0
