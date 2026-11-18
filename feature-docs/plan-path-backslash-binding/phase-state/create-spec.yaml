@@ -1,7 +1,7 @@
 schema_version: 1
 feature: plan-path-backslash-binding
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: 0d0225d4cfc43b81f8e5b8e99271366c055f6b5f
 last_input_digest: sha256:141ec1303f35498c16c7a65514c74403b8cba79c56d7d063fac110fb1c655038

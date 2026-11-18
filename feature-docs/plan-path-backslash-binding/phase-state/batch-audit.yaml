@@ -1,0 +1,40 @@
+schema_version: 1
+feature: plan-path-backslash-binding
+records:
+- gate_id: create-spec.requirement-clarification
+  question_id: requirement.assumption-a1-confirmation
+  options:
+  - root_only
+  - root_plus_reject
+  - reject_only
+  selected_option_ids:
+  - root_only
+  source: batch-codex-consultation
+  codex_consulted: true
+  opus_escalation: false
+  resolution_note: 'analyst は質問なしで completed を返した。依頼の指示に従い、前提 A1（暫定緩和策の拒否規則を足すか）を
+    Codex に相談した。Codex は root_only を推した: 検証側と実装担当が同じファイルを参照する。既存テストが ./ やバックスラッシュ等の別綴りの受け入れを固定しており、拒否規則を足すと検証済みの計画が起動時に止まる。オーケストレーターは
+    root_only を採用した。'
+- gate_id: create-spec.design-step
+  question_id: design-step.decision
+  options:
+  - decide_autonomously
+  - ask_user
+  selected_option_ids:
+  - decide_autonomously
+  source: batch-decision-table
+  codex_consulted: false
+  opus_escalation: false
+  resolution_note: 'batch-policies.yaml に従い design step を省く（UI が無い）。design system
+    候補は 0 件のため kind: none。'
+- gate_id: create-spec.command-approval
+  question_id: create-spec.command-approval
+  options:
+  - approve
+  selected_option_ids:
+  - approve
+  source: batch-decision-table
+  codex_consulted: false
+  opus_escalation: false
+  resolution_note: project.components のコマンド python3 -m unittest discover -s tests
+    は bash_guard に承認済み。新たな自動承認は無い。

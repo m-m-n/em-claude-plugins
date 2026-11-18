@@ -1,0 +1,178 @@
+schema_version: 1
+feature: plan-path-backslash-binding
+created: '2026-11-19'
+base_branch: main
+goal: |
+  # 計画パスのバックスラッシュ綴りで、検証した計画書と実装担当が読む計画書が食い違う
+
+  種別: セキュリティ (severity: medium)
+
+  ## 脆弱性の概要
+
+  最終パス訂正の入口で、検証器は `tasks.{T}.plan` の保存値を `path_segments` で正規化（バックスラッシュを区切りとして扱う）して `tasks/{T}.md` との結び付きを検証する。一方、`implement-phase.md` の `task_plan_path` と Plan-path check は保存値を文字列のまま `feature-docs/{feature}/` に結合する。POSIX ではバックスラッシュがファイル名の一部になるため、検証した計画書と実装担当に渡す計画書が別ファイルになり得る。
+
+  ## 攻撃シナリオ
+
+  `tasks/` にファイルを書ける計画担当が、`plan` を `tasks/\task0003.md`（または `tasks\task0003.md`）にする。正規形の `tasks/task0003.md` に `canonical_correction_plan` の出力を置き、文字どおりの名前 `\task0003.md` に別の指示を置く。`_plan_is_bound_to_task_md` は true、`_correction_entries_errors` は `[]` になり、Plan-path check の 4 条件（安全な相対パス・symlink なし・realpath が内側・制御文字なし）も通る。実装担当には未検証の計画書が渡る。
+
+  ## 影響範囲
+
+  実装担当が、検証を通っていない計画書の指示に従う。正規本文の強制（THREAT-MODEL の TM-1 / TM-4）が実際の指示入力まで届かない。悪意が無い場合も、バックスラッシュ綴りでは存在しないパスが実装担当に渡る。
+
+  ## 完了の定義
+
+  - [ ] 攻撃シナリオが成立しない
+  - [ ] 修正版に追随している（修正版が無い場合は暫定緩和策の欄に対応を記載）
+
+  ## 該当箇所
+
+  - `em-workflow/references/implement-phase.md:546`（`task_plan_path` と Plan-path check の規則 2・3）
+  - `em-workflow/references/phases/create-plan-phase.md` 2a 節（「joined with that value」の記述）
+  - `em-workflow/scripts/validate-worker-output.py`（`_plan_is_bound_to_task_md` / `_resolve_contained_relative_path`）
+  - `tests/test_final_path_correction_docs.py`（「joined with」系の固定文言）
+  - review stable_id `da0486374292de62`（feature `final-path-plan-binding` の round 1）
+
+  ## 暫定緩和策
+
+  Plan-path check に、保存値が `/` 区切りの正規形（バックスラッシュ・空セグメント・`.` を含まない形）と一致しないときに拒否する規則を足す。根本対応は、`path_segments` で正規化したセグメントから絶対パスを組み、検証と起動で同じ解決結果を使うこと。
+parent_branch: em-workflow/plan-path-backslash-binding/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.26
+      '2': 0.73
+      '3': 0.01
+    description_plus_code:
+      '0': 0.0
+      '1': 0.43
+      '2': 0.56
+      '3': 0.01
+  at: '2026-11-19T08:52:00+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 6ee58bb7be6967d465a7382bfade4ae5c854e36b
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 変更対象はフェーズ文書・検証スクリプト周辺・テストで、UI を持たないため
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  round: 0
+  passed_ids: []
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: task_plan_path を正規化後のセグメントから組む
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-4
+  FR2:
+    title: Plan-path check の規則 2・3 を同じ解決結果に適用する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-2
+    - TS-4
+  FR3:
+    title: create-plan-phase.md 2a 節の記述を合わせる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-3
+  FR4:
+    title: 検証器側の解決は変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-4
+    - TS-5
+  FR5:
+    title: 文書テストを新しい記述に合わせる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+  NFR1:
+    title: Plan-path check の段落の言い回しの制約
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-2
+  NFR2:
+    title: unittest のみで書き、python3 -m unittest discover -s tests が全件通る
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+  NFR3:
+    title: em-workflow の version は変更しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
