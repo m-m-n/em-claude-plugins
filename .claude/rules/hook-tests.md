@@ -44,7 +44,9 @@ python3 em-workflow/hooks/tests/run-destructive-guard.py \
 - 再帰削除と rm 以外の check を組み合わせたケースには `rule` を付け、判定と理由 ID の両方を固定する。
   そのようなケースが固定する優先順位は次のとおり。
     - 再帰削除の `deny` は、他の check の `ask` に、順序に関係なく勝つ。
-    - 同じ文の rm の削除対象が保護された自己設定パスのときは、代わりに self-modification の `ask` が残る。
+    - 同じ文の rm の削除対象のうち、保護された自己設定パスだけが候補から外れ、
+      その分は self-modification の `ask` が残る。
+      同じ rm の他の削除対象の `deny` は、その `ask` に勝つ。
     - `CLAUDE_BATCH` による降格は、優先順位を決めた後に行う。
 - `em-workflow/hooks/merge_pr_allow.py`（`gh pr merge` の正規形の許可を決める、
   `destructive-guard.py` の隣のモジュール）を変更したときも、同じテストを走らせる。

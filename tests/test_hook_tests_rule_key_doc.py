@@ -176,6 +176,28 @@ class TestMixedCaseGuidance(RuleDocCase):
             some_fact_has(bullet, "同じ文", "削除対象", "自己設定パス", "self-modification", "`ask`")
         )
 
+    def test_per_target_exclusion_leaves_out_only_the_protected_targets(self):
+        """mixed-rm-self-config-deny task0002 AC-1 (FR8): only the deletion
+        targets that are protected self-config paths are left out of the
+        candidates, and the `deny` of the same rm's other targets wins. The
+        bullet no longer says that a protected target replaces the verdict of
+        the whole rm."""
+        bullet = mixed_case_bullet(self.part)
+        self.assertTrue(
+            some_fact_has(
+                bullet, "同じ文", "削除対象", "自己設定パス", "だけ", "候補", "self-modification", "`ask`"
+            ),
+            "no sentence says that only the protected targets are left out of the candidates",
+        )
+        self.assertTrue(
+            some_fact_has(bullet, "同じrm", "他の削除対象", "`deny`", "勝つ"),
+            "no sentence says that the deny of the same rm's other targets wins",
+        )
+        self.assertFalse(
+            some_fact_has(bullet, "自己設定パス", "代わりに"),
+            "still says that a protected target replaces the verdict of the whole rm",
+        )
+
     def test_ac3_the_batch_demotion_comes_after_the_precedence(self):
         bullet = mixed_case_bullet(self.part)
         self.assertTrue(some_fact_has(bullet, "`CLAUDE_BATCH`", "降格", "優先", "後"))
