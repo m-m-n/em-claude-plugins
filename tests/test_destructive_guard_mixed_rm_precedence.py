@@ -52,6 +52,11 @@ CASES_PATH = TESTS_DIR / "destructive-guard-cases.json"
 
 FEATURE = "destructive-guard-mixed-rm-precedence"
 
+# The feature that moved the exclusion unit from the rm invocation to the rm
+# target (mixed-rm-self-config-deny). Its cases come after every case of the
+# table that existed before it, and none of its labels starts with FEATURE.
+PER_TARGET_FEATURE = "mixed-rm-self-config-deny"
+
 # Test-controlled, never the real environment's. The empty PATH leaves no
 # `gio` to find, so the deletion alternative in an rm reason is the same
 # wherever the suite runs.
@@ -246,9 +251,11 @@ class TestNoDenyCommandsKeepTheirVerdict(unittest.TestCase):
 
 
 class TestProtectedSelfConfigExclusion(unittest.TestCase):
-    """AC-5 (FR8, TM-3). In a statement whose own rm deletion operand is a
-    protected self-config path, the self-modification `ask` competes as an
-    ordinary held `ask` and that statement's rm records are left out."""
+    """AC-5 (FR8, TM-3), per target (mixed-rm-self-config-deny FR1). In a
+    statement whose own rm deletion operand is a protected self-config path,
+    the self-modification `ask` competes as an ordinary held `ask` and the
+    records of the protected operands are left out; the other targets of the
+    same rm stay in the pool."""
 
     PROTECTED = "~/.claude/skills/foo"
 
@@ -268,10 +275,14 @@ class TestProtectedSelfConfigExclusion(unittest.TestCase):
         self.assertIn("1番目のrmの1番目の対象", reason)
         self.assertNotIn("2番目のrm", reason)
 
-    def test_a_protected_and_an_unprotected_target_in_one_rm_stay_an_ask(self):
+    def test_a_protected_and_an_unprotected_target_in_one_rm_give_the_deny_of_the_unprotected_one(
+        self,
+    ):
+        # Only the protected operand's records are left out: the other target
+        # of the same rm stays in the pool and its deny wins.
         self.assertEqual(
             decision(f"rm -rf {self.PROTECTED} /home/user/valuable")[:2],
-            ("ask", "self-modification"),
+            ("deny", "rm-recursive"),
         )
 
     def test_the_excluded_statement_alone_is_the_self_modification_ask(self):
@@ -320,9 +331,14 @@ class TestProtectedSelfConfigExclusion(unittest.TestCase):
             ("deny", "rm-recursive"),
         )
         self.assertEqual(
-            decision(f"rm -rf {self.PROTECTED} \"x")[:2],
+            decision(f"rm -rf \"{self.PROTECTED}")[:2],
             ("ask", "self-modification"),
         )
+        # The unclosed word after the protected operand is a target of its own
+        # (the unit is the target), and its deny is the verdict.
+        tier, rule, reason = decision(f"rm -rf {self.PROTECTED} \"x")
+        self.assertEqual((tier, rule), ("deny", "rm-recursive"))
+        self.assertIn("1番目のrmの2番目の対象", reason)
 
     def test_the_spelling_of_the_protected_operand_does_not_matter(self):
         for operand in (
@@ -346,6 +362,200 @@ class TestProtectedSelfConfigExclusion(unittest.TestCase):
         tier, rule, reason = decision(f"$(printf rm) -rf {self.PROTECTED} ; {RM}")
         self.assertEqual((tier, rule), ("deny", "rm-recursive"))
         self.assertIn("2番目のrmの1番目の対象", reason)
+
+
+# --- mixed-rm-self-config-deny: the exclusion unit is the target ------------
+
+
+PROTECTED_PATH = "~/.claude/skills/foo"
+VALUABLE_PATH = "/home/user/valuable"
+SELF_MODIFICATION_TEXT = "Claude Code 自身の設定"
+
+
+class TestPerTargetExclusionReason(unittest.TestCase):
+    """TM-1 (TS-12; FR1, FR3, NFR3). The reason of a winning rm deny is built
+    from the remaining winners only, and the left-out target still takes its
+    place in the numbering."""
+
+    TS1 = f"rm -rf {PROTECTED_PATH} {VALUABLE_PATH}"
+    TS2 = f"rm -rf {VALUABLE_PATH} {PROTECTED_PATH}"
+
+    def test_the_winner_is_the_second_target_of_the_first_rm(self):
+        for batch in (False, True):
+            with self.subTest(batch=batch):
+                tier, rule, reason = decision(self.TS1, batch=batch)
+                self.assertEqual((tier, rule), ("deny", "rm-recursive"))
+                self.assertIn("1番目のrmの2番目の対象", reason)
+
+    def test_the_left_out_target_is_not_named(self):
+        for batch in (False, True):
+            with self.subTest(batch=batch):
+                reason = decision(self.TS1, batch=batch)[2]
+                self.assertNotIn("1番目のrmの1番目の対象", reason)
+
+    def test_the_reason_carries_no_text_of_the_self_modification_ask(self):
+        for batch in (False, True):
+            with self.subTest(batch=batch):
+                reason = decision(self.TS1, batch=batch)[2]
+                self.assertNotIn("self-modification", reason)
+                self.assertNotIn(SELF_MODIFICATION_TEXT, reason)
+                self.assertNotIn(DEMOTION_SENTENCE, reason)
+
+    def test_the_protected_target_after_the_winner_is_still_counted(self):
+        for batch in (False, True):
+            with self.subTest(batch=batch):
+                tier, rule, reason = decision(self.TS2, batch=batch)
+                self.assertEqual((tier, rule), ("deny", "rm-recursive"))
+                self.assertIn("1番目のrmの1番目の対象", reason)
+                self.assertNotIn("1番目のrmの2番目の対象", reason)
+
+    def test_the_output_is_the_same_with_and_without_the_unattended_flag(self):
+        for command in (self.TS1, self.TS2):
+            with self.subTest(command=command):
+                attended = run_guard(command)
+                unattended = run_guard(command, batch=True)
+                self.assertEqual(attended.returncode, 0, attended.stderr)
+                self.assertEqual(attended.stdout, unattended.stdout)
+
+    def test_the_output_is_byte_identical_across_runs(self):
+        for command in (self.TS1, self.TS2):
+            with self.subTest(command=command):
+                first = run_guard(command)
+                second = run_guard(command)
+                self.assertEqual(first.returncode, 0, first.stderr)
+                self.assertEqual(first.stderr, "")
+                self.assertEqual(first.stdout, second.stdout)
+
+
+class TestPerTargetExclusionOnTheSubstitutionHeadedRoute(unittest.TestCase):
+    """TM-2 (TS-13; FR3, A7). `$(printf rm) -rf <protected> <other>` is judged
+    on the substitution-headed route. The expected values below are what the
+    hook gives for it: on that route the statement does not reach the
+    self-modification ask, so nothing is left out and both targets are named
+    in the one reason."""
+
+    TS13 = f"$(printf rm) -rf {PROTECTED_PATH} {VALUABLE_PATH}"
+    EXPECTED_REASON = (
+        "[destructive-guard/rm-recursive] 再帰削除の複数対象が同じ強さの判定に達した: "
+        "1番目のrmの1番目の対象 — `mv -- <対象> /tmp/` で退避する"
+        "（gio が無いのでゴミ箱は使えない）。 "
+        "1番目のrmの2番目の対象 — `mv -- <対象> /tmp/` で退避する"
+        "（gio が無いのでゴミ箱は使えない）。 "
+        "それぞれ個別に安全な経路へ書き換えて撃ち直すと確認不要になる。"
+    )
+
+    def test_the_decision_the_reason_id_and_the_reason_text_are_pinned(self):
+        tier, rule, reason = decision(self.TS13)
+        self.assertEqual((tier, rule), ("deny", "rm-recursive"))
+        self.assertEqual(reason, self.EXPECTED_REASON)
+
+    def test_whether_the_exclusion_applied_is_recorded(self):
+        reason = decision(self.TS13)[2]
+        # The protected operand's record is still named: the self-modification
+        # ask is not reached on this route, so the exclusion does not apply.
+        self.assertIn("1番目のrmの1番目の対象", reason)
+        self.assertIn("1番目のrmの2番目の対象", reason)
+
+    def test_the_output_is_the_same_with_the_unattended_flag_and_across_runs(self):
+        first = run_guard(self.TS13)
+        self.assertEqual(first.returncode, 0, first.stderr)
+        self.assertEqual(first.stdout, run_guard(self.TS13).stdout)
+        self.assertEqual(first.stdout, run_guard(self.TS13, batch=True).stdout)
+
+
+class TestPerTargetExclusionKeepsTheNoDenyVerdicts(unittest.TestCase):
+    """TM-1 (FR3, NFR2). A protected operand beside targets that give no deny
+    keeps the self-modification ask; a protected operand repeated is left out
+    at every occurrence; a redirect target is not an operand."""
+
+    def test_the_forms_without_a_deny_stay_the_self_modification_ask(self):
+        for command in (
+            f"rm -rf {PROTECTED_PATH} tmp/$X",
+            f"rm -rf {PROTECTED_PATH} /tmp/x",
+            f"rm -rf {PROTECTED_PATH} ~/.claude/hooks/bar",
+            f"rm {PROTECTED_PATH} {VALUABLE_PATH}",
+            f"rm -rf {PROTECTED_PATH} {PROTECTED_PATH}",
+        ):
+            with self.subTest(command=command):
+                self.assertEqual(
+                    decision(command)[:2], ("ask", "self-modification")
+                )
+                self.assertEqual(
+                    decision(command, batch=True)[:2], ("deny", "self-modification")
+                )
+
+    def test_the_root_target_beside_a_protected_one_is_the_root_deny(self):
+        for batch in (False, True):
+            with self.subTest(batch=batch):
+                self.assertEqual(
+                    decision(f"rm -rf {PROTECTED_PATH} ~", batch=batch)[:2],
+                    ("deny", "rm-root"),
+                )
+
+    def test_the_redirect_target_is_not_an_operand_so_nothing_is_left_out(self):
+        self.assertEqual(
+            decision(f"rm -rf {VALUABLE_PATH} > ~/.claude/settings.json")[:2],
+            ("deny", "rm-recursive"),
+        )
+
+    def test_the_spelling_of_the_protected_operand_does_not_matter_in_one_rm(self):
+        for operand in (
+            "~/.claude/skills/foo",
+            "$HOME/.claude/skills/foo",
+            "~/.claude/../.claude/skills/foo",
+            "'~/.claude/skills/foo'",
+        ):
+            for command in (
+                f"rm -rf {operand} {VALUABLE_PATH}",
+                f"rm -rf {VALUABLE_PATH} {operand}",
+                f"rm -rf -- {operand} {VALUABLE_PATH}",
+                f"rm -rf {operand} {VALUABLE_PATH} ; git commit --amend",
+            ):
+                with self.subTest(command=command):
+                    self.assertEqual(
+                        decision(command)[:2], ("deny", "rm-recursive")
+                    )
+
+
+class TestProtectedOperandSet(unittest.TestCase):
+    """AC-3, AC-5 (FR2, FR4). The protected-operand function gives the SET of
+    operand numbers, counted the way _number_rm_operands() counts them. It is
+    called with plain strings here; it judges no command."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.hook = load_hook()
+        cls.numbers = staticmethod(cls.hook.rm_protected_operand_numbers)
+
+    def test_the_result_is_a_set_of_operand_numbers(self):
+        self.assertEqual(self.numbers(["-rf", PROTECTED_PATH, VALUABLE_PATH]), {1})
+        self.assertEqual(self.numbers(["-rf", VALUABLE_PATH, PROTECTED_PATH]), {2})
+        self.assertEqual(self.numbers(["-rf", PROTECTED_PATH, PROTECTED_PATH]), {1, 2})
+        self.assertIsInstance(self.numbers(["-rf", VALUABLE_PATH]), set)
+
+    def test_nothing_protected_gives_the_empty_set(self):
+        self.assertEqual(self.numbers([]), set())
+        self.assertEqual(self.numbers(["-rf"]), set())
+        self.assertEqual(self.numbers(["-rf", VALUABLE_PATH, "/tmp/x"]), set())
+
+    def test_the_numbers_follow_the_double_dash_rule(self):
+        self.assertEqual(self.numbers(["-rf", "--", PROTECTED_PATH, VALUABLE_PATH]), {1})
+        self.assertEqual(self.numbers(["--", "-x", PROTECTED_PATH]), {2})
+        self.assertEqual(self.numbers(["-r", "-f", VALUABLE_PATH, PROTECTED_PATH]), {2})
+
+    def test_a_dash_leading_operand_is_numbered_but_never_protected(self):
+        self.assertEqual(self.numbers(["--", "-=" + PROTECTED_PATH]), set())
+        self.assertEqual(
+            self.numbers(["--", "-=" + PROTECTED_PATH, PROTECTED_PATH]), {2}
+        )
+
+    def test_the_same_input_always_gives_the_same_set(self):
+        args = ["-rf", PROTECTED_PATH, VALUABLE_PATH, PROTECTED_PATH]
+        self.assertEqual(self.numbers(args), self.numbers(list(args)))
+
+    def test_no_caller_of_the_old_boolean_form_remains(self):
+        source = GUARD_PATH.read_text(encoding="utf-8")
+        self.assertNotIn("rm_operands_name_self_config", source)
 
 
 # --- AC-6: determinism and the case table ------------------------------------
@@ -446,7 +656,7 @@ class TestCaseTable(unittest.TestCase):
             ("ask", "rm -rf ~/.claude/skills/foo", "self-modification", False),  # TS-12
             ("deny", "rm -rf ~/.claude/skills/foo ; " + RM, "rm-recursive", False),  # TS-13
             ("deny", RM + " ; rm -rf ~/.claude/skills/foo", "rm-recursive", False),  # TS-14
-            ("ask", "rm -rf ~/.claude/skills/foo /home/user/valuable", "self-modification", False),  # TS-15
+            ("deny", "rm -rf ~/.claude/skills/foo /home/user/valuable", "rm-recursive", False),  # TS-15
             ("deny", "rm -rf ~/.claude/skills/foo", "self-modification", True),  # TS-16
             ("deny", RM + " && git commit --amend", "rm-recursive", False),  # TS-18
             ("deny", RM + " || git commit --amend", "rm-recursive", False),
@@ -476,6 +686,108 @@ class TestCaseTable(unittest.TestCase):
         for number in list(range(1, 17)) + list(range(18, 23)):
             with self.subTest(scenario=number):
                 self.assertRegex(labels, rf"\bTS-{number}\b")
+
+
+class TestPerTargetCaseTable(unittest.TestCase):
+    """AC-1, AC-4, AC-6 (FR5, NFR1, NFR4) of mixed-rm-self-config-deny. Its
+    cases are the last of the table, each pinned to a reason id, and the one
+    case of the earlier feature that this feature changes is changed in
+    place."""
+
+    SCENARIOS = [
+        # (number, decision, command, rule, batch)
+        (1, "deny", f"rm -rf {PROTECTED_PATH} {VALUABLE_PATH}", "rm-recursive", False),
+        (2, "deny", f"rm -rf {VALUABLE_PATH} {PROTECTED_PATH}", "rm-recursive", False),
+        (3, "deny", f"rm -rf {PROTECTED_PATH} {VALUABLE_PATH}", "rm-recursive", True),
+        (4, "deny", f"rm -rf {PROTECTED_PATH} ~", "rm-root", False),
+        (5, "ask", f"rm -rf {PROTECTED_PATH} tmp/$X", "self-modification", False),
+        (6, "ask", f"rm -rf {PROTECTED_PATH} /tmp/x", "self-modification", False),
+        (7, "ask", f"rm -rf {PROTECTED_PATH} ~/.claude/hooks/bar", "self-modification", False),
+        (8, "ask", f"rm {PROTECTED_PATH} {VALUABLE_PATH}", "self-modification", False),
+        (9, "deny", f"rm -rf $HOME/.claude/skills/foo {VALUABLE_PATH}", "rm-recursive", False),
+        (10, "deny", f"rm -rf -- {PROTECTED_PATH} {VALUABLE_PATH}", "rm-recursive", False),
+        (11, "deny", f"rm -rf {PROTECTED_PATH} {VALUABLE_PATH} ; git commit --amend", "rm-recursive", False),
+        (14, "ask", f"rm -rf {PROTECTED_PATH} {PROTECTED_PATH}", "self-modification", False),
+        (15, "deny", f"rm -rf {VALUABLE_PATH} > ~/.claude/settings.json", "rm-recursive", False),
+    ]
+
+    @classmethod
+    def setUpClass(cls):
+        with open(CASES_PATH, encoding="utf-8") as f:
+            cls.cases = json.load(f)
+        prefix = PER_TARGET_FEATURE + " TS-"
+        cls.positions = [
+            i for i, case in enumerate(cls.cases) if case[1].startswith(prefix)
+        ]
+        cls.new = [cls.cases[i] for i in cls.positions]
+
+    def test_the_cases_come_after_every_other_case(self):
+        self.assertTrue(self.positions, "no case carries this feature's label")
+        first = self.positions[0]
+        self.assertEqual(
+            self.positions, list(range(first, len(self.cases))),
+            "the cases are not one run at the end of the table",
+        )
+
+    def test_none_of_the_cases_joins_the_earlier_features_run(self):
+        self.assertLess(feature_case_positions(self.cases)[-1], self.positions[0])
+
+    def test_every_case_is_rule_pinned_and_labelled_with_its_scenario(self):
+        for case in self.new:
+            with self.subTest(label=case[1]):
+                self.assertEqual(len(case), 4)
+                self.assertIsInstance(case[3].get("rule"), str)
+                self.assertTrue(case[3]["rule"])
+                self.assertLessEqual(set(case[3]), {"rule", "batch"})
+                self.assertRegex(case[1], rf"^{PER_TARGET_FEATURE} TS-\d+")
+                self.assertTrue(
+                    re.search(r"[\u3040-\u30ff\u4e00-\u9fff]", case[1]),
+                    "the label is not in Japanese",
+                )
+
+    def test_every_case_names_no_machine_specific_path(self):
+        for case in self.new:
+            with self.subTest(label=case[1]):
+                self.assertNotRegex(case[2], r"/(?:Users|root)/|/home/(?!user/)")
+
+    def test_the_batch_key_is_set_for_scenario_3_only(self):
+        for case in self.new:
+            with self.subTest(label=case[1]):
+                self.assertEqual(
+                    bool(case[3].get("batch")), scenario_number(case) == 3
+                )
+
+    def test_each_scenario_has_one_case_with_its_decision_command_and_rule(self):
+        have = {
+            (scenario_number(case), case[0], case[2], case[3]["rule"],
+             bool(case[3].get("batch")))
+            for case in self.new
+        }
+        self.assertEqual(len(self.new), len(self.SCENARIOS))
+        for item in self.SCENARIOS:
+            with self.subTest(scenario=item[0]):
+                self.assertIn(item, have)
+
+    def test_the_earlier_features_ts_15_case_is_changed_in_place(self):
+        found = [
+            (i, case) for i, case in enumerate(self.cases)
+            if case[1].startswith(FEATURE + " TS-15")
+        ]
+        self.assertEqual(len(found), 1)
+        position, case = found[0]
+        self.assertGreaterEqual(position, PRE_EXISTING_CASE_COUNT)
+        self.assertLess(position, self.positions[0])
+        self.assertEqual(case[0], "deny")
+        self.assertEqual(case[2], "rm -rf ~/.claude/skills/foo /home/user/valuable")
+        self.assertEqual(case[3], {"rule": "rm-recursive"})
+
+    def test_the_existing_cases_named_in_the_plan_keep_their_verdicts(self):
+        by_command = {}
+        for case in self.cases[:PRE_EXISTING_CASE_COUNT]:
+            by_command.setdefault(case[2], []).append(case)
+        for command in ("rm ~/.claude/hooks/foo.py", "rm -rf ~/.claude/skills/foo"):
+            with self.subTest(command=command):
+                self.assertEqual([case[0] for case in by_command[command]], ["ask"])
 
 
 def scenario_number(case):
@@ -550,6 +862,84 @@ class TestScenarioCasesPassAgainstTheHook(unittest.TestCase):
             sorted(case[3]["rule"] for case in cases),
             ["chmod-broad", "git-amend", "git-amend"],
         )
+
+
+class TestPerTargetCasesPassAgainstTheHook(unittest.TestCase):
+    """AC-1, AC-4, AC-6 (FR1 to FR3, FR5, NFR1, NFR2) of
+    mixed-rm-self-config-deny. Each case of the feature is judged the way
+    run-destructive-guard.py judges it -- the hook as a subprocess,
+    CLAUDE_BATCH cleared unless the case sets it, the decision and the pinned
+    reason id both compared -- with one subtest per case."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.runner = load_runner([str(RUNNER_PATH), str(GUARD_PATH)])
+        with open(CASES_PATH, encoding="utf-8") as f:
+            cases = json.load(f)
+        prefix = PER_TARGET_FEATURE + " TS-"
+        cls.new = [case for case in cases if case[1].startswith(prefix)]
+        cls.changed = [
+            case for case in cases if case[1].startswith(FEATURE + " TS-15")
+        ]
+
+    def assert_pass(self, cases, count):
+        self.assertEqual(len(cases), count)
+        for case in cases:
+            want, label, command = case[:3]
+            cwd, batch, rule = self.runner.case_options(case)
+            with self.subTest(label=label):
+                got, reason = self.runner.verdict(command, batch=batch, cwd=cwd)
+                self.assertEqual(got, want, reason[:200])
+                self.assertEqual(self.runner.reason_id(reason), rule, reason[:200])
+
+    def numbered(self, numbers):
+        return [case for case in self.new if scenario_number(case) in numbers]
+
+    def test_ac1_the_forms_with_a_deny_target_give_that_targets_deny(self):
+        # TS-1, TS-2, TS-3 (CLAUDE_BATCH set), TS-4 (the root target), TS-9,
+        # TS-10 and TS-11.
+        cases = self.numbered({1, 2, 3, 4, 9, 10, 11})
+        self.assert_pass(cases, 7)
+        self.assertEqual(
+            sorted((scenario_number(c), c[0], c[3]["rule"]) for c in cases),
+            [
+                (1, "deny", "rm-recursive"),
+                (2, "deny", "rm-recursive"),
+                (3, "deny", "rm-recursive"),
+                (4, "deny", "rm-root"),
+                (9, "deny", "rm-recursive"),
+                (10, "deny", "rm-recursive"),
+                (11, "deny", "rm-recursive"),
+            ],
+        )
+
+    def test_ac3_the_numbering_forms(self):
+        # TS-14 (both occurrences left out) and TS-10 (the `--` rule).
+        self.assert_pass(self.numbered({10, 14}), 2)
+
+    def test_ac4_the_forms_without_a_deny_keep_their_verdict(self):
+        # TS-5, TS-6, TS-7, TS-8 stay the self-modification ask; TS-15, a
+        # redirect target, leaves nothing out and stays the rm deny.
+        cases = self.numbered({5, 6, 7, 8, 15})
+        self.assert_pass(cases, 5)
+        self.assertEqual(
+            sorted((scenario_number(c), c[0], c[3]["rule"]) for c in cases),
+            [
+                (5, "ask", "self-modification"),
+                (6, "ask", "self-modification"),
+                (7, "ask", "self-modification"),
+                (8, "ask", "self-modification"),
+                (15, "deny", "rm-recursive"),
+            ],
+        )
+
+    def test_ac6_the_earlier_features_ts_15_case_passes_with_its_new_verdict(self):
+        self.assert_pass(self.changed, 1)
+        self.assertEqual((self.changed[0][0], self.changed[0][3]["rule"]),
+                         ("deny", "rm-recursive"))
+
+    def test_ac6_every_case_of_the_feature_passes(self):
+        self.assert_pass(self.new, 13)
 
 
 # --- AC-7: the runner's rule key -------------------------------------------
@@ -813,6 +1203,39 @@ class TestDescriptionsAreCurrent(unittest.TestCase):
         self.assertIn("resolution step", text)
         self.assertIn("self-modification", text)
         self.assertIn("left out", text)
+
+    def comment_before(self, anchor_text):
+        """The comment block just above the first line of main() that holds
+        ANCHOR_TEXT."""
+        node = self.functions["main"]
+        lines = self.lines[node.lineno - 1 : node.end_lineno]
+        index = next(i for i, ln in enumerate(lines) if anchor_text in ln)
+        block = []
+        i = index - 1
+        while i >= 0 and lines[i].strip().startswith("#"):
+            block.append(lines[i].strip()[1:].strip())
+            i -= 1
+        return normalized(" ".join(reversed(block)))
+
+    def test_the_comment_before_the_emission_names_the_target_as_the_unit(self):
+        text = self.comment_before_emission()
+        self.assertIn("unit", text)
+        self.assertIn("target", text)
+        self.assertIn("other targets", text)
+
+    def test_the_comment_above_the_exclusion_names_the_target_as_the_unit(self):
+        text = self.comment_before("self_modification_asked = any(")
+        self.assertTrue(text, "no comment block above the exclusion")
+        self.assertIn("unit", text)
+        self.assertIn("target", text)
+        self.assertIn("other targets", text)
+        self.assertIn("left out", text)
+
+    def test_the_protected_operand_function_describes_the_set_it_returns(self):
+        text = self.docstring("rm_protected_operand_numbers")
+        self.assertIn("set", text)
+        self.assertIn("operand number", text)
+        self.assertIn("_number_rm_operands", text)
 
     def test_the_comment_before_the_emission_is_not_the_old_one(self):
         text = self.comment_before_emission()

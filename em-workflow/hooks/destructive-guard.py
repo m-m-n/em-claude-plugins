@@ -10353,22 +10353,28 @@ def matches_target_shape(word, args, cwd):
     return False
 
 
-def rm_operands_name_self_config(args):
-    """Whether a deletion operand of the rm invocation whose operand basis is
+def rm_protected_operand_numbers(args):
+    """The set of operand numbers, as _number_rm_operands() numbers them on
+    ARGS, of the deletion operands of the rm invocation whose operand basis is
     ARGS (check_rm()'s ARGS: the rm's own arguments, or the REMAINDER of a
-    substitution-headed statement) matches the protected self-config pattern
-    the way check_self_modification() matches a write target: the raw operand,
-    or its normalized form. The operands are the ones check_rm() judges -- a
-    counted operand that does not start with `-` -- whatever the statement's
-    LEXED flag; a redirect target is not among them."""
-    for _number, operand in _number_rm_operands(args):
+    substitution-headed statement) that match the protected self-config
+    pattern the way check_self_modification() matches a write target: the raw
+    operand, or its normalized form. The operands are the ones check_rm()
+    judges -- a counted operand that does not start with `-` -- whatever the
+    statement's LEXED flag; a redirect target is not among them. The set is
+    empty when no operand matches. The numbers are the operand numbers that
+    check_rm() puts on its records for the same ARGS, so a record belongs to a
+    protected operand exactly when its number is in the set. The function has
+    no side effects: the same ARGS always give the same set."""
+    protected = set()
+    for number, operand in _number_rm_operands(args):
         if operand.startswith("-"):
             continue
         if SELF_CONFIG.search(operand) or SELF_CONFIG.search(
             normalize_candidate(operand)
         ):
-            return True
-    return False
+            protected.add(number)
+    return protected
 
 
 def scanned_statements(command, unsettled, early_stop):
@@ -10496,17 +10502,20 @@ def main(payload):
             # `> ~/.claude/settings.json` のようにコマンド語を持たない純リダイレクト
             # 文も対象を切り詰める。word が無くても redirects だけで判定する。
             check_self_modification(word or "", args, shaped_redirects, segment, lexed)
-            # The exclusion (destructive-guard-mixed-rm-precedence): when THIS
-            # statement reached the self-modification `ask` (held above like
-            # any other non-rm `ask`) and the deletion operand of ITS OWN rm
-            # invocation is the protected path, that invocation's rm records
-            # are left out of the pool below, so that
-            # `rm -rf ~/.claude/skills/foo` keeps its self-modification `ask`
-            # instead of being denied as a recursive delete. A match only in
-            # a redirect target, another write source, or another statement
-            # (a substitution body, a payload, a heredoc body) leaves the
-            # records in. The invocation keeps its place in rm_invocations,
-            # so the other invocations are still numbered counting it.
+            # The exclusion (destructive-guard-mixed-rm-precedence, per target
+            # by mixed-rm-self-config-deny): when THIS statement reached the
+            # self-modification `ask` (held above like any other non-rm `ask`)
+            # and a deletion operand of ITS OWN rm invocation is a protected
+            # path, the records of that operand alone are left out of the pool
+            # below, so that `rm -rf ~/.claude/skills/foo` keeps its
+            # self-modification `ask` instead of being denied as a recursive
+            # delete. The unit is the target: the other targets of the same
+            # rm stay in the pool, and a deny of theirs wins over the held
+            # ask. A match only in a redirect target, another write source, or
+            # another statement (a substitution body, a payload, a heredoc
+            # body) leaves every record in. The invocation keeps its place in
+            # rm_invocations, so ordinals and target numbers still count the
+            # left-out targets.
             self_modification_asked = any(
                 rule == "self-modification"
                 for _tier, rule, _reason in held_asks[held_before:]
@@ -10547,12 +10556,10 @@ def main(payload):
                     rm_invocations.append,
                 )
                 substitution_headed_rm = len(rm_invocations) > invocations_before
-                if not (
-                    self_modification_asked
-                    and substitution_headed_rm
-                    and rm_operands_name_self_config(shaped_words[skip_index:])
-                ):
-                    rm_records.extend(records)
+                if self_modification_asked and substitution_headed_rm:
+                    left_out = rm_protected_operand_numbers(shaped_words[skip_index:])
+                    records = [r for r in records if r.number not in left_out]
+                rm_records.extend(records)
 
             # The deferral is judged on the statement's REAL head — leading
             # grouping tokens (subshell `(`, brace group `{`, a function
@@ -10582,10 +10589,10 @@ def main(payload):
                     rm_anchor = token_position(origin, toks, shaped_words[skip_index])
                     rm_invocations.append(rm_anchor)
                     records = check_rm(args, rm_anchor)
-                    if not (
-                        self_modification_asked and rm_operands_name_self_config(args)
-                    ):
-                        rm_records.extend(records)
+                    if self_modification_asked:
+                        left_out = rm_protected_operand_numbers(args)
+                        records = [r for r in records if r.number not in left_out]
+                    rm_records.extend(records)
             else:
                 merge_allowed = exception_allows(merge_exception, toks, lexed, cwd)
                 merge_allowed_seen = merge_allowed_seen or merge_allowed
@@ -10610,10 +10617,13 @@ def main(payload):
     #  5. the PR merge fallback ask;
     #  6. the rm `ask`;
     #  7. otherwise the final allow / silence below.
-    # The rm records of a statement whose own rm deletion operand is a
+    # The rm records of the targets that a statement's own rm names as a
     # protected self-config path were left out in the loop, with the
     # self-modification `ask` of that statement competing as an ordinary held
-    # ask, so they take no part in this choice.
+    # ask, so they take no part in this choice. The unit left out is the
+    # target: the other targets of the same rm stay in the pool and take part
+    # in this choice, so a deny of theirs wins and its reason is built from
+    # the pooled winners only.
     top = strongest_rm_decision(render_rm_decisions(rm_invocations, rm_records))
     if top is not None and top[0] == "deny":
         decide(*top)
