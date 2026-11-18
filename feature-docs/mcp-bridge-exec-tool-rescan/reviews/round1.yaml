@@ -1,0 +1,120 @@
+round: 1
+executed_at: '2026-11-18T21:01:03+09:00'
+scope:
+  review_mode: diff
+  base_commit: 0d02fb18734163225066f9514a3f9428196615fe
+  head_commit: ce955e62ae3fc756142576712b009b89579022e3
+  changed_files:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/mcp-bridge-exec-tool-rescan/task0001.tests.yaml
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 553233b6be6ecdc3
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7531
+  title: JSON のエスケープで書いた置換は、実行ツール宛てでも再走査されない（変更前からある制約）
+  description: 'chunk_subs は生の Bash 文字列から `$(` / バッククォートを探して作るため、`--args-json` の `command` に JSON エスケープ（例:
+    `\u0024(...)`）で書いた置換は候補にならず、再走査に入らない。フックは `--args-json` を JSON として復号しない。この差分が持ち込んだものではなく、同じ形は変更前も
+    allow だった。置換を使わない平文の破壊的コマンドを start_process に渡す形も変更前後とも allow で、フックは MCP 実行ツールに渡す引数の意味を解析していない。根本は
+    SPEC の範囲（S1 のスキップ条件の絞り込み）の外にある設計上の境界。'
+  suggestion: このフィーチャーでは直さず、別フィーチャーの候補とする。対処する場合は、notion の組以外の mcp-bridge run について `--args-json` を JSON
+    として復号して実行ツールの `command` をシェルの入力として検査するか、宛先や実行文字列が静的に決まらない形を ask に回すかを SPEC で決める。誤 deny の費用も合わせて考える。
+  reproduction: TS-1 と同じく Bash の PreToolUse 入力から `start_process` に渡る `--args-json` を対象にする。無害な置換を含む `command`
+    を使い、置換記号が生の Bash 入力にある場合と JSON 復号後にだけ現れる場合を静的に比較する。後者では復号済みの `command` に置換がある一方、`chunk_subs` にその候補が入らないことを確認できる。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: 'medium severity (evaluator downgraded from high: pre-existing limitation outside
+    SPEC scope): outside the Phase R4 auto-fix candidate gate (critical/high only) and not counted in
+    residual; carried as a follow-up task'
+- stable_id: 87b049d8d9ba6e8b
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/tests/destructive-guard-cases.json
+  line: 1369
+  title: TM-2 の `--` 終端・位置引数・引用したフラグ名のケースが、その形だけを単独で確かめていない
+  description: '`--` の後ろの組と位置引数の後ろの組のケースは、どちらも先頭が `-mcp` なので notion_comment_pair() は最初の語で False を返す。`--`
+    や位置引数を読み飛ばす実装に変わっても deny のまま通る。引用した ''--mcp'' のケースも、引用を許すように変わると `--mcp` が2回になるので deny のまま通る。実装は3つの形をどれも正しく拒否しており、足りないのは回帰テストの検知力だけ。'
+  suggestion: その形だけを含む deny ケースを3件足す（`mcp-bridge run -- --mcp notion ...`、`mcp-bridge run note --mcp notion
+    ...`、`mcp-bridge run '--mcp' notion ...`、いずれも `--tool notion-create-comment` と置換を含む `--args-json`）。既存のケースは消さず、変えない。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: 'medium severity: outside the Phase R4 auto-fix candidate gate (critical/high only)
+    and not counted in residual; carried as a follow-up task'
+evaluation:
+  round_summary: 'round 1（diff、cross_validation あり）。S1 を notion / notion-create-comment の組に絞る変更は SPEC
+    の FR1〜FR6 と NFR2 に沿っている。組以外の形と判定できない形は、すべて再走査に戻る。deny から allow への緩和は無い。security#0 の high（JSON エスケープした置換のすり抜け）は再現を確かめたが、変更前からある制約なので
+    medium に下げた。comprehensive#0 の medium はそのまま残した。評価者自身の点検で、値の位置の `--mcp` / `--tool` を数えない点が FR1 の文言より緩いことを
+    low で足した（R3b step 2 で破棄）。reviewer の出力に指示の注入は無かった。観点ごとの点検: comprehensive — corroborated、security —
+    corroborated（重大度は見直した）、architecture — corroborated、spec — findings。読んだファイルは 7 件（上限 10）。'
+  recommended_action: auto_fix
+  action_rationale: critical / high は残っていない。comprehensive のケース追加と spec の数え方の修正は小さく、この差分の範囲で直せる。security
+    の指摘は変更前からある設計上の境界で、SPEC の範囲外にある。自動修正には回さず、別フィーチャーの候補として記録するのが妥当。
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

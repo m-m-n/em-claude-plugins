@@ -103,7 +103,8 @@ workflow:
   completed_at_commit: 99983054bee2b179b30b53d739d540d05d2cad94
   base_commit: 0d02fb18734163225066f9514a3f9428196615fe
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: ce955e62ae3fc756142576712b009b89579022e3
 - id: verify
   status: pending
   result: null
@@ -139,8 +140,15 @@ tasks:
     notes: 'batch-retry-consumed: 1 (prior failure: implementer stopped without a merged event)'
     branch: em-workflow/mcp-bridge-exec-tool-rescan/task0001
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  residual_critical_high: 0
+  needs_rework: false
   plan:
     floor:
     - comprehensive
