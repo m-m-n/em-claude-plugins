@@ -2,49 +2,84 @@ schema_version: 1
 feature: mixed-rm-self-config-deny
 created: '2026-11-18'
 base_branch: main
-goal: |
-  # destructive-guard: 同じ rm に自己設定パスと通常パスを並べると通常パスの再帰削除 deny が ask(self-modification) に落ちる
+goal: '# destructive-guard: 同じ rm に自己設定パスと通常パスを並べると通常パスの再帰削除 deny が ask(self-modification)
+  に落ちる
+
 
   種別: セキュリティ
 
+
   ## 脆弱性の概要 (必須)
 
-  `destructive-guard.py` で、1 つの `rm` に自己設定パスと通常のパスを並べると、通常パスの再帰削除 `deny` が判定から外れ、`ask` / `self-modification` に落ちる。
+
+  `destructive-guard.py` で、1 つの `rm` に自己設定パスと通常のパスを並べると、通常パスの再帰削除 `deny` が判定から外れ、`ask`
+  / `self-modification` に落ちる。
+
 
   ## 参照 (必須)
 
+
   - CVE / GHSA ID: 該当なし
+
   - アドバイザリ URL: 該当なし
+
   - severity: low
+
   - 該当パッケージ: 該当なし
+
   - 現在のバージョン: 該当なし
+
   - 修正済みバージョン: 無し
+
 
   ## 攻撃シナリオ (必須)
 
-  `CLAUDE_BATCH` 未設定で `rm -rf ~/.claude/skills/foo /home/user/valuable` を渡すと、判定は `ask` / `self-modification` になる。`rm -rf /home/user/valuable` 単独なら `deny` / `rm-recursive`。
 
-  `check_self_modification()` が ask を保持したあと `rm_operands_name_self_config()` が真になり、その rm の判定記録全体（通常パスの deny を含む）がプールから外れる。`rm -rf ~/.claude/skills/foo /` のように rm-root の対象を並べた形でも同じになる。
+  `CLAUDE_BATCH` 未設定で `rm -rf ~/.claude/skills/foo /home/user/valuable` を渡すと、判定は `ask`
+  / `self-modification` になる。`rm -rf /home/user/valuable` 単独なら `deny` / `rm-recursive`。
+
+
+  `check_self_modification()` が ask を保持したあと `rm_operands_name_self_config()` が真になり、その
+  rm の判定記録全体（通常パスの deny を含む）がプールから外れる。`rm -rf ~/.claude/skills/foo /` のように rm-root
+  の対象を並べた形でも同じになる。
+
 
   ## 影響範囲 (必須)
 
-  対話実行では、自己設定への書き込みを理由にした確認だけが表示され、その承認で保護対象外の再帰削除も実行できる。`CLAUDE_BATCH` 下では `deny` に降格されるため判定段は一致するが、理由は self-modification のままになる。
 
-  以前からある挙動で、feature `destructive-guard-mixed-rm-precedence` の SPEC FR8 が既知の影響として受け入れ、TS-15 とユニットテスト `test_a_protected_and_an_unprotected_target_in_one_rm_stay_an_ask` で `ask` / `self-modification` に固定している。
+  対話実行では、自己設定への書き込みを理由にした確認だけが表示され、その承認で保護対象外の再帰削除も実行できる。`CLAUDE_BATCH` 下では `deny`
+  に降格されるため判定段は一致するが、理由は self-modification のままになる。
+
+
+  以前からある挙動で、feature `destructive-guard-mixed-rm-precedence` の SPEC FR8 が既知の影響として受け入れ、TS-15
+  とユニットテスト `test_a_protected_and_an_unprotected_target_in_one_rm_stay_an_ask` で `ask`
+  / `self-modification` に固定している。
+
 
   ## 完了の定義 (必須)
 
+
   - [ ] 攻撃シナリオが成立しない（上の形が `deny` / `rm-recursive`（または `rm-root`）になる）
+
   - [ ] 除外を対象単位で行い、自己設定パス以外の対象から出た rm-recursive / rm-root の deny をプールに残す
-  - [ ] SPEC FR8 の扱いと TS-15 の期待値を改め、`python3 em-workflow/hooks/tests/run-destructive-guard.py` が全件通る
+
+  - [ ] SPEC FR8 の扱いと TS-15 の期待値を改め、`python3 em-workflow/hooks/tests/run-destructive-guard.py`
+  が全件通る
+
 
   ## 該当箇所 (任意)
 
-  `em-workflow/hooks/destructive-guard.py` の `rm_operands_name_self_config()` 呼び出し付近（ループ内で rm 記録をプールから外す分岐）。
+
+  `em-workflow/hooks/destructive-guard.py` の `rm_operands_name_self_config()` 呼び出し付近（ループ内で
+  rm 記録をプールから外す分岐）。
+
 
   ## 暫定緩和策 (任意)
 
+
   自己設定パスと通常パスを同じ rm に並べたコマンドの確認を、対話実行で承認しない。
+
+  '
 parent_branch: em-workflow/mixed-rm-self-config-deny/integration
 tier: full
 tier_decision:
@@ -92,13 +127,15 @@ workflow:
   - DESIGN.md
   - design/
   status: skipped
-  skipped_reason: 'No UI: changes are confined to a Python hook, its case table, unit tests and Markdown documents.'
+  skipped_reason: 'No UI: changes are confined to a Python hook, its case table, unit
+    tests and Markdown documents.'
 - id: create-plan
   artifacts:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: 513ebae9de31150039f218cd3bb03d68c698b8b6
 - id: implement
   status: pending
 - id: review
@@ -107,7 +144,48 @@ workflow:
   status: pending
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Leave out only the protected rm targets from the pool
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_mixed_rm_precedence.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    - config-infra
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    status: pending
+    notes: null
+  task0002:
+    title: Describe the per-target exclusion in the hook-tests rule
+    plan: tasks/task0002.md
+    files:
+    - .claude/rules/hook-tests.md
+    - tests/test_hook_tests_rule_key_doc.py
+    skills: []
+    domains:
+    - config-infra
+    complexity: low
+    requirements:
+    - FR8
+    status: pending
+    notes: null
 review:
   status: pending
   rounds_completed: 0
@@ -119,92 +197,140 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-10
+    - TS-11
+    - TS-13
+    - TS-14
   FR2:
     title: 保護パスの判定方法は今と同じ
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-7
+    - TS-9
+    - TS-10
+    - TS-14
   FR3:
     title: 混ざった形の判定
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
+    - TS-6
+    - TS-7
+    - TS-8
+    - TS-12
+    - TS-15
   FR4:
     title: rm_operands_name_self_config() とコメントを直す
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-16
   FR5:
     title: ケース表
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-17
   FR6:
     title: 単体テスト
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-12
+    - TS-13
   FR7:
     title: 旧 feature の SPEC.md
     status: ok
     tbd_reason: null
     excluded_reason: null
     tasks: []
-    tests: []
+    tests:
+    - TS-18
   FR8:
     title: .claude/rules/hook-tests.md
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS-18
   NFR1:
     title: 変化の向き
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-15
+    - TS-17
   NFR2:
     title: deny の無い形の互換
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-5
+    - TS-6
+    - TS-7
+    - TS-8
   NFR3:
     title: 決定性
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-3
+    - TS-12
   NFR4:
     title: 性能
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-17
   NFR5:
     title: version
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-19
 batch:
   review_rework_count: 0
   verify_rework:
