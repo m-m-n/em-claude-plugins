@@ -105,11 +105,29 @@ workflow:
   status: completed
   completed_at_commit: 9dc2b655d806d6a0c282d60209fe0172b25856e4
 - id: verify
-  status: in_progress
-  result: null
-  round: 0
-  passed_ids: []
+  status: completed
+  completed_at_commit: da6a39509ed45920142cbfe4d041b72f80df5831
+  result: pass
+  round: 1
+  passed_ids:
+  - TS-1
+  - TS-2
+  - TS-3
+  - TS-4
+  - TS-5
+  - TS-6
+  - TS-7
+  - TS-8
+  - TS-9
+  - TS-10
+  - TS-11
+  - SC-1
+  - SC-2
+  - SC-3
+  - SC-4
+  - SC-5
   failed_items: []
+  summary: 'python3 -m unittest discover -s tests: 16402 tests OK (skipped=1). tests.test_resolve_verified_findings: 70 tests OK. NFR5 unchanged-files diff exit 0. NFR1 imports standard library only. TS-7 docstring Boundaries names the refused links (feature directory incl. trailing separators, reviews, round record) with their codes. No excluded requirements.'
 - id: retrospect
   status: pending
 tasks:
