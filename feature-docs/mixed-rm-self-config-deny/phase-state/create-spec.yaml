@@ -1,11 +1,11 @@
 schema_version: 1
 feature: mixed-rm-self-config-deny
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 04f2b01753c70c6b31ecca43a3290f38fb89b1de
 last_input_digest: sha256:0073b023162955edd80cee56315d944db641a34bc74c5a8a110f25c66c903573
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -55,7 +55,15 @@ worker_runs:
 - request_id: create-spec-run-0002
   status: completed
   input_digest: sha256:0073b023162955edd80cee56315d944db641a34bc74c5a8a110f25c66c903573
-artifacts: []
+- request_id: create-spec-run-0003
+  status: completed
+artifacts:
+- path: feature-docs/mixed-rm-self-config-deny/REQUIREMENTS.md
+  sha256: sha256:14b247f3a3b4189708b30810b507f12a7d61867ca7e71ce2912d854001caef16
+  produced_by: create-spec-run-0003
+- path: feature-docs/mixed-rm-self-config-deny/SPEC.md
+  sha256: sha256:2f43e97f62681d0213d19572de7f563bd01fdb0021ddb5da227cfdb174b0bd81
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0

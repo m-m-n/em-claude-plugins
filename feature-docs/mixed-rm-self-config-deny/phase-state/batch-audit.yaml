@@ -38,3 +38,15 @@ records:
   codex_consulted: false
   opus_escalation: false
   resolution_note: batch-policies.yaml に従い design step を省く。
+- gate_id: create-spec.command-approval
+  question_id: create-spec.command-approval
+  options:
+  - approve
+  selected_option_ids:
+  - approve
+  source: batch-decision-table
+  codex_consulted: false
+  opus_escalation: false
+  resolution_note: project.components の 2 コマンド `python3 -m unittest discover -s tests`
+    と `python3 em-workflow/hooks/tests/run-destructive-guard.py` はどちらも bash_guard
+    に承認済み。新たな自動承認は無い。
