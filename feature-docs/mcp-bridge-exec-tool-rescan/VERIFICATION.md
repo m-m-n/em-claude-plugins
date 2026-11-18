@@ -61,7 +61,7 @@ TS-4, TS-5 and the two TS-22 lines.
 ### Functional Requirements Coverage
 | Requirement | Tasks | Verification |
 |-------------|-------|--------------|
-| FR1 | task0001 | TS-1 to TS-10 |
+| FR1 | task0001 | TS-1 to TS-10; item TM-2 |
 | FR2 | task0001 | TS-10; diff inspection: W1 to W4, C1, S2, the top-level restriction and ANSI-C handling unchanged |
 | FR3 | task0001 | TS-1, TS-10; full case suite; diff inspection: candidate marking unchanged |
 | FR4 | task0001 | TS-1 to TS-9; case-file diff contains additions only |
@@ -91,11 +91,17 @@ TS-4, TS-5 and the two TS-22 lines.
 - TM-1: S1 returns its data word only when both sides of the
   `notion` / `notion-create-comment` pair hold — checked by TS-1, TS-3, TS-4,
   TS-5 and TS-9 passing as deny in the case runner.
-- TM-2: a repeated flag, a quoted flag word or value, and a `--flag=value` word
-  make the pair undeterminable and are re-scanned — checked by TS-6, TS-7 and
-  TS-8 and by these two cases passing as deny in the case runner:
+- TM-2: every form outside the complete flag sequence of IMPLEMENTATION.md
+  decision D1 (a repeated flag, a quoted flag word or value, an `=` form, a
+  single-dash flag, a `--` terminator, a positional word) leaves the pair
+  undeterminable and is re-scanned — checked by TS-6, TS-7 and TS-8 and by
+  these five cases passing as deny in the case runner, while TS-2 and the
+  TS-10 regression set pass as allow:
   - `mcp-bridge run '--mcp' desktop-commander --mcp notion --tool notion-create-comment --args-json '{"body":"$(git branch -D example)"}'`
   - `mcp-bridge run --mcp notion --tool=start_process --tool notion-create-comment --args-json '{"body":"$(git branch -D example)"}'`
+  - `mcp-bridge run --mcp notion --tool notion-create-comment -mcp desktop-commander -tool start_process --args-json '{"command":"echo $(git branch -D example)","shell":"bash"}'`
+  - `mcp-bridge run -mcp desktop-commander -tool start_process --args-json '{"command":"echo $(git branch -D example)","shell":"bash"}' -- --mcp notion --tool notion-create-comment`
+  - `mcp-bridge run -mcp desktop-commander -tool start_process --args-json '{"command":"echo $(git branch -D example)","shell":"bash"}' note --mcp notion --tool notion-create-comment`
 
 ## Verification Summary
 | Category | Items | Automated | E2E | Manual |

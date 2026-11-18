@@ -23,6 +23,14 @@ determined, is re-scanned (TM-1, TM-2). If A1 stops holding for the server
 registered as `notion`, a substitution inside the data word of that one pair
 goes unscanned; this dependency is the accepted remainder of the allowed pair.
 
+TM-2 also depends on mcp-bridge `run` parsing its options as decision D1 of
+IMPLEMENTATION.md records (single-dash and double-dash forms, the `=` form,
+the last occurrence winning, and option parsing stopping at `--` or at the
+first positional word). The set of undeterminable forms TM-2 re-scans is
+wider than the list in SPEC.md A2: it is every form outside the complete
+flag sequence of D1. This is the plan's reading of FR1's undeterminable
+clause and of NFR2; SPEC.md is not rewritten in this run.
+
 Categories with no row: Repudiation and Information disclosure (the change
 adds no record and exposes no data); Denial of service (the pair check is one
 pass over the words of one statement, and `scan_budget` and
@@ -43,4 +51,4 @@ Depth: deep (auth, input-handling)
 | STRIDE category | Threat | Mitigation ID | Mitigation | Implemented by | Verified by |
 |---|---|---|---|---|---|
 | Elevation of privilege | A destructive command wrapped in a command substitution inside the single-quoted `--args-json` value of an `mcp-bridge run` that targets an argument-executing tool is skipped as data, so the guard allows a command it must deny (FR1, NFR2; SPEC.md TS-1) | TM-1 | S1 returns its data word only when both sides of the `notion` / `notion-create-comment` pair hold; another server, another tool, or a missing `--mcp` / `--tool` makes S1 return the empty set, so every candidate is re-scanned | task0001 AC-3 | VERIFICATION.md Performance / Security Verification, item TM-1 |
-| Spoofing | A command makes the guard read the target as `notion` / `notion-create-comment` while mcp-bridge receives a different server or tool, through a form the exact-word reading misjudges: a repeated flag, a quoted flag word or value, or a `--flag=value` word (FR1, NFR2, A2) | TM-2 | A side of the pair holds only when exactly one word after `run` equals the flag after quote removal or begins with the flag followed by `=`, that word is the flag written without quote or escape, and the next word is the expected value written as one unquoted run; every other form is undeterminable and re-scanned | task0001 AC-4 | VERIFICATION.md Performance / Security Verification, item TM-2 |
+| Spoofing | A command makes the guard read the target as `notion` / `notion-create-comment` while mcp-bridge receives another server or tool, through a form a word-by-word reading misjudges: a repeated flag, a quoted flag word or value, an `=` form, a single-dash flag whose last occurrence wins, or a notion pair placed after `--` or after a positional word, where mcp-bridge has stopped reading options (FR1, NFR2, A2) | TM-2 | The pair is determined only when the words after `run` read as a complete sequence of the known `run` flags in the exact double-dash form, each value-taking flag followed by its value word and `--dry-run` alone, with `--mcp`, `--tool` and `--args-json` each exactly once and no `--`, positional word, single-dash form or `=` form (IMPLEMENTATION.md D1); every other form is undeterminable and re-scanned | task0001 AC-4 | VERIFICATION.md Performance / Security Verification, item TM-2 |
