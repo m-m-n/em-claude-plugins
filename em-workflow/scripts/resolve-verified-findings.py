@@ -42,7 +42,18 @@ Boundaries: YAML is read with safe load only, and a document that safe load
 refuses is a structural error. Every input is read and checked before the
 first write; on any failure nothing is written. The only file ever written is
 the latest review round record, replaced as a whole through a temporary file
-in the same directory and an atomic rename. Of a finding the script reads only
+in the same directory and an atomic rename. A symbolic link is refused at the
+final element of `--feature-dir` (also when the value ends in one or more `/`,
+which are stripped first) with invalid-workflow, before workflow.yaml is read;
+at `reviews` with invalid-round-record; and at the round record with
+invalid-round-record. Symbolic links above the feature directory are not
+checked, and a link at workflow.yaml or at the mapping file is followed as
+before. The feature directory is opened without following a link, `reviews` is
+opened relative to it in the same way, and every read and write after `reviews`
+is opened (the listing, the record and its mode, the temporary file, the rename
+and the removal of the temporary file after a failure) is made relative to that
+directory handle, so a swap of the path `reviews` after it was opened cannot
+redirect a write. Of a finding the script reads only
 `stable_id`, `resolution`, `severity`, `category` and `resolution_reason` (the
 last only to carry it over); it never reads SPEC.md, VERIFICATION.md or any
 free text to decide anything. stdout and stderr carry only values that were
@@ -54,9 +65,9 @@ above. The script runs no git command and writes no workflow.yaml.
 import json
 import os
 import re
+import secrets
 import stat
 import sys
-import tempfile
 
 sys.dont_write_bytecode = True
 
@@ -74,6 +85,9 @@ COMMIT_RE = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
 ROUND_FILE_RE = re.compile(r"round([1-9][0-9]*)\.yaml")
 
 MAX_INPUT_BYTES = 8 * 1024 * 1024
+
+# Attempts to find a temporary name that is not taken.
+TEMPORARY_ATTEMPTS = 100
 
 # Dump with a width no line reaches, so that no text is re-wrapped.
 DUMP_WIDTH = 2**30
@@ -122,15 +136,66 @@ def parse_args(argv):
     return values["--feature-dir"], values["--mapping"], values["--verified-commit"]
 
 
+# -- opening ------------------------------------------------------------------
+
+
+def normalize_feature_dir(value):
+    """FR7: remove the run of trailing `/`, so that the final element is the one
+    that is opened without following a link. A value of only `/` is used as
+    given. Nothing else is rewritten: `.` and `..` stay."""
+    stripped = value.rstrip("/")
+    return stripped if stripped else value
+
+
+def open_feature_dir(path):
+    """FR2: a handle on the feature directory, opened as a directory without
+    following a link at its final element. Ancestors are not checked (FR5)."""
+    try:
+        return os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    except Exception:
+        raise Failure(INVALID_WORKFLOW)
+
+
+def reviews_failure_code(feature_fd):
+    """The code for a `reviews` that could not be opened or listed. It comes
+    from a no-follow status query of the entry, never from the error number of
+    the open: that number differs between POSIX systems for a link."""
+    try:
+        mode = os.stat("reviews", dir_fd=feature_fd, follow_symlinks=False).st_mode
+    except Exception:
+        return MISSING_ROUND_RECORD
+    return INVALID_ROUND_RECORD if stat.S_ISLNK(mode) else MISSING_ROUND_RECORD
+
+
+def open_reviews(feature_fd):
+    """FR1, FR3: open `reviews` relative to the feature-directory handle, as a
+    directory and without following a link, and list it. Returns the handle,
+    which the caller holds until the run ends, and the entry names."""
+    fd = None
+    try:
+        fd = os.open("reviews", os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=feature_fd)
+        return fd, os.listdir(fd)
+    except Exception:
+        if fd is not None:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+        raise Failure(reviews_failure_code(feature_fd))
+
+
 # -- reading ------------------------------------------------------------------
 
 
-def read_text(path, code):
-    """The UTF-8 text of a regular file of bounded size; `code` on any failure."""
+def read_text(path, code, dir_fd=None):
+    """The UTF-8 text of a regular file of bounded size; `code` on any failure.
+    With `dir_fd` the path is relative to that directory handle. A link at the
+    file itself is followed."""
+    opener = None if dir_fd is None else (lambda name, flags: os.open(name, flags, dir_fd=dir_fd))
     try:
-        if not stat.S_ISREG(os.stat(path).st_mode):
+        if not stat.S_ISREG(os.stat(path, dir_fd=dir_fd).st_mode):
             raise Failure(code)
-        with open(path, "rb") as handle:
+        with open(path, "rb", opener=opener) as handle:
             data = handle.read(MAX_INPUT_BYTES + 1)
         if len(data) > MAX_INPUT_BYTES:
             raise Failure(code)
@@ -155,10 +220,11 @@ def is_token(value):
     return isinstance(value, str) and TOKEN_RE.fullmatch(value) is not None
 
 
-def read_workflow(feature_dir):
-    """Return (result, verify round, passed_ids set) of the verify step."""
+def read_workflow(feature_fd):
+    """Return (result, verify round, passed_ids set) of the verify step.
+    `workflow.yaml` is located through the feature-directory handle."""
     code = INVALID_WORKFLOW
-    doc = load_yaml(read_text(os.path.join(feature_dir, "workflow.yaml"), code), code)
+    doc = load_yaml(read_text("workflow.yaml", code, dir_fd=feature_fd), code)
     if not isinstance(doc, dict):
         raise Failure(code)
     steps = doc.get("workflow")
@@ -204,14 +270,10 @@ def read_mapping(path):
     return mapping
 
 
-def select_round_record(feature_dir):
+def select_round_record(names):
     """C6: the record with the numerically largest N among `roundN.yaml`
-    (N without leading zeros) in DIR/reviews. Returns (N, path)."""
-    reviews = os.path.join(feature_dir, "reviews")
-    try:
-        names = os.listdir(reviews)
-    except Exception:
-        raise Failure(MISSING_ROUND_RECORD)
+    (N without leading zeros) in the entry names of DIR/reviews. Returns
+    (N, entry name)."""
     best = None
     for name in names:
         match = ROUND_FILE_RE.fullmatch(name)
@@ -227,27 +289,55 @@ def select_round_record(feature_dir):
         number = int(best[1])
     except Exception:
         raise Failure(INVALID_ROUND_RECORD)
-    return number, os.path.join(reviews, best[2])
+    return number, best[2]
 
 
-def read_round_record(path):
-    """Return the parsed record; its `findings` is a list of mappings."""
+def read_round_record_text(reviews_fd, name):
+    """FR8: the text and the file mode of the record, read relative to the
+    `reviews` handle. In order: a no-follow status query that must report a
+    regular file (anything else is refused without opening it); a read-only
+    open that does not follow a link; a status query of the opened handle that
+    must report a regular file; a bounded read from that handle. The open does
+    not block on a FIFO that a swap put in place after the first query."""
     code = INVALID_ROUND_RECORD
     try:
-        mode = os.lstat(path).st_mode
+        # The record is replaced, not edited in place: a link or anything that
+        # is not a regular file is refused so that the write cannot land elsewhere.
+        if not stat.S_ISREG(os.stat(name, dir_fd=reviews_fd, follow_symlinks=False).st_mode):
+            raise Failure(code)
+        fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=reviews_fd)
+        handle = None
+        try:
+            info = os.fstat(fd)
+            if not stat.S_ISREG(info.st_mode):
+                raise Failure(code)
+            handle = os.fdopen(fd, "rb")
+        finally:
+            if handle is None:
+                os.close(fd)
+        with handle:
+            data = handle.read(MAX_INPUT_BYTES + 1)
+        if len(data) > MAX_INPUT_BYTES:
+            raise Failure(code)
+        return data.decode("utf-8"), stat.S_IMODE(info.st_mode)
+    except Failure:
+        raise
     except Exception:
         raise Failure(code)
-    # The record is replaced, not edited in place: a link or anything that is
-    # not a regular file is refused so that the write cannot land elsewhere.
-    if stat.S_ISLNK(mode) or not stat.S_ISREG(mode):
-        raise Failure(code)
-    record = load_yaml(read_text(path, code), code)
+
+
+def read_round_record(reviews_fd, name):
+    """Return (the parsed record, its file mode); the record's `findings` is a
+    list of mappings."""
+    code = INVALID_ROUND_RECORD
+    text, mode = read_round_record_text(reviews_fd, name)
+    record = load_yaml(text, code)
     if not isinstance(record, dict):
         raise Failure(code)
     findings = record.get("findings")
     if not isinstance(findings, list) or not all(isinstance(f, dict) for f in findings):
         raise Failure(code)
-    return record
+    return record, mode
 
 
 # -- eligibility and rewrite ------------------------------------------------------
@@ -299,10 +389,27 @@ def apply_mapping(mapping, findings, verify_round, passed_ids, verified_commit):
 # -- writing ----------------------------------------------------------------------
 
 
-def replace_record(path, record):
-    """Replace the record as a whole: write a sibling temporary file, then
-    rename it over the record. Any failure leaves the record as it was and no
-    temporary file behind."""
+def create_temporary(reviews_fd):
+    """A new temporary file in the `reviews` directory, created relative to its
+    handle, exclusively and without following a link. The name keeps the shape
+    of a mkstemp name (hidden `.resolve-` prefix, random part, `.tmp` suffix);
+    a name that is taken is replaced by a fresh one. Returns (fd, name)."""
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
+    for _ in range(TEMPORARY_ATTEMPTS):
+        name = ".resolve-" + secrets.token_hex(6) + ".tmp"
+        try:
+            return os.open(name, flags, 0o600, dir_fd=reviews_fd), name
+        except FileExistsError:
+            continue
+    raise Failure(INVALID_ROUND_RECORD)
+
+
+def replace_record(reviews_fd, name, record, mode):
+    """FR3, FR4: replace the record as a whole. A temporary file is created in
+    the `reviews` directory, written, flushed and synced, given the record's
+    mode through its own handle and renamed over the record, every name relative
+    to the `reviews` handle. Any failure leaves the record as it was and removes
+    the temporary file."""
     try:
         text = yaml.safe_dump(
             record,
@@ -314,23 +421,26 @@ def replace_record(path, record):
         reloaded = yaml.safe_load(text)
         if not isinstance(reloaded, dict) or not isinstance(reloaded.get("findings"), list):
             raise Failure(INVALID_ROUND_RECORD)
-        mode = stat.S_IMODE(os.stat(path).st_mode)
-        directory = os.path.dirname(path) or "."
-        fd, temporary = tempfile.mkstemp(prefix=".resolve-", suffix=".tmp", dir=directory)
+        fd, temporary = create_temporary(reviews_fd)
     except Failure:
         raise
     except Exception:
         raise Failure(INVALID_ROUND_RECORD)
     try:
-        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
+        try:
+            handle = os.fdopen(fd, "w", encoding="utf-8", newline="\n")
+        except BaseException:
+            os.close(fd)
+            raise
+        with handle:
             handle.write(text)
             handle.flush()
             os.fsync(handle.fileno())
-        os.chmod(temporary, mode)
-        os.replace(temporary, path)
+            os.fchmod(handle.fileno(), mode)
+        os.replace(temporary, name, src_dir_fd=reviews_fd, dst_dir_fd=reviews_fd)
     except BaseException:
         try:
-            os.unlink(temporary)
+            os.unlink(temporary, dir_fd=reviews_fd)
         except OSError:
             pass
         raise
@@ -341,21 +451,32 @@ def replace_record(path, record):
 
 def run(argv):
     feature_dir, mapping_path, verified_commit = parse_args(argv)
-    result, verify_round, passed_ids = read_workflow(feature_dir)
-    mapping = read_mapping(mapping_path)
-    review_round, record_path = select_round_record(feature_dir)
-    record = read_round_record(record_path)
-
-    fixed = []
-    if result == "pass" and verify_round >= 1:
-        fixed = apply_mapping(mapping, record["findings"], verify_round, passed_ids, verified_commit)
-    if fixed:
+    # Every handle opened here is released on success and on every failure path.
+    feature_fd = open_feature_dir(normalize_feature_dir(feature_dir))
+    try:
+        result, verify_round, passed_ids = read_workflow(feature_fd)
+        mapping = read_mapping(mapping_path)
+        reviews_fd, names = open_reviews(feature_fd)
         try:
-            replace_record(record_path, record)
-        except Failure:
-            raise
-        except BaseException:
-            raise Failure(INVALID_ROUND_RECORD)
+            review_round, record_name = select_round_record(names)
+            record, mode = read_round_record(reviews_fd, record_name)
+
+            fixed = []
+            if result == "pass" and verify_round >= 1:
+                fixed = apply_mapping(
+                    mapping, record["findings"], verify_round, passed_ids, verified_commit
+                )
+            if fixed:
+                try:
+                    replace_record(reviews_fd, record_name, record, mode)
+                except Failure:
+                    raise
+                except BaseException:
+                    raise Failure(INVALID_ROUND_RECORD)
+        finally:
+            os.close(reviews_fd)
+    finally:
+        os.close(feature_fd)
     return {
         "review_round": review_round,
         "verify_round": verify_round,
