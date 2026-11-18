@@ -5023,13 +5023,20 @@ def scan_structure(text, mode="shell", checkpoints=None, honor_single_quotes=Tru
       command unless _single_quote_skip_spans() names the candidate's span
       (destructive-guard-false-deny FR2). It names a span only in the
       top-level chunk, the original command string, and only when that
-      chunk is one static `mcp-bridge run --args-json <word>` or
-      `printf '%s\\n' <word>` command and the candidate fills the data word
-      whole, in a single-quote or ANSI-C-quote region that is not nested in
-      another region. The body is then data the program never runs, and is
-      not queued. A candidate in any other chunk or command, or in a quote
-      region nested in another region (`"${X:-'$(cmd)'}"`, where bash does
-      expand it), is queued as before.
+      chunk is one static `mcp-bridge run` command whose options determine
+      the `--mcp notion` / `--tool notion-create-comment` pair, or one static
+      `printf '%s\\n' <word>` command, and the candidate fills the data word
+      whole (the `--args-json` value for the mcp-bridge command), in a
+      single-quote or ANSI-C-quote region that is not nested in another
+      region. The body is then data the program never runs, and is not
+      queued. The options determine the pair only in the canonical flag
+      sequence (mcp-bridge-exec-tool-rescan FR1; S1 of
+      _single_quote_skip_spans()): any other `mcp-bridge run` command, and
+      every form outside that sequence (a repeated flag, a quoted flag word
+      or value, an `=` form, a single-dash flag, a `--` terminator, a
+      positional word), is queued as before. So is a candidate in any other
+      chunk or command, or in a quote region nested in another region
+      (`"${X:-'$(cmd)'}"`, where bash does expand it).
     """
     lexmap = lex_shell(text, mode, False)
     regions = lexmap.regions
@@ -7426,8 +7433,22 @@ def _single_quote_skip_spans(chunk, lexmap, real_spans, lexed):
       `mcp-bridge` or exactly `printf`. A word that has an assignment, a
       wrapper, a path or a quote in front of it is another word.
     - W4: every word is static (_piece_is_static()).
-    - S1: for `mcp-bridge`, the second word is exactly `run`, and the word
-      that directly follows a word exactly `--args-json` is the data word.
+    - S1: for `mcp-bridge`, the second word is exactly `run`, the words after
+      it read as a flag sequence in the canonical form, and the options
+      determine the `--mcp notion` / `--tool notion-create-comment` pair
+      (mcp-bridge-exec-tool-rescan FR1; notion_comment_pair() below). Then
+      the word that directly follows a word exactly `--args-json` is the data
+      word. The canonical form is: every word in flag position is exactly one
+      of `--mcp`, `--tool`, `--args-json`, `--format`, `--session` (each takes
+      the next word as its value) or `--dry-run`, written as one unquoted
+      run; `--mcp`, `--tool` and `--args-json` each appear once; the `--mcp`
+      value is `notion` and the `--tool` value is `notion-create-comment`,
+      each as one unquoted run. Every other form -- a repeated flag, a quoted
+      flag word or value, an `=` form, a single-dash flag, a `--` terminator,
+      a positional word, an unknown name, a value-taking flag with no value,
+      a missing `--mcp` or `--tool`, another server or tool -- gives no data
+      word: S1 names nothing, and every candidate of the statement is
+      re-scanned.
     - S2: for `printf`, the second word is exactly one single-quote region
       holding `%s\\n`, and every word after it is a data word.
     - C1: the candidate sits in a data word that is one closed single-quote
@@ -7465,11 +7486,49 @@ def _single_quote_skip_spans(chunk, lexmap, real_spans, lexed):
             return chunk[word[0][1] : word[0][2]]
         return None
 
+    def notion_comment_pair(rest):
+        """Whether the words REST (the words after `run`) read as a complete
+        flag sequence in the canonical form that determines the `--mcp notion`
+        / `--tool notion-create-comment` pair (mcp-bridge-exec-tool-rescan
+        FR1). Read left to right; the first word is in flag position. A word in
+        flag position must be exactly one of the known `run` flags as one
+        unquoted run: `--dry-run` takes no value, and `--mcp`, `--tool`,
+        `--args-json`, `--format` and `--session` take the next word as their
+        value, whatever it holds (a value word is never read as a flag). Any
+        other word in flag position (`--`, a positional word, a single-dash or
+        `=` form, a quoted flag word, an unknown or abbreviated name), and a
+        value-taking flag with no value word, make the pair undeterminable.
+        `--mcp`, `--tool` and `--args-json` must each appear exactly once; the
+        number of `--format`, `--session` and `--dry-run` is not restricted.
+        True only when the `--mcp` value is `notion` and the `--tool` value is
+        `notion-create-comment`, each written as one unquoted run."""
+        counts = {}
+        values = {}
+        k = 0
+        while k < len(rest):
+            flag = unquoted(rest[k])
+            if flag == "--dry-run":
+                k += 1
+                continue
+            if flag not in ("--mcp", "--tool", "--args-json", "--format", "--session"):
+                return False
+            if k + 1 >= len(rest):
+                return False
+            counts[flag] = counts.get(flag, 0) + 1
+            values[flag] = rest[k + 1]
+            k += 2
+        if any(counts.get(flag, 0) != 1 for flag in ("--mcp", "--tool", "--args-json")):
+            return False
+        return (
+            unquoted(values["--mcp"]) == "notion"
+            and unquoted(values["--tool"]) == "notion-create-comment"
+        )
+
     if len(words) < 2:
         return skip
     command = unquoted(words[0])
     if command == "mcp-bridge":
-        if unquoted(words[1]) != "run":
+        if unquoted(words[1]) != "run" or not notion_comment_pair(words[2:]):
             return skip
         data = [
             words[j]
@@ -7575,9 +7634,14 @@ def statements(command, unsettled=None, early_stop=None):
     command segment, substitution bodies included -- but for the bodies of
     the single-quote candidates that _single_quote_skip_spans() names
     (destructive-guard-false-deny FR2: the data argument of one static
-    `mcp-bridge run --args-json` or `printf '%s\\n'` command, which is the
-    whole command string). The marking still covers those candidates; only
-    their re-scan is skipped (see the queueing loop below).
+    `mcp-bridge run` command whose options determine the `--mcp notion` /
+    `--tool notion-create-comment` pair -- its `--args-json` value -- or of
+    one static `printf '%s\\n'` command, which is the whole command string).
+    The options determine the pair only in the canonical flag sequence
+    (mcp-bridge-exec-tool-rescan FR1); every other `mcp-bridge run` command,
+    and every form outside that sequence, has its candidates re-scanned. The
+    marking still covers those candidates; only their re-scan is skipped (see
+    the queueing loop below).
 
     UNSETTLED (a list, or None) says what happens to a chunk derived from the
     command -- a substitution body, an unclosed command form's content, a
@@ -8034,9 +8098,15 @@ def statements(command, unsettled=None, early_stop=None):
         # this chunk is queued, and answering for the top-level chunk (the
         # original command string, IS_COMMAND) only; every other chunk gets
         # the empty set. It names the spans of single-quote candidates that
-        # fill the data argument of one static `mcp-bridge run --args-json`
-        # or `printf '%s\n'` command, which is the whole chunk; a body it
-        # names is not queued, every other body is queued as it always was
+        # fill the data argument of one static `printf '%s\n'` command, or the
+        # `--args-json` value of one static `mcp-bridge run` command whose
+        # options determine the `--mcp notion` / `--tool
+        # notion-create-comment` pair, which is the whole chunk
+        # (mcp-bridge-exec-tool-rescan FR1: only the canonical flag sequence
+        # determines the pair; any other `mcp-bridge run` command, and every
+        # form outside that sequence, names nothing and has its candidates
+        # re-scanned). A body it names is not queued, every other body is
+        # queued as it always was
         # (the same entries in the same order; none is pushed and removed
         # again). Everything else this loop does -- TOP_SPANS, the marking, the
         # extension of ALL_SUBS (so a marker's index still names the right

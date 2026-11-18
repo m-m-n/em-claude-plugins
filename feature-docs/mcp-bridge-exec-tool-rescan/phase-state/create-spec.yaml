@@ -1,0 +1,108 @@
+schema_version: 1
+feature: mcp-bridge-exec-tool-rescan
+phase: create-spec
+status: completed
+generation: 1
+base_revision: 054c812a12bd5cc55e3dc480ac2680296d353699
+last_input_digest: sha256:80c7a51fc61ee83f131f585030a9cdc78b82985a07038382bb9a59501f6365d1
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-11-18T08:56:00+09:00'
+    questions:
+    - question_id: requirement.allowlist-scope
+      status: answered
+    - question_id: requirement.tm1-amend
+      status: answered
+answers:
+  create-spec.feature-identity:
+    packet_id: null
+    answered_at: '2026-11-18T08:52:00+09:00'
+    source: batch-decision-table
+    answer_mode: select
+    selected_option_ids:
+    - derive_from_task_description
+    freeform: null
+    normalized_answer: feature name mcp-bridge-exec-tool-rescan derived from the task
+      description
+  requirement.allowlist-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-18T08:58:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - notion-create-comment-only
+    freeform: null
+    normalized_answer: Allowlist only the pair --mcp notion / --tool notion-create-comment;
+      every other pair is re-scanned as before.
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted:
+      true (codex entry, 1 turn); opus_escalation: not run; Codex: only pair verifiably
+      non-executing and the one all existing allow cases use; not chosen: notion-any-tool'
+  requirement.tm1-amend:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-18T08:58:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - own-feature-only
+    freeform: null
+    normalized_answer: Do not edit the other feature's THREAT-MODEL TM-1; record the
+      condition in this feature's SPEC and THREAT-MODEL.
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted:
+      true (codex entry, 1 turn); opus_escalation: not run; Codex: documenting in
+      this feature''s SPEC/THREAT-MODEL suffices; not chosen: amend-tm1'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:008e7ceed9b90f515e6cca1213c7f8ac29e08cbecfd2b67807c140e63fb953b6
+  output_digest: sha256:e986088a40218435f3d6f59f12db7e09ae4fdf4205ab47f5b3da4457b0260029
+  dispatch_digest_inputs:
+    .claude/rules/hook-tests.md: sha256:a8c15bde31bb53748497dff8e9607b8348edf39279c8b99bf543a29ad60eb3b5
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    em-workflow/hooks/destructive-guard.py: sha256:20df0032cfd9ab35dc0aa2cc085a8e757606975f8afd6e3312751f19a64154be
+    em-workflow/hooks/tests/destructive-guard-cases.json: sha256:b95a89e84a9b60599ed5143493d38524af5fd761c69378c74cf84cb7ee5f5fa7
+    em-workflow/hooks/tests/run-destructive-guard.py: sha256:b0a03dbaf2c8f0b466be8c735cba283ff50492832599bdabac2bdc4c23a880a2
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
+    feature-docs/destructive-guard-false-deny/SPEC.md: sha256:99addc85406eab0b496582b5f744e02400f8b4a05a5267ca5445980e7a5c71e4
+    feature-docs/destructive-guard-false-deny/THREAT-MODEL.md: sha256:292e617f500a6ddb670287d794580c9b63a3c97263141506aeb02e807b9e4a5c
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+  self_write_set: []
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:57fa02b311dfb160670a4dfc1978af7cbd77e26551840648995ed5f5980b19e6
+  output_digest: sha256:bdd6c0c43d664dbf46783369ad97659e9abd07e65fc3f00021a92f346e877969
+  dispatch_digest_inputs:
+    .claude/rules/hook-tests.md: sha256:a8c15bde31bb53748497dff8e9607b8348edf39279c8b99bf543a29ad60eb3b5
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    em-workflow/hooks/destructive-guard.py: sha256:20df0032cfd9ab35dc0aa2cc085a8e757606975f8afd6e3312751f19a64154be
+    em-workflow/hooks/tests/destructive-guard-cases.json: sha256:b95a89e84a9b60599ed5143493d38524af5fd761c69378c74cf84cb7ee5f5fa7
+    em-workflow/hooks/tests/run-destructive-guard.py: sha256:b0a03dbaf2c8f0b466be8c735cba283ff50492832599bdabac2bdc4c23a880a2
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
+    feature-docs/destructive-guard-false-deny/SPEC.md: sha256:99addc85406eab0b496582b5f744e02400f8b4a05a5267ca5445980e7a5c71e4
+    feature-docs/destructive-guard-false-deny/THREAT-MODEL.md: sha256:292e617f500a6ddb670287d794580c9b63a3c97263141506aeb02e807b9e4a5c
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+  self_write_set: []
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:80c7a51fc61ee83f131f585030a9cdc78b82985a07038382bb9a59501f6365d1
+  output_digest: sha256:d75aa49a20b3a7341109f37cd0acc123bb925ced573f0d11da9342ba25fff214
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/spec-writer-contract.md: sha256:1e63f69687c6850e890f66b5ca92af7f3b0d02645cc464fca88455ad2269d671
+    em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
+    em-workflow/references/templates/spec-document.md: sha256:a5d0106c39a5df7dc2365357a9546588275ed6c7a1651c866e75fa327a7fa592
+  self_write_set:
+  - feature-docs/mcp-bridge-exec-tool-rescan/REQUIREMENTS.md
+  - feature-docs/mcp-bridge-exec-tool-rescan/SPEC.md
+artifacts:
+- path: feature-docs/mcp-bridge-exec-tool-rescan/REQUIREMENTS.md
+  sha256: sha256:045f3523d2d04d09e83c6b3266190532a28dfe47b368c6c66e5e4cf8309da09b
+  produced_by: create-spec-run-0003
+- path: feature-docs/mcp-bridge-exec-tool-rescan/SPEC.md
+  sha256: sha256:dd0f8da5fb6cbfc84d298bccd608c380aae1b627c1b6cc174ca4944cb0b1b9f6
+  produced_by: create-spec-run-0003
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

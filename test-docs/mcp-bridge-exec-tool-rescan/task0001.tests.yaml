@@ -1,0 +1,114 @@
+task_id: task0001
+# Baseline, recorded before any edit, at the task's base commit:
+# `python3 em-workflow/hooks/tests/run-destructive-guard.py` gave 1338/1338
+# passed (no FAIL line), so nothing was red when the task started.
+baseline_failures: []
+# After the hook change and this record, an actually re-executed run: the runner
+# gave 1352/1352 passed (1338 base checks plus the 14 added cases, no FAIL line,
+# no timeout), and `python3 -m unittest discover -s tests` gave no failure (see
+# the last comment block). Nothing absent from the baseline failed.
+final_failures: []
+# Red run (AC-2, NFR3). At the state with the 14 new cases added and
+# em-workflow/hooks/destructive-guard.py byte-identical to the base commit,
+# `python3 em-workflow/hooks/tests/run-destructive-guard.py` gave 1339/1352
+# passed. The 13 failures were every added deny case, each
+# "got=allow rule=None [destructive-guard] <no destructive pattern matched>":
+#   TS-1, TS-3, TS-4, TS-5, TS-6, TS-7, TS-8, TS-9 and the five TM-2 cases
+# (quoted repeated flag, flag=value beside the pair, single-dash flags after the
+# pair, pair after the -- terminator, pair after a positional word).
+# TS-2 (allow) passed already: the unchanged hook skips the re-scan for the notion
+# pair in any flag order, which is the behaviour TS-2 pins.
+# After the S1 change the same run gave 1352/1352 passed.
+#
+# Extra forms checked by hand against the changed hook (not added as cases; the
+# plan fixes the case list): the notion pair with --format, --dry-run and --session
+# in the flag sequence stays allow; a repeated --args-json, a trailing `--`, a
+# trailing --mcp with no value, --dry-run=true, a trailing positional word, a
+# quoted --tool value, and a single-quote region as the --format value all give deny.
+#
+# Unittest discovery: `python3 -m unittest discover -s tests` was run after the
+# change; its outcome is recorded in the implementer report.
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_every_pre_task_command_preserved_with_only_named_changes
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: false
+    red_reason: >
+      The criterion is about what the case file contains. The 14 cases did not exist
+      before this task, so no check could fail first; a dedicated new module is out
+      of scope, but the existing test_every_pre_task_command_preserved_with_only_named_changes
+      detects a changed or removed pre-task command and the runner wrapper runs every
+      case; no red state occurred for this change. Checked by script against the base
+      commit: the 1337 base entries equal the first 1337 entries of the new array as
+      parsed JSON, the 14 added entries are three-element cases whose label names
+      mcp-bridge-exec-tool-rescan and the case ID, each carries the command of the
+      plan's New cases table, and no added command equals a base command. The red of
+      the added cases is recorded under AC-3 and AC-4.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >
+      With the 14 cases added and the hook unchanged, the runner (the check the listed
+      test executes) printed "FAIL deny  mcp-bridge-exec-tool-rescan TS-1 ..." followed
+      by "got=allow rule=None [destructive-guard] <no destructive pattern matched>"
+      (1339/1352 passed; the full list of the 13 failures is in the comment block at
+      the top of this file).
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >
+      At the cases-only state, against the unmodified hook, the runner printed FAIL
+      for TS-1, TS-3, TS-4, TS-5 and TS-9, each "got=allow" where deny was expected.
+      With the changed hook all five give deny.
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >
+      At the cases-only state, against the unmodified hook, the runner printed FAIL
+      for TS-6, TS-7, TS-8 and the five TM-2 cases (quoted repeated flag, flag=value
+      beside the pair, single-dash flags after the pair, pair after the -- terminator,
+      pair after a positional word), each "got=allow" where deny was expected. With
+      the changed hook all eight give deny.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: false
+    red_reason: >
+      TS-2 and the TS-10 regression set (the destructive-guard-false-deny TS-3, TS-4,
+      TS-5 and the two TS-22 allow cases) pass against the unmodified hook and still
+      pass with the changed hook; they guard against a false deny, so no red state
+      occurred for this change. The runner gives 1352/1352 passed with every base
+      case keeping its expected decision, no FAIL line and no timeout marker.
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      A statement about docstring and comment text, with no executable check that can
+      be made to fail. Searched tests/ by the path em-workflow/hooks/destructive-guard.py
+      and by the basename destructive-guard.py: the existing tests that read the hook
+      assert other phrases and none reads the S1 passages (a search of tests/ for
+      args-json finds nothing); the task plan names reading the diff as the check and
+      adds no new unittest module. Checked by reading the diff: the docstring of
+      _single_quote_skip_spans() (S1), the single-quote candidate paragraph of the
+      scan_structure() docstring, the statements() docstring and the queueing-loop
+      comment each state the pair condition and that forms outside the canonical flag
+      sequence are re-scanned; no site states that the skip applies to any static
+      mcp-bridge run --args-json.
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      A statement about the extent of the diff, with no executable check that can be
+      made to fail. Searched tests/ by the path em-workflow/hooks/destructive-guard.py
+      and by the basename destructive-guard.py: none of the existing tests reads the
+      diff against the base commit. Checked by git diff against the base commit: the
+      hook change is the notion_comment_pair() helper and the S1 branch inside
+      _single_quote_skip_spans() plus the four explanation sites; the top-level span
+      computation, the marking, the all_subs extension, scan_budget,
+      MAX_SHELL_PAYLOAD_EXPANSIONS, W1 to W4, C1, S2 and the ANSI-C handling are not
+      in the diff, and the files that changed are the hook, the case file and this
+      record.
