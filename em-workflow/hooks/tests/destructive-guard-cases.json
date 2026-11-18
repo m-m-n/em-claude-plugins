@@ -1246,7 +1246,7 @@
   ["ask", "destructive-guard-mixed-rm-precedence TS-12 自己設定を消す rm -rf 単体は self-modification の ask", "rm -rf ~/.claude/skills/foo", {"rule": "self-modification"}],
   ["deny", "destructive-guard-mixed-rm-precedence TS-13 自己設定の rm -rf が先、別の rm -rf が後なら後の rm-recursive の deny", "rm -rf ~/.claude/skills/foo ; rm -rf /home/user/valuable", {"rule": "rm-recursive"}],
   ["deny", "destructive-guard-mixed-rm-precedence TS-14 別の rm -rf が先、自己設定の rm -rf が後でも先の rm-recursive の deny", "rm -rf /home/user/valuable ; rm -rf ~/.claude/skills/foo", {"rule": "rm-recursive"}],
-  ["ask", "destructive-guard-mixed-rm-precedence TS-15 同じ rm の対象に自己設定と通常のパスが並ぶと self-modification の ask", "rm -rf ~/.claude/skills/foo /home/user/valuable", {"rule": "self-modification"}],
+  ["deny", "destructive-guard-mixed-rm-precedence TS-15 同じ rm の対象に自己設定と通常のパスが並ぶと、通常のパスの再帰削除の rm-recursive が deny になる", "rm -rf ~/.claude/skills/foo /home/user/valuable", {"rule": "rm-recursive"}],
   ["deny", "destructive-guard-mixed-rm-precedence TS-16 自己設定の rm -rf は CLAUDE_BATCH で self-modification の deny に降格", "rm -rf ~/.claude/skills/foo", {"rule": "self-modification", "batch": true}],
   ["deny", "destructive-guard-mixed-rm-precedence TS-18 && でつないだ git commit --amend が後でも rm-recursive の deny", "rm -rf /home/user/valuable && git commit --amend", {"rule": "rm-recursive"}],
   ["deny", "destructive-guard-mixed-rm-precedence TS-18 || でつないだ git commit --amend が後でも rm-recursive の deny", "rm -rf /home/user/valuable || git commit --amend", {"rule": "rm-recursive"}],
@@ -1356,5 +1356,18 @@
   ["allow", "destructive-guard-heredoc-literal TS-43: Python の本文のコードにある *rest, last = [1, 2] と {\"a\",\"b\"} と ~0 は命令語として静的に決められなくても止めないので、リテラルの中のバッククォートは allow", "python3 <<'PY'\n*rest, last = [1, 2]\n{\"a\",\"b\"}\n~0\nx = \"`git branch -D example`\"\nPY"],
   ["allow", "destructive-guard-heredoc-literal TS-44a: ANSI-C 引用符で書いた $'echo' は echo に戻して読み、止める語ではないので、python3 宛てヒアドキュメントのリテラルは allow", "$'echo' ok\npython3 <<'PY'\nx = \"`git branch -D example`\"\nPY"],
   ["allow", "destructive-guard-heredoc-literal TS-44b: 引用符で分けた e\"ch\"o は echo に戻して読み、止める語ではないので、python3 宛てヒアドキュメントのリテラルは allow", "e\"ch\"o ok\npython3 <<'PY'\nx = \"`git branch -D example`\"\nPY"],
-  ["allow", "destructive-guard-heredoc-literal TS-44c: バックスラッシュで書いた ec\\ho は echo に戻して読み、止める語ではないので、python3 宛てヒアドキュメントのリテラルは allow", "ec\\ho ok\npython3 <<'PY'\nx = \"`git branch -D example`\"\nPY"]
+  ["allow", "destructive-guard-heredoc-literal TS-44c: バックスラッシュで書いた ec\\ho は echo に戻して読み、止める語ではないので、python3 宛てヒアドキュメントのリテラルは allow", "ec\\ho ok\npython3 <<'PY'\nx = \"`git branch -D example`\"\nPY"],
+  ["deny", "mixed-rm-self-config-deny TS-1: 同じ rm に保護された自己設定パスと別の対象が並ぶと、別の対象の再帰削除が rm-recursive で deny になる", "rm -rf ~/.claude/skills/foo /home/user/valuable", {"rule": "rm-recursive"}],
+  ["deny", "mixed-rm-self-config-deny TS-2: 別の対象が保護された自己設定パスより前にあっても、別の対象の再帰削除が rm-recursive で deny になる", "rm -rf /home/user/valuable ~/.claude/skills/foo", {"rule": "rm-recursive"}],
+  ["deny", "mixed-rm-self-config-deny TS-3: CLAUDE_BATCH を立てても、別の対象の再帰削除の rm-recursive の deny は変わらない", "rm -rf ~/.claude/skills/foo /home/user/valuable", {"rule": "rm-recursive", "batch": true}],
+  ["deny", "mixed-rm-self-config-deny TS-4: 保護された自己設定パスの隣がホームなら、ホームの rm-root が deny になる", "rm -rf ~/.claude/skills/foo ~", {"rule": "rm-root"}],
+  ["ask", "mixed-rm-self-config-deny TS-5: 保護された自己設定パスの隣が変数展開だけなら、deny は無く self-modification の ask のまま", "rm -rf ~/.claude/skills/foo tmp/$X", {"rule": "self-modification"}],
+  ["ask", "mixed-rm-self-config-deny TS-6: 保護された自己設定パスの隣がスクラッチ領域の中だけなら、deny は無く self-modification の ask のまま", "rm -rf ~/.claude/skills/foo /tmp/x", {"rule": "self-modification"}],
+  ["ask", "mixed-rm-self-config-deny TS-7: 対象がすべて保護された自己設定パスなら、self-modification の ask のまま", "rm -rf ~/.claude/skills/foo ~/.claude/hooks/bar", {"rule": "self-modification"}],
+  ["ask", "mixed-rm-self-config-deny TS-8: 再帰指定の無い rm は別の対象が通常のパスでも deny が無く、self-modification の ask のまま", "rm ~/.claude/skills/foo /home/user/valuable", {"rule": "self-modification"}],
+  ["deny", "mixed-rm-self-config-deny TS-9: 保護された自己設定パスを $HOME で書いても、別の対象の再帰削除が rm-recursive で deny になる", "rm -rf $HOME/.claude/skills/foo /home/user/valuable", {"rule": "rm-recursive"}],
+  ["deny", "mixed-rm-self-config-deny TS-10: -- の後ろに対象を並べても、保護された対象だけを除き、別の対象の再帰削除が rm-recursive で deny になる", "rm -rf -- ~/.claude/skills/foo /home/user/valuable", {"rule": "rm-recursive"}],
+  ["deny", "mixed-rm-self-config-deny TS-11: 同じ文の後ろに別の ask の文が続いても、別の対象の再帰削除が rm-recursive で deny になる", "rm -rf ~/.claude/skills/foo /home/user/valuable ; git commit --amend", {"rule": "rm-recursive"}],
+  ["ask", "mixed-rm-self-config-deny TS-14: 同じ保護された自己設定パスを 2 回書いても、2 つとも除かれ self-modification の ask のまま", "rm -rf ~/.claude/skills/foo ~/.claude/skills/foo", {"rule": "self-modification"}],
+  ["deny", "mixed-rm-self-config-deny TS-15: リダイレクト先は rm の対象ではないので何も除かず、rm の再帰削除が rm-recursive で deny になる", "rm -rf /home/user/valuable > ~/.claude/settings.json", {"rule": "rm-recursive"}]
 ]

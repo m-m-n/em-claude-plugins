@@ -1,0 +1,152 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCasesPassAgainstTheHook.test_ac1_the_forms_with_a_deny_target_give_that_targets_deny
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCaseTable.test_each_scenario_has_one_case_with_its_decision_command_and_rule
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetExclusionKeepsTheNoDenyVerdicts.test_the_root_target_beside_a_protected_one_is_the_root_deny
+    red_confirmed: true
+    red_reason: >
+      Run against the unchanged hook. With the new cases already in the table,
+      run-destructive-guard.py reported FAIL for TS-1, TS-2, TS-4, TS-9, TS-10
+      and TS-11 (got ask / self-modification where deny is required) and for
+      TS-3 (got deny / self-modification where deny / rm-recursive is
+      required). With the base hook file put back temporarily, the unit
+      tests failed the same way: every subtest of
+      test_ac1_the_forms_with_a_deny_target_give_that_targets_deny, and both
+      batch settings of test_the_root_target_beside_a_protected_one_is_the_root_deny.
+      test_each_scenario_has_one_case_with_its_decision_command_and_rule reads
+      the case table only and was green once the cases were appended.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetExclusionReason.test_the_winner_is_the_second_target_of_the_first_rm
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetExclusionReason.test_the_left_out_target_is_not_named
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetExclusionReason.test_the_reason_carries_no_text_of_the_self_modification_ask
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetExclusionReason.test_the_protected_target_after_the_winner_is_still_counted
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetExclusionReason.test_the_output_is_the_same_with_and_without_the_unattended_flag
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetExclusionReason.test_the_output_is_byte_identical_across_runs
+    red_confirmed: true
+    red_reason: >
+      Run against the base hook file, with HOME and PATH fixed by the test
+      module. The hook answered the self-modification ask (and its demotion
+      sentence under CLAUDE_BATCH) for TS-1 and TS-2's commands. Four of the
+      tests failed: for both batch settings the winner test lacked
+      1番目のrmの2番目の対象, the no-self-modification-text test found the
+      reason id and the message text, and the protected-target-after-the-winner
+      test lacked 1番目のrmの1番目の対象; the attended and the unattended
+      output differed for both commands. test_the_left_out_target_is_not_named
+      and test_the_output_is_byte_identical_across_runs passed on the base
+      hook (its self-modification reason also lacks the position string and
+      is deterministic), so they are regression pins, not red evidence.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCasesPassAgainstTheHook.test_ac3_the_numbering_forms
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetExclusionKeepsTheNoDenyVerdicts.test_the_forms_without_a_deny_stay_the_self_modification_ask
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetExclusionKeepsTheNoDenyVerdicts.test_the_spelling_of_the_protected_operand_does_not_matter_in_one_rm
+      - tests.test_destructive_guard_mixed_rm_precedence.TestProtectedOperandSet.test_the_result_is_a_set_of_operand_numbers
+      - tests.test_destructive_guard_mixed_rm_precedence.TestProtectedOperandSet.test_the_numbers_follow_the_double_dash_rule
+      - tests.test_destructive_guard_mixed_rm_precedence.TestProtectedOperandSet.test_a_dash_leading_operand_is_numbered_but_never_protected
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetExclusionOnTheSubstitutionHeadedRoute.test_the_decision_the_reason_id_and_the_reason_text_are_pinned
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetExclusionOnTheSubstitutionHeadedRoute.test_whether_the_exclusion_applied_is_recorded
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetExclusionOnTheSubstitutionHeadedRoute.test_the_output_is_the_same_with_the_unattended_flag_and_across_runs
+    red_confirmed: true
+    red_reason: >
+      Run against the base hook file. TS-10 (the `--` rule) failed in
+      test_ac3_the_numbering_forms (got ask / self-modification where deny /
+      rm-recursive is required), and
+      test_the_spelling_of_the_protected_operand_does_not_matter_in_one_rm
+      failed for every spelling of the protected operand (plain, $HOME,
+      `..` folded, quoted) beside another target, with and without `--`.
+      TestProtectedOperandSet errored in setUpClass: the hook had no
+      rm_protected_operand_numbers. Parts that pass before and after by
+      design: TS-14 (ask / self-modification, both occurrences left out) and
+      the three TS-13 tests, which pin what the hook gives for the
+      substitution-headed form. TS-13 was observed on the unchanged hook as
+      deny / rm-recursive naming both 1番目のrmの1番目の対象 and
+      1番目のrmの2番目の対象, because the statement does not reach the
+      self-modification ask on that route; after the change the output is the
+      same, so the exclusion does not apply there (SPEC.md A7).
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCasesPassAgainstTheHook.test_ac4_the_forms_without_a_deny_keep_their_verdict
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetExclusionKeepsTheNoDenyVerdicts.test_the_forms_without_a_deny_stay_the_self_modification_ask
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetExclusionKeepsTheNoDenyVerdicts.test_the_redirect_target_is_not_an_operand_so_nothing_is_left_out
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCaseTable.test_the_existing_cases_named_in_the_plan_keep_their_verdicts
+      - tests.test_destructive_guard_mixed_rm_precedence.TestNoDenyCommandsKeepTheirVerdict.test_decision_and_reason_id_equal_the_recorded_values
+      - tests.test_destructive_guard_mixed_rm_precedence.TestScenarioCasesPassAgainstTheHook.test_ac5_the_protected_self_config_exclusion
+    red_confirmed: false
+    red_reason: >
+      The behavior pre-existed: the forms without a deny target (TS-5 to TS-8,
+      TS-15, the cases at lines 31 and 42 of the table, old TS-12, TS-13,
+      TS-14, TS-16 and TS-20) gave the same decision and reason id on the base
+      hook, so these checks passed before any change and are regression pins.
+      An existing test, test_decision_and_reason_id_equal_the_recorded_values,
+      detects the line 42 form; no red state occurred for this change.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_mixed_rm_precedence.TestProtectedOperandSet.test_no_caller_of_the_old_boolean_form_remains
+      - tests.test_destructive_guard_mixed_rm_precedence.TestProtectedOperandSet.test_nothing_protected_gives_the_empty_set
+      - tests.test_destructive_guard_mixed_rm_precedence.TestProtectedOperandSet.test_the_same_input_always_gives_the_same_set
+      - tests.test_destructive_guard_mixed_rm_precedence.TestDescriptionsAreCurrent.test_the_comment_before_the_emission_names_the_target_as_the_unit
+      - tests.test_destructive_guard_mixed_rm_precedence.TestDescriptionsAreCurrent.test_the_comment_above_the_exclusion_names_the_target_as_the_unit
+      - tests.test_destructive_guard_mixed_rm_precedence.TestDescriptionsAreCurrent.test_the_protected_operand_function_describes_the_set_it_returns
+      - tests.test_destructive_guard_mixed_rm_precedence.TestDescriptionsAreCurrent.test_the_comment_before_the_emission_describes_the_held_asks
+      - tests.test_destructive_guard_mixed_rm_precedence.TestDescriptionsAreCurrent.test_the_phrases_the_numbering_tests_pin_are_kept
+      - tests.test_destructive_guard_rm_reason_positions.TestNumberingDescriptionsAreCurrent.test_no_listed_description_carries_a_stale_statement
+    red_confirmed: true
+    red_reason: >
+      Run against the base hook file. test_the_comment_before_the_emission_names_the_target_as_the_unit,
+      test_the_comment_above_the_exclusion_names_the_target_as_the_unit and
+      test_the_protected_operand_function_describes_the_set_it_returns failed
+      (the comments and docstrings still described the invocation as the
+      unit, and no rm_protected_operand_numbers existed), and the
+      TestProtectedOperandSet class errored in setUpClass with the missing
+      function, so its three tests never ran green against the base hook.
+      The held-ask, pinned-phrase and stale-phrase description tests are the
+      existing ones; they passed before and detect a dropped pinned word or a
+      added stale phrase, so no red state occurred for them.
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCaseTable.test_the_cases_come_after_every_other_case
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCaseTable.test_none_of_the_cases_joins_the_earlier_features_run
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCaseTable.test_every_case_is_rule_pinned_and_labelled_with_its_scenario
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCaseTable.test_every_case_names_no_machine_specific_path
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCaseTable.test_the_batch_key_is_set_for_scenario_3_only
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCaseTable.test_the_earlier_features_ts_15_case_is_changed_in_place
+      - tests.test_destructive_guard_mixed_rm_precedence.TestCaseTable.test_every_existing_case_is_present_unchanged_and_first
+      - tests.test_destructive_guard_mixed_rm_precedence.TestCaseTable.test_the_feature_cases_form_one_run_right_after_the_existing_cases
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCasesPassAgainstTheHook.test_ac6_the_earlier_features_ts_15_case_passes_with_its_new_verdict
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCasesPassAgainstTheHook.test_ac6_every_case_of_the_feature_passes
+    red_confirmed: true
+    red_reason: >
+      Run against the unchanged hook, python3
+      em-workflow/hooks/tests/run-destructive-guard.py ended 1343/1351 with
+      FAIL lines for the old TS-15 case (got ask / self-modification where
+      deny / rm-recursive is now required) and for this feature's TS-1, TS-2,
+      TS-3, TS-4, TS-9, TS-10 and TS-11. With the base hook file put back
+      temporarily, test_ac6_every_case_of_the_feature_passes and
+      test_ac6_the_earlier_features_ts_15_case_passes_with_its_new_verdict
+      failed on those same cases. The table-shape tests (position, rule pin,
+      label prefix, batch key, no machine path, byte-identical existing
+      cases) read the case file only and were green once the cases were
+      written; they are shape pins, not red evidence. After the change the
+      runner passes every case and none reaches GUARD_TIMEOUT_SECONDS.
+  AC-7:
+    tests:
+      - tests.test_destructive_guard_mixed_rm_precedence.TestProtectedSelfConfigExclusion.test_a_protected_and_an_unprotected_target_in_one_rm_give_the_deny_of_the_unprotected_one
+      - tests.test_destructive_guard_mixed_rm_precedence.TestProtectedSelfConfigExclusion.test_on_the_parse_failure_fallback_the_operand_test_decides
+      - tests.test_destructive_guard_mixed_rm_precedence.TestCaseTable.test_each_scenario_has_its_case
+      - tests.test_destructive_guard_mixed_rm_precedence.TestScenarioCasesPassAgainstTheHook.test_ac5_the_protected_self_config_exclusion
+    red_confirmed: true
+    red_reason: >
+      Run against the unchanged hook. The renamed mixed-target test failed
+      (got ask / self-modification where deny / rm-recursive is required),
+      test_ac5_the_protected_self_config_exclusion failed for the old TS-15
+      case, and test_on_the_parse_failure_fallback_the_operand_test_decides
+      failed for `rm -rf ~/.claude/skills/foo "x` once its expectation
+      followed the new verdict (the unclosed word is a target of its own).
+      test_each_scenario_has_its_case, whose TS-15 tuple is now deny /
+      rm-recursive, reads the case table only and was green once the case was
+      changed.
