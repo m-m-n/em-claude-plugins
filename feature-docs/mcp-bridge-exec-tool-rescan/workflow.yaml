@@ -134,7 +134,7 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: in_progress
+    status: failed
     notes: null
     branch: em-workflow/mcp-bridge-exec-tool-rescan/task0001
 review:
