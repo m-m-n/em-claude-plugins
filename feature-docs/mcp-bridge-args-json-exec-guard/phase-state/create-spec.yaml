@@ -1,17 +1,73 @@
 schema_version: 1
 feature: mcp-bridge-args-json-exec-guard
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: 3059fe1dcd799b3bc02c5c4fc5c22eca4b6197d1
 last_input_digest: sha256:854e453ab582238f9d55d6df701573bb0d6f4b0b1902e5d73567897d6c1e89d6
 active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-11-19T19:36:01+09:00'
+    questions:
+    - question_id: requirement.args-json.inspection-scope
+      status: answered
+    - question_id: requirement.args-json.undeterminable-forms
+      status: answered
+    - question_id: requirement.args-json.statement-scope
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+answers:
+  requirement.args-json.inspection-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-19T19:36:01+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - subs_all_strings_plus_command_payload
+    freeform: null
+    normalized_answer: 復号した全文字列値の $( / バッククォートを再走査し、トップレベルの command をシェル入力として再走査する。シェルとして読む範囲はトップレベルの command に絞る
+    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation, record_as_assumption); codex_consulted: true (entry codex, 1 turn); Codex suggestion mapped onto option subs_all_strings_plus_command_payload;
+      orchestrator judged mapping; opus_escalation: false'
+  requirement.args-json.undeterminable-forms:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-19T19:36:01+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - keep_current_out_of_scope
+    freeform: null
+    normalized_answer: 静的に決まらない形は今の判定（生の文字列の走査）を保ち、範囲外として SPEC に記録する
+    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation, record_as_assumption); codex_consulted: true (entry codex, 1 turn); Codex suggestion mapped onto option keep_current_out_of_scope;
+      orchestrator judged mapping; opus_escalation: false'
+  requirement.args-json.statement-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-19T19:36:01+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - every_statement
+    freeform: null
+    normalized_answer: コマンド位置で mcp-bridge run と静的に確定できるすべての文に適用する
+    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation, record_as_assumption); codex_consulted: true (entry codex, 1 turn); Codex suggestion mapped onto option every_statement;
+      orchestrator judged mapping; opus_escalation: false'
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-19T19:36:01+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - skip
+    freeform: null
+    normalized_answer: デザインステップをスキップする（UI なし）
+    resolution_note: 'gate: create-spec.design-step; policy option decide_autonomously (accept analyst design_step_recommendation=skip); the packet omitted the decide_autonomously option, so the recommendation''s
+      own option_id skip was recorded'
 worker_runs:
-  - request_id: create-spec-run-0001
-    status: dispatched
-    input_digest: sha256:854e453ab582238f9d55d6df701573bb0d6f4b0b1902e5d73567897d6c1e89d6
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:854e453ab582238f9d55d6df701573bb0d6f4b0b1902e5d73567897d6c1e89d6
 artifacts: []
 patches: []
 progress_fingerprint: null
