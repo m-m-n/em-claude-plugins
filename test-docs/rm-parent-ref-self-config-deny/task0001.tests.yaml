@@ -1,0 +1,104 @@
+task_id: task0001
+baseline_failures:             # 4a: python3 em-workflow/hooks/tests/run-destructive-guard.py -> 1365/1365 passed; python3 -m unittest discover -s tests -> Ran 16403 tests, FAILED (failures=1, skipped=1)
+  - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCaseTable.test_the_cases_come_after_every_other_case
+final_failures:                # re-executed after implementation and after this record: runner 1375/1375 passed; unittest discover -> the same single failure as the baseline, nothing else
+  - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCaseTable.test_the_cases_come_after_every_other_case
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >
+      The cases of TS-1 and TS-2 are run by run-destructive-guard.py, which
+      that existing test executes over the whole table and asserts exits 0.
+      The runner was observed on a copy of the table holding only the new
+      cases, against the unchanged hook: both cases FAILed (got ask with
+      reason id self-modification where deny / rm-recursive is required), so
+      the runner exits non-zero there.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >
+      Same runner run against the unchanged hook: the TS-3 case (the TS-2
+      command with batch true) FAILed with got=deny rule=self-modification
+      where rm-recursive is required.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >
+      Same runner run against the unchanged hook: TS-5 and TS-9 FAILed (got
+      ask / self-modification where deny / rm-recursive is required). TS-4,
+      TS-8, TS-10 and TS-11 passed before the change, as the plan expected;
+      they are regression pins for the decisions that must not move, and
+      TS-11 is pinned to the pair the base hook gives (ask / self-modification).
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_parent_ref.TestParentRefWithHomeOutsideHome.test_ts6_a_protected_operand_stays_protected
+      - tests.test_destructive_guard_parent_ref.TestParentRefWithHomeOutsideHome.test_ts6_a_parent_ref_out_of_the_protected_area_is_denied
+      - tests.test_destructive_guard_parent_ref.TestParentRefWithHomeOutsideHome.test_ts12_a_later_tilde_segment_does_not_rebuild_the_anchor
+      - tests.test_destructive_guard_parent_ref.TestAnchorRuleWithHomeUnderHome.test_ts12_the_normalized_form_still_protects_with_home_under_home
+      - tests.test_destructive_guard_parent_ref.TestAnchorRuleWithHomeUnderHome.test_ts6_the_parent_ref_out_of_the_area_is_denied_with_home_under_home
+      - tests.test_destructive_guard_parent_ref.TestHomeOutsideHomeChoice.test_the_home_is_not_under_home
+      - tests.test_destructive_guard_parent_ref.TestHomeOutsideHomeChoice.test_the_home_is_not_in_a_safe_deletion_area
+      - tests.test_destructive_guard_parent_ref.TestHomeOutsideHomeChoice.test_the_last_segment_of_the_home_is_not_a_literal_tilde
+      - tests.test_destructive_guard_parent_ref.TestHomeOutsideHomeChoice.test_the_hook_runs_without_claude_batch
+    red_confirmed: true
+    red_reason: >
+      Run against a copy of the unchanged hook (the module's GUARD_PATH
+      pointed at it). The `..` command of TS-6 and the TS-12 command each
+      failed with AssertionError: Tuples differ: ('ask', 'self-modification')
+      != ('deny', 'rm-recursive'); the HOME-under-/home variant of the TS-6 `..`
+      command failed the same way. The plain TS-6 command, the HOME-under-/home
+      TS-12 variant and the four HOME-choice tests passed before the change:
+      they are pins (the first keeps ask / self-modification, the others
+      guard the conditions the scenarios rest on).
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_parent_ref.TestSubstitutionHeadedRoute.test_a_parent_ref_out_of_the_protected_area_stays_in_the_deny_pool
+      - tests.test_destructive_guard_parent_ref.TestSubstitutionHeadedRoute.test_a_protected_operand_is_still_left_out_of_the_deny_pool
+      - tests.test_destructive_guard_parent_ref.TestSubstitutionHeadedRoute.test_the_plain_path_gives_the_same_decisions
+      - tests.test_destructive_guard_parent_ref.TestRuleLivesInOneFunction.test_the_fold_is_called_only_from_the_protected_operand_function
+      - tests.test_destructive_guard_parent_ref.TestRuleLivesInOneFunction.test_both_call_sites_call_the_one_function_with_the_same_shape
+    red_confirmed: true
+    red_reason: >
+      Run against a copy of the unchanged hook. The substitution-headed unit
+      test for the `..` operand FAILed (ask / self-modification where
+      deny / rm-recursive is required), the plain-path test FAILed on its
+      redirect command the same way, and the AST test that the fold is called
+      only from rm_protected_operand_numbers FAILed (no fold function
+      existed). The TS-7 case itself passed before the change and still
+      passes: on the plain TS-7 command no self-modification ask is held, so no
+      operand is left out of the deny pool, and the decision is deny /
+      rm-recursive with or without the new rule (pinned as observed). The
+      substitution-headed route is therefore exercised by the redirect
+      variants in TestSubstitutionHeadedRoute, where the ask is held. The
+      call-shape test and the left-out-operand test passed before the change
+      and pin the two-callers-one-function shape and the unchanged exclusion.
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_parent_ref.TestRuleLivesInOneFunction.test_the_docstring_states_the_rule_and_not_the_old_one
+      - tests.test_destructive_guard_parent_ref.TestRuleLivesInOneFunction.test_the_fold_reads_no_filesystem_and_expands_nothing
+      - tests.test_destructive_guard_parent_ref.TestRuleLivesInOneFunction.test_check_self_modification_still_matches_the_raw_or_normalized_form
+    red_confirmed: true
+    red_reason: >
+      Run against a copy of the unchanged hook. The docstring test FAILed
+      (AssertionError: 'the way check_self_modification() matches a write
+      target' unexpectedly found), and the fold test errored with
+      KeyError: 'fold_parent_refs' because the function did not exist. The
+      check_self_modification test passed before the change and pins that
+      function's matching on the raw or normalized form.
+  AC-7:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_mixed_rm_precedence.TestCaseTable.test_every_existing_case_is_present_unchanged_and_first
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCasesPassAgainstTheHook.test_ac6_every_case_of_the_feature_passes
+    red_confirmed: false
+    red_reason: >
+      A dedicated new module is out of scope, but the existing runner test,
+      the case-table digest test and the per-target cases test detect a
+      changed, reordered or removed case and any change in the previous
+      feature's decisions and reason IDs; no red state occurred for this
+      change, which is a no-regression criterion that held before and after.

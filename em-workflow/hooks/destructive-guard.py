@@ -9987,6 +9987,44 @@ def normalize_candidate(target):
     return re.sub(r"^//(?=[^/])", "/", normalized)
 
 
+# The leading segments that anchor an operand at the home directory. They are
+# the two home forms SELF_CONFIG matches on a raw operand.
+HOME_ANCHOR_SEGMENTS = ("~", "$HOME")
+
+
+def fold_parent_refs(operand):
+    """The `..`-folded form of OPERAND, or None once the fold has left the
+    protected area.
+
+    Computed from the operand string alone: `.` and empty segments are
+    dropped and each `..` removes the segment before it, lexically. Nothing
+    is expanded -- `~` and `$HOME` stay as they are, a leading one being the
+    anchor of the form -- and the filesystem is never consulted.
+
+    When a `..` consumes that leading `~` / `$HOME` anchor the folded form is
+    outside the protected area whatever segments follow, so the result is
+    None, which matches nothing. A later literal `~` or `$HOME` segment is
+    not an expansion and cannot rebuild a home-anchored form. A `..` with
+    nothing before it is kept in a relative form and dropped in an absolute
+    one, as os.path.normpath does.
+    """
+    absolute = operand.startswith("/")
+    kept = []
+    for segment in operand.split("/"):
+        if segment in ("", "."):
+            continue
+        if segment != "..":
+            kept.append(segment)
+            continue
+        if kept and kept[-1] != "..":
+            if len(kept) == 1 and kept[0] in HOME_ANCHOR_SEGMENTS and not absolute:
+                return None
+            kept.pop()
+        elif not absolute:
+            kept.append(segment)
+    return ("/" if absolute else "") + "/".join(kept)
+
+
 def check_self_modification(word, args, redirects, segment, lexed):
     """Ask/deny only when an assembled write TARGET matches a protected path.
 
@@ -10428,22 +10466,35 @@ def rm_protected_operand_numbers(args):
     ARGS, of the deletion operands of the rm invocation whose operand basis is
     ARGS (check_rm()'s ARGS: the rm's own arguments, or the REMAINDER of a
     substitution-headed statement) that match the protected self-config
-    pattern the way check_self_modification() matches a write target: the raw
-    operand, or its normalized form. The operands are the ones check_rm()
-    judges -- a counted operand that does not start with `-` -- whatever the
-    statement's LEXED flag; a redirect target is not among them. The set is
-    empty when no operand matches. The numbers are the operand numbers that
-    check_rm() puts on its records for the same ARGS, so a record belongs to a
-    protected operand exactly when its number is in the set. The function has
-    no side effects: the same ARGS always give the same set."""
+    pattern. An operand matches when its normalized form
+    (normalize_candidate(): HOME expanded, then folded) matches, or when its
+    raw form matches AND its `..`-folded form (fold_parent_refs(): `~` and
+    `$HOME` not expanded) also matches. A raw-form match alone no longer
+    counts: `~/.claude/skills/../../valuable` matches the raw form but names
+    `~/valuable`, so it is not protected, while `~/.claude/skills/../hooks/x`
+    folds to `~/.claude/hooks/x` and stays protected. The folded form does not
+    match once a `..` consumes the leading `~` / `$HOME` anchor, whatever
+    segments follow. The folded form is computed from the operand string
+    alone, with no filesystem access. check_self_modification() itself is
+    unchanged and still matches a write target on its raw or normalized form,
+    so its `ask` for such an operand stands; this function only decides which
+    operands stay out of the recursive-delete check. The operands are the ones
+    check_rm() judges -- a counted operand that does not start with `-` --
+    whatever the statement's LEXED flag; a redirect target is not among them.
+    The set is empty when no operand matches. The numbers are the operand
+    numbers that check_rm() puts on its records for the same ARGS, so a record
+    belongs to a protected operand exactly when its number is in the set. The
+    function has no side effects: the same ARGS always give the same set."""
     protected = set()
     for number, operand in _number_rm_operands(args):
         if operand.startswith("-"):
             continue
-        if SELF_CONFIG.search(operand) or SELF_CONFIG.search(
-            normalize_candidate(operand)
-        ):
+        if SELF_CONFIG.search(normalize_candidate(operand)):
             protected.add(number)
+        elif SELF_CONFIG.search(operand):
+            folded = fold_parent_refs(operand)
+            if folded is not None and SELF_CONFIG.search(folded):
+                protected.add(number)
     return protected
 
 
