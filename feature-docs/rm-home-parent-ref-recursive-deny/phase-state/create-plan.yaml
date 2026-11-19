@@ -1,0 +1,33 @@
+schema_version: 1
+feature: rm-home-parent-ref-recursive-deny
+phase: create-plan
+status: dispatched
+generation: 1
+base_revision: 1a191f836373cc805128cf20e8cbf220ac98d910
+last_input_digest: sha256:e8805b31a392585ab2f1a4a46fac159358d59fd078c66e86ffa3092774a803c7
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:e8805b31a392585ab2f1a4a46fac159358d59fd078c66e86ffa3092774a803c7
+  output_digest: null
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/planner-contract.md: sha256:df2bf3f0321c2627a31b878a14adb176ee7c2131638245112e5d3bb27f7a3682
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
+    em-workflow/references/workflow-schema.md: sha256:5bd8500c203c4f17cde4193ee43d561073fe7f47099d61a55eb593e098881d87
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/rm-home-parent-ref-recursive-deny/SPEC.md: sha256:c1e50c3f7e3a58d48c4e389d8680d48051c514de13569bfbc2cbce82249bcddb
+    feature-docs/rm-home-parent-ref-recursive-deny/workflow.yaml: sha256:773ed7e6b6c6f586cf995b26c9b53cbf6921f30f27b6b9516efd24266cb0c5f5
+artifacts: []
+other_feature_doc_fixes: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
