@@ -1,0 +1,183 @@
+schema_version: 1
+feature: rm-parent-ref-self-config-deny
+created: '2026-11-19'
+base_branch: main
+goal: '# destructive-guard: 親ディレクトリ参照で保護範囲の外に出る rm 対象も自己設定パス扱いになり、再帰削除の deny が ask(self-modification) に落ちる
+
+
+  種別: セキュリティ (severity: medium)
+
+
+  ## 脆弱性の概要
+
+  `destructive-guard.py` で、親ディレクトリ参照（`..`）を含み正規化後は保護範囲の外に出る rm の対象も、自己設定パスとして扱われる。その対象の再帰削除 `deny` が判定から外れ、`ask` / `self-modification` に落ちる。
+
+
+  ## 攻撃シナリオ
+
+  `CLAUDE_BATCH` 未設定で `rm -rf ~/.claude/skills/foo ~/.claude/skills/../../valuable` を渡すと、判定は `ask` / `self-modification` になる。第 2 対象を同じ場所を指す `~/valuable` に変えると `deny` / `rm-recursive` になる。
+
+
+  `rm_protected_operand_numbers()` は、生のオペランドと `normalize_candidate()` の形のどちらかが `SELF_CONFIG` に一致すれば、その対象を保護パスとみなす。生の形が `~/.claude/skills/` に一致するため、実体が `~/valuable` の対象もプールから外れる。
+
+
+  ## 影響範囲
+
+  対話実行では、自己設定への書き込みを理由にした確認だけが表示され、その承認で保護対象外の再帰削除も実行できる。`CLAUDE_BATCH` 下では `deny` に降格されるが、理由は self-modification のままになる。
+
+
+  feature `mixed-rm-self-config-deny` の review round 1 で medium として検出した。変更前から同じ動作で、その feature の SPEC の Edge Cases と Assumption A2 が範囲外・別タスクと明記している。
+
+
+  ## 完了の定義
+
+  - 攻撃シナリオが成立しない（上の形が `deny` / `rm-recursive` になる）
+
+  - 正規化後の形が保護範囲の外に出る対象は保護パスとみなさない。FR2・A1（HOME が /home の下に無い環境で、自己設定パスだけを消す rm を ask のまま保つ）と両立させる
+
+  - `rm -rf ~/.claude/skills/../../valuable` 単体の形と、保護パスと並べた形の回帰ケースを rule 付きでケース表に足し、`python3 em-workflow/hooks/tests/run-destructive-guard.py` が全件通る
+
+
+  ## 該当箇所
+
+  `em-workflow/hooks/destructive-guard.py` の `rm_protected_operand_numbers()`
+
+
+  ## 暫定緩和策
+
+  自己設定パスと、`..` を含むパスを同じ rm に並べたコマンドの確認を、対話実行で承認しない。
+
+  '
+parent_branch: em-workflow/rm-parent-ref-self-config-deny/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.95
+      '2': 0.05
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.92
+      '2': 0.08
+      '3': 0.0
+  at: '2026-11-19T08:52:34+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: e26c42f1c44f7bc96e2b18a8d7bc9ba02642b189
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'UI を持たないフックのスクリプトの修正、design-system 候補 0 件（create-spec.design-step: decide_autonomously -> skipped）。tier reduced でも design step は削減対象'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+requirements:
+  FR1:
+    title: '`..` で保護範囲の外に出る対象を保護パスとみなさない'
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: 前 feature の FR2・A1 と両立させる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: 両方の経路に効かせる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: docstring を直す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: 回帰ケースを足す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 変わる向き
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 決定性
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: 性能
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: version
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

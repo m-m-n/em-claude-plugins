@@ -1,7 +1,7 @@
 schema_version: 1
 feature: rm-parent-ref-self-config-deny
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 0eee4a67cf490a3164fd0d9d31f0e9d19bbcd93d
 last_input_digest: sha256:7f41f821bb538544457b02c179bae8e77161ae1a35e60f77d99f6854ac412171
