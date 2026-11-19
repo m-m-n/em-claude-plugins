@@ -259,7 +259,7 @@ tasks:
     - FR13
     - NFR2
     - NFR3
-    status: pending
+    status: in_progress
     provenance:
       source: review
       source_ids:
@@ -290,7 +290,7 @@ review:
 requirements:
   FR1:
     title: 対象の文
-    status: ok
+    status: in_progress
     tbd_reason: null
     excluded_reason: null
     tasks:
@@ -302,7 +302,7 @@ requirements:
     - TS-11
   FR2:
     title: notion の組は除外する
-    status: ok
+    status: in_progress
     tbd_reason: null
     excluded_reason: null
     tasks:
@@ -313,7 +313,7 @@ requirements:
     - TS-29
   FR3:
     title: フラグの読み方と --args-json の値の再構成
-    status: ok
+    status: in_progress
     tbd_reason: null
     excluded_reason: null
     tasks:
@@ -334,7 +334,7 @@ requirements:
     - TS-30
   FR4:
     title: JSON の復号と全文字列の置換の再走査
-    status: ok
+    status: in_progress
     tbd_reason: null
     excluded_reason: null
     tasks:
@@ -349,7 +349,7 @@ requirements:
     - TS-7
   FR5:
     title: トップレベルの command のシェル入力としての再走査
-    status: ok
+    status: in_progress
     tbd_reason: null
     excluded_reason: null
     tasks:
@@ -364,7 +364,7 @@ requirements:
     - TS-19
   FR6:
     title: 静的に決まらない形は今の判定を保つ
-    status: ok
+    status: in_progress
     tbd_reason: null
     excluded_reason: null
     tasks:
@@ -379,7 +379,7 @@ requirements:
     - TS-28
   FR7:
     title: 走査量の上限と、未検査を allow にしないこと
-    status: ok
+    status: in_progress
     tbd_reason: null
     excluded_reason: null
     tasks:
@@ -392,7 +392,7 @@ requirements:
     - TS-22
   FR8:
     title: 範囲外の記録
-    status: ok
+    status: in_progress
     tbd_reason: null
     excluded_reason: null
     tasks:
@@ -408,7 +408,7 @@ requirements:
     - TS-28
   FR9:
     title: ケースの追加
-    status: ok
+    status: in_progress
     tbd_reason: null
     excluded_reason: null
     tasks:
@@ -448,7 +448,7 @@ requirements:
     - TS-30
   FR10:
     title: コード内の説明の更新
-    status: ok
+    status: in_progress
     tbd_reason: null
     excluded_reason: null
     tasks:
@@ -459,7 +459,7 @@ requirements:
     tests: []
   NFR1:
     title: Performance
-    status: ok
+    status: in_progress
     tbd_reason: null
     excluded_reason: null
     tasks:
@@ -469,7 +469,7 @@ requirements:
     - TS-15
   NFR2:
     title: Fail-closed
-    status: ok
+    status: in_progress
     tbd_reason: null
     excluded_reason: null
     tasks:
@@ -482,7 +482,7 @@ requirements:
     - TS-16
   NFR3:
     title: Test procedure
-    status: ok
+    status: in_progress
     tbd_reason: null
     excluded_reason: null
     tasks:
@@ -497,7 +497,7 @@ requirements:
     - TS-16
   NFR4:
     title: Version
-    status: ok
+    status: in_progress
     tbd_reason: null
     excluded_reason: null
     tasks:
@@ -508,7 +508,7 @@ requirements:
     tests: []
   FR11:
     title: 復元できない静的な語は ask にする
-    status: ok
+    status: in_progress
     tbd_reason: null
     excluded_reason: null
     tasks:
@@ -517,7 +517,7 @@ requirements:
     - TS-21
   FR12:
     title: ペイロードの展開数の使い切りは ask にする
-    status: ok
+    status: in_progress
     tbd_reason: null
     excluded_reason: null
     tasks:
@@ -526,7 +526,7 @@ requirements:
     - TS-22
   FR13:
     title: 単体テストの更新
-    status: ok
+    status: in_progress
     tbd_reason: null
     excluded_reason: null
     tasks:
@@ -535,7 +535,7 @@ requirements:
     tests: []
   NFR5:
     title: Maintainability
-    status: ok
+    status: in_progress
     tbd_reason: null
     excluded_reason: null
     tasks:
@@ -549,3 +549,4 @@ batch:
   infra_resume:
     rounds: 0
     cap: 2
+    branch: em-workflow/mcp-bridge-args-json-exec-guard/task0005
