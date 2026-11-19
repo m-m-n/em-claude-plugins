@@ -557,9 +557,25 @@ class TestFlagReading(unittest.TestCase):
             ("terminator and a flag", "mcp-bridge run --args-json " + value + " -- --unknown"),
             ("positional", "mcp-bridge run --args-json " + value + " pos"),
             ("positional and a flag", "mcp-bridge run --args-json " + value + " pos --unknown"),
+            # A restored text shorter than two characters (a lone `-`, the empty
+            # text) is a positional word and ends the flag sequence (D2 step 2).
+            ("a lone dash", "mcp-bridge run --args-json " + value + " -"),
+            ("a lone dash and a flag", "mcp-bridge run --args-json " + value + " - --unknown"),
+            ("an empty single-quoted word", "mcp-bridge run --args-json " + value + " ''"),
+            ("a single-quoted lone dash", "mcp-bridge run --args-json " + value + " '-'"),
         ):
             with self.subTest(label):
                 self.assertEqual([KIND_INSPECTED], self.kinds(command))
+
+    def test_a_value_after_a_lone_dash_is_not_inspected(self):
+        # The lone dash ends the flag sequence: the value before it is
+        # inspected, the value after it is not read as a flag value.
+        command = (
+            "mcp-bridge run --args-json '{\"command\":\"first\"}'"
+            " - --args-json '{\"command\":\"second\"}'"
+        )
+        (result,) = Spy(command).results
+        self.assertEqual([("first",)], [v.commands for v in result.values])
 
     def test_every_value_of_a_repeated_args_json_is_inspected(self):
         command = (
@@ -599,7 +615,6 @@ class TestFlagReading(unittest.TestCase):
             ("unknown single dash", "mcp-bridge run -unknown --args-json " + value),
             ("unknown flag after the value", "mcp-bridge run --args-json " + value + " --unknown"),
             ("three dashes", "mcp-bridge run ---args-json " + value),
-            ("a lone dash", "mcp-bridge run - --args-json " + value),
             ("no value", "mcp-bridge run --args-json"),
             ("no value after a value", "mcp-bridge run --args-json " + value + " --mcp"),
             ("no value of another flag", "mcp-bridge run --args-json " + value + " --tool"),
@@ -610,6 +625,9 @@ class TestFlagReading(unittest.TestCase):
             ("run only", "mcp-bridge run"),
             ("terminator before the flag", "mcp-bridge run -- --args-json " + value),
             ("positional before the flag", "mcp-bridge run pos --args-json " + value),
+            # A lone dash is a positional word: it ends the flag sequence before
+            # any `--args-json` is read.
+            ("a lone dash before the flag (positional)", "mcp-bridge run - --args-json " + value),
         ):
             with self.subTest(label):
                 self.assertEqual([KIND_NOTHING], self.kinds(command))
@@ -1279,6 +1297,16 @@ class TestDocstring(unittest.TestCase):
 
     def test_the_flow_states_the_decoded_command_takes_no_payload_count(self):
         self.assertIn("takes no count from MAX_SHELL_PAYLOAD_EXPANSIONS", self.doc)
+
+    def test_the_flow_states_a_word_shorter_than_two_characters_ends_the_flags(self):
+        flow = self.doc[: self.doc.index("Out of scope")]
+        for phrase in (
+            "restored text is shorter than two characters",
+            "a lone `-`",
+            "positional word",
+        ):
+            with self.subTest(phrase):
+                self.assertIn(phrase, flow)
 
     def test_the_flow_states_the_three_word_outcomes_and_the_flags(self):
         for phrase in ("Not static", "Unrestorable", "Overrun"):

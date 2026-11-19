@@ -8009,14 +8009,17 @@ def _mcp_bridge_args_json_chunks(shaped_words, marked):
        inspected, and otherwise its restored text is used, so a quoted or
        backslashed flag word reads as the plain one. The restored text `--`
        ends the flag sequence, and so does a word that does not begin with `-`
-       (a positional word). One or two leading dashes are removed, and the rest
-       is split at its first `=` into a name and an inline value. The names
-       `mcp`, `tool`, `args-json`, `format` and `session` take the inline
-       value, or else the next word, whatever it holds (a value-taking flag
-       with neither makes the statement nothing to do); the word after a value
-       word is in flag position. The name `dry-run` takes no value. Any other
-       name makes the statement nothing to do. The first stop decides. The
-       values of `--mcp`, `--tool`, `--format` and `--session` are not
+       (a positional word) and a word whose restored text is shorter than two
+       characters (the empty text, a lone `-`), which is a positional word too.
+       The `--args-json` values read before the end are inspected; the words
+       after it are not read as flags. One or two leading dashes are removed,
+       and the rest is split at its first `=` into a name and an inline value.
+       The names `mcp`, `tool`, `args-json`, `format` and `session` take the
+       inline value, or else the next word, whatever it holds (a value-taking
+       flag with neither makes the statement nothing to do); the word after a
+       value word is in flag position. The name `dry-run` takes no value. Any
+       other name makes the statement nothing to do. The first stop decides.
+       The values of `--mcp`, `--tool`, `--format` and `--session` are not
        examined. No `--args-json` makes the statement nothing to do.
     4. Word outcomes (D5): _read_static_word() gives a word one of three
        outcomes. Not static: it holds an element of FR6 (1) (a substitution, a
@@ -8091,7 +8094,10 @@ def _mcp_bridge_args_json_chunks(shaped_words, marked):
             return _ARGS_JSON_NOTHING
         if outcome == WORD_UNRESTORABLE:
             return _ARGS_JSON_UNRESTORABLE
-        if flag == "--" or not flag.startswith("-"):
+        # The flag sequence ends at `--`, at a word that does not begin with
+        # `-`, and at a restored text shorter than two characters (the empty
+        # text, a lone `-`): each is a positional word (D2 step 2).
+        if flag == "--" or len(flag) < 2 or not flag.startswith("-"):
             break
         rest = flag[2:] if flag.startswith("--") else flag[1:]
         flag_name, equals, inline = rest.partition("=")
