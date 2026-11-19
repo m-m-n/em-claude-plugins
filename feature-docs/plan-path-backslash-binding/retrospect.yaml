@@ -1,0 +1,37 @@
+feature: plan-path-backslash-binding
+collected_at: "2026-11-19T10:56:00+09:00"
+session_ids: [01a1f183-09d9-727e-83ee-ab4972d042f5]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures:
+    - id: AC-7
+      category: comprehensive
+      note: "python3 -m unittest discover -s tests: 16447 tests, 1 failure: tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCaseTable.test_the_cases_come_after_every_other_case (the per-target cases are not one run at the end of em-workflow/hooks/tests/destructive-guard-cases.json). Reproduces at implement.base_commit and on main; this feature's diff does not touch the case table or that test."
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の最終読みは bucket 2 が 0.56 で、評価器は full を採用した"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.74, confidence: 0.73}
+        observed_at: "2026-11-19T08:49:20+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.57, confidence: 0.56}
+        observed_at: "2026-11-19T08:51:19+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/references/implement-phase.md
+        - em-workflow/references/phases/create-plan-phase.md
+        - tests/test_final_path_correction_docs.py
+      changed_lines_approx: 25
+      new_functions_needed: 0
+      change_containment: multiple_modules
+      changes_external_contract: false
+follow_up_drafts: []
+lessons_candidates:
+  - "verify round 1 は AC-7（全件実行で 1 件失敗）で fail した。失敗は implement.base_commit と main でも再現する既存の不具合で、この feature の差分の外だった。batch の自動 rework で task0003 を足し、round 2 で pass した"
+  - "review round 1 は 5 観点すべて完了し、critical/high は 0 件。comprehensive の medium 1 件（982847f3509e8db9、Windows でテストのデコイが一時ディレクトリの外に書かれる）は deferred のまま残った"
+  - "事前調査の変更見込みは 25 行・既存 3 ファイルだったが、実際は新規テストファイル 1 本を含めて 1212 行追加になった（大半はテスト）"

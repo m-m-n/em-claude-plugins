@@ -99,7 +99,8 @@ workflow:
   passed_ids: [TS-1, TS-2, TS-3, TS-4, TS-5, TS-6, AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-7, TM-1, TM-2]
   failed_items: []
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: 3ccb65aebca23effc4d4925c729a554a6719a6fe
 tasks:
   task0001:
     title: Phase documents derive the plan path from the path_segments segments
