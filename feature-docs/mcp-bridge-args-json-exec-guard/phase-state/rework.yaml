@@ -3,7 +3,7 @@ feature: mcp-bridge-args-json-exec-guard
 phase: rework
 worker_runs:
 - request_id: rework-run-0001
-  status: dispatched
+  status: needs_user_input
   source: review
   review_round: 1
   input_digest: sha256:9ee742d16cfa7190f6b70359a3e1ef703e5bf51c39a837ee754e65a7591ab490
@@ -20,3 +20,55 @@ worker_runs:
     feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0001.md: sha256:8250386aafa3b089c46b768a873b71ae10e549cb7565e47210d7545e4b7fc289
     feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0002.md: sha256:506a4a91980ecf002ebaa6e715c70606e0be16f80f66f7989f902837918129bb
     feature-docs/mcp-bridge-args-json-exec-guard/workflow.yaml: sha256:9837764cfdc608143fd0e85794d403bedbe6a0cb6a06556bcdd1782826a45e64
+  self_write_set: []
+status: completed
+packets:
+- packet_id: rework-q0001
+  status: answered
+  request_id: rework-run-0001
+  questions:
+  - question_id: rework.spec-change.round1
+    gate_id: rework.spec-change
+    status: answered
+answers:
+- question_id: rework.spec-change.round1
+  packet_id: rework-q0001
+  answered_at: '2026-11-19T21:58:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - change-spec
+  freeform: null
+  normalized_answer: change-spec
+  resolution_note: 'classification gate: goal block present; origin verification passed (32aa9e6e947c325d,
+    934ab7486f2cfbfb, e0e4df99e5cded9d are members of reviews/round1.yaml); direction 2 tripped (bound
+    set holds security-category findings) -> batch relaxed route -> one batched Codex consultation (codex
+    harness, 1 turn). Codex: change-spec; verdict (a) under the current SPEC; basis FR5/AC-2, NFR2/AC-8,
+    FR6/FR8, FR2/AC-5, AC-6. Orchestrator mapped the suggestion to option change-spec. Opus escalation:
+    not run.'
+spec_change:
+  reason: 'review round 1: residual high findings need SPEC A4 / FR6 / FR8 revisions (payload-counter
+    exhaustion leaves JSON commands unchecked; dynamic destination / unrestorable ANSI-C skips static
+    --args-json); batch classification gate resolved to change-spec via the relaxed route'
+  origin_kind: review
+  origin_id: 32aa9e6e947c325d
+  recorded_at_commit: 0a6fe0dc37e71b6574031f0bc433bc5d187cdf60
+  consumed: false
+  replan_authorized: true
+classification:
+- classifier: codex
+  verdict: goal_not_met
+  evidence_ids:
+  - FR5
+  - AC-2
+  - NFR2
+  - AC-8
+  - FR6
+  - FR8
+  - FR2
+  - AC-5
+  - AC-6
+  decision: proceed
+  reason: 'batch relaxed route (direction 2: the round''s bound set contains security findings): resolved
+    by the batched Codex consultation, which recommended change-spec because the current SPEC A4 / FR6
+    / FR8 let the goal''s attack scenario stand'

@@ -113,7 +113,7 @@ workflow:
   artifacts:
   - REQUIREMENTS.md
   - SPEC.md
-  status: completed
+  status: needs_update
   completed_at_commit: 3a7d4d3612d97127fe3dcade816d2efd579f38f7
 - id: design
   artifacts:
@@ -128,10 +128,10 @@ workflow:
   - VERIFICATION.md
   - THREAT-MODEL.md
   - tasks/
-  status: completed
+  status: pending
   completed_at_commit: 58edada819f319980814caf0df38125249b19cc2
 - id: implement
-  status: completed
+  status: pending
   completed_at_commit: 4dc8609bb110f992a02567181f46f22bbcacb12d
   base_commit: 4b4dd2cf59441cb5adad8beb855c5905bd10716b
 - id: review

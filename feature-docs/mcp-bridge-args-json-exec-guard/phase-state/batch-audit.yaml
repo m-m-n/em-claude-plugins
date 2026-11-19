@@ -4,7 +4,7 @@ records:
 - question_id: review.auto-fix-grouping
   packet_id: null
   answered_at: '2026-11-19T21:05:00+09:00'
-  source: batch-codex
+  source: batch-codex-consultation
   answer_mode: freeform
   selected_option_ids: []
   freeform: merge 5a49eeb09b71ffc3 + c678f9aca23d274f into one needs-judgment item
@@ -18,7 +18,7 @@ records:
 - question_id: review.auto-fix-keep-or-revert
   packet_id: null
   answered_at: '2026-11-19T21:10:00+09:00'
-  source: batch-codex
+  source: batch-codex-consultation
   answer_mode: freeform
   selected_option_ids: []
   freeform: revert the loop-1 edit for 027272e4f5501990 and treat the finding as residual needing a SPEC
@@ -34,7 +34,7 @@ records:
 - question_id: review.auto-fix-keep-or-revert
   packet_id: null
   answered_at: '2026-11-19T21:16:00+09:00'
-  source: batch-codex
+  source: batch-safe-default
   answer_mode: freeform
   selected_option_ids: []
   freeform: revert the loop-1 edits for 5a49eeb09b71ffc3 and 65c5a71c6af6cb06
@@ -44,3 +44,19 @@ records:
     contradicts a SPEC assumption or a test pinned by the plan goes to rework instead); 5a49eeb09b71ffc3
     broke TestPayloadCounter (SPEC A4), 65c5a71c6af6cb06 broke the ''quoted flag'' case pinned by D2;
     codex_consulted: false (reused the earlier consultation''s criterion); opus_escalation: false'
+- question_id: rework.spec-change.round1
+  packet_id: rework-q0001
+  answered_at: '2026-11-19T21:58:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - change-spec
+  freeform: null
+  normalized_answer: change-spec
+  resolution_note: 'gate: rework.spec-change (relaxed route, direction 2); options: change-spec / keep-spec;
+    chosen: change-spec; not chosen: keep-spec; codex_consulted: true (1 turn, codex harness); key points:
+    A4 lets JSON-derived commands go unchecked once the shared payload counter is used up, so the goal''s
+    attack scenario stands (FR5/AC-2); give legacy payloads the counter first (NFR2/AC-8) and send unchecked
+    JSON commands to ask; FR6/FR8: inspect a static --args-json even with a dynamic destination and send
+    values the guard cannot restore to ask, while keeping the notion exclusion (FR2/AC-5) and TS-13 (AC-6);
+    opus_escalation: false'
