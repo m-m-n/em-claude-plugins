@@ -25,7 +25,7 @@ notion の組以外の `mcp-bridge run` で、`--args-json` に JSON のエス�
 - [ ] AC-8 (NFR2): ほかの既存のケースが、期待する判定（理由 ID を固定しているケースはその理由 ID も）を保つ。ランナーが通り、既存のケースは 1 件も消されていない。
 - [ ] AC-9 (FR10): FR10 に挙げた docstring とコメントが新しい判定を述べ、FR8 の範囲外の形を記録している。
 - [ ] AC-10 (FR3): TS-17（引用符で書いたフラグ名 `'--args-json'`）が deny になる。変更前は allow。
-- [ ] AC-11 (FR5, FR7): TS-18（無害な `command` 25 件の後ろの破壊的な `command`）と TS-19（復号した `command` 25 件の後ろの `bash -c` の破壊的ペイロード）が deny になる。変更前はどちらも allow。
+- [ ] AC-11 (FR5, FR7): TS-18（無害な `command` 25 件の後ろの破壊的な `command`）と TS-19（復号した `command` 25 件の後ろの `bash -c` の破壊的ペイロード）が deny になる。変更前は TS-18 が allow、TS-19 は deny。
 - [ ] AC-12 (FR3, FR6): TS-20（静的でない `--mcp` と静的な破壊的 `command`）が deny になる。変更前は allow。
 - [ ] AC-13 (FR11): TS-21（有効な JSON の後ろに ANSI-C の `\0` がある値）が `args-json-unrestorable` の ask になる。変更前は allow。
 - [ ] AC-14 (FR12): TS-22（`bash -c` の無害なペイロード 25 個の後ろの `bash -c` の破壊的ペイロード）が `scan-budget-exceeded` の ask になる。変更前は allow。
@@ -83,7 +83,7 @@ notion の組以外の `mcp-bridge run` で、`--args-json` に JSON のエス�
 
 - **NFR1 - Performance:** 1 回の判定を、`hooks.json` の destructive-guard のタイムアウト（10 秒）と、ランナーの `GUARD_TIMEOUT_SECONDS` に収める。巨大な JSON、深い入れ子、多数のトップレベルの `command` でも、再帰や走査量が際限なく増えない（FR5、FR7）。
 - **NFR2 - Fail-closed:** 既存の deny / ask の判定を allow に変えない。allow から ask への変更は、FR11 と FR12 の形（AC-13、AC-14）に限る。
-- **NFR3 - Test procedure:** 同じ変更の中で `python3 em-workflow/hooks/tests/run-destructive-guard.py` を走らせる（`.claude/rules/hook-tests.md`）。新しい deny / ask のケースは修正の前に追加し、変更前のフックがそれらを allow にすること（見逃しの再現）を確かめる。
+- **NFR3 - Test procedure:** 同じ変更の中で `python3 em-workflow/hooks/tests/run-destructive-guard.py` を走らせる（`.claude/rules/hook-tests.md`）。新しい deny / ask のケースは修正の前に追加し、変更前のフックがそれらを allow にすること（見逃しの再現）を確かめる。TS-19 は変更前も deny なので、この再現の対象に含めない。
 - **NFR4 - Version:** `plugin.json` と `marketplace.json` の version は変えない。patch は GitHub Actions が上げる（`.claude/rules/core-plugin-version-bump.md`）。
 - **NFR5 - Maintainability:** `statements()` のループに入っている `--args-json` の処理（判定の呼び出し、走査量の加算、本体と `command` の投入、停止と後回しにした ask の記録）は、`statements()` の外の関数にまとめる。`statements()` からは文ごとに 1 回呼び出す。FR11・FR12 で後回しにする ask の記録も、同じ仕組みでまとめる。
 
@@ -279,7 +279,7 @@ path that never materializes is not a violation.
   ```
   mcp-bridge run --mcp desktop-commander --tool start_process --args-json '{"command":"true",…,"command":"git branch -D example"}'
   ```
-- [ ] TS-19: 復号した `command` 25 件の後ろの文の `bash -c` のペイロードも取り出す（FR5。指摘 934ab7486f2cfbfb）。変更前は allow - deny。`"command":"true"` を計 25 回並べる形で、create-plan で 25 回を書き下す。
+- [ ] TS-19: 復号した `command` 25 件の後ろの文の `bash -c` のペイロードも取り出す（FR5。指摘 934ab7486f2cfbfb）。変更前も deny - deny。`"command":"true"` を計 25 回並べる形で、create-plan で 25 回を書き下す。
   ```
   mcp-bridge run --mcp desktop-commander --tool start_process --args-json '{"command":"true",…}'; bash -c 'git branch -D example'
   ```

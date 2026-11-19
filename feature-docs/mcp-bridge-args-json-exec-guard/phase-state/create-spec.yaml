@@ -5,7 +5,7 @@ status: dispatching
 generation: 3
 base_revision: ef0980ca31722cf1d13d84f48f69d9bacdf6f7ae
 last_input_digest: sha256:90ef7a253b7a8e10272ede68edae9edc257e6ed5a37158816910a6471e867ba1
-active_request_id: create-spec-run-0008
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -158,18 +158,22 @@ worker_runs:
   status: completed
   input_digest: sha256:90ef7a253b7a8e10272ede68edae9edc257e6ed5a37158816910a6471e867ba1
 - request_id: create-spec-run-0008
-  status: dispatched
+  status: completed
   input_digest: sha256:f2b1b80a6aefa071750ef9123ca5cf50ae1f18ef22ceebfd6675ddbde58c23d3
   dispatch_digest_inputs:
     feature-docs/mcp-bridge-args-json-exec-guard/REQUIREMENTS.md: sha256:4070a541012ff40cc39d2e279cf295327fcdd81ccda3547de2c9acf398b8f224
     feature-docs/mcp-bridge-args-json-exec-guard/SPEC.md: sha256:ad98591bde591f470abb1e792c986a720fa8f4673356d25ac1e44e0a5371261b
+  self_write_set:
+  - feature-docs/mcp-bridge-args-json-exec-guard/REQUIREMENTS.md
+  - feature-docs/mcp-bridge-args-json-exec-guard/SPEC.md
+  scope_note: 'the worker''s write also decoded literal JSON escapes (\u0024, \u0060, \u00e9) in unrelated lines; the orchestrator restored both files from the snapshot and re-applied only the worker''s intended AC-11 / NFR3 / TS-19 edits'
 artifacts:
 - path: feature-docs/mcp-bridge-args-json-exec-guard/REQUIREMENTS.md
-  sha256: sha256:4070a541012ff40cc39d2e279cf295327fcdd81ccda3547de2c9acf398b8f224
-  produced_by: create-spec-run-0006
+  sha256: sha256:48542f59f3a9cee1be18e0f619d8dacc6d6464c8961534c3e3108d60af534894
+  produced_by: create-spec-run-0008
 - path: feature-docs/mcp-bridge-args-json-exec-guard/SPEC.md
-  sha256: sha256:ad98591bde591f470abb1e792c986a720fa8f4673356d25ac1e44e0a5371261b
-  produced_by: create-spec-run-0006
+  sha256: sha256:a7c51b945ecd97772a08f38c4348250e4b9961e49c999abf2df111313c4066f7
+  produced_by: create-spec-run-0008
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
