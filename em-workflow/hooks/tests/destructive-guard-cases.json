@@ -1393,5 +1393,21 @@
   ["ask", "rm-parent-ref-self-config-deny TS-8: 再帰指定の無い rm は `..` で保護領域の外に出る対象でも deny が無く、self-modification の ask のまま", "rm ~/.claude/skills/../../valuable", {"rule": "self-modification"}],
   ["deny", "rm-parent-ref-self-config-deny TS-9: `..` で保護領域そのもの（~/.claude）に出る対象は保護された対象ではないので、rm-recursive で deny になる", "rm -rf ~/.claude/skills/..", {"rule": "rm-recursive"}],
   ["ask", "rm-parent-ref-self-config-deny TS-10: `..` で保護領域の外の安全な削除領域（/tmp）に出る対象は rm-recursive の記録が無く、self-modification の ask のまま", "rm -rf ~/.claude/skills/../../../../tmp/x", {"rule": "self-modification"}],
-  ["ask", "rm-parent-ref-self-config-deny TS-11: 保護領域の中に留まる `..` 付きの対象は保護されたままで、deny は無く self-modification の ask のまま", "rm -rf ~/.claude/skills/foo/..", {"rule": "self-modification"}]
+  ["ask", "rm-parent-ref-self-config-deny TS-11: 保護領域の中に留まる `..` 付きの対象は保護されたままで、deny は無く self-modification の ask のまま", "rm -rf ~/.claude/skills/foo/..", {"rule": "self-modification"}],
+  ["ask", "rm-home-parent-ref-recursive-deny TS-1: $HOME で書いた、`..` で保護領域の外に出る対象（引用符付き）は、self-modification ではなく rm-unresolvable の ask になる", "rm -rf \"$HOME/.claude/skills/../../valuable\"", {"rule": "rm-unresolvable"}],
+  ["ask", "rm-home-parent-ref-recursive-deny TS-2: 引用符なしの同じ形も、self-modification ではなく rm-unresolvable の ask になる", "rm -rf $HOME/.claude/skills/../../valuable", {"rule": "rm-unresolvable"}],
+  ["ask", "rm-home-parent-ref-recursive-deny TS-3: 本当に保護された対象と並んでいても、`..` で保護領域の外に出る対象があれば rm-unresolvable の ask になる", "rm -rf $HOME/.claude/skills/foo \"$HOME/.claude/skills/../../valuable\"", {"rule": "rm-unresolvable"}],
+  ["deny", "rm-home-parent-ref-recursive-deny TS-4: CLAUDE_BATCH を立てると、TS-1 の形は rm-unresolvable の deny になる", "rm -rf \"$HOME/.claude/skills/../../valuable\"", {"rule": "rm-unresolvable", "batch": true}],
+  ["deny", "rm-home-parent-ref-recursive-deny TS-5: CLAUDE_BATCH を立てると、TS-3 の形も rm-unresolvable の deny になる", "rm -rf $HOME/.claude/skills/foo \"$HOME/.claude/skills/../../valuable\"", {"rule": "rm-unresolvable", "batch": true}],
+  ["ask", "rm-home-parent-ref-recursive-deny TS-6: 置換が文頭の rm でも、`..` で保護領域の外に出る対象があれば rm-unresolvable の ask になる", "$(printf rm) -rf $HOME/.claude/skills/foo \"$HOME/.claude/skills/../../valuable\"", {"rule": "rm-unresolvable"}],
+  ["ask", "rm-home-parent-ref-recursive-deny TS-7: 同じ文のリダイレクトが self-modification を起こしていても、rm-unresolvable の ask が先に選ばれる", "rm -rf \"$HOME/.claude/skills/../../valuable\" > ~/.claude/settings.json", {"rule": "rm-unresolvable"}],
+  ["ask", "rm-home-parent-ref-recursive-deny TS-8: `${HOME}` の書き方は生の形が保護パターンに一致せず、従来どおり rm-unresolvable の ask のまま", "rm -rf \"${HOME}/.claude/skills/../../valuable\"", {"rule": "rm-unresolvable"}],
+  ["ask", "rm-home-parent-ref-recursive-deny TS-9: 同じコマンドの中で HOME を代入し直しても、`$HOME` は未解決の展開のままで rm-unresolvable の ask になる", "HOME=/tmp/x; rm -rf \"$HOME/.claude/skills/../../valuable\"", {"rule": "rm-unresolvable"}],
+  ["deny", "rm-home-parent-ref-recursive-deny TS-9: HOME を代入し直す形に CLAUDE_BATCH を立てると、rm-unresolvable の deny になる", "HOME=/tmp/x; rm -rf \"$HOME/.claude/skills/../../valuable\"", {"rule": "rm-unresolvable", "batch": true}],
+  ["ask", "rm-home-parent-ref-recursive-deny TS-10: 再帰指定の無い rm は rm の記録が無いので、self-modification の ask のまま", "rm \"$HOME/.claude/skills/../../valuable\"", {"rule": "self-modification"}],
+  ["ask", "rm-home-parent-ref-recursive-deny TS-11: 畳んでも保護領域の中に残る対象は保護されたままで、self-modification の ask のまま", "rm -rf \"$HOME/.claude/skills/../hooks/x\"", {"rule": "self-modification"}],
+  ["ask", "rm-home-parent-ref-recursive-deny TS-12: `$HOME` は未解決なので、安全な削除領域（/tmp）に出る形も rm-unresolvable の ask になる", "rm -rf \"$HOME/.claude/skills/../../../../tmp/x\"", {"rule": "rm-unresolvable"}],
+  ["deny", "rm-home-parent-ref-recursive-deny TS-13: 同じ rm の他の削除対象が rm-recursive の deny なら、その deny が先に選ばれる", "rm -rf $HOME/.claude/skills/foo /home/user/valuable \"$HOME/.claude/skills/../../valuable\"", {"rule": "rm-recursive"}],
+  ["ask", "rm-home-parent-ref-recursive-deny TS-14: リダイレクトだけが self-modification を起こす文で、削除対象に保護パスの形が無ければ self-modification の ask のまま", "rm -rf tmp/$X > ~/.claude/settings.json", {"rule": "self-modification"}],
+  ["ask", "rm-home-parent-ref-recursive-deny TS-15: `~` の書き方でも、展開を含み `..` で保護領域の外に出る対象は rm-unresolvable の ask になる", "rm -rf ~/.claude/skills/../../$X", {"rule": "rm-unresolvable"}]
 ]
