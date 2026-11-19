@@ -259,7 +259,7 @@ tasks:
     - FR13
     - NFR2
     - NFR3
-    status: in_progress
+    status: merged
     provenance:
       source: review
       source_ids:
