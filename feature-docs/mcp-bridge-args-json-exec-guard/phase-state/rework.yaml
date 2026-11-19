@@ -146,7 +146,7 @@ spec_change:
   origin_id: AC-11
   recorded_at_commit: a05479704a7423314ecef809f03c856407cd30ce
   consumed: true
-  replan_authorized: true
+  replan_authorized: false
 classification:
 - classifier: codex
   verdict: goal_not_met
