@@ -135,7 +135,7 @@ workflow:
   completed_at_commit: 4dc8609bb110f992a02567181f46f22bbcacb12d
   base_commit: 4b4dd2cf59441cb5adad8beb855c5905bd10716b
 - id: review
-  status: in_progress
+  status: pending
 - id: verify
   status: pending
 - id: retrospect
@@ -190,8 +190,16 @@ tasks:
     branch: em-workflow/mcp-bridge-args-json-exec-guard/task0002
     notes: null
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: pending
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  - performance
+  residual_critical_high: 5
+  needs_rework: true
   plan:
     floor:
     - comprehensive

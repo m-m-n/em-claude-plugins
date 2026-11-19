@@ -1,0 +1,46 @@
+schema_version: 1
+feature: mcp-bridge-args-json-exec-guard
+records:
+- question_id: review.auto-fix-grouping
+  packet_id: null
+  answered_at: '2026-11-19T21:05:00+09:00'
+  source: batch-codex
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: merge 5a49eeb09b71ffc3 + c678f9aca23d274f into one needs-judgment item
+  normalized_answer: merge 5a49eeb09b71ffc3 + c678f9aca23d274f into one needs-judgment item
+  resolution_note: 'gate: Phase R4 same-site grouping (compatible prose vs conflict) for destructive-guard.py:8649;
+    options: compatible-merge (needs-judgment, Apply as-is) / conflict (batch skip site); chosen: compatible-merge;
+    not chosen: conflict; codex_consulted: true; key points: A (legacy bodies first on the shared payload
+    budget) and B (ask when JSON commands are left unchecked) are compatible; both need a SPEC A4 revision;
+    limit the ask to inputs that actually leave a JSON command unchecked to bound batch false-deny cost;
+    opus_escalation: false'
+- question_id: review.auto-fix-keep-or-revert
+  packet_id: null
+  answered_at: '2026-11-19T21:10:00+09:00'
+  source: batch-codex
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: revert the loop-1 edit for 027272e4f5501990 and treat the finding as residual needing a SPEC
+    change
+  normalized_answer: revert the loop-1 edit for 027272e4f5501990 and treat the finding as residual needing
+    a SPEC change
+  resolution_note: 'gate: keep or revert an applied auto-fix that broke existing tests (destructive-guard.py:7877/7880);
+    options: (a) keep / (b) revert and route as SPEC-change residual / (c) other; chosen: (b); not chosen:
+    (a),(c); codex_consulted: true; key points: SPEC FR6 requires the current verdict for dynamic destinations
+    and the threat model accepts unrestorable ANSI-C; the edit weakened existing deny cases FR2(d)/W4
+    to ask (NFR2, AC-8) and turned TS-13 / --args-json "$J" into ask, which batch demotes to deny; opus_escalation:
+    false'
+- question_id: review.auto-fix-keep-or-revert
+  packet_id: null
+  answered_at: '2026-11-19T21:16:00+09:00'
+  source: batch-codex
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: revert the loop-1 edits for 5a49eeb09b71ffc3 and 65c5a71c6af6cb06
+  normalized_answer: revert the loop-1 edits for 5a49eeb09b71ffc3 and 65c5a71c6af6cb06
+  resolution_note: 'gate: keep or revert applied auto-fixes that broke unit tests; options: keep / revert;
+    chosen: revert (same criterion as the Codex-consulted decision for 027272e4f5501990: an edit that
+    contradicts a SPEC assumption or a test pinned by the plan goes to rework instead); 5a49eeb09b71ffc3
+    broke TestPayloadCounter (SPEC A4), 65c5a71c6af6cb06 broke the ''quoted flag'' case pinned by D2;
+    codex_consulted: false (reused the earlier consultation''s criterion); opus_escalation: false'
