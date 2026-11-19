@@ -1,11 +1,11 @@
 schema_version: 1
 feature: plan-path-backslash-binding
 phase: rework
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 2abd2b7920e219a895e5ac3f27c2be61698e51c6
 last_input_digest: sha256:61e76af718bf3070f8117f762b60e45975c2012ad1b0b915a25e89ed2426fccd
-active_request_id: rework-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -34,7 +34,7 @@ artifacts:
   produced_by: rework-run-0001
 patches:
 - patch_id: plan-path-backslash-binding-rework-p0001
-  status: validated
+  status: applied
   base_input_digest: sha256:61e76af718bf3070f8117f762b60e45975c2012ad1b0b915a25e89ed2426fccd
   base_workflow_blob: 931f50dbdc398151b3adbb8a41406ff1a6022d42
 progress_fingerprint: null
