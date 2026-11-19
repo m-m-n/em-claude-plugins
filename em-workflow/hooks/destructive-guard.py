@@ -6985,7 +6985,13 @@ def _decode_ansi_c(body):
 def _read_double_quoted(body):
     """BODY -- the content of a double-quoted region -- with a backslash
     before `$`, a backtick, `"`, `\\` or a newline resolved (a backslash and a
-    newline vanish), or None when it holds an unescaped `$` or backtick."""
+    newline vanish), or None when it holds an unescaped backtick or an
+    unescaped `$` that starts an expansion. A `$` starts one only when the
+    next character is a name character, a digit, a special-parameter character
+    (`@*#?-$!`), `{`, `(` or `[`; any other `$` (before a space, the closing
+    quote, a backslash or another symbol, or at the end) is passed on as a
+    literal `$`, as Bash does. A character not known to be literal counts as
+    an expansion (safe side)."""
     out = []
     i, size = 0, len(body)
     while i < size:
@@ -7001,8 +7007,14 @@ def _read_double_quoted(body):
                 out.append(nxt)
                 i += 2
                 continue
-        elif ch in "$`":
+        elif ch == "`":
             return None
+        elif ch == "$":
+            nxt = body[i + 1] if i + 1 < size else ""
+            if nxt and (
+                nxt.isalnum() or nxt in "_@*#?-$!{([" or ord(nxt) > 127
+            ):
+                return None
         out.append(ch)
         i += 1
     return "".join(out)
@@ -7934,11 +7946,12 @@ def _read_static_word(marked, tok):
 
 def _flag_equals_prefix_name(marked, tok):
     """For a flag-position word that is not static as a whole: the flag name
-    when the word begins with one or two `-` and a plain unquoted name
-    (letters, digits, `_`, `-`) followed directly by an unquoted `=`, so that
-    only the value part after the `=` is non-static. None for any other
-    word (no `=` after a plain name, a quote, backslash, `$` or backtick in the
-    name part, no span or marked text)."""
+    when the word begins with one or two `-` and a name (letters, digits, `_`,
+    `-`, possibly written with single quotes, double quotes without `$`, backtick
+    or backslash, or backslash escapes) followed directly by an unquoted `=`,
+    so that only the value part after the `=` is non-static. None for any other
+    word (no `=` after the name, a `$` or backtick in the name part, an
+    unterminated quote, no span or marked text)."""
     span = getattr(tok, "span", None)
     if marked is None or span is None:
         return None
@@ -7954,12 +7967,38 @@ def _flag_equals_prefix_name(marked, tok):
     lo, hi = bounds
     source = marked.source
     pos = lo
-    while pos < hi and (source[pos].isascii() and (source[pos].isalnum() or source[pos] in "_-")):
+    chars = []
+    while pos < hi:
+        ch = source[pos]
+        if ch == "=":
+            break
+        if ch in "$`":
+            return None
+        if ch == "\\":
+            if pos + 1 >= hi:
+                return None
+            if source[pos + 1] != "\n":
+                chars.append(source[pos + 1])
+            pos += 2
+            continue
+        if ch in "'\"":
+            close = source.find(ch, pos + 1, hi)
+            if close < 0:
+                return None
+            body = source[pos + 1:close]
+            if ch == '"' and any(c in body for c in "$`\\"):
+                return None
+            chars.extend(body)
+            pos = close + 1
+            continue
+        chars.append(ch)
         pos += 1
     if pos >= hi or source[pos] != "=":
         return None
-    prefix = source[lo:pos]
-    if not prefix.startswith("-"):
+    prefix = "".join(chars)
+    if not prefix.startswith("-") or not all(
+        c.isascii() and (c.isalnum() or c in "_-") for c in prefix
+    ):
         return None
     name = prefix[2:] if prefix.startswith("--") else prefix[1:]
     return name or None
