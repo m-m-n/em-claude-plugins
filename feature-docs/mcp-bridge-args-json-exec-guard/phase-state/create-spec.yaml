@@ -72,7 +72,19 @@ worker_runs:
   status: completed
   input_digest: sha256:22df4eb71329f2f6eafa4c0f657c16d971591df738f85cfc4193b82c0c8dd2b6
   output_digest: sha256:685f1b0f3dfa95a6e6f7c799303f83d604f17bcae34cc89038f2d26f59236f23
-artifacts: []
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:1241296914e9b5e3d173a1e401534e6964318d40e92cf373e31b42931e539a49
+  self_write_set:
+  - feature-docs/mcp-bridge-args-json-exec-guard/REQUIREMENTS.md
+  - feature-docs/mcp-bridge-args-json-exec-guard/SPEC.md
+artifacts:
+- path: feature-docs/mcp-bridge-args-json-exec-guard/REQUIREMENTS.md
+  sha256: sha256:ad202dac6fd26562c5c3ea2793eab15a00d49206c063dc6841b4448ed2ffad57
+  produced_by: create-spec-run-0003
+- path: feature-docs/mcp-bridge-args-json-exec-guard/SPEC.md
+  sha256: sha256:d05af362397a2be074eb4ab232b784ca6fd8923c3b2fbbea0ad5d40df39ebd36
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
