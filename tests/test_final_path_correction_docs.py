@@ -1799,10 +1799,17 @@ PP_PAYLOAD_INTRO = "Prompt payload per task:"
 PP_UNTRUSTED_LABEL = "## Untrusted data"
 PP_PAYLOAD_LINE_NEEDLES = (
     "the integration worktree's feature-docs/{feature}/",
-    "joined with",
+    # plan-path-backslash-binding/task0001: what is joined onto the feature
+    # directory are the segments that path_segments returns for the stored
+    # value, never the stored value as-is.
+    "joined with the segments that path_segments of "
+    "scripts/validate-worker-output.py returns for the stored tasks.{T}.plan value",
     "tasks.{T}.plan",
     "the value the Plan-path check admitted",
 )
+# plan-path-backslash-binding/task0001: the contiguous pre-fix phrase of the
+# task_plan_path line, which joined the stored value as-is.
+PP_PAYLOAD_PRE_FIX_PHRASE = "joined with the stored tasks.{T}.plan value"
 
 # The payload block of Step I.2.a at the base revision, captured verbatim
 # with `git show HEAD:em-workflow/references/implement-phase.md` before this
@@ -1859,6 +1866,16 @@ def _pp_payload_problems(block):
         "the task_plan_path line lacks %r" % n
         for n in _missing(lines[plan_at[0]], PP_PAYLOAD_LINE_NEEDLES)
     ]
+    # plan-path-backslash-binding/task0001: the line holds neither the pre-fix
+    # phrase nor a word about backslashes (the normalization is cited, not
+    # described).
+    if PP_PAYLOAD_PRE_FIX_PHRASE in _norm(lines[plan_at[0]]):
+        problems.append(
+            "the task_plan_path line holds the pre-fix phrase %r"
+            % PP_PAYLOAD_PRE_FIX_PHRASE
+        )
+    if "\\" in lines[plan_at[0]] or "backslash" in lines[plan_at[0]].lower():
+        problems.append("the task_plan_path line names a backslash")
     if "tasks/{T}.md" in block:
         problems.append("the payload block names tasks/{T}.md")
     return problems
@@ -1973,18 +1990,23 @@ PP_RULES = (
             "names at least one segment once `path_segments` normalization is applied",
         ),
     ),
+    # plan-path-backslash-binding/task0001: rules 2 and 3 judge the path that
+    # `task_plan_path` carries, the `path_segments` segments joined onto the
+    # feature directory, not the stored value joined as-is.
     (
         "no symlink",
         (
-            "Joined to the integration worktree's `feature-docs/{feature}` directory",
+            "For the path that `task_plan_path` carries, the `path_segments` "
+            "segments of the stored value joined onto the integration worktree's "
+            "`feature-docs/{feature}` directory",
             "no component of the path, intermediate ones included, is a symlink",
         ),
     ),
     (
         "containment",
         (
-            "The realpath of the joined path lies inside the realpath of "
-            "`feature-docs/{feature}`",
+            "The realpath of that same path, the one `task_plan_path` carries, "
+            "lies inside the realpath of `feature-docs/{feature}`",
         ),
     ),
     (
@@ -1995,6 +2017,14 @@ PP_RULES = (
             "the set the Control-character check above rejects",
         ),
     ),
+)
+
+
+# plan-path-backslash-binding/task0001: phrases of the pre-fix rules 2 and 3,
+# which named the stored value joined as-is as their target.
+PP_AS_IS_PHRASES = (
+    "Joined to the integration worktree's",
+    "the joined path",
 )
 
 
@@ -2063,6 +2093,13 @@ def _pp_rule_problems(paragraph):
         problems += ["rule %r lacks %r" % (name, n) for n in _missing(bullet, needles)]
         if len(re.findall(r"\.(?:\s|$)", bullet)) != 1:
             problems.append("rule %r is not a sentence of its own" % name)
+        # plan-path-backslash-binding/task0001: no rule states its target as
+        # the stored value joined as-is.
+        problems += [
+            "rule %r joins the stored value as-is (%r)" % (name, p)
+            for p in PP_AS_IS_PHRASES
+            if p in bullet
+        ]
     return problems
 
 
@@ -2383,10 +2420,16 @@ PP_2A_STORED = (
     "`tasks/taskNNNN.md` otherwise",
 )
 PP_2A_RESOLVED = (
+    # plan-path-backslash-binding/task0001: the segments that `path_segments`
+    # returns for the stored value are joined, not the stored value as-is.
     "implement phase resolves it to the absolute path of the integration "
-    "worktree's `feature-docs/{feature}/` joined with that value",
+    "worktree's `feature-docs/{feature}/` joined with the segments that "
+    "`path_segments` of `scripts/validate-worker-output.py` returns for that value",
     "behind the Plan-path check of `references/implement-phase.md`",
+    "(cited, not restated here)",
 )
+# plan-path-backslash-binding/task0001: the pre-fix phrase of section 2a.
+PP_2A_AS_IS_PHRASE = "joined with that value"
 PP_2A_RETAINED = (
     "exactly one task entry",
     "task document",
@@ -2433,6 +2476,10 @@ def _pp_2a_problems(section):
         problems.append("the stored value and the resolved path share one sentence")
     if PP_2A_OLD_POINTER in _norm(section):
         problems.append("section 2a still points `plan` at the feature-rooted path")
+    if PP_2A_AS_IS_PHRASE in _norm(section):
+        problems.append(
+            "section 2a still joins the stored value as-is (%r)" % PP_2A_AS_IS_PHRASE
+        )
     return problems
 
 
@@ -2483,8 +2530,10 @@ class TestPlanPathSection2a(unittest.TestCase):
         forged = (
             "The stored `tasks.{T}.plan` value is relative to `feature-docs/{feature}` "
             "and the implement phase resolves it to the absolute path of the "
-            "integration worktree's `feature-docs/{feature}/` joined with that "
-            "value, behind the Plan-path check of `references/implement-phase.md`. "
+            "integration worktree's `feature-docs/{feature}/` joined with the "
+            "segments that `path_segments` of `scripts/validate-worker-output.py` "
+            "returns for that value, behind the Plan-path check of "
+            "`references/implement-phase.md` (cited, not restated here). "
             "`TASK.md` at the `minimal` tier, `tasks/taskNNNN.md` otherwise. "
             + " ".join(PP_2A_RETAINED)
         )
@@ -2499,6 +2548,210 @@ class TestPlanPathSection2a(unittest.TestCase):
             _pp_2a_problems(forged),
             ["section 2a still points `plan` at the feature-rooted path"],
         )
+
+
+# ===========================================================================
+# plan-path-backslash-binding/task0001: the plan path is made from the
+# segments that `path_segments` returns (FR1, FR2, FR3, FR5)
+#
+# The task_plan_path line of Step I.2.a, Plan-path check rules 2 and 3 and the
+# resolution sentence of section 2a state the same derivation. The samples
+# below are the texts that this task rewords, captured verbatim from the base
+# revision with `git show HEAD:<path>` before the edit; every matcher above
+# fails against its sample.
+# ===========================================================================
+
+PP_PRE_FIX_PLAN_LINE = (
+    "task_plan_path: {absolute path to the integration worktree's "
+    "feature-docs/{feature}/ joined with the stored tasks.{T}.plan value, "
+    "the value the Plan-path check admitted}"
+)
+PP_PRE_FIX_RULE_2 = (
+    "- Joined to the integration worktree's `feature-docs/{feature}` directory,\n"
+    "  no component of the path, intermediate ones included, is a symlink.\n"
+)
+PP_PRE_FIX_RULE_3 = (
+    "- The realpath of the joined path lies inside the realpath of\n"
+    "  `feature-docs/{feature}`.\n"
+)
+PP_PRE_FIX_2A_GROUP = (
+    "`implementation-planner` still registers exactly one task entry, whose\n"
+    "`plan` names the task document. The stored `tasks.{T}.plan` value is\n"
+    "relative to `feature-docs/{feature}`: `TASK.md` at the `minimal` tier,\n"
+    "`tasks/taskNNNN.md` otherwise. The implement phase resolves it to the\n"
+    "absolute path of the integration worktree's `feature-docs/{feature}/`\n"
+    "joined with that value, behind the Plan-path check of\n"
+    "`references/implement-phase.md` (cited, not restated here).\n"
+    "This registered `tasks.{T}.plan` value is authoritative for every\n"
+    "downstream consumer: the implement phase resolves the plan document to\n"
+    "read from `tasks.{T}.plan` in `workflow.yaml`, not from a fixed\n"
+    "`tasks/{T}.md` convention, so at the `minimal` tier the path it reads is\n"
+    "this `TASK.md` path.\n"
+)
+
+
+class TestPlanPathBackslashBindingPins(unittest.TestCase):
+    """AC-5 of plan-path-backslash-binding/task0001 (FR5): the pins of the
+    task_plan_path line, rules 2 and 3 and the section 2a resolution sentence
+    require the `path_segments` wording, and each verbatim pre-fix sample is
+    flagged by its matcher."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(PP_IMPLEMENT_DOC)
+        cls.paragraph = _pp_required_paragraph(cls.text)
+        cls.block = _pp_payload_block(cls.text)
+        cls.line = next(
+            line for line in cls.block.split("\n") if line.startswith("task_plan_path:")
+        )
+        cls.section = _pp_2a_section(_read(CREATE_PLAN_DOC))
+
+    def _rule_problems_with(self, at, sample):
+        """Problems of the live paragraph with the bullet `at` (0-based)
+        replaced by the pre-fix `sample` bullet."""
+        mutated = list(_bullets(self.paragraph))
+        mutated[at] = _norm(sample)
+        return _pp_rule_problems("\n".join(["intro"] + mutated))
+
+    # -- the samples are the base text ---------------------------------------
+
+    def test_non_vacuity_the_pre_fix_line_is_the_base_line(self):
+        flat = _norm(PP_PRE_FIX_PLAN_LINE)
+        self.assertIn(PP_PAYLOAD_PRE_FIX_PHRASE, flat)
+        self.assertEqual(
+            _missing(flat, PP_PAYLOAD_LINE_NEEDLES), [PP_PAYLOAD_LINE_NEEDLES[1]]
+        )
+
+    def test_non_vacuity_the_pre_fix_rules_are_one_bullet_of_one_sentence_each(self):
+        for sample in (PP_PRE_FIX_RULE_2, PP_PRE_FIX_RULE_3):
+            with self.subTest(sample=sample[:30]):
+                self.assertEqual(len(_bullets(sample)), 1)
+                self.assertEqual(len(re.findall(r"\.(?:\s|$)", _norm(sample))), 1)
+
+    def test_non_vacuity_the_pre_fix_2a_group_joins_the_value_as_is(self):
+        flat = _norm(PP_PRE_FIX_2A_GROUP)
+        self.assertIn(PP_2A_AS_IS_PHRASE, flat)
+        self.assertEqual(_missing(flat, PP_2A_STORED), [])
+        self.assertEqual(_missing(flat, PP_2A_RESOLVED), list(PP_2A_RESOLVED[:1]))
+
+    # -- the live text states the derivation ---------------------------------
+
+    def test_the_live_line_joins_the_segments_and_not_the_stored_value(self):
+        flat = _norm(self.line)
+        self.assertNotIn(PP_PAYLOAD_PRE_FIX_PHRASE, flat)
+        self.assertIn("path_segments", flat)
+        self.assertIn("scripts/validate-worker-output.py", flat)
+        self.assertNotIn("backslash", flat.lower())
+        self.assertNotIn("\\", flat)
+
+    def test_the_live_rules_two_and_three_name_the_path_that_task_plan_path_carries(
+        self,
+    ):
+        bullets = _bullets(self.paragraph)
+        for at in (1, 2):
+            with self.subTest(rule=PP_RULES[at][0]):
+                self.assertIn("`task_plan_path`", bullets[at])
+                for phrase in PP_AS_IS_PHRASES:
+                    self.assertNotIn(phrase, bullets[at])
+
+    def test_the_live_section_2a_does_not_join_the_value_as_is(self):
+        self.assertNotIn(PP_2A_AS_IS_PHRASE, _norm(self.section))
+        self.assertIn("`path_segments`", _norm(self.section))
+
+    # -- negative proofs: each pre-fix sample is flagged ---------------------
+
+    def test_negative_the_pre_fix_task_plan_path_line_is_flagged(self):
+        forged = self.block.replace(self.line, PP_PRE_FIX_PLAN_LINE, 1)
+        self.assertNotEqual(forged, self.block)
+        self.assertEqual(
+            _pp_payload_problems(forged),
+            [
+                "the task_plan_path line lacks %r" % PP_PAYLOAD_LINE_NEEDLES[1],
+                "the task_plan_path line holds the pre-fix phrase %r"
+                % PP_PAYLOAD_PRE_FIX_PHRASE,
+            ],
+        )
+
+    def test_negative_a_task_plan_path_line_that_names_a_backslash_is_flagged(self):
+        for word in ("backslash", "Backslash", "a\\b"):
+            with self.subTest(word=word):
+                forged = self.block.replace(
+                    self.line, self.line.rstrip("}") + ", " + word + "}", 1
+                )
+                self.assertNotEqual(forged, self.block)
+                self.assertIn(
+                    "the task_plan_path line names a backslash",
+                    _pp_payload_problems(forged),
+                )
+
+    def test_negative_a_task_plan_path_line_missing_its_wording_is_flagged(self):
+        for needle in PP_PAYLOAD_LINE_NEEDLES:
+            with self.subTest(needle=needle):
+                forged_line = _norm(self.line).replace(needle, "")
+                self.assertNotEqual(forged_line, _norm(self.line))
+                forged = self.block.replace(self.line, forged_line, 1)
+                self.assertIn(
+                    "the task_plan_path line lacks %r" % needle,
+                    _pp_payload_problems(forged),
+                )
+
+    def test_negative_the_pre_fix_rule_2_is_flagged(self):
+        problems = self._rule_problems_with(1, PP_PRE_FIX_RULE_2)
+        self.assertEqual(
+            problems,
+            [
+                "rule 'no symlink' lacks %r" % PP_RULES[1][1][0],
+                "rule 'no symlink' joins the stored value as-is (%r)"
+                % PP_AS_IS_PHRASES[0],
+            ],
+        )
+
+    def test_negative_the_pre_fix_rule_3_is_flagged(self):
+        problems = self._rule_problems_with(2, PP_PRE_FIX_RULE_3)
+        self.assertEqual(
+            problems,
+            [
+                "rule 'containment' lacks %r" % PP_RULES[2][1][0],
+                "rule 'containment' joins the stored value as-is (%r)"
+                % PP_AS_IS_PHRASES[1],
+            ],
+        )
+
+    def test_negative_a_rule_that_joins_the_stored_value_as_is_is_flagged(self):
+        bullets = list(_bullets(self.paragraph))
+        for at, phrase in ((1, PP_AS_IS_PHRASES[0]), (2, PP_AS_IS_PHRASES[1])):
+            with self.subTest(rule=PP_RULES[at][0]):
+                mutated = list(bullets)
+                mutated[at] = mutated[at].rstrip(".") + ", " + phrase + "."
+                self.assertNotEqual(mutated[at], bullets[at])
+                self.assertIn(
+                    "rule %r joins the stored value as-is (%r)"
+                    % (PP_RULES[at][0], phrase),
+                    _pp_rule_problems("\n".join(["intro"] + mutated)),
+                )
+
+    def test_negative_the_pre_fix_2a_group_is_flagged(self):
+        live_group = _between(self.section, PP_2A_GROUP_START, PP_2A_GROUP_END)
+        forged = self.section.replace(live_group, PP_PRE_FIX_2A_GROUP, 1)
+        self.assertNotEqual(forged, self.section)
+        self.assertEqual(_missing(forged, PP_2A_RETAINED), [])
+        self.assertEqual(
+            _pp_2a_problems(forged), ["section 2a lacks %r" % PP_2A_RESOLVED[0]]
+        )
+
+    def test_negative_the_pre_fix_phrase_back_in_section_2a_is_flagged(self):
+        forged = self.section + " " + PP_2A_AS_IS_PHRASE
+        self.assertEqual(
+            _pp_2a_problems(forged),
+            ["section 2a still joins the stored value as-is (%r)" % PP_2A_AS_IS_PHRASE],
+        )
+
+    def test_the_older_pre_change_samples_stay_flagged(self):
+        self.assertNotEqual(_pp_payload_problems(PP_PRE_CHANGE_PAYLOAD_BLOCK), [])
+        live_group = _between(self.section, PP_2A_GROUP_START, PP_2A_GROUP_END)
+        forged = self.section.replace(live_group, PP_PRE_CHANGE_2A_GROUP, 1)
+        self.assertNotEqual(forged, self.section)
+        self.assertNotEqual(_pp_2a_problems(forged), [])
 
 
 PP_BATCH_DOC = PLUGIN_ROOT / "references" / "batch-terminal-line.md"

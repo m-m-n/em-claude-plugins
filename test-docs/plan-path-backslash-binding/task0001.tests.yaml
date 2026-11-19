@@ -1,0 +1,54 @@
+task_id: task0001
+baseline_failures:             # 4a: python3 -m unittest discover -s tests -> Ran 16403 tests, FAILED (failures=1, skipped=1), before any file was touched
+  - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCaseTable.test_the_cases_come_after_every_other_case
+final_failures:                # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 16419 tests, FAILED (failures=1, skipped=1); the one failure is the inherited baseline failure, unrelated to this task
+  - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCaseTable.test_the_cases_come_after_every_other_case
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_final_path_correction_docs.TestPlanPathPayloadLine.test_the_live_payload_block_is_sound
+      - tests.test_final_path_correction_docs.TestPlanPathPayloadLine.test_the_line_gives_the_feature_directory_joined_with_the_stored_value
+      - tests.test_final_path_correction_docs.TestPlanPathBackslashBindingPins.test_the_live_line_joins_the_segments_and_not_the_stored_value
+    red_confirmed: true
+    red_reason: "Run against the unchanged implement-phase.md with the pins already updated. test_the_live_payload_block_is_sound failed with AssertionError: Lists differ, the task_plan_path line lacked 'joined with the segments that path_segments of scripts/validate-worker-output.py returns for the stored tasks.{T}.plan value' and held the pre-fix phrase 'joined with the stored tasks.{T}.plan value'. The other two tests failed on the same missing wording. The place of the line (directly after worktree_path, directly before implementation_md_path, before the untrusted-data label) is already pinned by test_exactly_one_task_plan_path_line_before_the_untrusted_data_label, which passed before the change and is a guard."
+  AC-2:
+    tests:
+      - tests.test_final_path_correction_docs.TestPlanPathCheckParagraph.test_it_states_the_four_rules_as_four_bullets_of_one_sentence_each
+      - tests.test_final_path_correction_docs.TestPlanPathCheckParagraph.test_the_symlink_rule_and_the_containment_rule_are_separate_bullets
+      - tests.test_final_path_correction_docs.TestPlanPathBackslashBindingPins.test_the_live_rules_two_and_three_name_the_path_that_task_plan_path_carries
+    red_confirmed: true
+    red_reason: "Run against the unchanged implement-phase.md with the pins already updated. test_it_states_the_four_rules_as_four_bullets_of_one_sentence_each failed with AssertionError: Lists differ, rule 'no symlink' and rule 'containment' lacked the new target wording and each joined the stored value as-is ('Joined to the integration worktree's', 'the joined path'). The other two tests failed on the same missing wording. Rule 1, rule 4 and the paragraph's other sentences are byte-identical to the base revision (git diff -U0 shows only the two bullets changed); the existing needles of test_it_runs_after_the_control_character_check_over_each_selected_task, test_it_states_why_the_path_may_stand_in_the_trusted_part and the TestPlanPathCheckAbort tests pin them and passed before and after."
+  AC-3:
+    tests:
+      - tests.test_final_path_correction_docs.TestPlanPathCheckWording.test_the_paragraph_holds_none_of_the_neighbours_phrases
+      - tests.test_final_path_correction_docs.TestPlanPathCheckParagraph.test_the_paragraph_exists_and_sits_between_its_neighbours
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing TestPlanPathCheckWording and TestPlanPathCheckParagraph detect the forbidden phrases, the condition-marker threshold, the uppercase quantifiers and the place of the paragraph; no red state occurred for this change, because the criterion is a guard that the reworded rules 2 and 3 stay inside limits that already held. Their negative tests (test_negative_each_forbidden_phrase_is_flagged and the placement negatives) prove the matchers can fail."
+  AC-4:
+    tests:
+      - tests.test_final_path_correction_docs.TestPlanPathSection2a.test_the_live_section_is_sound
+      - tests.test_final_path_correction_docs.TestPlanPathSection2a.test_the_resolution_is_cited_from_the_implement_phase
+      - tests.test_final_path_correction_docs.TestPlanPathBackslashBindingPins.test_the_live_section_2a_does_not_join_the_value_as_is
+    red_confirmed: true
+    red_reason: "Run against the unchanged create-plan-phase.md with the pins already updated. test_the_live_section_is_sound failed with AssertionError: Lists differ, section 2a lacked 'implement phase resolves it to the absolute path of the integration worktree's `feature-docs/{feature}/` joined with the segments that `path_segments` of `scripts/validate-worker-output.py` returns for that value'. test_the_live_section_2a_does_not_join_the_value_as_is failed with AssertionError: 'joined with that value' unexpectedly found in the section. test_the_listed_phrases_stay passed before the change and is the guard that the reword keeps the phrases other tests pin."
+  AC-5:
+    tests:
+      - tests.test_final_path_correction_docs.TestPlanPathBackslashBindingPins.test_negative_the_pre_fix_task_plan_path_line_is_flagged
+      - tests.test_final_path_correction_docs.TestPlanPathBackslashBindingPins.test_negative_the_pre_fix_rule_2_is_flagged
+      - tests.test_final_path_correction_docs.TestPlanPathBackslashBindingPins.test_negative_the_pre_fix_rule_3_is_flagged
+      - tests.test_final_path_correction_docs.TestPlanPathBackslashBindingPins.test_negative_the_pre_fix_2a_group_is_flagged
+      - tests.test_final_path_correction_docs.TestPlanPathBackslashBindingPins.test_the_older_pre_change_samples_stay_flagged
+    red_confirmed: false
+    red_reason: "AC-5 is a property of the new tests, not of a document: each matcher gets a negative proof against a verbatim pre-fix sample, and those proofs pass by construction. Against the unchanged documents the sample tests failed only because the live text equalled the sample (the forged copy was identical to the live text), which shows the sample is the base text and not that a matcher fails on wrong wording. The matchers that read the live documents were observed red under AC-1, AC-2 and AC-4."
+  AC-6:
+    tests:
+      - tests.test_final_path_correction_docs
+      - tests.test_canonical_worktree_path_docs
+      - tests.test_prelaunch_inprogress_launch_order
+      - tests.test_prelaunch_failed_launch_state
+      - tests.test_assignment_payload_untrusted_section
+      - tests.test_implementer_untrusted_data_rule
+      - tests.test_tier_phase_preconditions
+      - tests.test_scenario_id_planner_docs
+    red_confirmed: false
+    red_reason: "AC-6 is the result of the full run, python3 -m unittest discover -s tests, with standard-library tests only. The listed modules (the edited module and the seven neighbouring pinned modules) passed before and after the change; no check of this criterion was observed to fail on its own. The full-suite result is recorded in baseline_failures and final_failures: the one inherited failure is unrelated to this task and unchanged."
