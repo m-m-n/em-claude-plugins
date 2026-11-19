@@ -1,0 +1,114 @@
+task_id: task0001
+baseline_failures: []          # 4a, before any edit: python3 em-workflow/hooks/tests/run-destructive-guard.py -> 1375/1375 passed; python3 -m unittest discover -s tests -> Ran 16487 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record (see the Step 4c re-run): the runner passes every case and unittest discover is OK; nothing failing
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >
+      The 23 new cases were committed before any hook change, and
+      run-destructive-guard.py (the runner that existing test executes over the
+      whole table and asserts exits 0) was run against the unchanged hook: it
+      exited 1 with 1381/1398 passed. The 17 new deny and ask cases (TS-1 to
+      TS-8, both TS-15 cases, FR1 payload, FR1 substitution body, TM-1, both
+      TM-2 cases, both TM-5 cases) each FAILed with got=allow rule=None; the 6
+      new allow cases (TS-9 to TS-14) passed, as the plan expected. Every case
+      of the base commit still passed. Each stored command was read back from
+      the case file and compared with the shell text of its task-plan row.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_args_json.TestWalk.test_bodies_of_every_string_at_every_depth_in_document_order
+      - tests.test_destructive_guard_args_json.TestWalk.test_a_key_written_with_a_json_escape_is_the_decoded_key
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_value_forms_are_rebuilt_under_bash_quoting
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_candidate_residue_in_single_quotes_does_not_make_the_word_unreadable
+    red_confirmed: true
+    red_reason: >
+      The same runner run against the unchanged hook: TS-1 to TS-8, the two
+      FR1 cases and the TM-1 case each FAILed with got=allow rule=None where
+      deny is required. The unit tests were run against a copy of the unchanged
+      hook: each ERRORed with AttributeError, module has no attribute
+      '_mcp_bridge_args_json_chunks' (the component did not exist).
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_the_notion_pair_is_not_inspected
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_the_notion_pair_in_another_flag_order_is_not_inspected
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_other_forms_that_read_as_flags_are_inspected
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_the_command_word_that_is_text_of_another_command_is_not_inspected
+    red_confirmed: true
+    red_reason: >
+      The same runner run against the unchanged hook: both TM-5 cases FAILed
+      with got=allow rule=None where deny is required. TS-9, TS-11, TS-12 and
+      the notion regression set passed before the change, as the plan expected:
+      they are pins for the allow verdicts that must not move. The unit tests
+      ERRORed on the copy of the unchanged hook (no
+      '_mcp_bridge_args_json_chunks').
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_forms_outside_the_canonical_flag_sequence_are_not_inspected
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_a_non_static_value_word_is_not_inspected
+      - tests.test_destructive_guard_args_json.TestDocstring.test_o1_and_o2_are_named
+      - tests.test_destructive_guard_args_json.TestDocstring.test_o1_forms
+      - tests.test_destructive_guard_args_json.TestDocstring.test_o2_forms
+    red_confirmed: true
+    red_reason: >
+      The docstring tests and the flag-reading unit tests ERRORed against the
+      copy of the unchanged hook (the component and its docstring did not
+      exist). TS-10, TS-13 and TS-14 are out-of-scope forms that keep their
+      allow verdict: they passed in the runner before the change and are pins
+      (no red state occurred for those three cases).
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_args_json.TestDecoderFailure.test_failure_that_is_not_a_syntax_error_is_overrun
+      - tests.test_destructive_guard_args_json.TestDecoderFailure.test_overrun_ends_the_scan_with_the_scan_budget_ask
+      - tests.test_destructive_guard_args_json.TestDecoderFailure.test_an_integer_the_decoder_refuses_is_overrun
+      - tests.test_destructive_guard_args_json.TestDecoderFailure.test_a_json_syntax_error_is_not_inspected
+      - tests.test_destructive_guard_args_json.TestDecoderFailure.test_a_top_level_that_is_not_an_object_is_not_inspected
+      - tests.test_destructive_guard_args_json.TestDecoderFailure.test_nesting_above_the_bound_is_overrun_before_the_decoder_runs
+      - tests.test_destructive_guard_args_json.TestDecoderFailure.test_nesting_at_the_bound_is_decoded
+      - tests.test_destructive_guard_args_json.TestDecoderFailure.test_brackets_inside_strings_do_not_count_as_nesting
+      - tests.test_destructive_guard_args_json.TestWalk.test_every_top_level_command_string_is_collected_duplicates_included
+      - tests.test_destructive_guard_args_json.TestWalk.test_a_repeated_nested_key_keeps_every_pair
+    red_confirmed: true
+    red_reason: >
+      The same runner run against the unchanged hook: the two TM-2 cases and
+      the TS-15 nesting case each FAILed with got=allow rule=None (deny /
+      ask with reason id scan-budget-exceeded required). The unit tests
+      ERRORed against the copy of the unchanged hook (AttributeError: no
+      '_mcp_bridge_args_json_chunks' / 'ARGS_JSON_OVERRUN').
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_args_json.TestCharge.test_the_charge_covers_the_value_and_every_value_visited
+      - tests.test_destructive_guard_args_json.TestCharge.test_the_charge_grows_with_the_strings_searched
+      - tests.test_destructive_guard_args_json.TestCharge.test_the_charge_of_a_rebuilt_value_counts_its_decoded_length
+      - tests.test_destructive_guard_args_json.TestCharge.test_the_charge_is_added_to_the_scanned_total
+      - tests.test_destructive_guard_args_json.TestPayloadCounter.test_with_the_counter_used_up_the_command_string_is_not_queued
+      - tests.test_destructive_guard_args_json.TestPayloadCounter.test_with_one_count_left_both_are_queued
+      - tests.test_destructive_guard_args_json.TestPayloadCounter.test_each_command_string_takes_one_count
+      - tests.test_destructive_guard_args_json.TestPayloadCounter.test_the_component_returns_the_command_string_and_the_body
+    red_confirmed: true
+    red_reason: >
+      The same runner run against the unchanged hook: the TS-15 chain case
+      FAILed with got=allow rule=None (ask with reason id scan-budget-exceeded
+      required). The payload-counter tests were run against the copy of the
+      unchanged hook: test_with_the_counter_used_up_the_command_string_is_not_queued
+      failed with AssertionError ('echo MARK-BODY' not among the yielded
+      statements, because no body was queued), and the charge tests ERRORed
+      with AttributeError (no component).
+  AC-7:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >
+      The runner with the new cases and the unchanged hook exited 1
+      (1381/1398 passed), so the runner exiting 0 is a check that was seen to
+      fail first. The rest of the criterion (the whole unittest discover run
+      stays green; what "stays unchanged" is unchanged; no file outside the
+      three task files changes) is read off the full test run and the diff
+      against the base commit: no executable check of its own can be made to
+      fail first.
