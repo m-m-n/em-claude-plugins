@@ -105,3 +105,17 @@ records:
     points: inspect every static form the executor accepts including quoted and = forms; duplicates all
     inspected so an overridden value with a destructive command still denies; orchestrator judged the
     mapping; opus_escalation: false'
+- question_id: implement.deviation-auto-addition.task0003
+  packet_id: null
+  answered_at: '2026-11-19T22:58:00+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: decline auto-addition of test-docs/mcp-bridge-args-json-exec-guard/task0001.tests.yaml
+  normalized_answer: declined
+  resolution_note: 'implement wake phase deviation auto-addition rule; task_id: task0003; path: test-docs/mcp-bridge-args-json-exec-guard/task0001.tests.yaml
+    (passes the shape check, not under a workflow control path); missing evidence part: identifier
+    (the deviation names no AC-n of task0003''s plan and no registered requirement id); the observable
+    outcome part was given (tests.test_tests_yaml_id_resolution fails on three renamed test ids); not
+    added to tasks.task0003.files; the containment check handles it as an ordinary deviation; codex_consulted:
+    false; opus_escalation: false'
