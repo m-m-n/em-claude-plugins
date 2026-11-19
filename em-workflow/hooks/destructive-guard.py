@@ -8229,6 +8229,9 @@ def statements(command, unsettled=None, early_stop=None):
     masking_stopped = False
     deferred_python_bodies = []
     command_chunk = True
+    # Raised when an `--args-json` step overran its bounds; the scan-budget ask
+    # is settled once the queue is drained (see the end of the loop).
+    args_json_overran = False
     while pending:
         chunk, anchor, sub_index, py_mark = pending.pop()
         is_command, command_chunk = command_chunk, False
@@ -8624,7 +8627,7 @@ def statements(command, unsettled=None, early_stop=None):
                                 derived_mark,
                             )
                         )
-                if lexed and not args_json_stop:
+                if lexed and not args_json_stop and not args_json_overran:
                     # _mcp_bridge_args_json_chunks() (mcp-bridge-args-json-
                     # exec-guard FR3 to FR5): the decoded `--args-json` value
                     # of an `mcp-bridge run` statement queues the candidate
@@ -8662,11 +8665,12 @@ def statements(command, unsettled=None, early_stop=None):
         # An `--args-json` step that overran (the nesting bound, a decoder
         # failure, or its charge passing the budget above) ends the scan the
         # way the budget does: after the statements of this chunk were yielded.
+        # The ask is held back: the queue the legacy inspection already filled
+        # (substitutions, `-c` bodies) is still processed within the existing
+        # bounds, and the ask is settled after the queue is drained, so a deny
+        # found there is not weakened.
         if args_json_stop:
-            if early_stop is None:
-                ask_scan_budget_exceeded()
-            early_stop.append(SCAN_BUDGET_ASK)
-            return
+            args_json_overran = True
         # The unclosed command forms of this chunk: every level of a nest of
         # them is scanned as a chunk of nearly the whole text, so a deep nest
         # spends the scan budget above on copies of one text, in time that
@@ -8684,6 +8688,10 @@ def statements(command, unsettled=None, early_stop=None):
                 ask_scan_budget_exceeded()
             early_stop.append(SCAN_BUDGET_ASK)
             return
+    if args_json_overran:
+        if early_stop is None:
+            ask_scan_budget_exceeded()
+        early_stop.append(SCAN_BUDGET_ASK)
 
 
 def tokens(segment):
