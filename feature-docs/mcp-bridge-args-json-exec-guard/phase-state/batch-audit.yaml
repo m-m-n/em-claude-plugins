@@ -60,3 +60,48 @@ records:
     JSON commands to ask; FR6/FR8: inspect a static --args-json even with a dynamic destination and send
     values the guard cannot restore to ask, while keeping the notion exclusion (FR2/AC-5) and TS-13 (AC-6);
     opus_escalation: false'
+- question_id: requirement.args-json.payload-counter-exhaustion
+  packet_id: create-spec-q0002
+  answered_at: '2026-11-19T22:10:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - separate_count_fail_closed
+  freeform: null
+  normalized_answer: トップレベルの command は展開数 25 に入れず scan_budget で上限を持つ。-c / eval / ヒアストリングのペイロードを使い切りで積めなかったときは、キューを処理し終えた後に
+    ask（それまでの deny が勝つ）
+  resolution_note: 'gate: create-spec.requirement-clarification (category security -> batch relaxed route);
+    options: separate_count_fail_closed / shared_count_fail_closed / provenance_count_fail_closed; chosen:
+    separate_count_fail_closed; not chosen: shared_count_fail_closed, provenance_count_fail_closed; codex_consulted:
+    true (entry codex, 1 turn); key points: decoded command is checked within the overall scan budget
+    without spending the expansion count; when the count is exhausted, ask after draining if no deny (batch
+    demotes it to deny); orchestrator judged the mapping; opus_escalation: false'
+- question_id: requirement.args-json.ask-reason-id
+  packet_id: create-spec-q0002
+  answered_at: '2026-11-19T22:10:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - budget_for_bounds_new_for_unrestorable
+  freeform: null
+  normalized_answer: 展開数の使い切りは既存の scan-budget-exceeded。復元できない静的な語は新しい理由 ID args-json-unrestorable と専用の文言
+  resolution_note: 'gate: create-spec.requirement-clarification (category security -> batch relaxed route);
+    options: budget_for_bounds_new_for_unrestorable / reuse_scan_budget / new_ids_for_both; chosen: budget_for_bounds_new_for_unrestorable;
+    not chosen: reuse_scan_budget, new_ids_for_both; codex_consulted: true (entry codex, 1 turn); key
+    points: exhaustion is a bound like scan-budget-exceeded; unrestorable static words have a different
+    cause and get args-json-unrestorable; orchestrator judged the mapping; opus_escalation: false'
+- question_id: requirement.args-json.noncanonical-flag-forms
+  packet_id: create-spec-q0002
+  answered_at: '2026-11-19T22:10:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - read_mcp_bridge_forms
+  freeform: null
+  normalized_answer: mcp-bridge が受理する静的な形（引用符付きのフラグ名、= の形、単ダッシュ、-- や位置引数の後ろ）を読み、重複した --args-json はすべての値を検査する
+  resolution_note: 'gate: create-spec.requirement-clarification (category security -> batch relaxed route);
+    options: read_mcp_bridge_forms / keep_out_of_scope / ask_noncanonical; chosen: read_mcp_bridge_forms;
+    not chosen: keep_out_of_scope, ask_noncanonical; codex_consulted: true (entry codex, 1 turn); key
+    points: inspect every static form the executor accepts including quoted and = forms; duplicates all
+    inspected so an overridden value with a destructive command still denies; orchestrator judged the
+    mapping; opus_escalation: false'
