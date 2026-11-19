@@ -1,7 +1,7 @@
 schema_version: 1
 feature: rm-home-parent-ref-recursive-deny
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: 698c5e6f65b266777de3677158519db01362c63f
 last_input_digest: sha256:f8c883515ce2a08e4390cc793d132daddeb68243569aa6b33496a1546664f95f

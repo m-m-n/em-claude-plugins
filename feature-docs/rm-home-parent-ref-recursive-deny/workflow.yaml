@@ -1,0 +1,181 @@
+schema_version: 1
+feature: rm-home-parent-ref-recursive-deny
+created: '2026-11-19'
+base_branch: main
+goal: '# destructive-guard: $HOME の綴りで .. により保護範囲の外に出る rm 対象の再帰削除が、self-modification の ask に飲まれる
+
+
+  種別: セキュリティ (severity: medium)
+
+
+  ## 脆弱性の概要
+
+  `destructive-guard.py` で、`$HOME` の綴りで `..` により保護範囲の外に出る rm の対象は、再帰削除の `deny` にならず `ask` / `self-modification` のまま残る。`~` と絶対パスの綴りでは `deny` / `rm-recursive` になる。
+
+
+  ## 攻撃シナリオ
+
+  HOME=/home/user、`CLAUDE_BATCH` 未設定で `rm -rf "$HOME/.claude/skills/../../valuable"` をフックに渡すと `ask` / `self-modification` になる。`$HOME` を `~` に置き換えると `deny` / `rm-recursive` になる。`CLAUDE_BATCH=1` では `deny` に降格されるが、理由 ID は `self-modification` のまま。
+
+
+  `rm_protected_operand_numbers()` は対象を正しく保護対象から外すが、`check_rm()` は `$HOME` を未解決の展開として扱い `ask` / `rm-unresolvable` を記録する。`main()` の選択順では保持済みの `self-modification` の `ask` が rm の `ask` より先に選ばれる。
+
+
+  ## 影響範囲
+
+  対話実行では自己設定への書き込みを理由にした確認だけが表示され、その承認で保護対象外の再帰削除も実行できる。判定は変更前と同じで、feature `rm-parent-ref-self-config-deny` の review round 1 で medium として検出した（回帰ではない）。
+
+
+  ## 完了の定義
+
+  - [ ] 上の `$HOME` の綴りで、self-modification の確認だけに飲まれない（理由 ID が self-modification 以外になる）
+
+  - [ ] `$HOME` を未解決として扱う既存の固定ケース（`HOME=/tmp/x; ... rm -rf $HOME` 等）を壊さない
+
+  - [ ] 通常経路・置換が文頭の経路・`CLAUDE_BATCH` の回帰ケースを rule 付きでケース表に足し、`python3 em-workflow/hooks/tests/run-destructive-guard.py` が全件通る
+
+
+  ## 該当箇所
+
+  `em-workflow/hooks/destructive-guard.py` の `check_rm()` と `main()` の判定の選択順
+
+
+  ## 暫定緩和策
+
+  自己設定パスと `$HOME/...` の `..` を含むパスを並べた rm の確認を、対話実行で承認しない。
+
+  '
+parent_branch: em-workflow/rm-home-parent-ref-recursive-deny/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.95
+      '2': 0.05
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.92
+      '2': 0.08
+      '3': 0.0
+  at: '2026-11-19T19:28:39+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: a1daea8561803fafe3da4c12927ddfecc3b73c0d
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'UI を持たないフックのスクリプトの修正、design-system 候補 0 件（create-spec.design-step: decide_autonomously -> skipped）。tier reduced でも design step は削減対象'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: 条件を満たす対象がある文では、rm の ask を self-modification の ask より先に選ぶ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: 両方の経路に効かせる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: $HOME を未解決として扱う判定は変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: 選択順の説明と規則を直す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: 回帰ケースを足す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: 変わる向き
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 決定性
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: 性能
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: version
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
