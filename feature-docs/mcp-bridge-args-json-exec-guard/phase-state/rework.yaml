@@ -69,7 +69,7 @@ worker_runs:
   - feature-docs/mcp-bridge-args-json-exec-guard/VERIFICATION.md
   - feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0005.md
 - request_id: rework-run-0004
-  status: dispatched
+  status: needs_user_input
   source: verify
   verify_round: 1
   input_digest: sha256:2f789c7441d62b5eab998d11d1fb57eaf15395a133fe54d51bd8c16c10df5ecb
@@ -89,13 +89,23 @@ worker_runs:
     feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0004.md: sha256:43bb71f55214287739f130a074dd2a3cd7c6903e7b892afe2c30fe5381201e7a
     feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0005.md: sha256:a0b1dc62d19f66cdd8fd40a4927349d62565ccebef5e265fc956d4dd2dcf9c42
     feature-docs/mcp-bridge-args-json-exec-guard/workflow.yaml: sha256:4a16c09fb08198949d3e2e5450773958e06a3e780393eedb98f2c8af5c51cf8b
-status: in_progress
+  self_write_set: []
+status: completed
 packets:
 - packet_id: rework-q0001
   status: answered
   request_id: rework-run-0001
   questions:
   - question_id: rework.spec-change.round1
+    gate_id: rework.spec-change
+    status: answered
+- packet_id: rework-q0002
+  status: answered
+  request_id: rework-run-0004
+  issued_at: '2026-11-20T00:38:26+09:00'
+  worker_packet_id: rework-q0001
+  questions:
+  - question_id: rework.spec-change.ts19-pre-change
     gate_id: rework.spec-change
     status: answered
 answers:
@@ -114,15 +124,29 @@ answers:
     harness, 1 turn). Codex: change-spec; verdict (a) under the current SPEC; basis FR5/AC-2, NFR2/AC-8,
     FR6/FR8, FR2/AC-5, AC-6. Orchestrator mapped the suggestion to option change-spec. Opus escalation:
     not run.'
+- question_id: rework.spec-change.ts19-pre-change
+  packet_id: rework-q0002
+  answered_at: '2026-11-20T00:38:26+09:00'
+  source: batch-classification-gate
+  answer_mode: single_select
+  selected_option_ids:
+  - change-spec
+  freeform: null
+  normalized_answer: change-spec
+  resolution_note: 'classification gate (classification entry 2): goal block present; origin verification
+    passed (AC-11, NFR3 are members of verify.failed_items); direction 2 not tripped (bound set categories
+    spec, spec; no reversible:false). Codex verdict (b) spec_gap citing AC-1, AC-2, FR5, FR7 (divergence
+    in AC-11, NFR3, TS-19); Claude convinced -> change-spec. The worker returned packet_id rework-q0001,
+    already used in this feature; the orchestrator recorded it as rework-q0002.'
 spec_change:
-  reason: 'review round 1: residual high findings need SPEC A4 / FR6 / FR8 revisions (payload-counter
-    exhaustion leaves JSON commands unchecked; dynamic destination / unrestorable ANSI-C skips static
-    --args-json); batch classification gate resolved to change-spec via the relaxed route'
-  origin_kind: review
-  origin_id: 32aa9e6e947c325d
-  recorded_at_commit: 0a6fe0dc37e71b6574031f0bc433bc5d187cdf60
-  consumed: true
-  replan_authorized: false
+  reason: 'verify round 1: SPEC AC-11 / TS-19 / NFR3 state TS-19 is allow before the change, but the base-commit
+    hook gives deny (it never decodes --args-json, so the trailing bash -c payload is caught); correct
+    the pre-change expectation of TS-19 to deny and drop it from the NFR3 reproduction set; no code change'
+  origin_kind: verify
+  origin_id: AC-11
+  recorded_at_commit: a05479704a7423314ecef809f03c856407cd30ce
+  consumed: false
+  replan_authorized: true
 classification:
 - classifier: codex
   verdict: goal_not_met
@@ -140,6 +164,19 @@ classification:
   reason: 'batch relaxed route (direction 2: the round''s bound set contains security findings): resolved
     by the batched Codex consultation, which recommended change-spec because the current SPEC A4 / FR6
     / FR8 let the goal''s attack scenario stand'
+- classifier: codex
+  verdict: spec_gap
+  evidence_ids:
+  - AC-1
+  - AC-2
+  - FR5
+  - FR7
+  - AC-11
+  - NFR3
+  - TS-19
+  decision: proceed
+  reason: 'Codex verdict (b): the implementation satisfies the goal (AC-1, AC-2, FR5, FR7 met; TS-19 deny
+    after the change) but SPEC AC-11 / NFR3 / TS-19 misstate the pre-change result of TS-19'
 artifacts:
 - path: feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0005.md
   sha256: sha256:a0b1dc62d19f66cdd8fd40a4927349d62565ccebef5e265fc956d4dd2dcf9c42
