@@ -148,3 +148,21 @@ records:
     not chosen: pass-as-doc-inaccuracy; codex_consulted: true (codex, 1 turn); key points: the pre-change
     allow is a stated verification condition, passing would falsify verification, rework should only correct
     the documented pre-change expectation; opus_escalation: false'
+- question_id: review.round4.loop2.regressing-fix
+  packet_id: null
+  answered_at: '2026-11-20T02:05:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - revert-regressing-fix-only
+  freeform: null
+  normalized_answer: revert only the 3f7145c6c8c0b26a application, commit the other two loop-2 fixes
+  resolution_note: 'unlisted orchestrator decision in review round 4 auto-fix loop 2: the applied fix for
+    3f7145c6c8c0b26a (notion pair spoofing by an unquoted expansion) made the canonical notion pair exclusion
+    fail, turning six existing allow runner cases (TS-2, TS-9, TS-3, TS-4, TS-22 x2) and four unit tests
+    into failures; Phase R4 does not define the handling of an applied fix that breaks tests; options:
+    commit-all (A) / revert-regressing-fix-only (B) / revert-whole-loop (C); chosen: B; not chosen: A, C;
+    codex_consulted: true (codex, 1 turn); key points: the failures come only from the 3f7145c6c8c0b26a
+    change, removing it restores 1412/1412 runner cases, A would ship false denies that stop unattended
+    runs, C would discard two non-regressing fixes; 3f7145c6c8c0b26a is aborted for the auto-fix loop and
+    stays an open high; opus_escalation: false'
