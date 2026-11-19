@@ -38,3 +38,20 @@ records:
   opus_escalation: false
   resolution_note: project.components のコマンド python3 -m unittest discover -s tests
     は bash_guard に承認済み。新たな自動承認は無い。
+- question_id: verify.preexisting-suite-failure
+  packet_id: null
+  answered_at: '2026-11-19T10:08:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: select_or_freeform
+  selected_option_ids:
+  - fail_and_rework
+  freeform: null
+  normalized_answer: record verify as fail with failed item AC-7 and run the batch
+    auto-rework
+  resolution_note: 'gate: verify result when the only full-suite failure predates
+    the feature (unlisted-gate fallback); options: fail_and_rework (A) / pass_out_of_scope
+    (B); codex_consulted: true; Codex chose A: AC-7 requires the full suite to pass,
+    and a pre-existing failure still leaves it unmet; taking B would need an explicit
+    waiver of AC-7. Orchestrator adopted A. Failing test: tests.test_destructive_guard_mixed_rm_precedence
+    TestPerTargetCaseTable.test_the_cases_come_after_every_other_case; it also fails
+    at implement.base_commit and on main.'
