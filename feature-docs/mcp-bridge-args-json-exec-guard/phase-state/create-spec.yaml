@@ -1,0 +1,20 @@
+schema_version: 1
+feature: mcp-bridge-args-json-exec-guard
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: 3059fe1dcd799b3bc02c5c4fc5c22eca4b6197d1
+last_input_digest: sha256:854e453ab582238f9d55d6df701573bb0d6f4b0b1902e5d73567897d6c1e89d6
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: dispatched
+    input_digest: sha256:854e453ab582238f9d55d6df701573bb0d6f4b0b1902e5d73567897d6c1e89d6
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
