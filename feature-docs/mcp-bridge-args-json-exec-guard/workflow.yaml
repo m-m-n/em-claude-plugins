@@ -135,9 +135,9 @@ workflow:
   status: completed
   completed_at_commit: a604d5a5c95fe0d89dc50f5ec46f37977bb56920
 - id: verify
-  status: in_progress
+  status: failed
   result: fail
-  round: 1
+  round: 2
   passed_ids:
   - TS-1
   - TS-2
@@ -179,12 +179,12 @@ workflow:
   - AC-8
   - AC-9
   - AC-10
+  - AC-11
   - AC-12
   - AC-13
   - AC-14
   - AC-15
   - AC-16
-  - AC-17
   - TM-1
   - TM-2
   - TM-3
@@ -194,14 +194,14 @@ workflow:
   - TM-7
   - TM-8
   - NFR1
+  - NFR3
   - NFR4
   - NFR5
   failed_items:
-  - id: AC-11
-    note: TS-19 の変更前の期待値は allow だが、ベースコミットのフックでの実測値は deny（--args-json を復号しないため後続の bash -c が最初のシェルペイロードとして検査される）。変更後の TS-19 は deny で合格
-    category: spec
-  - id: NFR3
-    note: 変更前の再現で TS-19 が allow の失敗として報告される前提だが、ベースコミットのフックでは deny で合格する。他の新しい deny / ask ケースは期待どおり allow で失敗した
+  - id: AC-17
+    note: tests/test_destructive_guard_args_json.py の TestFlagReading.test_a_flag_position_word_that_is_not_static_is_not_inspected の subTest
+      'equals form with a destination'（`mcp-bridge run --mcp="$S" --args-json ...`）が KIND_NOTHING を期待するが、review round 4 loop 1 の修正後の実装は
+      KIND_INSPECTED を返す（SPEC FR3 / FR13 では静的でない宛先と `=` の形は検査する）。unittest discover は 16601 件中 1 件失敗。ケースランナーは全件合格
     category: spec
 - id: retrospect
   status: pending
@@ -614,10 +614,11 @@ requirements:
 batch:
   review_rework_count: 1
   verify_rework:
-    rounds: 1
+    rounds: 2
     failed_id_counts:
       AC-11: 1
       NFR3: 1
+      AC-17: 1
   infra_resume:
     rounds: 0
     cap: 2
