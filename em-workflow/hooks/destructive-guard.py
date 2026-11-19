@@ -10498,6 +10498,39 @@ def rm_protected_operand_numbers(args):
     return protected
 
 
+def has_qualifying_rm_operand(args, records, protected):
+    """Whether the rm invocation whose operand basis is ARGS has a qualifying
+    operand (rm-home-parent-ref-recursive-deny): a deletion target -- a
+    counted operand, as _number_rm_operands() numbers them, that does not
+    start with `-`, the same set rm_protected_operand_numbers() judges -- that
+    meets all three conditions. (a) Its raw form matches SELF_CONFIG. (b) Its
+    number is not in PROTECTED, the set rm_protected_operand_numbers() returns
+    for ARGS: once `..` is folded it is no longer a protected self-config path.
+    (c) RECORDS, the rm records of the same invocation as check_rm() or
+    route_substitution_headed_statement() returned them, before the protected
+    operands were filtered out, hold a record with the reason id
+    `rm-unresolvable` and that operand number: the operand holds an expansion
+    the hook cannot settle statically. ARGS, RECORDS and PROTECTED must come
+    from the same basis, so that the operand numbers mean the same thing in all
+    three. main() uses the answer to let the statement's self-modification
+    `ask` yield to the rm `ask`. The function has no side effects and no
+    file-system access: `$HOME` and `~` are not expanded with the hook's HOME,
+    and the same inputs always give the same answer. The work is linear in the
+    number of operands plus the number of records."""
+    unresolvable = {r.number for r in records if r.rule == "rm-unresolvable"}
+    if not unresolvable:
+        return False
+    for number, operand in _number_rm_operands(args):
+        if (
+            number in unresolvable
+            and number not in protected
+            and not operand.startswith("-")
+            and SELF_CONFIG.search(operand)
+        ):
+            return True
+    return False
+
+
 def scanned_statements(command, unsettled, early_stop):
     """statements() for main(): the same statements, and when the scan ends
     early the reason is recorded instead of raised. A scan-budget overrun is
@@ -10568,6 +10601,12 @@ def main(payload):
     rm_records = []
     held_asks = []
     early_stop = []
+    # rm-home-parent-ref-recursive-deny: the positions in HELD_ASKS of the
+    # self-modification asks that yield to the rm `ask` at the resolution step,
+    # those a statement holds when its own rm has a qualifying operand
+    # (has_qualifying_rm_operand()). The held entries themselves are not
+    # rewritten; only the resolution step reads this set.
+    yields_to_rm_ask = set()
 
     # destructive-guard-rm-reason-positions: the anchor of every rm
     # invocation the loop below establishes — the origin position (see
@@ -10636,11 +10675,29 @@ def main(payload):
             # another statement (a substitution body, a payload, a heredoc
             # body) leaves every record in. The invocation keeps its place in
             # rm_invocations, so ordinals and target numbers still count the
-            # left-out targets.
+            # left-out targets. A qualifying operand is not left out: a
+            # deletion target of the same rm whose raw form matches the
+            # protected self-config pattern, which is not protected once `..`
+            # is folded, and whose records hold rm-unresolvable (it holds an
+            # expansion that cannot be settled statically,
+            # has_qualifying_rm_operand()). Its records stay in the pool, and
+            # it makes this statement's self-modification `ask` yield to the
+            # rm `ask` at the resolution step below, so the verdict names the
+            # rm-unresolvable operand and not the self-modification of the
+            # protected path beside it. The unit is still the target: an rm
+            # `deny` of the other targets wins over both asks as before.
             self_modification_asked = any(
                 rule == "self-modification"
                 for _tier, rule, _reason in held_asks[held_before:]
             )
+            # The positions in held_asks of the self-modification asks this
+            # statement added: the ones that yield when it has a qualifying
+            # operand. Other asks of the statement are not among them.
+            self_modification_slots = [
+                index
+                for index in range(held_before, len(held_asks))
+                if held_asks[index][1] == "self-modification"
+            ]
 
             # task0001 FR1/FR2/FR3 (AS-2), rebuilt by task0002 FR1/FR2/FR3/FR11/
             # FR13: a statement whose command word is a `.substitution_only`
@@ -10679,6 +10736,10 @@ def main(payload):
                 substitution_headed_rm = len(rm_invocations) > invocations_before
                 if self_modification_asked and substitution_headed_rm:
                     left_out = rm_protected_operand_numbers(shaped_words[skip_index:])
+                    if has_qualifying_rm_operand(
+                        shaped_words[skip_index:], records, left_out
+                    ):
+                        yields_to_rm_ask.update(self_modification_slots)
                     records = [r for r in records if r.number not in left_out]
                 rm_records.extend(records)
 
@@ -10712,6 +10773,8 @@ def main(payload):
                     records = check_rm(args, rm_anchor)
                     if self_modification_asked:
                         left_out = rm_protected_operand_numbers(args)
+                        if has_qualifying_rm_operand(args, records, left_out):
+                            yields_to_rm_ask.update(self_modification_slots)
                         records = [r for r in records if r.number not in left_out]
                     rm_records.extend(records)
             else:
@@ -10732,7 +10795,15 @@ def main(payload):
     #     winner is, else rm-recursive), whatever the order of the segments
     #     and whatever held ask stands beside it. Its reason is the rm reason
     #     alone: no text of any other check, no demotion sentence;
-    #  2. the first held ask;
+    #  2. the first held ask -- except that a self-modification `ask` held by
+    #     a statement whose own rm has a qualifying operand
+    #     (has_qualifying_rm_operand(): a deletion target whose raw form
+    #     matches the protected self-config pattern, which is not protected
+    #     once `..` is folded, and which is rm-unresolvable) yields to the rm
+    #     `ask` when it is the first held ask. The verdict is then the rm
+    #     `ask` the pool gives (the one of step 6), reason id rm-unresolvable,
+    #     and not the self-modification `ask`. The asks of other statements
+    #     keep their rank;
     #  3. the early-stop ask;
     #  4. the ask of a chunk that could not be read, after a normal end;
     #  5. the PR merge fallback ask;
@@ -10749,6 +10820,8 @@ def main(payload):
     if top is not None and top[0] == "deny":
         decide(*top)
     if held_asks:
+        if 0 in yields_to_rm_ask and top is not None and top[0] == "ask":
+            decide(*top)
         decide(*held_asks[0])
     if early_stop:
         decide("ask", *early_stop[0])

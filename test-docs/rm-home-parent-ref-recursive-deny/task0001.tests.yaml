@@ -1,0 +1,142 @@
+task_id: task0001
+baseline_failures: []          # 4a, before any file was touched: python3 em-workflow/hooks/tests/run-destructive-guard.py -> 1375/1375 passed; python3 -m unittest discover -s tests -> Ran 16487 tests, OK (skipped=1)
+final_failures: []             # re-executed after the implementation and after this record was written: runner 1391/1391 passed; unittest discover -> Ran 16540 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_home_parent_ref.TestVerdictsUnderAFixedHome.test_the_scenarios_give_their_decision_and_reason_id
+      - tests.test_destructive_guard_home_parent_ref.TestCasesPassAgainstTheHook.test_every_case_of_the_feature_passes
+      - tests.test_destructive_guard_home_parent_ref.TestReasonText.test_the_reason_equals_the_reason_of_an_unprotected_expansion_operand
+      - tests.test_destructive_guard_home_parent_ref.TestReasonText.test_the_reason_carries_no_self_modification_text
+      - tests.test_destructive_guard_home_parent_ref.TestQualifyingOperandHelper.test_a_parent_ref_operand_out_of_the_protected_area_qualifies
+      - tests.test_destructive_guard_home_parent_ref.TestQualifyingOperandHelper.test_the_tilde_spelling_qualifies
+    red_confirmed: true
+    red_reason: >
+      Run against the unchanged hook with the new cases and module already in
+      place. Scenarios 1, 2, 3, 7, 12 and 15 each failed with AssertionError:
+      Tuples differ: ('ask', 'self-modification') != ('ask', 'rm-unresolvable');
+      the reason-text equality test failed because the TS-1 reason was the
+      self-modification reason; the helper tests failed with AttributeError:
+      module has no attribute 'has_qualifying_rm_operand'.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_home_parent_ref.TestVerdictsUnderAFixedHome.test_the_scenarios_give_their_decision_and_reason_id
+      - tests.test_destructive_guard_home_parent_ref.TestCasesPassAgainstTheHook.test_every_case_of_the_feature_passes
+      - tests.test_destructive_guard_home_parent_ref.TestReasonText.test_the_demotion_sentence_is_added_only_under_claude_batch
+    red_confirmed: true
+    red_reason: >
+      Against the unchanged hook, scenarios 4, 5 and the batch case of 9 failed
+      with AssertionError: Tuples differ: ('deny', 'self-modification') !=
+      ('deny', 'rm-unresolvable'), and the non-batch case of 9 failed with
+      ('ask', 'self-modification') != ('ask', 'rm-unresolvable'). The
+      demotion-sentence test passed before the change: it pins that the
+      demotion still happens only in decide(), after the choice.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_home_parent_ref.TestSubstitutionHeadedPath.test_a_qualifying_operand_beside_a_protected_one_gives_the_rm_ask
+      - tests.test_destructive_guard_home_parent_ref.TestSubstitutionHeadedPath.test_a_qualifying_operand_alone_gives_the_rm_ask
+      - tests.test_destructive_guard_home_parent_ref.TestSubstitutionHeadedPath.test_with_claude_batch_the_rm_ask_is_demoted_after_the_choice
+      - tests.test_destructive_guard_home_parent_ref.TestQualifyingOperandHelper.test_the_numbers_follow_the_double_dash_rule
+      - tests.test_destructive_guard_home_parent_ref.TestCasesPassAgainstTheHook.test_every_case_of_the_feature_passes
+    red_confirmed: true
+    red_reason: >
+      The TS-6 command itself (no redirect) already gave ask / rm-unresolvable
+      on the unchanged hook: on the substitution-headed path no
+      self-modification ask is held without a redirect to a protected file, so
+      that case is a pin. The path's own check is reached only when the
+      statement holds one, so the module also runs the TS-6 form with
+      `> ~/.claude/settings.json` appended. Against the unchanged hook those
+      tests failed with AssertionError: Tuples differ: ('ask',
+      'self-modification') != ('ask', 'rm-unresolvable') (and ('deny',
+      'self-modification') != ('deny', 'rm-unresolvable') with CLAUDE_BATCH).
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_home_parent_ref.TestCasesPassAgainstTheHook.test_every_case_of_the_feature_passes
+      - tests.test_destructive_guard_home_parent_ref.TestForwardRankOfEarlierStatements.test_an_earlier_git_amend_ask_stays_first
+      - tests.test_destructive_guard_home_parent_ref.TestForwardRankOfEarlierStatements.test_an_earlier_self_modification_ask_of_another_statement_stays_first
+      - tests.test_destructive_guard_home_parent_ref.TestForwardRankOfEarlierStatements.test_the_rm_deny_still_wins_over_an_earlier_held_ask
+      - tests.test_destructive_guard_home_parent_ref.TestSubstitutionHeadedPath.test_a_protected_operand_alone_keeps_the_self_modification_ask
+      - tests.test_destructive_guard_home_parent_ref.TestQualifyingOperandHelper.test_a_protected_operand_alone_does_not_qualify
+      - tests.test_destructive_guard_home_parent_ref.TestQualifyingOperandHelper.test_an_operand_whose_raw_form_matches_nothing_does_not_qualify
+    red_confirmed: false
+    red_reason: >
+      The forms of this criterion (TS-8, TS-10, TS-11, TS-13, TS-14 and the two
+      TS-18 forms) are the decisions that must not move, and every one of
+      their checks passed on the unchanged hook before any implementation
+      existed, as the plan expected for TS-8, TS-10, TS-11, TS-13 and TS-14
+      and as the hook gave for TS-18. No executable check of "keeps its
+      verdict" can be red before the change; the existing tests of this
+      area (test_destructive_guard_mixed_rm_precedence,
+      test_destructive_guard_parent_ref) detect the same behavior for the
+      neighbouring forms; no red state occurred for this change.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_home_parent_ref.TestCaseTable.test_there_are_16_cases
+      - tests.test_destructive_guard_home_parent_ref.TestCaseTable.test_the_cases_form_one_unbroken_run_right_after_the_earlier_cases
+      - tests.test_destructive_guard_home_parent_ref.TestCaseTable.test_every_earlier_case_is_present_unchanged_and_in_its_place
+      - tests.test_destructive_guard_home_parent_ref.TestCaseTable.test_every_case_has_four_elements_and_a_rule
+      - tests.test_destructive_guard_home_parent_ref.TestCaseTable.test_every_label_starts_with_the_prefix_and_a_japanese_description
+      - tests.test_destructive_guard_home_parent_ref.TestCaseTable.test_no_case_names_a_machine_specific_path
+      - tests.test_destructive_guard_home_parent_ref.TestCaseTable.test_the_batch_key_is_set_on_ts_4_ts_5_and_the_batch_case_of_ts_9_only
+      - tests.test_destructive_guard_home_parent_ref.TestCaseTable.test_the_cases_are_exactly_the_scenarios_in_order
+      - tests.test_destructive_guard_home_parent_ref.TestCasesPassAgainstTheHook.test_every_case_of_the_feature_passes
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >
+      The run of every case of the feature, judged the way the runner judges
+      it (TestCasesPassAgainstTheHook), was observed failing on the unchanged
+      hook for TS-1, TS-2, TS-3, TS-4, TS-5, TS-7, both TS-9 cases, TS-12 and
+      TS-15 (got self-modification where rm-unresolvable is required). The
+      table-shape tests were written together with the cases, before any hook
+      change, and passed on first run, so they are pins and no red was
+      observed for them; the existing test_runner_reports_every_case_passing
+      runs the whole table through run-destructive-guard.py and was not run
+      separately against the unchanged hook.
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_home_parent_ref.TestComments.test_the_selection_order_comment_states_the_exception_at_step_2
+      - tests.test_destructive_guard_home_parent_ref.TestComments.test_the_exclusion_comment_says_a_qualifying_operand_is_not_left_out
+      - tests.test_destructive_guard_home_parent_ref.TestRuleDocument.test_there_is_exactly_one_bullet_about_rm_unresolvable
+      - tests.test_destructive_guard_home_parent_ref.TestRuleDocument.test_the_bullet_states_the_exception
+      - tests.test_destructive_guard_home_parent_ref.TestRuleDocument.test_the_bullet_does_not_say_a_protected_target_replaces_the_verdict
+      - tests.test_destructive_guard_home_parent_ref.TestRuleDocument.test_the_bullet_stands_after_the_same_rm_bullet_and_before_the_demotion
+      - tests.test_destructive_guard_home_parent_ref.TestRuleDocument.test_the_existing_bullets_are_still_there
+      - tests.test_destructive_guard_mixed_rm_precedence.TestDescriptionsAreCurrent.test_the_comment_before_the_emission_describes_the_held_asks
+      - tests.test_destructive_guard_mixed_rm_precedence.TestDescriptionsAreCurrent.test_the_comment_before_the_emission_names_the_target_as_the_unit
+      - tests.test_destructive_guard_mixed_rm_precedence.TestDescriptionsAreCurrent.test_the_comment_above_the_exclusion_names_the_target_as_the_unit
+      - tests.test_destructive_guard_mixed_rm_precedence.TestDescriptionsAreCurrent.test_the_phrases_the_numbering_tests_pin_are_kept
+      - tests.test_hook_tests_rule_key_doc.TestMixedCaseGuidance.test_per_target_exclusion_leaves_out_only_the_protected_targets
+    red_confirmed: true
+    red_reason: >
+      Against the unchanged comments and rule document, the two comment tests
+      failed with AssertionError: 'qualifying operand' not found in the
+      comment block, and the bullet tests failed (AssertionError: 0 != 1, no
+      bullet mentions rm-unresolvable). The existing comment-pin and rule-key
+      tests are the pins the change had to keep passing; they were green
+      before and after.
+  AC-7:
+    tests:
+      - tests.test_destructive_guard_home_parent_ref.TestDeterminism.test_the_output_is_byte_identical_across_two_runs
+      - tests.test_destructive_guard_home_parent_ref.TestStructure.test_the_helper_is_called_once_per_rm_path_and_only_from_main
+      - tests.test_destructive_guard_home_parent_ref.TestStructure.test_the_helper_reads_no_filesystem_and_expands_nothing
+      - tests.test_destructive_guard_parent_ref.TestRuleLivesInOneFunction.test_both_call_sites_call_the_one_function_with_the_same_shape
+    red_confirmed: false
+    red_reason: >
+      The parts of this criterion that are a comparison against the task base
+      (no line of check_rm(), check_self_modification(),
+      rm_protected_operand_numbers(), fold_parent_refs(),
+      normalize_candidate() or decide() changed; neither plugin manifest in
+      the change set) have no executable check that can fail before the
+      change: the plan says to verify them with a diff against the task base,
+      not with a permanent source-digest test, and they were verified that
+      way (a per-function comparison of the source at the task base and now
+      showed check_rm, check_self_modification, rm_protected_operand_numbers,
+      fold_parent_refs, normalize_candidate, decide,
+      route_substitution_headed_statement and strongest_rm_decision unchanged,
+      main changed and has_qualifying_rm_operand added; git status lists no
+      manifest). The determinism test passed on the unchanged hook (it pins
+      behavior that pre-existed) and the two structure tests failed before the
+      change only because the helper did not exist; no red was observed for
+      the determinism and the unchanged-function parts of this criterion.
+      python3 -m unittest discover -s tests passing in full is the run of the
+      project test command itself.
