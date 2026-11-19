@@ -135,7 +135,7 @@ workflow:
   completed_at_commit: 4dc8609bb110f992a02567181f46f22bbcacb12d
   base_commit: 4b4dd2cf59441cb5adad8beb855c5905bd10716b
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
 - id: retrospect
@@ -190,8 +190,18 @@ tasks:
     branch: em-workflow/mcp-bridge-args-json-exec-guard/task0002
     notes: null
 review:
-  status: pending
+  status: in_progress
   rounds_completed: 0
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary:
+    - perspective: performance
+      reason: フックは全 Bash 呼び出しで走り、JSON 復号と再走査の走査量上限（FR7 / NFR1）が差分の中心にあるため
+    cross_validation: true
 requirements:
   FR1:
     title: 対象の文
