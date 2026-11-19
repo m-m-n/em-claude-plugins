@@ -138,6 +138,14 @@ tasks:
     notes: null
 review:
   status: pending
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
 requirements:
   FR1:
     title: '`..` で保護範囲の外に出る対象を保護パスとみなさない'
