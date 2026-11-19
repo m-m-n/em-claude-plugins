@@ -1,11 +1,11 @@
 schema_version: 1
 feature: rm-parent-ref-self-config-deny
 phase: rework
-status: applying_patch
+status: completed
 generation: 1
 base_revision: e4ea8fa3d650948247c5db75f4f11f4015bdfce2
 last_input_digest: sha256:97dbac625d6dd68785fca965047561aef1d82f2fdabb33d1f4c5aec2b48d6941
-active_request_id: rework-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -32,7 +32,7 @@ artifacts:
   produced_by: rework-run-0001
 patches:
 - patch_id: rm-parent-ref-self-config-deny-rework-p0001
-  status: validated
+  status: applied
   base_input_digest: sha256:97dbac625d6dd68785fca965047561aef1d82f2fdabb33d1f4c5aec2b48d6941
   base_workflow_blob: 638b48c95fa832ad92f819fefea8a731dd37af46
 progress_fingerprint: null

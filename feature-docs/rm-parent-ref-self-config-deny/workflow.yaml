@@ -100,14 +100,14 @@ workflow:
   status: completed
   completed_at_commit: cc23cd9dbfe536316ad3d9ffb95819720c76999a
 - id: implement
-  status: completed
+  status: pending
   base_commit: c790f5cd022ce19409feb0b69c94e0ad1124a95b
   completed_at_commit: 74e363197695978426777b652252f2b7c33ec754
 - id: review
-  status: completed
+  status: pending
   completed_at_commit: 0aff495c60b733fa8b1d1d6dabeb7c9659d60c20
 - id: verify
-  status: failed
+  status: pending
   result: fail
   round: 1
   passed_ids: [TS-1, TS-2, TS-3, TS-4, TS-5, TS-6, TS-7, TS-8, TS-9, TS-10, TS-11, TS-12, AC1, AC2, AC3, AC4, AC5, NFR4, FR3, FR4, NFR2, NFR3, TM-1, TM-2]
@@ -143,6 +143,19 @@ tasks:
     - NFR4
     status: merged
     branch: em-workflow/rm-parent-ref-self-config-deny/task0001
+    notes: null
+  task0002:
+    title: Let later features append cases after mixed-rm-self-config-deny's run in the case table
+    plan: tasks/task0002.md
+    files:
+    - tests/test_destructive_guard_mixed_rm_precedence.py
+    skills: []
+    domains:
+    - config-infra
+    complexity: low
+    requirements:
+    - FR5
+    status: pending
     notes: null
 review:
   status: completed
@@ -216,6 +229,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-1
     - TS-2
