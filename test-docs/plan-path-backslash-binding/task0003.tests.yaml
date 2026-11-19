@@ -1,7 +1,7 @@
 task_id: task0003
 baseline_failures:             # 4a: python3 -m unittest discover -s tests -> Ran 16447 tests, FAILED (failures=1, skipped=1); inherited, and the one task0003 repairs
   - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCaseTable.test_the_cases_come_after_every_other_case
-final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> no failure and no error; the baseline test no longer exists under that name (renamed, assertion replaced by the ordering check). The first re-run found one failure caused by the rename (the id-resolution check of test-docs/mixed-rm-self-config-deny/task0001.tests.yaml, AC-6); that record's id was updated and the suite re-run
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> no failure and no error; the baseline test no longer exists under that name (renamed, assertion replaced by the ordering check). The first re-run found one failure caused by the rename (the id-resolution check of test-docs/mixed-rm-self-config-deny/task0001.tests.yaml, AC-6); that record's id was updated and the suite re-run: Ran 16460 tests, OK (skipped=1)
 acceptance_tests:
   AC-1:
     tests:
