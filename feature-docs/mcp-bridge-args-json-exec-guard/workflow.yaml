@@ -2,7 +2,8 @@ schema_version: 1
 feature: mcp-bridge-args-json-exec-guard
 created: '2026-11-19'
 base_branch: main
-goal: '# destructive-guard が mcp-bridge run --args-json の JSON エスケープで書いたコマンド置換をシェル実行型 MCP ツール宛てでも検出しない
+goal: '# destructive-guard が mcp-bridge run --args-json の JSON エスケープで書いたコマンド置換をシェル実行型
+  MCP ツール宛てでも検出しない
 
 
   種別: セキュリティ
@@ -11,7 +12,8 @@ goal: '# destructive-guard が mcp-bridge run --args-json の JSON エスケー�
   ## 脆弱性の概要
 
 
-  `em-workflow/hooks/destructive-guard.py` は `mcp-bridge run` の `--args-json` を JSON として復号しない。シェルを実行する MCP ツール宛ての呼び出しで、`command` の中のコマンド置換を JSON のエスケープ（例: `$(...)`）で書くと、置換の候補にならず再走査をすり抜ける。
+  `em-workflow/hooks/destructive-guard.py` は `mcp-bridge run` の `--args-json` を JSON
+  として復号しない。シェルを実行する MCP ツール宛ての呼び出しで、`command` の中のコマンド置換を JSON のエスケープ（例: `$(...)`）で書くと、置換の候補にならず再走査をすり抜ける。
 
 
   ## 参照
@@ -29,7 +31,9 @@ goal: '# destructive-guard が mcp-bridge run --args-json の JSON エスケー�
   ## 攻撃シナリオ
 
 
-  シェルを実行する MCP ツール（例: desktop-commander の `start_process`）が mcp-bridge に登録された環境で、Bash から `mcp-bridge run --mcp desktop-commander --tool start_process --args-json` を実行し、`command` に JSON エスケープで書いた置換を入れる。フックは置換を検出せず allow にし、復号後の値を受け取った MCP ツールがシェルで評価する。
+  シェルを実行する MCP ツール（例: desktop-commander の `start_process`）が mcp-bridge に登録された環境で、Bash
+  から `mcp-bridge run --mcp desktop-commander --tool start_process --args-json` を実行し、`command`
+  に JSON エスケープで書いた置換を入れる。フックは置換を検出せず allow にし、復号後の値を受け取った MCP ツールがシェルで評価する。
 
 
   置換を使わずに破壊的なコマンドを平文で `command` に書く形も、変更前から allow になっている。フックは MCP の実行ツールに渡す引数の意味を解析していない。
@@ -38,7 +42,8 @@ goal: '# destructive-guard が mcp-bridge run --args-json の JSON エスケー�
   ## 影響範囲
 
 
-  destructive-guard が止めるべき破壊的な git 操作・ファイル削除が、シェル実行型 MCP ツール経由で素通りする。feature mcp-bridge-exec-tool-rescan が持ち込んだものではなく、それより前からある設計上の境界。
+  destructive-guard が止めるべき破壊的な git 操作・ファイル削除が、シェル実行型 MCP ツール経由で素通りする。feature mcp-bridge-exec-tool-rescan
+  が持ち込んだものではなく、それより前からある設計上の境界。
 
 
   ## 完了の定義
@@ -48,15 +53,18 @@ goal: '# destructive-guard が mcp-bridge run --args-json の JSON エスケー�
 
   - [ ] 修正版に追随している（修正版が無い場合は暫定緩和策の欄に対応を記載）
 
-  - [ ] notion の組以外の mcp-bridge run について、`--args-json` を復号して実行ツールの `command` をシェル入力として検査するか、宛先や実行文字列が静的に決まらない形を ask に回すかを SPEC で決める（batch では ask が deny に降格する誤 deny の費用も考える）
+  - [ ] notion の組以外の mcp-bridge run について、`--args-json` を復号して実行ツールの `command` をシェル入力として検査するか、宛先や実行文字列が静的に決まらない形を
+  ask に回すかを SPEC で決める（batch では ask が deny に降格する誤 deny の費用も考える）
 
 
   ## 該当箇所
 
 
-  - `em-workflow/hooks/destructive-guard.py` の置換候補の収集（chunk_subs）と、mcp-bridge の `--args-json` を扱う判定
+  - `em-workflow/hooks/destructive-guard.py` の置換候補の収集（chunk_subs）と、mcp-bridge の `--args-json`
+  を扱う判定
 
-  - review の stable_id: 553233b6be6ecdc3（feature mcp-bridge-exec-tool-rescan の review round 1）
+  - review の stable_id: 553233b6be6ecdc3（feature mcp-bridge-exec-tool-rescan の review
+  round 1）
 
 
   ## 暫定緩和策
@@ -97,7 +105,8 @@ project:
     main:
       language: python
       build_command: ''
-      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3
+        -m unittest discover -s tests
       format_command: ''
 workflow:
 - id: create-spec
@@ -111,14 +120,16 @@ workflow:
   - DESIGN.md
   - design/
   status: skipped
-  skipped_reason: 'UI を持たないフックの静的解析の修正、design-system 候補 0 件（create-spec.design-step: decide_autonomously -> skipped）'
+  skipped_reason: 'UI を持たないフックの静的解析の修正、design-system 候補 0 件（create-spec.design-step:
+    decide_autonomously -> skipped）'
 - id: create-plan
   artifacts:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - THREAT-MODEL.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: 58edada819f319980814caf0df38125249b19cc2
 - id: implement
   status: pending
 - id: review
@@ -127,7 +138,55 @@ workflow:
   status: pending
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Decode and inspect the --args-json value of mcp-bridge run statements
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_args_json.py
+    skills:
+    - backend-impl
+    domains:
+    - auth
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - FR8
+    - FR9
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: pending
+    branch: null
+    notes: null
+  task0002:
+    title: Update the in-code explanations of --args-json handling
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    skills: []
+    domains:
+    - input-handling
+    complexity: low
+    requirements:
+    - FR8
+    - FR10
+    - NFR2
+    - NFR3
+    - NFR4
+    status: pending
+    branch: null
+    notes: null
 review:
   status: pending
   rounds_completed: 0
@@ -137,7 +196,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-7
     - TS-8
@@ -147,7 +207,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-9
   FR3:
@@ -155,7 +216,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-2
@@ -166,7 +228,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-2
@@ -179,7 +242,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-5
     - TS-8
@@ -190,7 +254,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-13
     - TS-14
@@ -199,7 +264,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-15
   FR8:
@@ -207,7 +273,9 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
     tests:
     - TS-10
     - TS-13
@@ -217,21 +285,40 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
+    - TS-6
+    - TS-7
+    - TS-8
+    - TS-9
+    - TS-10
+    - TS-11
+    - TS-12
+    - TS-13
+    - TS-14
+    - TS-15
+    - TS-16
   FR10:
     title: コード内の説明の更新
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0002
     tests: []
   NFR1:
     title: Performance
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-15
   NFR2:
@@ -239,7 +326,9 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
     tests:
     - TS-16
   NFR3:
@@ -247,14 +336,21 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-1
+    - TS-5
+    - TS-16
   NFR4:
     title: Version
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
     tests: []
 batch:
   review_rework_count: 0
