@@ -167,8 +167,8 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/mcp-bridge-args-json-exec-guard/task0001
     notes: null
   task0002:
     title: Update the in-code explanations of --args-json handling
@@ -185,8 +185,8 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/mcp-bridge-args-json-exec-guard/task0002
     notes: null
 review:
   status: pending
