@@ -1,0 +1,266 @@
+schema_version: 1
+feature: mcp-bridge-args-json-exec-guard
+created: '2026-11-19'
+base_branch: main
+goal: '# destructive-guard が mcp-bridge run --args-json の JSON エスケープで書いたコマンド置換をシェル実行型 MCP ツール宛てでも検出しない
+
+
+  種別: セキュリティ
+
+
+  ## 脆弱性の概要
+
+
+  `em-workflow/hooks/destructive-guard.py` は `mcp-bridge run` の `--args-json` を JSON として復号しない。シェルを実行する MCP ツール宛ての呼び出しで、`command` の中のコマンド置換を JSON のエスケープ（例: `$(...)`）で書くと、置換の候補にならず再走査をすり抜ける。
+
+
+  ## 参照
+
+
+  - CVE / GHSA ID: 該当なし
+
+  - severity: medium
+
+  - 現在のバージョン: feature mcp-bridge-exec-tool-rescan の時点
+
+  - 修正済みバージョン: 無し
+
+
+  ## 攻撃シナリオ
+
+
+  シェルを実行する MCP ツール（例: desktop-commander の `start_process`）が mcp-bridge に登録された環境で、Bash から `mcp-bridge run --mcp desktop-commander --tool start_process --args-json` を実行し、`command` に JSON エスケープで書いた置換を入れる。フックは置換を検出せず allow にし、復号後の値を受け取った MCP ツールがシェルで評価する。
+
+
+  置換を使わずに破壊的なコマンドを平文で `command` に書く形も、変更前から allow になっている。フックは MCP の実行ツールに渡す引数の意味を解析していない。
+
+
+  ## 影響範囲
+
+
+  destructive-guard が止めるべき破壊的な git 操作・ファイル削除が、シェル実行型 MCP ツール経由で素通りする。feature mcp-bridge-exec-tool-rescan が持ち込んだものではなく、それより前からある設計上の境界。
+
+
+  ## 完了の定義
+
+
+  - [ ] 攻撃シナリオが成立しない
+
+  - [ ] 修正版に追随している（修正版が無い場合は暫定緩和策の欄に対応を記載）
+
+  - [ ] notion の組以外の mcp-bridge run について、`--args-json` を復号して実行ツールの `command` をシェル入力として検査するか、宛先や実行文字列が静的に決まらない形を ask に回すかを SPEC で決める（batch では ask が deny に降格する誤 deny の費用も考える）
+
+
+  ## 該当箇所
+
+
+  - `em-workflow/hooks/destructive-guard.py` の置換候補の収集（chunk_subs）と、mcp-bridge の `--args-json` を扱う判定
+
+  - review の stable_id: 553233b6be6ecdc3（feature mcp-bridge-exec-tool-rescan の review round 1）
+
+
+  ## 暫定緩和策
+
+
+  シェルを実行する MCP ツールを mcp-bridge に登録しない。
+
+
+  ## 追加の指示
+
+
+  - 不明点は Codex に相談し、比較してより良いと判断した選択肢を採用する。
+
+  '
+parent_branch: em-workflow/mcp-bridge-args-json-exec-guard/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.02
+      '1': 0.13
+      '2': 0.83
+      '3': 0.02
+    description_plus_code:
+      '0': 0.0
+      '1': 0.33
+      '2': 0.67
+      '3': 0.0
+  at: '2026-11-19T19:29:03+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
+      format_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 3a7d4d3612d97127fe3dcade816d2efd579f38f7
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'UI を持たないフックの静的解析の修正、design-system 候補 0 件（create-spec.design-step: decide_autonomously -> skipped）'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: 対象の文
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-7
+    - TS-8
+    - TS-11
+  FR2:
+    title: notion の組は除外する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-9
+  FR3:
+    title: --args-json の値の再構成
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+  FR4:
+    title: JSON の復号と全文字列の置換の再走査
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-6
+    - TS-7
+  FR5:
+    title: トップレベルの command のシェル入力としての再走査
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+    - TS-8
+    - TS-10
+    - TS-12
+  FR6:
+    title: 静的に決まらない形は今の判定を保つ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-13
+    - TS-14
+  FR7:
+    title: 走査量の上限
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-15
+  FR8:
+    title: 範囲外の記録
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-10
+    - TS-13
+    - TS-14
+  FR9:
+    title: ケースの追加
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR10:
+    title: コード内の説明の更新
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: Performance
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-15
+  NFR2:
+    title: Fail-closed
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-16
+  NFR3:
+    title: Test procedure
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: Version
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
