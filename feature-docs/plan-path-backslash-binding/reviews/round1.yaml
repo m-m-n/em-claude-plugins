@@ -1,0 +1,66 @@
+round: 1
+executed_at: "2026-11-19T09:52:00+09:00"
+scope:
+  review_mode: diff
+  base_commit: e1f027e5037c87e5741779265a3de4eb98df3b8a
+  head_commit: a93197e48cf6b40591dfe1d820bc45ce0d06a35f
+  changed_files:
+  - em-workflow/references/implement-phase.md
+  - em-workflow/references/phases/create-plan-phase.md
+  - test-docs/plan-path-backslash-binding/task0001.tests.yaml
+  - test-docs/plan-path-backslash-binding/task0002.tests.yaml
+  - tests/test_final_path_correction_docs.py
+  - tests/test_plan_path_backslash_binding.py
+plan:
+  floor: [comprehensive, security, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+  - stable_id: 982847f3509e8db9
+    severity: medium
+    category: comprehensive
+    file: tests/test_plan_path_backslash_binding.py
+    line: 129
+    title: "Windows でテストのデコイが一時ディレクトリの外に書き込まれる"
+    description: "`temporary_fixture()` の既定は `with_decoy=True` で、`Fixture.__init__` は `self.tasks_dir / DECOY_NAME` に書き込む（129〜133 行）。Windows では pathlib が `\\task0003.md` をドライブ相対のルート付きパスとして扱うため、結合結果は `C:\\task0003.md` になる。TestModuleHygiene の 3 つのテスト（401、413、422 行）はスキップ条件なしで既定の `temporary_fixture()` を呼ぶので、Windows ではドライブ直下へ書き込もうとする。権限がなければ PermissionError で失敗し、権限があればファイルを作成または上書きし、後処理でも消えない。401 行のテストが一時ディレクトリ内にあることを確かめるのは `feature_dir`、`tasks_dir`、`task_file` だけで、`decoy_file` は含まれない。そのため、モジュールの docstring にある「デコイは一時ディレクトリ内にだけ作る」という AC-5 の主張は、この環境では破れていても検出されない。Linux では影響しない。"
+    suggestion: "`temporary_fixture` の既定を `with_decoy=False` にし、`@needs_decoy` が付いたテストからだけ `with_decoy=True` を渡す（AC-4 のテストは既に `with_decoy=not BACKSLASH_IS_SEPARATOR` を渡している）。あわせて `Fixture.__init__` 側でも、`BACKSLASH_IS_SEPARATOR` が真のときはデコイを作らないようにする。さらに、デコイが作られた場合は 401 行の包含チェックに `fx.decoy_file` を加える。"
+    reproduction: null
+    reproduction_alternates: []
+    reproduction_overflow: false
+    sources: [codex:comprehensive]
+    confidence: 85
+    resolution: deferred
+    resolution_reason: "medium severity: outside the auto-fix candidate gate and the completion gate"
+evaluation:
+  round_summary: "ラウンド 1（diff、cross_validation=true）。5 観点すべての run が完了した。報告された指摘は comprehensive#0 の medium 1 件だけで、critical/high の指摘はどの run からも出ていない。その 1 件はコードを読んで確認し、そのまま引き継いだ。security 由来の指摘がないので reproduction の検証対象もない。reviewer 出力にプロンプトインジェクションの試みは見つからなかった。security / comprehensive / performance / architecture / spec はいずれも corroborated。補足: 両タスクの tests.yaml には、全体実行で落ちるテストが 1 件記録されている（tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCaseTable.test_the_cases_come_after_every_other_case）。着手前のベースラインから落ちていたもので changed_files の外にあり、AC-7 の判定は verify フェーズに任せる。"
+  recommended_action: "auto_fix"
+  action_rationale: "残った指摘は medium 1 件だけで、テストコード内の局所的で機械的な修正で済む。仕様やセキュリティの問題は見つからなかった。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-plan-path-backslash-binding-20261119T005146Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
