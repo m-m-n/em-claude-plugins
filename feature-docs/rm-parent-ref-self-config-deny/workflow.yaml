@@ -155,7 +155,8 @@ tasks:
     complexity: low
     requirements:
     - FR5
-    status: pending
+    status: in_progress
+    branch: em-workflow/rm-parent-ref-self-config-deny/task0002
     notes: null
 review:
   status: completed
