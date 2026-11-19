@@ -1,11 +1,11 @@
 schema_version: 1
 feature: mcp-bridge-args-json-exec-guard
 phase: create-spec
-status: completed
-generation: 1
-base_revision: 3059fe1dcd799b3bc02c5c4fc5c22eca4b6197d1
+status: dispatching
+generation: 2
+base_revision: 13bb565b09539dcb4e512fb3f77d99540383af1b
 last_input_digest: sha256:22df4eb71329f2f6eafa4c0f657c16d971591df738f85cfc4193b82c0c8dd2b6
-active_request_id: null
+active_request_id: create-spec-run-0004
 packets:
   create-spec-q0001:
     status: answered
@@ -28,8 +28,10 @@ answers:
     selected_option_ids:
     - subs_all_strings_plus_command_payload
     freeform: null
-    normalized_answer: 復号した全文字列値の $( / バッククォートを再走査し、トップレベルの command をシェル入力として再走査する。シェルとして読む範囲はトップレベルの command に絞る
-    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation, record_as_assumption); codex_consulted: true (entry codex, 1 turn); Codex suggestion mapped onto option subs_all_strings_plus_command_payload;
+    normalized_answer: 復号した全文字列値の $( / バッククォートを再走査し、トップレベルの command をシェル入力として再走査する。シェルとして読む範囲はトップレベルの
+      command に絞る
+    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation, record_as_assumption);
+      codex_consulted: true (entry codex, 1 turn); Codex suggestion mapped onto option subs_all_strings_plus_command_payload;
       orchestrator judged mapping; opus_escalation: false'
   requirement.args-json.undeterminable-forms:
     packet_id: create-spec-q0001
@@ -40,7 +42,8 @@ answers:
     - keep_current_out_of_scope
     freeform: null
     normalized_answer: 静的に決まらない形は今の判定（生の文字列の走査）を保ち、範囲外として SPEC に記録する
-    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation, record_as_assumption); codex_consulted: true (entry codex, 1 turn); Codex suggestion mapped onto option keep_current_out_of_scope;
+    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation, record_as_assumption);
+      codex_consulted: true (entry codex, 1 turn); Codex suggestion mapped onto option keep_current_out_of_scope;
       orchestrator judged mapping; opus_escalation: false'
   requirement.args-json.statement-scope:
     packet_id: create-spec-q0001
@@ -51,7 +54,8 @@ answers:
     - every_statement
     freeform: null
     normalized_answer: コマンド位置で mcp-bridge run と静的に確定できるすべての文に適用する
-    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation, record_as_assumption); codex_consulted: true (entry codex, 1 turn); Codex suggestion mapped onto option every_statement;
+    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation, record_as_assumption);
+      codex_consulted: true (entry codex, 1 turn); Codex suggestion mapped onto option every_statement;
       orchestrator judged mapping; opus_escalation: false'
   design-step.decision:
     packet_id: create-spec-q0001
@@ -62,7 +66,8 @@ answers:
     - skip
     freeform: null
     normalized_answer: デザインステップをスキップする（UI なし）
-    resolution_note: 'gate: create-spec.design-step; policy option decide_autonomously (accept analyst design_step_recommendation=skip); the packet omitted the decide_autonomously option, so the recommendation''s
+    resolution_note: 'gate: create-spec.design-step; policy option decide_autonomously (accept analyst
+      design_step_recommendation=skip); the packet omitted the decide_autonomously option, so the recommendation''s
       own option_id skip was recorded'
 worker_runs:
 - request_id: create-spec-run-0001
@@ -78,6 +83,9 @@ worker_runs:
   self_write_set:
   - feature-docs/mcp-bridge-args-json-exec-guard/REQUIREMENTS.md
   - feature-docs/mcp-bridge-args-json-exec-guard/SPEC.md
+- request_id: create-spec-run-0004
+  status: dispatched
+  input_digest: sha256:5efb71ceb492872566b8a767faa6d5aeda61cb1a2c7bdafad8bcf43d0235ccbc
 artifacts:
 - path: feature-docs/mcp-bridge-args-json-exec-guard/REQUIREMENTS.md
   sha256: sha256:ad202dac6fd26562c5c3ea2793eab15a00d49206c063dc6841b4448ed2ffad57
