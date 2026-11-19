@@ -5,12 +5,61 @@ status: in_progress
 generation: 1
 base_revision: 698c5e6f65b266777de3677158519db01362c63f
 last_input_digest: sha256:b3f9edd36aa382259174922a510b7fc978cefbb769aa78bb605cfeaf9a9d1a50
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    questions:
+    - question_id: requirement.home-parent-ref-verdict
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+answers:
+  create-spec.feature-identity:
+    packet_id: null
+    answered_at: '2026-11-19T19:34:46+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - derive_from_task_description
+    freeform: null
+    normalized_answer: 'feature name derived from the task description: rm-home-parent-ref-recursive-deny'
+  requirement.home-parent-ref-verdict:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-19T19:34:46+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - ask_rm_unresolvable
+    freeform: null
+    normalized_answer: $HOME は未解決の展開のまま扱う。同じ文の再帰削除対象のうち、生の形が SELF_CONFIG に一致し、.. を畳むと保護範囲の外に出て、rm-unresolvable
+      が記録された対象があるときに限り、main() の選択で rm の ask（rm-unresolvable）を同じ文の self-modification
+      の ask より先に選ぶ。対話実行は ask / rm-unresolvable、CLAUDE_BATCH では deny / rm-unresolvable。本物の保護対象・リダイレクト由来の確認、既存の
+      deny の優先順位、TS-5（tmp/$X）は変えない。hook-tests.md の優先順位の箇条に例外を追記する。
+    resolution_note: 'gate create-spec.requirement-clarification -> batch-policies.yaml
+      action codex_consultation (record_as_assumption: true). 1 turn via run_codex_exec.sh
+      readonly; converged. requirements-analyst recommended deny_rm_recursive; Codex
+      recommended ask_rm_unresolvable. Adopted ask_rm_unresolvable (orchestrator judgement):
+      resolving $HOME with the hook-launch HOME cannot reflect an in-command HOME
+      reassignment, and a resolved path could reach the safe-delete-area exception
+      (fail-open risk); keeping $HOME unresolved matches the existing pinned $HOME
+      cases and the substitution-headed / ${HOME} spellings already giving ask / rm-unresolvable.
+      Not chosen: deny_rm_recursive (stronger and consistent with ~ spelling, but
+      relies on hook HOME). Opus escalation not run.'
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-19T19:34:46+09:00'
+    source: batch-policy
+    answer_mode: single_select
+    selected_option_ids:
+    - skip
+    freeform: null
+    normalized_answer: 'design step skipped: no UI or visual artifact (decide_autonomously).'
+    resolution_note: gate create-spec.design-step -> batch-policies.yaml decide_autonomously;
+      followed the analyst recommendation skip.
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:b3f9edd36aa382259174922a510b7fc978cefbb769aa78bb605cfeaf9a9d1a50
 artifacts: []
 patches: []
