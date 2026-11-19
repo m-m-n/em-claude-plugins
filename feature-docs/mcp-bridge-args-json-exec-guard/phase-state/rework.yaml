@@ -115,6 +115,27 @@ worker_runs:
   rejection: 'layer-3/6 validation failed: task-plan-files, task-plan-files-mismatch (task0006 Files to Modify bullet
     quotes `=` in backticks), rework-index (verification_index was nested under rework_source in the envelope);
     written artifacts discarded'
+- request_id: rework-run-0006
+  status: dispatched
+  source: verify
+  verify_round: 2
+  input_digest: sha256:be7e464b3d7813401db5e6932df6c5a3bf021f809248d24c45677ba924f06137
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/rework-planner-contract.md: sha256:0c9f82099c3546b6b675856539d8244628b7170ce7a4442ec951e13e16577ec3
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/mcp-bridge-args-json-exec-guard/IMPLEMENTATION.md: sha256:e321d95c108c877e551e87efe3fca8106382b5f2f392796dd245bff2fbb2a53a
+    feature-docs/mcp-bridge-args-json-exec-guard/SPEC.md: sha256:a7c51b945ecd97772a08f38c4348250e4b9961e49c999abf2df111313c4066f7
+    feature-docs/mcp-bridge-args-json-exec-guard/VERIFICATION.md: sha256:6e639e8992cfabaece51d2332dfc69f1df7bb6747ad8b7f4628684029728dbd1
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0001.md: sha256:8250386aafa3b089c46b768a873b71ae10e549cb7565e47210d7545e4b7fc289
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0002.md: sha256:506a4a91980ecf002ebaa6e715c70606e0be16f80f66f7989f902837918129bb
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0003.md: sha256:fc1aefb8b22bf340c5d93295b87c3941f2e030e8a565fa7b15237e3280b3b531
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0004.md: sha256:43bb71f55214287739f130a074dd2a3cd7c6903e7b892afe2c30fe5381201e7a
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0005.md: sha256:a0b1dc62d19f66cdd8fd40a4927349d62565ccebef5e265fc956d4dd2dcf9c42
+    feature-docs/mcp-bridge-args-json-exec-guard/workflow.yaml: sha256:a84cd1458ab436021190b36f4190472579e578ee196a2437658fde2fa4974528
 status: completed
 packets:
 - packet_id: rework-q0001
