@@ -1,9 +1,9 @@
 schema_version: 1
 feature: mcp-bridge-args-json-exec-guard
 phase: create-plan
-status: dispatching
+status: applying_patch
 generation: 2
-base_revision: 472e53ad45e2ec18a8f1b4ea2340e6f5ddfe10dd
+base_revision: d1203d1249a6ac9686478588c603ac8e9d7eefe6
 last_input_digest: sha256:f8b90219cde88a591bcd387fee859c32c0412c7791cf65f7a9f6403aef22391d
 active_request_id: create-plan-run-0002
 packets: {}
@@ -32,7 +32,7 @@ worker_runs:
   - feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0001.md
   - feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0002.md
 - request_id: create-plan-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:f8b90219cde88a591bcd387fee859c32c0412c7791cf65f7a9f6403aef22391d
   dispatch_digest_inputs:
     em-workflow/references/contracts/planner-contract.md: sha256:df2bf3f0321c2627a31b878a14adb176ee7c2131638245112e5d3bb27f7a3682
@@ -51,6 +51,13 @@ worker_runs:
     feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0001.md: sha256:8250386aafa3b089c46b768a873b71ae10e549cb7565e47210d7545e4b7fc289
     feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0002.md: sha256:506a4a91980ecf002ebaa6e715c70606e0be16f80f66f7989f902837918129bb
     feature-docs/mcp-bridge-args-json-exec-guard/workflow.yaml: sha256:ff17aeefd610419e0bfa48326736b5baf8feea78618764895b25eb762cd41a3b
+  output_digest: sha256:1602dcc111122887e8951dd7f45526be1e3143ad88381bb521e40de949d1c9c0
+  self_write_set:
+  - feature-docs/mcp-bridge-args-json-exec-guard/IMPLEMENTATION.md
+  - feature-docs/mcp-bridge-args-json-exec-guard/THREAT-MODEL.md
+  - feature-docs/mcp-bridge-args-json-exec-guard/VERIFICATION.md
+  - feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0003.md
+  - feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0004.md
 artifacts:
 - path: feature-docs/mcp-bridge-args-json-exec-guard/IMPLEMENTATION.md
   sha256: sha256:13e9c7c7a625790b49c2feacb24f0b2e0d743b1959055dfc88a2426ad96996c7
@@ -67,12 +74,31 @@ artifacts:
 - path: feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0002.md
   sha256: sha256:506a4a91980ecf002ebaa6e715c70606e0be16f80f66f7989f902837918129bb
   produced_by: create-plan-run-0001
+- path: feature-docs/mcp-bridge-args-json-exec-guard/IMPLEMENTATION.md
+  sha256: sha256:8e3544b5a3ea11b504bb7704c0ca77e99130b8a79fca2ec270d502da816e5799
+  produced_by: create-plan-run-0002
+- path: feature-docs/mcp-bridge-args-json-exec-guard/VERIFICATION.md
+  sha256: sha256:fce28ad385080f1e1b329d14f95c70486367dcaf73be62411990c2ac65b5ab11
+  produced_by: create-plan-run-0002
+- path: feature-docs/mcp-bridge-args-json-exec-guard/THREAT-MODEL.md
+  sha256: sha256:b8defa565f8e73e99f830e5ef02eac7298c1a7098c942171af350a5962330f4d
+  produced_by: create-plan-run-0002
+- path: feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0003.md
+  sha256: sha256:fc1aefb8b22bf340c5d93295b87c3941f2e030e8a565fa7b15237e3280b3b531
+  produced_by: create-plan-run-0002
+- path: feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0004.md
+  sha256: sha256:43bb71f55214287739f130a074dd2a3cd7c6903e7b892afe2c30fe5381201e7a
+  produced_by: create-plan-run-0002
 other_feature_doc_fixes: []
 patches:
 - patch_id: create-plan-p0001
   status: applied
   base_input_digest: sha256:2c970f1efea09113634a3a40a29acf67e384ef3e913b81536c39e40a11c62ab0
   base_workflow_blob: db66bea05350b34b18d9e5618cdde568d5289369
+- patch_id: create-plan-p0002
+  status: validated
+  base_input_digest: sha256:f8b90219cde88a591bcd387fee859c32c0412c7791cf65f7a9f6403aef22391d
+  base_workflow_blob: 7a27f46c02ed9444ecd08b4cb10ba7b41c8950f6
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
