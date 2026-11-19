@@ -101,7 +101,7 @@ workflow:
   completed_at_commit: 6e1fda9a0f3e4ea602bdae4e87c839c9e7e20557
   base_commit: 57acc4343de0b8a4555f6f8d65427f664ff5ae63
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
 - id: retrospect
@@ -137,6 +137,14 @@ tasks:
 review:
   status: pending
   rounds_completed: 0
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
 requirements:
   FR1:
     title: 条件を満たす対象がある文では、rm の ask を self-modification の ask より先に選ぶ
