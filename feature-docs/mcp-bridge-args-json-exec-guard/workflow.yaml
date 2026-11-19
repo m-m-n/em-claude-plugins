@@ -167,7 +167,7 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: in_progress
+    status: merged
     branch: em-workflow/mcp-bridge-args-json-exec-guard/task0001
     notes: null
   task0002:
