@@ -22,7 +22,7 @@ worker_runs:
     feature-docs/mcp-bridge-args-json-exec-guard/workflow.yaml: sha256:9837764cfdc608143fd0e85794d403bedbe6a0cb6a06556bcdd1782826a45e64
   self_write_set: []
 - request_id: rework-run-0002
-  status: dispatched
+  status: rejected
   source: review
   review_round: 2
   input_digest: sha256:6cf36a97f4f824640ba70083593b06ebc4db9f87d2b865e3904c2ad3c4a2701d
@@ -42,6 +42,8 @@ worker_runs:
     feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0004.md: sha256:43bb71f55214287739f130a074dd2a3cd7c6903e7b892afe2c30fe5381201e7a
     feature-docs/mcp-bridge-args-json-exec-guard/workflow.yaml: sha256:51b39b8fe23ab5e83325ae5748b783d2d3d67b593ffbbc47d27630685d08f7e2
   self_write_set: []
+  rejection: 'layer-3/6 validation failed: expected-mismatch (review step status), task-plan-files, rework-index;
+    written artifacts discarded'
 status: in_progress
 packets:
 - packet_id: rework-q0001
