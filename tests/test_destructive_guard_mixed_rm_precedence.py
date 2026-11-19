@@ -56,6 +56,7 @@ FEATURE = "destructive-guard-mixed-rm-precedence"
 # target (mixed-rm-self-config-deny). Its cases come after every case of the
 # table that existed before it, and none of its labels starts with FEATURE.
 PER_TARGET_FEATURE = "mixed-rm-self-config-deny"
+PER_TARGET_LABEL_PREFIX = PER_TARGET_FEATURE + " TS-"
 
 # Test-controlled, never the real environment's. The empty PATH leaves no
 # `gio` to find, so the deletion alternative in an rm reason is the same
@@ -142,12 +143,56 @@ def normalized(text):
     return re.sub(r"\s+", " ", text or "")
 
 
-def feature_case_positions(cases):
+def feature_case_positions(cases, feature=FEATURE):
     """The 0-based positions in CASES of this feature's cases: the cases whose
     label (second element) begins with the feature name and one space. A label
     of another feature whose name merely begins with FEATURE is not one."""
-    prefix = FEATURE + " "
+    prefix = feature + " "
     return [i for i, case in enumerate(cases) if case[1].startswith(prefix)]
+
+
+def per_target_ordering_violations(
+    cases, per_target_prefix, earlier_feature, pre_existing_count
+):
+    """The violated ordering conditions of the per-target feature's cases in
+    CASES, one text per condition in condition order; empty when every
+    condition holds. Each text starts with `condition N` and names the
+    positions involved.
+
+    A per-target case is a case whose label begins with `per_target_prefix`;
+    an earlier-feature case is selected the way feature_case_positions selects
+    it, by `earlier_feature`. The conditions are: (1) at least one per-target
+    case exists; (2) the per-target positions are consecutive, one run; (3)
+    the first per-target position is at or after `pre_existing_count`; (4) the
+    first per-target position is after every earlier-feature position. What
+    follows the run is not a condition: a later feature appends its cases
+    there."""
+    per_target = [
+        i for i, case in enumerate(cases) if case[1].startswith(per_target_prefix)
+    ]
+    if not per_target:
+        return [f"condition 1: no case label begins with {per_target_prefix!r}"]
+    violations = []
+    first = per_target[0]
+    for before, after in zip(per_target, per_target[1:]):
+        if after != before + 1:
+            violations.append(
+                "condition 2: the per-target cases at positions "
+                f"{before} and {after} are not consecutive"
+            )
+            break
+    if first < pre_existing_count:
+        violations.append(
+            f"condition 3: the first per-target case is at position {first}, "
+            f"before the pre-existing case count {pre_existing_count}"
+        )
+    earlier = feature_case_positions(cases, earlier_feature)
+    if earlier and first < earlier[-1]:
+        violations.append(
+            f"condition 4: the first per-target case at position {first} is "
+            f"not after the last earlier-feature case at position {earlier[-1]}"
+        )
+    return violations
 
 
 # --- AC-3: the reason of a winning rm deny is the rm reason ----------------
@@ -690,9 +735,10 @@ class TestCaseTable(unittest.TestCase):
 
 class TestPerTargetCaseTable(unittest.TestCase):
     """AC-1, AC-4, AC-6 (FR5, NFR1, NFR4) of mixed-rm-self-config-deny. Its
-    cases are the last of the table, each pinned to a reason id, and the one
-    case of the earlier feature that this feature changes is changed in
-    place."""
+    cases form one run placed after the earlier feature's cases, each pinned
+    to a reason id, and the one case of the earlier feature that this feature
+    changes is changed in place. What follows the run is not constrained: a
+    later feature appends its own cases there."""
 
     SCENARIOS = [
         # (number, decision, command, rule, batch)
@@ -721,13 +767,14 @@ class TestPerTargetCaseTable(unittest.TestCase):
         ]
         cls.new = [cls.cases[i] for i in cls.positions]
 
-    def test_the_cases_come_after_every_other_case(self):
-        self.assertTrue(self.positions, "no case carries this feature's label")
-        first = self.positions[0]
-        self.assertEqual(
-            self.positions, list(range(first, len(self.cases))),
-            "the cases are not one run at the end of the table",
+    def test_the_cases_form_one_run_after_the_earlier_cases(self):
+        violations = per_target_ordering_violations(
+            self.cases,
+            PER_TARGET_LABEL_PREFIX,
+            FEATURE,
+            PRE_EXISTING_CASE_COUNT,
         )
+        self.assertEqual(violations, [], "\n".join(violations))
 
     def test_none_of_the_cases_joins_the_earlier_features_run(self):
         self.assertLess(feature_case_positions(self.cases)[-1], self.positions[0])
@@ -788,6 +835,130 @@ class TestPerTargetCaseTable(unittest.TestCase):
         for command in ("rm ~/.claude/hooks/foo.py", "rm -rf ~/.claude/skills/foo"):
             with self.subTest(command=command):
                 self.assertEqual([case[0] for case in by_command[command]], ["ask"])
+
+
+# One kind letter per case of a synthetic table. The labels are built from the
+# prefixes the module defines, so the ordering check's selection is exercised.
+SYNTHETIC_LABELS = {
+    "o": "older-feature case {n}",
+    "e": FEATURE + " TS-{n} earlier-feature case",
+    "p": PER_TARGET_FEATURE + " TS-{n} per-target case",
+    "l": "later-feature TS-{n} appended after the run",
+}
+
+
+def synthetic_table(kinds):
+    """A case table of the kinds named by KINDS, one letter per case: `o` an
+    older case, `e` a case of the earlier feature, `p` a per-target case, `l`
+    a case of a later feature. Each label carries the case's position."""
+    return [
+        ["deny", SYNTHETIC_LABELS[kind].format(n=position), "echo x"]
+        for position, kind in enumerate(kinds)
+    ]
+
+
+def violated_conditions(violations):
+    """The condition numbers the violations name, in the order given."""
+    return [int(re.match(r"condition (\d)", text).group(1)) for text in violations]
+
+
+class TestPerTargetOrderingCheck(unittest.TestCase):
+    """AC-1 to AC-3 (NFR2) of the ordering check, over small synthetic tables.
+    The pre-existing count of these tables is two: the two `o` cases that
+    open each of them."""
+
+    PRE_EXISTING = 2
+
+    def check(self, kinds, pre_existing=PRE_EXISTING):
+        return per_target_ordering_violations(
+            synthetic_table(kinds),
+            PER_TARGET_LABEL_PREFIX,
+            FEATURE,
+            pre_existing,
+        )
+
+    # AC-1: a legitimate table reports nothing.
+
+    def test_ac1_a_run_after_the_earlier_cases_with_cases_after_it_is_accepted(self):
+        for kinds in (
+            "ooeeepppll",
+            "ooeeplllll",
+            "ooeeppp",
+            "ooeellpppl",
+            "ooppll",
+        ):
+            with self.subTest(kinds=kinds):
+                self.assertEqual(self.check(kinds), [])
+
+    def test_ac1_a_label_that_only_contains_the_per_target_prefix_is_not_selected(self):
+        table = synthetic_table("ooeepppl")
+        table.insert(3, ["deny", "x " + PER_TARGET_LABEL_PREFIX + "9", "echo x"])
+        self.assertEqual(
+            per_target_ordering_violations(
+                table, PER_TARGET_LABEL_PREFIX, FEATURE, self.PRE_EXISTING
+            ),
+            [],
+        )
+
+    def test_ac1_a_name_that_merely_begins_with_the_earlier_feature_is_not_one_of_its_cases(self):
+        table = synthetic_table("ooeepppl")
+        table.append(["deny", FEATURE + "-v2 TS-1 another feature", "echo x"])
+        self.assertEqual(
+            per_target_ordering_violations(
+                table, PER_TARGET_LABEL_PREFIX, FEATURE, self.PRE_EXISTING
+            ),
+            [],
+        )
+
+    # AC-2: a case of another label inside the run.
+
+    def test_ac2_one_other_case_between_two_per_target_cases_violates_condition_2(self):
+        violations = self.check("ooeeplp")
+        self.assertEqual(violated_conditions(violations), [2])
+        self.assertRegex(violations[0], r"positions 4 and 6\b")
+
+    def test_ac2_a_wider_gap_names_the_two_cases_around_it(self):
+        violations = self.check("ooeepllpp")
+        self.assertEqual(violated_conditions(violations), [2])
+        self.assertRegex(violations[0], r"positions 4 and 7\b")
+
+    def test_ac2_an_older_or_earlier_feature_case_inside_the_run_violates_it_too(self):
+        for kinds in ("ooeepopp", "ooeepepp"):
+            with self.subTest(kinds=kinds):
+                self.assertIn(2, violated_conditions(self.check(kinds)))
+
+    # AC-3: the other conditions.
+
+    def test_ac3_a_per_target_case_before_an_earlier_feature_case_violates_condition_4(self):
+        violations = self.check("ooppee")
+        self.assertEqual(violated_conditions(violations), [4])
+        self.assertRegex(violations[0], r"position 2\b.*position 5\b")
+
+    def test_ac3_a_per_target_run_that_starts_inside_the_earlier_cases_violates_condition_4(self):
+        violations = self.check("ooepee")
+        self.assertEqual(violated_conditions(violations), [4])
+        self.assertRegex(violations[0], r"position 3\b.*position 5\b")
+
+    def test_ac3_a_first_per_target_case_before_the_pre_existing_count_violates_condition_3(self):
+        violations = self.check("oopp", pre_existing=3)
+        self.assertEqual(violated_conditions(violations), [3])
+        self.assertRegex(violations[0], r"position 2\b.*\b3\b")
+
+    def test_ac3_a_first_per_target_case_at_the_pre_existing_count_is_accepted(self):
+        self.assertEqual(self.check("oopp", pre_existing=2), [])
+
+    def test_ac3_no_per_target_case_violates_condition_1(self):
+        for kinds in ("ooeel", "oo", ""):
+            with self.subTest(kinds=kinds):
+                violations = self.check(kinds)
+                self.assertEqual(violated_conditions(violations), [1])
+                self.assertIn(PER_TARGET_LABEL_PREFIX, violations[0])
+
+    def test_ac3_several_violated_conditions_are_all_reported_in_condition_order(self):
+        violations = self.check("ppee")
+        self.assertEqual(violated_conditions(violations), [3, 4])
+        violations = self.check("ppelpee", pre_existing=3)
+        self.assertEqual(violated_conditions(violations), [2, 3, 4])
 
 
 def scenario_number(case):

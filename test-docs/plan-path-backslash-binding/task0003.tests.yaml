@@ -1,0 +1,82 @@
+task_id: task0003
+baseline_failures:             # 4a: python3 -m unittest discover -s tests -> Ran 16447 tests, FAILED (failures=1, skipped=1); inherited, and the one task0003 repairs
+  - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCaseTable.test_the_cases_come_after_every_other_case
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> no failure and no error; the baseline test no longer exists under that name (renamed, assertion replaced by the ordering check). The first re-run found one failure caused by the rename (the id-resolution check of test-docs/mixed-rm-self-config-deny/task0001.tests.yaml, AC-6); that record's id was updated and the suite re-run: Ran 16460 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetOrderingCheck.test_ac1_a_run_after_the_earlier_cases_with_cases_after_it_is_accepted
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetOrderingCheck.test_ac1_a_label_that_only_contains_the_per_target_prefix_is_not_selected
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetOrderingCheck.test_ac1_a_name_that_merely_begins_with_the_earlier_feature_is_not_one_of_its_cases
+    red_confirmed: true
+    red_reason: >-
+      Run with the tests written and the ordering check not yet defined: every
+      subtest of the first test and both selection tests errored with
+      "NameError: name 'per_target_ordering_violations' is not defined".
+      Negative proof against the old "the run reaches the end of the table"
+      condition, applied to the synthetic tables of the first test in a
+      throwaway script: it rejected "ooeeepppll" and "ooeeplllll" (False) and
+      accepted only "ooeeppp", the table with nothing after the run.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetOrderingCheck.test_ac2_one_other_case_between_two_per_target_cases_violates_condition_2
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetOrderingCheck.test_ac2_a_wider_gap_names_the_two_cases_around_it
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetOrderingCheck.test_ac2_an_older_or_earlier_feature_case_inside_the_run_violates_it_too
+    red_confirmed: true
+    red_reason: >-
+      Run with the ordering check not yet defined: all three tests errored with
+      "NameError: name 'per_target_ordering_violations' is not defined".
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetOrderingCheck.test_ac3_a_per_target_case_before_an_earlier_feature_case_violates_condition_4
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetOrderingCheck.test_ac3_a_per_target_run_that_starts_inside_the_earlier_cases_violates_condition_4
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetOrderingCheck.test_ac3_a_first_per_target_case_before_the_pre_existing_count_violates_condition_3
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetOrderingCheck.test_ac3_a_first_per_target_case_at_the_pre_existing_count_is_accepted
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetOrderingCheck.test_ac3_no_per_target_case_violates_condition_1
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetOrderingCheck.test_ac3_several_violated_conditions_are_all_reported_in_condition_order
+    red_confirmed: true
+    red_reason: >-
+      Run with the ordering check not yet defined: every test and every
+      subtest errored with "NameError: name 'per_target_ordering_violations'
+      is not defined".
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCaseTable.test_the_cases_form_one_run_after_the_earlier_cases
+    red_confirmed: true
+    red_reason: >-
+      Two observations. At the start (4a) the old ordering test of the same
+      class, test_the_cases_come_after_every_other_case, failed on the real
+      table with "AssertionError: Lists differ: [1337 ... 1349] != [1337 ...
+      1363] : the cases are not one run at the end of the table", because the
+      mcp-bridge-exec-tool-rescan cases sit after the run. After the test was
+      rewritten to apply the ordering check and renamed, and before the check
+      existed, it errored with "NameError: name
+      'per_target_ordering_violations' is not defined". The wording
+      requirement (neither the test name nor the class docstring says the
+      per-target cases are the last of the table) is read in the module text;
+      no executable check covers it.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_mixed_rm_precedence.TestCaseTable.test_every_existing_case_is_present_unchanged_and_first
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCasesPassAgainstTheHook.test_ac6_every_case_of_the_feature_passes
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing tests above
+      detect a change to the pre-existing cases of the case table and a break
+      of the per-target cases against the hook; no red state occurred for this
+      change, which touches none of the three files. The byte-identity itself
+      was confirmed with a read-only git diff of the three paths against
+      implement.base_commit (empty), and the diff of the test module against
+      that commit removes only the old ordering test body, the old class
+      docstring text and the one-argument form of feature_case_positions
+      (kept callable that way through a default argument).
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_mixed_rm_precedence
+    red_confirmed: true
+    red_reason: >-
+      Whole-suite outcome. At 4a the full suite failed with one failure
+      (the old ordering test), so the criterion was red before the change; it
+      is verified by running python3 -m unittest
+      tests.test_destructive_guard_mixed_rm_precedence and python3 -m unittest
+      discover -s tests, standard library only.
