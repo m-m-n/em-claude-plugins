@@ -119,7 +119,7 @@ tasks:
     - NFR1
     - NFR2
     - NFR3
-    status: pending
+    status: in_progress
     notes: null
     branch: em-workflow/plan-path-backslash-binding/task0001
   task0002:
@@ -136,7 +136,7 @@ tasks:
     - FR4
     - NFR2
     - NFR3
-    status: pending
+    status: in_progress
     notes: null
     branch: em-workflow/plan-path-backslash-binding/task0002
 review:
