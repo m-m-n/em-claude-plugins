@@ -1,0 +1,92 @@
+task_id: task0005
+baseline_failures: []          # 4a, before any edit: python3 em-workflow/hooks/tests/run-destructive-guard.py -> 1411/1411 passed; python3 -m unittest discover -s tests -> Ran 16598 tests, OK (skipped=1)
+final_failures: []             # re-executed after the hook change and after this record: python3 em-workflow/hooks/tests/run-destructive-guard.py -> 1412/1412 passed; python3 -m unittest discover -s tests -> Ran 16601 tests, OK (skipped=1); nothing failing
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >
+      The TS-30 case and the new unit-test entries were written
+      before any hook change. run-destructive-guard.py (the runner that the
+      existing test above executes over the whole table and asserts exits 0)
+      was run against the unchanged hook: it exited 1 with 1411/1412 passed,
+      and the one failure was TS-30, FAIL with got=allow rule=None where deny
+      is required. Every other case kept its decision. The stored command was
+      read back from the case file and compared with the shell text of the
+      New case table (equal); the label begins with
+      mcp-bridge-args-json-exec-guard TS-30; the entry has three elements; the
+      earlier 1410 entries of the file are unchanged (the diff of the file
+      adds one entry and touches no other).
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_a_value_before_the_terminator_or_a_positional_word_is_inspected
+    red_confirmed: true
+    red_reason: >
+      The runner run against the unchanged hook: TS-30 FAILed with got=allow
+      rule=None where deny is required (the lone dash read as a flag whose
+      name is empty, an unknown name, so the statement became nothing to do
+      and the --args-json value read before it was dropped). TS-25 (the value
+      before `--`) passed before and after the change: it pins the existing
+      stop at `--` (no red state occurred for it).
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_a_value_before_the_terminator_or_a_positional_word_is_inspected
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_a_value_after_a_lone_dash_is_not_inspected
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_forms_that_are_not_inspected
+    red_confirmed: true
+    red_reason: >
+      On the unchanged hook, test_a_value_before_the_terminator_or_a_positional_word_is_inspected
+      FAILed for the subtests "a lone dash", "a lone dash and a flag" and "a
+      single-quoted lone dash" (AssertionError: Lists differ: ['inspected'] !=
+      ['nothing']), and test_a_value_after_a_lone_dash_is_not_inspected FAILed
+      (AssertionError: [('first',)] != []). The subtest "an empty
+      single-quoted word" passed before the change: the empty restored text
+      does not begin with `-`, so the unchanged reading already ended the flag
+      sequence there (the behavior pre-existed; no red state occurred for that
+      entry). test_forms_that_are_not_inspected, with the lone-dash entry moved
+      next to the positional forms, passed before and after: a lone dash
+      before any --args-json gives nothing to do under both readings (only the
+      reason for the stop changes).
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_forms_that_are_not_inspected
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_a_flag_position_word_that_is_not_static_is_not_inspected
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_a_non_static_value_word_is_not_inspected
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: false
+    red_reason: >
+      The criterion keeps existing behavior (an unknown flag, an unknown
+      single-dash flag, three dashes, no value, no --args-json, the canonical
+      notion pair, a flag-position word that is not static, TS-28 as allow).
+      The existing tests above detect a regression of that behavior, and they
+      passed before any change; no red state occurred for this change.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDocstring.test_the_flow_states_a_word_shorter_than_two_characters_ends_the_flags
+      - tests.test_destructive_guard_args_json.TestDocstring.test_o1_and_o2_are_named
+      - tests.test_destructive_guard_args_json.TestDocstring.test_o1_forms
+      - tests.test_destructive_guard_args_json.TestDocstring.test_o2_forms
+      - tests.test_destructive_guard_args_json.TestDocstring.test_neither_form_is_sent_to_ask
+      - tests.test_destructive_guard_args_json.TestDocstring.test_no_form_that_is_not_out_of_scope_is_listed
+    red_confirmed: true
+    red_reason: >
+      On the unchanged docstring, the new
+      test_the_flow_states_a_word_shorter_than_two_characters_ends_the_flags
+      FAILed for the subtests "restored text is shorter than two characters"
+      and "a lone `-`" (AssertionError: the phrase was not found in the flag
+      reading steps of the docstring). The other TestDocstring tests (the O1 /
+      O2 list, and the check that no form that is not out of scope is listed)
+      passed before and after: they pin that the O1 / O2 list did not change.
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_args_json
+    red_confirmed: true
+    red_reason: >
+      Before the hook change the runner exited 1 (1411/1412, TS-30 FAIL) and
+      python3 -m unittest tests.test_destructive_guard_args_json reported
+      FAILED (failures=6) over 109 tests. After the change the runner exits 0
+      with 1412/1412 passed, the unit module reports OK, and unittest discover
+      exits 0. The change set is the three files of the task plus this record.

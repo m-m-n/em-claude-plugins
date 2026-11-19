@@ -1429,5 +1429,6 @@
   ["deny", "mcp-bridge-args-json-exec-guard TS-26: --args-json を 2 回書いたときは値ごとに独立に検査するので、先の値の最上位の command の平文の git branch -D を deny", "mcp-bridge run --mcp desktop-commander --tool start_process --args-json '{\"command\":\"git branch -D example\"}' --args-json '{\"command\":\"ls\"}'"],
   ["allow", "mcp-bridge-args-json-exec-guard TS-27: 対象外の形 O2 (2): 静的でないフラグ位置の語（引用の外の変数展開）がある形は、検査せず従来の判定のまま allow", "mcp-bridge run $OPTS --args-json '{\"command\":\"git branch -D example\"}'"],
   ["allow", "mcp-bridge-args-json-exec-guard TS-28: 対象外の形 O2 (3): 知らないフラグがある形は、検査せず従来の判定のまま allow", "mcp-bridge run --unknown x --args-json '{\"command\":\"git branch -D example\"}'"],
-  ["deny", "mcp-bridge-args-json-exec-guard TS-29: 引用符で書いたフラグ名 '--mcp' は notion の組として外さず、--args-json の値を復号して JSON エスケープで書いた置換の中の git branch -D を deny", "mcp-bridge run '--mcp' notion --tool notion-create-comment --args-json '{\"body\":\"\\u0024(git branch -D example) と記載する\"}'"]
+  ["deny", "mcp-bridge-args-json-exec-guard TS-29: 引用符で書いたフラグ名 '--mcp' は notion の組として外さず、--args-json の値を復号して JSON エスケープで書いた置換の中の git branch -D を deny", "mcp-bridge run '--mcp' notion --tool notion-create-comment --args-json '{\"body\":\"\\u0024(git branch -D example) と記載する\"}'"],
+  ["deny", "mcp-bridge-args-json-exec-guard TS-30: フラグ位置の単独の - は位置引数としてフラグの並びを終わらせるので、その前の --args-json の値を復号して最上位の command の平文の git branch -D を deny", "mcp-bridge run --mcp desktop-commander --tool start_process --args-json '{\"command\":\"git branch -D example\"}' -"]
 ]
