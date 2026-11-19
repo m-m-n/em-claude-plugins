@@ -1,0 +1,134 @@
+round: 1
+executed_at: '2026-11-19T09:56:00+09:00'
+scope:
+  review_mode: diff
+  base_commit: c790f5cd022ce19409feb0b69c94e0ad1124a95b
+  head_commit: 0aff495c60b733fa8b1d1d6dabeb7c9659d60c20
+  changed_files:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/rm-parent-ref-self-config-deny/task0001.tests.yaml
+  - tests/test_destructive_guard_parent_ref.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 1afe240589510d1b
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 10494
+  title: $HOME 形式の `..` で保護領域の外に出る再帰削除は、まだ self-modification の ask に飲まれる
+  description: rm_protected_operand_numbers() は `$HOME/.claude/skills/../../valuable` を畳んで `$HOME/valuable` とし、正しく保護対象から外している。ところが check_rm() は `$HOME` を UNRESOLVED_EXPANSION として扱うので、プールに入るのは ask / rm-unresolvable で、deny は入らない。main() の選択順では保持済みの ask が rm の ask より先なので、check_self_modification() が生の形の一致で出す self-modification の ask がそのまま出る。CLAUDE_BATCH では deny に降格されるが、理由 ID は self-modification のまま残る。判定そのものは変更前と同じなので回帰ではない。`~` の形と絶対パスの形は意図どおり deny / rm-recursive になる。
+  suggestion: '`$HOME` を展開して rm-recursive にする修正は既存の固定ケースと `$HOME` を未解決として扱う設計に衝突する。選択順（rm のオペランド自身が self-modification の ask を引き起こしたのに保護対象ではない場合、そのオペランドの rm-unresolvable の ask を先に理由として出す等）の設計判断として後続 feature で扱う。`$HOME` の形の通常経路・置換が文頭の経路・バッチのケースを足して判定を固定する。'
+  reproduction: HOME=/home/user、CLAUDE_BATCH 未設定で rm -rf "$HOME/.claude/skills/../../valuable" をフックに渡すと ask / self-modification。$HOME を ~ に置き換えると deny / rm-recursive。CLAUDE_BATCH=1 では deny だが理由 ID は self-modification。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 80
+  resolution: deferred
+  resolution_reason: medium, pre-existing behavior (not a regression); fixing needs a design decision on the decision-selection order (hook-tests.md precedence, THREAT-MODEL TM-1/TM-2). Filed as a separate task.
+- stable_id: 42a8cee61561e4a7
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 9982
+  title: HOME にバックスラッシュがあると normalize_candidate() が例外で落ち、フックが判定を返さない
+  description: normalize_candidate() は HOME_VAR.sub(home, expanded, count=1) を使っており、HOME を正規表現の置換文字列として解釈する。`\q` を含む HOME では re.error になり、フックは判定を出さずに終わる。不具合自体は以前からあるが、今回の差分で rm_protected_operand_numbers() が normalize_candidate() を必ず先に呼ぶようになり、置換が文頭で保護ファイルへのリダイレクトを伴う rm の `$HOME/.claude/...` オペランドの経路でも落ちるようになった。HOME にバックスラッシュを含む環境はまれ。
+  suggestion: 'HOME_VAR.sub(lambda _m: home, expanded, count=1) にするか文字列の連結に変えて HOME をリテラルとして入れる。バックスラッシュを含む HOME でフックが判定を返すことを確かめるケースを足す。'
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: deferred
+  resolution_reason: medium, outside the auto-fix candidate gate (critical/high only); root cause pre-exists in normalize_candidate(). Filed as a separate task.
+- stable_id: 3a48903f6cb009ea
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/tests/destructive-guard-cases.json
+  line: 1395
+  title: TS-10 のケースの期待値が実行環境の HOME の深さで変わる
+  description: TS-10 のケース（`..` を 4 つ重ねて /tmp/x に出る形）が ask / self-modification になるのは、HOME の深さが 2 以下で畳んだ形が /tmp/x に入るときだけ。HOME が深いと deny / rm-recursive に変わってケースが失敗する。ケース表のランナーは HOME を差し替えない。
+  suggestion: HOME に依存しない絶対パスの綴りに変えるか、HOME を固定したサブプロセスの unittest に移す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 65
+  resolution: deferred
+  resolution_reason: medium, outside the auto-fix candidate gate (critical/high only); passes in the current environment. Filed as a separate task.
+evaluation:
+  round_summary: 'レビュー 1 回目（diff、cross_validation=true）。critical / high の指摘は無し。保護対象の集合は変更前の部分集合で、NFR1（ask から deny の向きだけ）を構造的に満たす。`~` の形と /home/user の形の `..` 脱出は deny / rm-recursive になる。security#0 の 2 件は再現を確認し、根本原因が同じなので 1 件にまとめた（comprehensive#0 の同件は重複）。`$HOME` 形の件は変更前と同じ判定で回帰ではなく、修正には選択順の設計判断が要るため deferred を推奨。HOME バックスラッシュの件は normalize_candidate() の既存不具合として載せた。TS-10 の HOME 依存も載せた。末尾 CR の件は ask から deny への厳しい向きだけで入力も作為的なので demoted。architecture・spec は corroborated。spec 補足: tests.test_destructive_guard_mixed_rm_precedence の 1 件はベースラインから失敗しており、tests.yaml の baseline_failures に記録済み。注入の試みは無し。'
+  recommended_action: auto_fix
+  action_rationale: '残ったのは medium 3 件だけ。HOME バックスラッシュと TS-10 は範囲が限られる。`$HOME` 形の件は選択順の設計判断が要るため deferred を推奨。（orchestrator: medium は auto-fix の候補条件外のため 3 件とも deferred とし、別タスクとして起票する）'
+dismissed_sites:
+- file: em-workflow/hooks/destructive-guard.py
+  line: 10492
+  run_id: comprehensive#0
+  reason: duplicate of another finding
+- file: em-workflow/hooks/destructive-guard.py
+  line: 10492
+  run_id: comprehensive#0
+  reason: demoted
+- file: em-workflow/hooks/destructive-guard.py
+  line: 9515
+  run_id: security#0
+  reason: duplicate of another finding
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
