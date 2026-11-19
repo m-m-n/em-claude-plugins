@@ -1,0 +1,33 @@
+feature: rm-parent-ref-self-config-deny
+collected_at: "2026-11-19T11:03:19+09:00"
+session_ids: [01a1f18a-75eb-7393-866d-f4945ebcdfb9.jsonl]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: "description_plus_code の最終読み（score 1.08、confidence 0.92）と事前調査（change_containment: single_function、changes_external_contract: false）から評価器が reduced を返した"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.05, confidence: 0.95}
+        observed_at: "2026-11-19T08:52:34+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.08, confidence: 0.92}
+        observed_at: "2026-11-19T08:52:34+09:00"
+    pre_survey_estimate:
+      changed_lines_approx: 16
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      body_change_kind: new_logic
+      change_containment: single_function
+      changes_external_contract: false
+follow_up_drafts: []
+lessons_candidates:
+  - "verify round 1 が AC6 で failed: 前 feature のテスト test_the_cases_come_after_every_other_case が「前 feature のケースがケース表の末尾」と固定しており、後続 feature がケースを足すと必ず落ちた。rework task0002 で解消し、round 2 で pass"
+  - "事前調査の files_expected（2 ファイル）に対し、実際は tests/ 配下の単体テストと前 feature のテストも触った"
+  - "review round 1 で medium の deferred が 3 件残った: 1afe240589510d1b（$HOME 形式の .. で保護領域外に出る再帰削除が self-modification の ask に飲まれる）、42a8cee61561e4a7（HOME にバックスラッシュがあると normalize_candidate() が例外）、3a48903f6cb009ea（TS-10 の期待値が HOME の深さに依存）"
