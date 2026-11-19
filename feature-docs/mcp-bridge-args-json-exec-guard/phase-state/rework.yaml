@@ -1,0 +1,22 @@
+schema_version: 1
+feature: mcp-bridge-args-json-exec-guard
+phase: rework
+worker_runs:
+- request_id: rework-run-0001
+  status: dispatched
+  source: review
+  review_round: 1
+  input_digest: sha256:9ee742d16cfa7190f6b70359a3e1ef703e5bf51c39a837ee754e65a7591ab490
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/rework-planner-contract.md: sha256:0c9f82099c3546b6b675856539d8244628b7170ce7a4442ec951e13e16577ec3
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/mcp-bridge-args-json-exec-guard/IMPLEMENTATION.md: sha256:13e9c7c7a625790b49c2feacb24f0b2e0d743b1959055dfc88a2426ad96996c7
+    feature-docs/mcp-bridge-args-json-exec-guard/SPEC.md: sha256:d05af362397a2be074eb4ab232b784ca6fd8923c3b2fbbea0ad5d40df39ebd36
+    feature-docs/mcp-bridge-args-json-exec-guard/VERIFICATION.md: sha256:5f63a6416c87d18877a2978a2a5f8bb41f104ddd77a9c668bb1b1d7c4a58e80a
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0001.md: sha256:8250386aafa3b089c46b768a873b71ae10e549cb7565e47210d7545e4b7fc289
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0002.md: sha256:506a4a91980ecf002ebaa6e715c70606e0be16f80f66f7989f902837918129bb
+    feature-docs/mcp-bridge-args-json-exec-guard/workflow.yaml: sha256:9837764cfdc608143fd0e85794d403bedbe6a0cb6a06556bcdd1782826a45e64
