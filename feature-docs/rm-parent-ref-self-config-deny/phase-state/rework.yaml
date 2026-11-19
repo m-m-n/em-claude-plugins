@@ -1,0 +1,41 @@
+schema_version: 1
+feature: rm-parent-ref-self-config-deny
+phase: rework
+status: completed
+generation: 1
+base_revision: e4ea8fa3d650948247c5db75f4f11f4015bdfce2
+last_input_digest: sha256:97dbac625d6dd68785fca965047561aef1d82f2fdabb33d1f4c5aec2b48d6941
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs:
+- request_id: rework-run-0001
+  status: completed
+  input_digest: sha256:97dbac625d6dd68785fca965047561aef1d82f2fdabb33d1f4c5aec2b48d6941
+  output_digest: null
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/rework-planner-contract.md: sha256:0c9f82099c3546b6b675856539d8244628b7170ce7a4442ec951e13e16577ec3
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/rm-parent-ref-self-config-deny/SPEC.md: sha256:7b2f9309c6f2c04e718f3a48465d55b3fd960c42b0d5de346334b741aa47eb71
+    feature-docs/rm-parent-ref-self-config-deny/VERIFICATION.md: sha256:2f959958df1f77ea302755669ec88a7236520c314c8bc3d44abb8d541cb63642
+    feature-docs/rm-parent-ref-self-config-deny/tasks/task0001.md: sha256:f8e71f0103c6ffe03f8f301aa770718b78bb5f3c32b144bd6e485a7278f57930
+    feature-docs/rm-parent-ref-self-config-deny/workflow.yaml: sha256:5d00b852f2696b5e12ae7a75a7494dfe5dca365a128951c34595d75c2e4f761d
+  self_write_set:
+  - feature-docs/rm-parent-ref-self-config-deny/tasks/task0002.md
+artifacts:
+- path: feature-docs/rm-parent-ref-self-config-deny/tasks/task0002.md
+  sha256: sha256:b7f53c8d2771fd434b66156f0780bd7753be207e97865b2c2de5126423ecec27
+  produced_by: rework-run-0001
+patches:
+- patch_id: rm-parent-ref-self-config-deny-rework-p0001
+  status: applied
+  base_input_digest: sha256:97dbac625d6dd68785fca965047561aef1d82f2fdabb33d1f4c5aec2b48d6941
+  base_workflow_blob: 638b48c95fa832ad92f819fefea8a731dd37af46
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

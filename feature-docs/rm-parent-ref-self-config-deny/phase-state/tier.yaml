@@ -1,0 +1,45 @@
+schema_version: 2
+feature: rm-parent-ref-self-config-deny
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.05
+    confidence: 0.95
+    probabilities:
+      '0': 0.0
+      '1': 0.95
+      '2': 0.05
+      '3': 0.0
+  observed_at: '2026-11-19T08:52:34+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.08
+    confidence: 0.92
+    probabilities:
+      '0': 0.0
+      '1': 0.92
+      '2': 0.08
+      '3': 0.0
+  observed_at: '2026-11-19T08:52:34+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  changed_lines_approx: 16
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 2
+  body_change_kind: new_logic
+  change_containment: single_function
+  caller_and_dependency_count: 4
+  changes_external_contract: false
+  changes_behavior: true
+decided_at: '2026-11-19T08:52:34+09:00'

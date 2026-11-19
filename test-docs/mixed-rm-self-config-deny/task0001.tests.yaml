@@ -110,6 +110,7 @@ acceptance_tests:
   AC-6:
     tests:
       - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCaseTable.test_the_cases_form_one_run_after_the_earlier_cases
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCaseTable.test_the_cases_form_one_unbroken_run
       - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCaseTable.test_none_of_the_cases_joins_the_earlier_features_run
       - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCaseTable.test_every_case_is_rule_pinned_and_labelled_with_its_scenario
       - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCaseTable.test_every_case_names_no_machine_specific_path
