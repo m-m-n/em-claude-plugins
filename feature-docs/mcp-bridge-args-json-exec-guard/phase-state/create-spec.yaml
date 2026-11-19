@@ -4,8 +4,8 @@ phase: create-spec
 status: dispatching
 generation: 3
 base_revision: ef0980ca31722cf1d13d84f48f69d9bacdf6f7ae
-last_input_digest: sha256:c1cee4d2abebcdb06354601f90a0337f7fe4f541ec4db42ec89208efa17a2e99
-active_request_id: create-spec-run-0007
+last_input_digest: sha256:90ef7a253b7a8e10272ede68edae9edc257e6ed5a37158816910a6471e867ba1
+active_request_id: create-spec-run-0008
 packets:
   create-spec-q0001:
     status: answered
@@ -155,8 +155,14 @@ worker_runs:
     feature-docs/mcp-bridge-args-json-exec-guard/REQUIREMENTS.md: sha256:ad202dac6fd26562c5c3ea2793eab15a00d49206c063dc6841b4448ed2ffad57
     feature-docs/mcp-bridge-args-json-exec-guard/SPEC.md: sha256:d05af362397a2be074eb4ab232b784ca6fd8923c3b2fbbea0ad5d40df39ebd36
 - request_id: create-spec-run-0007
-  status: dispatched
+  status: completed
   input_digest: sha256:90ef7a253b7a8e10272ede68edae9edc257e6ed5a37158816910a6471e867ba1
+- request_id: create-spec-run-0008
+  status: dispatched
+  input_digest: sha256:f2b1b80a6aefa071750ef9123ca5cf50ae1f18ef22ceebfd6675ddbde58c23d3
+  dispatch_digest_inputs:
+    feature-docs/mcp-bridge-args-json-exec-guard/REQUIREMENTS.md: sha256:4070a541012ff40cc39d2e279cf295327fcdd81ccda3547de2c9acf398b8f224
+    feature-docs/mcp-bridge-args-json-exec-guard/SPEC.md: sha256:ad98591bde591f470abb1e792c986a720fa8f4673356d25ac1e44e0a5371261b
 artifacts:
 - path: feature-docs/mcp-bridge-args-json-exec-guard/REQUIREMENTS.md
   sha256: sha256:4070a541012ff40cc39d2e279cf295327fcdd81ccda3547de2c9acf398b8f224
