@@ -10,6 +10,9 @@ words after `run` the way mcp-bridge reads them, asks instead of skipping
 silently when a bound leaves something unscanned or a static word cannot be
 restored, moves the step's bookkeeping out of statements(), and pins the new
 cases and the revised unit tests; task0004 updates the in-code explanations.
+Review round 2 (finding ca547a9f716957df) adds task0005: a flag-position word
+whose restored text is shorter than two characters (a lone `-`) ends the flag
+sequence as a positional word (D2 step 2).
 
 ## Technology Stack
 - **Language**: Python 3 (the existing hook script, its case runner and the
@@ -33,7 +36,7 @@ cases and the revised unit tests; task0004 updates the in-code explanations.
 ## Shared Components
 | Component | Responsibility | Contract (pre/postcondition) | Used by tasks |
 |-----------|----------------|------------------------------|---------------|
-| `_mcp_bridge_args_json_chunks()` (existing function in `em-workflow/hooks/destructive-guard.py`; name kept) | The decision for one statement: whether it is an inspected `mcp-bridge run` statement, and what its `--args-json` values yield (FR1 to FR6, FR11) | Pre: the shaped words of a statement that statements() yielded, and the marked text it was lexed from. Post: nothing is evaluated, executed or read, and no token, marked text or state of statements() changes. The result is either "nothing to do" (not a target, the notion pair, or a statement-level FR6 form) or: for each `--args-json` value, in order, that is static and decodes to an object, its anchor word, its candidate bodies and its top-level `command` strings (each in document order); the total scan charge of the rebuilds, the nesting passes, the decodes and the walks; an Overrun flag (some value nests deeper than `MAX_ARGS_JSON_DEPTH` or fails the decoder for a reason other than a JSON syntax error); and an Unrestorable flag (FR11, D5). Flow: D2, D3, D5. The representation is the building task's choice | task0003 (revises it), task0004 (names it) |
+| `_mcp_bridge_args_json_chunks()` (existing function in `em-workflow/hooks/destructive-guard.py`; name kept) | The decision for one statement: whether it is an inspected `mcp-bridge run` statement, and what its `--args-json` values yield (FR1 to FR6, FR11) | Pre: the shaped words of a statement that statements() yielded, and the marked text it was lexed from. Post: nothing is evaluated, executed or read, and no token, marked text or state of statements() changes. The result is either "nothing to do" (not a target, the notion pair, or a statement-level FR6 form) or: for each `--args-json` value, in order, that is static and decodes to an object, its anchor word, its candidate bodies and its top-level `command` strings (each in document order); the total scan charge of the rebuilds, the nesting passes, the decodes and the walks; an Overrun flag (some value nests deeper than `MAX_ARGS_JSON_DEPTH` or fails the decoder for a reason other than a JSON syntax error); and an Unrestorable flag (FR11, D5). Flow: D2, D3, D5. The representation is the building task's choice | task0003 (revises it), task0004 (names it), task0005 (revises the flag reading of D2 step 2) |
 | `_queue_args_json_chunks()` (new function in the same file) | The step's bookkeeping, outside statements() (NFR5): it calls the decision once and does everything statements() did inline for it | Pre: called by statements() once for each statement it yields, with that statement's shaped words, marked text, lexed flag and origin step, the chunk's anchor and derived Python-body mark, and the run's pending queue, scan state (scanned total and budget) and `_DeferredAsks` record. Post: (1) for a statement from the parse-failure fallback, or once this step has already held the scan-budget ask in the run, it does nothing; (2) on Overrun, or when the charge would take the scanned total past the budget, it leaves the scanned total unchanged, queues nothing for the statement and holds the scan-budget ask; (3) otherwise it adds the charge to the scanned total and queues every body like a substitution body and every `command` string like a `-c` payload, taking no count from `MAX_SHELL_PAYLOAD_EXPANSIONS`, each anchored at its value's word in the payload anchor form; (4) on Unrestorable it holds the `args-json-unrestorable` ask, whatever (2) or (3) did. It never emits a decision and never ends the scan (D3, D6, D7) | task0003 (builds it and calls it), task0004 (names it) |
 | `_DeferredAsks` (new class in the same file) | The run-local record of the asks statements() holds until its queue is drained (NFR5) | Pre: one record per statements() run. Post: it holds at most the two asks of D6 (scan-budget, `args-json-unrestorable`); it is settled once, after the queue is drained: with an early-stop list the strongest held ask is appended to it, with none that ask is emitted through decide(); an empty record does nothing. An ordinary scan-budget overrun that ends the scan early keeps its present behaviour, and the record is then not settled (D6) | task0003 (builds it; the collaborator and the payload extraction hold asks in it), task0004 (names it) |
 | `ARGS_JSON_UNRESTORABLE_ASK` (new module constant) | The (reason id, reason text) pair of the FR11 ask | Reason id `args-json-unrestorable`; the reason text is Japanese and says, in the sense of FR11, that the quoting of an `mcp-bridge run` `--args-json` value or flag word cannot be restored statically, so a confirmation is asked on the safe side. Same shape as `SCAN_BUDGET_ASK` | task0003 (defines it), task0004 (names it) |
@@ -97,7 +100,13 @@ cases and the revised unit tests; task0004 updates the in-code explanations.
      statement is inspected (FR11). Otherwise its restored text is used, so a
      quoted or backslashed flag word reads as the plain one (FR3 (a)).
   2. Restored text exactly `--` ends the flag sequence; restored text that does
-     not begin with `-` (a positional word) ends it too (FR3 (d)).
+     not begin with `-`, or that is shorter than two characters (the empty
+     text, a lone `-`), is a positional word and ends it too (FR3 (d)). The
+     `--args-json` values read before the end are inspected; the words after
+     it are not read as flags. The word shorter than two characters follows
+     Go's standard flag parsing, which ends the flags at such a word; review
+     round 2 finding ca547a9f716957df reads mcp-bridge-exec-tool-rescan D1
+     (A11) as recording that `mcp-bridge run` uses that parsing.
   3. Otherwise one or two leading dashes are removed (FR3 (b)), and the rest is
      split at its first `=` into a name and an inline value (FR3 (c)).
   4. Name `mcp`, `tool`, `args-json`, `format` or `session`: the value is the
@@ -115,8 +124,11 @@ cases and the revised unit tests; task0004 updates the in-code explanations.
   restored text is the value (FR3 (f)). An inline value is the text after the
   first `=` of its restored flag word, and its anchor word is the flag word.
 - **Basis**: FR1 to FR3, FR6, FR11, A8, A9, A11; review round 1 findings
-  65c5a71c6af6cb06 and e0e4df99e5cded9d.
-- **Affected tasks**: task0003 implements it; task0004 describes it.
+  65c5a71c6af6cb06 and e0e4df99e5cded9d; review round 2 finding
+  ca547a9f716957df (step 2, the word shorter than two characters).
+- **Affected tasks**: task0003 implements it; task0004 describes it; task0005
+  implements step 2's word shorter than two characters and updates the
+  flag-reading step of the `_mcp_bridge_args_json_chunks()` docstring.
 
 ### D3: Decoder failures, the nesting bound and the step's charge (revised)
 - **Decision**: a value the decoder rejects with a JSON syntax error, and a
@@ -232,7 +244,7 @@ the step.
 None of these is out of scope, and no out-of-scope statement lists them: a
 destination that is not static, an ANSI-C escape the guard cannot restore, a
 quoted flag name, the `=` form, a single-dash flag, a value before `--` or a
-positional word, a repeated `--args-json`.
+positional word (a lone `-` included), a repeated `--args-json`.
 
 ## Risk Assessment
 | Risk | Likelihood | Impact | Mitigation |

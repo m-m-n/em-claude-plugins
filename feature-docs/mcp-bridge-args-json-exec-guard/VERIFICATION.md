@@ -49,9 +49,15 @@ are six-character JSON escapes (IMPLEMENTATION.md D4).
 | TS-27 | `mcp-bridge run $OPTS --args-json '{"command":"git branch -D example"}'` | allow (out of scope, O2 (2)) | Integration (case runner) |
 | TS-28 | `mcp-bridge run --unknown x --args-json '{"command":"git branch -D example"}'` | allow (out of scope, O2 (3)) | Integration (case runner) |
 | TS-29 | `mcp-bridge run '--mcp' notion --tool notion-create-comment --args-json '{"body":"\u0024(git branch -D example) と記載する"}'` | deny | Integration (case runner) |
+| TS-30 | `mcp-bridge run --mcp desktop-commander --tool start_process --args-json '{"command":"git branch -D example"}' -` | deny (allow before the change) | Unit (case runner) |
 
 TS-18 and TS-19 each hold `"command":"true"` 25 times; TS-22 holds
 `bash -c 'true'` 25 times.
+
+TS-30 is not in SPEC.md. Rework task0005 adds it for review round 2 finding
+ca547a9f716957df: a lone `-` after the value is a positional word that ends
+the flag sequence (FR3 (d), IMPLEMENTATION.md D2 step 2), so the value before
+it is inspected.
 
 ### Additional Cases
 task0001 added these cases; the verdicts are after the change, and every
@@ -86,8 +92,11 @@ cases (TS-1, TS-3 to TS-9 and the four TM-2 lines) stay deny.
 - Payload counter (task0003, revised): decoded `command` strings take no
   count; a payload left unqueued by a used-up counter holds the scan-budget
   ask.
-- Flag reading (task0003, revised): which forms are inspected and which are
-  not (task0003 Unit tests).
+- Flag reading (task0003, revised; task0005, revised): which forms are
+  inspected and which are not (task0003 and task0005 Unit tests); a lone `-`
+  or an empty word after a value ends the flag sequence and the value before
+  it is inspected, and a lone `-` before `--args-json` is read with the
+  positional forms, not as an unknown flag.
 - Docstring (task0003, revised): O1 and O2 as IMPLEMENTATION.md states them,
   and none of the forms it says are not out of scope.
 - Unrestorable (task0003, added): value and flag-position words; the settled
@@ -106,7 +115,7 @@ cases (TS-1, TS-3 to TS-9 and the four TM-2 lines) stay deny.
   from the integration worktree, so that the current case file runs against
   the unchanged hook.
 - Expected: every new deny and ask case (TS-1 to TS-8, both TS-15 cases,
-  TS-17 to TS-26, TS-29 and the deny Additional Cases) is reported as failed
+  TS-17 to TS-26, TS-29, TS-30 and the deny Additional Cases) is reported as failed
   with obtained decision allow; the new allow cases (TS-9 to TS-14, TS-27,
   TS-28) pass. The run as a whole exits non-zero; only these results are
   checked.
@@ -142,13 +151,13 @@ cases (TS-1, TS-3 to TS-9 and the four TM-2 lines) stay deny.
 |-------------|-------|--------------|
 | FR1 | task0001, task0003 | TS-7, TS-8, TS-11; the two FR1 Additional Cases |
 | FR2 | task0001, task0003 | TS-9, TS-29; Notion Regression Set; item TM-5 |
-| FR3 | task0001, task0003 | TS-1 to TS-4, TS-17, TS-20, TS-23 to TS-26; item TM-6 |
+| FR3 | task0001, task0003, task0005 | TS-1 to TS-4, TS-17, TS-20, TS-23 to TS-26, TS-30; item TM-6 |
 | FR4 | task0001, task0003 | TS-1 to TS-4, TS-6, TS-7; item TM-2 |
 | FR5 | task0001, task0003 | TS-5, TS-8, TS-10, TS-12, TS-18, TS-19; payload-counter unit tests |
 | FR6 | task0001, task0003 | TS-13, TS-14, TS-20, TS-27, TS-28; flag-reading unit tests |
 | FR7 | task0001, task0003 | TS-15, TS-18, TS-19, TS-22; deferral unit tests |
 | FR8 | task0001, task0002, task0003, task0004 | TS-10, TS-13, TS-14, TS-27, TS-28 labels; Docstring unit test; Manual Testing |
-| FR9 | task0001, task0003 | TS-1 to TS-29; the case file's diff contains additions only |
+| FR9 | task0001, task0003, task0005 | TS-1 to TS-30; the case file's diff contains additions only |
 | FR10 | task0002, task0003, task0004 | Manual Testing |
 | FR11 | task0003 | TS-21; unrestorable unit tests; item TM-7 |
 | FR12 | task0003 | TS-22; payload-counter unit tests; item TM-8 |
@@ -207,8 +216,8 @@ cases (TS-1, TS-3 to TS-9 and the four TM-2 lines) stay deny.
   Regression Set pass as allow.
 - TM-6: the words after `run` are read as mcp-bridge reads them and every
   `--args-json` value is inspected whatever the destination — checked by
-  TS-17, TS-20 and TS-23 to TS-26 passing as deny and by the flag-reading unit
-  tests.
+  TS-17, TS-20, TS-23 to TS-26 and TS-30 passing as deny and by the
+  flag-reading unit tests.
 - TM-7: a static word whose quoting cannot be restored gives the
   `args-json-unrestorable` ask and a deny found wins — checked by TS-21 passing
   as ask with that reason ID, and by the unrestorable and deny-wins unit tests.
@@ -221,7 +230,7 @@ cases (TS-1, TS-3 to TS-9 and the four TM-2 lines) stay deny.
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
 | Build | 0 | 0 | 0 | 0 |
-| Test scenarios (TS-1 to TS-29) | 29 | 29 | 0 | 0 |
+| Test scenarios (TS-1 to TS-30) | 30 | 30 | 0 | 0 |
 | Additional cases | 7 | 7 | 0 | 0 |
 | Unit test groups | 10 | 10 | 0 | 0 |
 | Pre-change reproduction (NFR3) | 1 | 1 | 0 | 0 |
