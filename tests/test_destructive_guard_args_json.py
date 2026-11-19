@@ -604,9 +604,25 @@ class TestFlagReading(unittest.TestCase):
             ("tool", "mcp-bridge run --tool $T --args-json " + value),
             ("both", "mcp-bridge run --mcp $(echo s) --tool `echo t` --args-json " + value),
             ("format and session", "mcp-bridge run --format $F --session $(x) --args-json " + value),
+            # The `=` form of a known value-taking name whose value part is not
+            # static is a value-taking flag with a non-static inline value (D2
+            # step 1, FR3 (c)); it does not stop the inspection (FR3 (g)).
+            ("equals form with a destination", 'mcp-bridge run --mcp="$S" --args-json ' + value),
+            ("equals form with an unquoted variable as the tool name", "mcp-bridge run --tool=$T --args-json " + value),
+            ("equals form with a double-quoted variable as the session name", 'mcp-bridge run --session="$SID" --args-json ' + value),
         ):
             with self.subTest(label):
                 self.assertEqual([KIND_INSPECTED], self.kinds(command))
+
+    def test_the_value_beside_an_equals_form_destination_that_is_not_static_is_read(self):
+        # The one inspected value of `--mcp="$S" --args-json '{"command":"ls"}'`
+        # holds exactly the command string ls, and the Unrestorable flag is not
+        # set (FR3 (c), (g)).
+        command = 'mcp-bridge run --mcp="$S" --args-json ' + self.VALUE
+        spy = Spy(command)
+        (result,) = spy.inspected()
+        self.assertEqual(("ls",), sole_value(result).commands)
+        self.assertFalse(result.unrestorable)
 
     def test_forms_that_are_not_inspected(self):
         value = self.VALUE
@@ -641,9 +657,12 @@ class TestFlagReading(unittest.TestCase):
             ("glob", "mcp-bridge run --args-j* " + value),
             ("after a value", "mcp-bridge run --args-json " + value + " $OPTS"),
             ("after a first flag", "mcp-bridge run --dry-run $OPTS --args-json " + value),
-            # The flag word of the `=` form is one word: a destination that is
-            # not static in it makes the flag-position word not static.
-            ("equals form with a destination", 'mcp-bridge run --mcp="$S" --args-json ' + value),
+            # An `=`-form word whose name part is not static, or whose name is
+            # unknown, leaves the statement not inspected (D2 step 1, FR6 (2),
+            # (3)); only a known value-taking name with a non-static value part
+            # is read on (see the test of a destination that is not static).
+            ("equals form with a name part that is not static", "mcp-bridge run --$N=x --args-json " + value),
+            ("equals form of an unknown name with a non-static value part", 'mcp-bridge run --unknown="$S" --args-json ' + value),
         ):
             with self.subTest(label):
                 spy = Spy(command)

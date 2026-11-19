@@ -1,0 +1,69 @@
+task_id: task0006
+baseline_failures:             # 4a, before any edit. The one failure below was observed by running python3 -m unittest tests.test_destructive_guard_args_json (109 tests, failures=1) before the first edit; the first run of the whole project test command overlapped the edit, so its discover step already loaded the edited module and is not the source of this entry. Its runner step (hook and case file untouched) reported 1412/1412 passed.
+  - tests.test_destructive_guard_args_json.TestFlagReading.test_a_flag_position_word_that_is_not_static_is_not_inspected
+final_failures: []             # re-executed after the change: the whole project test command ran python3 em-workflow/hooks/tests/run-destructive-guard.py -> 1412/1412 passed, then python3 -m unittest discover -s tests -> Ran 16603 tests, OK (skipped=1); python3 -m unittest tests.test_destructive_guard_args_json -> Ran 110 tests, OK. Nothing failing. No test reads this record.
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_a_flag_position_word_that_is_not_static_is_not_inspected
+    red_confirmed: true
+    red_reason: >
+      Before any edit, python3 -m unittest tests.test_destructive_guard_args_json
+      ran 109 tests and reported FAILED (failures=1): the subtest "equals form
+      with a destination" of test_a_flag_position_word_that_is_not_static_is_not_inspected
+      (AssertionError: Lists differ: ['nothing'] != ['inspected']; the test
+      expected nothing to do and the hook returned one inspected result).
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_a_flag_position_word_that_is_not_static_is_not_inspected
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_a_destination_that_is_not_static_is_inspected
+    red_confirmed: true
+    red_reason: >
+      The red state is the failing subtest of AC-1: before the change the test
+      of flag-position words that are not static held the command with
+      --mcp="$S" and failed on it. After the change that test no longer holds
+      the command (it passes) and the test of a destination that is not static
+      holds it with the expectation of one inspected result. The new entry of
+      the destination test passed on its first run (the hook already inspects
+      the statement); only the removal from the flag-position test was
+      observed red.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_a_destination_that_is_not_static_is_inspected
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_the_value_beside_an_equals_form_destination_that_is_not_static_is_read
+    red_confirmed: false
+    red_reason: >
+      No red state occurred for these entries: the hook already reads an
+      `=`-form word of a known value-taking name with a non-static value part
+      as a value-taking flag (D2 step 1) and inspects the statement, so the
+      new entries (--tool=$T, --session="$SID", and the one inspected value
+      holding exactly the command string ls with the Unrestorable flag not set)
+      passed on their first run. The plan states they pass against the current
+      hook and that the hook is not changed. Search of the test directory by
+      path and basename found no earlier test of these forms; the existing
+      test of a destination that is not static covered only the space-separated
+      forms.
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_a_flag_position_word_that_is_not_static_is_not_inspected
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_a_non_static_value_word_is_not_inspected
+    red_confirmed: false
+    red_reason: >
+      No red state occurred for the new not-inspected entries (--$N=x and
+      --unknown="$S"): the hook already leaves a flag-position word whose name
+      part is not static, or whose name is unknown, as nothing to do (D2 step
+      1, FR6 (2), (3)), so they passed on their first run, as the plan states.
+      Every other entry of both tests keeps its assertions, and the
+      "equals form with a substitution" entry of the non-static value-word test
+      still expects nothing to do.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_args_json
+    red_confirmed: true
+    red_reason: >
+      Before the change python3 -m unittest tests.test_destructive_guard_args_json
+      exited 1 (FAILED, failures=1, the subtest named in AC-1). After the change
+      it exits 0 (110 tests OK). python3 em-workflow/hooks/tests/run-destructive-guard.py
+      and python3 -m unittest discover -s tests are checked by the project test
+      command; only tests/test_destructive_guard_args_json.py and this record
+      changed.
