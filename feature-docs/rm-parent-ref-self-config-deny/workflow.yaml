@@ -132,7 +132,7 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: in_progress
+    status: merged
     branch: em-workflow/rm-parent-ref-self-config-deny/task0001
     notes: null
 review:
