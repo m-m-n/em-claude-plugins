@@ -1,0 +1,20 @@
+schema_version: 1
+feature: rm-home-parent-ref-recursive-deny
+phase: create-spec
+status: in_progress
+generation: 1
+base_revision: 698c5e6f65b266777de3677158519db01362c63f
+last_input_digest: sha256:b3f9edd36aa382259174922a510b7fc978cefbb769aa78bb605cfeaf9a9d1a50
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:b3f9edd36aa382259174922a510b7fc978cefbb769aa78bb605cfeaf9a9d1a50
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
