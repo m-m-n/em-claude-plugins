@@ -136,7 +136,7 @@ tasks:
     - FR4
     - NFR2
     - NFR3
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/plan-path-backslash-binding/task0002
 review:
