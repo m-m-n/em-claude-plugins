@@ -92,11 +92,14 @@ workflow:
   status: completed
   completed_at_commit: a93197e48cf6b40591dfe1d820bc45ce0d06a35f
 - id: verify
-  status: in_progress
-  result: null
-  round: 0
-  passed_ids: []
-  failed_items: []
+  status: failed
+  result: fail
+  round: 1
+  passed_ids: [TS-1, TS-2, TS-3, TS-4, TS-5, TS-6, AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, TM-1, TM-2]
+  failed_items:
+  - id: AC-7
+    category: comprehensive
+    note: "python3 -m unittest discover -s tests: 16447 tests, 1 failure: tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCaseTable.test_the_cases_come_after_every_other_case (the per-target cases are not one run at the end of em-workflow/hooks/tests/destructive-guard-cases.json). Reproduces at implement.base_commit and on main; this feature's diff does not touch the case table or that test."
 - id: retrospect
   status: pending
 tasks:
@@ -241,8 +244,9 @@ requirements:
 batch:
   review_rework_count: 0
   verify_rework:
-    rounds: 0
-    failed_id_counts: {}
+    rounds: 1
+    failed_id_counts:
+      AC-7: 1
   infra_resume:
     rounds: 0
     cap: 2
