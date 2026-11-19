@@ -48,7 +48,7 @@ acceptance_tests:
   AC-4:
     tests:
       - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
-      - tests.test_destructive_guard_args_json.TestFlagReading.test_forms_outside_the_canonical_flag_sequence_are_not_inspected
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_forms_that_are_not_inspected
       - tests.test_destructive_guard_args_json.TestFlagReading.test_a_non_static_value_word_is_not_inspected
       - tests.test_destructive_guard_args_json.TestDocstring.test_o1_and_o2_are_named
       - tests.test_destructive_guard_args_json.TestDocstring.test_o1_forms
@@ -87,9 +87,9 @@ acceptance_tests:
       - tests.test_destructive_guard_args_json.TestCharge.test_the_charge_grows_with_the_strings_searched
       - tests.test_destructive_guard_args_json.TestCharge.test_the_charge_of_a_rebuilt_value_counts_its_decoded_length
       - tests.test_destructive_guard_args_json.TestCharge.test_the_charge_is_added_to_the_scanned_total
-      - tests.test_destructive_guard_args_json.TestPayloadCounter.test_with_the_counter_used_up_the_command_string_is_not_queued
+      - tests.test_destructive_guard_args_json.TestPayloadCounter.test_with_the_counter_used_up_the_command_string_is_still_queued
       - tests.test_destructive_guard_args_json.TestPayloadCounter.test_with_one_count_left_both_are_queued
-      - tests.test_destructive_guard_args_json.TestPayloadCounter.test_each_command_string_takes_one_count
+      - tests.test_destructive_guard_args_json.TestPayloadCounter.test_a_command_string_takes_no_count
       - tests.test_destructive_guard_args_json.TestPayloadCounter.test_the_component_returns_the_command_string_and_the_body
     red_confirmed: true
     red_reason: >
