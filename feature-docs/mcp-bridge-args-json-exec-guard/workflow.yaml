@@ -135,9 +135,11 @@ workflow:
   status: completed
   completed_at_commit: a604d5a5c95fe0d89dc50f5ec46f37977bb56920
 - id: verify
-  status: in_progress
-  result: fail
-  round: 2
+  status: completed
+  completed_at_commit: b9cde6640dd02f01c6fb3ea96a9d9bfab569c0bd
+  result: pass
+  round: 3
+  failed_items: []
   passed_ids:
   - TS-1
   - TS-2
@@ -185,6 +187,7 @@ workflow:
   - AC-14
   - AC-15
   - AC-16
+  - AC-17
   - TM-1
   - TM-2
   - TM-3
@@ -197,13 +200,6 @@ workflow:
   - NFR3
   - NFR4
   - NFR5
-  failed_items:
-  - id: AC-17
-    note: tests/test_destructive_guard_args_json.py の TestFlagReading.test_a_flag_position_word_that_is_not_static_is_not_inspected
-      の subTest 'equals form with a destination'（`mcp-bridge run --mcp="$S" --args-json ...`）が KIND_NOTHING
-      を期待するが、review round 4 loop 1 の修正後の実装は KIND_INSPECTED を返す（SPEC FR3 / FR13 では静的でない宛先と `=` の形は検査する）。unittest
-      discover は 16601 件中 1 件失敗。ケースランナーは全件合格
-    category: spec
 - id: retrospect
   status: pending
 tasks:
