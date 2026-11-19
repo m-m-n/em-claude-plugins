@@ -91,7 +91,7 @@ worker_runs:
     feature-docs/mcp-bridge-args-json-exec-guard/workflow.yaml: sha256:4a16c09fb08198949d3e2e5450773958e06a3e780393eedb98f2c8af5c51cf8b
   self_write_set: []
 - request_id: rework-run-0005
-  status: dispatched
+  status: rejected
   source: verify
   verify_round: 2
   input_digest: sha256:c40cb2c9514589a956ad3a3ab24d0784f8602a2a60563fb3260a7dc871656c3f
@@ -111,6 +111,10 @@ worker_runs:
     feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0004.md: sha256:43bb71f55214287739f130a074dd2a3cd7c6903e7b892afe2c30fe5381201e7a
     feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0005.md: sha256:a0b1dc62d19f66cdd8fd40a4927349d62565ccebef5e265fc956d4dd2dcf9c42
     feature-docs/mcp-bridge-args-json-exec-guard/workflow.yaml: sha256:a84cd1458ab436021190b36f4190472579e578ee196a2437658fde2fa4974528
+  self_write_set: []
+  rejection: 'layer-3/6 validation failed: task-plan-files, task-plan-files-mismatch (task0006 Files to Modify bullet
+    quotes `=` in backticks), rework-index (verification_index was nested under rework_source in the envelope);
+    written artifacts discarded'
 status: completed
 packets:
 - packet_id: rework-q0001
