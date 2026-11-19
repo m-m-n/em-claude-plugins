@@ -1,0 +1,87 @@
+task_id: task0002
+baseline_failures:             # 4a: python3 em-workflow/hooks/tests/run-destructive-guard.py -> 1375/1375 passed; python3 -m unittest discover -s tests -> Ran 16421 tests, FAILED (failures=2, skipped=1). The second failure, test_tests_yaml_id_resolution ... mixed_rm_self_config_deny_task0001, was caused by this task's own rename of the old method while that run was still in progress (the record check imports the test module late and could not find the old name), so it is not inherited and is not listed.
+  - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCaseTable.test_the_cases_come_after_every_other_case
+final_failures: []             # re-executed after implementation and after this record: runner 1375/1375 passed; unittest discover -> no failure
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCaseTable.test_the_cases_form_one_unbroken_run
+    red_confirmed: true
+    red_reason: >
+      The baseline run failed on the real case table with the old method of
+      this check (test_the_cases_come_after_every_other_case, "the cases are
+      not one run at the end of the table"), because the later features'
+      cases follow the run. The renamed method, run with the run-check helper
+      still holding the old end-of-table rule, failed the same way on the
+      current case table; it passes once the helper requires only the
+      unbroken run.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_mixed_rm_precedence.TestLabelledRunCheckOnSmallTables.test_an_unlabelled_case_between_two_labelled_ones_fails
+      - tests.test_destructive_guard_mixed_rm_precedence.TestLabelledRunCheckOnSmallTables.test_no_labelled_case_fails
+    red_confirmed: false
+    red_reason: >
+      The two conditions these tests pin (no case without the label between
+      two labelled cases, and at least one labelled case) are the half of the
+      rule that does not change, and the old end-of-table rule gives the same
+      result on their tables. They passed when first run against the helper
+      still holding the old rule, so no red state occurred for them; they
+      guard the new rule against dropping either condition.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_mixed_rm_precedence.TestLabelledRunCheckOnSmallTables.test_unlabelled_cases_only_after_the_run_pass
+      - tests.test_destructive_guard_mixed_rm_precedence.TestLabelledRunCheckOnSmallTables.test_unlabelled_cases_only_before_the_run_pass
+      - tests.test_destructive_guard_mixed_rm_precedence.TestLabelledRunCheckOnSmallTables.test_unlabelled_cases_on_both_sides_of_the_run_pass
+      - tests.test_destructive_guard_mixed_rm_precedence.TestLabelledRunCheckOnSmallTables.test_a_table_that_is_all_run_passes
+    red_confirmed: true
+    red_reason: >
+      Run against the helper still holding the old end-of-table rule,
+      test_unlabelled_cases_only_after_the_run_pass failed on the tables
+      "Lo", "LLoo" and "Looo" (AssertionError: 'the cases are not one run at
+      the end of the table' is not None), and
+      test_unlabelled_cases_on_both_sides_of_the_run_pass failed on "oLo",
+      "ooLLoo" and "oLLLo" the same way. The before-only test and the
+      all-run test passed under the old rule (the old rule gives the same
+      result there), so the red state is the after-run half of the criterion.
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      The wording of a class docstring, a method name and a failure message
+      has no executable check that can be made to fail first; a test that
+      searched this module's own source for the old phrases would itself
+      have to carry them. A search of tests/ and em-workflow/ by the
+      repository-relative path and by the file name
+      test_destructive_guard_mixed_rm_precedence found no test that reads
+      this module; only the record-resolution check
+      tests.test_tests_yaml_id_resolution resolves its test IDs from the
+      records, and it detects a stale method name, not wording. The criterion
+      is checked by reading the diff.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCaseTable.test_none_of_the_cases_joins_the_earlier_features_run
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCaseTable.test_every_case_is_rule_pinned_and_labelled_with_its_scenario
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCaseTable.test_every_case_names_no_machine_specific_path
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCaseTable.test_the_batch_key_is_set_for_scenario_3_only
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCaseTable.test_each_scenario_has_one_case_with_its_decision_command_and_rule
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCaseTable.test_the_earlier_features_ts_15_case_is_changed_in_place
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCaseTable.test_the_existing_cases_named_in_the_plan_keep_their_verdicts
+    red_confirmed: false
+    red_reason: >
+      A dedicated new module is out of scope, but these existing methods keep
+      their assertions unchanged and detect any weakening of the rest of the
+      class; they passed before and after the change, so no red state
+      occurred. That the assertions are unchanged is checked by reading the
+      diff.
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCaseTable.test_the_cases_form_one_unbroken_run
+    red_confirmed: true
+    red_reason: >
+      The outcome is the exit status of the two commands of the test command.
+      The baseline python3 -m unittest discover -s tests run ended FAILED with
+      test_the_cases_come_after_every_other_case failing, which is the failure
+      this criterion removes; it passes after the change. The case-table
+      runner half passed at the baseline (1375/1375) and still passes, and
+      the existing runner test above detects a failing case.
