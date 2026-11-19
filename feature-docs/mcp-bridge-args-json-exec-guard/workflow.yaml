@@ -135,7 +135,74 @@ workflow:
   status: completed
   completed_at_commit: cc6c58163e0f1c4cab23ddba1190cec7be666fdb
 - id: verify
-  status: in_progress
+  status: failed
+  result: fail
+  round: 1
+  passed_ids:
+  - TS-1
+  - TS-2
+  - TS-3
+  - TS-4
+  - TS-5
+  - TS-6
+  - TS-7
+  - TS-8
+  - TS-9
+  - TS-10
+  - TS-11
+  - TS-12
+  - TS-13
+  - TS-14
+  - TS-15
+  - TS-16
+  - TS-17
+  - TS-18
+  - TS-19
+  - TS-20
+  - TS-21
+  - TS-22
+  - TS-23
+  - TS-24
+  - TS-25
+  - TS-26
+  - TS-27
+  - TS-28
+  - TS-29
+  - TS-30
+  - AC-1
+  - AC-2
+  - AC-3
+  - AC-4
+  - AC-5
+  - AC-6
+  - AC-7
+  - AC-8
+  - AC-9
+  - AC-10
+  - AC-12
+  - AC-13
+  - AC-14
+  - AC-15
+  - AC-16
+  - AC-17
+  - TM-1
+  - TM-2
+  - TM-3
+  - TM-4
+  - TM-5
+  - TM-6
+  - TM-7
+  - TM-8
+  - NFR1
+  - NFR4
+  - NFR5
+  failed_items:
+  - id: AC-11
+    note: TS-19 の変更前の期待値は allow だが、ベースコミットのフックでの実測値は deny（--args-json を復号しないため後続の bash -c が最初のシェルペイロードとして検査される）。変更後の TS-19 は deny で合格
+    category: spec
+  - id: NFR3
+    note: 変更前の再現で TS-19 が allow の失敗として報告される前提だが、ベースコミットのフックでは deny で合格する。他の新しい deny / ask ケースは期待どおり allow で失敗した
+    category: spec
 - id: retrospect
   status: pending
 tasks:
@@ -547,8 +614,10 @@ requirements:
 batch:
   review_rework_count: 1
   verify_rework:
-    rounds: 0
-    failed_id_counts: {}
+    rounds: 1
+    failed_id_counts:
+      AC-11: 1
+      NFR3: 1
   infra_resume:
     rounds: 0
     cap: 2
