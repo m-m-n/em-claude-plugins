@@ -47,6 +47,7 @@ python3 em-workflow/hooks/tests/run-destructive-guard.py \
     - 同じ文の rm の削除対象のうち、保護された自己設定パスだけが候補から外れ、
       その分は self-modification の `ask` が残る。
       同じ rm の他の削除対象の `deny` は、その `ask` に勝つ。
+    - 同じ rm の削除対象のうち、生の形が保護された自己設定パスに一致するが、`..` を畳むと保護範囲の外に出て rm-unresolvable になるものがあると、その文の self-modification の `ask` より rm の `ask` が先に選ばれる。
     - `CLAUDE_BATCH` による降格は、優先順位を決めた後に行う。
 - `em-workflow/hooks/merge_pr_allow.py`（`gh pr merge` の正規形の許可を決める、
   `destructive-guard.py` の隣のモジュール）を変更したときも、同じテストを走らせる。
