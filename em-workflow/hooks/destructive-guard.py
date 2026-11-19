@@ -7918,8 +7918,21 @@ def _read_static_word(marked, tok):
                 bare.append(False)
             pos += 2
             continue
-        if ch in "$`":
+        if ch == "`":
             return WORD_NOT_STATIC, None
+        if ch == "$":
+            # An unquoted `$` is literal when it ends the word or the next
+            # character cannot start an expansion (same rule as
+            # _read_double_quoted). `$'` and `$"` keep the non-static handling.
+            if pos + 1 < hi:
+                nxt = source[pos + 1]
+                if (
+                    nxt.isalnum()
+                    or nxt == "_"
+                    or nxt in "@*#?-$!{([\"'"
+                    or not nxt.isascii()
+                ):
+                    return WORD_NOT_STATIC, None
         chars.append(ch)
         bare.append(True)
         pos += 1
@@ -7968,10 +7981,27 @@ def _flag_equals_prefix_name(marked, tok):
     source = marked.source
     pos = lo
     chars = []
+    eq_inside = False  # the `=` was found inside a single or ANSI-C quote
     while pos < hi:
         ch = source[pos]
         if ch == "=":
             break
+        if ch == "$" and source.startswith("$'", pos) and pos + 2 <= hi:
+            j = pos + 2
+            while j < hi and source[j] != "'":
+                j += 2 if source[j] == "\\" else 1
+            if j >= hi:
+                return None
+            decoded = _decode_ansi_c(source[pos + 2:j])
+            if decoded is None:
+                return None
+            if "=" in decoded:
+                chars.extend(decoded[:decoded.index("=")])
+                eq_inside = True
+                break
+            chars.extend(decoded)
+            pos = j + 1
+            continue
         if ch in "$`":
             return None
         if ch == "\\":
@@ -7982,18 +8012,56 @@ def _flag_equals_prefix_name(marked, tok):
             pos += 2
             continue
         if ch in "'\"":
+            if ch == '"':
+                # Read the name part inside the double quote; an `=` ends the
+                # name even when the value part after it holds expansions.
+                j = pos + 1
+                found_eq = False
+                closed = False
+                while j < hi:
+                    c = source[j]
+                    if c == "=":
+                        found_eq = True
+                        break
+                    if c == '"':
+                        closed = True
+                        break
+                    if c in "$`":
+                        return None
+                    if c == "\\":
+                        if j + 1 >= hi:
+                            return None
+                        nxt = source[j + 1]
+                        if nxt in "$`\"\\":
+                            chars.append(nxt)
+                        elif nxt != "\n":
+                            chars.append(c)
+                            chars.append(nxt)
+                        j += 2
+                        continue
+                    chars.append(c)
+                    j += 1
+                if found_eq:
+                    pos = j
+                    break
+                if not closed:
+                    return None
+                pos = j + 1
+                continue
             close = source.find(ch, pos + 1, hi)
             if close < 0:
                 return None
             body = source[pos + 1:close]
-            if ch == '"' and any(c in body for c in "$`\\"):
-                return None
+            if "=" in body:
+                chars.extend(body[:body.index("=")])
+                eq_inside = True
+                break
             chars.extend(body)
             pos = close + 1
             continue
         chars.append(ch)
         pos += 1
-    if pos >= hi or source[pos] != "=":
+    if not eq_inside and (pos >= hi or source[pos] != "="):
         return None
     prefix = "".join(chars)
     if not prefix.startswith("-") or not all(
