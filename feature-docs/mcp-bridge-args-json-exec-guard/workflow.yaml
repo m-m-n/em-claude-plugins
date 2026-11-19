@@ -128,14 +128,14 @@ workflow:
   status: completed
   completed_at_commit: bd5eed8518b54901c5231a5bfe82c911a345b6ca
 - id: implement
-  status: completed
+  status: pending
   completed_at_commit: ac96625702431f848bc8c3944e0cb51ac63ce971
   base_commit: 4b4dd2cf59441cb5adad8beb855c5905bd10716b
 - id: review
   status: completed
   completed_at_commit: a604d5a5c95fe0d89dc50f5ec46f37977bb56920
 - id: verify
-  status: failed
+  status: pending
   result: fail
   round: 2
   passed_ids:
@@ -199,9 +199,10 @@ workflow:
   - NFR5
   failed_items:
   - id: AC-17
-    note: tests/test_destructive_guard_args_json.py の TestFlagReading.test_a_flag_position_word_that_is_not_static_is_not_inspected の subTest
-      'equals form with a destination'（`mcp-bridge run --mcp="$S" --args-json ...`）が KIND_NOTHING を期待するが、review round 4 loop 1 の修正後の実装は
-      KIND_INSPECTED を返す（SPEC FR3 / FR13 では静的でない宛先と `=` の形は検査する）。unittest discover は 16601 件中 1 件失敗。ケースランナーは全件合格
+    note: tests/test_destructive_guard_args_json.py の TestFlagReading.test_a_flag_position_word_that_is_not_static_is_not_inspected
+      の subTest 'equals form with a destination'（`mcp-bridge run --mcp="$S" --args-json ...`）が KIND_NOTHING
+      を期待するが、review round 4 loop 1 の修正後の実装は KIND_INSPECTED を返す（SPEC FR3 / FR13 では静的でない宛先と `=` の形は検査する）。unittest
+      discover は 16601 件中 1 件失敗。ケースランナーは全件合格
     category: spec
 - id: retrospect
   status: pending
@@ -336,6 +337,26 @@ tasks:
       review_round: 2
     notes: null
     branch: em-workflow/mcp-bridge-args-json-exec-guard/task0005
+  task0006:
+    title: Pin the inspection of a static --args-json value beside an equals-form flag word with a non-static
+      destination
+    plan: tasks/task0006.md
+    files:
+    - tests/test_destructive_guard_args_json.py
+    skills: []
+    domains:
+    - input-handling
+    complexity: low
+    requirements:
+    - FR3
+    - FR6
+    - FR13
+    status: pending
+    provenance:
+      source: verify
+      source_ids:
+      - AC-17
+    notes: null
 review:
   status: completed
   rounds_completed: 4
@@ -390,6 +411,7 @@ requirements:
     - task0001
     - task0003
     - task0005
+    - task0006
     tests:
     - TS-1
     - TS-2
@@ -441,6 +463,7 @@ requirements:
     - task0001
     - task0003
     - task0005
+    - task0006
     tests:
     - TS-13
     - TS-14
@@ -602,6 +625,7 @@ requirements:
     tasks:
     - task0003
     - task0005
+    - task0006
     tests: []
   NFR5:
     title: Maintainability

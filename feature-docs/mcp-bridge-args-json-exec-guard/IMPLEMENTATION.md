@@ -104,10 +104,20 @@ states the current expectation.
   reading of mcp-bridge-exec-tool-rescan IMPLEMENTATION.md D1 (A11); the first
   word after `run` is in flag position:
   1. A word in flag position is classified (D5). Not static: the statement is
-     not inspected (FR6 (2)). Unrestorable: the step holds the
-     `args-json-unrestorable` ask, the reading ends, and no value of the
-     statement is inspected (FR11). Otherwise its restored text is used, so a
-     quoted or backslashed flag word reads as the plain one (FR3 (a)).
+     not inspected (FR6 (2)), except an `=`-form word whose name part (one or
+     two leading dashes and the name up to the first `=`) is static and is one
+     of the value-taking names `mcp`, `tool`, `args-json`, `format` or
+     `session`, and whose value part after that `=` is the part that is not
+     static. Such a word is a value-taking flag with a non-static inline value
+     (FR3 (c)): the reading goes on with the next word in flag position; a
+     non-static destination (`--mcp="$S"`) does not stop the inspection (FR3
+     (g), A8), and a non-static inline `--args-json` value is skipped (FR6
+     (1)). Any other non-static flag-position word, one whose name part is not
+     static or whose name is unknown or `dry-run` included, leaves the
+     statement not inspected as before (FR6 (2), (3)). Unrestorable: the step
+     holds the `args-json-unrestorable` ask, the reading ends, and no value of
+     the statement is inspected (FR11). Otherwise its restored text is used, so
+     a quoted or backslashed flag word reads as the plain one (FR3 (a)).
   2. Restored text exactly `--` ends the flag sequence; restored text that does
      not begin with `-`, or that is shorter than two characters (the empty
      text, a lone `-`), is a positional word and ends it too (FR3 (d)). The
@@ -134,10 +144,14 @@ states the current expectation.
   first `=` of its restored flag word, and its anchor word is the flag word.
 - **Basis**: FR1 to FR3, FR6, FR11, A8, A9, A11; review round 1 findings
   65c5a71c6af6cb06 and e0e4df99e5cded9d; review round 2 finding
-  ca547a9f716957df (step 2, the word shorter than two characters).
+  ca547a9f716957df (step 2, the word shorter than two characters); verify
+  round 2 failed item AC-17 (step 1, the `=`-form word with a non-static
+  value part, as SPEC.md FR6 states that a non-static destination and the `=`
+  form are not FR6 forms).
 - **Affected tasks**: task0003 implements it; task0004 describes it; task0005
   implements step 2's word shorter than two characters and updates the
-  flag-reading step of the `_mcp_bridge_args_json_chunks()` docstring.
+  flag-reading step of the `_mcp_bridge_args_json_chunks()` docstring; task0006
+  revises the flag-reading unit tests to pin step 1's `=`-form word.
 
 ### D3: Decoder failures, the nesting bound and the step's charge (revised)
 - **Decision**: a value the decoder rejects with a JSON syntax error, and a

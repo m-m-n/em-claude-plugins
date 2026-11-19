@@ -92,11 +92,14 @@ cases (TS-1, TS-3 to TS-9 and the four TM-2 lines) stay deny.
 - Payload counter (task0003, revised): decoded `command` strings take no
   count; a payload left unqueued by a used-up counter holds the scan-budget
   ask.
-- Flag reading (task0003, revised; task0005, revised): which forms are
-  inspected and which are not (task0003 and task0005 Unit tests); a lone `-`
-  or an empty word after a value ends the flag sequence and the value before
-  it is inspected, and a lone `-` before `--args-json` is read with the
-  positional forms, not as an unknown flag.
+- Flag reading (task0003, revised; task0005, revised; task0006, revised):
+  which forms are inspected and which are not (task0003, task0005 and task0006
+  Unit tests); a lone `-` or an empty word after a value ends the flag
+  sequence and the value before it is inspected, and a lone `-` before
+  `--args-json` is read with the positional forms, not as an unknown flag; an
+  `=`-form flag word of a known value-taking name whose value part is not
+  static (`--mcp="$S"`) does not stop the inspection of a static
+  `--args-json` value (IMPLEMENTATION.md D2 step 1).
 - Docstring (task0003, revised): O1 and O2 as IMPLEMENTATION.md states them,
   and none of the forms it says are not out of scope.
 - Unrestorable (task0003, added): value and flag-position words; the settled
@@ -154,17 +157,17 @@ cases (TS-1, TS-3 to TS-9 and the four TM-2 lines) stay deny.
 |-------------|-------|--------------|
 | FR1 | task0001, task0003 | TS-7, TS-8, TS-11; the two FR1 Additional Cases |
 | FR2 | task0001, task0003 | TS-9, TS-29; Notion Regression Set; item TM-5 |
-| FR3 | task0001, task0003, task0005 | TS-1 to TS-4, TS-17, TS-20, TS-23 to TS-26, TS-30; item TM-6 |
+| FR3 | task0001, task0003, task0005, task0006 | TS-1 to TS-4, TS-17, TS-20, TS-23 to TS-26, TS-30; item TM-6 |
 | FR4 | task0001, task0003 | TS-1 to TS-4, TS-6, TS-7; item TM-2 |
 | FR5 | task0001, task0003 | TS-5, TS-8, TS-10, TS-12, TS-18, TS-19; payload-counter unit tests |
-| FR6 | task0001, task0003 | TS-13, TS-14, TS-20, TS-27, TS-28; flag-reading unit tests |
+| FR6 | task0001, task0003, task0005, task0006 | TS-13, TS-14, TS-20, TS-27, TS-28; flag-reading unit tests |
 | FR7 | task0001, task0003 | TS-15, TS-18, TS-19, TS-22; deferral unit tests |
 | FR8 | task0001, task0002, task0003, task0004 | TS-10, TS-13, TS-14, TS-27, TS-28 labels; Docstring unit test; Manual Testing |
 | FR9 | task0001, task0003, task0005 | TS-1 to TS-30; the case file's diff contains additions only |
 | FR10 | task0002, task0003, task0004 | Manual Testing |
 | FR11 | task0003 | TS-21; unrestorable unit tests; item TM-7 |
 | FR12 | task0003 | TS-22; payload-counter unit tests; item TM-8 |
-| FR13 | task0003 | Unit test command (AC-17) |
+| FR13 | task0003, task0005, task0006 | Unit test command (AC-17) |
 | NFR1 | task0001, task0003 | TS-15; item NFR1 |
 | NFR2 | task0001, task0002, task0003, task0004 | TS-16; task0004 syntax-tree comparison |
 | NFR3 | task0001, task0002, task0003, task0004 | Pre-change Reproduction (TS-19 outside the reproduction set); TS-16 |
