@@ -114,8 +114,22 @@ records:
   freeform: decline auto-addition of test-docs/mcp-bridge-args-json-exec-guard/task0001.tests.yaml
   normalized_answer: declined
   resolution_note: 'implement wake phase deviation auto-addition rule; task_id: task0003; path: test-docs/mcp-bridge-args-json-exec-guard/task0001.tests.yaml
-    (passes the shape check, not under a workflow control path); missing evidence part: identifier
-    (the deviation names no AC-n of task0003''s plan and no registered requirement id); the observable
-    outcome part was given (tests.test_tests_yaml_id_resolution fails on three renamed test ids); not
-    added to tasks.task0003.files; the containment check handles it as an ordinary deviation; codex_consulted:
+    (passes the shape check, not under a workflow control path); missing evidence part: identifier (the
+    deviation names no AC-n of task0003''s plan and no registered requirement id); the observable outcome
+    part was given (tests.test_tests_yaml_id_resolution fails on three renamed test ids); not added to
+    tasks.task0003.files; the containment check handles it as an ordinary deviation; codex_consulted:
     false; opus_escalation: false'
+- question_id: develop.once-boundary.review-rework.round2
+  packet_id: null
+  answered_at: '2026-11-19T23:33:12+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - continue_into_implement
+  freeform: null
+  normalized_answer: continue into implement in the same --once launch
+  resolution_note: 'unlisted orchestrator decision: whether an applied review-sourced rework patch is
+    a --once phase boundary; options: end_turn_now / continue_into_implement; chosen: continue_into_implement;
+    not chosen: end_turn_now; codex_consulted: true (codex, 1 turn); key points: the boundary table lists
+    only verify-sourced rework, review did not reach completed, so the next pending step (implement) runs
+    in this launch; opus_escalation: false'
