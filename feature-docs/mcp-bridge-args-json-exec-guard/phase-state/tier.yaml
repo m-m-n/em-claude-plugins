@@ -1,0 +1,68 @@
+schema_version: 2
+feature: mcp-bridge-args-json-exec-guard
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.86
+    confidence: 0.81
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files
+        together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the
+        architecture.'
+    probabilities:
+      '0': 0.02
+      '1': 0.13
+      '2': 0.83
+      '3': 0.02
+  observed_at: '2026-11-19T19:29:03+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.67
+    confidence: 0.67
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread across a few files
+        together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the
+        architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.33
+      '2': 0.67
+      '3': 0.0
+  observed_at: '2026-11-19T19:29:03+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  changed_lines_approx: -1
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: []
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  work_still_required_evidence: HEAD `733253313` に検査漏れが残っている。em-workflow/hooks/destructive-guard.py:1396
+    は引用符内の置換記号を元の文字列から探し、同ファイル:7917–7921 はその走査結果から `chunk_subs` を作る。同ファイル:8127–8142 は見つかった候補だけを再走査に回す。同ファイル:7530–7537
+    の `--args-json` の扱いは正規形の Notion コメント呼び出しで候補を除外するためのもので、JSON を復号するのはフックの標準入力を読む箇所だけ（同ファイル:10826）。既存のシェル入力抽出も
+    `eval` とシェルの `-c`・ヒアストリングを対象とする（同ファイル:4396–4444、:8228–8231）。そのため、JSON 復号後にだけ現れる置換も、置換のない平文の `command`
+    もシェル入力として検査されず、ほかの規則に一致しなければ `allow` に達する（同ファイル:10706–10722、:10772–10773）。レビューでも同じ欠落が未解決と記録されている（feature-docs/mcp-bridge-exec-tool-rescan/reviews/round1.yaml:48、:54–57、:67）。既存テストは、置換記号を直接書いた
+    `start_process` の `deny` と Notion コメントの `allow` を確認する（em-workflow/hooks/tests/destructive-guard-cases.json:1373–1374）。該当する
+    JSON エスケープの回帰ケースは表にない。既存ランナーはケース表からフックの判定を検証できる（em-workflow/hooks/tests/run-destructive-guard.py:209–238、:268–275）。読み取り専用で実行した関連30件と無人実行の確認1件はすべて通過した。SPEC
+    で決める点は、静的に確定できる実行文字列を復号して既存のシェル検査に渡す範囲と、宛先や実行文字列を確定できない場合の `ask` の範囲。無人実行では `ask` が `deny` になるため、その範囲が正常な呼び出しの拒否にも影響する（em-workflow/hooks/destructive-guard.py:411–423）。変更行数の
+    `-1` は方針決定前で未算定を示す。追加テスト件数は回帰ケースの下限で、呼び出し箇所は既存の抽出関数の直接呼び出し2か所を数えた（同ファイル:4263、:8228）。ファイル欄は実装とテストの範囲を示す。
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 1
+  body_change_kind: new_logic
+  change_containment: single_module
+  caller_and_dependency_count: 2
+  changes_external_contract: false
+  changes_behavior: true
+decided_at: '2026-11-19T19:29:03+09:00'
