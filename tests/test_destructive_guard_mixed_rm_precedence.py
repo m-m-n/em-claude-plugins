@@ -150,6 +150,28 @@ def feature_case_positions(cases):
     return [i for i, case in enumerate(cases) if case[1].startswith(prefix)]
 
 
+def labelled_run_problem(cases, prefix):
+    """None when the cases of CASES whose label (second element) starts with
+    PREFIX form one unbroken run; otherwise a message that says what is wrong.
+
+    The run check has two conditions: at least one case carries the prefix, and
+    every position from the first labelled one to the last labelled one is
+    labelled, so no unlabelled case sits between two labelled cases. Nothing is
+    required of the cases before or after the run."""
+    positions = [i for i, case in enumerate(cases) if case[1].startswith(prefix)]
+    if not positions:
+        return "no case carries the label prefix"
+    first, last = positions[0], positions[-1]
+    if positions != list(range(first, last + 1)):
+        gap = next(i for i in range(first, last + 1) if i not in positions)
+        return (
+            f"the case at position {gap} does not carry the label prefix but "
+            f"sits between labelled cases (positions {first} to {last}): the "
+            "labelled cases are not one unbroken run"
+        )
+    return None
+
+
 # --- AC-3: the reason of a winning rm deny is the rm reason ----------------
 
 
@@ -690,9 +712,9 @@ class TestCaseTable(unittest.TestCase):
 
 class TestPerTargetCaseTable(unittest.TestCase):
     """AC-1, AC-4, AC-6 (FR5, NFR1, NFR4) of mixed-rm-self-config-deny. Its
-    cases are the last of the table, each pinned to a reason id, and the one
-    case of the earlier feature that this feature changes is changed in
-    place."""
+    cases form one unbroken run of the table (cases of later features may
+    follow the run), each pinned to a reason id, and the one case of the
+    earlier feature that this feature changes is changed in place."""
 
     SCENARIOS = [
         # (number, decision, command, rule, batch)
@@ -721,12 +743,11 @@ class TestPerTargetCaseTable(unittest.TestCase):
         ]
         cls.new = [cls.cases[i] for i in cls.positions]
 
-    def test_the_cases_come_after_every_other_case(self):
-        self.assertTrue(self.positions, "no case carries this feature's label")
-        first = self.positions[0]
-        self.assertEqual(
-            self.positions, list(range(first, len(self.cases))),
-            "the cases are not one run at the end of the table",
+    def test_the_cases_form_one_unbroken_run(self):
+        # AC-1 of rm-parent-ref-self-config-deny: cases of later features may
+        # follow the run; no unlabelled case may sit inside it.
+        self.assertIsNone(
+            labelled_run_problem(self.cases, PER_TARGET_FEATURE + " TS-")
         )
 
     def test_none_of_the_cases_joins_the_earlier_features_run(self):
@@ -793,6 +814,69 @@ class TestPerTargetCaseTable(unittest.TestCase):
 def scenario_number(case):
     """The N of the `TS-N` a case's label names."""
     return int(re.search(r"\bTS-(\d+)\b", case[1]).group(1))
+
+
+class TestLabelledRunCheckOnSmallTables(unittest.TestCase):
+    """AC-2, AC-3 (FR5) of rm-parent-ref-self-config-deny. The run check is
+    applied to small tables built here, so each of its conditions is seen to
+    decide: an unlabelled case between two labelled ones, and no labelled case
+    at all, fail it; unlabelled cases only before the run, only after it, or on
+    both sides, pass it."""
+
+    PREFIX = PER_TARGET_FEATURE + " TS-"
+
+    def table(self, *kinds):
+        """A case table whose position i is labelled when KINDS[i] is "L" and
+        carries another feature's label when it is "o"."""
+        labels = {
+            "L": self.PREFIX + "1 labelled case",
+            "o": "another-feature TS-1 unlabelled case",
+        }
+        return [["deny", labels[kind], "rm -rf /home/user/valuable"] for kind in kinds]
+
+    def problem(self, *kinds):
+        return labelled_run_problem(self.table(*kinds), self.PREFIX)
+
+    def test_an_unlabelled_case_between_two_labelled_ones_fails(self):
+        for kinds in ("LoL", "LooL", "oLoL", "LoLo", "oLoLo", "LLoLL"):
+            with self.subTest(table=kinds):
+                self.assertIsNotNone(self.problem(*kinds))
+
+    def test_no_labelled_case_fails(self):
+        for kinds in ("", "o", "oo"):
+            with self.subTest(table=kinds):
+                self.assertIsNotNone(self.problem(*kinds))
+
+    def test_unlabelled_cases_only_before_the_run_pass(self):
+        for kinds in ("oL", "ooLL", "oooL"):
+            with self.subTest(table=kinds):
+                self.assertIsNone(self.problem(*kinds))
+
+    def test_unlabelled_cases_only_after_the_run_pass(self):
+        # The table that tells the changed rule from the old one: the old rule
+        # required the run to reach the last case of the table.
+        for kinds in ("Lo", "LLoo", "Looo"):
+            with self.subTest(table=kinds):
+                self.assertIsNone(self.problem(*kinds))
+
+    def test_unlabelled_cases_on_both_sides_of_the_run_pass(self):
+        for kinds in ("oLo", "ooLLoo", "oLLLo"):
+            with self.subTest(table=kinds):
+                self.assertIsNone(self.problem(*kinds))
+
+    def test_a_table_that_is_all_run_passes(self):
+        for kinds in ("L", "LLL"):
+            with self.subTest(table=kinds):
+                self.assertIsNone(self.problem(*kinds))
+
+    def test_a_label_that_only_contains_the_prefix_is_not_labelled(self):
+        # startswith: a label that mentions the prefix later does not carry it.
+        cases = self.table("L", "L") + [
+            ["deny", "see " + self.PREFIX + "1", "rm -rf /home/user/valuable"]
+        ]
+        self.assertIsNone(labelled_run_problem(cases, self.PREFIX))
+        cases = self.table("L") + [cases[-1]] + self.table("L")
+        self.assertIsNotNone(labelled_run_problem(cases, self.PREFIX))
 
 
 class TestScenarioCasesPassAgainstTheHook(unittest.TestCase):
