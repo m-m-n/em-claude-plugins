@@ -7932,6 +7932,39 @@ def _read_static_word(marked, tok):
     return WORD_STATIC, "".join(chars)
 
 
+def _flag_equals_prefix_name(marked, tok):
+    """For a flag-position word that is not static as a whole: the flag name
+    when the word begins with one or two `-` and a plain unquoted name
+    (letters, digits, `_`, `-`) followed directly by an unquoted `=`, so that
+    only the value part after the `=` is non-static. None for any other
+    word (no `=` after a plain name, a quote, backslash, `$` or backtick in the
+    name part, no span or marked text)."""
+    span = getattr(tok, "span", None)
+    if marked is None or span is None:
+        return None
+    start, end = span
+    cr = getattr(tok, "trailing_cr", "")
+    if cr and marked.text.startswith(cr, end - len(cr)):
+        end -= len(cr)
+    if end <= start:
+        return None
+    bounds = _word_source_bounds(marked, start, end)
+    if bounds is None:
+        return None
+    lo, hi = bounds
+    source = marked.source
+    pos = lo
+    while pos < hi and (source[pos].isascii() and (source[pos].isalnum() or source[pos] in "_-")):
+        pos += 1
+    if pos >= hi or source[pos] != "=":
+        return None
+    prefix = source[lo:pos]
+    if not prefix.startswith("-"):
+        return None
+    name = prefix[2:] if prefix.startswith("--") else prefix[1:]
+    return name or None
+
+
 def _args_json_notion_pair(marked, words):
     """Whether the words WORDS (the words after `run`) read as a complete flag
     sequence in the canonical form that determines the `--mcp notion` /
@@ -8005,7 +8038,10 @@ def _mcp_bridge_args_json_chunks(shaped_words, marked):
        right the way mcp-bridge reads its options; the first word after `run`
        is in flag position. A word in flag position is read by
        _read_static_word() (step 4): Not static makes the statement nothing to
-       do, Unrestorable sets Unrestorable and ends the reading with no value
+       do, except an `=`-form word whose plain unquoted name part is a known
+       value-taking name and whose value part is the non-static one (for
+       example `--session="$SID"`, `--args-json="$X"`): that value alone is
+       skipped and the reading goes on. Unrestorable sets Unrestorable and ends the reading with no value
        inspected, and otherwise its restored text is used, so a quoted or
        backslashed flag word reads as the plain one. The restored text `--`
        ends the flag sequence, and so does a word that does not begin with `-`
@@ -8091,7 +8127,15 @@ def _mcp_bridge_args_json_chunks(shaped_words, marked):
     while k < len(words):
         outcome, flag = _read_static_word(marked, words[k])
         if outcome == WORD_NOT_STATIC:
-            return _ARGS_JSON_NOTHING
+            # An `=`-form flag word whose name part is a plain known
+            # value-taking name and whose value part is not static: only that
+            # value is skipped (FR6 (1)); the values of the other names are
+            # not examined. Any other non-static flag word is FR6 (2).
+            prefix_name = _flag_equals_prefix_name(marked, words[k])
+            if prefix_name not in _MCP_RUN_VALUE_NAMES:
+                return _ARGS_JSON_NOTHING
+            k += 1
+            continue
         if outcome == WORD_UNRESTORABLE:
             return _ARGS_JSON_UNRESTORABLE
         # The flag sequence ends at `--`, at a word that does not begin with
