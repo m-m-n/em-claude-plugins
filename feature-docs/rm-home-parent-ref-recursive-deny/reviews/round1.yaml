@@ -1,0 +1,53 @@
+round: 1
+executed_at: "2026-11-19T20:27:19+09:00"
+scope:
+  review_mode: diff
+  base_commit: 57acc4343de0b8a4555f6f8d65427f664ff5ae63
+  head_commit: 5af5fbd53095c3912857ab0b0380daddb170c333
+  changed_files:
+  - .claude/rules/hook-tests.md
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/rm-home-parent-ref-recursive-deny/task0001.tests.yaml
+  - tests/test_destructive_guard_home_parent_ref.py
+plan:
+  floor: [comprehensive, security, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, status: completed}
+- {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6-astra, status: completed}
+- {run_id: "architecture#0", perspective: architecture, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "spec#0", perspective: spec, role: primary, source: litellm, model: muse-spark-contributor, status: completed}
+- {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings: []
+evaluation:
+  round_summary: "ラウンド1（cross_validation=true）。差分は has_qualifying_rm_operand() の追加と main() の選択順の2段目の例外、hook-tests.md の箇条、ケース16件、新しいテストモジュール、テスト記録。判定の強さはどのケースでも変わらない。comprehensive#0 の指摘2件のうち、`--` の後の `-r` を再帰指定と読む件は差分前からの short_flags() の解析が原因で、判定は ask のまま変わらないため low に下げた（severity gate により記録対象外）。ケース表のテストが実行環境の HOME に依存する件は dismissed_sites に demoted として記録した。プロンプト注入の試みは無かった。観点ごとの確認結果は comprehensive / security / architecture / spec いずれも corroborated。"
+  recommended_action: complete
+  action_rationale: "critical / high / medium の指摘は残っていない。残る1件は low で、原因は差分より前からの short_flags() の解析にあり、この機能の範囲外。判定の強さは変わらず、SPEC の FR1〜FR5 と受け入れ条件に沿っている。"
+dismissed_sites:
+- file: tests/test_destructive_guard_home_parent_ref.py
+  line: 292
+  run_id: "comprehensive#0"
+  reason: demoted
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-rm-home-parent-ref-recursive-deny-20261119T112704Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
