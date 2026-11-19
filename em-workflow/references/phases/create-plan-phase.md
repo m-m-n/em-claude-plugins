@@ -103,8 +103,10 @@ restated. Subtracting the task split is not subtracting the task record:
 relative to `feature-docs/{feature}`: `TASK.md` at the `minimal` tier,
 `tasks/taskNNNN.md` otherwise. The implement phase resolves it to the
 absolute path of the integration worktree's `feature-docs/{feature}/`
-joined with that value, behind the Plan-path check of
-`references/implement-phase.md` (cited, not restated here).
+joined with the segments that `path_segments` of
+`scripts/validate-worker-output.py` returns for that value, behind the
+Plan-path check of `references/implement-phase.md` (cited, not restated
+here).
 This registered `tasks.{T}.plan` value is authoritative for every
 downstream consumer: the implement phase resolves the plan document to
 read from `tasks.{T}.plan` in `workflow.yaml`, not from a fixed

@@ -505,10 +505,12 @@ when all four rules hold:
   `is_safe_relative_path` of `scripts/validate-worker-output.py` (cited, not
   restated here), and it names at least one segment once `path_segments`
   normalization is applied.
-- Joined to the integration worktree's `feature-docs/{feature}` directory,
-  no component of the path, intermediate ones included, is a symlink.
-- The realpath of the joined path lies inside the realpath of
-  `feature-docs/{feature}`.
+- For the path that `task_plan_path` carries, the `path_segments` segments of
+  the stored value joined onto the integration worktree's
+  `feature-docs/{feature}` directory, no component of the path, intermediate
+  ones included, is a symlink.
+- The realpath of that same path, the one `task_plan_path` carries, lies
+  inside the realpath of `feature-docs/{feature}`.
 - Neither the stored value nor the resolved absolute path holds a character
   of Unicode category Cc, U+2028 or U+2029, the set the Control-character
   check above rejects.
@@ -543,7 +545,7 @@ Prompt payload per task:
 # Task assignment
 task_id: {T}
 worktree_path: {canonical worktree_path: the strict realpath of $WT_ROOT/{T}}
-task_plan_path: {absolute path to the integration worktree's feature-docs/{feature}/ joined with the stored tasks.{T}.plan value, the value the Plan-path check admitted}
+task_plan_path: {absolute path to the integration worktree's feature-docs/{feature}/ joined with the segments that path_segments of scripts/validate-worker-output.py returns for the stored tasks.{T}.plan value, the value the Plan-path check admitted}
 implementation_md_path: {absolute path to the integration worktree's feature-docs/{feature}/IMPLEMENTATION.md}
 lessons_path: {absolute path to the MAIN working tree's feature-docs/LESSONS.md; OMIT this line when the file does not exist — LESSONS.md is the one cross-feature artifact that stays outside the integration worktree}
 parent_branch: em-workflow/{feature}/integration
