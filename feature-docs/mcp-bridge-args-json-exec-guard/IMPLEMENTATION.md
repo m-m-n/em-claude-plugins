@@ -14,6 +14,15 @@ Review round 2 (finding ca547a9f716957df) adds task0005: a flag-position word
 whose restored text is shorter than two characters (a lone `-`) ends the flag
 sequence as a positional word (D2 step 2).
 
+Verify round 1 found that TS-19 is deny at the base commit as well. The SPEC
+change of that round records it: TS-19 is deny before and after the change
+(SPEC.md AC-11), and it is outside the pre-change reproduction set (SPEC.md
+NFR3). The merged code and cases already meet the revised SPEC, so this
+re-plan corrects the plan documents only and adds no task. The merged task0003
+plan, whose red-run criterion expects every new deny and ask case to be allow
+before the change, is not edited; VERIFICATION.md's Pre-change Reproduction
+states the current expectation.
+
 ## Technology Stack
 - **Language**: Python 3 (the existing hook script, its case runner and the
   unit tests under `tests/`).
@@ -255,7 +264,7 @@ positional word (a lone `-` included), a repeated `--args-json`.
 | FR11 asks on a legitimate command and stops a batch run | Low | Medium | Only a word with no FR6 (1) element whose quoting cannot be restored is affected (A10) |
 | A parser difference between the guard and mcp-bridge (duplicate keys, nesting) hides a destructive value | Medium | High | D3 and the all-pairs walk; THREAT-MODEL.md TM-2 and TM-3 |
 | task0003 and task0004 edit the same file in parallel | Medium | Low | Disjoint regions by the explanation-ownership convention; task0004 names only the components pinned above |
-| A long repeated case command (TS-18, TS-19, TS-22) is written with the wrong count, or a JSON escape is decoded on the way into the case file (D4) | Medium | Medium | task0003 reads each stored command back, compares it with the shell text and counts the repetitions; the red run shows each new deny and ask case as allow |
+| A long repeated case command (TS-18, TS-19, TS-22) is written with the wrong count, or a JSON escape is decoded on the way into the case file (D4) | Medium | Medium | task0003 reads each stored command back, compares it with the shell text and counts the repetitions; the red run shows each new deny and ask case as allow, except TS-19, which is deny before the change as well (SPEC.md AC-11, NFR3), so the read-back alone checks its count |
 
 ## Open Questions
 - [ ] The case labelled "TM-1 escaped key" that task0001 added holds the key

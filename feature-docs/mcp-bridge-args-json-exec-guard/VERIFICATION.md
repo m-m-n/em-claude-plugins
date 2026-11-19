@@ -38,7 +38,7 @@ are six-character JSON escapes (IMPLEMENTATION.md D4).
 | TS-16 | Every case present at the base commit, the notion regression set and the mcp-bridge-exec-tool-rescan cases included | Each keeps its expected decision and pinned reason ID | Integration (case runner) |
 | TS-17 | `mcp-bridge run --mcp desktop-commander --tool start_process '--args-json' '{"command":"git branch -D example","shell":"bash"}'` | deny (allow before the change) | Unit (case runner) |
 | TS-18 | `mcp-bridge run --mcp desktop-commander --tool start_process --args-json '{"command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"git branch -D example"}'` | deny (allow before the change) | Integration (case runner) |
-| TS-19 | `mcp-bridge run --mcp desktop-commander --tool start_process --args-json '{"command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true"}'; bash -c 'git branch -D example'` | deny (allow before the change) | Integration (case runner) |
+| TS-19 | `mcp-bridge run --mcp desktop-commander --tool start_process --args-json '{"command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true","command":"true"}'; bash -c 'git branch -D example'` | deny (deny before the change as well) | Integration (case runner) |
 | TS-20 | `mcp-bridge run --mcp "$S" --tool start_process --args-json '{"command":"git branch -D example","shell":"bash"}'` | deny (allow before the change) | Unit (case runner) |
 | TS-21 | `mcp-bridge run --mcp desktop-commander --tool start_process --args-json $'{"command":"git branch -D example"}\0'` | ask, reason ID `args-json-unrestorable` (allow before the change) | Unit (case runner) |
 | TS-22 | `bash -c 'true'; bash -c 'true'; bash -c 'true'; bash -c 'true'; bash -c 'true'; bash -c 'true'; bash -c 'true'; bash -c 'true'; bash -c 'true'; bash -c 'true'; bash -c 'true'; bash -c 'true'; bash -c 'true'; bash -c 'true'; bash -c 'true'; bash -c 'true'; bash -c 'true'; bash -c 'true'; bash -c 'true'; bash -c 'true'; bash -c 'true'; bash -c 'true'; bash -c 'true'; bash -c 'true'; bash -c 'true'; bash -c 'git branch -D example'` | ask, reason ID `scan-budget-exceeded` (allow before the change) | Integration (case runner) |
@@ -114,11 +114,14 @@ cases (TS-1, TS-3 to TS-9 and the four TM-2 lines) stay deny.
   `python3 em-workflow/hooks/tests/run-destructive-guard.py <exported copy>/destructive-guard.py`
   from the integration worktree, so that the current case file runs against
   the unchanged hook.
-- Expected: every new deny and ask case (TS-1 to TS-8, both TS-15 cases,
-  TS-17 to TS-26, TS-29, TS-30 and the deny Additional Cases) is reported as failed
-  with obtained decision allow; the new allow cases (TS-9 to TS-14, TS-27,
-  TS-28) pass. The run as a whole exits non-zero; only these results are
-  checked.
+- Expected: every new deny and ask case of the reproduction set (TS-1 to TS-8,
+  both TS-15 cases, TS-17, TS-18, TS-20 to TS-26, TS-29, TS-30 and the deny
+  Additional Cases) is reported as failed with obtained decision allow; the new
+  allow cases (TS-9 to TS-14, TS-27, TS-28) pass. The run as a whole exits
+  non-zero; only these results and the TS-19 result below are checked.
+- TS-19 is outside the reproduction set (SPEC.md NFR3): the unchanged hook
+  already gives it deny, so the same run reports it as passed. That result is
+  the pre-change verdict SPEC.md AC-11 records.
 
 ## Code Quality Verification
 - Format: none configured (empty format command).
@@ -138,7 +141,7 @@ cases (TS-1, TS-3 to TS-9 and the four TM-2 lines) stay deny.
 | AC-8 | Every other existing case keeps its decision and pinned reason ID; the runner passes; no existing case is removed | Case runner (TS-16); the case file's diff against the base commit contains additions only |
 | AC-9 | The FR10 docstrings and comments state the new judgment and record the FR8 out-of-scope forms | Manual Testing |
 | AC-10 | TS-17 is deny, allow before the change | Case runner; Pre-change Reproduction |
-| AC-11 | TS-18 and TS-19 are deny, allow before the change | Case runner; Pre-change Reproduction |
+| AC-11 | TS-18 and TS-19 are deny after the change; before the change TS-18 is allow and TS-19 is deny | Case runner (both deny); Pre-change Reproduction (TS-18 reported as failed with obtained decision allow; TS-19 reported as passed, deny) |
 | AC-12 | TS-20 is deny, allow before the change | Case runner; Pre-change Reproduction |
 | AC-13 | TS-21 is the `args-json-unrestorable` ask, allow before the change | Case runner (reason ID pinned); Pre-change Reproduction |
 | AC-14 | TS-22 is the `scan-budget-exceeded` ask, allow before the change | Case runner (reason ID pinned); Pre-change Reproduction |
@@ -164,7 +167,7 @@ cases (TS-1, TS-3 to TS-9 and the four TM-2 lines) stay deny.
 | FR13 | task0003 | Unit test command (AC-17) |
 | NFR1 | task0001, task0003 | TS-15; item NFR1 |
 | NFR2 | task0001, task0002, task0003, task0004 | TS-16; task0004 syntax-tree comparison |
-| NFR3 | task0001, task0002, task0003, task0004 | Pre-change Reproduction; TS-16 |
+| NFR3 | task0001, task0002, task0003, task0004 | Pre-change Reproduction (TS-19 outside the reproduction set); TS-16 |
 | NFR4 | task0001, task0002, task0003, task0004 | item NFR4 |
 | NFR5 | task0003 | Structure unit test; Manual Testing |
 

@@ -5,16 +5,17 @@ threats-identified
 
 ## Rationale
 Inspected: SPEC.md and REQUIREMENTS.md as revised by the spec-change re-entry
-of review round 1 (FR1-FR13, NFR1-NFR5, assumptions A1-A11) at the full tier;
-the design step was skipped, so there is no DESIGN.md. destructive-guard is the
+of review round 1 (FR1-FR13, NFR1-NFR5, assumptions A1-A11) and by the spec
+change of verify round 1 (AC-11, NFR3), at the full tier; the design step was
+skipped, so there is no DESIGN.md. destructive-guard is the
 PreToolUse hook whose static analysis of a Bash command decides allow, deny or
 ask before the shell runs it. The command is written by the agent and can
 carry content from untrusted inputs. For `mcp-bridge run`, an allow lets an MCP
 server process receive the `--args-json` value, and a shell-executing tool runs
 its `command` in a shell; for a `-c` / `eval` / here-string payload, an allow
-lets a nested shell run it. That decision point is TB-1. task0001 (merged) and
-task0003 declare `auth` and `input-handling`; task0002 (merged) and task0004
-declare `input-handling`. All four change only
+lets a nested shell run it. That decision point is TB-1. task0001, task0003 and
+task0005 declare `auth` and `input-handling`; task0002 and task0004 declare
+`input-handling`; all five are merged. All five change only
 `em-workflow/hooks/destructive-guard.py` among the boundary files, so TB-1 is
 analysed at deep depth. The case file and the unit test module are test data
 and test code, not boundary files.
@@ -26,6 +27,11 @@ that is not static, and static words whose quoting the guard cannot restore
 (TM-6, TM-7); and the payload counter that silently dropped decoded commands
 and payloads (TM-2, TM-8). The flag reading follows the option parsing
 recorded in mcp-bridge-exec-tool-rescan IMPLEMENTATION.md decision D1 (A11).
+
+The spec change of verify round 1 corrects only the recorded pre-change
+verdict of TS-19 (deny, SPEC.md AC-11) and removes TS-19 from the pre-change
+reproduction set (SPEC.md NFR3). It adds no input, boundary or threat and
+changes no mitigation, so the verdict and TM-1 to TM-8 stand unchanged.
 
 Accepted remainder (SPEC.md FR6 and FR8; IMPLEMENTATION.md O1 and O2): a
 command written as plain text in a key other than the top-level `command`, or
