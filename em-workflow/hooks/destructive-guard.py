@@ -4289,6 +4289,32 @@ def extract_shell_payload_anchored(toks, lexed, quoted_toks=None):
     substitution-headed statement whose command name cannot be read
     statically out of the substitution's own text.
 
+    The top-level `command` of a decoded `--args-json` value (a `mcp-bridge
+    run` statement other than the notion pair) is another source of shell
+    payloads (mcp-bridge-args-json-exec-guard FR5). This function does not
+    extract it: statements() queues it through
+    _mcp_bridge_args_json_chunks(), as a shell payload counted against the
+    same MAX_SHELL_PAYLOAD_EXPANSIONS as the payloads extracted here. Two
+    forms of that source are out of scope (mcp-bridge-args-json-exec-guard
+    FR8; stated with the same scope in the docstring of
+    _mcp_bridge_args_json_chunks() and in the labels of the cases that cover
+    them -- a divergence in scope between them is a defect). Neither is
+    decided by the decoded-value inspection; the second keeps the raw-string
+    verdict:
+
+    - O1: a command written as plain text, without a substitution, in a key
+      other than the top-level `command` (for example the `input` of
+      desktop-commander's `interact_with_process`), or in a `command` key
+      below the top level. Only the candidate search of the substitutions
+      (`$(` and the backtick) in the decoded string values applies there.
+    - O2: the forms that keep the raw-string verdict (FR6): a value word set
+      by a substitution or a variable expansion, or otherwise not static (a
+      substitution Bash itself runs is still re-scanned); a destination whose
+      `--mcp` or `--tool` value word is not static; a value that does not
+      decode as JSON; `--args-json` missing, repeated, or written in the `=`
+      form; words after `run` that do not read as the canonical flag
+      sequence; a decoded value whose top level is not an object.
+
     Only lexed (LEXED True) segments are examined: token provenance is what
     tells split_redirects() a real `<<<` apart from a quoted word that merely
     looks like one, and head()/split_redirects() both expect that provenance
@@ -5036,7 +5062,12 @@ def scan_structure(text, mode="shell", checkpoints=None, honor_single_quotes=Tru
       or value, an `=` form, a single-dash flag, a `--` terminator, a
       positional word), is queued as before. So is a candidate in any other
       chunk or command, or in a quote region nested in another region
-      (`"${X:-'$(cmd)'}"`, where bash does expand it).
+      (`"${X:-'$(cmd)'}"`, where bash does expand it). The span list and this
+      queueing concern the raw text only: the decoded `--args-json` value of a
+      `mcp-bridge run` statement other than the notion pair is inspected
+      separately, in the statement loop of statements(), through
+      _mcp_bridge_args_json_chunks() (mcp-bridge-args-json-exec-guard FR10),
+      whatever spans the skip names.
     """
     lexmap = lex_shell(text, mode, False)
     regions = lexmap.regions
@@ -7448,7 +7479,9 @@ def _single_quote_skip_spans(chunk, lexmap, real_spans, lexed):
       a positional word, an unknown name, a value-taking flag with no value,
       a missing `--mcp` or `--tool`, another server or tool -- gives no data
       word: S1 names nothing, and every candidate of the statement is
-      re-scanned.
+      re-scanned. S1 concerns the raw-string candidates of the `--args-json`
+      value only; the decoded value is a separate matter (the closing
+      paragraph).
     - S2: for `printf`, the second word is exactly one single-quote region
       holding `%s\\n`, and every word after it is a data word.
     - C1: the candidate sits in a data word that is one closed single-quote
@@ -7457,6 +7490,22 @@ def _single_quote_skip_spans(chunk, lexmap, real_spans, lexed):
     Such a word reaches the program as data and the program never runs it, so
     a command in a substitution written inside it is not queued. Every other
     candidate, and every real substitution, is queued as before.
+
+    The skip keeps its conditions (mcp-bridge-args-json-exec-guard FR2): it
+    names the raw-string candidates of the `--args-json` value only for the
+    notion pair, in the top-level single static command (W1 to W4, C1, S1,
+    S2). It never names the candidates of any other pair. Apart from this
+    function, every `mcp-bridge run` statement in any chunk whose options do
+    not determine the notion pair -- the top-level chunk, a chain, behind a
+    wrapper, a substitution body, a payload -- has its `--args-json` value
+    decoded and inspected by _mcp_bridge_args_json_chunks()
+    (mcp-bridge-args-json-exec-guard FR1 to FR5; the forms that function
+    leaves to the raw-string verdict are listed in the out-of-scope
+    declaration of extract_shell_payload_anchored()). So for the notion pair
+    neither the raw candidates nor the decoded value is scanned where this
+    function names its candidates; where it names none (a chain, a wrapper, a
+    substitution body), its raw candidates are re-scanned as before and its
+    decoded value is still not inspected.
     """
     skip = set()
     real = set(real_spans)
@@ -7664,6 +7713,28 @@ def statements(command, unsettled=None, early_stop=None):
     early stop of destructive-guard-mixed-rm-precedence). Either way, the
     statements yielded before the overrun were yielded in full.
 
+    The statement loop below also inspects the decoded `--args-json` value of
+    every `mcp-bridge run` statement whose options do not determine the
+    notion pair, in every chunk, through _mcp_bridge_args_json_chunks()
+    (mcp-bridge-args-json-exec-guard FR1 to FR7). This is separate from the
+    skip above, which concerns raw-string candidates only: whatever the skip
+    names, the notion pair is the only pair whose decoded value is not
+    inspected. A statement in one of the forms that
+    _mcp_bridge_args_json_chunks() does not inspect keeps the raw-string
+    verdict (FR6). The inspection queues two kinds of chunk, each list in
+    document order: the candidate bodies found in every decoded string value
+    (FR4), queued like any other substitution body, and the top-level
+    `command` strings (FR5), queued as shell payloads like a `-c` payload. The
+    payloads take from the same MAX_SHELL_PAYLOAD_EXPANSIONS counter as every
+    other shell payload; the candidate bodies, like any substitution body,
+    take from no counter. Rebuilding the value, decoding it and walking the
+    result are charged to the relative scan budget below (FR7), which is
+    counted apart from that counter. Nesting deeper than MAX_ARGS_JSON_DEPTH,
+    or a decoder failure other than a JSON syntax error, takes the same early
+    stop as an overrun of that budget (EARLY_STOP above: the scan-budget
+    `ask`, or the scan simply ending when EARLY_STOP is a list); a JSON syntax
+    error is no overrun, and the statement keeps the raw-string verdict.
+
     The text is the tokens rejoined, so quoting is already resolved by the
     time the regex-based checks see it. LEXED is lex_segments()'s per-segment
     parse-success flag — False only on the parse-failure fallback, where
@@ -7680,7 +7751,10 @@ def statements(command, unsettled=None, early_stop=None):
     out of: a substitution body, at the substitution's own opening (refined
     to where the substitution sits inside the payload when it was written
     inside a `-c` / eval / here-string payload); a payload, at the payload
-    word; a heredoc body queued whole, at the start of the body (after
+    word; a candidate body or a top-level `command` payload of a decoded
+    `--args-json` value (mcp-bridge-args-json-exec-guard), at the
+    `--args-json` value word of the `mcp-bridge run` statement it was decoded
+    from; a heredoc body queued whole, at the start of the body (after
     everything on the operator's line, before anything after the delimiter
     line — not at the operator); a substitution extracted from an unquoted
     heredoc body, at its offset inside that body's start. A chunk lexed
@@ -8114,6 +8188,12 @@ def statements(command, unsettled=None, early_stop=None):
         # unchanged. The statements of the chunk lexed through the
         # parse-failure fallback make the function answer with the empty set
         # (SEGMENTS holds their LEXED flags).
+        #
+        # That skip concerns raw-string candidates only. The decoded
+        # `--args-json` value of a `mcp-bridge run` statement other than the
+        # notion pair is not decided here: it is inspected in the statement
+        # loop below, through _mcp_bridge_args_json_chunks()
+        # (mcp-bridge-args-json-exec-guard FR10), whatever the skip names.
         skipped_spans = (
             _single_quote_skip_spans(
                 chunk,

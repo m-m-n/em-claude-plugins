@@ -1,0 +1,28 @@
+task_id: task0002
+baseline_failures: []          # 4a: run-destructive-guard.py exit 0; python3 -m unittest discover -s tests -> Ran 16487 tests, OK (skipped=1)
+final_failures: []             # re-executed after the last docstring edit and after this record: run-destructive-guard.py exit 0; python3 -m unittest discover -s tests -> Ran 16488 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: false
+    red_reason: "No executable red exists. The criterion is a statement in the docstring of _single_quote_skip_spans() in em-workflow/hooks/destructive-guard.py. Searched tests/ by the path em-workflow/hooks/destructive-guard.py and by the basename destructive-guard.py: the tests that read docstrings of this file through ast.get_docstring (tests.test_destructive_guard_rm_reason_positions, tests.test_destructive_guard_mixed_rm_precedence, tests.test_destructive_guard_parent_ref) read other functions, and no test reads this docstring. A new test file is outside this task (AC-5: no other file changes). Verified by reading the docstring against the Design."
+  AC-2:
+    tests: []
+    red_confirmed: false
+    red_reason: "No executable red exists. The criterion covers the queueing bullet in the docstring of scan_structure() and the destructive-guard-false-deny FR2 comment above the queueing loop of statements(). Searched tests/ by path and by basename as for AC-1: tests.test_destructive_guard_lexer_agreement calls scan_structure() for its behavior and never reads its docstring, and no test reads that comment. A new test file is outside this task (AC-5). Verified by reading both sites against the Design."
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_rm_reason_positions.TestNumberingDescriptionsAreCurrent.test_statements_describes_the_origin_position_it_reports
+      - tests.test_destructive_guard_rm_reason_positions.TestNumberingDescriptionsAreCurrent.test_no_listed_description_carries_a_stale_statement
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing tests.test_destructive_guard_rm_reason_positions tests read the statements() docstring and detect the loss of the phrase `origin position` and the return of stale numbering statements; no red state occurred for this change. They do not read the new text (the queued chunks, the MAX_SHELL_PAYLOAD_EXPANSIONS count, the origin position at the --args-json value word, the scan charge, the early stop), which was verified by reading the docstring against the Design."
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: "No executable red exists. The criterion is the out-of-scope declaration in the docstring of extract_shell_payload_anchored(). Searched tests/ and em-workflow/hooks/tests/ by path, by basename and by the function name: no test names extract_shell_payload_anchored() or reads its docstring. A new test file is outside this task (AC-5). Verified by reading the declaration against the Design and IMPLEMENTATION.md O1 and O2."
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_mixed_rm_precedence.TestDescriptionsAreCurrent.test_the_phrases_the_numbering_tests_pin_are_kept
+      - tests.test_destructive_guard_rm_reason_positions.TestNumberingDescriptionsAreCurrent.test_no_listed_description_carries_a_stale_statement
+    red_confirmed: false
+    red_reason: "The change is docstrings and comments only, so no observable behavior changes and no red state occurred. The one-off check compared the syntax tree of the module with docstrings removed against the base commit (ast.dump, no attributes): equal; the same script reported not equal for a copy with the value of MAX_SHELL_PAYLOAD_EXPANSIONS changed. python3 em-workflow/hooks/tests/run-destructive-guard.py and python3 -m unittest discover -s tests both exit 0, and git shows em-workflow/hooks/destructive-guard.py as the only modified file besides this record. The two listed existing tests read the edited docstrings and detect the loss of a pinned phrase."
