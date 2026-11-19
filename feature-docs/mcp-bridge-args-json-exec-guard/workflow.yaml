@@ -351,7 +351,8 @@ tasks:
     - FR3
     - FR6
     - FR13
-    status: pending
+    status: in_progress
+    branch: em-workflow/mcp-bridge-args-json-exec-guard/task0006
     provenance:
       source: verify
       source_ids:
