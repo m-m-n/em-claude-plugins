@@ -1,7 +1,7 @@
 schema_version: 1
 feature: mcp-bridge-args-json-exec-guard
 phase: create-spec
-status: dispatching
+status: completed
 generation: 2
 base_revision: 13bb565b09539dcb4e512fb3f77d99540383af1b
 last_input_digest: sha256:c1cee4d2abebcdb06354601f90a0337f7fe4f541ec4db42ec89208efa17a2e99
