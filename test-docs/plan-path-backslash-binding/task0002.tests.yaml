@@ -1,0 +1,134 @@
+task_id: task0002
+baseline_failures:             # 4a: python3 -m unittest discover -s tests -> Ran 16403 tests, FAILED (failures=1, skipped=1); inherited, not caused by this task
+  - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCaseTable.test_the_cases_come_after_every_other_case
+final_failures:                # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 16431 tests, FAILED (failures=1, skipped=1); the one failure is the inherited baseline test
+  - tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCaseTable.test_the_cases_come_after_every_other_case
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_plan_path_backslash_binding.TestBackslashPlanValueBindsToTheTaskFile.test_ac1_slash_backslash_value_derives_the_file_the_validator_reads
+      - tests.test_plan_path_backslash_binding.TestBackslashPlanValueBindsToTheTaskFile.test_the_two_values_derive_one_path
+      - tests.test_plan_path_backslash_binding.TestBackslashPlanValueBindsToTheTaskFile.test_the_decoy_is_present_with_text_that_differs_from_the_canonical_text
+      - tests.test_plan_path_backslash_binding.TestBackslashPlanValueBindsToTheTaskFile.test_each_backslash_plan_value_holds_one_literal_backslash
+      - tests.test_plan_path_backslash_binding.TestBackslashPlanValueBindsToTheTaskFile.test_the_documented_derivation_does_not_call_the_validators_resolution
+      - tests.test_plan_path_backslash_binding.TestBackslashPlanValueBindsToTheTaskFile.test_negative_the_call_check_fires_on_a_derivation_that_calls_the_resolution
+    red_confirmed: true
+    red_reason: >-
+      Run with the documented derivation stubbed as the pre-fix join of the
+      stored string (the derivation helper not yet implemented),
+      test_ac1_slash_backslash_value_derives_the_file_the_validator_reads
+      failed with "AssertionError: PosixPath('.../tasks/\\task0003.md') !=
+      PosixPath('.../tasks/task0003.md')", test_the_two_values_derive_one_path
+      failed with the same kind of path inequality, and
+      test_the_documented_derivation_does_not_call_the_validators_resolution
+      failed with "'path_segments' not found in {'stored', 'Path',
+      'feature_dir'}". The decoy-present, one-backslash and negative call-check
+      tests describe the fixture and the matcher and were green from the
+      start.
+  AC-2:
+    tests:
+      - tests.test_plan_path_backslash_binding.TestBackslashPlanValueBindsToTheTaskFile.test_ac2_backslash_value_derives_the_file_the_validator_reads
+    red_confirmed: true
+    red_reason: >-
+      Run with the documented derivation stubbed as the pre-fix join,
+      test_ac2_backslash_value_derives_the_file_the_validator_reads failed with
+      "AssertionError: PosixPath('.../tasks\\task0003.md') !=
+      PosixPath('.../tasks/task0003.md')".
+  AC-3:
+    tests:
+      - tests.test_plan_path_backslash_binding.TestPreFixDerivationIsTheDecoy.test_ac3_pre_fix_derivation_of_slash_backslash_names_the_decoy_and_reads_its_text
+      - tests.test_plan_path_backslash_binding.TestPreFixDerivationIsTheDecoy.test_ac3_pre_fix_derivation_of_backslash_names_no_existing_entry
+      - tests.test_plan_path_backslash_binding.TestPreFixDerivationIsTheDecoy.test_ac3_the_main_case_checks_report_a_failure_on_the_pre_fix_derivation
+      - tests.test_plan_path_backslash_binding.TestPreFixDerivationIsTheDecoy.test_ac3_the_failure_on_slash_backslash_is_that_it_names_the_decoy
+      - tests.test_plan_path_backslash_binding.TestPreFixDerivationIsTheDecoy.test_ac3_the_failure_on_backslash_is_that_it_names_nothing
+      - tests.test_plan_path_backslash_binding.TestPreFixDerivationIsTheDecoy.test_ac3_the_same_checks_are_quiet_on_the_documented_derivation
+    red_confirmed: true
+    red_reason: >-
+      Run with the shared main-case check helper stubbed to report no defects
+      (the helper not yet implemented),
+      test_ac3_the_main_case_checks_report_a_failure_on_the_pre_fix_derivation
+      failed for both plan values with "AssertionError: [] == []",
+      test_ac3_the_failure_on_slash_backslash_is_that_it_names_the_decoy failed
+      with "False is not true : set()", and
+      test_ac3_the_failure_on_backslash_is_that_it_names_nothing failed with
+      "'not-a-file' not found in set()". Run with the documented derivation
+      stubbed as the pre-fix join, test_ac3_the_same_checks_are_quiet_on_the_documented_derivation
+      failed for both values ("Lists differ ... First list contains 5
+      additional elements"), which is the same helper reporting the failure the
+      negative proof relies on. The two tests that describe the pre-fix
+      derivation itself (names the decoy and reads its text; names no existing
+      entry) depend only on the fixture and the one-line pre-fix join, so they
+      were green from the start.
+  AC-4:
+    tests:
+      - tests.test_plan_path_backslash_binding.TestEverySpellingTheValidatorBinds.test_ac4_documented_derivation_equals_the_validators_resolution
+      - tests.test_plan_path_backslash_binding.TestEverySpellingTheValidatorBinds.test_ac4_plan_is_bound_to_task_md_reports_each_spelling_bound
+      - tests.test_plan_path_backslash_binding.TestEverySpellingTheValidatorBinds.test_ac4_every_bound_spelling_derives_one_path
+      - tests.test_plan_path_backslash_binding.TestEverySpellingTheValidatorBinds.test_negative_a_value_naming_another_task_is_not_bound
+    red_confirmed: true
+    red_reason: >-
+      Run with the documented derivation stubbed as the pre-fix join,
+      test_ac4_documented_derivation_equals_the_validators_resolution failed
+      for the two backslash spellings (subTest plan='tasks/\\task0003.md' and
+      plan='tasks\\task0003.md': "PosixPath('.../tasks/\\task0003.md') !=
+      PosixPath('.../tasks/task0003.md')") and
+      test_ac4_every_bound_spelling_derives_one_path failed ("Items in the
+      first set but not the second" naming both backslash paths). The four
+      other spellings passed under the stub, because the path library
+      normalizes them itself. The _plan_is_bound_to_task_md test and its
+      other-task negative describe the validator's existing behavior, which
+      this task leaves unchanged, so they were green from the start.
+  AC-5:
+    tests:
+      - tests.test_plan_path_backslash_binding.TestModuleHygiene.test_this_module_imports_only_the_standard_library
+      - tests.test_plan_path_backslash_binding.TestModuleHygiene.test_negative_the_import_check_fires_on_a_third_party_or_relative_import
+      - tests.test_plan_path_backslash_binding.TestModuleHygiene.test_every_fixture_file_is_inside_a_temporary_directory_removed_afterwards
+      - tests.test_plan_path_backslash_binding.TestModuleHygiene.test_the_fixture_directory_is_removed_when_the_body_raises
+      - tests.test_plan_path_backslash_binding.TestModuleHygiene.test_loading_the_validator_adds_no_compiled_file_under_em_workflow
+      - tests.test_plan_path_backslash_binding.TestModuleHygiene.test_the_loader_is_bytecode_free_and_puts_the_callers_flag_back
+      - tests.test_plan_path_backslash_binding.TestModuleHygiene.test_negative_the_compiled_file_check_fires_on_a_pycache_with_a_pyc
+      - tests.test_plan_path_backslash_binding.TestModuleHygiene.test_backslash_is_detected_as_a_separator_by_either_separator_attribute
+      - tests.test_plan_path_backslash_binding.TestModuleHygiene.test_the_decoy_skip_states_its_reason_and_applies_only_where_backslash_separates
+      - tests.test_plan_path_backslash_binding.TestModuleHygiene.test_the_decoy_cases_carry_the_skip_and_the_other_cases_do_not
+    red_confirmed: true
+    red_reason: >-
+      Observed per part, each with the part's helper stubbed. Stdlib-only:
+      with an unused function that imports a third-party module appended,
+      test_this_module_imports_only_the_standard_library failed ("Items in the
+      first set but not the second"); with the import helper stubbed,
+      test_negative_the_import_check_fires_on_a_third_party_or_relative_import
+      failed. Temporary directory: with the fixture stubbed to leave its
+      directory behind, test_every_fixture_file_is_inside_a_temporary_directory_removed_afterwards
+      and test_the_fixture_directory_is_removed_when_the_body_raises failed
+      ("True is not false"). Compiled files: with the loader no longer turning
+      the bytecode flag on, test_the_loader_is_bytecode_free_and_puts_the_callers_flag_back
+      failed (start=False: "False is not true"; start=True: a __pycache__ with
+      probe.cpython-314.pyc listed), and with the compiled-entry helper stubbed
+      test_negative_the_compiled_file_check_fires_on_a_pycache_with_a_pyc
+      failed ("Lists differ: [] != ['pkg/__pycache__', ...]"). Skip: with the
+      separator helper stubbed,
+      test_backslash_is_detected_as_a_separator_by_either_separator_attribute
+      failed ("False is not true") and
+      test_the_decoy_skip_states_its_reason_and_applies_only_where_backslash_separates
+      errored. Not observed red:
+      test_loading_the_validator_adds_no_compiled_file_under_em_workflow, whose
+      failure would need this module to write a compiled file under
+      em-workflow/, which it must not do, and
+      test_the_decoy_cases_carry_the_skip_and_the_other_cases_do_not, which
+      compares against the platform and is vacuous where backslash is not a
+      path separator.
+  AC-6:
+    tests:
+      - tests.test_final_path_correction.TestPlanBindingAdmits.test_every_spelling_of_tasks_t_md_is_bound
+    red_confirmed: false
+    red_reason: >-
+      The criterion is the full run of python3 -m unittest discover -s tests
+      and the two files em-workflow/scripts/validate-worker-output.py and
+      tests/test_final_path_correction.py staying unchanged; neither is a test
+      that can be made to fail before the task exists. A dedicated new module
+      is out of scope, but the existing
+      tests.test_final_path_correction.TestPlanBindingAdmits.test_every_spelling_of_tasks_t_md_is_bound
+      (the module tests/test_final_path_correction.py loads the validator by
+      file path) detects a change to the validator's binding of the
+      spellings; no red state occurred for this change. The unchanged state is
+      checked with git diff against the base revision.
