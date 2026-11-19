@@ -155,8 +155,9 @@ tasks:
     complexity: low
     requirements:
     - NFR2
-    status: pending
+    status: in_progress
     notes: null
+    branch: em-workflow/plan-path-backslash-binding/task0003
     provenance:
       source: verify
       source_ids:
