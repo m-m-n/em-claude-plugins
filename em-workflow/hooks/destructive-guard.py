@@ -7013,7 +7013,7 @@ def _word_source_bounds(marked, start, end):
     return first[1], (last[1] + 1 if last[0] == "copy" else last[2])
 
 
-def _read_word_as_written(marked, tok, quote_residue=False):
+def _read_word_as_written(marked, tok):
     """Component 1 of the masking-stop check (FR9 (3)): the word TOK as the
     shell passes it on, or None when it cannot be fixed statically ("undeter-
     minable"). The word is read from the characters it was written with in
@@ -7039,22 +7039,15 @@ def _read_word_as_written(marked, tok, quote_residue=False):
     parse-failure fallback's plain split) has no as-written reading: it is
     undeterminable unless _read_plain_word() accepts it.
 
-    QUOTE_RESIDUE (mcp-bridge-args-json-exec-guard FR3; the masking-stop check
-    leaves it off) lets the marker residue that the marking left for a
-    single-quote candidate -- a `$(` or backtick inside a single-quote or
-    ANSI-C-quote region of the word -- stand: the word is read from SOURCE
-    over the span's source bounds, where the candidate's characters are the
-    literal text bash passes on. Residue of a real substitution still makes the
-    word undeterminable: its region is not a quote region, or sits in a
-    double-quote region as an unescaped `$` or backtick. A word that is a
-    substitution as a whole (`.substitution_only`), and a marker character that
-    the source itself holds, stay undeterminable."""
+    This is the masking-stop reading only. The `--args-json` step of
+    `mcp-bridge run` reads its words with _read_static_word()
+    (mcp-bridge-args-json-exec-guard D5), which tells a word that is not
+    static from one whose quoting cannot be restored; the reading here keeps
+    its single outcome and its result."""
     span = getattr(tok, "span", None)
     if getattr(tok, "substitution_only", False):
         return None
-    if getattr(tok, "unresolved", False) and not (
-        quote_residue and marked is not None and span is not None
-    ):
+    if getattr(tok, "unresolved", False):
         return None
     if marked is None or span is None:
         return _read_plain_word(tok)
@@ -7066,22 +7059,12 @@ def _read_word_as_written(marked, tok, quote_residue=False):
     word = text[start:end]
     if not word:
         return None
-    if not quote_residue and (
-        UNRESOLVED_MARK in word or QUOTED_MARK in word or _MARK_TERMINATOR in word
-    ):
+    if UNRESOLVED_MARK in word or QUOTED_MARK in word or _MARK_TERMINATOR in word:
         return None
     bounds = _word_source_bounds(marked, start, end)
     if bounds is None:
         return None
-    if quote_residue:
-        written = marked.source[bounds[0]:bounds[1]]
-        if (
-            UNRESOLVED_MARK in written
-            or QUOTED_MARK in written
-            or _MARK_TERMINATOR in written
-        ):
-            return None
-    elif bounds[1] - bounds[0] != end - start:
+    if bounds[1] - bounds[0] != end - start:
         return None
     lo, hi = bounds
     regions = marked.top_regions
@@ -7627,40 +7610,55 @@ def _single_quote_skip_spans(chunk, lexmap, real_spans, lexed):
 
 
 # mcp-bridge-args-json-exec-guard: the `--args-json` step. For an `mcp-bridge
-# run` statement it rebuilds the value word under Bash quoting rules, decodes
-# it as JSON, and hands statements() the substitution candidates of every
-# decoded string and every top-level `command` string, which statements()
-# queues for the ordinary re-scan. _mcp_bridge_args_json_chunks() is the
-# decision; statements() calls it once per statement it yielded from a lexed
-# segment. It only adds chunks to the queue: the raw-string scan before it, and
-# every verdict it gives, stay.
+# run` statement it reads the words after `run` the way mcp-bridge reads them
+# (FR3), rebuilds each static `--args-json` value under Bash quoting rules,
+# decodes it as JSON, and finds the substitution candidates of every decoded
+# string and every top-level `command` string.
+# _mcp_bridge_args_json_chunks() is that decision. _queue_args_json_chunks() is
+# its bookkeeping (NFR5): it queues what the decision found for the ordinary
+# re-scan, adds the scan charge to the running total and holds the asks the
+# step owes (a bound left something unscanned, FR7; a static word's quoting
+# cannot be restored, FR11) until the queue is drained (D6). statements() calls
+# the collaborator once per statement it yields. The step only adds chunks to
+# the queue and holds asks: the raw-string scan before it, and every verdict it
+# gives, stay (NFR2).
 
 # The deepest JSON nesting the step decodes (decision D3): a value nested
-# deeper gives the Overrun result before the decoder runs.
+# deeper sets Overrun before the decoder runs.
 MAX_ARGS_JSON_DEPTH = 100
 
 # The flags of `mcp-bridge run` the canonical flag reading knows
 # (mcp-bridge-exec-tool-rescan D1): each takes the next word as its value,
-# whatever it holds. `--dry-run` takes none.
+# whatever it holds. `--dry-run` takes none. Only the notion-pair reading
+# (FR2) uses this canonical form.
 _MCP_RUN_VALUE_FLAGS = frozenset(
     {"--mcp", "--tool", "--args-json", "--format", "--session"}
 )
 
-# The three kinds of result of _mcp_bridge_args_json_chunks().
-ARGS_JSON_NOT_INSPECTED = "not-inspected"
-ARGS_JSON_INSPECTED = "inspected"
-ARGS_JSON_OVERRUN = "overrun"
+# The flag names of the flag reading (FR3 (b)), without their dashes: each of
+# these takes the next word as its value, or the text after the first `=` of
+# its own word. `dry-run` takes no value.
+_MCP_RUN_VALUE_NAMES = frozenset({"mcp", "tool", "args-json", "format", "session"})
 
-# KIND is one of the three above. For ARGS_JSON_INSPECTED: CHARGE is the scan
-# cost of the rebuild, the decode and the walk, BODIES the candidate bodies of
-# every decoded string and COMMANDS the top-level `command` strings (each in
-# document order), WORD the `--args-json` value word they are anchored at. The
-# other two kinds carry nothing (0, (), (), None).
+# One decoded `--args-json` value: WORD is the word it is anchored at (the
+# value word, or the flag word of the `=` form), BODIES the candidate bodies of
+# its decoded strings and COMMANDS its top-level `command` strings, each in
+# document order.
+ArgsJsonValue = collections.namedtuple("ArgsJsonValue", ["word", "bodies", "commands"])
+
+# The result of _mcp_bridge_args_json_chunks(). VALUES: one ArgsJsonValue for
+# each `--args-json` value, in order, that is static and decodes to a JSON
+# object. CHARGE: the scan cost of those values (for each, its rebuilt length,
+# one per JSON value visited and the length of each string searched). OVERRUN:
+# some value nests deeper than MAX_ARGS_JSON_DEPTH or fails the decoder for a
+# reason other than a JSON syntax error (D3). UNRESTORABLE: a word the step
+# read is static but its quoting cannot be restored (FR11, D5). The result with
+# no values, no charge and no flag is "nothing to do".
 ArgsJsonResult = collections.namedtuple(
-    "ArgsJsonResult", ["kind", "charge", "bodies", "commands", "word"]
+    "ArgsJsonResult", ["values", "charge", "overrun", "unrestorable"]
 )
-_ARGS_JSON_NOT_INSPECTED = ArgsJsonResult(ARGS_JSON_NOT_INSPECTED, 0, (), (), None)
-_ARGS_JSON_OVERRUN = ArgsJsonResult(ARGS_JSON_OVERRUN, 0, (), (), None)
+_ARGS_JSON_NOTHING = ArgsJsonResult((), 0, False, False)
+_ARGS_JSON_UNRESTORABLE = ArgsJsonResult((), 0, False, True)
 
 # One token of the nesting pass: a JSON string (an unclosed one runs to the end
 # of the text; a backslash inside it escapes the next character), or an opening
@@ -7760,101 +7758,178 @@ def _args_json_word_index(toks, word):
     return _token_index(toks, word)
 
 
-def _mcp_bridge_args_json_chunks(shaped_words, marked):
-    """The `--args-json` step for one statement (mcp-bridge-args-json-exec-guard
-    FR1 to FR8): whether it is an `mcp-bridge run` statement whose
-    `--args-json` value is decoded, and what statements() queues for the
-    ordinary re-scan when it is. SHAPED_WORDS are the words of a statement that
-    statements() yielded from a lexed segment (after statement shaping),
-    MARKED the _MarkedText it was lexed from. Nothing is evaluated, executed or
-    read, and no token, no marked text and no state of statements() changes.
-    The result is an ArgsJsonResult of exactly one of three kinds:
+# The three outcomes of _read_static_word() (D5).
+WORD_STATIC = "static"
+WORD_NOT_STATIC = "not-static"
+WORD_UNRESTORABLE = "unrestorable"
 
-    - ARGS_JSON_NOT_INSPECTED: the statement is not a target (FR1), its options
-      determine the notion pair (FR2), or it is one of the forms of O2 below
-      (FR6).
-    - ARGS_JSON_INSPECTED: the scan charge of the rebuild, the decode and the
-      walk (FR7); the candidate bodies found in every decoded string value
-      (FR4); the top-level `command` string values (FR5); each list in document
-      order; and the `--args-json` value word they are anchored at.
-    - ARGS_JSON_OVERRUN: the JSON nesting is deeper than MAX_ARGS_JSON_DEPTH, or
-      the decoder failed for a reason other than a JSON syntax error (D3).
-      statements() ends the scan with the scan-budget ask.
 
-    Per statement, in order:
+def _read_static_word(marked, tok):
+    """The word reader of the `--args-json` step (mcp-bridge-args-json-exec-
+    guard D5): the word TOK, of a statement lexed from MARKED (the
+    _MarkedText), as (OUTCOME, TEXT). Nothing is evaluated, executed or
+    imported. The word is read from the characters it was written with in
+    MARKED and the lexer's top-level region kinds over them, as
+    _read_word_as_written() reads one, but the three outcomes are told apart:
 
-    1. Target (FR1): the command word that head() returns over SHAPED_WORDS is
-       exactly `mcp-bridge` and carries no substitution flag, and the first
-       word after it is exactly `run`. A statement in which `mcp-bridge run` is
-       only text inside another command's argument has another command word.
-    2. Flag reading (D2): the words after `run` are read left to right; the
-       first is in flag position. A word in flag position is one of `--mcp`,
-       `--tool`, `--args-json`, `--format`, `--session` or `--dry-run`, written
-       as one unquoted run. `--dry-run` takes no value; each other flag takes
-       the next word as its value whatever it holds, and the word after a value
-       is in flag position. Any other word in flag position, and a value-taking
-       flag with no value word, make the statement not inspected.
-    3. Notion pair (FR2): when `--mcp`, `--tool` and `--args-json` each appear
-       exactly once, the `--mcp` value is `notion` and the `--tool` value is
-       `notion-create-comment`, each written as one unquoted run, the statement
-       is not inspected. Only this reading excludes a statement.
-    4. Shape (FR6): `--args-json` appearing other than exactly once, or any
-       `--mcp` or `--tool` value word that is not static, makes the statement
-       not inspected. A missing or repeated `--mcp` / `--tool` does not, on its
-       own.
-    5. Rebuild (FR3): the `--args-json` value word is rebuilt as the characters
-       Bash passes on (_read_word_as_written() with QUOTE_RESIDUE: a
-       single-quote region is its content, a double-quote region has `\\$`,
-       `` \\` ``, `\\"`, `\\\\` and backslash-newline resolved, an ANSI-C quote
-       is decoded, a backslash outside quotes keeps the next character). A word
-       that is not static -- a substitution, a parameter or arithmetic
-       expansion, a locale quote, an unquoted `$` or backtick, an unquoted glob,
-       brace or tilde form -- makes the statement not inspected.
-    6. Nesting bound (D3): one pass over the rebuilt value, outside JSON
-       strings, counts `[` and `{` up and `]` and `}` down; a depth above
-       MAX_ARGS_JSON_DEPTH gives Overrun, before the decoder runs.
-    7. Decode (FR4, D3): the rebuilt value is decoded as standard JSON with the
-       standard library's decoder, keeping every key/value pair of each object
-       in source order, duplicates included. The decoder's own acceptance is
-       not narrowed. A JSON syntax error makes the statement not inspected; any
-       other decoder failure gives Overrun. A decoded top level that is not an
-       object makes the statement not inspected.
-    8. Walk (FR4, FR5): an iterative walk (_walk_args_json()) collects the
-       candidate bodies of every string value at every depth and the top-level
-       `command` strings, duplicates included.
+    - (WORD_STATIC, TEXT): the characters Bash passes on. A single-quoted
+      region is its content, a double-quoted region has a backslash before
+      `$`, a backtick, `"`, a backslash or a newline resolved, an ANSI-C quote
+      is decoded (_decode_ansi_c()), a backslash outside quotes keeps the next
+      character (and with a newline after it vanishes). The marker residue the
+      marking left for a single-quote candidate -- a `$(` or backtick inside a
+      single-quote or ANSI-C-quote region of the word -- does not count
+      against the word: its characters are the literal text Bash passes on.
+    - (WORD_NOT_STATIC, None): the word holds an element of FR6 (1): a region
+      of a kind other than a single-quote, double-quote, ANSI-C or locale quote
+      (a substitution, a parameter or arithmetic expansion, an array
+      subscript); an unescaped `$` or backtick inside a double-quote or
+      locale-quote region; an unquoted `$` or backtick; an unquoted glob,
+      brace, tilde or extended-glob form that _read_word_as_written()
+      rejects; residue of a real substitution; a word that is a substitution as
+      a whole. A word with no as-written reading (no span, no marked text) is
+      not static unless _read_plain_word() accepts it.
+    - (WORD_UNRESTORABLE, None): the word holds none of those, and its quoting
+      still cannot be restored (FR11): an ANSI-C quote that
+      _decode_ansi_c() gives no result for (a NUL, a character outside ASCII,
+      an escape it does not handle), a locale quote whose content holds no
+      unescaped `$` or backtick, a marker character the source itself holds, or
+      any other failure of the restoration.
 
-    Out of scope (FR8; the same scope as in the out-of-scope declaration of
-    extract_shell_payload_anchored() and in the labels of the cases that pin
-    them). Neither form is sent to ask; each keeps the verdict it has without
-    this step:
+    The whole word is read before the outcome is settled, so a word that holds
+    an element of FR6 (1) is not static whatever else it holds: it sets
+    nothing."""
+    span = getattr(tok, "span", None)
+    if getattr(tok, "substitution_only", False):
+        return WORD_NOT_STATIC, None
+    if marked is None or span is None:
+        if getattr(tok, "unresolved", False):
+            return WORD_NOT_STATIC, None
+        text = _read_plain_word(tok)
+        if text is None:
+            return WORD_NOT_STATIC, None
+        return WORD_STATIC, text
+    start, end = span
+    text = marked.text
+    cr = getattr(tok, "trailing_cr", "")
+    if cr and text.startswith(cr, end - len(cr)):
+        end -= len(cr)  # bash passes the CR on; the reading disregards it
+    if end <= start:
+        return WORD_NOT_STATIC, None
+    bounds = _word_source_bounds(marked, start, end)
+    if bounds is None:
+        return WORD_NOT_STATIC, None  # its first character is a substitution's residue
+    lo, hi = bounds
+    source = marked.source
+    written = source[lo:hi]
+    unrestorable = (
+        UNRESOLVED_MARK in written or QUOTED_MARK in written or _MARK_TERMINATOR in written
+    )
+    regions = marked.top_regions
+    by_start = {}
+    k = max(bisect.bisect_right(marked.top_starts, lo) - 1, 0)
+    while k < len(regions) and regions[k].start < hi:
+        region = regions[k]
+        k += 1
+        if region.end <= lo:
+            continue
+        if region.start < lo or region.end > hi or not region.closed:
+            if region.kind not in LEX_QUOTE_KINDS:
+                return WORD_NOT_STATIC, None
+            unrestorable = True  # a quote the word does not hold whole
+            continue
+        by_start[region.start] = region
+    chars = []  # the restored characters
+    bare = []  # parallel: whether the character stands unquoted and unescaped
+    pos = lo
+    while pos < hi:
+        region = by_start.get(pos)
+        if region is not None:
+            if region.kind == "single-quote":
+                opener, closer, skip = "'", "'", 1
+            elif region.kind == "double-quote":
+                opener, closer, skip = '"', '"', 1
+            elif region.kind == "ansi-c-quote":
+                opener, closer, skip = "$'", "'", 2
+            elif region.kind == "locale-quote":
+                opener, closer, skip = '$"', '"', 2
+            else:
+                return WORD_NOT_STATIC, None
+            if not source.startswith(opener, pos) or source[region.end - 1] != closer:
+                unrestorable = True
+                pos = region.end
+                continue
+            body = source[pos + skip:region.end - 1]
+            if region.kind == "double-quote":
+                body = _read_double_quoted(body)
+                if body is None:
+                    return WORD_NOT_STATIC, None
+            elif region.kind == "ansi-c-quote":
+                body = _decode_ansi_c(body)
+                if body is None:
+                    unrestorable = True
+                    body = "\x00"  # a quoted placeholder, never read as unquoted text
+            elif region.kind == "locale-quote":
+                # A locale quote expands like a double-quote region, and the
+                # translation of its text cannot be told statically.
+                if _read_double_quoted(body) is None:
+                    return WORD_NOT_STATIC, None
+                unrestorable = True
+                body = "\x00"
+            chars.extend(body)
+            bare.extend([False] * len(body))
+            pos = region.end
+            continue
+        ch = source[pos]
+        if ch == "\\":
+            if pos + 1 >= hi or pos + 1 in by_start:
+                unrestorable = True
+                pos += 1
+                continue
+            if source[pos + 1] != "\n":
+                chars.append(source[pos + 1])
+                bare.append(False)
+            pos += 2
+            continue
+        if ch in "$`":
+            return WORD_NOT_STATIC, None
+        chars.append(ch)
+        bare.append(True)
+        pos += 1
+    if chars:
+        for opener, closer in (("[", "]"), ("{", "}")):
+            opened = False
+            for ch, free in zip(chars, bare):
+                if not free:
+                    continue
+                if ch == opener:
+                    opened = True
+                elif ch == closer and opened:
+                    return WORD_NOT_STATIC, None
+        if any(free and ch in "*?" for ch, free in zip(chars, bare)):
+            return WORD_NOT_STATIC, None
+        if bare[0] and chars[0] == "~":
+            return WORD_NOT_STATIC, None
+        if bare[-1] and chars[-1] in "?*+@!" and text[end:end + 1] == "(":
+            return WORD_NOT_STATIC, None
+    if unrestorable:
+        return WORD_UNRESTORABLE, None
+    return WORD_STATIC, "".join(chars)
 
-    - O1: a command written as plain text, without a substitution, in a key
-      other than the top-level `command` (for example the `input` of
-      desktop-commander's `interact_with_process`), or in a `command` key below
-      the top level. Only the candidate search applies there.
-    - O2: the forms of FR6, which keep the raw-string verdict:
-        - a value word set by a substitution or a variable expansion, or
-          otherwise not static (a substitution Bash itself runs is still
-          re-scanned);
-        - a destination whose `--mcp` or `--tool` value word is not static;
-        - a value that does not decode as JSON;
-        - `--args-json` missing, repeated, or written in the `=` form;
-        - words after `run` that do not read as the canonical flag sequence;
-        - a decoded value whose top level is not an object.
-    """
-    if marked is None:
-        return _ARGS_JSON_NOT_INSPECTED
-    name, args = head(shaped_words)
-    if name != "mcp-bridge" or not args:
-        return _ARGS_JSON_NOT_INSPECTED
-    command_word = shaped_words[len(shaped_words) - len(args) - 1]
-    run_word = args[0]
-    for word in (command_word, run_word):
-        if getattr(word, "unresolved", False) or getattr(word, "substitution_only", False):
-            return _ARGS_JSON_NOT_INSPECTED
-    if str(run_word) != "run":
-        return _ARGS_JSON_NOT_INSPECTED
-    words = args[1:]
+
+def _args_json_notion_pair(marked, words):
+    """Whether the words WORDS (the words after `run`) read as a complete flag
+    sequence in the canonical form that determines the `--mcp notion` /
+    `--tool notion-create-comment` pair (mcp-bridge-args-json-exec-guard FR2,
+    D2; mcp-bridge-exec-tool-rescan FR1). This reading is not widened: a word
+    in flag position must be exactly one of the known flags as one unquoted
+    run (_args_json_unquoted_run()), `--dry-run` takes no value, the other
+    flags take the next word as their value whatever it holds, and any other
+    word -- a quoted, `=`-form or single-dash flag word, `--`, a positional
+    word, an unknown name -- or a value-taking flag with no value word makes
+    the pair undeterminable. `--mcp`, `--tool` and `--args-json` must each
+    appear exactly once, and the `--mcp` value and the `--tool` value must be
+    `notion` and `notion-create-comment`, each as one unquoted run."""
     values = {flag: [] for flag in _MCP_RUN_VALUE_FLAGS}
     k = 0
     while k < len(words):
@@ -7863,45 +7938,193 @@ def _mcp_bridge_args_json_chunks(shaped_words, marked):
             k += 1
             continue
         if flag not in _MCP_RUN_VALUE_FLAGS or k + 1 >= len(words):
-            return _ARGS_JSON_NOT_INSPECTED
+            return False
         values[flag].append(words[k + 1])
         k += 2
-    if (
+    return (
         len(values["--mcp"]) == len(values["--tool"]) == len(values["--args-json"]) == 1
         and _args_json_unquoted_run(marked, values["--mcp"][0]) == "notion"
         and _args_json_unquoted_run(marked, values["--tool"][0]) == "notion-create-comment"
-    ):
-        return _ARGS_JSON_NOT_INSPECTED
-    if len(values["--args-json"]) != 1:
-        return _ARGS_JSON_NOT_INSPECTED
-    for word in values["--mcp"] + values["--tool"]:
-        if _read_word_as_written(marked, word, True) is None:
-            return _ARGS_JSON_NOT_INSPECTED
-    value_word = values["--args-json"][0]
-    value = _read_word_as_written(marked, value_word, True)
-    if value is None:
-        return _ARGS_JSON_NOT_INSPECTED
-    if _json_nesting_exceeds(value, MAX_ARGS_JSON_DEPTH):
-        return _ARGS_JSON_OVERRUN
-    try:
-        decoded = json.loads(value, object_pairs_hook=_JsonObject)
-    except json.JSONDecodeError:
-        return _ARGS_JSON_NOT_INSPECTED
-    except Exception:
-        # Whatever else the decoder refuses (an integer past the interpreter's
-        # digit limit, a recursion or memory failure) is a value that only
-        # this decoder fails on: not an FR6 form (TM-3).
-        return _ARGS_JSON_OVERRUN
-    if not isinstance(decoded, _JsonObject):
-        return _ARGS_JSON_NOT_INSPECTED
-    visited, searched, bodies, commands = _walk_args_json(decoded)
-    return ArgsJsonResult(
-        ARGS_JSON_INSPECTED,
-        len(value) + visited + searched,
-        tuple(bodies),
-        tuple(commands),
-        value_word,
     )
+
+
+def _mcp_bridge_args_json_chunks(shaped_words, marked):
+    """The `--args-json` decision for one statement (mcp-bridge-args-json-exec-
+    guard FR1 to FR8, FR11): whether it is an `mcp-bridge run` statement with
+    `--args-json` values to decode, and what _queue_args_json_chunks() queues
+    for the ordinary re-scan when it is. SHAPED_WORDS are the words of a
+    statement that statements() yielded from a lexed segment (after statement
+    shaping), MARKED the _MarkedText it was lexed from. Nothing is evaluated,
+    executed or read, and no token, no marked text and no state of statements()
+    changes. The result is an ArgsJsonResult:
+
+    - VALUES: for each `--args-json` value, in order, that is static and
+      decodes to a JSON object: the word it is anchored at, the candidate
+      bodies found in its decoded strings (FR4) and its top-level `command`
+      strings (FR5), each list in document order. A decoded `command` string
+      takes no count from MAX_SHELL_PAYLOAD_EXPANSIONS (A4); the scan budget
+      alone bounds it (FR7).
+    - CHARGE: the scan cost of those values (FR7): for each, its rebuilt
+      length, one per JSON value visited and the length of each string
+      searched.
+    - OVERRUN: some value nests deeper than MAX_ARGS_JSON_DEPTH, or fails the
+      decoder for a reason other than a JSON syntax error (D3).
+    - UNRESTORABLE: a word the step read is static but its quoting cannot be
+      restored (FR11, D5).
+
+    No values, no charge and no flag is "nothing to do": the statement is not a
+    target, its options determine the notion pair, or it is one of the forms of
+    O2 below.
+
+    Per statement, in order:
+
+    1. Target (FR1): the command word that head() returns over SHAPED_WORDS is
+       exactly `mcp-bridge` and carries no substitution flag, and the first
+       word after it is exactly `run`. A statement in which `mcp-bridge run` is
+       only text inside another command's argument has another command word.
+    2. Notion pair (FR2): the canonical reading (_args_json_notion_pair()) that
+       determines the `--mcp notion` / `--tool notion-create-comment` pair
+       makes the statement nothing to do, and sets no Unrestorable flag. Only
+       this reading excludes a statement; it is not widened.
+    3. Flag reading (FR3, FR6, FR11): every other statement is read left to
+       right the way mcp-bridge reads its options; the first word after `run`
+       is in flag position. A word in flag position is read by
+       _read_static_word() (step 4): Not static makes the statement nothing to
+       do, Unrestorable sets Unrestorable and ends the reading with no value
+       inspected, and otherwise its restored text is used, so a quoted or
+       backslashed flag word reads as the plain one. The restored text `--`
+       ends the flag sequence, and so does a word that does not begin with `-`
+       (a positional word). One or two leading dashes are removed, and the rest
+       is split at its first `=` into a name and an inline value. The names
+       `mcp`, `tool`, `args-json`, `format` and `session` take the inline
+       value, or else the next word, whatever it holds (a value-taking flag
+       with neither makes the statement nothing to do); the word after a value
+       word is in flag position. The name `dry-run` takes no value. Any other
+       name makes the statement nothing to do. The first stop decides. The
+       values of `--mcp`, `--tool`, `--format` and `--session` are not
+       examined. No `--args-json` makes the statement nothing to do.
+    4. Word outcomes (D5): _read_static_word() gives a word one of three
+       outcomes. Not static: it holds an element of FR6 (1) (a substitution, a
+       parameter or arithmetic expansion, an unquoted `$` or backtick, an
+       unquoted glob, brace or tilde form, residue of a real substitution).
+       Unrestorable: it holds none of those, and its quoting still cannot be
+       restored (an ANSI-C quote that _decode_ansi_c() gives no result for, a
+       locale quote). Static: the characters Bash passes on (a single-quote
+       region is its content, a double-quote region has its backslash escapes
+       resolved, an ANSI-C quote is decoded, a backslash outside quotes keeps
+       the next character).
+    5. Values (FR3): every `--args-json` value is handled on its own, in
+       order. A value word of its own is read by _read_static_word(): Not
+       static skips that value, Unrestorable skips it and sets Unrestorable,
+       Static is the value. An inline value is the text after the first `=` of
+       the restored flag word, anchored at that flag word.
+    6. Nesting bound (D3): one pass over the value, outside JSON strings,
+       counts `[` and `{` up and `]` and `}` down; a depth above
+       MAX_ARGS_JSON_DEPTH sets Overrun for that value, before the decoder
+       runs.
+    7. Decode (FR4, D3): the value is decoded as standard JSON with the
+       standard library's decoder, keeping every key/value pair of each object
+       in source order, duplicates included. The decoder's own acceptance is
+       not narrowed. A JSON syntax error skips the value; any other decoder
+       failure sets Overrun. A decoded top level that is not an object skips
+       the value.
+    8. Walk (FR4, FR5): an iterative walk (_walk_args_json()) collects the
+       candidate bodies of every string value at every depth and the top-level
+       `command` strings, duplicates included.
+
+    Out of scope (FR8; stated with the same scope in the out-of-scope
+    declaration of extract_shell_payload_anchored() and in the labels of the
+    cases that pin them). Neither form is sent to ask; each keeps the verdict it
+    has without this step:
+
+    - O1: a command written as plain text, without a substitution, in a key
+      other than the top-level `command` (for example the `input` of
+      desktop-commander's `interact_with_process`), or in a `command` key below
+      the top level. Only the candidate search applies there.
+    - O2: the FR6 forms, which keep the raw-string verdict:
+        1. an `--args-json` value word that is not static, set by a
+           substitution, a variable expansion or the like (a substitution Bash
+           itself runs is still re-scanned);
+        2. a word in flag position that is not static in the same sense;
+        3. an unknown flag;
+        4. a value-taking flag with no value word;
+        5. no `--args-json`;
+        6. a value that does not decode as JSON;
+        7. a decoded value whose top level is not an object.
+    """
+    if marked is None:
+        return _ARGS_JSON_NOTHING
+    name, args = head(shaped_words)
+    if name != "mcp-bridge" or not args:
+        return _ARGS_JSON_NOTHING
+    command_word = shaped_words[len(shaped_words) - len(args) - 1]
+    run_word = args[0]
+    for word in (command_word, run_word):
+        if getattr(word, "unresolved", False) or getattr(word, "substitution_only", False):
+            return _ARGS_JSON_NOTHING
+    if str(run_word) != "run":
+        return _ARGS_JSON_NOTHING
+    words = args[1:]
+    if _args_json_notion_pair(marked, words):
+        return _ARGS_JSON_NOTHING
+    # The flag reading (FR3, D2): the first stop decides.
+    value_words = []  # (anchor word, inline value text or None) per `--args-json`
+    k = 0
+    while k < len(words):
+        outcome, flag = _read_static_word(marked, words[k])
+        if outcome == WORD_NOT_STATIC:
+            return _ARGS_JSON_NOTHING
+        if outcome == WORD_UNRESTORABLE:
+            return _ARGS_JSON_UNRESTORABLE
+        if flag == "--" or not flag.startswith("-"):
+            break
+        rest = flag[2:] if flag.startswith("--") else flag[1:]
+        flag_name, equals, inline = rest.partition("=")
+        if flag_name == "dry-run":
+            k += 1
+            continue
+        if flag_name not in _MCP_RUN_VALUE_NAMES:
+            return _ARGS_JSON_NOTHING
+        if equals:
+            anchor_word, inline_value = words[k], inline
+            k += 1
+        else:
+            if k + 1 >= len(words):
+                return _ARGS_JSON_NOTHING
+            anchor_word, inline_value = words[k + 1], None
+            k += 2
+        if flag_name == "args-json":
+            value_words.append((anchor_word, inline_value))
+    values = []
+    charge = 0
+    overrun = False
+    unrestorable = False
+    for anchor_word, value in value_words:
+        if value is None:
+            outcome, value = _read_static_word(marked, anchor_word)
+            if outcome == WORD_UNRESTORABLE:
+                unrestorable = True
+            if outcome != WORD_STATIC:
+                continue
+        if _json_nesting_exceeds(value, MAX_ARGS_JSON_DEPTH):
+            overrun = True
+            continue
+        try:
+            decoded = json.loads(value, object_pairs_hook=_JsonObject)
+        except json.JSONDecodeError:
+            continue
+        except Exception:
+            # Whatever else the decoder refuses (an integer past the interpreter's
+            # digit limit, a recursion or memory failure) is a value that only
+            # this decoder fails on: not an FR6 form (TM-3).
+            overrun = True
+            continue
+        if not isinstance(decoded, _JsonObject):
+            continue
+        visited, searched, bodies, commands = _walk_args_json(decoded)
+        charge += len(value) + visited + searched
+        values.append(ArgsJsonValue(anchor_word, tuple(bodies), tuple(commands)))
+    return ArgsJsonResult(tuple(values), charge, overrun, unrestorable)
 
 
 # The scan-budget `ask` (reason id, reason text): the static analysis would
@@ -7913,6 +8136,18 @@ SCAN_BUDGET_ASK = (
     "scan-budget-exceeded",
     "入れ子/積み上げの構造が深く、静的解析の走査量が入力長に対して"
     "過大になったため打ち切った。安全側で確認を挟む。",
+)
+
+# The `ask` (reason id, reason text) for an `mcp-bridge run` `--args-json`
+# value word or flag-position word that holds no non-static element but whose
+# quoting cannot be restored statically (mcp-bridge-args-json-exec-guard FR11,
+# D5): an ANSI-C quote the decoder gives no result for, a locale quote. The
+# `--args-json` step holds it in the _DeferredAsks record and statements()
+# settles it once the queue is drained; the scan-budget ask outranks it (D6).
+ARGS_JSON_UNRESTORABLE_ASK = (
+    "args-json-unrestorable",
+    "mcp-bridge run の --args-json の値、またはフラグの語の引用を静的に"
+    "復元できないため、中身を検査できない。安全側で確認を挟む。",
 )
 
 # The `ask` for an array subscript whose matching `]` is not found before the
@@ -7978,6 +8213,144 @@ def ask_lex_unsettled(exc):
     LexBudgetExceeded that escapes main() from outside the statement loop,
     where no rm decision or held `ask` is being kept."""
     decide("ask", *lex_unsettled_ask(exc))
+
+
+class _ScanState:
+    """The relative scan-cost state of one statements() run (TM-5): SCANNED is
+    the running total of the text scanned so far, BUDGET the cap on it
+    (statements() sets it from the length of the command). The `--args-json`
+    step's collaborator adds its charge to SCANNED, or leaves SCANNED unchanged
+    when the charge does not fit (mcp-bridge-args-json-exec-guard D3, NFR5)."""
+
+    __slots__ = ("scanned", "budget")
+
+    def __init__(self, budget):
+        self.scanned = 0
+        self.budget = budget
+
+
+class _DeferredAsks:
+    """The asks one statements() run holds until its queue is drained
+    (mcp-bridge-args-json-exec-guard NFR5, D6): at most the scan-budget ask
+    (SCAN_BUDGET_ASK; held for an `--args-json` Overrun or a charge that does
+    not fit, FR7, and for a payload the used-up payload counter left unqueued,
+    FR12, D7) and the `--args-json` unrestorable ask
+    (ARGS_JSON_UNRESTORABLE_ASK; FR11).
+
+    statements() settles the record once, after the queue is drained
+    (settle()): with an early-stop list the strongest held ask -- the
+    scan-budget ask, then the unrestorable ask -- is appended to it, for main()
+    to weigh against what the statements already earned (a deny found
+    anywhere wins over every ask); with no list it is emitted through decide();
+    an empty record does nothing. An ordinary scan-budget overrun that ends the
+    scan early keeps its present behaviour (statements() returns with the
+    scan-budget ask), and the record is then not settled.
+
+    ARGS_JSON_STOPPED says the `--args-json` step itself has held the
+    scan-budget ask (D3): from then on the step does nothing for the rest of
+    the run. A scan-budget ask held for a payload does not set it."""
+
+    __slots__ = ("scan_budget", "unrestorable", "args_json_stopped")
+
+    def __init__(self):
+        self.scan_budget = False
+        self.unrestorable = False
+        self.args_json_stopped = False
+
+    def hold_scan_budget(self):
+        """Hold the scan-budget ask."""
+        self.scan_budget = True
+
+    def hold_unrestorable(self):
+        """Hold the `--args-json` unrestorable ask."""
+        self.unrestorable = True
+
+    def stop_args_json(self):
+        """Hold the scan-budget ask for the `--args-json` step and stop the
+        step for the rest of the run."""
+        self.scan_budget = True
+        self.args_json_stopped = True
+
+    def strongest(self):
+        """The (reason id, reason text) of the strongest held ask, or None."""
+        if self.scan_budget:
+            return SCAN_BUDGET_ASK
+        if self.unrestorable:
+            return ARGS_JSON_UNRESTORABLE_ASK
+        return None
+
+    def settle(self, early_stop):
+        """Hand the strongest held ask over: appended to EARLY_STOP when it is
+        a list, else emitted through decide(). Nothing when none is held."""
+        ask = self.strongest()
+        if ask is None:
+            return
+        if early_stop is None:
+            decide("ask", *ask)
+            return
+        early_stop.append(ask)
+
+
+def _queue_args_json_chunks(
+    shaped_words, marked_chunk, tokens, lexed, anchor, seg_index, derived_mark,
+    pending, scan, asks,
+):
+    """The bookkeeping of the `--args-json` step, outside statements()
+    (mcp-bridge-args-json-exec-guard NFR5, FR5, FR7, FR11): it asks
+    _mcp_bridge_args_json_chunks() for its decision once and does everything
+    statements() would otherwise do inline for it. statements() calls it once
+    for each statement it yields, after the statement's own payload extraction.
+
+    SHAPED_WORDS and MARKED_CHUNK are the arguments of the decision. TOKENS are
+    the statement's tokens as written, LEXED says the statement was lexed (not
+    the parse-failure fallback), ANCHOR is the chunk's origin-position prefix,
+    SEG_INDEX the statement's index in the chunk, DERIVED_MARK the Python-body
+    mark a chunk derived from this one carries. PENDING is the run's queue,
+    SCAN its _ScanState (scanned total and budget) and ASKS its _DeferredAsks
+    record.
+
+    1. A statement from the parse-failure fallback, and any statement once this
+       step has held the scan-budget ask in the run, are left alone.
+    2. On Overrun, or when the charge would take the scanned total past the
+       budget, the scanned total is left unchanged, nothing of the statement is
+       queued, and the scan-budget ask is held (D3). The queue already filled
+       is processed within the bounds as they stand; the ask is settled after
+       it is drained (D6).
+    3. Otherwise the charge is added to the scanned total, and every candidate
+       body is queued like a substitution body and every `command` string like
+       a `-c` payload. Neither takes a count from MAX_SHELL_PAYLOAD_EXPANSIONS
+       (D7); a `command` string is charged to the scan budget when it is popped
+       like every chunk. Each entry is anchored at its value's word: the
+       anchor, the statement index, the index of that word in TOKENS and an
+       ordinal that keeps the entries of one word in document order (bodies
+       first, then `command` strings), with the chunk's derived Python-body mark
+       and no substitution index.
+    4. On Unrestorable the `args-json-unrestorable` ask is held, whatever 2 or
+       3 did (FR11).
+
+    It never emits a decision and never ends the scan."""
+    if not lexed or asks.args_json_stopped:
+        return
+    result = _mcp_bridge_args_json_chunks(shaped_words, marked_chunk)
+    if result.unrestorable:
+        asks.hold_unrestorable()
+    if result.overrun or scan.scanned + result.charge > scan.budget:
+        asks.stop_args_json()
+        return
+    scan.scanned += result.charge
+    for value in result.values:
+        word_step = (seg_index, _args_json_word_index(tokens, value.word))
+        ordinal = 0
+        for body in value.bodies:
+            ordinal += 1
+            pending.append(
+                (body, anchor + (word_step + (ordinal,),), None, derived_mark)
+            )
+        for command_string in value.commands:
+            ordinal += 1
+            pending.append(
+                (command_string, anchor + (word_step + (ordinal,),), None, derived_mark)
+            )
 
 
 def statements(command, unsettled=None, early_stop=None):
@@ -8201,8 +8574,11 @@ def statements(command, unsettled=None, early_stop=None):
     # single large, flat command (a 60KB heredoc, a 50KB echo) trip the same
     # limit a small nested one would, which is wrong — cost must scale with
     # input length, not sit at a fixed ceiling regardless of it.
-    scanned_chars = 0
-    scan_budget = 8 * len(command) + 4096
+    scan = _ScanState(8 * len(command) + 4096)
+    # The asks held until the queue is drained (mcp-bridge-args-json-exec-guard
+    # NFR5, D6): the `--args-json` step's, through _queue_args_json_chunks(),
+    # and the payload counter's own (FR12, D7). Settled after the loop below.
+    asks = _DeferredAsks()
     # Run-global: one list for the whole statements() call, appended to as
     # each chunk is processed, never rebuilt per chunk. A marker's encoded
     # index (see _mark_substitutions()) names a position in THIS list, so
@@ -8229,9 +8605,6 @@ def statements(command, unsettled=None, early_stop=None):
     masking_stopped = False
     deferred_python_bodies = []
     command_chunk = True
-    # Raised when an `--args-json` step overran its bounds; the scan-budget ask
-    # is settled once the queue is drained (see the end of the loop).
-    args_json_overran = False
     while pending:
         chunk, anchor, sub_index, py_mark = pending.pop()
         is_command, command_chunk = command_chunk, False
@@ -8245,8 +8618,8 @@ def statements(command, unsettled=None, early_stop=None):
         )
         if sub_index is not None:
             anchor = marker_pos.get(sub_index, anchor)
-        scanned_chars += len(chunk)
-        if scanned_chars > scan_budget:
+        scan.scanned += len(chunk)
+        if scan.scanned > scan.budget:
             if early_stop is None:
                 ask_scan_budget_exceeded()
             early_stop.append(SCAN_BUDGET_ASK)
@@ -8540,9 +8913,6 @@ def statements(command, unsettled=None, early_stop=None):
         quoted_segments = lex_segments(_mark_quoted_substitutions(chunk, top_spans))
         # task0001: case-pattern/body state, scoped to this one chunk only.
         case_stack = []
-        # Set when the `--args-json` step of a statement of this chunk overran
-        # (mcp-bridge-args-json-exec-guard): the scan ends after this chunk.
-        args_json_stop = False
         for seg_index, (marked, lexed, sep) in enumerate(segments):
             toks = _strip_unresolved_marks(marked, all_subs)
             _register_marker_positions(marker_pos, marked, anchor, seg_index)
@@ -8596,7 +8966,13 @@ def statements(command, unsettled=None, early_stop=None):
                     " ".join(toks), toks, lexed, shaped_words, redirects,
                     (anchor, seg_index),
                 )
-                if budget[0] > 0 and lexed:
+                if lexed:
+                    # The payload extraction runs whatever the counter holds
+                    # (mcp-bridge-args-json-exec-guard D7): a payload that is
+                    # not blank is queued while the counter is above zero and
+                    # takes one; with the counter at zero it is not queued, and
+                    # the scan-budget ask is held until the queue is drained
+                    # (FR12), instead of the payload being skipped silently.
                     quoted_marked = (
                         quoted_segments[seg_index][0]
                         if seg_index < len(quoted_segments)
@@ -8617,60 +8993,26 @@ def statements(command, unsettled=None, early_stop=None):
                         payload_toks, lexed, quoted_payload_toks
                     )
                     if payload and payload.strip():
-                        budget[0] -= 1
-                        pending.append(
-                            (
-                                payload,
-                                anchor
-                                + ((seg_index, _token_index(marked, payload_word), 0),),
-                                None,
-                                derived_mark,
-                            )
-                        )
-                if lexed and not args_json_stop and not args_json_overran:
-                    # _mcp_bridge_args_json_chunks() (mcp-bridge-args-json-
-                    # exec-guard FR3 to FR5): the decoded `--args-json` value
-                    # of an `mcp-bridge run` statement queues the candidate
-                    # bodies of its strings and its top-level `command`
-                    # strings. Independent of the payload counter for the
-                    # bodies; a command string takes one count from it.
-                    args_json = _mcp_bridge_args_json_chunks(shaped_words, marked_chunk)
-                    if args_json.kind == ARGS_JSON_INSPECTED:
-                        scanned_chars += args_json.charge
-                    if args_json.kind == ARGS_JSON_OVERRUN or scanned_chars > scan_budget:
-                        # The scan-budget early stop below, after the rest of
-                        # this chunk's statements have been yielded.
-                        args_json_stop = True
-                    elif args_json.kind == ARGS_JSON_INSPECTED:
-                        word_step = (seg_index, _args_json_word_index(marked, args_json.word))
-                        ordinal = 0
-                        for body in args_json.bodies:
-                            ordinal += 1
-                            pending.append(
-                                (body, anchor + (word_step + (ordinal,),), None, derived_mark)
-                            )
-                        for command_string in args_json.commands:
-                            ordinal += 1
-                            if budget[0] <= 0:
-                                continue  # A4: none is queued at zero
+                        if budget[0] > 0:
                             budget[0] -= 1
                             pending.append(
                                 (
-                                    command_string,
-                                    anchor + (word_step + (ordinal,),),
+                                    payload,
+                                    anchor
+                                    + ((seg_index, _token_index(marked, payload_word), 0),),
                                     None,
                                     derived_mark,
                                 )
                             )
-        # An `--args-json` step that overran (the nesting bound, a decoder
-        # failure, or its charge passing the budget above) ends the scan the
-        # way the budget does: after the statements of this chunk were yielded.
-        # The ask is held back: the queue the legacy inspection already filled
-        # (substitutions, `-c` bodies) is still processed within the existing
-        # bounds, and the ask is settled after the queue is drained, so a deny
-        # found there is not weakened.
-        if args_json_stop:
-            args_json_overran = True
+                        else:
+                            asks.hold_scan_budget()
+                # The `--args-json` step of this statement: one call per
+                # statement yielded, all of its bookkeeping in the
+                # collaborator (mcp-bridge-args-json-exec-guard NFR5).
+                _queue_args_json_chunks(
+                    shaped_words, marked_chunk, marked, lexed, anchor, seg_index,
+                    derived_mark, pending, scan, asks,
+                )
         # The unclosed command forms of this chunk: every level of a nest of
         # them is scanned as a chunk of nearly the whole text, so a deep nest
         # spends the scan budget above on copies of one text, in time that
@@ -8683,15 +9025,15 @@ def statements(command, unsettled=None, early_stop=None):
         # the same scan-budget ask, either emitted at once or handed over as
         # the early stop (EARLY_STOP); a form that is not nested deep enough
         # to get there is scanned as before.
-        if scanned_chars + unclosed_form_chars > scan_budget:
+        if scan.scanned + unclosed_form_chars > scan.budget:
             if early_stop is None:
                 ask_scan_budget_exceeded()
             early_stop.append(SCAN_BUDGET_ASK)
             return
-    if args_json_overran:
-        if early_stop is None:
-            ask_scan_budget_exceeded()
-        early_stop.append(SCAN_BUDGET_ASK)
+    # The queue is drained: the asks held on the way (the `--args-json` step's
+    # and the payload counter's) are settled now, so a deny found while the
+    # queue was processed is not weakened (mcp-bridge-args-json-exec-guard D6).
+    asks.settle(early_stop)
 
 
 def tokens(segment):
