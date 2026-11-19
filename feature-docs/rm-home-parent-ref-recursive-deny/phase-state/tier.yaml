@@ -1,0 +1,66 @@
+schema_version: 2
+feature: rm-home-parent-ref-recursive-deny
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.05
+    confidence: 0.95
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.95
+      '2': 0.05
+      '3': 0.0
+  observed_at: '2026-11-19T19:28:39+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.08
+    confidence: 0.92
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.92
+      '2': 0.08
+      '3': 0.0
+  observed_at: '2026-11-19T19:28:39+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  changed_lines_approx: 30
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 3
+  body_change_kind: new_logic
+  change_containment: single_module
+  caller_and_dependency_count: 9
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: em-workflow/hooks/destructive-guard.py:9513–9525 で対象を ask / rm-unresolvable
+    として記録する。保護対象の除外後も記録は残るが（同ファイル:10488–10498）、最終選択では保持済みの self-modification が先に選ばれ（同ファイル:10748–10770）、バッチでも理由
+    ID は残る（同ファイル:418–432）。ケース表の :113–114 は代入を含む裸の $HOME を deny / rm-root として固定し、:1387–1396
+    は ~ と絶対パスを検証している。今回の $HOME 表記に対する通常・文頭置換・バッチの3ケースは未追加。見積もりは該当する rm-unresolvable
+    の優先順を変える前提。全件テストは一時ディレクトリを作るため実行していない（em-workflow/hooks/tests/run-destructive-guard.py:146–156、248–259）
+decided_at: '2026-11-19T19:28:39+09:00'
