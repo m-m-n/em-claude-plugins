@@ -107,14 +107,12 @@ workflow:
   status: completed
   completed_at_commit: 5e51cb2d040d6668501fbf6c84afbebd20b2aa84
 - id: verify
-  status: in_progress
-  result: fail
-  round: 1
-  passed_ids: [TS-1, TS-2, TS-3, TS-4, TS-5, TS-6, TS-7, TS-8, TS-9, TS-10, TS-11, TS-12, AC1, AC2, AC3, AC4, AC5, NFR4, FR3, FR4, NFR2, NFR3, TM-1, TM-2]
-  failed_items:
-  - id: AC6
-    category: comprehensive
-    note: 'python3 -m unittest discover -s tests fails: tests.test_destructive_guard_mixed_rm_precedence.TestPerTargetCaseTable.test_the_cases_come_after_every_other_case asserts the previous feature''s cases are the last run of the case table, so appending any later case breaks it (fails on main b198b8f65 too; the case-table runner passes 1375/1375)'
+  status: completed
+  result: pass
+  round: 2
+  passed_ids: [TS-1, TS-2, TS-3, TS-4, TS-5, TS-6, TS-7, TS-8, TS-9, TS-10, TS-11, TS-12, AC1, AC2, AC3, AC4, AC5, AC6, NFR4, FR3, FR4, NFR2, NFR3, TM-1, TM-2]
+  failed_items: []
+  completed_at_commit: 9ed0062d8b206073ac8e107a8fe520a9b1678c24
 - id: retrospect
   status: pending
 tasks:
