@@ -54,7 +54,7 @@ spec_change:
   origin_id: 32aa9e6e947c325d
   recorded_at_commit: 0a6fe0dc37e71b6574031f0bc433bc5d187cdf60
   consumed: true
-  replan_authorized: true
+  replan_authorized: false
 classification:
 - classifier: codex
   verdict: goal_not_met
