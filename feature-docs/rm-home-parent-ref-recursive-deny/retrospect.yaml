@@ -1,0 +1,32 @@
+feature: rm-home-parent-ref-recursive-deny
+collected_at: "2026-11-19T20:44:00+09:00"
+session_ids: [01a1f39d-f47a-7248-8e66-f8cd34d11a34.jsonl]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: "description_plus_code の最終読み（score 1.08、confidence 0.92）と事前調査（change_containment: single_module、changes_external_contract: false）から評価器が reduced を返した"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.05, confidence: 0.95}
+        observed_at: "2026-11-19T19:28:39+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.08, confidence: 0.92}
+        observed_at: "2026-11-19T19:28:39+09:00"
+    pre_survey_estimate:
+      changed_lines_approx: 30
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      body_change_kind: new_logic
+      change_containment: single_module
+      changes_external_contract: false
+follow_up_drafts: []
+lessons_candidates:
+  - "事前調査の files_expected（2 ファイル）に対し、実際は .claude/rules/hook-tests.md と tests/ 配下の単体テストも触った（計画の files には含まれていた）"
+  - "review round 1 は findings 0 件、verify round 1 で pass（rework 無し）"

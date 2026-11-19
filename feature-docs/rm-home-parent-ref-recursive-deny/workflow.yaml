@@ -143,7 +143,8 @@ workflow:
   - AC7
   failed_items: []
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: c3141c0a8b2e33735c8d0069c2c3eada444bc1e7
 tasks:
   task0001:
     title: Select the rm ask over the same statement's self-modification ask for a qualifying operand
