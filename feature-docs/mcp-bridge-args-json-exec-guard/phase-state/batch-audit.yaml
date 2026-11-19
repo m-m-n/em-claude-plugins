@@ -133,3 +133,18 @@ records:
     not chosen: end_turn_now; codex_consulted: true (codex, 1 turn); key points: the boundary table lists
     only verify-sourced rework, review did not reach completed, so the next pending step (implement) runs
     in this launch; opus_escalation: false'
+- question_id: verify.round1.ts19-pre-change-judgment
+  packet_id: null
+  answered_at: '2026-11-20T00:38:38+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - record-failed
+  freeform: null
+  normalized_answer: record AC-11 and NFR3 as failed items
+  resolution_note: 'unlisted orchestrator decision in verify round 1: TS-19 is deny after the change,
+    but also deny at the base commit, against the documented allow-before premise (SPEC AC-11 / NFR3,
+    VERIFICATION Pre-change Reproduction); options: record-failed / pass-as-doc-inaccuracy; chosen: record-failed;
+    not chosen: pass-as-doc-inaccuracy; codex_consulted: true (codex, 1 turn); key points: the pre-change
+    allow is a stated verification condition, passing would falsify verification, rework should only correct
+    the documented pre-change expectation; opus_escalation: false'
