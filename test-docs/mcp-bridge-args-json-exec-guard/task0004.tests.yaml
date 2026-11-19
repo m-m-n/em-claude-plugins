@@ -1,0 +1,70 @@
+task_id: task0004
+baseline_failures: []          # 4a, before any edit: python3 em-workflow/hooks/tests/run-destructive-guard.py exited 0 and python3 -m unittest discover -s tests -> Ran 16529 tests, OK (skipped=1)
+final_failures: []             # re-executed after the edits and after this record: the runner exits 0 and unittest discover is OK; nothing failing
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      The criterion is the text of the _single_quote_skip_spans() docstring.
+      No executable check that can fail exists for it: the existing tests
+      under tests/ were searched by the path
+      em-workflow/hooks/destructive-guard.py and by the basename
+      destructive-guard.py, and by the function name; none reads this
+      docstring. It was checked by reading the docstring against Design site
+      1. The task plan states AC-1 to AC-5 are checked by reading.
+  AC-2:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      The criterion is the text of the scan_structure() docstring bullet and of
+      the destructive-guard-false-deny FR2 comment above the queueing loop of
+      statements(). The same search by path, basename and function name found
+      no test that reads either (tests/test_destructive_guard_lexer_agreement.py
+      reads the AST of scan_structure() for forbidden calls only, which this
+      change does not touch). Checked by reading against Design sites 2 and 4.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_rm_reason_positions.TestNumberingDescriptionsAreCurrent.test_statements_describes_the_origin_position_it_reports
+      - tests.test_destructive_guard_mixed_rm_precedence.TestDescriptionsAreCurrent.test_the_phrases_the_numbering_tests_pin_are_kept
+    red_confirmed: false
+    red_reason: >
+      A dedicated new module is out of scope, but the existing tests above
+      detect that the statements() docstring keeps the phrase "origin
+      position"; no red state occurred for this change. They do not read the
+      new text (the collaborator name, the missing payload count, the charge
+      that fits, the order of the held asks), which was checked by reading the
+      docstring against Design site 3.
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: >
+      The criterion is the text of the out-of-scope declaration in the
+      extract_shell_payload_anchored() docstring. The search by path, basename
+      and function name found no test that reads it (the test that reads the
+      out-of-scope forms reads the docstring of
+      _mcp_bridge_args_json_chunks(), which task0003 owns). Checked by reading
+      the declaration against IMPLEMENTATION.md O1 and O2.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestSourceHygieneAndDeterminism.test_shell_payload_expansion_cap_left_in_place
+    red_confirmed: false
+    red_reason: >
+      A dedicated new module is out of scope, but the existing test above
+      detects that the definition line "MAX_SHELL_PAYLOAD_EXPANSIONS = 25"
+      stays in the source; no red state occurred for this change. The new
+      comment text itself was checked by reading it against Design site 6.
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: false
+    red_reason: >
+      The criterion is that only docstrings and comments change. A one-off
+      comparison of the module's syntax tree with docstrings removed, against
+      the base commit, printed "AST equal (docstrings removed): True" after the
+      edits (not committed as a test, as the task plan states); git status
+      shows destructive-guard.py as the only modified file besides this
+      record. The runner and the unit suite stay green, which the existing
+      test above (it executes the runner over the whole case table and asserts
+      exit 0) and the full unittest discover run confirm; they were green
+      before the edit too, so no red state occurred.

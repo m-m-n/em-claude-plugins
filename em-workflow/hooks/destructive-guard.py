@@ -201,7 +201,11 @@ SHELL_WORDS = {"sh", "bash", "zsh", "dash", "ksh"}
 # Hard cap on how many `-c`/`eval`/here-string payloads statements() will
 # unpack and re-scan for one command, so a deliberately or accidentally
 # nested chain (`bash -c 'bash -c "bash -c ..."'`) cannot make this loop run
-# unbounded.
+# unbounded. A payload left unqueued because this counter is used up is not
+# dropped silently: statements() holds the scan-budget `ask` for it, settled
+# once after its queue is drained (mcp-bridge-args-json-exec-guard FR12). A
+# top-level `command` string of a decoded `--args-json` value is not counted
+# here (FR5); the relative scan budget in statements() bounds it.
 MAX_SHELL_PAYLOAD_EXPANSIONS = 25
 
 # Wrapper commands that prefix the real one. `mise exec -- gcloud …` and
@@ -4293,27 +4297,29 @@ def extract_shell_payload_anchored(toks, lexed, quoted_toks=None):
     run` statement other than the notion pair) is another source of shell
     payloads (mcp-bridge-args-json-exec-guard FR5). This function does not
     extract it: statements() queues it through
-    _mcp_bridge_args_json_chunks(), as a shell payload counted against the
-    same MAX_SHELL_PAYLOAD_EXPANSIONS as the payloads extracted here. Two
-    forms of that source are out of scope (mcp-bridge-args-json-exec-guard
-    FR8; stated with the same scope in the docstring of
-    _mcp_bridge_args_json_chunks() and in the labels of the cases that cover
-    them -- a divergence in scope between them is a defect). Neither is
-    decided by the decoded-value inspection; the second keeps the raw-string
-    verdict:
+    _queue_args_json_chunks(), as a shell payload like the ones extracted
+    here, but taking no count from MAX_SHELL_PAYLOAD_EXPANSIONS; the relative
+    scan budget of statements() bounds it. Two forms of that source are out
+    of scope (mcp-bridge-args-json-exec-guard FR8; stated with the same scope
+    in the docstring of _mcp_bridge_args_json_chunks() and in the labels of
+    the cases that cover them -- a divergence in scope between them is a
+    defect). Neither is sent to `ask`; each keeps the verdict it has without
+    the decoded-value inspection:
 
     - O1: a command written as plain text, without a substitution, in a key
       other than the top-level `command` (for example the `input` of
       desktop-commander's `interact_with_process`), or in a `command` key
-      below the top level. Only the candidate search of the substitutions
-      (`$(` and the backtick) in the decoded string values applies there.
-    - O2: the forms that keep the raw-string verdict (FR6): a value word set
-      by a substitution or a variable expansion, or otherwise not static (a
-      substitution Bash itself runs is still re-scanned); a destination whose
-      `--mcp` or `--tool` value word is not static; a value that does not
-      decode as JSON; `--args-json` missing, repeated, or written in the `=`
-      form; words after `run` that do not read as the canonical flag
-      sequence; a decoded value whose top level is not an object.
+      below the top level. Only the candidate search applies there.
+    - O2: the forms that keep the raw-string verdict (FR6):
+      1. an `--args-json` value word that is not static, set by a
+         substitution, a variable expansion or the like (a substitution Bash
+         itself runs is still re-scanned);
+      2. a word in flag position that is not static in the same sense;
+      3. an unknown flag;
+      4. a value-taking flag with no value word;
+      5. no `--args-json`;
+      6. a value that does not decode as JSON;
+      7. a decoded value whose top level is not an object.
 
     Only lexed (LEXED True) segments are examined: token provenance is what
     tells split_redirects() a real `<<<` apart from a quoted word that merely
@@ -5066,8 +5072,9 @@ def scan_structure(text, mode="shell", checkpoints=None, honor_single_quotes=Tru
       queueing concern the raw text only: the decoded `--args-json` value of a
       `mcp-bridge run` statement other than the notion pair is inspected
       separately, in the statement loop of statements(), through
-      _mcp_bridge_args_json_chunks() (mcp-bridge-args-json-exec-guard FR10),
-      whatever spans the skip names.
+      _queue_args_json_chunks() (which asks
+      _mcp_bridge_args_json_chunks() for the decision;
+      mcp-bridge-args-json-exec-guard FR10), whatever spans the skip names.
     """
     lexmap = lex_shell(text, mode, False)
     regions = lexmap.regions
@@ -7505,7 +7512,8 @@ def _single_quote_skip_spans(chunk, lexmap, real_spans, lexed):
       word: S1 names nothing, and every candidate of the statement is
       re-scanned. S1 concerns the raw-string candidates of the `--args-json`
       value only; the decoded value is a separate matter (the closing
-      paragraph).
+      paragraph), which covers the forms listed here as giving no data word
+      too.
     - S2: for `printf`, the second word is exactly one single-quote region
       holding `%s\\n`, and every word after it is a data word.
     - C1: the candidate sits in a data word that is one closed single-quote
@@ -7518,18 +7526,25 @@ def _single_quote_skip_spans(chunk, lexmap, real_spans, lexed):
     The skip keeps its conditions (mcp-bridge-args-json-exec-guard FR2): it
     names the raw-string candidates of the `--args-json` value only for the
     notion pair, in the top-level single static command (W1 to W4, C1, S1,
-    S2). It never names the candidates of any other pair. Apart from this
-    function, every `mcp-bridge run` statement in any chunk whose options do
-    not determine the notion pair -- the top-level chunk, a chain, behind a
-    wrapper, a substitution body, a payload -- has its `--args-json` value
-    decoded and inspected by _mcp_bridge_args_json_chunks()
-    (mcp-bridge-args-json-exec-guard FR1 to FR5; the forms that function
-    leaves to the raw-string verdict are listed in the out-of-scope
-    declaration of extract_shell_payload_anchored()). So for the notion pair
-    neither the raw candidates nor the decoded value is scanned where this
-    function names its candidates; where it names none (a chain, a wrapper, a
-    substitution body), its raw candidates are re-scanned as before and its
-    decoded value is still not inspected.
+    S2), and the canonical reading of S1 alone decides the pair. It never
+    names the candidates of any other pair. Apart from this function, every
+    other `mcp-bridge run` statement in any chunk -- the top-level chunk, a
+    chain, behind a wrapper, a substitution body, a payload, a queued
+    `command` string -- is read the way mcp-bridge reads its flags
+    (mcp-bridge-exec-tool-rescan D1; mcp-bridge-args-json-exec-guard D2) and
+    has each static `--args-json` value decoded and inspected through
+    _queue_args_json_chunks() and _mcp_bridge_args_json_chunks()
+    (mcp-bridge-args-json-exec-guard FR1 to FR5, D1, D2). That holds for the
+    forms S1 lists as giving no data word too: they get no skip, and their
+    decoded values are inspected all the same. The forms that
+    _mcp_bridge_args_json_chunks() leaves to the raw-string verdict are
+    listed in the out-of-scope declaration of
+    extract_shell_payload_anchored(). So for the notion pair neither the raw
+    candidates nor the decoded value is scanned where this function names its
+    candidates; where it names none (a chain, a wrapper, a substitution
+    body), its raw candidates are re-scanned as before, and its decoded value
+    is still not inspected, since the notion pair is the one pair the
+    decoded-value inspection leaves out.
     """
     skip = set()
     real = set(real_spans)
@@ -8015,27 +8030,52 @@ def statements(command, unsettled=None, early_stop=None):
     early stop of destructive-guard-mixed-rm-precedence). Either way, the
     statements yielded before the overrun were yielded in full.
 
+    Besides that early stop, a run that ends normally may hand over one held
+    ask. The run-local record _DeferredAsks holds at most two: the scan-budget
+    `ask` (SCAN_BUDGET_ASK), held for the decoded-value step's Overrun or a
+    charge that does not fit, and for a payload left unqueued because the
+    MAX_SHELL_PAYLOAD_EXPANSIONS counter is used up (FR12); and the
+    `args-json-unrestorable` `ask` (ARGS_JSON_UNRESTORABLE_ASK), held for a
+    word of an `mcp-bridge run` statement whose quoting cannot be restored
+    statically (FR11). The record is settled once, after the queue is
+    drained, and hands over the strongest held ask, the scan-budget `ask`
+    before the `args-json-unrestorable` `ask`: with an EARLY_STOP list it is
+    appended to that list, with None it is emitted through decide(); an empty
+    record does nothing. A `deny` found in the scan still wins over it in
+    main() (D6). When an ordinary overrun ends the scan early (above), the
+    record is not settled.
+
     The statement loop below also inspects the decoded `--args-json` value of
     every `mcp-bridge run` statement whose options do not determine the
-    notion pair, in every chunk, through _mcp_bridge_args_json_chunks()
-    (mcp-bridge-args-json-exec-guard FR1 to FR7). This is separate from the
-    skip above, which concerns raw-string candidates only: whatever the skip
-    names, the notion pair is the only pair whose decoded value is not
-    inspected. A statement in one of the forms that
-    _mcp_bridge_args_json_chunks() does not inspect keeps the raw-string
-    verdict (FR6). The inspection queues two kinds of chunk, each list in
-    document order: the candidate bodies found in every decoded string value
-    (FR4), queued like any other substitution body, and the top-level
-    `command` strings (FR5), queued as shell payloads like a `-c` payload. The
-    payloads take from the same MAX_SHELL_PAYLOAD_EXPANSIONS counter as every
-    other shell payload; the candidate bodies, like any substitution body,
-    take from no counter. Rebuilding the value, decoding it and walking the
-    result are charged to the relative scan budget below (FR7), which is
-    counted apart from that counter. Nesting deeper than MAX_ARGS_JSON_DEPTH,
-    or a decoder failure other than a JSON syntax error, takes the same early
-    stop as an overrun of that budget (EARLY_STOP above: the scan-budget
-    `ask`, or the scan simply ending when EARLY_STOP is a list); a JSON syntax
-    error is no overrun, and the statement keeps the raw-string verdict.
+    notion pair, in every chunk (mcp-bridge-args-json-exec-guard FR1 to FR7).
+    This is separate from the skip above, which concerns raw-string
+    candidates only: whatever the skip names, the notion pair is the only pair
+    whose decoded value is not inspected. The loop calls
+    _queue_args_json_chunks() once per statement it yields from a lexed
+    segment, next to the `-c` / `eval` / here-string payload extraction; that
+    collaborator asks _mcp_bridge_args_json_chunks() for the decision and
+    does the queueing and the bookkeeping. Every static `--args-json` value of
+    the statement is inspected, whatever the destination (the `--mcp`,
+    `--tool`, `--format` and `--session` values are not examined). A
+    statement in one of the forms that _mcp_bridge_args_json_chunks() does not
+    inspect keeps the raw-string verdict (FR6). The inspection queues two
+    kinds of chunk, each list in document order: the candidate bodies found in
+    every decoded string value (FR4), queued like any other substitution
+    body, and the top-level `command` strings (FR5), queued like shell
+    payloads. The `command` strings take no count from
+    MAX_SHELL_PAYLOAD_EXPANSIONS, which counts the `-c` / `eval` /
+    here-string payloads only; the candidate bodies, like any substitution
+    body, take from no counter. Both are bounded by the relative scan budget
+    below (FR5, D7), and each is charged when it is popped, like every chunk.
+    Rebuilding the value, decoding it and walking the result are charged to
+    that budget too (FR7), which is counted apart from the payload counter.
+    The step's charge is added to the scanned total only when it fits. Nesting
+    deeper than MAX_ARGS_JSON_DEPTH, a decoder failure other than a JSON
+    syntax error (an Overrun), and a charge that does not fit leave the
+    scanned total unchanged and queue nothing of the statement (FR7, D3); the
+    scan-budget `ask` is held instead (settled as the paragraph above says).
+    A JSON syntax error is no overrun, and the statement keeps the
+    raw-string verdict.
 
     The text is the tokens rejoined, so quoting is already resolved by the
     time the regex-based checks see it. LEXED is lex_segments()'s per-segment
@@ -8053,10 +8093,11 @@ def statements(command, unsettled=None, early_stop=None):
     out of: a substitution body, at the substitution's own opening (refined
     to where the substitution sits inside the payload when it was written
     inside a `-c` / eval / here-string payload); a payload, at the payload
-    word; a candidate body or a top-level `command` payload of a decoded
+    word; a candidate body or a top-level `command` string of a decoded
     `--args-json` value (mcp-bridge-args-json-exec-guard), at the
     `--args-json` value word of the `mcp-bridge run` statement it was decoded
-    from; a heredoc body queued whole, at the start of the body (after
+    from (for the `=` form, the flag word, which carries the value); a
+    heredoc body queued whole, at the start of the body (after
     everything on the operator's line, before anything after the delimiter
     line — not at the operator); a substitution extracted from an unquoted
     heredoc body, at its offset inside that body's start. A chunk lexed
@@ -8497,8 +8538,9 @@ def statements(command, unsettled=None, early_stop=None):
         # That skip concerns raw-string candidates only. The decoded
         # `--args-json` value of a `mcp-bridge run` statement other than the
         # notion pair is not decided here: it is inspected in the statement
-        # loop below, through _mcp_bridge_args_json_chunks()
-        # (mcp-bridge-args-json-exec-guard FR10), whatever the skip names.
+        # loop below, through _queue_args_json_chunks() (which asks
+        # _mcp_bridge_args_json_chunks() for the decision;
+        # mcp-bridge-args-json-exec-guard FR10), whatever the skip names.
         skipped_spans = (
             _single_quote_skip_spans(
                 chunk,
