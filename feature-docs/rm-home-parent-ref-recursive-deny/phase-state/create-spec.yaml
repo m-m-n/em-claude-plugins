@@ -4,7 +4,7 @@ phase: create-spec
 status: in_progress
 generation: 1
 base_revision: 698c5e6f65b266777de3677158519db01362c63f
-last_input_digest: sha256:b3f9edd36aa382259174922a510b7fc978cefbb769aa78bb605cfeaf9a9d1a50
+last_input_digest: sha256:f8c883515ce2a08e4390cc793d132daddeb68243569aa6b33496a1546664f95f
 active_request_id: null
 packets:
   create-spec-q0001:
@@ -61,7 +61,18 @@ worker_runs:
 - request_id: create-spec-run-0001
   status: completed
   input_digest: sha256:b3f9edd36aa382259174922a510b7fc978cefbb769aa78bb605cfeaf9a9d1a50
-artifacts: []
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:f8c883515ce2a08e4390cc793d132daddeb68243569aa6b33496a1546664f95f
+- request_id: create-spec-run-0004
+  status: completed
+  input_digest: sha256:7d3bddd83cce1a758e0a821a2aac180161d374848557b28d64ca28fc16ee2ad2
+  self_write_set:
+  - feature-docs/rm-home-parent-ref-recursive-deny/SPEC.md
+artifacts:
+- path: feature-docs/rm-home-parent-ref-recursive-deny/SPEC.md
+  sha256: sha256:c1e50c3f7e3a58d48c4e389d8680d48051c514de13569bfbc2cbce82249bcddb
+  produced_by: create-spec-run-0004
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
