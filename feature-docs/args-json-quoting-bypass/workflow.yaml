@@ -2,7 +2,9 @@ schema_version: 1
 feature: args-json-quoting-bypass
 created: '2026-11-20'
 base_branch: main
-goal: "# destructive-guard の --args-json 検査を引用・エスケープの書き方で回避できる残件\n\n## 脆弱性の概要 (必須)\n\n`em-workflow/hooks/destructive-guard.py` の `mcp-bridge run --args-json` の検査を、引用・エスケープ・展開の書き方を変えるだけで回避できる経路が残っている。feature mcp-bridge-args-json-exec-guard の review round 4 で、自動修正の上限に達して持ち越した high 2 件と関連する medium の残件。\n\n## 参照 (必須)\n\n- CVE / GHSA ID: 該当なし\n- アドバイザリ URL: 該当なし\n- severity: high\n- 該当パッケージ: 該当なし\n- 現在のバージョン: integration ブランチ em-workflow/mcp-bridge-args-json-exec-guard/integration の時点\n- 修正済みバージョン: 無し\n\n## 攻撃シナリオ (必須)\n\nシェルを実行する MCP ツールが mcp-bridge に登録された環境で、Bash から `mcp-bridge run` を実行し、`--args-json` の `command` に破壊的なコマンドを入れる。次の書き方では、フックが JSON を検査せず allow にする。\n\n1. `3f7145c6c8c0b26a`（high）: notion の組の除外判定（`_args_json_notion_pair`）を、引用していない展開の単語分割で偽装できる。`--format ${UNSET:-json --mcp desktop-commander --tool start_process}` の形にすると、フックは notion 宛てと読むが、実際は別の MCP ツールに送られる。\n   - loop 2 で除外を狭める修正を入れたが、既存の正規の notion 呼び出し 6 件を誤って deny にしたため、Codex と相談して取り消した。除外の条件を、展開が単語分割で別のフラグを作れない形に限る方向で直す必要がある。\n2. `f16e5bb8d5da2621`（high）: `=` 形式のフラグ語で、引用の外のバックスラッシュ付き `=`（`--mcp\\=\"$S\"`）を区切りとして認識せず、後続の静的な `--args-json` が検査から外れる。\n\n## 影響範囲 (必須)\n\n無人実行で、破壊的なコマンドが destructive-guard の deny を通らずに MCP 経由のシェルで実行される。\n\n## 完了の定義 (必須)\n\n- [ ] 攻撃シナリオが成立しない\n- [ ] 修正版に追随している（修正版が無い場合は暫定緩和策の欄に対応を記載）\n- [ ] 既存の allow ケース（notion の正規の呼び出し）を deny にしない\n- [ ] 上の 2 件を `em-workflow/hooks/tests/destructive-guard-cases.json` の deny ケースとして固定する\n\n## 該当箇所 (任意)\n\n- `em-workflow/hooks/destructive-guard.py` の `_args_json_notion_pair()`、`_flag_equals_prefix_name()`\n- 同時に扱うとよい medium の残件\n  - `dc2fdf65ce30d198`: `$` と変数名の間に行継続があると、展開を固定文字列として扱う（`_read_double_quoted()` / `_read_static_word()`）\n  - `f35ed060564bcf20`: `$` の後に非 ASCII 文字が続くと、Bash は文字どおりに渡すのに展開として扱い、検査を打ち切る\n  - `0379cf2eb7ad4e92` / `9981fd673b28e7e4`: `--args-json` を多数並べると、値ごとの位置検索が二乗時間になる\n  - `3340375b4b50c4b0`: 単体テスト `equals form with a destination` の期待値が現行の判定と逆\n- 詳細はリポジトリの `feature-docs/mcp-bridge-args-json-exec-guard/reviews/round4.yaml`\n\n## 暫定緩和策 (任意)\n\n\\<修正までの回避手段。あれば>\n"
+goal: "# destructive-guard の --args-json 検査を引用・エスケープの書き方で回避できる残件\n\n## 脆弱性の概要 (必須)\n\n`em-workflow/hooks/destructive-guard.py` の `mcp-bridge run --args-json` の検査を、引用・エスケープ・展開の書き方を変えるだけで回避できる経路が残っている。feature mcp-bridge-args-json-exec-guard の review round 4 で、自動修正の上限に達して持ち越した high 2 件と関連する medium の残件。\n\n## 参照 (必須)\n\n- CVE / GHSA ID: 該当なし\n- アドバイザリ URL: 該当なし\n- severity: high\n- 該当パッケージ: 該当なし\n- 現在のバージョン: integration ブランチ em-workflow/mcp-bridge-args-json-exec-guard/integration の時点\n- 修正済みバージョン: 無し\n\n## 攻撃シナリオ (必須)\n\nシェルを実行する MCP ツールが mcp-bridge に登録された環境で、Bash から `mcp-bridge run` を実行し、`--args-json` の `command` に破壊的なコマンドを入れる。次の書き方では、フックが JSON を検査せず allow にする。\n\n1. `3f7145c6c8c0b26a`（high）: notion の組の除外判定（`_args_json_notion_pair`）を、引用していない展開の単語分割で偽装できる。`--format ${UNSET:-json --mcp desktop-commander --tool start_process}` の形にすると、フックは notion 宛てと読むが、実際は別の MCP ツールに送られる。\n   - loop 2 で除外を狭める修正を入れたが、既存の正規の notion 呼び出し 6 件を誤って deny にしたため、Codex と相談して取り消した。除外の条件を、展開が単語分割で別のフラグを作れない形に限る方向で直す必要がある。\n\
+  2. `f16e5bb8d5da2621`（high）: `=` 形式のフラグ語で、引用の外のバックスラッシュ付き `=`（`--mcp\\=\"$S\"`）を区切りとして認識せず、後続の静的な `--args-json` が検査から外れる。\n\n## 影響範囲 (必須)\n\n無人実行で、破壊的なコマンドが destructive-guard の deny を通らずに MCP 経由のシェルで実行される。\n\n## 完了の定義 (必須)\n\n- [ ] 攻撃シナリオが成立しない\n- [ ] 修正版に追随している（修正版が無い場合は暫定緩和策の欄に対応を記載）\n- [ ] 既存の allow ケース（notion の正規の呼び出し）を deny にしない\n- [ ] 上の 2 件を `em-workflow/hooks/tests/destructive-guard-cases.json` の deny ケースとして固定する\n\n## 該当箇所 (任意)\n\n- `em-workflow/hooks/destructive-guard.py` の `_args_json_notion_pair()`、`_flag_equals_prefix_name()`\n- 同時に扱うとよい medium の残件\n  - `dc2fdf65ce30d198`: `$` と変数名の間に行継続があると、展開を固定文字列として扱う（`_read_double_quoted()` / `_read_static_word()`）\n  - `f35ed060564bcf20`: `$` の後に非 ASCII 文字が続くと、Bash は文字どおりに渡すのに展開として扱い、検査を打ち切る\n  - `0379cf2eb7ad4e92` / `9981fd673b28e7e4`: `--args-json` を多数並べると、値ごとの位置検索が二乗時間になる\n  - `3340375b4b50c4b0`: 単体テスト `equals form with a destination` の期待値が現行の判定と逆\n- 詳細はリポジトリの `feature-docs/mcp-bridge-args-json-exec-guard/reviews/round4.yaml`\n\n##\
+  \ 暫定緩和策 (任意)\n\n\\<修正までの回避手段。あれば>\n"
 parent_branch: em-workflow/args-json-quoting-bypass/integration
 tier: reduced
 tier_decision:
@@ -162,14 +164,14 @@ tasks:
     notes: null
 review:
   status: pending
-  rounds_completed: 1
+  rounds_completed: 2
   perspectives:
   - comprehensive
   - security
   - architecture
   - spec
   - performance
-  residual_critical_high: 3
+  residual_critical_high: 6
   needs_rework: true
   plan:
     floor:
