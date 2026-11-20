@@ -45,6 +45,10 @@ the prompt:
     Passed to the wrapper as `-m <model>`, verbatim. Absent → no `-m`, and
     Codex runs its recommended default. Unsupported by Codex → skip with
     `harness_unavailable`; never retry with another model or without `-m`.
+- `effort` — codex reviewer only, and only when the registry entry names
+  `effort`. Passed to the wrapper as `--effort <effort>`, verbatim. Absent →
+  readonly runs at xhigh. The Claude reviewer and the litellm-harness reviewer
+  never receive it.
 - `review_mode` — `"diff"`, `"whole-codebase"`, or `"pr-diff"`
 - `protocol_path`, `schema_path` — resolved SSOT paths
 - `changed_files` — path list (validated by the orchestrator)

@@ -130,6 +130,14 @@ When the orchestrator supplies `model`, add `-m "<model>"` right before
 Codex then runs its recommended default model. Never choose a model
 yourself.
 
+When the orchestrator supplies `effort`, add `--effort "<effort>"` right
+before `"$PROMPT"`, with the value passed verbatim. When both `model` and
+`effort` are supplied, `-m "<model>"` and `--effort "<effort>"` both come
+before `"$PROMPT"`. Without `effort`, add no `--effort`: the wrapper then
+runs its readonly default. Never choose an effort yourself. When Codex
+rejects the effort, the Step 6 non-JSON rule applies and the run skips with
+`harness_unavailable`.
+
 The Bash call contains only the `PROMPT` assignment (plus a `SCHEMA=`
 assignment if you keep the variable rather than the literal path) and this
 wrapper line. Nothing else goes before, between or after them — no `cd`,
