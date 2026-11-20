@@ -1111,6 +1111,137 @@ def judge(command):
     return out["permissionDecision"], rule
 
 
+class TestAnchorLookup(unittest.TestCase):
+    """args-json-quoting-bypass TS-16 (FR5, FR9, NFR4): the collaborator finds
+    the token index of the anchor word of each value that queues something
+    through one walk of the statement's tokens, not one search per value; a
+    value that queues nothing costs no token position; a word without a span
+    is located by _token_index(). The proof is structural: a token list that
+    counts how often it is walked, never elapsed time."""
+
+    MANY = 100
+    HEAD = ["mcp-bridge", "run", "--mcp", "desktop-commander", "--tool", "start_process"]
+
+    class WalkCounting(list):
+        """A token list that counts how many times it is walked."""
+
+        def __init__(self, items):
+            super().__init__(items)
+            self.walks = 0
+
+        def __iter__(self):
+            self.walks += 1
+            return super().__iter__()
+
+    def run_words(self, words):
+        """Drive statements() over the command WORDS spell (joined by a blank,
+        each written as it is to be lexed): (origins, walks), the anchor of
+        each statement it yielded keyed by statement text, and how many times
+        the collaborator walked the token list of the statement whose command
+        word is `mcp-bridge`."""
+        original = GUARD._queue_args_json_chunks
+        walked = []
+
+        def spy(shaped_words, marked_chunk, tokens, *rest):
+            counting = self.WalkCounting(tokens)
+            if tokens and tokens[0] == "mcp-bridge":
+                walked.append(counting)
+            return original(shaped_words, marked_chunk, counting, *rest)
+
+        origins = {}
+        with mock.patch.object(GUARD, "_queue_args_json_chunks", spy):
+            for statement in GUARD.statements(" ".join(words), early_stop=[]):
+                origins[statement[0]] = statement[5][0]
+        (counting,) = walked
+        return origins, counting.walks
+
+    def test_many_values_cost_one_walk_and_the_command_string_keeps_its_origin(self):
+        words = (
+            self.HEAD
+            + ["--args-json", "'{}'"] * self.MANY
+            + ["--args-json", "'{\"command\":\"echo MARK-CMD\"}'"]
+        )
+        origins, walks = self.run_words(words)
+        # The token index of the value word, read off the words as written; the
+        # value has no body, so its command string is the first entry of its word.
+        self.assertEqual(((0, len(words) - 1, 1),), origins["echo MARK-CMD"])
+        self.assertLessEqual(walks, 1)
+
+    def test_values_that_queue_nothing_cost_no_token_position(self):
+        words = self.HEAD + ["--args-json", "'{}'"] * self.MANY
+        origins, walks = self.run_words(words)
+        self.assertEqual(0, walks)
+        self.assertEqual(1, len(origins))
+
+    def test_the_command_strings_of_many_values_share_one_walk_and_keep_their_origins(self):
+        words = list(self.HEAD)
+        expected = {}
+        for i in range(self.MANY):
+            words += ["--args-json", "'{}'"]
+            if i % 10 == 0:
+                words += ["--args-json", "'{\"command\":\"echo MARK-" + str(i) + "\"}'"]
+                expected["echo MARK-" + str(i)] = ((0, len(words) - 1, 1),)
+        origins, walks = self.run_words(words)
+        self.assertEqual(expected, {text: origins[text] for text in expected})
+        self.assertLessEqual(walks, 1)
+
+    # The collaborator over a fixed decision result (the decision replaced by a
+    # stub, as TestDeferral does), the tokens given as they are.
+
+    def queue(self, tokens, *words):
+        """The last origin step (statement index, token index, ordinal) of each
+        entry the collaborator queues over TOKENS when the decision names one
+        value of a single body at each of WORDS."""
+        values = tuple(GUARD.ArgsJsonValue(word, ("echo B",), ()) for word in words)
+        result = GUARD.ArgsJsonResult(values, 1, False, False)
+        pending = []
+        with mock.patch.object(
+            GUARD, "_mcp_bridge_args_json_chunks", lambda shaped_words, marked: result
+        ):
+            GUARD._queue_args_json_chunks(
+                ["mcp-bridge", "run"], None, tokens, True, ("anchor",), 3,
+                GUARD.PY_BODY, pending, GUARD._ScanState(1000), GUARD._DeferredAsks(),
+            )
+        return [entry[1][-1] for entry in pending]
+
+    @staticmethod
+    def tok(text, span=None):
+        token = GUARD.Tok(text)
+        token.span = span
+        return token
+
+    def test_a_word_without_a_span_is_located_by_identity_first(self):
+        first, second = self.tok("dup"), self.tok("dup")
+        tokens = [self.tok("a"), first, second]
+        # Equal text at 1 and 2: the word itself is at 2.
+        self.assertEqual([(3, 2, 1)], self.queue(tokens, second))
+
+    def test_a_word_without_a_span_that_is_not_a_token_is_located_by_text_then_zero(self):
+        tokens = [self.tok("a"), self.tok("b")]
+        self.assertEqual([(3, 1, 1)], self.queue(tokens, self.tok("b")))
+        self.assertEqual([(3, 0, 1)], self.queue(tokens, self.tok("absent")))
+
+    def test_a_word_whose_span_no_token_has_is_located_by_token_index(self):
+        tokens = [self.tok("a", (0, 1)), self.tok("b", (2, 3))]
+        self.assertEqual([(3, 1, 1)], self.queue(tokens, self.tok("b", (40, 41))))
+        self.assertEqual([(3, 0, 1)], self.queue(tokens, self.tok("absent", (40, 41))))
+
+    def test_a_word_with_a_span_gets_the_first_token_with_that_span(self):
+        tokens = [self.tok("a", (0, 1)), self.tok("b", (2, 3)), self.tok("b", (2, 3))]
+        # The word is the token at 2, but the first token with its span is 1.
+        self.assertEqual([(3, 1, 1)], self.queue(tokens, tokens[2]))
+
+    def test_two_values_with_spans_each_get_their_own_index(self):
+        tokens = [self.tok("a", (0, 1)), self.tok("b", (2, 3)), self.tok("c", (4, 5))]
+        self.assertEqual([(3, 2, 1), (3, 0, 1)], self.queue(tokens, tokens[2], tokens[0]))
+
+    def test_the_step_3_docstring_states_the_lookup_rule(self):
+        doc = GUARD._queue_args_json_chunks.__doc__
+        for phrase in ("span", "at most once", "_token_index()"):
+            with self.subTest(phrase):
+                self.assertIn(phrase, doc)
+
+
 class TestDenyWins(unittest.TestCase):
     """AC-5, AC-6 (FR7, FR11, FR12, D6): the deferred asks are settled after
     the queue is drained, so a deny found beside them wins; alone they are

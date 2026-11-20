@@ -7773,16 +7773,18 @@ def _walk_args_json(top):
     return visited, searched, bodies, commands
 
 
-def _args_json_word_index(toks, word):
-    """The index in TOKS (a statement's tokens as written) of the token with
-    WORD's span: the token step of the origin position of what the `--args-json`
-    value word queues. _token_index() when WORD has no span."""
-    span = getattr(word, "span", None)
-    if span is not None:
-        for i, tok in enumerate(toks):
-            if getattr(tok, "span", None) == span:
-                return i
-    return _token_index(toks, word)
+def _args_json_span_index(toks):
+    """{span: index} over TOKS (a statement's tokens as written), the index of
+    the first token that has each span: the token step of the origin position
+    of what an `--args-json` value word queues is the index of the token with
+    the word's span. One walk of TOKS, whatever the number of values looked
+    up. A token without a span has no entry."""
+    index = {}
+    for i, tok in enumerate(toks):
+        span = getattr(tok, "span", None)
+        if span is not None:
+            index.setdefault(span, i)
+    return index
 
 
 # The three outcomes of _read_static_word() (D5).
@@ -8496,7 +8498,12 @@ def _queue_args_json_chunks(
        anchor, the statement index, the index of that word in TOKENS and an
        ordinal that keeps the entries of one word in document order (bodies
        first, then `command` strings), with the chunk's derived Python-body mark
-       and no substitution index.
+       and no substitution index. A value that queues nothing gets no index.
+       For one that queues something, the index of its word comes from a map
+       from token span to the index of the first token with that span
+       (_args_json_span_index()); the map is built at most once per call, when
+       the first value whose word has a span is reached. A word without a
+       span, or whose span is not in the map, is found by _token_index().
     4. On Unrestorable the `args-json-unrestorable` ask is held, whatever 2 or
        3 did (FR11).
 
@@ -8510,8 +8517,19 @@ def _queue_args_json_chunks(
         asks.stop_args_json()
         return
     scan.scanned += result.charge
+    span_index = None
     for value in result.values:
-        word_step = (seg_index, _args_json_word_index(tokens, value.word))
+        if not value.bodies and not value.commands:
+            continue
+        span = getattr(value.word, "span", None)
+        token_index = None
+        if span is not None:
+            if span_index is None:
+                span_index = _args_json_span_index(tokens)
+            token_index = span_index.get(span)
+        if token_index is None:
+            token_index = _token_index(tokens, value.word)
+        word_step = (seg_index, token_index)
         ordinal = 0
         for body in value.bodies:
             ordinal += 1
