@@ -61,9 +61,10 @@ workflow:
   status: completed
   completed_at_commit: 527fc3151de5dcf184b90a65ebc7539262f8c268
 - id: verify
-  status: in_progress
-  result: fail
-  round: 1
+  status: completed
+  completed_at_commit: 83129df81062e11d792ab547224655b73973455d
+  result: pass
+  round: 2
   passed_ids:
   - TS-1
   - TS-2
@@ -85,6 +86,8 @@ workflow:
   - TS-18
   - TS-19
   - TS-20
+  - TS-21
+  - TS-22
   - TS-23
   - TS-24
   - TS-25
@@ -95,6 +98,7 @@ workflow:
   - TS-30
   - TS-31
   - TS-32
+  - TS-33
   - AC-1
   - AC-2
   - AC-3
@@ -106,13 +110,7 @@ workflow:
   - AC-9
   - AC-10
   - AC-11
-  failed_items:
-  - id: TS-22
-    note: statements() has a diff against implement base_commit (owner/enclosing chunk tracking for nameref inheritance and an unquoted-heredoc nameref cache), contrary to SPEC NFR6 and the Implementation Approach entry 'statements() 変更しない'; TestStructure and the single helper otherwise pass
-    category: spec
-  - id: TS-21
-    note: 'destructive-guard-cases.json diff is not add-only line-wise: the formerly-last case line is changed to add a trailing comma (no case content deleted or changed; runner 1450/1450 and unittest discover OK)'
-    category: spec
+  failed_items: []
 - id: retrospect
   status: pending
 tasks:
