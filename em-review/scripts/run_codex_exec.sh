@@ -7,18 +7,24 @@
 #   run_codex_exec.sh readonly  -C /path "prompt"  # With working directory
 #   run_codex_exec.sh readonly  --output-schema schema.json "prompt"
 #   run_codex_exec.sh readonly  -m gpt-6-astra "prompt"
+#   run_codex_exec.sh readonly  --effort high "prompt"
 #
 # Options passed through to codex exec:
 #   -C DIR             Set working directory
 #   --output-schema F  Pass JSON Schema for structured output
 #   -m MODEL           Pass `-m MODEL` to codex exec verbatim. Omitted, Codex
 #                      resolves its recommended default model.
+#   --effort LEVEL     Set the reasoning effort of the launch: LEVEL must match
+#                      ^[a-z]+$ and becomes the model_reasoning_effort -c
+#                      override. Accepted in both modes. A later --effort
+#                      replaces an earlier one.
 #
 # Model: --ignore-user-config skips ~/.codex/config.toml (auth is kept), so
 # with no -m flag Codex resolves its recommended default model (auto-track).
 # Timeout and flags are read from references/codex-cli.yaml.
-# Reasoning effort: readonly (review) mode forces xhigh via -c override;
-# readwrite mode runs with the model's default effort.
+# Reasoning effort: readonly (review) mode defaults to xhigh via a -c override;
+# readwrite mode defaults to the model's own effort. --effort LEVEL replaces
+# that default in either mode.
 
 set -euo pipefail
 
@@ -39,9 +45,16 @@ parse_yaml_value() {
 
 TIMEOUT="$(parse_yaml_value 'timeout')"
 
+# Succeeds when $1 is one or more lowercase ASCII letters, a-z, and nothing
+# else. LC_ALL=C pins the range to ASCII whatever locale the caller runs in.
+is_effort_word() {
+  local LC_ALL=C
+  [[ "$1" =~ ^[a-z]+$ ]]
+}
+
 # --- Parse arguments ---
 if [[ $# -lt 2 ]]; then
-  echo "Usage: run_codex_exec.sh <readonly|readwrite> [-C DIR] [--output-schema F] [-m MODEL] \"prompt\"" >&2
+  echo "Usage: run_codex_exec.sh <readonly|readwrite> [-C DIR] [--output-schema F] [-m MODEL] [--effort LEVEL] \"prompt\"" >&2
   exit 1
 fi
 
@@ -70,6 +83,7 @@ esac
 WORKDIR_FLAG=()
 SCHEMA_FLAG=()
 MODEL_FLAG=()
+EFFORT_LEVEL=""
 while [[ "${1:-}" == -* ]]; do
   case "$1" in
     -C)
@@ -96,12 +110,32 @@ while [[ "${1:-}" == -* ]]; do
       MODEL_FLAG=(-m "$2")
       shift 2
       ;;
+    --effort)
+      if [[ $# -lt 3 ]]; then
+        echo "ERROR: --effort requires an effort argument" >&2
+        exit 1
+      fi
+      # The value is embedded in a TOML override below, so it is checked first.
+      # The message never echoes it, so it stays one line whatever it holds.
+      if ! is_effort_word "$2"; then
+        echo 'ERROR: --effort value must match ^[a-z]+$' >&2
+        exit 1
+      fi
+      EFFORT_LEVEL="$2"
+      shift 2
+      ;;
     *)
       echo "ERROR: Unknown flag '$1'" >&2
       exit 1
       ;;
   esac
 done
+
+# --effort replaces the mode's effort choice (the xhigh pair in readonly,
+# nothing in readwrite); the pair keeps its place in the launch below.
+if [[ -n "$EFFORT_LEVEL" ]]; then
+  EFFORT_FLAG=(-c "model_reasoning_effort=\"${EFFORT_LEVEL}\"")
+fi
 
 # Remaining argument is the prompt
 if [[ $# -lt 1 ]]; then
