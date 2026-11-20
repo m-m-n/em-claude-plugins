@@ -1,0 +1,42 @@
+task_id: task0006
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 16656 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 16685 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_review_perspective_model_effort_version_bump.TestEmWorkflowManifest.test_version_is_a_minor_bump_over_baseline
+      - tests.test_review_perspective_model_effort_version_bump.TestEmWorkflowManifest.test_manifest_name_is_em_workflow
+    red_confirmed: true
+    red_reason: "Against the unchanged manifest, test_version_is_a_minor_bump_over_baseline failed with AssertionError: 4 != 5 : minor of '0.4.28' is not the baseline minor 4 plus one. test_manifest_name_is_em_workflow passed before the change (it is an identity guard, not a bump check)."
+  AC-2:
+    tests:
+      - tests.test_review_perspective_model_effort_version_bump.TestEmReviewManifest.test_version_is_a_minor_bump_over_baseline
+      - tests.test_review_perspective_model_effort_version_bump.TestEmReviewManifest.test_manifest_name_is_em_review
+    red_confirmed: true
+    red_reason: "Against the unchanged manifest, test_version_is_a_minor_bump_over_baseline failed with AssertionError: 5 != 6 : minor of '0.5.54' is not the baseline minor 5 plus one. test_manifest_name_is_em_review passed before the change (identity guard)."
+  AC-3:
+    tests:
+      - tests.test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_workflow_entry_version_is_a_minor_bump_over_baseline
+      - tests.test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_review_entry_version_is_a_minor_bump_over_baseline
+      - tests.test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_workflow_entry_version_matches_manifest
+      - tests.test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_review_entry_version_matches_manifest
+      - tests.test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_entry_lookups_are_non_vacuous
+      - tests.test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_other_plugin_entry_is_still_present
+    red_confirmed: true
+    red_reason: "The two marketplace bump tests failed against the unchanged marketplace file (AssertionError: 4 != 5 for the em-workflow entry, 5 != 6 for the em-review entry). The two agreement tests, the non-vacuity test and the other-entry test passed before the change, because the manifests and the entries agreed at the base version. The claim that no other byte of the three files changed has no executable red; it is verified against the base commit with git diff, which shows exactly four changed lines, all version values."
+  AC-4:
+    tests:
+      - tests.test_review_perspective_model_effort_version_bump.TestBumpRuleDetectsRegressions.test_rejects_patch_only_bump
+      - tests.test_review_perspective_model_effort_version_bump.TestBumpRuleDetectsRegressions.test_rejects_a_disagreeing_marketplace_entry
+      - tests.test_review_perspective_model_effort_version_bump.TestBumpRuleDetectsRegressions.test_string_ordering_trap_accepts_a_numeric_bump
+      - tests.test_review_perspective_model_effort_version_bump.TestBumpRuleDetectsRegressions.test_string_ordering_trap_rejects_a_numerically_lower_version
+      - tests.test_review_perspective_model_effort_version_bump.TestOwnModuleStdlibOnly.test_only_standard_library_imports
+    red_confirmed: false
+    red_reason: "The criterion is about the test module itself, so no check existed before the module was written and none was observed failing. Non-vacuity of the negative proofs was shown on throwaway copies of the module with one matcher weakened at a time: dropping the patch check, accepting any minor, dropping the major check, making the agreement matcher always pass, dropping the duplicate-entry check and loosening the version shape each made the corresponding negative-proof test fail."
+  AC-5:
+    tests:
+      - tests.test_plugin_version_parity
+      - tests.test_em_workflow_version
+      - tests.test_unattended_merge_manifest_version_bump
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing tests.test_plugin_version_parity, tests.test_em_workflow_version and tests.test_unattended_merge_manifest_version_bump read the actual plugin.json and marketplace.json files and detect a version that falls behind their older baselines or a manifest and entry that disagree; no red state occurred for this change. The criterion's outcome is the full-suite command python3 -m unittest discover -s tests exiting 0, run before and after the change."
