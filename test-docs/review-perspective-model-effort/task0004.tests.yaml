@@ -1,0 +1,112 @@
+task_id: task0004
+# python3 -m unittest discover -s tests on the untouched worktree (before any edit): Ran 16656 tests, OK (skipped=1).
+baseline_failures: []
+# python3 -m unittest discover -s tests re-run after the implementation and this record: OK.
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_review_phase_effort_docs.EmWorkflowR2Test.test_codex_bullet_sends_effort_verbatim_without_allow_list
+      - tests.test_review_phase_effort_docs.EmWorkflowR2Test.test_chain_entry_shape_names_effort
+      - tests.test_review_phase_effort_docs.EmWorkflowR2Test.test_litellm_bullet_never_adds_effort
+      - tests.test_review_phase_effort_docs.EmReviewR2Test.test_codex_bullet_sends_effort_verbatim_without_allow_list
+      - tests.test_review_phase_effort_docs.EmReviewR2Test.test_chain_entry_shape_names_effort
+      - tests.test_review_phase_effort_docs.EmReviewR2Test.test_litellm_bullet_never_adds_effort
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged review-phase.md files before any doc edit, in both plugins:
+      test_codex_bullet_sends_effort_verbatim_without_allow_list failed with
+      "Lists differ: [\"no sentence 'When the entry names `effort: E`, ...'\"] != []" and
+      test_chain_entry_shape_names_effort failed with "Lists differ: ['missing `{harness, model?, effort?}`',
+      'still names `{harness, model?}`'] != []". test_litellm_bullet_never_adds_effort passed before the edit
+      too, because the litellm bullet already carried no effort; it is the guard that the edit leaves it so.
+  AC-2:
+    tests:
+      - tests.test_review_phase_effort_docs.EmWorkflowR2bR4UnchangedTest.test_r2b_same_input_block_sentence_is_byte_identical
+      - tests.test_review_phase_effort_docs.EmWorkflowR2bR4UnchangedTest.test_r4_same_input_block_sentence_is_byte_identical
+      - tests.test_review_phase_effort_docs.EmWorkflowR2bR4UnchangedTest.test_r2b_does_not_mention_effort
+      - tests.test_review_phase_effort_docs.EmWorkflowR2bR4UnchangedTest.test_r4_does_not_mention_effort
+    red_confirmed: false
+    red_reason: >-
+      The criterion requires text to stay unchanged, so no red state can occur: these four checks pin the R2b
+      and R4 "same input block" sentences as they stood at the base commit and passed both before and after
+      the edit. They would fail if a later edit changed those sentences or added effort to either section.
+  AC-3:
+    tests:
+      - tests.test_review_phase_effort_docs.EmWorkflowR3aDispatchedTest.test_lists_effort_for_codex_runs_given_an_effort
+      - tests.test_review_phase_effort_docs.EmWorkflowRecordTest.test_a_codex_example_row_carries_model_and_effort
+      - tests.test_review_phase_effort_docs.EmWorkflowRecordTest.test_comment_says_effort_is_attached_only_to_a_codex_run_given_one
+      - tests.test_review_phase_effort_docs.EmWorkflowRecordTest.test_no_non_codex_example_row_carries_effort
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged em-workflow review-phase.md before any doc edit:
+      test_lists_effort_for_codex_runs_given_an_effort failed with "Lists differ: ['missing: `effort` for codex
+      runs given an `effort`'] != []", test_a_codex_example_row_carries_model_and_effort failed with "[] == []"
+      (no codex example row carried model and effort), and
+      test_comment_says_effort_is_attached_only_to_a_codex_run_given_one failed on the missing effort sentence.
+      test_no_non_codex_example_row_carries_effort passed before the edit too (no example row carried effort at
+      all); it is the guard that the added effort stays on codex rows only.
+  AC-4:
+    tests:
+      - tests.test_review_phase_effort_docs.EmReviewRecordTest.test_a_codex_example_row_carries_model_and_effort
+      - tests.test_review_phase_effort_docs.EmReviewRecordTest.test_comment_says_effort_is_attached_only_to_a_codex_run_given_one
+      - tests.test_review_phase_effort_docs.EmReviewRecordTest.test_no_non_codex_example_row_carries_effort
+      - tests.test_review_phase_effort_docs.EmWorkflowRecordTest.test_no_non_codex_example_row_carries_effort
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged em-review review-phase.md before any doc edit:
+      test_comment_says_effort_is_attached_only_to_a_codex_run_given_one failed with "Lists differ: ['no `effort`
+      sentence'] != []" and test_a_codex_example_row_carries_model_and_effort failed with "[] == []". The two
+      test_no_non_codex_example_row_carries_effort checks (em-review and em-workflow) passed before the edit too,
+      because no example row carried effort at all; they are the guard that no litellm row carries it after.
+  AC-5:
+    tests:
+      - tests.test_tier_record_schema_v2.TestReviewDocumentsUntouched.test_review_phase_md_unchanged
+      - tests.test_tier_record_schema_v2.TestReviewDocumentsUntouched.test_review_rules_yaml_unchanged
+    red_confirmed: true
+    red_reason: >-
+      After the review-phase.md edits and before REVIEW_PHASE_SHA256 was recomputed,
+      test_review_phase_md_unchanged failed with the digest mismatch
+      "'f04bcbbf...a11a73' != 'ba925ee8...fee882'"; it passes once the pin and its "Refreshed by" line are in
+      place. test_review_rules_yaml_unchanged and every other assertion of the module stayed green and unedited
+      (REVIEW_RULES_SHA256 is not touched).
+  AC-6:
+    tests:
+      - tests.test_review_phase_effort_docs.EmWorkflowR2Test.test_forged_bullet_without_the_effort_sentence_is_rejected
+      - tests.test_review_phase_effort_docs.EmWorkflowR2Test.test_forged_bullet_that_adds_an_allow_list_check_is_rejected
+      - tests.test_review_phase_effort_docs.EmWorkflowR2Test.test_forged_litellm_bullet_that_adds_effort_is_rejected
+      - tests.test_review_phase_effort_docs.EmReviewR2Test.test_forged_bullet_without_the_effort_sentence_is_rejected
+      - tests.test_review_phase_effort_docs.EmReviewR2Test.test_forged_bullet_that_adds_an_allow_list_check_is_rejected
+      - tests.test_review_phase_effort_docs.EmReviewR2Test.test_forged_litellm_bullet_that_adds_effort_is_rejected
+      - tests.test_review_phase_effort_docs.EmWorkflowRecordTest.test_forged_litellm_row_carrying_effort_is_rejected
+      - tests.test_review_phase_effort_docs.EmWorkflowRecordTest.test_forged_block_without_an_effort_row_is_rejected
+      - tests.test_review_phase_effort_docs.EmWorkflowRecordTest.test_forged_comment_without_the_effort_sentence_is_rejected
+      - tests.test_review_phase_effort_docs.EmReviewRecordTest.test_forged_litellm_row_carrying_effort_is_rejected
+      - tests.test_review_phase_effort_docs.EmReviewRecordTest.test_forged_block_without_an_effort_row_is_rejected
+      - tests.test_review_phase_effort_docs.EmReviewRecordTest.test_forged_comment_without_the_effort_sentence_is_rejected
+      - tests.test_review_phase_effort_docs.EmWorkflowR3aDispatchedTest.test_forged_bullet_without_effort_is_rejected
+    red_confirmed: true
+    red_reason: >-
+      The module was written before the doc edit and run against the unchanged documents: 33 of its 62 tests
+      failed, among them the forged-text proofs that mutate the real text (the bullet without the effort
+      sentence, the allow-list swap, the block without an effort row, the comment without the effort sentence,
+      the R3a bullet without effort), each failing on its "forge changed nothing" guard because the unchanged
+      text had nothing to forge. The two forged-litellm proofs (test_forged_litellm_bullet_that_adds_effort_is_rejected
+      and test_forged_litellm_row_carrying_effort_is_rejected) feed forged text straight to their matcher and
+      passed before the edit as well; they prove the matcher rejects an effort on a litellm entry.
+  AC-7:
+    tests:
+      - tests.test_review_phase_llm_led
+      - tests.test_review_phase_shard_dispatch
+      - tests.test_review_phase_coverage_record
+      - tests.test_reproduction_review_phase_workflow
+      - tests.test_reproduction_review_phase_em_review
+      - tests.test_consultation_harness_chain
+      - tests.test_tier_record_schema_v2
+    red_confirmed: false
+    red_reason: >-
+      The criterion is the outcome of the full-suite command, and the suite was green at baseline (16656 tests,
+      OK, skipped=1), so no red state occurred for it. A dedicated new module is out of scope, but the existing
+      modules listed here read em-workflow/references/review-phase.md or em-review/references/review-phase.md (found by searching
+      tests/ for the repository-relative path and for the bare filename) and detect literal-phrase drift in the
+      R2, R3a and R5 text this task edits.

@@ -193,16 +193,20 @@ Read references/reviewers.yaml. For each selected perspective (skip
 `requires_spec` ones when `spec_available == false` — render as SKIPPED):
 
 Walk that perspective's registry `primary_chain` (an ordered list of
-`{harness, model?}` entries — the registry's per-perspective chain key,
-IMPLEMENTATION.md Shared Components "Registry chain key") from the front and
-take the FIRST entry whose harness is available (`codex_available` for
+`{harness, model?, effort?}` entries — the registry's per-perspective chain
+key, IMPLEMENTATION.md Shared Components "Registry chain key") from the front
+and take the FIRST entry whose harness is available (`codex_available` for
 `codex`, `litellm_available` for `litellm`). Dispatch exactly ONE primary
 reviewer for this perspective (per shard when the round is split):
 
 - `{harness: codex}` → `Task(subagent_type="em-workflow:codex-reviewer")`; when
   the entry names `model: M`, add `model: M` to the input block, passed
   through verbatim. No allow-list check: Codex itself rejects an unsupported
-  model, and the reviewer then skips with `harness_unavailable`.
+  model, and the reviewer then skips with `harness_unavailable`. When the
+  entry names `effort: E`, add `effort: E` to the same input block, passed
+  through verbatim, with no allow-list check: the wrapper alone validates the
+  value, and a value Codex rejects ends in the same `harness_unavailable` skip.
+  Only this bullet adds `effort`; the litellm entry below never does.
 - `{harness: litellm, model: M}` → before dispatching, validate `M` against
   the vertex-review plugin's litellm-harness skill's allow-list of known
   litellm models. If `M` is not on that allow-list, treat this chain entry
@@ -551,7 +555,8 @@ R3b's evaluator-failure degradation).
 - `lessons` — optional, same resolution rule as Phase R2.
 - `perspectives_dispatched` — one entry per perspective run this round,
   carrying `run_id`, `perspective`, `role`, `status`, `skip_reason`, and
-  `model` for litellm runs and for codex runs given a `model`.
+  `model` for litellm runs and for codex runs given a `model`, and `effort`
+  for codex runs given an `effort`.
 - `reviewer_outputs` — one entry per run, carrying `run_id` plus that run's
   verbatim reviewer output.
 - `unreviewed_perspectives` — the same list Phase R5 records at the
@@ -1125,11 +1130,14 @@ plan:
       reason: "..."
   cross_validation: true
 perspective_runs:
-  - {run_id: "security#0", perspective: security, role: primary, source: codex, status: skipped, skip_reason: "rate_limited"}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6.2-astra, effort: high, status: skipped, skip_reason: "rate_limited"}
   - {run_id: "security#1", perspective: security, role: primary, source: litellm, model: muse-spark, status: completed}
   - {run_id: "performance#fallback", perspective: performance, role: fallback, source: claude, status: completed}
   - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
-  # `model` は litellm ハーネスと、`model` を渡した codex のときだけ付ける。`run_id` は round 内で一意:
+  # `model` は litellm ハーネスと、`model` を渡した codex のときだけ付ける。
+  # `effort` は `effort` を渡した codex のときだけ付ける。litellm の行には付けず、
+  # `effort` を渡していない codex の行にも付けない。
+  # `run_id` は round 内で一意:
   # 形式は `{perspective}[@s{k}]#[loop{N}.]{chain_index|fallback}`。`@s{k}` は
   # 分割された pass の run だけに付く (k は review-shards の shard index、1 始まり)。
   # `loop{N}.` は Phase R4 の loop N の再レビューだけに付く (N は 1 始まり)。末尾は
