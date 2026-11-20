@@ -181,7 +181,7 @@ tasks:
     - NFR3
     - NFR5
     - NFR6
-    status: in_progress
+    status: merged
     branch: em-workflow/args-json-quoting-bypass/task0005
     notes: null
     provenance:
