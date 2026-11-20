@@ -1,6 +1,6 @@
 task_id: task0003
 baseline_failures: []          # 4a, before any edit: python3 em-workflow/hooks/tests/run-destructive-guard.py -> passed (exit 0); python3 -m unittest discover -s tests -> Ran 16603 tests, OK (skipped=1)
-final_failures: []             # re-executed after implementation and after this record: PENDING
+final_failures: []             # re-executed after implementation and after this record: python3 em-workflow/hooks/tests/run-destructive-guard.py -> 1416/1416 passed; python3 -m unittest discover -s tests -> Ran 16620 tests, OK (skipped=1)
 acceptance_tests:
   AC-1:
     tests:
