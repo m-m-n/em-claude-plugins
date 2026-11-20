@@ -163,6 +163,16 @@ tasks:
 review:
   status: pending
   rounds_completed: 0
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary:
+    - perspective: performance
+      reason: diff replaces the per-value --args-json anchor search with a linear span map (FR5 / NFR1)
+    cross_validation: true
 requirements:
   FR1:
     title: Notion-pair exclusion only for single-word-certain value words
