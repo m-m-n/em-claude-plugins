@@ -1,0 +1,533 @@
+schema_version: 1
+feature: args-json-quoting-bypass
+created: '2026-11-20'
+base_branch: main
+goal: "# destructive-guard の --args-json 検査を引用・エスケープの書き方で回避できる残件\n\n## 脆弱性の概要 (必須)\n\n`em-workflow/hooks/destructive-guard.py` の `mcp-bridge run --args-json` の検査を、引用・エスケープ・展開の書き方を変えるだけで回避できる経路が残っている。feature mcp-bridge-args-json-exec-guard の review round 4 で、自動修正の上限に達して持ち越した high 2 件と関連する medium の残件。\n\n## 参照 (必須)\n\n- CVE / GHSA ID: 該当なし\n- アドバイザリ URL: 該当なし\n- severity: high\n- 該当パッケージ: 該当なし\n- 現在のバージョン: integration ブランチ em-workflow/mcp-bridge-args-json-exec-guard/integration の時点\n- 修正済みバージョン: 無し\n\n## 攻撃シナリオ (必須)\n\nシェルを実行する MCP ツールが mcp-bridge に登録された環境で、Bash から `mcp-bridge run` を実行し、`--args-json` の `command` に破壊的なコマンドを入れる。次の書き方では、フックが JSON を検査せず allow にする。\n\n1. `3f7145c6c8c0b26a`（high）: notion の組の除外判定（`_args_json_notion_pair`）を、引用していない展開の単語分割で偽装できる。`--format ${UNSET:-json --mcp desktop-commander --tool start_process}` の形にすると、フックは notion 宛てと読むが、実際は別の MCP ツールに送られる。\n   - loop 2 で除外を狭める修正を入れたが、既存の正規の notion 呼び出し 6 件を誤って deny にしたため、Codex と相談して取り消した。除外の条件を、展開が単語分割で別のフラグを作れない形に限る方向で直す必要がある。\n2. `f16e5bb8d5da2621`（high）: `=` 形式のフラグ語で、引用の外のバックスラッシュ付き `=`（`--mcp\\=\"$S\"`）を区切りとして認識せず、後続の静的な `--args-json` が検査から外れる。\n\n## 影響範囲 (必須)\n\n無人実行で、破壊的なコマンドが destructive-guard の deny を通らずに MCP 経由のシェルで実行される。\n\n## 完了の定義 (必須)\n\n- [ ] 攻撃シナリオが成立しない\n- [ ] 修正版に追随している（修正版が無い場合は暫定緩和策の欄に対応を記載）\n- [ ] 既存の allow ケース（notion の正規の呼び出し）を deny にしない\n- [ ] 上の 2 件を `em-workflow/hooks/tests/destructive-guard-cases.json` の deny ケースとして固定する\n\n## 該当箇所 (任意)\n\n- `em-workflow/hooks/destructive-guard.py` の `_args_json_notion_pair()`、`_flag_equals_prefix_name()`\n- 同時に扱うとよい medium の残件\n  - `dc2fdf65ce30d198`: `$` と変数名の間に行継続があると、展開を固定文字列として扱う（`_read_double_quoted()` / `_read_static_word()`）\n  - `f35ed060564bcf20`: `$` の後に非 ASCII 文字が続くと、Bash は文字どおりに渡すのに展開として扱い、検査を打ち切る\n  - `0379cf2eb7ad4e92` / `9981fd673b28e7e4`: `--args-json` を多数並べると、値ごとの位置検索が二乗時間になる\n  - `3340375b4b50c4b0`: 単体テスト `equals form with a destination` の期待値が現行の判定と逆\n- 詳細はリポジトリの `feature-docs/mcp-bridge-args-json-exec-guard/reviews/round4.yaml`\n\n## 暫定緩和策 (任意)\n\n\\<修正までの回避手段。あれば>\n"
+parent_branch: em-workflow/args-json-quoting-bypass/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.69
+      '2': 0.31
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.86
+      '2': 0.14
+      '3': 0.0
+  at: '2026-11-20T19:47:44+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
+      format_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: a0b5833958ae75eb5b2c42e11e325af665eea80b
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'tier reduced により design step を削減（UI を持たないフックの静的解析の修正、design-system 候補 0 件。create-spec.design-step: decide_autonomously → skip）'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: completed
+  completed_at_commit: 4618bd2b8c514e4b0f0cea0984a7347fb766b0e1
+- id: implement
+  status: completed
+  completed_at_commit: 83c33a405a993131ea85bca7efc5fa44b1bb9e71
+  base_commit: 996e1443a63b46e552a97d2ad7e2d2f96ae8f778
+- id: review
+  status: completed
+  completed_at_commit: 527fc3151de5dcf184b90a65ebc7539262f8c268
+- id: verify
+  status: completed
+  completed_at_commit: 83129df81062e11d792ab547224655b73973455d
+  result: pass
+  round: 2
+  passed_ids:
+  - TS-1
+  - TS-2
+  - TS-3
+  - TS-4
+  - TS-5
+  - TS-6
+  - TS-7
+  - TS-8
+  - TS-9
+  - TS-10
+  - TS-11
+  - TS-12
+  - TS-13
+  - TS-14
+  - TS-15
+  - TS-16
+  - TS-17
+  - TS-18
+  - TS-19
+  - TS-20
+  - TS-21
+  - TS-22
+  - TS-23
+  - TS-24
+  - TS-25
+  - TS-26
+  - TS-27
+  - TS-28
+  - TS-29
+  - TS-30
+  - TS-31
+  - TS-32
+  - TS-33
+  - AC-1
+  - AC-2
+  - AC-3
+  - AC-4
+  - AC-5
+  - AC-6
+  - AC-7
+  - AC-8
+  - AC-9
+  - AC-10
+  - AC-11
+  failed_items: []
+- id: retrospect
+  status: completed
+  completed_at_commit: eefd88f230c0204ccb376017b44782feb585cacc
+tasks:
+  task0001:
+    title: Notion-pair exclusion only for single-word-certain value words, and O2 (8)
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_args_json.py
+    skills: []
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR6
+    - FR8
+    - FR9
+    - FR10
+    - NFR2
+    - NFR3
+    - NFR5
+    - NFR6
+    status: merged
+    branch: em-workflow/args-json-quoting-bypass/task0001
+    notes: null
+  task0002:
+    title: Unquoted backslash-escaped = as the =-form separator
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_args_json.py
+    skills: []
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR2
+    - FR8
+    - FR9
+    - FR10
+    - FR11
+    - NFR2
+    - NFR3
+    - NFR5
+    status: merged
+    branch: em-workflow/args-json-quoting-bypass/task0002
+    notes: null
+  task0003:
+    title: $ before line continuations and before non-ASCII in the word readers
+    plan: tasks/task0003.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_args_json.py
+    skills: []
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR3
+    - FR4
+    - FR7
+    - FR8
+    - FR9
+    - FR10
+    - NFR2
+    - NFR3
+    - NFR5
+    status: merged
+    branch: em-workflow/args-json-quoting-bypass/task0003
+    notes: null
+  task0004:
+    title: Linear anchor lookup in the --args-json collaborator
+    plan: tasks/task0004.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - tests/test_destructive_guard_args_json.py
+    skills: []
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR5
+    - FR9
+    - NFR1
+    - NFR3
+    - NFR4
+    - NFR5
+    - NFR6
+    status: merged
+    branch: em-workflow/args-json-quoting-bypass/task0004
+    notes: null
+  task0005:
+    title: 'Nameref declarations: enclosing-shell chain and Bash word boundaries'
+    plan: tasks/task0005.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_args_json.py
+    skills: []
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR8
+    - FR9
+    - NFR2
+    - NFR3
+    - NFR5
+    - NFR6
+    status: merged
+    branch: em-workflow/args-json-quoting-bypass/task0005
+    notes: null
+    provenance:
+      source: review
+      source_ids:
+      - 1d971862e2458376
+      - a3fdb05c00db3c03
+      - 6083a3b46956a2f0
+      - 7bb299da67faace7
+      - 4d1573a9f53b167f
+      - 21b0ef3d5aaa59ae
+      review_round: 2
+  task0006:
+    title: Chunk derivation links for the nameref chain outside statements()
+    plan: tasks/task0006.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    skills: []
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR8
+    - NFR2
+    - NFR3
+    - NFR5
+    - NFR6
+    status: merged
+    branch: em-workflow/args-json-quoting-bypass/task0006
+    notes: null
+    provenance:
+      source: verify
+      source_ids:
+      - TS-22
+review:
+  status: completed
+  rounds_completed: 3
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  - performance
+  residual_critical_high: 3
+  needs_rework: false
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary:
+    - perspective: performance
+      reason: diff replaces the per-value --args-json anchor search with a linear span map (FR5 / NFR1)
+    cross_validation: true
+requirements:
+  FR1:
+    title: Notion-pair exclusion only for single-word-certain value words
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0005
+    - task0006
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
+    - TS-17
+    - TS-24
+    - TS-25
+    - TS-26
+    - TS-27
+    - TS-28
+    - TS-29
+    - TS-30
+    - TS-31
+    - TS-32
+    - TS-33
+  FR2:
+    title: Unquoted `\=` is the `=`-form separator
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0002
+    tests:
+    - TS-6
+    - TS-7
+    - TS-18
+  FR3:
+    title: '`$` followed by line continuations'
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0003
+    tests:
+    - TS-8
+    - TS-9
+    - TS-13
+    - TS-14
+  FR4:
+    title: Non-ASCII character after `$` is literal
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0003
+    tests:
+    - TS-10
+    - TS-11
+    - TS-15
+  FR5:
+    title: Linear anchor lookup
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0004
+    tests:
+    - TS-16
+  FR6:
+    title: Record value-word word-count shifts as out of scope (O2 (8))
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-12
+    - TS-19
+  FR7:
+    title: FR11 amended to name the line-continuation form
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0003
+    tests:
+    - TS-8
+    - TS-9
+    - TS-19
+  FR8:
+    title: Runner cases
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0005
+    - task0006
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
+    - TS-6
+    - TS-7
+    - TS-8
+    - TS-9
+    - TS-10
+    - TS-11
+    - TS-12
+    - TS-24
+    - TS-25
+    - TS-26
+    - TS-27
+    - TS-28
+    - TS-29
+    - TS-30
+    - TS-31
+    - TS-33
+  FR9:
+    title: Unit tests
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    tests:
+    - TS-13
+    - TS-14
+    - TS-15
+    - TS-16
+    - TS-17
+    - TS-18
+    - TS-32
+  FR10:
+    title: Docstrings and comments
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    tests:
+    - TS-19
+  FR11:
+    title: Confirm 3340375b4b50c4b0
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0002
+    tests:
+    - TS-20
+  NFR1:
+    title: Performance
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0004
+    tests:
+    - TS-16
+    - TS-21
+  NFR2:
+    title: Fail-closed
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0005
+    - task0006
+    tests:
+    - TS-8
+    - TS-9
+    - TS-21
+  NFR3:
+    title: Test procedure
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    - task0006
+    tests:
+    - TS-21
+  NFR4:
+    title: No load-based testing
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0004
+    tests:
+    - TS-16
+  NFR5:
+    title: Version
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    - task0006
+    tests:
+    - TS-23
+  NFR6:
+    title: Maintainability
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0004
+    - task0005
+    - task0006
+    tests:
+    - TS-22
+batch:
+  review_rework_count: 1
+  verify_rework:
+    rounds: 1
+    failed_id_counts:
+      TS-22: 1
+      TS-21: 1
+  infra_resume:
+    rounds: 0
+    cap: 2

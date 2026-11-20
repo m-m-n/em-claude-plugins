@@ -1,0 +1,1316 @@
+round: 2
+executed_at: '2026-11-20T23:12:27+09:00'
+scope:
+  review_mode: diff
+  base_commit: 996e1443a63b46e552a97d2ad7e2d2f96ae8f778
+  head_commit: c7d20de69dd9391a83ec1a48cf128ea82c5cec3a
+  changed_files:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/args-json-quoting-bypass/task0001.tests.yaml
+  - test-docs/args-json-quoting-bypass/task0002.tests.yaml
+  - test-docs/args-json-quoting-bypass/task0003.tests.yaml
+  - test-docs/args-json-quoting-bypass/task0004.tests.yaml
+  - tests/test_destructive_guard_args_json.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary:
+  - perspective: performance
+    reason: diff replaces the per-value --args-json anchor search with a linear span map (FR5 / NFR1)
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+  model: gpt-6.2-astra
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: codex
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: codex
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: codex
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+- run_id: comprehensive#loop1.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#loop1.0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+  model: gpt-6.2-astra
+- run_id: architecture#loop1.0
+  perspective: architecture
+  role: primary
+  source: codex
+  status: completed
+- run_id: spec#loop1.0
+  perspective: spec
+  role: primary
+  source: codex
+  status: completed
+- run_id: performance#loop1.0
+  perspective: performance
+  role: primary
+  source: codex
+  status: completed
+- run_id: comprehensive#loop2.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#loop2.0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+  model: gpt-6.2-astra
+- run_id: architecture#loop2.0
+  perspective: architecture
+  role: primary
+  source: codex
+  status: completed
+- run_id: spec#loop2.0
+  perspective: spec
+  role: primary
+  source: codex
+  status: completed
+- run_id: performance#loop2.0
+  perspective: performance
+  role: primary
+  source: codex
+  status: completed
+- run_id: comprehensive#loop3.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#loop3.0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+  model: gpt-6.2-astra
+- run_id: architecture#loop3.0
+  perspective: architecture
+  role: primary
+  source: codex
+  status: completed
+- run_id: spec#loop3.0
+  perspective: spec
+  role: primary
+  source: codex
+  status: completed
+- run_id: performance#loop3.0
+  perspective: performance
+  role: primary
+  source: codex
+  status: completed
+findings:
+- stable_id: 4879ba9c31a99dbe
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8073
+  title: 行継続の形と通常の展開が同じ語にあると WORD_UNRESTORABLE になり、SPEC FR3・TS-13 に反して単体テストが失敗する
+  description: SPEC FR3 は語が FR6 (1) の別の要素も含むときは Not static のままと定めるが、実装は行継続の形を優先して WORD_UNRESTORABLE を返し、TS-13 の 7 サブケースが失敗する。優先順位が引用の区切りでも変わる。round 1 の aa6573c3b4b75f4f が未解消。
+  suggestion: 優先順位を 1 つに決め、語全体を読んだ後に一度だけ適用する。SPEC FR3 に合わせ、FR6 (1) の要素が 1 つでもあれば WORD_NOT_STATIC とする。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 100
+  resolution: fixed
+  resolution_reason: auto-applied loop 1
+- stable_id: 8de9c05f28f9e69a
+  severity: high
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8073
+  title: FR3 の混在形の判定が SPEC と食い違い、AC-7 と AC-11 が未達のまま
+  description: SPEC FR3 と TS-13 は混在する語を WORD_NOT_STATIC と定めるが、実装は WORD_UNRESTORABLE を返し、TS-13 の 7 サブテストが失敗する。
+  suggestion: SPEC FR3・TS-13 と実装のどちらを正とするかを一度決め、揃える。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 100
+  resolution: fixed
+  resolution_reason: resolved by loop 1 fix of 4879ba9c31a99dbe (TS-13 passes)
+- stable_id: 9e2f8c3ecdf0d593
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8374
+  title: 'TM-1: 参照変数の宣言を生の文字列の正規表現で探すため、引用やエスケープで書いた -n を見落とし、notion ペアの除外で command が未検査になる'
+  description: 正規表現は空白の直後に生で書かれた `-` しか認めず、`declare "-n"` などを見落とす。配列を指す参照変数の `--format "$R"` が 1 語確定と判定され、command が未検査のまま実行される。round 1 の 16aa66d09b0b09b7 が未解消。
+  suggestion: 宣言の有無を字句解析済みの語から求め、確定できない場合は除外しない。判定はチャンクごとに 1 回だけ行う。
+  reproduction: 同じ参照宣言の `-n` と `"-n"` を正規表現で比較すると、後者だけ一致しなかった。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 100
+  resolution: fixed
+  resolution_reason: auto-applied loop 1
+- stable_id: fb1648a418edfd7a
+  severity: high
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8374
+  title: 参照変数の判定が字句解析の結果を使わず入力全体の文字列を検索し、見落としと誤検出の両方を起こす
+  description: 宣言の検出が構文に結び付いておらず、引用された本文中の `declare -n` で正規の notion ペアの除外が外れる一方、クォート除去後に成立する宣言を見落とす。
+  suggestion: 字句解析で得た各文のコマンド名とオプション語から参照変数の宣言を組み立てる。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 100
+  resolution: fixed
+  resolution_reason: resolved by loop 1 fix (merged with the security finding at the same site)
+- stable_id: c2a40040460368a9
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8015
+  title: 'TM-4: ロケール引用と引用外のパラメータ展開領域では、行継続の形があっても別の展開と並ぶと WORD_NOT_STATIC になる'
+  description: 別の FR6 (1) の要素を含む語を Not static とするのは SPEC FR3 が求める判定で、O2 (1) を超える回避手段を加えない。
+  suggestion: 8073 行の判断に合わせる。
+  reproduction: ロケール引用内の `$`・行継続・`X` に `"$Y"` を連結すると not-static に変わった。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 75
+  resolution: declined
+  resolution_reason: SPEC FR3 が求める Not static の判定（O2 (1) と同じ扱い）。混在形の優先順位は loop 1 で SPEC FR3 に揃えた
+- stable_id: ebca577376d4fd51
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8605
+  title: 'O2 (8): フラグの値の語数がずれると、後続の --args-json を検査せずに許可する'
+  description: SPEC FR6・A6 が対象外 O2 (8) として記録した形そのもので、TS-12 は allow を期待する固定のケース。
+  suggestion: SPEC A6 の判断を見直さない限り、受け入れ済みの対象外として declined にする。
+  reproduction: TS-12 の command を `printf ok` に置き換えると judge は allow を返した。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 50
+  resolution: declined
+  resolution_reason: SPEC A6 / O2 (8) で対象外として受け入れ済み（TS-12 が allow を固定。round 1 の 6976f24f6b2e1811 等と同じ形）
+- stable_id: 3b681e93837af56e
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8585
+  title: フラグ位置の語が復元不能になると、それ以前に集めた --args-json の値を検査せずに戻り、deny が ask に弱まる
+  description: SPEC A10 は FR3 の形を含むフラグ位置の語について既存の FR11 の振る舞いを保つと定め、対象外の 328945641695048d に属する。
+  suggestion: SPEC A10 のとおり declined とする。
+  reproduction: '`$` と変数名の間に行継続を入れた `--session=` で先行 JSON が nothing になった。'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 55
+  resolution: declined
+  resolution_reason: SPEC A10 が既存の FR11 の振る舞いを保つと定め、対象外の 328945641695048d に属する
+- stable_id: d528e2c12cbf8191
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8359
+  title: 'TM-2: `${...}` の既定値に含まれる文字の @ で、正規の notion コメントの除外が外れて deny になる'
+  description: holds_array_form() は `${` の内側で `@` を 1 文字でも見ると真を返す。
+  suggestion: 配列の全要素を展開する構文の `@` と、既定値の文字の `@` を区別する。
+  reproduction: '`--session "${SID:-a@b}"` で deny になった。'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: 24f7bc694ae66885
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7220
+  title: 'TM-5: _read_word_as_written() は引用外の非 ASCII 文字直前の `$` を復元しない'
+  description: SPEC FR4 がマスク停止の読み取りに求めるのは二重引用内の規則で、引用外の分岐は FR4 の対象外。None は安全側の結果。
+  suggestion: SPEC の範囲では変更不要。
+  reproduction: 引用外の `$€` で as_written は None を返した。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 50
+  resolution: declined
+  resolution_reason: SPEC FR4 の対象は二重引用内の規則で、引用外の分岐は対象外。None は安全側の結果
+- stable_id: 61185b4c787b6c5d
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8416
+  title: 'FR1: 1 語確定の判定が引用外の文字の `$`（非 ASCII 文字の前、語末）も拒否する'
+  description: '`--session price$€` などで notion ペアの除外が外れる。安全側への誤り。'
+  suggestion: 引用外の `$` の後続文字を確かめ、展開を開始するときだけ 1 語確定から外す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 70
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: 94564aea3876a1bb
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8047
+  title: 'FR3: 引用外の `$`・行継続・`?` / `*` が、特殊パラメータでなくグロブとして読み直されて ask にならない'
+  description: 次の周回で同じ文字を裸のグロブとして読み、WORD_NOT_STATIC を返す。
+  suggestion: 特殊パラメータとして認識した 1 文字を消費してから読み取りを続ける。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 70
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: b844314161dba042
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/tests/destructive-guard-cases.json
+  line: 1410
+  title: 'TS-5: ランナーに登録した入力が SPEC の入力と異なり、SPEC の入力そのものは修正前も後も deny になる'
+  description: SPEC の「修正前 allow」という記述が事実と合っておらず、AC-2 と FR8 を字句どおりには満たせない。
+  suggestion: SPEC TS-5 の入力を JSON エスケープの形に改めるか、TS-5 の期待を改める。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 80
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: 113e5e302cf32720
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8012
+  title: 'NFR2: 行継続を含まないロケール引用 `$"5 $€"` の値が allow から ask に変わる'
+  description: FR4 で `$€` が文字になった結果、ロケール引用の分岐が WORD_UNRESTORABLE とする。
+  suggestion: NFR2 にこの形を例外として追記するか、ロケール引用の分岐で修正前の判定を保つ。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 85
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: 4fac25535c5e2fab
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7080
+  title: _read_dollar() の戻り位置が展開の途中になり、`$$` の 2 文字目を行継続の形の始まりとして読み直す
+  description: 特殊パラメータの末尾までは進まないため `$$` の 2 文字目を読み直す。
+  suggestion: 展開の開始の判定と、展開を消費した後の位置を分ける。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 70
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: fb1648a418edfd7a
+  severity: medium
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8374
+  title: 参照変数の宣言を値ごとに入力全体から検索し、正規表現の後戻りで入力長に対して二次的に時間が増える
+  description: 呼び出しは値の数だけ起き、走査予算に計上されない。
+  suggestion: 宣言の有無はチャンクごとに 1 回だけ、線形時間で求める。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:performance
+  confidence: 85
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: 2792036e6e38e3ef
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8302
+  title: 先頭のコメント行だけで正規の Notion 投稿が確認対象になる
+  description: 字句解析器が識別したコメントを、参照変数の宣言を調べる処理が復元不能な語として取り込む。コメントが単独行だと、その語を復元不能なコマンド名と判定して宣言ありとみなす。その結果、`"$SID"` が単一引数と認められず、Notion 投稿の除外が外れる。
+  suggestion: 字句解析器が `comment` と識別した領域を、文や語に追加せず読み飛ばす。単独のコメント行の有無で判定が変わらないことを回帰テストで確認する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: 2746ece8685e13af
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8255
+  title: キャッシュに保存できず、値ごとに入力全体を再走査する
+  description: '`_MarkedText` の `__slots__` に `_nameref_declared_cache` がないため、代入は毎回 `AttributeError` になり、例外処理で握りつぶされる。'
+  suggestion: '`_MarkedText` にキャッシュ用のスロットを定義して初期化し、`False` も保存済みの結果として再利用する。'
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 75
+  resolution: fixed
+  resolution_reason: resolved by loop 3 (cache slot added)
+- stable_id: 75e6122320977322
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8305
+  title: ANSI-C 引用で書かれた名前参照の宣言を見落とす
+  description: TM-1 の実装では、宣言のオプションに使われた ANSI-C 引用の中身を復号せずに比較している。Bash が `-n` と読むオプションを見落とすと、配列を指す名前参照も引用すれば1引数になると誤判定する。その結果、実行時に宛先が変わり得る呼び出しに Notion 用の例外が適用され、`--args-json` の検査が省略される。
+  suggestion: 宣言名とオプションを既存の引用復元処理で読み、復元できない場合は引数の個数を未確定として扱う。
+  reproduction: 宣言オプションを `"-n"` とした場合と、同じ値を表す `$'\x2dn'` とした場合を `_args_json_nameref_scan` に渡すと、前者は true、後者は false になった。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 75
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+- stable_id: b4d6252a10c17307
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8337
+  title: 先頭にリダイレクトがあると名前参照の宣言を見落とす
+  description: 宣言を探す処理が、先頭のリダイレクトとその入力元を読み飛ばしていない。Bash が実行する `declare` を認識できず、後続の名前参照を1引数と誤認するため、TM-1 が要求する宛先の確認を通過してしまう。
+  suggestion: 宣言の検出には、リダイレクトとその引数を取り除いた後のコマンド位置を使う。
+  reproduction: 同じ `declare -n` 宣言の先頭に `< /dev/null` を付けると、`_args_json_nameref_scan` は false になり、`_args_json_notion_pair` が true を返した。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+- stable_id: b1cbfc527296b0a6
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7090
+  title: 行継続を含む展開があるのに JSON 全体の検査と確認を省略する
+  description: 行継続を挟んだ `$$` の2文字目を新しい展開の開始として再度読むため、別の展開がない場合にも通常の展開と判定される。呼び出し側はこの結果を受けて JSON 全体を読み飛ばし、TM-4 の確認も行わない。
+  suggestion: 展開に使われた文字を二重に読まず、行継続で復元できない箇所を検出した事実を、値全体の最終判定まで保持する。
+  reproduction: 二重引用符の中身として `ID=$`、バックスラッシュと改行、`$x` を順につなぐと、Bash の結果は `ID=`、プロセス ID、文字 `x` の連結になった。`_read_double_quoted` は同じ入力を `continued` ではなく `expansion` と判定した。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 75
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+- stable_id: 91d2f948cebc4196
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8711
+  title: 通常のフラグ解析でも、引数の個数が変わると後続の JSON を見落とす
+  description: 値を取るフラグはソース上の次の1語だけを消費する。Bash の展開でフラグが追加されると、フックは実行時のツール名を位置引数と誤認して解析を終了し、後続の `--args-json` を検査せずに許可する。TS-12 はこの許可を期待値にしている。
+  suggestion: 値の展開後に引数の個数を確定できず、後続のフラグ位置が変わり得る場合は、解析を終了する前に確認対象にする。
+  reproduction: ケース表の TS-12 の command を `printf marker` に置き換えてフックに渡すと、検査対象は0件で、最終判定は allow だった。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: declined
+  resolution_reason: SPEC A6 / O2 (8) で対象外として受け入れ済み（TS-12 が allow を固定。round 1 の 6976f24f6b2e1811 等と同じ形）
+- stable_id: 2746ece8685e13af
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8255
+  title: 名前参照の走査結果が保存されず、フックの処理量が二次的に増える
+  description: 走査結果の保存に失敗しても例外を捨てるため、値を判定するたびにコマンド全文を再走査する。
+  suggestion: 同じ解析対象について走査結果を確実に1回だけ保存する。
+  reproduction: '`_args_json_nameref_scan` の呼び出しを数えると、同じコマンド全文の走査が2回発生した。'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 75
+  resolution: fixed
+  resolution_reason: resolved by loop 3 (cache slot added)
+- stable_id: cddd6edd4d55260d
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8311
+  title: シェルのコメントを名前参照の宣言候補として扱い、正当な投稿を拒否する
+  description: コメント領域をコマンドの語として取り込み、復元できないコマンド名として扱っている。実行されないコメントを先頭に加えただけで Notion 用の例外が外れる。
+  suggestion: 字句解析器がコメントと判定した領域を、宣言検出用の語に追加しない。
+  reproduction: TS-5 の前に `# declare -n ignored` と改行を加えると最終結果は deny になった。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: 8bd8e986a76e621b
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8471
+  title: 既定値に含まれる文字 `@` を配列展開と誤認する
+  description: '`${...}` 内の `@` を位置に関係なく配列展開とみなしている。'
+  suggestion: 引数を複数に展開する構文と、既定値などのデータに含まれる `@` を区別する。
+  reproduction: TS-5 のセッション値を `"${SID:-user@example.org}"` に置き換えると最終判定が deny になった。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: 1e11445cdde2ca67
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7218
+  title: TM-5 の非 ASCII 文字に対する処理が一方の読み取り処理に未実装である
+  description: '`_read_word_as_written` は引用外の `$` に達した時点で常に `None` を返す。'
+  suggestion: 引用外でも `$` の直後の文字を確認し、非 ASCII 文字の前ではリテラルとして読み進める。
+  reproduction: 引用外に `$€` を置いた値で `_read_word_as_written` の戻り値は `None` だった。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: 9788fca097c55762
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8301
+  title: 参照変数の検出が共通の字句解析と異なる文を組み立てる
+  description: _MarkedText はコメントを空白に置き換えるが、新しい参照変数の走査はコメント領域を復元不能な語として文に加える。コメントだけの行が不明なコマンドとみなされるため、通常のコメントを1行付けるだけで同じ Notion 投稿の除外が外れ、本文中のコマンド例によって allow が deny に変わることを確認した。
+  suggestion: 参照変数の検出に既存の文分割、コマンド位置、引用除去の結果を使う。コメントを前置しても Notion の除外が維持されることをテストで固定する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: 2746ece8685e13af
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8255
+  title: 参照変数の走査結果を保持できず、入力全体を繰り返し読む
+  description: _MarkedText は __slots__ で属性を制限しており、_nameref_declared_cache への代入は常に失敗する。例外が握りつぶされるため、同じ _MarkedText でも値ごとに入力全体が再走査される。
+  suggestion: 解析済み入力が参照変数の判定結果を保持できるようにし、引用内の展開の語数を判断するときにだけ遅延計算する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 75
+  resolution: fixed
+  resolution_reason: resolved by loop 3 (cache slot added)
+- stable_id: d743437bc9b158f0
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8498
+  title: 語数判定が字句解析済みの引用を独自の規則で再解釈する
+  description: 共通の字句解析器は行継続を挟む ANSI-C 引用とロケール引用を認識するが、語数判定は開始記号が生の入力で連続していることを要求する。また、引用内の展開を独自に走査し、既定値の文字列に含まれる @ も配列展開とみなす。どちらも1引数になる値で Notion の除外が外れ、通常の JSON 検査に進むことを確認した。
+  suggestion: 引用本文の境界と展開の役割を共通の字句解析結果から取得し、語数判定はその情報を使って1引数に確定するかを決める。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: 1073061a5dd699e9
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/tests/destructive-guard-cases.json
+  line: 1410
+  title: 仕様に記載された TS-5 が拒否される
+  description: SPEC AC-2、FR8、TS-5 は本文に `$(` をそのまま含む入力で allow を要求するが、現行フックは git-branch-force-delete の deny を返す。ランナーケースは `$` を `\u0024` に置き換えておりこの拒否を検出できない。
+  suggestion: 仕様に記載された入力をランナーケースに使い、フック全体で allow になることを確認する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: 37b89bddd1a27008
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7086
+  title: 行継続付きの特殊パラメータを別の展開として読み直す
+  description: '`_read_double_quoted()` は `$$` の後半の `$` から読み直し、クォート外の分岐も `?` を独立したグロブとみなす。どちらも Not static と判定し、FR3 が要求する確認を保持しない。'
+  suggestion: 特殊パラメータの文字を同じ展開の一部として消費する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: 6bbfbf7f1ccd097b
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7983
+  title: 字句解析済みの行継続付き展開で確認が省かれる
+  description: 字句解析器が行継続ごと認識したパラメータ展開・コマンド置換を即座に Not static にし、FR3 の Unrestorable が出ない。
+  suggestion: 字句解析済みの領域にも FR3 の開始条件を適用する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: 34a2dbfa3e4a36c5
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8012
+  title: 行継続を含まないロケールクォートに確認が追加される
+  description: NFR2 は allow から ask への変更を FR3 の形に限るが、`$"5 $€"` で args-json-unrestorable が保持される。
+  suggestion: 行継続を含まないロケールクォートの従来の判定を維持する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: 0b06a7a2b5dc05f3
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8452
+  title: リテラルの `@` を複数引数になる配列展開とみなす
+  description: holds_array_form() は既定値のリテラルの `@` や引用されたコマンド置換の内部の `$@` も外側を分割する展開として扱い、Notion ペアの除外が外れる。
+  suggestion: 外側の値の引数の数に影響する位置だけで `@` 形式を認識する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: 0690d8db82fc3ee1
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8510
+  title: 無関係な参照変数の宣言で引用付きコマンド置換が除外から外れる
+  description: 別の文に参照変数の宣言があるだけで、`"$(printf x)"` のような値も除外対象から外れる。
+  suggestion: 参照変数による語数の判定は、その参照が外側の引数の数に影響し得る展開に限る。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: b7a4ed7cc1e74128
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8504
+  title: 行継続で分かれた ANSI-C クォートが Notion ペアの除外から外れる
+  description: 字句解析器は `$` と開きクォートの間に行継続がある値を ANSI-C クォートと認識するが、語数判定は開始記号の連続を要求する。
+  suggestion: 字句解析器が認識したクォートの開始位置を使う。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: 026faf50f1b925ba
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8525
+  title: クォート外のリテラルの `$` が 1 引数の値を除外から外す
+  description: 語数判定でクォート外の `$` を無条件に拒むため、`5$€` でも Notion ペアの除外が外れる。
+  suggestion: クォート外の `$` が実際に展開を開始するかを判定する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: 2746ece8685e13af
+  severity: medium
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8255
+  title: キャッシュに保存できず、引数ごとに入力全体を再走査する
+  description: 3722行目までの `_MarkedText.__slots__` に `_nameref_declared_cache` がないため、キャッシュへの書き込みは毎回 `AttributeError` になり、例外処理で握りつぶされる。Notion コメントを同じシェル入力で一括処理すると、`--format` や `--args-json` の値を調べるたびに入力全体を再走査する。各コメントの長さが同程度なら、処理量はコメント数の二乗に比例する。
+  suggestion: '`_nameref_declared_cache` を `_MarkedText.__slots__` に追加し、未計算の状態を `None` で初期化する。同じ入力に対する複数の値の判定で、全体走査が一度だけ行われることを回帰テストで確認する。'
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:performance
+  confidence: 75
+  resolution: fixed
+  resolution_reason: resolved by loop 3 (cache slot added; performance#loop3.0 confirmed)
+- stable_id: 8797d707519db22d
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8053
+  title: 行継続を挟んだ `$$` の直後で引用を見失い、確認を省略する
+  description: 特殊パラメータとして2個目の `$` を消費すると、その位置から始まると字句解析器が判断した引用領域も飛ばす。続く単一引用符内の `*` を引用外のグロブと判定して値を検査対象から外すため、修正前の `args-json-unrestorable` による確認が `allow` に変わる。
+  suggestion: 2個目の `$` を消費した位置に引用領域がある場合は、残る引用符から読み直して引用の境界を保つ。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: 2fd1d45584df5f2f
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8317
+  title: ANSI-C引用で書いた通常の代入がNotionの除外を解除する
+  description: '`declare msg=$''\u2603''` は通常の変数代入だが、`_decode_ansi_c()` が `None` を返すため名前参照を宣言し得る文と判定される。'
+  suggestion: '`declare` 系のオプションと代入値を区別し、代入値の復元失敗を判定から外す。'
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: 61fa4ac5bb9880cf
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8358
+  title: 先頭リダイレクト付きの `declare -p` がNotionコメントを誤って拒否する
+  description: '`< /dev/null declare -p "$VAR"` が名前参照の検査に入るようになり、動的な変数名までオプションとして扱うため、Notion コメントの除外が解除される。'
+  suggestion: リダイレクトを除いた後に `declare` 系のオプションとオペランドを区別し、表示専用の呼び出しを除外する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: 225cd5b9e835409b
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8314
+  title: TM-1 二重引用符内の行継続で参照変数の宣言を見落とす
+  description: 宣言を検出する処理は、二重引用符内のバックスラッシュと改行を残したまま、コマンド名とオプションを照合する。Bash はこの行継続を取り除くため、同じ入力を参照変数の宣言として実行する。配列を参照する変数をフックが1引数と誤認し、Notion コメントとして JSON の検査を省略する。
+  suggestion: 二重引用符内のコマンド名とオプションには既存の引用復元処理を使い、復元できない場合は Notion の検査除外を適用しない
+  reproduction: 二重引用符で囲んだオプションの途中に行継続を置くと _args_json_nameref_scan は False を返す。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 75
+  resolution: fixed
+  resolution_reason: auto-applied loop 3
+- stable_id: 0f52bb4b6f33ea59
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8339
+  title: TM-1 ファイル記述子の複製を文の区切りと誤認する
+  description: 参照変数の宣言を探す処理は、リダイレクトを読む前に `&` で文を分割する。先頭にファイル記述子の複製があると、複製元の数字を次のコマンド名として扱い、その後の宣言を見落とす。
+  suggestion: 文字単位の文分割をやめ、既存の字句解析器が識別した演算子と split_redirects の結果から宣言のコマンド位置を求める
+  reproduction: '`2>&1 :` を _args_json_nameref_scan の分割では `2>` と `1 :` に分かれ、後半のコマンド名が `1` になる。'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 75
+  resolution: fixed
+  resolution_reason: auto-applied loop 3
+- stable_id: d126bacea5f2e928
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8276
+  title: TM-1 コマンド置換の検査で親シェルの参照変数を見失う
+  description: _args_json_nameref_scan が参照するのは現在の解析対象のソースだけで、コマンド置換の本文には同じ Bash 入力の先行宣言が含まれない。本文で引用された参照変数は複数引数になり得るのに、Notion の検査除外を適用する。
+  suggestion: 親の参照変数に関する判定を、シェル状態を引き継ぐコマンド置換の解析にも渡す
+  reproduction: コマンド置換内の Notion コメント例で _args_json_nameref_scan が受け取った入力は置換本文だけだった。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 3
+- stable_id: 0f7fba572fa2a00a
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7093
+  title: TM-4 通常の展開が同居すると行継続に対する確認要求が消える
+  description: _read_double_quoted は通常の展開と行継続の両方を検出しても、通常の展開だけを返す。呼び出し元が値全体を WORD_NOT_STATIC として読み飛ばし、args-json-unrestorable の確認も保持しない。
+  suggestion: 語が静的かどうかと、行継続に対する確認が必要かどうかを別々に保持する。
+  reproduction: TS-13 の混在ケースを _read_double_quoted に渡すと expansion が返る。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: declined
+  resolution_reason: SPEC FR3・TS-13 が、行継続の形と別の展開を含む語を WORD_NOT_STATIC と定めている。O2 (1) と同じ扱いで、`"$CMD"` と書くのと同じ結果になり新たな回避手段を加えない
+- stable_id: d72ed188cf923438
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8265
+  title: 参照変数の判定を保存できず、入力全体の走査が二次時間になる
+  description: _MarkedText.__slots__ に _nameref_declared_cache がないため、結果の代入は毎回 AttributeError になり、握りつぶされる。
+  suggestion: _MarkedText に判定結果を保存するスロットを設ける
+  reproduction: 同一の入力全体が3回走査された
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 75
+  resolution: fixed
+  resolution_reason: resolved by loop 3 (cache slot added)
+- stable_id: 5d8d2aac37bd5083
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8324
+  title: TM-2 説明コメントを1行加えるだけで正規の Notion 投稿が拒否される
+  description: 単独行のシェルコメントが「復元できないコマンド語」として記録され、正規の投稿で検査除外が外れる。
+  suggestion: 字句解析器が comment と判定した領域は、宣言を探す際のコマンド語や引数に加えない
+  reproduction: TS-5 の先頭に `# note` と改行を加えると deny になる。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: bce44c7fdb086934
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8358
+  title: リダイレクトの再判定が既存の字句解析と食い違う
+  description: 既存の `split_redirects()` は `Tok.is_operator` で演算子と引用された文字列を区別する。新しい分岐は引用を除去した後の文字列を正規表現で判定するため、コマンド位置の `'>output'` もリダイレクトとして読み飛ばす。続く引数が `declare -n` に見えると名前参照があると誤判定し、Notion の除外が外れる。
+  suggestion: 既存の字句解析が保持する演算子情報を再利用し、構文上のリダイレクトとその対象だけを読み飛ばす。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: b4796bb5dcb7fd9a
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8317
+  title: 引用の復元結果を宣言オプションの判定に流用している
+  description: '`_decode_ansi_c()` は ASCII 外の文字を復元できない。`declare title=$''日本語''` のような代入の値でも復元失敗を名前参照オプションの可能性として扱い、Notion の除外が外れる。'
+  suggestion: 語が宣言オプションになり得るかを先に判定し、代入の値を復元できない場合は名前参照の判定に影響させない。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: b4d6252a10c17307
+  severity: high
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8339
+  title: リダイレクトに続く参照変数の宣言を見落とす
+  description: SPEC FR1 は「Bash が常にちょうど 1 つの引数にする語」の場合に限って Notion ペアを除外すると定めている。参照変数の検出は記述中の `&` を文の区切りとして扱うため、先頭にファイル記述子の複製リダイレクトがある宣言を認識できない。配列全体を参照する変数が複数引数に展開され得る場合も、後続の引用付き変数を 1 語確定と判定し、`--args-json` の検査を省略する
+  suggestion: 既存の字句解析器でリダイレクト演算子とその値を識別し、同じ文のコマンド名と引数から参照変数の宣言を検出する
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 75
+  resolution: fixed
+  resolution_reason: resolved by loop 3 fix of the security finding at the same site
+- stable_id: c1d406e33e77b2ac
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8532
+  title: 参照変数の宣言を検出すると静的な値まで除外から外す
+  description: 同じ入力内の二重引用符に `$` があるだけで除外が解除される。バックスラッシュでエスケープした `$` だけを含む静的なセッション値でも KIND_NOTHING から KIND_INSPECTED に変わる
+  suggestion: 引用内のエスケープを解釈し、参照変数を参照し得る展開に限って宣言の検出結果を適用する
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: 70d2cb91c378de0c
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7988
+  title: 行継続で始まるロケール引用の内部にある通常の展開を見落とす
+  description: '`$` と開始引用符の間に行継続があるロケール引用では、本文を読む前に領域全体を飛ばし、本文に通常の変数展開があっても WORD_UNRESTORABLE を返す'
+  suggestion: 行継続を除いた位置からロケール引用の本文を読み、別の展開があれば WORD_NOT_STATIC を優先する
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: 6bbfbf7f1ccd097b
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7984
+  title: 行継続を挟むクォート外の展開で確認要求を保持しない
+  description: クォート外のブレース付きパラメータ展開と角括弧付き算術展開は、行継続の有無を調べる前に WORD_NOT_STATIC を返す
+  suggestion: 字句領域を分類するときに開始記号の行継続を確認し、その展開を FR3 として記録する
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: 0736a15fe1ee85bd
+  severity: medium
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8262
+  title: キャッシュへの保存が失敗し、同じ Bash チャンクを繰り返し走査する
+  description: '`_MarkedText.__slots__` に `_nameref_declared_cache` がないため、代入時の `AttributeError` が握りつぶされる。コメント投稿をまとめて実行すると、投稿件数に対して走査量が二次的に増える。'
+  suggestion: '`_nameref_declared_cache` を `_MarkedText.__slots__` に追加して `None` で初期化し、走査結果を直接保存する。'
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:performance
+  confidence: 75
+  resolution: fixed
+  resolution_reason: resolved by loop 3 (cache slot added)
+- stable_id: fb1648a418edfd7a
+  severity: medium
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8374
+  title: 名前参照のオプション判定で二次時間のバックトラックが起きる
+  description: declare/local/typeset の各引数に適用される正規表現は、長い候補が末尾で不一致になると後半を再走査し、最悪で引数の文字数の二乗に比例する。走査予算の外に出る。
+  suggestion: 先頭の `-`、残りが ASCII 英字だけであること、`n` を含むことをそれぞれ確認し、判定全体を線形時間にする。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:performance
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: 1d971862e2458376
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 9418
+  title: 入れ子のコマンド置換が中間のシェルの名前参照を見落とす
+  description: 派生チャンクはすべて `top_marked` を参照するため、直近の親にだけある宣言を検査しない。二重のコマンド置換で、中間のシェルが宣言した配列への名前参照を最内側で展開すると、Bash は複数の引数を渡す。フックは同じ構造の値を1引数と判定し、`--args-json` の検査を省略した。
+  suggestion: シェル環境を継承する派生チャンクに直近の親を引き継ぎ、名前参照の判定で親の連鎖をたどる。二重のコマンド置換の中間で宣言する回帰ケースを追加する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: auto-fix loop cap reached (loop 3 re-review); residual for rework
+- stable_id: 11f47b97023de3b5
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8349
+  title: コメントだけの行を追加すると Notion 呼び出しが拒否される
+  description: 字句解析器が認識した `comment` 領域が復元不能な語として取り込まれ、チャンク全体で名前参照があり得る扱いになる。
+  suggestion: 名前参照の走査では `comment` 領域を語に追加しない。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: aeee7548dff7e6d1
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8392
+  title: 展開を含む代入やリダイレクトを動的なコマンド名として扱う
+  description: 代入の右辺やリダイレクト先に展開があると、その語を復元不能なコマンド名として扱い、後続の Notion 呼び出しが確認対象になる。
+  suggestion: コマンド名を復元できるか判定する前に、代入とリダイレクトをシェルの構文に従って識別する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: 1b0b66df3f5e8084
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8567
+  title: 名前参照があると引用されたコマンド置換まで複数引数の候補になる
+  description: 名前参照の可能性がある場合、二重引用符内の `$` を一律に判定対象にするため、コマンド置換やエスケープ済みのドル記号も含まれる。
+  suggestion: 引用領域での名前参照の判定を、外側の引数数に影響するパラメータ展開に限定する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: a3fdb05c00db3c03
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 9420
+  title: TM-1：二重に入れ子になったコマンド置換が、直近の親で宣言された名前参照を見落とす
+  description: 派生した解析単位はすべて最上位のコマンドを親として記録する。途中のシェルで配列全体への名前参照を宣言すると、内側のコマンド置換では Bash とフックの認識が食い違い、Notion 向けの除外を適用して後続の静的な --args-json を検査しない。
+  suggestion: コマンド置換を検査待ちに追加するときに、直近の親で有効な名前参照の情報を引き継ぐ
+  reproduction: bash -c 'declare -n r=value; echo "$(printf sample)"' を statements() に渡すと、宣言を含む段階では True、そこから派生した printf では False になった。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: auto-fix loop cap reached (loop 3 re-review); residual for rework
+- stable_id: 6083a3b46956a2f0
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8378
+  title: TM-1：コマンド名に密着したリダイレクトが名前参照の宣言を隠す
+  description: 宣言を探す処理は、空白を挟まない入力リダイレクトをコマンド名の一部として連結し、Bash が実行する declare を見落とす。
+  suggestion: リダイレクト演算子とその対象を Bash の字句境界で切り分けてから、コマンド名と宣言オプションを判定する
+  reproduction: declare</dev/null -n r=value を _args_json_nameref_declared() に渡すと False になった。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: auto-fix loop cap reached (loop 3 re-review); residual for rework
+- stable_id: 7bb299da67faace7
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8392
+  title: TM-1：command のオプション終端をコマンド名と誤認する
+  description: command を読み飛ばした直後に -- があると、宣言を探す処理はそこで止まる。Bash はその後ろの declare を現在のシェルで実行する。
+  suggestion: command 自身のオプションと終端の -- を解釈したうえで、実際に呼び出される組み込みコマンドを判定する
+  reproduction: command -- declare -n r=value を _args_json_nameref_declared() に渡すと False になった。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: auto-fix loop cap reached (loop 3 re-review); residual for rework
+- stable_id: d4b14c037955ed15
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8273
+  title: TM-2：新しく起動する Bash にも親の名前参照を引き継いで正当な投稿を拒否する
+  description: 独立した bash -c にも親のローカルな名前参照が存在すると判定し、Notion 向けの除外から外れる。
+  suggestion: コマンド置換と新しいシェルプロセスを区別する
+  reproduction: TS-5 を bash -c の本体とし外側に declare -n r=value を前置すると deny になった。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: e640b87b2a60cd58
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8349
+  title: TM-2：先頭に説明コメントを1行置くだけで正当な投稿が拒否される
+  description: 字句解析器が識別済みのコメントを、復元できないコマンド語として取り込む。
+  suggestion: comment 領域を語に追加せずに読み飛ばす
+  reproduction: TS-5 の先頭に「# review note」と改行を加えると deny に変わった。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: 1aac621e2c1bbbe0
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8532
+  title: TM-2：既定値のメールアドレスに含まれる @ を配列展開と誤認する
+  description: 引用されたパラメーター展開内に @ があるだけで、複数の引数になると判定する。
+  suggestion: '@ が展開対象や配列添字に現れる場合と、既定値の文字列に現れる場合を区別する'
+  reproduction: TS-5 の --session の値を "${SID:-me@example.org}" にすると deny を返した。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: 9a400896c7b38478
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8417
+  title: 名前参照オプションの正規表現で検査時間が入力長の二乗に比例する
+  description: 正規表現の両方の英字反復が n に一致し、末尾が英字以外だと照合が繰り返し走査する。
+  suggestion: 先頭のハイフン、残りが ASCII 英字だけであること、n を含むことを線形時間で判定する
+  reproduction: n を128/256/512個並べると中央値は44/118/423マイクロ秒だった。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: 4d1573a9f53b167f
+  severity: high
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8364
+  title: 参照変数の検査と通常の字句解析でコマンドの境界がずれる
+  description: 追加された分岐が `&>` を直前の語に連結する。通常の字句解析は演算子の前に空白があってもなくても `source` をコマンドとして認識するが、参照変数の検査は空白なしの場合だけ見落とす。修正前は両方ともシェル状態が不明と判定していた。この情報が失われると、後続の引数を1語に確定し、Notion の検査除外を誤って適用し得る
+  suggestion: 既存の字句解析が記録する演算子と語の境界を参照変数の検査でも使う。演算子がコマンド名に接する場合と空白で区切られる場合で、同じ判定になることを回帰テストで確認する
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: auto-fix loop cap reached (loop 3 re-review); residual for rework
+- stable_id: 1d971862e2458376
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 9418
+  title: 派生チャンクの参照変数の判定がシェルの実行スコープとずれる
+  description: すべての派生チャンクを最上位のチャンクに結び付けるため、二重のコマンド置換では直近の親にある参照変数の宣言が判定から漏れる。独立した `bash -c` にも最上位の宣言を適用する
+  suggestion: 派生チャンクをキューに積む時点で、参照変数を継承するスコープを記録する。コマンド置換は直近の親をたどり、独立したシェルの起動ではスコープを切り替える
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: 21b0ef3d5aaa59ae
+  severity: high
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 9420
+  title: 入れ子の置換で複数引数に展開される値を1語と判定する
+  description: SPEC FR1 は、Bash が常にちょうど1引数にする値だけを Notion ペアの除外対象にする。ループ3の変更は、すべての派生チャンクを最上位のチャンクに直接結び付ける。二重に入れ子になったコマンド置換では、間のシェルで有効になった配列への参照変数の宣言を内側の判定が参照できず、Notion ペアを除外し JSON の検査を省く。
+  suggestion: 直近の囲みで有効な宣言を内側の語数判定に引き継ぎ、必要に応じてさらに外側の文脈を参照する。中間のシェルにだけ宣言がある場合を回帰テストに加える。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: auto-fix loop cap reached (loop 3 re-review); residual for rework
+- stable_id: d31ccb2d74b2f1e8
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8273
+  title: 後続の無関係な宣言で Notion ペアの除外が解除される
+  description: 派生チャンクが最上位の宣言判定を引き継ぐため、コマンド置換の後にある別変数の参照宣言でも、置換内の "$SID" が1語確定から外れる。ループ2では許可された入力が ask になる。
+  suggestion: 参照する変数と、その置換を評価する時点で有効な宣言を対応付ける。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: e378aac9d95c3b55
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8364
+  title: リダイレクト先の `-n` を参照変数の宣言オプションとして読む
+  description: '`declare SAMPLE &> -n` の出力先 `-n` を宣言オプションと誤認し、後続の Notion ペアを除外せず ask を返す。'
+  suggestion: 宣言コマンドの前後にあるリダイレクトを、その引数と一緒にオプション走査から除外する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: 92f65a612d606ae1
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7991
+  title: 行継続で分かれたロケール引用の内部にある通常の展開を見落とす
+  description: 語の読み取りは連続した開始記号を要求し、内部を読まずに Unrestorable とする。内部に通常の `$Y` がある場合も WORD_UNRESTORABLE となる。
+  suggestion: 行継続を含む開始記号の後から引用本文を読み、通常の展開が見つかれば WORD_NOT_STATIC を返す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+- stable_id: 4f814ad23fbf80d4
+  severity: medium
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8277
+  title: 派生チャンクの検査で親コマンドにも二次時間の処理が走る
+  description: 派生チャンクに対象の Notion 呼び出しがあると、外側のコマンドも走査するようになった。宣言コマンドの長い引数が正規表現に渡り、不一致時に同じ末尾を繰り返し調べるため、約 2 万文字に 0.68 秒、約 4 万文字に 2.65 秒かかった。
+  suggestion: 宣言オプションを線形時間で判定する。先頭がハイフンで、残りが ASCII 英字だけで構成され、その中に `n` が含まれることを確認する
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:performance
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外（rework では high の修正と同じ箇所を扱う）'
+evaluation:
+  round_summary: round 2（cross_validation あり）。5 観点の指摘を重複をまとめて 15 件（high 4、medium 11）にした。未解決の high は 2 件で、どちらも round 1 で auto-fix の上限に達したまま残っていた。(1) 行継続の形と通常の展開が混在する語の優先順位が SPEC FR3・TS-13 と逆で、TS-13 の 7 サブテストが失敗する。(2) 参照変数の宣言を生の文字列の正規表現で探すため、notion ペアの除外が成立し command が未検査になる。security の 8015 行と 8605 行は medium に下げた。security の再現手順 7 件はすべて読み取りで確かめ reproduced。レビュー結果にプロンプトインジェクションの試みは無かった。
+  recommended_action: rework
+  action_rationale: high 2 件は round 1 の auto-fix 3 回で収束せず、局所的な修正では片付かない。(1) は SPEC FR3 どおりに揃える。(2) は宣言の検出を字句解析済みの語に移し、確定できない場合は除外しない形に設計し直す。
+dismissed_sites:
+- file: em-workflow/hooks/destructive-guard.py
+  line: 7092
+  run_id: architecture#0
+  reason: duplicate of another finding
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 3
+  applied_total: 8
+  termination: loop-cap
+residual_critical_high: 6
+rework_required: true
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

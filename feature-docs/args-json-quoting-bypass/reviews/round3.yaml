@@ -1,0 +1,895 @@
+round: 3
+executed_at: '2026-11-21T01:15:29+09:00'
+scope:
+  review_mode: diff
+  base_commit: 996e1443a63b46e552a97d2ad7e2d2f96ae8f778
+  head_commit: 0d66808990bf1b6590ca5bd5bf6b334c13c47fb6
+  changed_files:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/args-json-quoting-bypass/task0001.tests.yaml
+  - test-docs/args-json-quoting-bypass/task0002.tests.yaml
+  - test-docs/args-json-quoting-bypass/task0003.tests.yaml
+  - test-docs/args-json-quoting-bypass/task0004.tests.yaml
+  - test-docs/args-json-quoting-bypass/task0005.tests.yaml
+  - tests/test_destructive_guard_args_json.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary:
+  - perspective: performance
+    reason: diff replaces the per-value --args-json anchor search with a linear span map (FR5 / NFR1)
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  status: failed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: codex
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: codex
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#fallback
+  perspective: security
+  role: fallback
+  source: claude
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+- run_id: comprehensive#loop1.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#loop1.0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  status: completed
+- run_id: architecture#loop1.0
+  perspective: architecture
+  role: primary
+  source: codex
+  status: completed
+- run_id: spec#loop1.0
+  perspective: spec
+  role: primary
+  source: codex
+  status: completed
+- run_id: performance#loop1.0
+  perspective: performance
+  role: primary
+  source: codex
+  status: completed
+- run_id: comprehensive#loop2.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#loop2.0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  status: completed
+- run_id: architecture#loop2.0
+  perspective: architecture
+  role: primary
+  source: codex
+  status: completed
+- run_id: spec#loop2.0
+  perspective: spec
+  role: primary
+  source: codex
+  status: completed
+- run_id: performance#loop2.0
+  perspective: performance
+  role: primary
+  source: codex
+  status: completed
+- run_id: comprehensive#loop3.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: failed
+- run_id: security#loop3.0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  status: completed
+- run_id: architecture#loop3.0
+  perspective: architecture
+  role: primary
+  source: codex
+  status: completed
+- run_id: spec#loop3.0
+  perspective: spec
+  role: primary
+  source: codex
+  status: completed
+- run_id: performance#loop3.0
+  perspective: performance
+  role: primary
+  source: codex
+  status: completed
+- run_id: comprehensive#loop3.fallback
+  perspective: comprehensive
+  role: fallback
+  source: claude
+  status: completed
+findings:
+- file: em-workflow/hooks/destructive-guard.py
+  line: 7994
+  severity: high
+  category: security
+  title: TM-4：引用外の波括弧付き変数展開では、行継続があっても確認を求めない
+  description: 字句解析が語を parameter-expansion と認識すると、_read_static_word は行継続を調べる前に WORD_NOT_STATIC を返す。そのため --args-json の値は読み飛ばされる。ほかに展開を含まない語でも、TB-1 で TM-4 が求める args-json-unrestorable の確認が行われない
+  suggestion: 展開領域を読み飛ばす前に、開始記号が行継続をまたいでいるか確認し、その展開だけを含む語は WORD_UNRESTORABLE にする
+  reproduction: VALUE に無害な JSON `{"command":"true"}` を設定する。--args-json の値を引用外の `${VALUE}` とし、`$` の直後にバックスラッシュと改行を置いてフックに渡す。_read_static_word は7995行で not-static を返し、確認理由は空、最終判定は allow になる
+  sources:
+  - codex:security
+  confidence: 75
+  stable_id: 3952f928593c18a0
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached. auto-fix の修正案は TS-13 の単体テストが固定する期待値（引用外の `$`・行継続・`{` は Not static）と衝突したため取り消した。SPEC FR3 と TS-13 のどちらに揃えるかは仕様判断が要る'
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8291
+  severity: high
+  category: security
+  title: TM-1：現在のシェルで実行した置換内の名前参照を見落とす
+  description: 名前参照の探索は親の解析結果を子に引き継ぐ。Bash 5.3 の `${ command; }` では置換内の変更が呼び出し元にも残るが、親の判定には反映されない。そのため、後続の引用付き変数が複数の引数に展開され得るのに、Notion 宛てと判定して `--args-json` の検査を省略する。feature-docs/args-json-quoting-bypass/THREAT-MODEL.md の TB-1 で定めた TM-1 の「各値が必ず1引数になる場合だけ除外する」という対策が、この経路では成立しない。
+  suggestion: 現在のシェルで実行される置換の副作用を、呼び出し元の名前参照判定に反映する。副作用を確定できない場合は、後続の変数を1引数とみなす前に Notion の除外を解除する。
+  reproduction: 'Bash 5.3.9 で `: "${ declare -gn review_ref=review_value; }"` の後に `declare -p review_ref` を読むと、名前参照が残っていた。同じ入力をフックで解析すると `_args_json_nameref_declared()` は置換内で True、外側で False を返した。続けて `--session "$review_ref"` と本文 `ok` の Notion 呼び出しを渡すと、`_args_json_notion_pair()` は True、JSON の検査結果は `nothing` になった。'
+  sources:
+  - codex:security
+  confidence: 60
+  stable_id: aaab62a027688c1e
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8317
+  severity: high
+  category: comprehensive
+  title: 後から評価される値への対策が `${` の字面検索だけで、`$''{` 分割・ANSI-C・引用したヒアドキュメント・read で読んだ値で回避できる
+  description: 回帰修正はチャンクの原文に `${` と空白または `|` の並びがあれば名前参照ありとして扱う。しかし危険の本体は評価する側（`(( a ))`、`let`、`$(( ))`、`[[ a -eq 0 ]]`、`${p@P}` など）にあり、評価される値の字面ではない。値は `$''{` 分割、ANSI-C の `\x24{`、区切り語を引用したヒアドキュメントを read で読む形、ファイルから read する形で、字面に `${ ` を出さずに作れる。どの形でも `_args_json_declares_nameref()` は False になり（8527 行は `((...))` を何も宣言しないと扱い、read も対象外）、`--format "$r"` が 1 語に確定したと判定され、notion ペアの除外が成立して `--args-json` の command は検査されない。bash 5.3.9 で `"$r"` が 5 語に展開されることを確かめた。
+  suggestion: (a) 値をコードとして現在のシェルで評価し直す箇所（算術コマンド `((...))`、`let`、算術展開、`[[ ]]` の算術比較、変数を使う配列添字、`declare -i` 付きの代入、`${x@P}`）をチャンクが持つとき、`_args_json_nameref_scan()` が安全側を返すようにする。(b) 最低限、引用除去・ANSI-C 復号後の語にも字面検索を行い、区切り語を引用したヒアドキュメントも対象にする。4 つの形を deny ケースとしてランナーに足す。
+  reproduction: null
+  sources:
+  - claude:comprehensive
+  confidence: 60
+  stable_id: 50060ea113b79522
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8333
+  severity: high
+  category: comprehensive
+  title: 行継続を含むコマンド置換で Notion の除外が残る
+  description: 生の文字列に対する正規表現は、Bash が行継続を取り除いて認識するコマンド置換を見落とす。Bash 5.3.9 で無害な変数代入が現在のシェルに残り、既存の字句解析器も置換として認識する一方、この関数はシェル状態を不明としないことを確認した。置換が名前参照を変更する場合、後続の引用付き展開で引数の数が変わり得ても、Notion 向けの除外が残って `--args-json` の検査が省かれる。
+  suggestion: 既存の字句解析器が認識した `LEX_BRACE_COMMAND_SUBSTITUTION` を使ってシェル状態を判定する。行継続を含む有効な置換でも状態が不明になることを、無害な変数代入で検証する。
+  reproduction: null
+  sources:
+  - codex:architecture
+  - codex:comprehensive
+  - codex:spec
+  confidence: 75
+  stable_id: f2ae2d8167d9e83b
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: fixed
+  resolution_reason: auto-applied loop 3 (followed by a regression correction commit)
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8333
+  severity: high
+  category: security
+  title: TM-1：行継続を含むコマンド置換でシェル状態の変更を見落とす
+  description: aaab62a027688c1e の修正は置換の開始記号を元の文字列から正規表現で探す。Bash が先に行継続を取り除く場合、同じ置換が現在のシェルで実行されても検出できない。名前参照が変わると、複数の引数に展開される値を1語と判定し、Notion 用の例外によって実際の呼び出し先の検査を省略する。TB-1 で定めた TM-1 の緩和に漏れがある
+  suggestion: Bash の引用と行継続を処理した字句解析結果から、現在のシェルで実行される置換を判定する
+  reproduction: 無害な `${ v=after; }` を二重引用符内で評価し、開始記号の `$` と `{` の間にバックスラッシュと改行を置く。Bash 5.3.9 では置換後の v は after になる。同じ文字列を _args_json_nameref_scan に渡すと False を返し、行継続を除くと True を返す
+  sources:
+  - codex:security
+  confidence: 75
+  stable_id: 8fc2e9b71d43b92f
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: fixed
+  resolution_reason: auto-applied loop 3 (followed by a regression correction commit)
+- stable_id: 82b5da1c1554d8ca
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8397
+  title: 'TM-1: trap / alias / mapfile -C / readarray -C で実行される名前参照の宣言を見落とし、notion ペアの除外を回避できる'
+  description: _args_json_declares_nameref() がシェル状態を不明とするコマンド名は eval / source / . だけ（8397 行）。trap のアクション文字列（DEBUG は次の単純コマンドの前、ERR は失敗の後に実行される）、alias（expand_aliases の下で後続の行で展開される）、mapfile / readarray の -C コールバックは、現在のシェルで文字列をコードとして実行する。その中の `declare -gn r=A[@]` はコマンド位置の語ではないので走査されない。子のチャンクとして読まれても、_args_json_nameref_declared() は外側に向かってしかたどらない（8284-8299 行）ので、mcp-bridge の文のチャンクには届かない。結果、`--format "$r"` / `--session "$r"` が 1 語確定と判定されて除外され allow になる。しかし Bash の argv は --mcp desktop-commander --tool start_process を含み、--args-json の command（git branch -D、rm -rf ~ など）が検査されずに実行される。同じフックの STOP_COMMAND_WORDS は trap / mapfile / readarray を、OVERRIDE_BUILTINS は alias を、シェル状態を変えるものとして既に扱っている。名前参照の判定だけがこれを反映していない。評価者がコードを読んで再現経路を確認した（reproduced）。
+  suggestion: "--- a/em-workflow/hooks/destructive-guard.py\n+++ b/em-workflow/hooks/destructive-guard.py\n@@ -8396,3 +8396,5 @@\n     name, ok = _args_json_declaration_word(marked, words[k])\n-    if not ok or name in (\"eval\", \"source\", \".\"):\n+    if not ok or name in (\n+        \"eval\", \"source\", \".\", \"trap\", \"alias\", \"mapfile\", \"readarray\",\n+    ):\n         return True"
+  sources:
+  - claude:security
+  confidence: 88
+  reproduction: 'フックに PreToolUse の Bash ペイロードとして次のコマンドを渡す（CLAUDE_BATCH なし）: A=(json --mcp desktop-commander --tool start_process); trap ''declare -gn r=A[@]'' DEBUG; mcp-bridge run --mcp notion --tool notion-create-comment --format "$r" --args-json ''{"command":"git branch -D example"}'' → allow。次の形でも同じく allow になる。(1) trap の後に `trap ''declare -gn r=A[@]'' ERR; false;` を置いた形。(2) `mapfile -t -C ''declare -gn r=A[@]; :'' -c 1 X <<< x;` の形とその readarray 版。(3) 改行区切りで `shopt -s expand_aliases` / `alias D=''declare -n''` / `D r=''A[@]''` と書いた後に同じ mcp-bridge 文を置く形。(4) --session "$r" と --args-json ''{"command":"rm -rf ~"}'' の組み合わせ。対照として `declare -n r=''A[@]''` と直接書くと deny になる。Bash 側の確認: bash -c ''A=(json --mcp desktop-commander --tool start_process); trap "declare -gn r=A[@]" DEBUG; printf "<%s> " run --mcp notion --tool notion-create-comment --format "$r" --args-json "{}"'' の出力は <--format> <json> <--mcp> <desktop-commander> <--tool> <start_process> <--args-json> を含む。alias 形は eval 経由でも成立することを確認した。'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: fixed
+  resolution_reason: auto-applied loop 1
+- stable_id: 2238d080e3e12252
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8525
+  title: 'TM-1: ブレース展開・グロブで綴った declare -n を名前参照の宣言として読まず、notion ペアの除外で --args-json の command が未検査になる'
+  description: _args_json_declaration_word() は引用除去だけを再現し、Bash がその後に行うブレース展開とパス名展開を考えない。`{` `}` `*` `?` `[` を含む語も字面のまま restorable=True で返す（8519-8529 行）。そのため _args_json_declares_nameref() は、コマンド名 `{declare,-n}` / `declar?` を declare とも不明とも読まず（8396-8399 行）、オプション語 `{-n,r=A[@]}` / `-{g,n}` は `-[A-Za-z]*n[A-Za-z]*` に一致しない（8402 行）。結果、_args_json_single_word_certain() が `--format "$r"` を 1 語確定と判定し（8657-8682 行）、notion ペアとして除外して allow を返す。Bash では `declare -n r=A[@]` が実行され、`"$r"` は --mcp desktop-commander --tool start_process を含む複数の引数になるので、TB-1 / TM-1 の緩和策を迂回して破壊的な command が検査なしで実行先に届く。round 2 の 9e2f8c3ecdf0d593（引用で書いた -n）と同じ類の別の綴り。評価者がコードを読んで再現経路を確認した（reproduced）。security#0（スキーマ不正で失敗した実行）も `declare -{g,n}` の形で同じ欠陥を 8399 行に報告している。
+  suggestion: _args_json_declaration_word() の引用外の文字の読み取りで、Bash が語の数や綴りを変えうる形（引用外のブレースの組、`*` と `?`、引用外の `[`...`]` の組）を restorable=False にし、_args_json_single_word_certain() の引用外の判定と規則をそろえる。単独の `[` / `[[` / `]` / `]]` の語は対象から外し、テストコマンドを含む正規の呼び出しの誤爆（TM-2）を避ける。コマンド名の位置とオプションの位置の両方に効くことを確かめる。ランナーに `declare {-n,r=A[@]}`、`declare -{g,n} r='A[@]'`、`{declare,-n} r='A[@]'` の deny ケースを追加する。
+  sources:
+  - claude:security
+  - codex:security
+  confidence: 90
+  reproduction: '[security#fallback] フックに PreToolUse の Bash ペイロードとして次のコマンドを渡す（CLAUDE_BATCH なし）: A=(json --mcp desktop-commander --tool start_process); declare {-n,r=A[@]}; mcp-bridge run --mcp notion --tool notion-create-comment --format "$r" --args-json ''{"command":"git branch -D example"}'' → allow（「破壊的なパターンに一致しない」）。`{declare,-n} r=''A[@]''` に置き換えても allow。`touch declare; declar? -n r=''A[@]''` でも allow。同じ文を `declare -n r=''A[@]''` で書くと deny（git-branch-force-delete）。Bash 側の確認: bash -c ''A=(a b c); declare {-n,r=A[@]}; printf "<%s>\n" "$r"'' が <a><b><c> の 3 行を出力し、"$r" は複数引数になる。
+
+    [security#0] `declare -{g,n} ref=example` を `_args_json_nameref_scan()` に渡すと `False` になった。同じ宣言を Bash 5.3.9 で評価すると `declare -p ref` は `-n` を示した。また、参照先を無害な2要素の配列全体にすると、`"$ref"` が実際に2引数になることを確認した'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: fixed
+  resolution_reason: auto-applied loop 1
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8890
+  severity: high
+  category: security
+  title: 展開で引数の数が変わると、後続の静的な --args-json を検査せず許可する
+  description: 通常のフラグ解析は値を常に1語として進める。Bash の展開でフラグが増えると、フックはその値を位置引数と誤認して解析を打ち切る。mcp-bridge が受け取る後続の --args-json に検査対象のコマンドがあっても、フックは allow を返す。追加された TS-12 がこの判定を固定している
+  suggestion: 値の語数を確定できず、後続のフラグとの対応が変わり得る場合は ask を返す。TS-12 でもその判定を検証する
+  reproduction: destructive-guard-cases.json の args-json-quoting-bypass TS-12 の入力をテスト用の judge に渡すと allow を返す。同じ入力の JSON の command を `true` に置き換えて Spy に渡しても、静的な JSON があるのに検査結果は nothing になる
+  sources:
+  - codex:security
+  confidence: 60
+  stable_id: d22381d97825da92
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached. SPEC は TS-12 を対象外の形（期待 allow、AC-6）と定めており、指摘の採用には仕様変更が要る'
+- file: em-workflow/hooks/destructive-guard.py
+  line: 9549
+  severity: high
+  category: security
+  title: TM-1：ヒアドキュメント内の状態変更が後続の呼び出しに反映されない
+  description: 親の marked_chunk を作る時点で、ヒアドキュメントの本文は取り除かれている。区切り語を引用しない場合、本文の置換は現在のシェルの変数を変更できる。本文を後から別に検査しても、その変更は親の名前参照判定に戻らない。後続の呼び出しを誤って Notion 用の例外にできるため、TB-1 における TM-1 を満たさない
+  suggestion: 親の状態を判定する前に、引用されていない区切り語を持つ本文から、現在のシェルで実行される置換の有無を引き継ぐ
+  reproduction: v を before に設定し、組み込みコマンド `:` に、区切り語を引用せず本文を `${ v=after; }` としたヒアドキュメントを渡す。Bash 5.3.9 で直後の v は after になる。同じ入力をフックの _strip_heredocs_mapped に通し、親に残った文字列を _args_json_nameref_scan に渡すと False を返す
+  sources:
+  - codex:security
+  confidence: 60
+  stable_id: 8d279f2d8674d29f
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: fixed
+  resolution_reason: auto-applied loop 3
+- file: em-workflow/hooks/destructive-guard.py
+  line: 7992
+  severity: medium
+  category: spec
+  title: 引用符外の行継続付きパラメータ展開で確認が省かれる
+  description: SPEC の FR3・FR7（64–75、95–100行）は、`$` と展開開始文字 `{` の間に行継続があり、同じ語に別の FR6 (1) 要素がない場合、`args-json-unrestorable` の `ask` を求める。引用符外では字句解析が値全体をパラメータ展開として渡すため、この分岐が `WORD_NOT_STATIC` を返し、確認理由が記録されない。無害な変数名を使った確認では、同じ形を二重引用符で囲んだ場合にだけ理由が記録された。
+  suggestion: 構文領域の種類で読み取りを打ち切る前に FR3 の形を識別し、同じ語に独立した FR6 (1) 要素がある場合に `WORD_NOT_STATIC` を優先する。
+  reproduction: null
+  sources:
+  - codex:spec
+  confidence: 75
+  stable_id: 92f65a612d606ae1
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: f7c8d43b2a5cdc5d
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7993
+  title: 'FR3: 引用外の `$`・行継続・`{` を字句解析が展開の領域とし、args-json-unrestorable の ask にならない'
+  description: _read_static_word() は、引用の種類でない最上位の領域を見ると、行継続の形かどうかを確かめずに WORD_NOT_STATIC を返す（7994-7995 行）。引用外の `$`・行継続・`{JSON_ARG}` は字句解析がパラメータ展開の領域として扱う。そのため SPEC FR3 / TM-4 が求める Unrestorable（ask、batch では deny）にならず、値を読み飛ばして allow になる。評価者がコードを読んで経路を確認した（reproduced）。security#0 は high としたが、結果は `--args-json "$JSON_ARG"` と同じ O2 (1)（静的でない値は検査しない、前身 feature の対象外）である。Bash が読む展開を字句解析も展開として読んでおり、新しい回避手段を加えないので medium に下げた。round 2 の 6bbfbf7f1ccd097b（deferred）と同じ箇所の未解決分で、tests の TS-13 の固定（spec の指摘）と根本原因が同じ。
+  suggestion: パラメータ展開・コマンド置換の領域を WORD_NOT_STATIC として返す前に、領域の開始の `$` の直後が行継続かを確かめる。行継続の形だけが非静的要素である語は WORD_UNRESTORABLE にする。コマンド置換の本体の既存の再走査は保つ。tests/test_destructive_guard_args_json.py の 1148-1161 行の固定も合わせて直す。
+  sources:
+  - codex:security
+  confidence: 75
+  reproduction: '`--args-json` の値に、引用符の外で `$`、バックスラッシュ、実際の改行、`{JSON_ARG}` を順に置いて判定器に渡した。結果は `allow` だった。同じ入力で波括弧だけを外すと、無人実行時の結果は `args-json-unrestorable` による `deny` になった'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 3646e7540986cfb2
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8268
+  title: 別プロセスで動く `bash -c` の payload に外側の名前参照を引き継ぎ、NFR2 が認めない allow から ask への変化を起こす
+  description: _args_json_nameref_declared() は、bash -c の payload も外側のチャンクの宣言を引き継ぐものとして扱う（docstring に安全側と明記）。新しいプロセスには名前参照も配列も引き継がれない。そのため、外側だけに宣言がある無害な Notion 呼び出しが、直前の版の allow から args-json-unrestorable の ask に変わる（spec#0 が実測）。SPEC NFR2 が allow から ask への変化を認めているのは、FR3 の形だけ。round 2 の d4b14c037955ed15（deferred）が残っている。
+  suggestion: 連鎖をたどるのは、シェル変数を共有する境界（コマンド置換など）に限り、`bash -c` など新しいプロセスの payload で止める。安全側に残すなら、SPEC NFR2 に例外として明記する。
+  sources:
+  - codex:spec
+  confidence: 70
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8317
+  severity: medium
+  category: architecture
+  title: 字句解析と名前参照の判定が食い違い、コメントが Notion の除外を解除する
+  description: 無関係な行継続があるだけで正規表現がコメント内の置換開始記号を拾う。生のテキストを先に検査するため、行継続がなくても同じ誤判定が起きる。既存の許可ケースにシェルコメントを添えると、字句解析器は置換を検出しない一方で、フックの判定は allow から deny に変わる。
+  suggestion: 行継続をまたぐ置換も認識する字句解析結果を使う。引用された値の再評価は、その値が再評価され得る構文から別に判定し、単なるコメントや引用データを含む許可ケースも残す。
+  reproduction: null
+  sources:
+  - codex:architecture
+  - codex:spec
+  confidence: 60
+  stable_id: 7d292f42a3dfd817
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8320
+  severity: medium
+  category: security
+  title: TM-2：行継続があると、コメント本文の文字列をコマンド置換と誤認する
+  description: コマンドのどこかに行継続があると、正規表現が単一引用符の内側まで検索する。Notion に投稿する本文に `${ sample; }` という文字列があるだけで、フックは名前参照が存在する可能性を認定し、本文が実行コマンドとして再検査され、投稿が拒否される。TB-1 の TM-2 の対策に漏れがある。
+  suggestion: 行継続をまたぐ置換の開始判定を、引用・エスケープ・シェルコメントを区別できる字句解析器で行う
+  reproduction: TS-5 の本文末尾に ` ${ sample; }` を加え、`--args-json` 直前でバックスラッシュと改行を使って折り返すと、git-branch-force-delete の deny になる
+  sources:
+  - codex:security
+  confidence: 60
+  stable_id: a0fee0c9a692e873
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8327
+  severity: medium
+  category: performance
+  title: 静的な Notion 呼び出しでも同じチャンクを再び字句解析する
+  description: '`statements()` は9550行目で字句解析済みの文を取得するが、名前参照の検査は `lex_segments()` で同じチャンク全体をもう一度解析し、トークン列を再構築する。8669行目では引用内に展開があるかを確認する前にこの検査を呼ぶため、引数がすべて静的な Notion 呼び出しでも再解析が発生する。約37 KBの入力では `statements()` 全体が約147ミリ秒、追加の字句解析だけで約27ミリ秒だった。'
+  suggestion: 名前参照の判定は引用内で `$` を見つけた時点まで遅らせ、判定が必要な場合は `statements()` が取得済みの文とトークンを再利用する。
+  reproduction: null
+  sources:
+  - codex:performance
+  confidence: 60
+  stable_id: 3033b490aec90007
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 82f7e67d65a068ef
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8332
+  title: 名前参照の判定が case のパターンの語をコマンドとして読む
+  description: '_args_json_nameref_scan() は、lex_segments() の文を `(` `)` `{` `}` で区切り直すだけで、case のパターンの位置を追跡しない。`case x in a|source) : ;; esac` では、`|` で分かれた `source)` の `source` をコマンド名として読み、シェル状態を不明とする。その結果、後続の正規の Notion 呼び出しの除外が外れる（TM-2）。既存の _shape_leading() は case のパターンを追跡しており、コマンド境界の判定が二重に実装されている。round 2 の 9788fca097c55762（deferred）と同じ系統。'
+  suggestion: コマンド位置の判定を、既存の文の整形（_shape_leading() など）と共有する。名前参照の判定は、そこでコマンド位置とされた語にだけ適用する。
+  sources:
+  - codex:architecture
+  confidence: 65
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8333
+  severity: medium
+  category: security
+  title: TM-2：コメント本文の文字列だけで正当な Notion 投稿が拒否される
+  description: 正規表現は単一引用符内の JSON 本文も検索する。本文に `${ ` があるだけでシェル状態を不明と判定し、通常の `--session "$SID"` を持つ投稿が Notion 用の例外から外れる。その結果、説明として引用したコマンド例が実行命令として検査され、投稿が拒否される。TB-1 における TM-2 の可用性を損なう
+  suggestion: 置換を実行する引用範囲だけを判定対象とし、単一引用符内の本文に同じ文字列がある場合の許可テストを追加する
+  reproduction: 追加済みの許可ケース TS-5 を judge に渡すと allow になる。引数や引用方法を変えず、JSON の body に説明文 `${ text; }` を足すだけで deny となり、理由は git-branch-force-delete になる
+  sources:
+  - codex:security
+  confidence: 75
+  stable_id: 12a549bc2eecfcf0
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8333
+  severity: medium
+  category: performance
+  title: 単一引用符内の文字列が JSON の重複走査を引き起こす
+  description: 元の文字列を正規表現で検索するため、単一引用符内の `${ command; }` でもシェル状態が不明になり、`--session "$SID"` を使う Notion コメントが JSON の復号と再走査に進む。コメントに含まれる入れ子のコマンド例は、元の入力と復号後の両方から走査される。約1.4 KBの無害な入力を `statements()` で比較すると、この分岐を外した場合は走査が完了し、現行コードでは `scan-budget-exceeded` で打ち切られた。
+  suggestion: 字句解析済みの `LEX_BRACE_COMMAND_SUBSTITUTION` 領域を再利用して、実際に評価される置換だけでシェル状態を不明にする。二重引用符内の置換は引き続き検出する。
+  reproduction: null
+  sources:
+  - codex:performance
+  confidence: 75
+  stable_id: 989fb72d4f6a10da
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 62c50e3dc4083efc
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8376
+  title: 展開を含む代入語だけの文（`SID="$CURRENT_SESSION"`）をシェル状態不明と判定し、正規の Notion 呼び出しの除外が外れる
+  description: _args_json_declares_nameref() は、語の復元に失敗すると前置語の読み飛ばしを止める（8377-8378 行）。続けてその語をコマンド名として読み、不明扱いにする（8396-8398 行）。右辺に変数展開やコマンド置換を含む代入語は復元できない。そのため `SID="$CURRENT_SESSION"` や `SID="$(cat session)"` を前に置くだけで、後続の `--session "$SID"` は 1 語確定でなくなる。notion ペアの除外が外れて本文の候補が再走査され、本文が `$(` を含む破壊的な例を書いていると deny になり、無人実行が止まる（TM-2）。セッション値を変数で受け渡すのは、正規の呼び出しでよくある形。round 2 の aeee7548dff7e6d1（deferred）が残っている。評価者がコードを読んで経路を確認した。
+  suggestion: 代入語は名前の部分（`NAME=` / `NAME+=` / `NAME[...]=`）だけを字面で判定し、右辺を復元できるかどうかにかかわらず読み飛ばす。右辺のコマンド置換はサブシェルで動くので親の名前参照を作れず、本体は派生チャンクとして別に検査される。TS-5 に代入を前置した allow のケースを追加する。
+  sources:
+  - codex:comprehensive
+  confidence: 95
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 4d20677d728c58aa
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8379
+  title: '`command -v` / `-V` の照会を実行として読み、`command -v source` で正規の Notion 呼び出しの除外が外れる'
+  description: _args_json_declares_nameref() は、command の -v / -V も読み飛ばし、続く語を実行されるコマンド名として扱う（8381-8386 行、docstring に安全側と明記）。`command -v source` は名前を照会するだけだが、source として読まれてシェル状態が不明になる。そのため後続の `--session "$SID"` の呼び出しが除外されず、spec#0 の実測では allow から args-json-unrestorable の ask に変わった。NFR2 は、FR3 の形以外の allow から ask への変化を認めていない。
+  suggestion: command の -v / -V は照会として扱い、その引数を名前参照の判定のコマンド名に使わない。-p など実行を伴うオプションは、現在どおり読み飛ばす。
+  sources:
+  - codex:spec
+  confidence: 85
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8397
+  severity: medium
+  category: comprehensive
+  title: 表示専用の組み込みコマンドでも Notion コメントに確認が出る
+  description: コマンド名だけでシェル状態を不明と判定するため、`trap -l` や `alias -p` のような表示専用の呼び出しや、コールバックなしの `mapfile` でも、後続の `--session "$SID"` が複数引数になり得ると扱われる。その結果、Notion の検査除外が外れ、Unicode エスケープを使った通常のコメントに `args-json-unrestorable` の確認が出る。
+  suggestion: 表示専用の形式とコールバックなしの `mapfile`／`readarray` を引数から判別し、シェル状態を不明とする条件を絞る。コールバック付きの既存ケースと対になる、確認が出ないケースを追加する。
+  reproduction: null
+  sources:
+  - codex:comprehensive
+  confidence: 75
+  stable_id: 57cca735b67baaba
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8397
+  severity: medium
+  category: security
+  title: TM-2：`trap -p` で設定を表示するだけで正規の Notion 投稿を拒否する
+  description: 今回の修正は `trap`、`alias`、`mapfile` などをコマンド名だけで判定する。設定の表示やコールバックを伴わない読み込みでも、後続の `"$SID"` が1引数と認められず、投稿本文のコマンド例が実行対象として検査される。feature-docs/args-json-quoting-bypass/THREAT-MODEL.md の TB-1 で定めた TM-2 の、正規の投稿を許可する対策がこの場合に欠けている。
+  suggestion: 引数まで確認し、`trap -p` や `alias -p` など、状態を表示するだけと確定できる形式では Notion の除外を維持する。コールバックを実行し得る形式や引数が確定しない形式は引き続き検査する。
+  reproduction: ケース表の TS-5 を Bash の PreToolUse に渡すと `allow` になる。同じ入力の先頭に `trap -p EXIT; ` を加えると、投稿本文も宛先も同じまま `deny / git-branch-force-delete` になった。`alias -p` でも同じ結果を確認した。
+  sources:
+  - codex:security
+  confidence: 75
+  stable_id: 1e5e990ae5bc0df3
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8401
+  severity: medium
+  category: spec
+  title: 通常の変数宣言で Notion ペアの除外が失われる
+  description: SPEC の FR1（43–54行）は、`"$SID"` のように一語に確定する値を除外対象に残す。宣言の読み取りは `--` の後ろの代入もオプション候補として調べ、復元不能なら名前参照があり得ると判定する。さらに 8498–8500 行目は、二重引用符内でエスケープされたリテラルの `$` も復元不能とする。このため、名前参照と無関係な変数宣言を前置しただけで `"$SID"` の除外が外れ、後続の JSON が検査されることを確認した。
+  suggestion: 宣言のオプション終端を尊重し、代入の右辺をオプション判定から外す。二重引用符内ではエスケープされた `$` をリテラルとして扱う。
+  reproduction: null
+  sources:
+  - codex:spec
+  confidence: 75
+  stable_id: fad500e3e80b2d9c
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8404
+  severity: medium
+  category: security
+  title: 名前参照オプションの照合でフックの処理時間が二次的に増える
+  description: '`declare` の引数は入力の長さにかかわらず正規表現に渡る。中央の `n` は前後の英字反復にも一致するため、末尾で照合に失敗すると同じ範囲を繰り返し走査する。この処理にはフックの走査予算が適用されず、長い入力が PreToolUse の判定を占有できる。'
+  suggestion: 先頭のハイフンを除いた部分が ASCII 英字だけで構成され、かつ `n` を含むかを線形時間で判定する。
+  reproduction: ラウンド2で記録された計測では、末尾が英字でない `declare` の候補引数を名前参照判定に渡すと、`n` が128、256、512文字のときの中央値はそれぞれ44、118、423マイクロ秒だった。現行の `_args_json_declares_nameref()` にも同じ照合式が残っている。
+  sources:
+  - codex:performance
+  - codex:security
+  confidence: 75
+  stable_id: 0e9e0e208d2862bb
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8435
+  severity: medium
+  category: security
+  title: TM-2：シェル設定を表示するだけで後続の投稿が拒否される
+  description: '`trap` と `alias` を引数に関係なく名前参照を作り得るコマンドとして扱っている。`trap -p EXIT` や `alias -p` でも、後続の Notion のコメント本文が再検査される。'
+  suggestion: 引数を静的に確定できる表示専用の呼び出しを識別し、名前参照の判定に影響させない
+  reproduction: TS-5 の先頭に `trap -p EXIT; ` または `alias -p; ` を加えると deny になる
+  sources:
+  - codex:security
+  confidence: 60
+  stable_id: a66490ea869359f8
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8436
+  severity: medium
+  category: performance
+  title: 名前参照オプションの照合に二次時間がかかる
+  description: Notion 呼び出しのために同じチャンク内の宣言を調べる際、`declare`、`local`、`typeset` の引数を `-[A-Za-z]*n[A-Za-z]*` で照合する。ハイフンの後に `n` を多数含む英字列が続き、末尾で不一致になると、正規表現が `n` の候補ごとに後半を走査し直す。8 KiB と 16 KiB の入力で、照合単体にそれぞれ約 0.27 秒と約 1.06 秒かかった。
+  suggestion: 先頭がハイフンであることを確認し、残りが ASCII 英字のみで `n` を含むかを文字列操作で判定する。
+  reproduction: null
+  sources:
+  - codex:performance
+  confidence: 60
+  stable_id: 4005eb38930be0c1
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8530
+  severity: medium
+  category: comprehensive
+  title: 代入値の波括弧やワイルドカードで名前参照の判定が誤る
+  description: '`cfg={}` の波括弧は Bash で展開されず、`declare pattern=abc*` の `*` も代入値としてそのまま残る。変更後はどちらも復元不能とされる。前者は代入を飛ばす処理に届かず、後者は不明な宣言オプションとして扱われるため、後続の通常の Notion コメントに `args-json-unrestorable` の確認が出る。'
+  suggestion: Bash の代入として確定できる語を、コマンド名や宣言オプションに展開され得る語と区別する。`cfg={}` と `declare pattern=abc*` の直後でも Notion の検査除外が適用されることをテストする。
+  reproduction: null
+  sources:
+  - codex:architecture
+  - codex:comprehensive
+  confidence: 75
+  stable_id: c1d406e33e77b2ac
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8654
+  severity: medium
+  category: security
+  title: TM-2：変数の既定値にメールアドレスがあると正規の投稿を拒否する
+  description: '`holds_array_form()` は `${...}` の内部にある `@` をすべて配列展開と判定する。引用されたスカラー変数の既定値に含まれるメールアドレスでも Notion の除外が外れる。TB-1 で定めた TM-2 の、1引数に確定する引用付き展開を許可する対策がこの場合に欠けている。'
+  suggestion: パラメーター展開の構造を使い、引数の個数を変え得る `@` と、既定値の文字列に含まれる `@` を区別する。
+  reproduction: TS-5 の先頭に `SID=session; ` を加えて PreToolUse に渡すと `allow` になった。`--session` の値だけを `"${SID:-user@example.org}"` に変えると、Bash が渡す値は同じ `session` のまま、フックは `deny / git-branch-force-delete` を返した。
+  sources:
+  - codex:security
+  confidence: 60
+  stable_id: 89488758b2246193
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8662
+  severity: medium
+  category: security
+  title: TM-2：セッションの既定値にある @ を配列展開と誤認する
+  description: holds_array_form は変数展開の内部にあるすべての `@` を複数語の兆候として扱う。メールアドレスを既定値にした二重引用符付きのスカラー値もこれに該当し、コマンド例を含む正当な Notion 投稿が拒否される。TB-1 で TM-2 が求める、1語に確定する引用付き値の扱いを満たさない
+  suggestion: 配列添字や特殊パラメーターとして使われる `@` と、既定値の文字列に含まれる `@` を構文上の位置で区別する
+  reproduction: TS-5 の本文を保ち、--session の値を `"${SID:-example}"` にすると judge は allow を返す。既定値だけを `team@example.com` に変えると、Bash が渡す引数の数は同じでも、判定は git-branch-force-delete による deny になる
+  sources:
+  - codex:security
+  confidence: 60
+  stable_id: 35175e5237a7b4a9
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: f52cbbbdb3ddbbcb
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8677
+  title: 二重引用の中の `@` の判定がコマンド置換の内部や既定値の文字まで配列展開とみなし、正規の Notion 呼び出しの除外が外れる
+  description: holds_array_form() は、二重引用の本体をコマンド置換の境界を区別せずに走査する。そのため `"$(printf json '$@')"` の置換の中にある単一引用の `$@` でも True を返す。`${SID:-user@example.org}` の既定値の文字 `@` も同じ扱いになる（security#0 が報告）。さらに名前参照の宣言がどこかにあると、8681 行が `"$(printf %s demo)"` のように二重引用で囲んだコマンド置換まで 1 語確定でなくす（security#0）。いずれも Bash では 1 引数だが、除外が外れて本文が再走査され、無人実行が拒否されうる（TM-2）。round 2 の d528e2c12cbf8191 / 0b06a7a2b5dc05f3 / 1aac621e2c1bbbe0 / 0690d8db82fc3ee1（deferred）の残り。
+  suggestion: 二重引用の本体を読むときは、字句解析が特定したコマンド置換の内部を読み飛ばす。二重引用で囲んだコマンド置換の出力は、名前参照の有無にかかわらず 1 語とする。`${...}` の中は、名前が `@` のもの、添字 `[@]`、`!` の間接展開だけを語数の定まらない形とし、既定値や置換の文字列の部分の `@` は数えない。対になる allow / deny のケースを追加する。
+  sources:
+  - codex:comprehensive
+  confidence: 75
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8686
+  severity: medium
+  category: security
+  title: TM-2：セッション名の既定値に含まれる `@` を配列展開と誤認する
+  description: 二重引用符内の `${...}` に `@` が現れると、その位置に関係なく複数引数になり得ると判定する。メールアドレスを既定値にしたスカラー変数も該当し、正当な Notion 投稿が拒否される。
+  suggestion: 複数引数を生成する展開構文と、既定値に含まれる通常の文字 `@` を区別する
+  reproduction: '`"${SID:-review}"` は allow、`"${SID:-review@example.org}"` は deny'
+  sources:
+  - codex:security
+  confidence: 60
+  stable_id: 109b9f638427f285
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8701
+  severity: medium
+  category: spec
+  title: シェル状態が不明になると、引数が1語に確定するコマンド置換まで除外から外す
+  description: SPEC FR1 は `"$(cat comment.json)"` のようなクォートされた展開を除外の対象に残すと定め、NFR2 は「allow が ask になるのは FR3 の形だけ」と定めている。今回の変更で現在シェル置換がシェル状態を不明にすると、この分岐はドル記号を含む値を一律に1語未確定とする。先行する現在シェル置換の後でも、`--session "$(printf %s sid)"` は常に1引数になる。復号不能な ANSI-C クォートの `--args-json` 値を組み合わせた場合、修正前の `allow` が現行版では `args-json-unrestorable` の `ask` に変わる。入力には FR3 の行継続がない。
+  suggestion: シェル状態が不明な場合に除外を外す条件を、名前参照によって引数の個数が変わり得るパラメータ展開に限定する。ダブルクォート内のコマンド置換は FR1 の1語判定を維持する。
+  reproduction: null
+  sources:
+  - codex:spec
+  confidence: 60
+  stable_id: 655aa593f27e8066
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 97d720c4f87b4844
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 9448
+  title: 保留したヒアドキュメントの本文が、再投入したチャンクを親として記録される
+  description: statements() は、pending に増えた項目を、直前に処理したチャンク（enclosing）に一律で対応付ける（9450 行）。保留された本文（deferred_data_bodies / deferred_python_bodies）は、上書き構文やマスク停止を別のチャンクで検出した時点でキューに戻る。そのため、本文を含んでいたチャンクではなく、再投入したチャンクが親になる。_args_json_nameref_declared() の連鎖はこの親をたどるので、元の親の名前参照の宣言が抜けたり、無関係なチャンクの宣言が混入したりする。architecture#0 は、無関係なコマンド置換の `declare -n` で本文の復号対象が 0 件から 1 件に変わることを示した。comprehensive#0 も同じ箇所を報告した。評価者がコードを読んで確認した。
+  suggestion: 保留するときに元の親チャンクを項目と一緒に保存し、再投入するときにその親を引き継ぐ。保留と再開が別のチャンクになるケースで、親の参照先を確かめるテストを追加する。
+  sources:
+  - codex:architecture
+  confidence: 75
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- file: em-workflow/hooks/destructive-guard.py
+  line: 9462
+  severity: medium
+  category: architecture
+  title: 保留したヒアドキュメントが別のチャンクのシェル状態を引き継ぐ
+  description: '`statements()` は保留した本文を再投入するとき、その時点で処理中のチャンクを親として割り当てる。最上位のヒアドキュメントが別のコマンド置換内の `alias` によって再投入されると、その置換が本文の親になる。今回の修正で `alias` がシェル状態を不明にするようになったため、本文中の `--session "$SID"` を含む Notion 呼び出しが、直前の版では復号の検査対象外だったのに対し、現行版では検査対象になったことを確認した。'
+  suggestion: 本文を最初に保留する時点で親チャンクを記録する。親をキュー項目に含め、再投入時にも元の親を保持する。
+  reproduction: null
+  sources:
+  - codex:architecture
+  confidence: 60
+  stable_id: 074d9283dd06edf6
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 1be9f2da4b6952e1
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 9530
+  title: statements() に名前参照の判定のための親チャンクの追跡が加わり、SPEC NFR6 と Implementation Approach に反する
+  description: SPEC NFR6 は、statements() が _queue_args_json_chunks() の 1 回の呼び出しを保ち、ほかの --args-json の処理を持たないことを求めている。Implementation Approach も statements() を変更しないと明記している。差分は statements() に、owners による親の追跡（9450-9452 行）と、派生チャンクへの _is_derived / _outer_marked の設定（9530-9537 行）を加えている。用途は notion ペアの名前参照の判定だけ。TestStructure は識別子に args_json を含むかどうかで調べるので、これを検出しない（task0005 の AC-6 の記録）。セキュリティ修正に必要な変更なので、SPEC を改めるか、追跡を一般的なチャンクの出所の記録として位置付け直すかの判断が要る。
+  suggestion: 派生元の追跡をチャンクの一般的な属性として SPEC に明記して NFR6 を改めるか、追跡を --args-json 側に移す。TestStructure がこの種の追加を検出できるようにするかも、あわせて決める。
+  sources:
+  - codex:spec
+  confidence: 75
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- file: em-workflow/hooks/destructive-guard.py
+  line: 9542
+  severity: medium
+  category: spec
+  title: '`statements()` に除外判定専用の状態追跡が追加されている'
+  description: SPEC の NFR6 と Architecture（140–142、164–165行）は、`statements()` を変更せず、`_queue_args_json_chunks()` の呼び出し以外の `--args-json` 処理を持たせないと定める。差分は処理待ち項目ごとに親を追跡し、その情報を Notion ペアの除外判定が参照する `_outer_marked` と `_is_derived` に設定する。これにより、除外判定の結果が `statements()` 内の新しい状態追跡に依存する。
+  suggestion: '`statements()` を変更せず、除外判定の追加処理を既存の呼び出し先の中に収める。'
+  reproduction: null
+  sources:
+  - codex:spec
+  confidence: 60
+  stable_id: 13b36aeed27789fa
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- file: em-workflow/hooks/destructive-guard.py
+  line: 9605
+  severity: medium
+  category: security
+  title: TM-2：ヒアドキュメントでエスケープした `$` が後続の投稿を拒否させる
+  description: 区切り語を引用しないヒアドキュメントでは、`\$` は文字どおりの `$` になる。本文を検索する正規表現はこのエスケープを無視し、名前参照があり得るという判定を親コマンド全体に保存する。後続の Notion 投稿が拒否される。
+  suggestion: ヒアドキュメント本文用の字句解析で、エスケープと行継続を解釈したうえで、実際のコマンド置換を検出する
+  reproduction: 'TS-5 の先頭に `: <<EOF`、`\${ sample; }`、`EOF` の3行を加えると deny、開始行を `: <<''EOF''` に変えると allow'
+  sources:
+  - codex:security
+  confidence: 60
+  stable_id: 46c31e8aa3b0b320
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- file: em-workflow/hooks/destructive-guard.py
+  line: 9609
+  severity: medium
+  category: spec
+  title: statements() が引数検査専用の判定を行う
+  description: SPEC NFR6（140–142行）は、`statements()` が `_queue_args_json_chunks()` の呼び出し以外に `--args-json` の処理を持たないと定めている。追加された処理はヒアドキュメント本文を直接検査し、`_nameref_declared_cache` を更新している。
+  suggestion: ヒアドキュメントの解析結果をチャンク情報として渡し、名前参照の判定とキャッシュ更新を `--args-json` 側のヘルパーに集約する。
+  reproduction: null
+  sources:
+  - codex:spec
+  confidence: 60
+  stable_id: fe4599ac14d9b2bf
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- file: em-workflow/hooks/destructive-guard.py
+  line: 9612
+  severity: medium
+  category: architecture
+  title: ヒアドキュメントの独自判定が名前参照のキャッシュを上書きする
+  description: '`statements()` は既存のヒアドキュメント本文用の字句解析を使わず、正規表現の一致を名前参照キャッシュへ直接書き込む。字句解析器がエスケープ済みの `$` をリテラルと判定する本文でも、後続の Notion 呼び出しの除外が解除され、許可されていた投稿が拒否される。'
+  suggestion: 本文の走査と名前参照の判定で同じ字句解析結果を共有する。名前参照キャッシュの更新は `_args_json_nameref_declared()` に集約する。
+  reproduction: null
+  sources:
+  - codex:architecture
+  confidence: 60
+  stable_id: 6fa2fca481faaf84
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- file: em-workflow/hooks/destructive-guard.py
+  line: 9612
+  severity: medium
+  category: spec
+  title: ヒアドキュメント内のエスケープ済みのドル記号で ask が発生する
+  description: SPEC FR1 と NFR2 に違反する。区切り語が引用されていないヒアドキュメントでも、バックスラッシュでエスケープした `$` は文字として扱われる。本文の正規表現はこの形も置換として拾い、後続の notion ペアの除外を外す。
+  suggestion: 既存のヒアドキュメント用字句解析を使い、有効な置換だけを名前参照の判定に渡す。
+  reproduction: null
+  sources:
+  - codex:spec
+  confidence: 60
+  stable_id: a59da24694f025e7
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: da3a2b40d34177fb
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/tests/destructive-guard-cases.json
+  line: 1410
+  title: TS-5 のランナーのケースが SPEC の入力（本文に `$(` を直接書く形）と異なり、AC-2 を確認していない
+  description: SPEC TS-5 / AC-2 は、本文に `$(git branch -D example)` を直接書いた入力の allow を求める。しかし追加したケースは `$` を JSON の `\u0024` に置き換えている。両 reviewer の実測では、SPEC どおりの入力は修正前も修正後も deny になる。AC-2 を文面どおり満たすと既存の deny が allow になり、NFR2 と矛盾する。round 1・2 の b844314161dba042 / 1073061a5dd699e9 として deferred のまま 3 周回残っている。comprehensive#0 も同じ箇所を報告した。auto-fix では決められず、SPEC の判断が要る。
+  suggestion: 人の判断を求める。SPEC の TS-5 を現行の `\u0024` の入力に改め、直接書いた形の現行の判定（deny）も TS-5 に記録するか、直接書いた形を allow にして NFR2 の例外として明記するかを決める。決めた入力と期待判定をランナーに登録する。
+  sources:
+  - codex:spec
+  confidence: 85
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- file: em-workflow/hooks/tests/destructive-guard-cases.json
+  line: 1410
+  severity: medium
+  category: spec
+  title: TS-5 が仕様で指定された生文字列を検証していない
+  description: SPEC の AC-2・FR8・TS-5（22–23、101–106、249–252行）は、生の `$(` を含む本文が `allow` になることを求める。追加ケースではドル記号を JSON の Unicode エスケープに置き換えている。テスト記録の `task0001.tests.yaml` 25–28 行目も、仕様どおりの入力が生文字列走査で `deny` になると記録している。現行コードでも、無害な置換本文に差し替えた同じ形では、生の `$(` が再走査に積まれ、JSON エスケープを使った形では積まれないことを確認した。
+  suggestion: 仕様どおりの入力をランナーで検証し、AC-2 の期待値と FR1 が維持を求める生文字列走査の条件を整合させる。
+  reproduction: null
+  sources:
+  - codex:spec
+  confidence: 60
+  stable_id: 1073061a5dd699e9
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- file: tests/test_destructive_guard_args_json.py
+  line: 551
+  severity: medium
+  category: spec
+  title: TS-17 の `--args-json` に仕様と異なる期待値が設定されている
+  description: SPEC の AC-9・FR9・TS-17（34、107–110、296–298行）は、値が複数語になり得る Notion ペアで `KIND_INSPECTED` を要求する。追加テストは `--args-json` 自体がその形の場合に `KIND_NOTHING` を期待するため、テストが通っても TS-17 の期待値を満たしたことを確認できない。
+  suggestion: TS-17 の期待値と、O2 (1) が定める非静的な値の読み飛ばしを仕様上で整合させ、合意した期待値を単体テストで固定する。
+  reproduction: null
+  sources:
+  - codex:spec
+  confidence: 60
+  stable_id: efd68548e7a0f1ac
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 9c0cf8e9d91788ea
+  severity: medium
+  category: spec
+  file: tests/test_destructive_guard_args_json.py
+  line: 1148
+  title: TS-13 のテストが行継続を挟んだコマンド置換・引用外のパラメータ展開を Not static として固定し、SPEC FR3 と食い違う
+  description: SPEC FR3 は、`$`・行継続・展開を開始する文字（ダブルクォートの中では `{` `(` `[` を含む）の並びを Unrestorable とする。Not static を保つのは、語が別の非静的要素も含むときだけ。test_a_dollar_continuation_paren_is_a_substitution_and_not_static は、`"$<行継続>(DEST)"`、`$<行継続>(DEST)`、`$<行継続>{DEST}` を WORD_NOT_STATIC として固定している。一方、同じ形の `"$<行継続>{DEST}"` は 1138 行で WORD_UNRESTORABLE を期待しており、引用の内と外で判定が揃っていない。フックはこれらの値に args-json-unrestorable の ask を出さず、allow を返す。
+  suggestion: FR3 のとおり、行継続の形だけが非静的要素である語は Unrestorable を期待するよう、テストと実装を直す（コマンド置換の本体の再走査は保つ）。Not static を認めるなら、SPEC FR3 と TS-13 に例外として明記する。
+  sources:
+  - codex:spec
+  confidence: 80
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+evaluation:
+  round_summary: 'round 3（cross_validation: true）。6 本の実行のうち security#0（codex）は、各指摘に余分なキー source があるスキーマ不正で失敗した。security#fallback（claude）が代わりに完了した。重大度が高い指摘は 2 件で、どちらも TM-1 の名前参照の判定の見落としによる notion ペアの除外の回避（ブレース展開・グロブで綴った declare -n、trap / alias / mapfile -C / readarray -C の中の宣言）。どちらもコードの読解で reproduced。security#0 の高の 4 件: 8883 の O2 (8) は SPEC A6 で受け入れ済み（round 2 declined）、8893 の変数経由の --args-json は O2 (1) で false positive、8399 は重複、7993 は reproduced だが O2 (1) と同じ結果で medium に下げた。medium は round 2 の deferred の残りを中心に 10 件。落とした medium は 2 件（7229 は round 2 declined、performance 8657 は軽微）。TS-5 の入力の食い違いは 3 周回目で SPEC の判断が要る。観点ごとの確認状況: comprehensive / security / architecture / spec / performance すべて corroborated。task0001〜0004.tests.yaml は読んでいない。'
+  recommended_action: auto_fix
+  action_rationale: high の 2 件は修正箇所が _args_json_declaration_word() と _args_json_declares_nameref() の局所に収まり、具体的な修正案とランナーのケースの形があるので auto_fix を推奨する。修正は綴りの列挙でなく規則でまとめるのが望ましい（Bash が語を書き換えうる形は復元不能、現在のシェルで文字列をコードとして評価する組み込みは不明扱い）。medium は deferred の継続で auto-fix の対象外。TS-5、NFR6、NFR2 の例外（bash -c、command -v）は SPEC の判断が要る。
+dismissed_sites:
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8883
+  run_id: security#0
+  reason: already resolved per round_context
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8893
+  run_id: security#0
+  reason: false positive
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8399
+  run_id: security#0
+  reason: duplicate of another finding
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 3
+  applied_total: 6
+  termination: loop-cap
+residual_critical_high: 3
+rework_required: false
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

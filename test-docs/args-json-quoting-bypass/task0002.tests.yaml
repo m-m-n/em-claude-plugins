@@ -1,0 +1,64 @@
+task_id: task0002
+baseline_failures: []          # full project test command run before any edit: runner all ok, 16603 unittest tests OK (skipped=1)
+final_failures: []             # full project test command re-run after the implementation and this record: no failure
+acceptance_tests:
+  AC-1:
+    # The runner has no per-case selector; the check is the runner itself
+    # (python3 em-workflow/hooks/tests/run-destructive-guard.py), cases TS-6 and
+    # TS-7 of em-workflow/hooks/tests/destructive-guard-cases.json.
+    tests: []
+    red_confirmed: true
+    red_reason: >-
+      With TS-6 and TS-7 added and the hook unchanged, the runner printed
+      "FAIL deny args-json-quoting-bypass TS-6 ... got=allow" and the same for
+      TS-7, ending "1412/1414 passed". After the change it ends
+      "1414/1414 passed".
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_an_unquoted_backslash_escaped_equals_ends_the_name_part
+    red_confirmed: true
+    red_reason: >-
+      Before the change the [server] and [session] subtests failed with
+      "AssertionError: Lists differ: ['inspected'] != ['nothing']". The
+      subtest "escaped equals inside double quotes" (KIND_NOTHING) already
+      passed before the change: it pins the unchanged double-quote behaviour
+      and is not itself a red.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_the_equals_form_is_inspected
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_a_destination_that_is_not_static_is_inspected
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_the_value_beside_an_equals_form_destination_that_is_not_static_is_read
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_a_quoted_double_quoted_or_backslashed_flag_name_is_inspected
+    red_confirmed: false
+    red_reason: >-
+      The behaviour is a no-change guarantee: these existing tests passed on
+      the unchanged hook (baseline) and still pass unchanged after it; no red
+      state occurred for this change.
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_the_name_reading_docstring_states_the_escaped_equals
+    red_confirmed: true
+    red_reason: >-
+      With the old docstring text of _flag_equals_prefix_name() in place the
+      test failed four subtests, for example "AssertionError: 'an unquoted `=`
+      or an unquoted backslash-escaped `=`' not found in 'For a flag-position
+      word that is not static as a whole ...'".
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_a_destination_that_is_not_static_is_inspected
+    red_confirmed: false
+    red_reason: >-
+      The behaviour pre-existed: the subtest 'equals form with a destination'
+      passed on the unchanged hook and passes now; its line is unchanged, so
+      the existing test detects the behaviour and no red state occurred for
+      this change.
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_args_json
+    red_confirmed: true
+    red_reason: >-
+      Before the code change the runner ended "1412/1414 passed" (TS-6, TS-7
+      FAIL) and TestFlagReading of this module failed on the TS-18 subtests;
+      after the change the runner ends "1414/1414 passed", this module and
+      `python3 -m unittest discover -s tests` pass, and the case file's diff
+      adds lines only (git diff shows 2 insertions, 0 deletions).

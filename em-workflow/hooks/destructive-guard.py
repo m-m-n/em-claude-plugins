@@ -3719,6 +3719,7 @@ class _MarkedText:
         "source", "text", "posmap", "view", "mask_char", "mask_ranges",
         "subscript_ranges", "tail_start", "pairs", "_mask_starts",
         "_quote_starts", "_quote_ends", "top_regions", "top_starts",
+        "_outer_marked", "_is_derived", "_nameref_declared_cache",
     )
 
     def __init__(self, source, text, posmap):
@@ -3794,6 +3795,16 @@ class _MarkedText:
         self._mask_starts = [lo for lo, _hi in mask_ranges]
         self._quote_starts = [lo for lo, _hi in quote_ranges]
         self._quote_ends = [hi for _lo, hi in quote_ranges]
+        # The marked text of the chunk this one was derived from, which the
+        # nameref answer walks up to the command's own chunk; _is_derived says
+        # the chunk is not the top one, so a missing link reads as "nameref
+        # possibly declared". Both, and the answer cached for a chunk whose
+        # unquoted heredoc body holds a current-shell substitution, are set by
+        # _ChunkLinks.register(), which _queue_args_json_chunks() calls for
+        # the chunk before it asks for any decision -- not by statements().
+        self._outer_marked = None
+        self._is_derived = False
+        self._nameref_declared_cache = None
 
     @classmethod
     def plain(cls, text):
@@ -4315,6 +4326,12 @@ def extract_shell_payload_anchored(toks, lexed, quoted_toks=None):
          substitution, a variable expansion or the like (a substitution Bash
          itself runs is still re-scanned);
       2. a word in flag position that is not static in the same sense;
+      8. a value word of the mcp, tool, format or session flag, or the value
+         part after the `=` of a flag word, that Bash expansion turns into a
+         word count other than one, shifting where mcp-bridge reads flags and
+         values so that a later args-json value is hidden (the flag reading
+         reads words as written, and the form keeps its current verdict
+         without the decoded-value inspection and is not sent to ask);
       3. an unknown flag;
       4. a value-taking flag with no value word;
       5. no `--args-json`;
@@ -4504,6 +4521,34 @@ class HeredocRecord:
         self.quoted = quoted
 
 
+class _StrippedWithShellSubstitution(str):
+    """A chunk with its heredoc bodies removed (_strip_heredocs_mapped()), one
+    of which has an unquoted delimiter and holds a Bash 5.3 current-shell
+    substitution (args-json-quoting-bypass TM-1): the shell expands such a
+    body, so `${ cmd; }` / `${| cmd; }` in it runs in the current shell and
+    its state change (a nameref included) outlasts the heredoc. The text is
+    equal to, and hashed like, the plain stripped text; the type alone carries
+    the fact, to the _MarkedText built from it (MARKED.source), where
+    _ChunkLinks.register() reads it. Nothing is kept outside the value, so the
+    answer for a chunk never depends on what was judged before it."""
+
+    __slots__ = ()
+
+
+def _bodies_hold_current_shell_substitution(records):
+    """Whether one of the HeredocRecord RECORDS has an unquoted delimiter and a
+    body that holds a current-shell substitution opener: `${` followed by
+    whitespace or `|`, line continuations removed. The body of a quoted
+    delimiter is not expanded and is left out."""
+    for record in records:
+        if record.quoted:
+            continue
+        body = record.body.replace("\\\r\n", "").replace("\\\n", "")
+        if re.search(r"\$\{[\s|]", body):
+            return True
+    return False
+
+
 def _strip_heredocs_mapped(chunk, lexmap=None):
     """(CHUNK with every real heredoc body removed, the ordered list of
     HeredocRecord, the original-to-stripped _PositionMap). Which `<<` is a
@@ -4514,7 +4559,12 @@ def _strip_heredocs_mapped(chunk, lexmap=None):
     Each removed body -- the body lines and the delimiter line, through its
     line end -- is one `replace` segment of the map (its stripped range
     empty, its REF the body's HeredocRecord); the text between bodies is
-    copied verbatim. Construction is linear in the chunk."""
+    copied verbatim. Construction is linear in the chunk.
+
+    The stripped text is a plain str, except when a removed body with an
+    unquoted delimiter holds a current-shell substitution: it is then a
+    _StrippedWithShellSubstitution, so that the fact outlives the removal of
+    the body (_bodies_hold_current_shell_substitution())."""
     if lexmap is None:
         lexmap = lex_shell(chunk, "shell")
     ops = [op for op in lexmap.heredocs if op.body_start is not None]
@@ -4560,7 +4610,10 @@ def _strip_heredocs_mapped(chunk, lexmap=None):
             ("copy", cursor, len(chunk), new_cursor, new_cursor + length, None)
         )
         new_cursor += length
-    return "".join(out), records, _PositionMap(segments, len(chunk), new_cursor)
+    stripped = "".join(out)
+    if _bodies_hold_current_shell_substitution(records):
+        stripped = _StrippedWithShellSubstitution(stripped)
+    return stripped, records, _PositionMap(segments, len(chunk), new_cursor)
 
 
 def strip_heredocs(chunk):
@@ -6982,23 +7035,84 @@ def _decode_ansi_c(body):
     return "".join(out)
 
 
+# What reading a `$` found (_read_dollar()).
+_DOLLAR_LITERAL = "literal"  # a literal `$`
+_DOLLAR_EXPANSION = "expansion"  # an expansion, with no line continuation after the `$`
+_DOLLAR_CONTINUED = "continued"  # an expansion started across a line continuation (FR3)
+
+# The outcomes of _read_double_quoted().
+_DQ_RESTORED = "restored"  # the restored text
+_DQ_EXPANSION = "expansion"  # the body holds an expansion
+_DQ_CONTINUED = "continued"  # the body holds the FR3 form and no expansion
+
+
+def _starts_expansion(ch, quoted):
+    """Whether the character CH, directly after a `$` (and the line
+    continuations after it, if any), starts an expansion: an ASCII letter, an
+    ASCII digit, `_`, a special-parameter character (`@*#?-$!`), `{`, `(` or
+    `[`, and, outside double quotes (QUOTED false), `'` or `"` (the opener of
+    an ANSI-C or locale quote). A non-ASCII character starts none (FR4)."""
+    if not ch.isascii():
+        return False
+    if ch.isalnum() or ch in "_@*#?-$!{([":
+        return True
+    return not quoted and ch in "'\""
+
+
+def _read_dollar(text, pos, limit, quoted):
+    """Reads the `$` at TEXT[POS] of a text that ends at LIMIT: (KIND, AFTER).
+    AFTER is the offset of the first character after the `$` and the line
+    continuations (a backslash and a newline each, any number) directly after
+    it; the reading goes on there, and the continuations vanish. KIND is
+    _DOLLAR_LITERAL when no character follows or the character at AFTER starts
+    no expansion (_starts_expansion(); QUOTED tells whether the `$` is inside
+    double quotes), _DOLLAR_EXPANSION when it starts one and no continuation
+    was skipped, and _DOLLAR_CONTINUED when it starts one and at least one was
+    skipped (the FR3 form)."""
+    after = pos + 1
+    skipped = False
+    while after + 1 < limit and text[after] == "\\" and text[after + 1] == "\n":
+        after += 2
+        skipped = True
+    if after >= limit or not _starts_expansion(text[after], quoted):
+        return _DOLLAR_LITERAL, after
+    return (_DOLLAR_CONTINUED if skipped else _DOLLAR_EXPANSION), after
+
+
 def _read_double_quoted(body):
-    """BODY -- the content of a double-quoted region -- with a backslash
-    before `$`, a backtick, `"`, `\\` or a newline resolved (a backslash and a
-    newline vanish), or None when it holds an unescaped backtick or an
-    unescaped `$` that starts an expansion. A `$` starts one only when the
-    next character is a name character, a digit, a special-parameter character
-    (`@*#?-$!`), `{`, `(` or `[`; any other `$` (before a space, the closing
-    quote, a backslash or another symbol, or at the end) is passed on as a
-    literal `$`, as Bash does. A character not known to be literal counts as
-    an expansion (safe side)."""
+    """BODY -- the content of a double-quoted region -- read once, left to
+    right, as (OUTCOME, TEXT):
+
+    - (_DQ_RESTORED, TEXT): the body with a backslash before `$`, a backtick,
+      `"`, `\\` or a newline resolved (a backslash and a newline vanish).
+    - (_DQ_EXPANSION, None): it holds an unescaped backtick or an unescaped
+      `$` that starts an expansion with no line continuation between them. A
+      `$` starts one only when the next character is an ASCII letter, an ASCII
+      digit, `_`, a special-parameter character (`@*#?-$!`), `{`, `(` or `[`;
+      any other `$` (before a space, the closing quote, a backslash or another
+      symbol, or at the end) is passed on as a literal `$`, as Bash does. A
+      `$` before a non-ASCII character is a literal `$` (FR4). A character not
+      known to be literal counts as an expansion (safe side).
+    - (_DQ_CONTINUED, None): it holds the FR3 form and no other expansion:
+      a `$`, one or more line continuations (a backslash and a newline), and a
+      character that starts an expansion. Bash removes the continuations first
+      and reads an expansion, which this reading does not restore. A `$` whose
+      next character after the continuations starts no expansion (or that ends
+      the body) is a literal `$`, and the continuations vanish.
+
+    The whole body is read first. When an ordinary expansion or backtick is
+    also in the body, the outcome is _DQ_EXPANSION (SPEC FR3: a word that
+    holds another FR6 (1) element stays not static)."""
     out = []
+    continued = False
+    expansion = False
     i, size = 0, len(body)
     while i < size:
         ch = body[i]
         if ch == "\\":
             if i + 1 >= size:
-                return None
+                expansion = True
+                break
             nxt = body[i + 1]
             if nxt == "\n":
                 i += 2
@@ -7008,16 +7122,26 @@ def _read_double_quoted(body):
                 i += 2
                 continue
         elif ch == "`":
-            return None
+            expansion = True
         elif ch == "$":
-            nxt = body[i + 1] if i + 1 < size else ""
-            if nxt and (
-                nxt.isalnum() or nxt in "_@*#?-$!{([" or ord(nxt) > 127
-            ):
-                return None
+            kind, after = _read_dollar(body, i, size, True)
+            if kind == _DOLLAR_EXPANSION:
+                expansion = True
+            elif kind == _DOLLAR_CONTINUED:
+                continued = True
+            out.append(ch)
+            i = after
+            if kind != _DOLLAR_LITERAL and body[after] in "@*#?-$!0123456789":
+                out.append(body[after])
+                i = after + 1
+            continue
         out.append(ch)
         i += 1
-    return "".join(out)
+    if expansion:
+        return _DQ_EXPANSION, None
+    if continued:
+        return _DQ_CONTINUED, None
+    return _DQ_RESTORED, "".join(out)
 
 
 def _word_source_bounds(marked, start, end):
@@ -7045,14 +7169,19 @@ def _read_word_as_written(marked, tok):
     region is its content with `\\$`, `` \\` ``, `\\"`, `\\\\` and backslash-
     newline resolved; an ANSI-C quote is decoded (_decode_ansi_c()); a
     backslash outside quotes keeps the next character, and with a newline
-    after it vanishes. Undeterminable: a locale quote, any other region kind
-    (a substitution, a parameter or arithmetic expansion, an array subscript),
-    an unquoted `$` or backtick, an unquoted `*` or `?`, an unquoted `[` with
-    a later unquoted `]`, an unquoted `{` with a later unquoted `}`, an
-    unquoted `~` as the first character, an unquoted `?`, `*`, `+`, `@` or `!`
-    that ends the word directly before a `(` (an extended-glob pattern, which
-    the tokenizer splits at the parenthesis), a word that holds marker residue
-    of a substitution, and a region the word does not hold whole.
+    after it vanishes. Undeterminable: a locale quote, a double-quoted region
+    that holds an expansion or the form of a `$`, one or more line
+    continuations (a backslash and a newline), and a character that starts an
+    expansion (Bash removes the continuations and reads the expansion; a `$`
+    before a non-ASCII character is a literal `$`, so it is not one), any
+    other region kind (a substitution, a parameter or arithmetic expansion, an
+    array subscript), an unquoted `$` or backtick, an unquoted `*` or `?`, an
+    unquoted `[` with a later unquoted `]`, an unquoted `{` with a later
+    unquoted `}`, an unquoted `~` as the first character, an unquoted `?`,
+    `*`, `+`, `@` or `!` that ends the word directly before a `(` (an
+    extended-glob pattern, which the tokenizer splits at the parenthesis), a
+    word that holds marker residue of a substitution, and a region the word
+    does not hold whole.
 
     A word without a span (a token no tokenizer read) or without MARKED (the
     parse-failure fallback's plain split) has no as-written reading: it is
@@ -7116,7 +7245,9 @@ def _read_word_as_written(marked, tok):
                 return None
             body = source[pos + skip:region.end - 1]
             if region.kind == "double-quote":
-                body = _read_double_quoted(body)
+                outcome, body = _read_double_quoted(body)
+                if outcome != _DQ_RESTORED:
+                    return None  # an expansion, or the FR3 form: undeterminable
             elif region.kind == "ansi-c-quote":
                 body = _decode_ansi_c(body)
             if body is None:
@@ -7655,9 +7786,13 @@ def _single_quote_skip_spans(chunk, lexmap, real_spans, lexed):
 MAX_ARGS_JSON_DEPTH = 100
 
 # The flags of `mcp-bridge run` the canonical flag reading knows
-# (mcp-bridge-exec-tool-rescan D1): each takes the next word as its value,
-# whatever it holds. `--dry-run` takes none. Only the notion-pair reading
-# (FR2) uses this canonical form.
+# (mcp-bridge-exec-tool-rescan D1): each takes the next word as its value. The
+# reading takes that word whatever it holds, but it determines the notion pair
+# only when the `--format`, `--session` and `--args-json` value words are
+# single-word-certain (args-json-quoting-bypass FR1: Bash always passes them
+# as exactly one argument, so none of them can shift where the flags and
+# values sit). `--dry-run` takes none. Only the notion-pair reading (FR2) uses
+# this canonical form.
 _MCP_RUN_VALUE_FLAGS = frozenset(
     {"--mcp", "--tool", "--args-json", "--format", "--session"}
 )
@@ -7773,16 +7908,18 @@ def _walk_args_json(top):
     return visited, searched, bodies, commands
 
 
-def _args_json_word_index(toks, word):
-    """The index in TOKS (a statement's tokens as written) of the token with
-    WORD's span: the token step of the origin position of what the `--args-json`
-    value word queues. _token_index() when WORD has no span."""
-    span = getattr(word, "span", None)
-    if span is not None:
-        for i, tok in enumerate(toks):
-            if getattr(tok, "span", None) == span:
-                return i
-    return _token_index(toks, word)
+def _args_json_span_index(toks):
+    """{span: index} over TOKS (a statement's tokens as written), the index of
+    the first token that has each span: the token step of the origin position
+    of what an `--args-json` value word queues is the index of the token with
+    the word's span. One walk of TOKS, whatever the number of values looked
+    up. A token without a span has no entry."""
+    index = {}
+    for i, tok in enumerate(toks):
+        span = getattr(tok, "span", None)
+        if span is not None:
+            index.setdefault(span, i)
+    return index
 
 
 # The three outcomes of _read_static_word() (D5).
@@ -7806,26 +7943,37 @@ def _read_static_word(marked, tok):
       character (and with a newline after it vanishes). The marker residue the
       marking left for a single-quote candidate -- a `$(` or backtick inside a
       single-quote or ANSI-C-quote region of the word -- does not count
-      against the word: its characters are the literal text Bash passes on.
+      against the word: its characters are the literal text Bash passes on. A
+      `$` before a non-ASCII character is a literal `$` (FR4), and so is a `$`
+      whose next character after its line continuations starts no expansion
+      (the continuations vanish).
     - (WORD_NOT_STATIC, None): the word holds an element of FR6 (1): a region
       of a kind other than a single-quote, double-quote, ANSI-C or locale quote
       (a substitution, a parameter or arithmetic expansion, an array
-      subscript); an unescaped `$` or backtick inside a double-quote or
-      locale-quote region; an unquoted `$` or backtick; an unquoted glob,
-      brace, tilde or extended-glob form that _read_word_as_written()
-      rejects; residue of a real substitution; a word that is a substitution as
-      a whole. A word with no as-written reading (no span, no marked text) is
-      not static unless _read_plain_word() accepts it.
+      subscript); an unescaped `$` that starts an expansion, or a backtick,
+      inside a double-quote or locale-quote region; an unquoted `$` that starts
+      an expansion, or a backtick; an unquoted glob, brace, tilde or
+      extended-glob form that _read_word_as_written() rejects; residue of a
+      real substitution; a word that is a substitution as a whole. A word with
+      no as-written reading (no span, no marked text) is not static unless
+      _read_plain_word() accepts it.
     - (WORD_UNRESTORABLE, None): the word holds none of those, and its quoting
       still cannot be restored (FR11): an ANSI-C quote that
       _decode_ansi_c() gives no result for (a NUL, a character outside ASCII,
       an escape it does not handle), a locale quote whose content holds no
-      unescaped `$` or backtick, a marker character the source itself holds, or
-      any other failure of the restoration.
+      unescaped `$` that starts an expansion or backtick, a marker character
+      the source itself holds, the form of a `$`, one or more line
+      continuations (a backslash and a newline), and a character that starts an
+      expansion (FR3; inside double quotes or outside quotes, where the
+      character may also be `'` or `"`; Bash removes the continuations and
+      reads an expansion, which is not restored), or any other failure of the
+      restoration.
 
     The whole word is read before the outcome is settled, so a word that holds
     an element of FR6 (1) is not static whatever else it holds: it sets
-    nothing."""
+    nothing. The FR3 line-continuation form makes the word Unrestorable only
+    when it is the word's sole non-static element: a word that also holds any
+    other FR6 (1) element, in any region, is not static."""
     span = getattr(tok, "span", None)
     if getattr(tok, "substitution_only", False):
         return WORD_NOT_STATIC, None
@@ -7866,6 +8014,8 @@ def _read_static_word(marked, tok):
             unrestorable = True  # a quote the word does not hold whole
             continue
         by_start[region.start] = region
+    plain_expansion = False  # an ordinary expansion seen in some region
+    continued = False  # an FR3 line-continuation form seen in some region
     chars = []  # the restored characters
     bare = []  # parallel: whether the character stands unquoted and unescaped
     pos = lo
@@ -7888,9 +8038,19 @@ def _read_static_word(marked, tok):
                 continue
             body = source[pos + skip:region.end - 1]
             if region.kind == "double-quote":
-                body = _read_double_quoted(body)
-                if body is None:
-                    return WORD_NOT_STATIC, None
+                outcome, body = _read_double_quoted(body)
+                if outcome == _DQ_EXPANSION:
+                    # Settled after the whole word is read: any ordinary
+                    # expansion makes the word not static.
+                    plain_expansion = True
+                    body = "\x00"
+                elif outcome == _DQ_CONTINUED:
+                    # The FR3 form: Bash reads an expansion the restoration
+                    # cannot. The reading goes on, so a later non-static
+                    # element still makes the word not static.
+                    unrestorable = True
+                    continued = True
+                    body = "\x00"  # a quoted placeholder, never read as unquoted text
             elif region.kind == "ansi-c-quote":
                 body = _decode_ansi_c(body)
                 if body is None:
@@ -7899,7 +8059,7 @@ def _read_static_word(marked, tok):
             elif region.kind == "locale-quote":
                 # A locale quote expands like a double-quote region, and the
                 # translation of its text cannot be told statically.
-                if _read_double_quoted(body) is None:
+                if _read_double_quoted(body)[0] == _DQ_EXPANSION:
                     return WORD_NOT_STATIC, None
                 unrestorable = True
                 body = "\x00"
@@ -7922,17 +8082,26 @@ def _read_static_word(marked, tok):
             return WORD_NOT_STATIC, None
         if ch == "$":
             # An unquoted `$` is literal when it ends the word or the next
-            # character cannot start an expansion (same rule as
-            # _read_double_quoted). `$'` and `$"` keep the non-static handling.
-            if pos + 1 < hi:
-                nxt = source[pos + 1]
-                if (
-                    nxt.isalnum()
-                    or nxt == "_"
-                    or nxt in "@*#?-$!{([\"'"
-                    or not nxt.isascii()
-                ):
-                    return WORD_NOT_STATIC, None
+            # character after its line continuations cannot start an expansion
+            # (same rule as _read_double_quoted(), with `'` and `"` added: the
+            # opener of an ANSI-C or locale quote). A non-ASCII character
+            # starts none. With no continuation, an expansion is not static;
+            # with one or more (the FR3 form) the word is unrestorable unless
+            # another non-static element is present; the reading goes on.
+            kind, after = _read_dollar(source, pos, hi, False)
+            if kind == _DOLLAR_EXPANSION:
+                plain_expansion = True
+            if kind == _DOLLAR_CONTINUED:
+                unrestorable = True
+                continued = True
+            chars.append(ch)
+            bare.append(True)
+            pos = after
+            if kind != _DOLLAR_LITERAL and source[after] in "@*#?-$!0123456789":
+                chars.append(source[after])
+                bare.append(False)
+                pos = after + 1
+            continue
         chars.append(ch)
         bare.append(True)
         pos += 1
@@ -7952,6 +8121,8 @@ def _read_static_word(marked, tok):
             return WORD_NOT_STATIC, None
         if bare[-1] and chars[-1] in "?*+@!" and text[end:end + 1] == "(":
             return WORD_NOT_STATIC, None
+    if plain_expansion:
+        return WORD_NOT_STATIC, None
     if unrestorable:
         return WORD_UNRESTORABLE, None
     return WORD_STATIC, "".join(chars)
@@ -7961,10 +8132,13 @@ def _flag_equals_prefix_name(marked, tok):
     """For a flag-position word that is not static as a whole: the flag name
     when the word begins with one or two `-` and a name (letters, digits, `_`,
     `-`, possibly written with single quotes, double quotes without `$`, backtick
-    or backslash, or backslash escapes) followed directly by an unquoted `=`,
-    so that only the value part after the `=` is non-static. None for any other
-    word (no `=` after the name, a `$` or backtick in the name part, an
-    unterminated quote, no span or marked text)."""
+    or backslash, or backslash escapes) followed directly by an unquoted `=` or
+    an unquoted backslash-escaped `=` (`\\=`; either one ends the name part),
+    so that only the value part after the `=` is non-static. A `\\=` inside
+    double quotes is not an end: it keeps its backslash, which makes the name
+    one that is not valid. None for any other word (no `=` after the name, a
+    `$` or backtick in the name part, an unterminated quote, no span or marked
+    text)."""
     span = getattr(tok, "span", None)
     if marked is None or span is None:
         return None
@@ -8007,6 +8181,12 @@ def _flag_equals_prefix_name(marked, tok):
         if ch == "\\":
             if pos + 1 >= hi:
                 return None
+            if source[pos + 1] == "=":
+                # An unquoted backslash-escaped `=` ends the name part the way
+                # an unquoted `=` does: Bash's quote removal makes it the `=`
+                # of the `=`-form word. POS moves onto the `=` itself.
+                pos += 1
+                break
             if source[pos + 1] != "\n":
                 chars.append(source[pos + 1])
             pos += 2
@@ -8076,15 +8256,24 @@ def _args_json_notion_pair(marked, words):
     """Whether the words WORDS (the words after `run`) read as a complete flag
     sequence in the canonical form that determines the `--mcp notion` /
     `--tool notion-create-comment` pair (mcp-bridge-args-json-exec-guard FR2,
-    D2; mcp-bridge-exec-tool-rescan FR1). This reading is not widened: a word
-    in flag position must be exactly one of the known flags as one unquoted
-    run (_args_json_unquoted_run()), `--dry-run` takes no value, the other
-    flags take the next word as their value whatever it holds, and any other
-    word -- a quoted, `=`-form or single-dash flag word, `--`, a positional
-    word, an unknown name -- or a value-taking flag with no value word makes
-    the pair undeterminable. `--mcp`, `--tool` and `--args-json` must each
-    appear exactly once, and the `--mcp` value and the `--tool` value must be
-    `notion` and `notion-create-comment`, each as one unquoted run."""
+    D2; mcp-bridge-exec-tool-rescan FR1; args-json-quoting-bypass FR1). This
+    reading is not widened: a word in flag position must be exactly one of the
+    known flags as one unquoted run (_args_json_unquoted_run()), `--dry-run`
+    takes no value, the other flags take the next word as their value, and any
+    other word -- a quoted, `=`-form or single-dash flag word, `--`, a
+    positional word, an unknown name -- or a value-taking flag with no value
+    word makes the pair undeterminable. `--mcp`, `--tool` and `--args-json`
+    must each appear exactly once, and the `--mcp` value and the `--tool`
+    value must be `notion` and `notion-create-comment`, each as one unquoted
+    run.
+
+    The flags take the next word as their value whatever it holds, but the
+    pair is determined only when the `--format`, `--session` and `--args-json`
+    value words (every occurrence) are single-word-certain
+    (_args_json_single_word_certain()): Bash always passes each as exactly one
+    argument. A value word that Bash may turn into a different number of words
+    would move where mcp-bridge reads the flags and values, so such a
+    statement is not excluded and goes on to the flag reading unchanged."""
     values = {flag: [] for flag in _MCP_RUN_VALUE_FLAGS}
     k = 0
     while k < len(words):
@@ -8100,7 +8289,515 @@ def _args_json_notion_pair(marked, words):
         len(values["--mcp"]) == len(values["--tool"]) == len(values["--args-json"]) == 1
         and _args_json_unquoted_run(marked, values["--mcp"][0]) == "notion"
         and _args_json_unquoted_run(marked, values["--tool"][0]) == "notion-create-comment"
+        and all(
+            _args_json_single_word_certain(marked, value)
+            for flag in ("--format", "--session", "--args-json")
+            for value in values[flag]
+        )
     )
+
+
+def _args_json_nameref_declared(marked):
+    """Whether the shell state in effect for the statements of MARKED (the
+    _MarkedText of one chunk) may hold a nameref: the text of the chunk
+    declares one (`declare -n`, `local -n`, `typeset -n`) or leaves the shell
+    state unknown (_args_json_nameref_scan()), or the text of an enclosing
+    chunk does.
+
+    A derived chunk (a command substitution body, a `bash -c` payload, a
+    decoded `--args-json` value, ...) records the chunk it was derived from
+    (MARKED._outer_marked, set when _queue_args_json_chunks() registers the
+    chunk, _ChunkLinks.register()) and inherits the variables of every chunk
+    around it: its answer counts the declarations of its own text and of each
+    enclosing chunk, up to the top chunk, whatever the depth and wherever the
+    declaration stands in that chunk (the safe side). A payload that a new
+    process runs (`bash -c`) is treated the same way, which is the safe side
+    as well. A derived chunk that carries no link reads as "declared". So does
+    a chunk with a heredoc body of an unquoted delimiter that holds a
+    current-shell substitution: its cache is set at registration too.
+
+    Computed once per chunk and kept on it. The chain is walked without
+    recursion, so a deep nest of substitutions never meets the recursion
+    limit."""
+    if marked is None:
+        return True
+    walked = []
+    result = False
+    node = marked
+    while True:
+        cached = node._nameref_declared_cache
+        if cached is not None:
+            result = cached
+            break
+        walked.append(node)
+        if _args_json_nameref_scan(node):
+            result = True
+            break
+        if not node._is_derived:
+            break
+        node = node._outer_marked
+        if node is None:
+            result = True
+            break
+    for visited in walked:
+        visited._nameref_declared_cache = result
+    return result
+
+
+def _args_json_has_brace_substitution(marked):
+    """Whether the chunk MARKED holds a Bash 5.3 current-shell substitution
+    (`${ cmd; }` / `${| cmd; }`) the lexer recognises as a
+    LEX_BRACE_COMMAND_SUBSTITUTION region, or holds the opener anywhere in its
+    text, quoted or not (a quoted value can be evaluated later). A chunk with a line continuation
+    whose removal makes the opener appear is read as holding one (the safe
+    side), in case the lexer does not see the opener across the continuation."""
+    source = getattr(marked, "source", "") or ""
+    # Quoted text is not safe to leave out: a value assigned in single quotes
+    # can be evaluated later in the current shell (an arithmetic context or
+    # an array subscript, `${var@P}`), so an opener anywhere in the chunk,
+    # quoted or not, reads as one (the safe side).
+    if re.search(r"\$\{[\s|]", source):
+        return True
+    try:
+        regions = lex_shell(source, "shell", False).regions
+    except Exception:
+        return True
+    for region in regions:
+        if region.kind == LEX_BRACE_COMMAND_SUBSTITUTION:
+            return True
+    if "\\\n" in source and re.search(
+        r"\$\{[\s|]", source.replace("\\\r\n", "").replace("\\\n", "")
+    ):
+        return True
+    return False
+
+
+def _args_json_nameref_scan(marked):
+    """Whether the text of one chunk, MARKED, may declare a nameref or leave
+    the shell state unknown: some simple command of it is `declare`, `local`
+    or `typeset` with a `-n` option (any option word that holds `n`), or is
+    `eval`, `source` or `.`, or has a command name or a declaration word that
+    cannot be restored statically. The chunk's own enclosing chunks are not
+    read here (_args_json_nameref_declared()).
+
+    Decided from the words as Bash reads them after quote removal, at command
+    position only, so quoted data is not a declaration while `declare "-n"`,
+    `decla''re -n` and `declare -\\<newline>n` are.
+
+    The simple commands and their words come from the lexer's own statements
+    (lex_segments()): the boundaries the rest of the hook works from. A
+    redirection (an operator and its target, a file-descriptor number or
+    `{name}` in front of the operator) is taken out of a simple command before
+    its command name and its options are read, whether it stands before the
+    name, touches it or comes after it, so a glued form and its spaced form
+    read the same. A `(`, `)`, `{` or `}` word begins a new simple command.
+    Fail safe: True for a chunk the lexer could not read as statements.
+
+    A substitution that runs in the current shell (Bash 5.3 `${ command; }`
+    and `${| command; }`, a `${` followed by whitespace or `|`) may change the
+    shell state, a nameref included, and the change stays after it. Its side
+    effects are not tracked: a chunk holding one, as the lexer reads it
+    (a LEX_BRACE_COMMAND_SUBSTITUTION region, also across a line
+    continuation, or the opener anywhere in the text, quoted or not, since a
+    quoted value can be evaluated later), reads as "may declare" (the safe
+    side)."""
+    if marked is None or getattr(marked, "top_regions", None) is None:
+        return True
+    if _args_json_has_brace_substitution(marked):
+        return True
+    for words, lexed, _sep in lex_segments(marked):
+        if not lexed:
+            return True
+        commands = [[]]
+        for tok in _split_fused_closer_redirects(words):
+            if _args_json_command_boundary(tok):
+                commands.append([])
+            else:
+                commands[-1].append(tok)
+        for command in commands:
+            if _args_json_declares_nameref(marked, command):
+                return True
+    return False
+
+
+def _args_json_command_boundary(tok):
+    """Whether TOK, a token of a lexed statement, ends one simple command and
+    begins another inside the statement: an unquoted operator made of
+    parentheses only (`(`, `)`, `((`, `)(`, `()`), or an unquoted `{` or `}`
+    word."""
+    if getattr(tok, "is_operator", False):
+        return bool(tok) and all(c in "()" for c in tok)
+    return tok in ("{", "}") and not getattr(tok, "quoted", False)
+
+
+def _args_json_declares_nameref(marked, toks):
+    """Whether the simple command whose tokens are TOKS (a statement's tokens
+    between two boundaries) may declare a nameref or leave the shell state
+    unknown (_args_json_nameref_scan()).
+
+    The redirections go first. Then the words in front of the command name
+    are skipped: `VAR=value` assignments, the prefixes `builtin`, `command`,
+    `exec`, `time`, `!` and the reserved words that introduce a command
+    (`if`, `elif`, `then`, `else`, `while`, `until`, `do`), each with its own
+    `--` terminator when one follows; `command` and `time` also with their own
+    options (`-p`, `-v`, `-V`, ...), so `command -p -- declare -n r` is read as
+    `declare -n r`. A `-v` or `-V` option is read as if `command` ran the word
+    (the safe side). The word after them is the command name: a name that
+    cannot be restored statically, or `eval`, `source`, `.`, `trap`, `alias`,
+    `mapfile` or `readarray`, leaves the shell state unknown; for `declare`, `local` and `typeset` an option word that
+    holds `n`, or any word that cannot be restored, does."""
+    words = _args_json_strip_redirections(marked, toks)
+    prefixes = (
+        "builtin", "command", "exec", "time", "!",
+        "if", "elif", "then", "else", "while", "until", "do",
+    )
+    size = len(words)
+    k = 0
+    while k < size:
+        text, ok = _args_json_declaration_word(marked, words[k])
+        if not ok:
+            break
+        if text in prefixes:
+            k += 1
+            if text in ("command", "time"):
+                while k < size:
+                    option, option_ok = _args_json_declaration_word(marked, words[k])
+                    if not (option_ok and re.fullmatch(r"-[A-Za-z]+", option)):
+                        break
+                    k += 1
+            if k < size and _args_json_declaration_word(marked, words[k]) == ("--", True):
+                k += 1
+            continue
+        if re.match(r"[A-Za-z_][A-Za-z0-9_]*(?:\[[^\]]*\])?\+?=", text):
+            k += 1
+            continue
+        break
+    if k >= size:
+        return False
+    name, ok = _args_json_declaration_word(marked, words[k])
+    if not ok or name in (
+        "eval", "source", ".", "trap", "alias", "mapfile", "readarray",
+    ):
+        return True
+    if name in ("declare", "local", "typeset"):
+        for word in words[k + 1:]:
+            option, option_ok = _args_json_declaration_word(marked, word)
+            if not option_ok or re.fullmatch(r"-[A-Za-z]*n[A-Za-z]*", option):
+                return True
+    return False
+
+
+def _args_json_strip_redirections(marked, toks):
+    """The tokens TOKS of one simple command without its redirections: each
+    redirection operator with its target word (split_redirects()), the
+    file-descriptor number it takes, and a `{name}` word that the operator
+    touches (the variable form of the file descriptor). What is left is the
+    command's words in order, wherever the redirections stood."""
+    kept = []
+    for index, tok in enumerate(toks):
+        span = getattr(tok, "span", None)
+        if (
+            span is not None
+            and not tok.is_operator
+            and not tok.quoted
+            and index + 1 < len(toks)
+            and toks[index + 1].is_operator
+            and marked.text[span[1]:span[1] + 1] in ("<", ">")
+            and re.fullmatch(r"\{[A-Za-z_][A-Za-z0-9_]*\}", tok)
+        ):
+            continue
+        kept.append(tok)
+    return split_redirects(kept, True)[0]
+
+
+def _args_json_declaration_word(marked, word):
+    """(text, restorable) of WORD, a word of a statement lexed from MARKED
+    (the _MarkedText): TEXT is the word as Bash passes it on after quote
+    removal, read from the characters it was written with and the lexer's
+    top-level region kinds over them, not from the token's own value, which has
+    lost the quotes. RESTORABLE is False when the word cannot be settled
+    statically: it holds an expansion (an unquoted or double-quoted `$` or
+    backtick, a substitution, a parameter or arithmetic expansion), an ANSI-C
+    quote that does not decode, a region the word does not hold whole or that
+    is not closed, or it has no span. An arithmetic command (`((expr))`) is
+    kept as written and restorable: it is no command name and declares
+    nothing. A form Bash may rewrite (an unquoted brace pair, an unquoted
+    `*` or `?`, an unquoted bracket pair) is not restorable, since brace and
+    pathname expansion can change the word's spelling or count. A trailing
+    `\\r` that the lexing took off the word is not part of it."""
+    value = str(word)
+    span = getattr(word, "span", None)
+    if marked is None or span is None or getattr(word, "is_operator", False):
+        return value, False
+    start, end = span
+    text = marked.text
+    cr = getattr(word, "trailing_cr", "")
+    if cr and text.startswith(cr, end - len(cr)):
+        end -= len(cr)
+    if end <= start:
+        return value, False
+    bounds = _word_source_bounds(marked, start, end)
+    if bounds is None:
+        return value, False
+    lo, hi = bounds
+    source = marked.source
+    regions = marked.top_regions
+    by_start = {}
+    k = max(bisect.bisect_right(marked.top_starts, lo) - 1, 0)
+    while k < len(regions) and regions[k].start < hi:
+        region = regions[k]
+        k += 1
+        if region.end <= lo:
+            continue
+        if region.start < lo or region.end > hi or not region.closed:
+            return value, False
+        by_start[region.start] = region
+    quote_kinds = {
+        "single-quote": 1,
+        "double-quote": 1,
+        "ansi-c-quote": 2,
+        "locale-quote": 2,
+    }
+    restorable = True
+    unquoted_marks = set()
+    out = []
+    pos = lo
+    while pos < hi:
+        region = by_start.get(pos)
+        if region is not None:
+            kind = region.kind
+            if kind == "arithmetic-command":
+                # `((expr))` at command position evaluates an expression: it
+                # is no command name and declares nothing.
+                out.append(source[pos:region.end])
+                pos = region.end
+                continue
+            if kind not in quote_kinds:
+                return value, False
+            skip = quote_kinds[kind]
+            body = source[pos + skip:region.end - 1]
+            if kind in ("double-quote", "locale-quote"):
+                if "$" in body or "`" in body:
+                    restorable = False
+                # Bash drops backslash-newline and unescapes \" \\ \$ \`
+                # inside double quotes.
+                restored = []
+                i = 0
+                while i < len(body):
+                    c = body[i]
+                    if c == "\\" and i + 1 < len(body) and body[i + 1] in '"\\$`\n':
+                        if body[i + 1] != "\n":
+                            restored.append(body[i + 1])
+                        i += 2
+                        continue
+                    restored.append(c)
+                    i += 1
+                body = "".join(restored)
+            elif kind == "ansi-c-quote":
+                decoded = _decode_ansi_c(body)
+                if decoded is None:
+                    restorable = False
+                else:
+                    body = "".join(decoded)
+            out.append(body)
+            pos = max(region.end, pos + 1)
+            continue
+        ch = source[pos]
+        if ch == "\\":
+            if pos + 1 < hi and source[pos + 1] != "\n":
+                out.append(source[pos + 1])
+            pos += 2
+            continue
+        if ch in "$`*?":
+            restorable = False
+        elif ch in "{}[]":
+            unquoted_marks.add(ch)
+        out.append(ch)
+        pos += 1
+    # Bash rewrites a word with an unquoted brace pair or bracket pair
+    # (brace and pathname expansion), so such a word is not restorable. A
+    # lone `[`, `[[`, `]`, `]]`, `{` or `}` word is no pair and stays so.
+    if {"{", "}"} <= unquoted_marks or {"[", "]"} <= unquoted_marks:
+        restorable = False
+    return "".join(out), restorable
+
+
+def _args_json_single_word_certain(marked, word):
+    """Whether Bash always passes WORD -- a word of a statement lexed from
+    MARKED (the _MarkedText) -- as exactly one argument
+    (args-json-quoting-bypass FR1, NFR6). True only for a word that is certain;
+    False for everything else, and for anything this reading cannot settle: a
+    word without a span or without MARKED, one that holds marker residue, a
+    quote region the word does not hold whole, an unclosed region. This is the
+    only place the judgment is made; the word readers are not used, since the
+    reading here must not move with how they treat `$`
+    (_read_double_quoted(), _read_static_word() and _read_word_as_written()
+    are not called).
+
+    The word is read from the characters it was written with in MARKED and the
+    lexer's top-level region kinds over them, left to right:
+
+    - A single-quote region, an ANSI-C quote region (whether or not
+      _decode_ansi_c() decodes it) and unquoted literal characters, a
+      backslash escape included, are certain.
+    - A double-quote region is certain unless its content holds an `@`-form
+      array expansion: `$@`, or a `${...}` whose content holds `@` (which
+      covers `${name[@]...}` and `${!prefix@}`). A command substitution or a
+      parameter expansion inside the double quotes (`"$(cat comment.json)"`,
+      `"$SID"`) is certain, unless the command declares a nameref
+      (`declare -n`, `local -n`, `typeset -n`), in which case a `$` inside
+      the double quotes is not certain. A locale quote region is checked the
+      same way.
+    - Any other top-level region kind (a command, process, parameter or
+      arithmetic expansion, an array subscript) is not certain.
+    - An unquoted `$` that does not open an ANSI-C or locale quote, and an
+      unquoted backtick, are not certain.
+    - An unquoted brace pair, an unquoted glob character (`*`, `?`), an
+      unquoted bracket pair, an extended-glob form (an unquoted `+`, `@` or `!`
+      that ends the word directly before a `(`) and an unquoted `~` as the
+      first character are not certain."""
+    span = getattr(word, "span", None)
+    if marked is None or span is None or getattr(word, "is_operator", False):
+        return False
+    start, end = span
+    text = marked.text
+    cr = getattr(word, "trailing_cr", "")
+    if cr and text.startswith(cr, end - len(cr)):
+        end -= len(cr)  # bash passes the CR on; the reading disregards it
+    if end <= start:
+        return False
+    bounds = _word_source_bounds(marked, start, end)
+    if bounds is None:
+        return False  # its first character is a substitution's residue
+    lo, hi = bounds
+    source = marked.source
+    if any(
+        mark in source[lo:hi] for mark in (UNRESOLVED_MARK, QUOTED_MARK, _MARK_TERMINATOR)
+    ):
+        return False
+    regions = marked.top_regions
+    by_start = {}
+    k = max(bisect.bisect_right(marked.top_starts, lo) - 1, 0)
+    while k < len(regions) and regions[k].start < hi:
+        region = regions[k]
+        k += 1
+        if region.end <= lo:
+            continue
+        if region.start < lo or region.end > hi or not region.closed:
+            return False
+        by_start[region.start] = region
+
+    def holds_array_form(body):
+        """Whether BODY, the content of a double-quote or locale-quote
+        region as written, holds an unescaped `$@`, a `${...}` with an `@`
+        in its content, or an indirect `${!...}` expansion, nested ones
+        included (its word count is not settled; line continuations after
+        `${` are skipped) (a `${` nests only with another `${`; one that is never
+        closed cannot be settled and counts as holding one)."""
+        i, size = 0, len(body)
+
+        def after_continuations(k):
+            # Bash drops backslash-newline pairs before reading further.
+            while body.startswith("\\\n", k):
+                k += 2
+            return k
+
+        while i < size:
+            ch = body[i]
+            if ch == "\\":
+                i += 2
+                continue
+            if ch == "$":
+                k = after_continuations(i + 1)
+                if k >= size:
+                    i += 1
+                    continue
+                nxt = body[k]
+                if nxt == "@":
+                    return True
+                if nxt == "{":
+                    if body.startswith("!", after_continuations(k + 1)):
+                        return True  # indirect expansion: the word count is open
+                    depth, j = 1, k + 1
+                    while j < size and depth:
+                        c = body[j]
+                        if c == "\\":
+                            j += 2
+                            continue
+                        if c == "$":
+                            m = after_continuations(j + 1)
+                            if body.startswith("{", m):
+                                if body.startswith("!", after_continuations(m + 1)):
+                                    return True  # nested indirect expansion
+                                depth += 1
+                                j = m + 1
+                                continue
+                        if c == "@":
+                            return True
+                        if c == "}":
+                            depth -= 1
+                        j += 1
+                    if depth:
+                        return True
+                    i = j
+                    continue
+            i += 1
+        return False
+
+    # A `declare -n` / `local -n` / `typeset -n` in the command can make a
+    # variable a nameref to an array (`R='A[@]'`), so `"$R"` may expand to
+    # several words.
+    nameref_declared = _args_json_nameref_declared(marked)
+    opened = {"[": False, "{": False}
+    leading = True  # no character of the word has been read yet
+    last_bare = None  # the last character read, when it stands unquoted
+    pos = lo
+    while pos < hi:
+        region = by_start.get(pos)
+        if region is not None:
+            if region.kind == "single-quote":
+                opener, closer, skip = "'", "'", 1
+            elif region.kind == "double-quote":
+                opener, closer, skip = '"', '"', 1
+            elif region.kind == "ansi-c-quote":
+                opener, closer, skip = "$'", "'", 2
+            elif region.kind == "locale-quote":
+                opener, closer, skip = '$"', '"', 2
+            else:
+                return False
+            if not source.startswith(opener, pos) or source[region.end - 1] != closer:
+                return False
+            if region.kind in ("double-quote", "locale-quote"):
+                body_text = source[pos + skip:region.end - 1]
+                if holds_array_form(body_text):
+                    return False
+                if nameref_declared and "$" in body_text:
+                    return False  # a nameref may make the expansion an array
+            leading = False
+            last_bare = None
+            pos = region.end
+            continue
+        ch = source[pos]
+        if ch == "\\":
+            if pos + 1 >= hi or pos + 1 in by_start:
+                return False
+            if source[pos + 1] != "\n":
+                leading = False
+            last_bare = None
+            pos += 2
+            continue
+        if ch in "$`*?":
+            return False
+        if ch == "~" and leading:
+            return False
+        if ch in "[{":
+            opened[ch] = True
+        elif ch in "]}" and opened["[" if ch == "]" else "{"]:
+            return False
+        leading = False
+        last_bare = ch
+        pos += 1
+    return not (last_bare is not None and last_bare in "+@!" and text[end:end + 1] == "(")
 
 
 def _mcp_bridge_args_json_chunks(shaped_words, marked):
@@ -8139,8 +8836,13 @@ def _mcp_bridge_args_json_chunks(shaped_words, marked):
        only text inside another command's argument has another command word.
     2. Notion pair (FR2): the canonical reading (_args_json_notion_pair()) that
        determines the `--mcp notion` / `--tool notion-create-comment` pair
-       makes the statement nothing to do, and sets no Unrestorable flag. Only
-       this reading excludes a statement; it is not widened.
+       makes the statement nothing to do, and sets no Unrestorable flag. The
+       reading takes the next word of a flag as its value whatever it holds,
+       but it determines the pair only when the `--format`, `--session` and
+       `--args-json` value words are single-word-certain
+       (_args_json_single_word_certain(): Bash always passes the word as
+       exactly one argument); a statement for which it does not goes on to
+       step 3. Only this reading excludes a statement; it is not widened.
     3. Flag reading (FR3, FR6, FR11): every other statement is read left to
        right the way mcp-bridge reads its options; the first word after `run`
        is in flag position. A word in flag position is read by
@@ -8166,14 +8868,17 @@ def _mcp_bridge_args_json_chunks(shaped_words, marked):
        examined. No `--args-json` makes the statement nothing to do.
     4. Word outcomes (D5): _read_static_word() gives a word one of three
        outcomes. Not static: it holds an element of FR6 (1) (a substitution, a
-       parameter or arithmetic expansion, an unquoted `$` or backtick, an
-       unquoted glob, brace or tilde form, residue of a real substitution).
-       Unrestorable: it holds none of those, and its quoting still cannot be
-       restored (an ANSI-C quote that _decode_ansi_c() gives no result for, a
-       locale quote). Static: the characters Bash passes on (a single-quote
-       region is its content, a double-quote region has its backslash escapes
-       resolved, an ANSI-C quote is decoded, a backslash outside quotes keeps
-       the next character).
+       parameter or arithmetic expansion, an unquoted `$` or backtick that
+       starts an expansion, an unquoted glob, brace or tilde form, residue of a
+       real substitution). Unrestorable: it holds none of those, and its
+       quoting still cannot be restored (an ANSI-C quote that _decode_ansi_c()
+       gives no result for, a locale quote, a `$`, one or more line
+       continuations (a backslash and a newline), and a character that starts
+       an expansion, which Bash reads as the expansion). Static: the
+       characters Bash passes on (a single-quote region is its content, a
+       double-quote region has its backslash escapes resolved, an ANSI-C quote
+       is decoded, a backslash outside quotes keeps the next character, a `$`
+       before a non-ASCII character is a literal `$`).
     5. Values (FR3): every `--args-json` value is handled on its own, in
        order. A value word of its own is read by _read_static_word(): Not
        static skips that value, Unrestorable skips it and sets Unrestorable,
@@ -8207,6 +8912,13 @@ def _mcp_bridge_args_json_chunks(shaped_words, marked):
            substitution, a variable expansion or the like (a substitution Bash
            itself runs is still re-scanned);
         2. a word in flag position that is not static in the same sense;
+        8. a value word of the mcp, tool, format or session flag, or the
+           value part after the `=` of a flag word, that Bash expansion turns
+           into a word count other than one, shifting where mcp-bridge reads
+           flags and values so that a later args-json value is hidden (the
+           flag reading reads words as written, and the form keeps its current
+           verdict without the decoded-value inspection and is not sent to
+           ask);
         3. an unknown flag;
         4. a value-taking flag with no value word;
         5. no `--args-json`;
@@ -8313,9 +9025,11 @@ SCAN_BUDGET_ASK = (
 # The `ask` (reason id, reason text) for an `mcp-bridge run` `--args-json`
 # value word or flag-position word that holds no non-static element but whose
 # quoting cannot be restored statically (mcp-bridge-args-json-exec-guard FR11,
-# D5): an ANSI-C quote the decoder gives no result for, a locale quote. The
-# `--args-json` step holds it in the _DeferredAsks record and statements()
-# settles it once the queue is drained; the scan-budget ask outranks it (D6).
+# D5): an ANSI-C quote the decoder gives no result for, a locale quote, a `$`,
+# one or more line continuations (a backslash and a newline), and a character
+# that starts an expansion (args-json-quoting-bypass FR3). The `--args-json`
+# step holds it in the _DeferredAsks record and statements() settles it once
+# the queue is drained; the scan-budget ask outranks it (D6).
 ARGS_JSON_UNRESTORABLE_ASK = (
     "args-json-unrestorable",
     "mcp-bridge run の --args-json の値、またはフラグの語の引用を静的に"
@@ -8387,18 +9101,76 @@ def ask_lex_unsettled(exc):
     decide("ask", *lex_unsettled_ask(exc))
 
 
+class _ChunkLinks:
+    """The chunks one statements() run has met, kept for the nameref answer of
+    a chunk (_args_json_nameref_declared()), which walks from a derived chunk
+    to the chunk it was derived from, up to the command's own chunk
+    (args-json-quoting-bypass FR1, NFR6). statements() records no derivation:
+    the `--args-json` collaborator, which it calls with each chunk's marked
+    text, registers the chunk here.
+
+    BY_ANCHOR maps the origin-position prefix of each chunk registered so far
+    (the ANCHOR statements() gives the collaborator; the command's own chunk
+    has the empty one) to its _MarkedText, the chunk registered last for equal
+    anchors. LAST is the chunk registered last: the statements of one chunk
+    are handed over one after the other, so a later statement of it finds it
+    there."""
+
+    __slots__ = ("by_anchor", "last")
+
+    def __init__(self):
+        self.by_anchor = {}
+        self.last = None
+
+    def register(self, marked_chunk, anchor):
+        """Register MARKED_CHUNK, the _MarkedText of the chunk being processed
+        (None registers nothing), under ANCHOR, once: the call for a later
+        statement of the chunk registered last does nothing. It sets, before
+        the nameref answer of the chunk is first asked for:
+
+        - the derivation link. A chunk with a non-empty anchor is derived
+          (_is_derived), and is linked (_outer_marked) to the registered chunk
+          with the longest anchor that is a proper prefix of its own: the
+          anchor of a derived chunk extends the anchor of the chunk it was
+          derived from, so the chain reaches that chunk and the command's own
+          chunk. When several registered chunks qualify, or the refined
+          anchor of a substitution body points into a payload derived from the
+          true parent, the chain may name a chunk below the true parent; it
+          still reaches the true parent and counts more chunks than the true
+          chain, which is the safe side. A derived chunk with no registered
+          prefix keeps no link, which the chain walk reads as "declared".
+        - the heredoc result. A chunk whose source is a
+          _StrippedWithShellSubstitution reads as "may hold a nameref"."""
+        if marked_chunk is None or marked_chunk is self.last:
+            return
+        self.last = marked_chunk
+        if anchor:
+            marked_chunk._is_derived = True
+            for end in range(len(anchor) - 1, -1, -1):
+                parent = self.by_anchor.get(anchor[:end])
+                if parent is not None:
+                    marked_chunk._outer_marked = parent
+                    break
+        if isinstance(marked_chunk.source, _StrippedWithShellSubstitution):
+            marked_chunk._nameref_declared_cache = True
+        self.by_anchor[anchor] = marked_chunk
+
+
 class _ScanState:
     """The relative scan-cost state of one statements() run (TM-5): SCANNED is
     the running total of the text scanned so far, BUDGET the cap on it
     (statements() sets it from the length of the command). The `--args-json`
     step's collaborator adds its charge to SCANNED, or leaves SCANNED unchanged
-    when the charge does not fit (mcp-bridge-args-json-exec-guard D3, NFR5)."""
+    when the charge does not fit (mcp-bridge-args-json-exec-guard D3, NFR5).
+    LINKS is the run's _ChunkLinks, which the collaborator registers each
+    chunk in (the derivation links of the nameref answer)."""
 
-    __slots__ = ("scanned", "budget")
+    __slots__ = ("scanned", "budget", "links")
 
     def __init__(self, budget):
         self.scanned = 0
         self.budget = budget
+        self.links = _ChunkLinks()
 
 
 class _DeferredAsks:
@@ -8481,6 +9253,15 @@ def _queue_args_json_chunks(
     SCAN its _ScanState (scanned total and budget) and ASKS its _DeferredAsks
     record.
 
+    Before step 1 it registers MARKED_CHUNK in the run's chunk record
+    (SCAN.links, _ChunkLinks.register()): once for each chunk, at the first of
+    its statements the collaborator is called for, whatever LEXED says and
+    before the early return of step 1, so a chunk that holds statements is
+    never skipped by the chain a derived chunk walks. The registration sets the
+    chunk's derivation link and its heredoc result for the nameref answer
+    (_args_json_nameref_declared()), which the decision asks for after it. It
+    queues nothing and changes nothing that steps 1 to 4 queue, charge or hold.
+
     1. A statement from the parse-failure fallback, and any statement once this
        step has held the scan-budget ask in the run, are left alone.
     2. On Overrun, or when the charge would take the scanned total past the
@@ -8496,11 +9277,17 @@ def _queue_args_json_chunks(
        anchor, the statement index, the index of that word in TOKENS and an
        ordinal that keeps the entries of one word in document order (bodies
        first, then `command` strings), with the chunk's derived Python-body mark
-       and no substitution index.
+       and no substitution index. A value that queues nothing gets no index.
+       For one that queues something, the index of its word comes from a map
+       from token span to the index of the first token with that span
+       (_args_json_span_index()); the map is built at most once per call, when
+       the first value whose word has a span is reached. A word without a
+       span, or whose span is not in the map, is found by _token_index().
     4. On Unrestorable the `args-json-unrestorable` ask is held, whatever 2 or
        3 did (FR11).
 
     It never emits a decision and never ends the scan."""
+    scan.links.register(marked_chunk, anchor)
     if not lexed or asks.args_json_stopped:
         return
     result = _mcp_bridge_args_json_chunks(shaped_words, marked_chunk)
@@ -8510,8 +9297,19 @@ def _queue_args_json_chunks(
         asks.stop_args_json()
         return
     scan.scanned += result.charge
+    span_index = None
     for value in result.values:
-        word_step = (seg_index, _args_json_word_index(tokens, value.word))
+        if not value.bodies and not value.commands:
+            continue
+        span = getattr(value.word, "span", None)
+        token_index = None
+        if span is not None:
+            if span_index is None:
+                span_index = _args_json_span_index(tokens)
+            token_index = span_index.get(span)
+        if token_index is None:
+            token_index = _token_index(tokens, value.word)
+        word_step = (seg_index, token_index)
         ordinal = 0
         for body in value.bodies:
             ordinal += 1

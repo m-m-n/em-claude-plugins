@@ -1,0 +1,114 @@
+schema_version: 1
+feature: args-json-quoting-bypass
+phase: rework
+status: completed
+generation: 3
+base_revision: b74304bc75d55ac2337eb5b9c49663f495d9fef9
+last_input_digest: sha256:4e28527ae0ad47209b778836c5eb986e7cff7a9c508d5f20c7c9bb12efb6f207
+active_request_id: null
+packets:
+  rework-q0001:
+    status: obsolete
+    issued_by: rework-run-0001
+    questions:
+      rework.spec-change.fr3-fr1-word-classification:
+        gate_id: rework.spec-change
+        status: unanswered
+answers: {}
+worker_runs:
+- request_id: rework-run-0001
+  status: needs_user_input
+  input_digest: sha256:3b8eb93395c3090e29a48d6d8eca9b4b8b2d3686ad809f3c36e73df10f7671ee
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/rework-planner-contract.md: sha256:0c9f82099c3546b6b675856539d8244628b7170ce7a4442ec951e13e16577ec3
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/args-json-quoting-bypass/IMPLEMENTATION.md: sha256:36182e7f97ff4a7c7365694a858500dbfed473dafac6ae4d80d4aea7fa5dd595
+    feature-docs/args-json-quoting-bypass/SPEC.md: sha256:57a223a5e7f1ee7d27ea09d4fe6be38890fb82875b76b37a1813db9a650b45ec
+    feature-docs/args-json-quoting-bypass/VERIFICATION.md: sha256:e40c7f75f6f240d965f437f701b13def9f36e71eb3204558c53ba0e3ac6edc1d
+    feature-docs/args-json-quoting-bypass/tasks/task0001.md: sha256:a2c900155a7726e82d09bf5ff07fb229d73832231b95bd20bc4090b653b2616f
+    feature-docs/args-json-quoting-bypass/tasks/task0002.md: sha256:f7fbb8fa4d3154d97200f769b18d7778edfe41a1a12c20ae6dd6630961cbe0ef
+    feature-docs/args-json-quoting-bypass/tasks/task0003.md: sha256:b3455e8e4cad294099013706a3727a90fc409d4fc5c3066d9f4a548157ab1f12
+    feature-docs/args-json-quoting-bypass/tasks/task0004.md: sha256:2106dcfe0d937c4c48bb5b031120871ad21b12ae4b48c0b1a58f6c81ed6ef1a7
+    feature-docs/args-json-quoting-bypass/workflow.yaml: sha256:d5f5e28a422931b04d31d9ccadd611731067f1409fa978b45c26c37c6bd578c5
+  self_write_set: []
+- request_id: rework-run-0002
+  status: completed
+  input_digest: sha256:b123482d56e9956d5006759c5208fe8eb5bf7f8b1276298d299a48d2e56e361d
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/rework-planner-contract.md: sha256:0c9f82099c3546b6b675856539d8244628b7170ce7a4442ec951e13e16577ec3
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/args-json-quoting-bypass/IMPLEMENTATION.md: sha256:36182e7f97ff4a7c7365694a858500dbfed473dafac6ae4d80d4aea7fa5dd595
+    feature-docs/args-json-quoting-bypass/SPEC.md: sha256:57a223a5e7f1ee7d27ea09d4fe6be38890fb82875b76b37a1813db9a650b45ec
+    feature-docs/args-json-quoting-bypass/VERIFICATION.md: sha256:e40c7f75f6f240d965f437f701b13def9f36e71eb3204558c53ba0e3ac6edc1d
+    feature-docs/args-json-quoting-bypass/tasks/task0001.md: sha256:a2c900155a7726e82d09bf5ff07fb229d73832231b95bd20bc4090b653b2616f
+    feature-docs/args-json-quoting-bypass/tasks/task0002.md: sha256:f7fbb8fa4d3154d97200f769b18d7778edfe41a1a12c20ae6dd6630961cbe0ef
+    feature-docs/args-json-quoting-bypass/tasks/task0003.md: sha256:b3455e8e4cad294099013706a3727a90fc409d4fc5c3066d9f4a548157ab1f12
+    feature-docs/args-json-quoting-bypass/tasks/task0004.md: sha256:2106dcfe0d937c4c48bb5b031120871ad21b12ae4b48c0b1a58f6c81ed6ef1a7
+    feature-docs/args-json-quoting-bypass/workflow.yaml: sha256:981c195da5283d79463ac734ba8eb9248c9a38d8d8a73067bd387ecbb13d4665
+  self_write_set:
+  - feature-docs/args-json-quoting-bypass/VERIFICATION.md
+  - feature-docs/args-json-quoting-bypass/tasks/task0005.md
+- request_id: rework-run-0003
+  status: completed
+  input_digest: sha256:4e28527ae0ad47209b778836c5eb986e7cff7a9c508d5f20c7c9bb12efb6f207
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/rework-planner-contract.md: sha256:0c9f82099c3546b6b675856539d8244628b7170ce7a4442ec951e13e16577ec3
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/args-json-quoting-bypass/IMPLEMENTATION.md: sha256:36182e7f97ff4a7c7365694a858500dbfed473dafac6ae4d80d4aea7fa5dd595
+    feature-docs/args-json-quoting-bypass/SPEC.md: sha256:57a223a5e7f1ee7d27ea09d4fe6be38890fb82875b76b37a1813db9a650b45ec
+    feature-docs/args-json-quoting-bypass/VERIFICATION.md: sha256:0f320f18f60089ec549447b9dde440807673f105e3b29dcdfb211dea828d9416
+    feature-docs/args-json-quoting-bypass/tasks/task0001.md: sha256:a2c900155a7726e82d09bf5ff07fb229d73832231b95bd20bc4090b653b2616f
+    feature-docs/args-json-quoting-bypass/tasks/task0002.md: sha256:f7fbb8fa4d3154d97200f769b18d7778edfe41a1a12c20ae6dd6630961cbe0ef
+    feature-docs/args-json-quoting-bypass/tasks/task0003.md: sha256:b3455e8e4cad294099013706a3727a90fc409d4fc5c3066d9f4a548157ab1f12
+    feature-docs/args-json-quoting-bypass/tasks/task0004.md: sha256:2106dcfe0d937c4c48bb5b031120871ad21b12ae4b48c0b1a58f6c81ed6ef1a7
+    feature-docs/args-json-quoting-bypass/tasks/task0005.md: sha256:b40b2854d84429cc24c0184c63f0a0c900b82937fb9abdbd57f82a5954a6ebc6
+    feature-docs/args-json-quoting-bypass/workflow.yaml: sha256:a4e1f71f30873897ccad5907f3a95c69cc02701a2624b713b7a3906e2670a0ac
+  self_write_set:
+  - feature-docs/args-json-quoting-bypass/IMPLEMENTATION.md
+  - feature-docs/args-json-quoting-bypass/VERIFICATION.md
+  - feature-docs/args-json-quoting-bypass/tasks/task0006.md
+artifacts:
+- path: feature-docs/args-json-quoting-bypass/tasks/task0005.md
+  sha256: sha256:b40b2854d84429cc24c0184c63f0a0c900b82937fb9abdbd57f82a5954a6ebc6
+- path: feature-docs/args-json-quoting-bypass/VERIFICATION.md
+  sha256: sha256:21047b386b33a7aa2593536ffaa483d28eda65e80091a44a3f9e9d12f60f3faf
+- path: feature-docs/args-json-quoting-bypass/tasks/task0006.md
+  sha256: sha256:8317eccd348edccbf542ed4b8432446001053fc2f6ce7e079d11ebc6b2cc0e69
+- path: feature-docs/args-json-quoting-bypass/IMPLEMENTATION.md
+  sha256: sha256:56793642ea7d7780112ad59bf6db741b9aac23239c2cd8dfd252b80d003e6a59
+patches:
+- patch_id: rework-run-0002-p0001
+  status: applied
+  applied_at: '2026-11-20T23:20:01+09:00'
+- patch_id: rework-run-0003-p0001
+  status: applied
+  applied_at: '2026-11-21T01:59:35+09:00'
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
+classification:
+- classifier: codex
+  verdict: goal_not_met
+  evidence_ids:
+  - FR1
+  - FR3
+  - FR7
+  - AC-2
+  - AC-7
+  - TS-13
+  decision: stop
+  reason: Codex の分類は (a)。行継続の形と別の展開が混在する語、引用された参照変数の宣言を経由する語で、検査を終える経路が実装に残る。AC-2
+    を保ちながらすり抜けを塞ぐには実装の修正も要る

@@ -1,0 +1,116 @@
+task_id: task0005
+baseline_failures: []          # 4a, before any edit: python3 em-workflow/hooks/tests/run-destructive-guard.py -> 1424/1424 passed; python3 -m unittest discover -s tests -> Ran 16643 tests, OK (skipped=1); nothing failing
+final_failures: []             # re-executed after implementation and after this record: the runner passes every case (1438/1438) and unittest discover is OK; nothing failing
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_args_json.TestNamerefDeclarations.test_a_declaration_in_an_enclosing_chunk_counts_at_any_depth
+      - tests.test_destructive_guard_args_json.TestNamerefDeclarations.test_the_chain_is_walked_without_recursion
+    red_confirmed: true
+    red_reason: >
+      The fourteen new runner cases (TS-24 to TS-31) were added to the case
+      file before any hook change, and run-destructive-guard.py (the runner
+      that the first existing test executes over the whole table and asserts
+      exits 0 with no FAIL line) was run directly against the unchanged hook:
+      1430/1438 passed. TS-24 FAILed with got=allow where deny is required (the
+      pre-fix verdict the plan names), TS-25 FAILed the same way (allow), and
+      TS-26 passed (deny already; the payload declares the nameref in its own
+      text, so its pre-fix verdict is deny). After the change all three give
+      deny. The two unit tests were run against the base commit's hook (a copy
+      of the test module with the hook path pointed at the base file): the
+      depth test FAILed for one and two levels above the call's chunk with
+      AssertionError ['inspected'] != ['nothing'] (the call was excluded), and
+      the chain test ERRORed with RecursionError.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_args_json.TestNamerefDeclarations.test_a_glued_form_gives_the_same_kind_as_its_spaced_form
+      - tests.test_destructive_guard_args_json.TestNamerefDeclarations.test_a_redirection_in_any_place_is_left_out_of_the_command_name
+      - tests.test_destructive_guard_args_json.TestNamerefDeclarations.test_the_notion_call_of_every_ts_27_to_30_command_is_inspected
+    red_confirmed: true
+    red_reason: >
+      The same direct run of the runner against the unchanged hook: both TS-27
+      cases (declare</dev/null and declare>/dev/null) FAILed with got=allow
+      where deny is required, and both TS-28 cases passed (deny already: the
+      redirection is separated from the command name by a blank or stands
+      before it). After the change all four give deny. The unit tests, run
+      against the base commit's hook, FAILed for both glued TS-27 forms with
+      AssertionError ['inspected'] != ['nothing'], and the redirection test for
+      the {fd} variable form and for the group form.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_args_json.TestNamerefDeclarations.test_a_glued_form_gives_the_same_kind_as_its_spaced_form
+      - tests.test_destructive_guard_args_json.TestNamerefDeclarations.test_the_notion_call_of_every_ts_27_to_30_command_is_inspected
+    red_confirmed: true
+    red_reason: >
+      The direct run of the runner against the unchanged hook: the `source&>`
+      case FAILed with got=allow where deny is required, the `.&>` case FAILed
+      the same way (allow), and the spaced `source &>` case passed (deny
+      already). After the change all three give deny. The unit tests, run
+      against the base commit's hook, FAILed for the glued source and dot forms
+      (['inspected'] != ['nothing']): the spaced form was inspected and the
+      glued form was not.
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_args_json.TestNamerefDeclarations.test_the_notion_call_of_every_ts_27_to_30_command_is_inspected
+      - tests.test_destructive_guard_args_json.TestNamerefDeclarations.test_a_prefix_word_before_the_declaration_is_skipped
+    red_confirmed: true
+    red_reason: >
+      The direct run of the runner against the unchanged hook: both TS-30 cases
+      (`command --` and `command -p --`) FAILed with got=allow where deny is
+      required. After the change both give deny. The unit tests, run against
+      the base commit's hook, FAILed for both TS-30 commands and for the
+      prefix-word forms `builtin --`, `time -p --`, `x+=1`, `elif` and
+      `command -p command --` (['inspected'] != ['nothing']); the plain
+      `command declare -n` form passed there (it was already read).
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_every_pre_task_command_preserved_with_only_named_changes
+      - tests.test_destructive_guard_args_json.TestNamerefDeclarations.test_no_declaration_anywhere_keeps_the_nested_call_excluded
+      - tests.test_destructive_guard_args_json.TestNamerefDeclarations.test_a_declaration_with_no_nameref_option_does_not_make_the_call_uncertain
+    red_confirmed: false
+    red_reason: >
+      The criterion is an allow-side pin: both TS-31 cases, TS-5 and the existing
+      notion-pair allow cases gave allow on the unchanged hook before any
+      change, and every existing runner case kept its verdict and reason id
+      (the runner passed every one of the 1424 existing cases before and
+      after), so no red state occurred for it. The case file's diff adding
+      lines only was checked with git diff --numstat (14 added, 0 deleted); no
+      executable check of that exists to make fail. The two unit tests pin the
+      same side; their arithmetic-command and comment subtests FAILed on the
+      base commit's hook (the old scan read both as an unknown shell state),
+      which is a gain beyond the criterion and not what this entry claims.
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_args_json.TestNamerefDeclarations.test_the_notion_call_of_every_ts_27_to_30_command_is_inspected
+      - tests.test_destructive_guard_args_json.TestNamerefDeclarations.test_a_glued_form_gives_the_same_kind_as_its_spaced_form
+      - tests.test_destructive_guard_args_json.TestStructure.test_the_decision_is_referenced_only_from_the_collaborator
+      - tests.test_destructive_guard_args_json.TestStructure.test_statements_has_one_call_site_and_no_other_args_json_logic
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_the_single_word_judgment_is_one_helper_called_only_by_the_notion_pair
+    red_confirmed: true
+    red_reason: >
+      The TS-32 tests, run against the base commit's hook (a copy of the test
+      module with the hook path pointed at the base file), FAILed for every
+      glued TS-27 and TS-29 form and for both TS-30 commands with
+      AssertionError ['inspected'] != ['nothing'] (the mcp-bridge statement was
+      excluded where Inspected is required). The TestStructure and
+      single-helper tests are existing tests that pass before and after
+      unchanged: they pin that statements() has one call of
+      _queue_args_json_chunks() and no other args-json name, and that the
+      single-word judgment stays in one helper referenced only from
+      _args_json_notion_pair().
+  AC-7:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_args_json
+    red_confirmed: true
+    red_reason: >
+      With the new runner cases and the new unit tests present and the hook
+      unchanged, the runner ended 1430/1438 passed and the args-json module
+      reported failures (the red states of AC-1 to AC-4 and AC-6). After the
+      change the runner passes 1438/1438, the args-json module passes, and
+      the whole suite (python3 -m unittest discover -s tests) passes.

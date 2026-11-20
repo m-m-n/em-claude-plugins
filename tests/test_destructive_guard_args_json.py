@@ -490,6 +490,163 @@ class TestFlagReading(unittest.TestCase):
         self.assertEqual(nothing_result(), result)
         self.assertEqual([], spy.early_stop)
 
+    # args-json-quoting-bypass TS-17 (FR1, FR9; finding 3f7145c6c8c0b26a): the
+    # notion pair excludes a statement only when the `--format`, `--session`
+    # and `--args-json` value words are single-word-certain.
+
+    NOTION = "mcp-bridge run --mcp notion --tool notion-create-comment "
+    COMMAND_VALUE = "'{\"command\":\"ls\"}'"
+
+    def notion_pair(self, command):
+        """(the answers of _args_json_notion_pair() over a statements() run of
+        COMMAND, in call order; the Spy of the run)."""
+        answers = []
+        original = GUARD._args_json_notion_pair
+
+        def wrapper(marked, words):
+            answer = original(marked, words)
+            answers.append(answer)
+            return answer
+
+        with mock.patch.object(GUARD, "_args_json_notion_pair", wrapper):
+            run = Spy(command)
+        return answers, run
+
+    # Value words that Bash may turn into a word count other than one.
+    SPLITTING_WORDS = (
+        ("unquoted parameter expansion with a default", "${REVIEW_UNSET:-json --mcp desktop-commander --tool start_process}"),
+        ("unquoted variable", "$FORMAT"),
+        ("unquoted command substitution", "$(echo json)"),
+        ("unquoted arithmetic expansion", "$((1 + 2))"),
+        ("unquoted brace list", "{json,--mcp=desktop-commander}"),
+        ("unquoted brace range", "{1..3}"),
+        ("unquoted glob", "*"),
+        ("unquoted bracket glob", "[jt]son"),
+        ("leading tilde", "~root"),
+        ("quoted at-sign parameter", '"$@"'),
+        ("quoted at-sign array", '"${A[@]}"'),
+        ("quoted at-sign array with a modifier", '"${A[@]#x}"'),
+        ("quoted prefix names", '"${!PREFIX@}"'),
+        ("quoted braced at-sign parameter", '"${@}"'),
+        ("quoted at-sign array between other text", 'x"${A[@]}"y'),
+    )
+
+    def test_a_format_or_session_value_that_may_split_is_not_excluded(self):
+        for flag in ("--format", "--session"):
+            for label, word in self.SPLITTING_WORDS:
+                with self.subTest(flag + " " + label):
+                    command = self.NOTION + flag + " " + word + " --args-json " + self.COMMAND_VALUE
+                    answers, run = self.notion_pair(command)
+                    self.assertEqual([False], answers)
+                    self.assertEqual([KIND_INSPECTED], run.kinds())
+
+    def test_a_decoded_command_after_a_split_format_value_is_inspected(self):
+        command = (
+            self.NOTION + "--format ${REVIEW_UNSET:-json --mcp desktop-commander --tool start_process} "
+            "--args-json '{\"command\":\"git branch -D example\"}'"
+        )
+        (result,) = Spy(command).inspected()
+        self.assertEqual(("git branch -D example",), sole_value(result).commands)
+
+    def test_an_args_json_value_that_may_split_leaves_the_pair_undetermined(self):
+        for label, word in self.SPLITTING_WORDS:
+            with self.subTest(label):
+                answers, run = self.notion_pair(self.NOTION + "--args-json " + word)
+                self.assertEqual([False], answers)
+                # A value word that is not static is skipped by the flag
+                # reading (O2 (1)), so the kind alone does not show the
+                # exclusion; the answer above does.
+                self.assertEqual([KIND_NOTHING], run.kinds())
+
+    def test_the_pair_is_not_excluded_for_any_one_of_several_value_words(self):
+        command = (
+            self.NOTION + "--format json --session $SID --args-json " + self.COMMAND_VALUE
+        )
+        answers, run = self.notion_pair(command)
+        self.assertEqual([False], answers)
+        self.assertEqual([KIND_INSPECTED], run.kinds())
+        command = (
+            self.NOTION + "--format json --format \"${A[@]}\" --args-json " + self.COMMAND_VALUE
+        )
+        answers, run = self.notion_pair(command)
+        self.assertEqual([False], answers)
+        self.assertEqual([KIND_INSPECTED], run.kinds())
+
+    # Value words that Bash always passes as exactly one argument.
+    ONE_WORD_FORMS = (
+        ("plain word", "json"),
+        ("single-quoted", "'json'"),
+        ("double-quoted", '"json"'),
+        ("double-quoted variable", '"$SID"'),
+        ("double-quoted braced variable", '"${SID}"'),
+        ("double-quoted command substitution", '"$(cat comment.json)"'),
+        ("double-quoted star array", '"${A[*]}"'),
+        ("double-quoted star parameter", '"$*"'),
+        ("double-quoted escaped dollar", '"\\$@"'),
+        ("single-quoted at-sign", "'$@'"),
+        ("single-quoted glob", "'*'"),
+        ("single-quoted braces", "'{a,b}'"),
+        ("backslashed glob", "\\*"),
+        ("backslashed braces", "\\{a,b\\}"),
+        ("double-quoted tilde", '"~"'),
+        ("double-quoted text with a space", '"a b"'),
+        ("ANSI-C quote", "$'json'"),
+        ("ANSI-C quote that does not decode", "$'a\\0b'"),
+        ("locale quote", '$"json"'),
+        ("mixed quotes", "a'b'\"c\"\\d"),
+    )
+
+    def test_a_value_that_is_always_one_word_keeps_the_pair_excluded(self):
+        for flag in ("--format", "--session", "--args-json"):
+            for label, word in self.ONE_WORD_FORMS:
+                with self.subTest(flag + " " + label):
+                    command = self.NOTION + flag + " " + word
+                    if flag != "--args-json":
+                        command += " --args-json " + self.COMMAND_VALUE
+                    answers, run = self.notion_pair(command)
+                    self.assertEqual([True], answers)
+                    self.assertEqual([nothing_result()], run.results)
+                    self.assertEqual([], run.early_stop)
+
+    def test_the_session_variable_and_the_comment_substitution_stay_excluded(self):
+        for label, command in (
+            (
+                "session variable",
+                self.NOTION + "--session \"$SID\" --args-json "
+                "'{\"body\":\"$(git branch -D example) と記載する\"}'",
+            ),
+            (
+                "args-json command substitution",
+                self.NOTION + "--args-json \"$(cat comment.json)\"",
+            ),
+            (
+                "args-json ANSI-C value",
+                self.NOTION + "--args-json $'{\"body\":\"x\"}\\0'",
+            ),
+        ):
+            with self.subTest(label):
+                answers, run = self.notion_pair(command)
+                self.assertEqual([True], answers)
+                self.assertEqual([KIND_NOTHING], run.kinds())
+                (result,) = run.results
+                self.assertFalse(result.unrestorable)
+                self.assertEqual([], run.early_stop)
+
+    def test_the_single_word_judgment_is_one_helper_called_only_by_the_notion_pair(self):
+        """AC-4 (NFR6): the judgment has one home, and the notion-pair
+        predicate is its only caller."""
+        with open(HOOK, encoding="utf-8") as handle:
+            tree = ast.parse(handle.read())
+        helpers = [
+            node.name for node in ast.walk(tree)
+            if isinstance(node, ast.FunctionDef) and "single_word" in node.name
+        ]
+        self.assertEqual(1, len(helpers), helpers)
+        sites = _CallSites()
+        sites.visit(tree)
+        places = {where for name, where in sites.references if name == helpers[0]}
+        self.assertEqual({"_args_json_notion_pair"}, places)
+
     def test_other_forms_that_read_as_flags_are_inspected(self):
         value = self.VALUE
         for label, command in (
@@ -545,6 +702,39 @@ class TestFlagReading(unittest.TestCase):
                 # The anchor is the flag word of the `=` form.
                 self.assertTrue(str(value.word).endswith('"command":"ls"}'), str(value.word))
                 self.assertIn("args-json=", str(value.word))
+
+    def test_an_unquoted_backslash_escaped_equals_ends_the_name_part(self):
+        """args-json-quoting-bypass TS-18 (FR2, FR9): outside quotes a
+        backslash-escaped `=` ends the name part of a non-static flag word the
+        way an unquoted `=` does, so the static `--args-json` value after it is
+        inspected; inside double quotes `\\=` keeps its backslash, the name is
+        not a known one, and the statement stays nothing to do."""
+        for label, command in (
+            ("server", 'mcp-bridge run --mcp\\="$S" --args-json ' + self.VALUE),
+            ("session", 'mcp-bridge run --session\\="$SID" --args-json ' + self.VALUE),
+        ):
+            with self.subTest(label):
+                spy = Spy(command)
+                self.assertEqual([KIND_INSPECTED], spy.kinds())
+                self.assertEqual(("ls",), sole_value(spy.results[0]).commands)
+        with self.subTest("escaped equals inside double quotes"):
+            command = 'mcp-bridge run "--mcp\\=$S" --args-json ' + self.VALUE
+            self.assertEqual([KIND_NOTHING], self.kinds(command))
+
+    def test_the_name_reading_docstring_states_the_escaped_equals(self):
+        """args-json-quoting-bypass TS-18 (FR10): the docstring of
+        _flag_equals_prefix_name() says that an unquoted `=` or an unquoted
+        backslash-escaped `=` ends the name part and that a `\\=` inside double
+        quotes keeps its backslash."""
+        doc = " ".join(inspect.getdoc(GUARD._flag_equals_prefix_name).split())
+        for phrase in (
+            "an unquoted `=` or an unquoted backslash-escaped `=`",
+            "either one ends the name part",
+            "A `\\=` inside double quotes",
+            "keeps its backslash",
+        ):
+            with self.subTest(phrase):
+                self.assertIn(phrase, doc)
 
     def test_single_dash_flags_are_inspected(self):
         command = "mcp-bridge run -mcp x -tool y -args-json " + self.VALUE
@@ -886,6 +1076,510 @@ class TestUnrestorable(unittest.TestCase):
         self.assertEqual([GUARD.ARGS_JSON_UNRESTORABLE_ASK], spy.early_stop)
 
 
+class TestDollarReading(unittest.TestCase):
+    """args-json-quoting-bypass TS-13 to TS-15 (FR3, FR4, FR7, FR9, FR10, TM-4,
+    TM-5): how the word readers read a `$`. A `$`, one or more line
+    continuations (a backslash and a newline) and a character that starts an
+    expansion make the word Unrestorable; a `$` before a character that starts
+    no expansion, a non-ASCII character included, is a literal `$`."""
+
+    NL = "\n"
+    FR3_FORM = (
+        "a `$`, one or more line continuations (a backslash and a newline), "
+        "and a character that starts an expansion"
+    )
+
+    def lex(self, written):
+        """The marked text and the value word of the `mcp-bridge run`
+        statement whose `--args-json` value is WRITTEN, as the decision
+        receives them (a spy on the decision records its arguments). The
+        statement is checked to end with WRITTEN as written, line continuations
+        included, and the word to span it (unless it starts with a
+        substitution's residue)."""
+        seen = []
+        original = GUARD._mcp_bridge_args_json_chunks
+
+        def spy(shaped_words, marked):
+            seen.append((shaped_words, marked))
+            return original(shaped_words, marked)
+
+        with mock.patch.object(GUARD, "_mcp_bridge_args_json_chunks", spy):
+            list(GUARD.statements("mcp-bridge run --args-json " + written, early_stop=[]))
+        ((shaped_words, marked),) = [
+            s for s in seen if GUARD.head(s[0])[0] == "mcp-bridge"
+        ]
+        word = shaped_words[-1]
+        self.assertTrue(marked.source.endswith(written))
+        bounds = GUARD._word_source_bounds(marked, *word.span)
+        if bounds is not None:  # None: the word starts with a substitution's residue
+            self.assertEqual(written, marked.source[bounds[0]:bounds[1]])
+        return marked, word
+
+    def static(self, written):
+        """_read_static_word() over the value word WRITTEN."""
+        return GUARD._read_static_word(*self.lex(written))
+
+    def as_written(self, written):
+        """_read_word_as_written() over the value word WRITTEN."""
+        return GUARD._read_word_as_written(*self.lex(written))
+
+    def cont(self, count=1):
+        """COUNT line continuations: a backslash and a newline, each."""
+        return ("\\" + self.NL) * count
+
+    def test_a_double_quoted_dollar_continuation_expansion_start_is_unrestorable(self):
+        """TS-13 (AC-2, FR3): `"$`, a line continuation and a character that
+        starts an expansion`"` is Unrestorable."""
+        c = self.cont
+        for label, written in (
+            ("name", '"$' + c() + 'DEST"'),
+            ("two continuations", '"$' + c(2) + 'DEST"'),
+            ("three continuations", '"$' + c(3) + 'DEST"'),
+            ("brace", '"$' + c() + '{DEST}"'),
+            ("bracket", '"$' + c() + '[DEST]"'),
+            ("digit", '"$' + c() + '1"'),
+            ("underscore", '"$' + c() + '_"'),
+            ("special parameter", '"$' + c() + '@"'),
+            ("text around", '"a $' + c() + 'DEST b"'),
+        ):
+            with self.subTest(label):
+                self.assertEqual((GUARD.WORD_UNRESTORABLE, None), self.static(written))
+
+    def test_a_dollar_continuation_paren_is_a_substitution_and_not_static(self):
+        """TS-13 (AC-2, FR3): a `$`, a line continuation and a `(` is a
+        substitution Bash runs (the marking reads it as one), not a quoting
+        that cannot be restored: the word stays Not static, in double quotes
+        and outside. A `{` after an unquoted `$` and a continuation is a
+        parameter expansion region, also Not static."""
+        c = self.cont
+        for label, written in (
+            ("double quote, paren", '"$' + c() + '(DEST)"'),
+            ("unquoted, paren", "$" + c() + "(DEST)"),
+            ("unquoted, brace", "$" + c() + "{DEST}"),
+        ):
+            with self.subTest(label):
+                self.assertEqual((GUARD.WORD_NOT_STATIC, None), self.static(written))
+
+    def test_an_unquoted_dollar_continuation_name_is_unrestorable(self):
+        """TS-13 (AC-2, FR3): an unquoted `$`, a line continuation and a name
+        character is Unrestorable."""
+        c = self.cont
+        for label, written in (
+            ("name", "$" + c() + "X"),
+            ("two continuations", "$" + c(2) + "X"),
+            ("digit", "$" + c() + "1"),
+            ("text around", "a$" + c() + "Xb"),
+        ):
+            with self.subTest(label):
+                self.assertEqual((GUARD.WORD_UNRESTORABLE, None), self.static(written))
+
+    def test_an_unquoted_dollar_continuation_quote_is_unrestorable(self):
+        """TS-13 (AC-2, FR3): an unquoted `$`, a line continuation and a quoted
+        part (the opener of an ANSI-C or locale quote split by the
+        continuation) is Unrestorable."""
+        c = self.cont
+        for label, written in (
+            ("single quote", "$" + c() + "'abc'"),
+            ("double quote", "$" + c() + '"abc"'),
+            ("two continuations", "$" + c(2) + "'abc'"),
+        ):
+            with self.subTest(label):
+                self.assertEqual((GUARD.WORD_UNRESTORABLE, None), self.static(written))
+
+    def test_a_word_that_also_holds_an_expansion_is_not_static(self):
+        """TS-13 (AC-2, FR3): an expansion anywhere in the word wins over the
+        FR3 form, whichever comes first."""
+        c = self.cont
+        for label, written in (
+            ("double quote, expansion after", '"$' + c() + 'DEST $Y"'),
+            ("double quote, expansion before", '"$Y $' + c() + 'DEST"'),
+            ("double quote, backtick after", '"$' + c() + 'DEST `x`"'),
+            ("double quote, expansion in a second region", '"$' + c() + 'DEST"$Y'),
+            ("unquoted, expansion after", "$" + c() + "X$Y"),
+            ("unquoted, expansion before", "$Y$" + c() + "X"),
+            ("unquoted, substitution after", "$" + c() + "X$(echo x)"),
+            ("unquoted, glob after", "$" + c() + "X*"),
+            ("locale quote, expansion after", '$"$' + c() + "X $Y" + '"'),
+        ):
+            with self.subTest(label):
+                self.assertEqual((GUARD.WORD_NOT_STATIC, None), self.static(written))
+
+    def test_a_dollar_continuation_before_no_expansion_is_a_literal_dollar(self):
+        """TS-13 (AC-2, FR3): a `$` whose next character after the line
+        continuations starts no expansion (a space, the closing quote, another
+        symbol, the end) is a literal `$`; the continuations vanish."""
+        c = self.cont
+        for label, written, text in (
+            ("space", '"a $' + c() + ' b"', "a $ b"),
+            ("closing quote", '"a $' + c() + '"', "a $"),
+            ("two continuations then a space", '"a $' + c(2) + ' b"', "a $ b"),
+            ("two continuations then the closing quote", '"a $' + c(2) + '"', "a $"),
+            ("only the dollar and a continuation", '"$' + c() + '"', "$"),
+            ("percent sign", '"$' + c() + '%"', "$%"),
+            ("a backslash escape", '"$' + c() + '\\"x"', '$"x'),
+            ("unquoted, percent sign", "a$" + c() + "%b", "a$%b"),
+            ("unquoted, a backslash escape", "$" + c() + "\\x", "$x"),
+        ):
+            with self.subTest(label):
+                self.assertEqual((GUARD.WORD_STATIC, text), self.static(written))
+
+    def test_a_continuation_without_a_dollar_vanishes_as_before(self):
+        """TS-13 (AC-7): a line continuation that does not follow a `$` is
+        read as before."""
+        c = self.cont
+        for label, written, text in (
+            ("double quote", '"a' + c() + 'b"', "ab"),
+            ("unquoted", "a" + c() + "b", "ab"),
+        ):
+            with self.subTest(label):
+                self.assertEqual((GUARD.WORD_STATIC, text), self.static(written))
+
+    def test_a_dollar_without_a_continuation_is_read_as_before(self):
+        """TS-13 (AC-7): both sides of the continuation rule: with no
+        continuation, a `$` before an expansion-start character is not static
+        and a `$` before any other ASCII character is a literal `$`."""
+        for label, written, expected in (
+            ("double quote, name", '"$DEST"', (GUARD.WORD_NOT_STATIC, None)),
+            ("double quote, brace", '"${DEST}"', (GUARD.WORD_NOT_STATIC, None)),
+            ("double quote, special parameter", '"$@"', (GUARD.WORD_NOT_STATIC, None)),
+            ("double quote, space", '"a $ b"', (GUARD.WORD_STATIC, "a $ b")),
+            ("double quote, percent sign", '"$%"', (GUARD.WORD_STATIC, "$%")),
+            ("double quote, end", '"a $"', (GUARD.WORD_STATIC, "a $")),
+            ("unquoted, name", "$X", (GUARD.WORD_NOT_STATIC, None)),
+            ("unquoted, special parameter", "$@", (GUARD.WORD_NOT_STATIC, None)),
+            ("unquoted, end", "a$", (GUARD.WORD_STATIC, "a$")),
+            ("unquoted, percent sign", "a$%b", (GUARD.WORD_STATIC, "a$%b")),
+        ):
+            with self.subTest(label):
+                self.assertEqual(expected, self.static(written))
+
+    def test_the_masking_stop_reading_does_not_determine_the_fr3_form(self):
+        """TS-14 (AC-3, FR3): `_read_word_as_written()` gives None for a
+        double-quoted word holding a `$`, a line continuation and a character
+        that starts an expansion."""
+        c = self.cont
+        for label, written in (
+            ("name", '"$' + c() + 'DEST"'),
+            ("two continuations", '"$' + c(2) + 'DEST"'),
+            ("brace", '"$' + c() + '{DEST}"'),
+            ("special parameter", '"$' + c() + '@"'),
+            ("text around", '"a $' + c() + 'DEST b"'),
+        ):
+            with self.subTest(label):
+                self.assertIsNone(self.as_written(written))
+
+    def test_the_masking_stop_reading_of_a_word_without_the_fr3_form_is_as_before(self):
+        """TS-14 (AC-3, AC-7): a word without the FR3 form is read as before."""
+        c = self.cont
+        for label, written, expected in (
+            ("plain", "plain", "plain"),
+            ("double quote, space", '"a $ b"', "a $ b"),
+            ("double quote, end", '"a $"', "a $"),
+            ("double quote, dollar continuation space", '"a $' + c() + ' b"', "a $ b"),
+            ("double quote, dollar continuation end", '"a $' + c() + '"', "a $"),
+            ("double quote, continuation only", '"a' + c() + 'b"', "ab"),
+            ("double quote, name", '"$DEST"', None),
+            ("double quote, brace", '"${DEST}"', None),
+            ("unquoted, dollar", "$X", None),
+            ("unquoted, dollar continuation", "$" + c() + "X", None),
+        ):
+            with self.subTest(label):
+                self.assertEqual(expected, self.as_written(written))
+
+    def test_a_dollar_before_a_non_ascii_character_is_literal(self):
+        """TS-15 (AC-5, FR4): the double-quoted value `"5 $€"` is read as
+        static text `5 $€`, and the same value written with `\\$€` is read as
+        the same text."""
+        for label, written in (
+            ("bare", '"5 $€"'),
+            ("escaped", '"5 \\$€"'),
+        ):
+            with self.subTest(label):
+                self.assertEqual((GUARD.WORD_STATIC, "5 $€"), self.static(written))
+
+    def test_a_dollar_before_a_non_ascii_character_is_literal_in_every_position(self):
+        """TS-15 (FR4): a `$` before a non-ASCII character is literal in a
+        double-quoted body and outside quotes, a non-ASCII letter included."""
+        for label, written, text in (
+            ("double quote, symbol", '"$€"', "$€"),
+            ("double quote, letter", '"$é"', "$é"),
+            ("double quote, letter, text around", '"a $é b"', "a $é b"),
+            ("unquoted, symbol", "a$€b", "a$€b"),
+            ("unquoted, letter", "$é", "$é"),
+            ("single-quoted parts around an unquoted one", "'{\"a\":\"'$€'\"}'", '{"a":"$€"}'),
+        ):
+            with self.subTest(label):
+                self.assertEqual((GUARD.WORD_STATIC, text), self.static(written))
+
+    def test_a_non_ascii_character_after_a_continuation_is_literal(self):
+        """TS-15 (FR3, FR4): a `$`, a line continuation and a non-ASCII
+        character is a literal `$` and the character; the continuation
+        vanishes."""
+        c = self.cont
+        for label, written, text in (
+            ("double quote", '"5 $' + c() + '€"', "5 $€"),
+            ("double quote, two continuations", '"5 $' + c(2) + '€"', "5 $€"),
+            ("unquoted", "a$" + c() + "€b", "a$€b"),
+        ):
+            with self.subTest(label):
+                self.assertEqual((GUARD.WORD_STATIC, text), self.static(written))
+
+    def test_a_locale_quote_is_unrestorable_unless_it_holds_an_expansion(self):
+        """TS-13, TS-15 (FR3, FR4): a locale quote whose body holds the FR3
+        form or a `$` before a non-ASCII character holds no expansion, so it is
+        Unrestorable (as any locale quote without one); with an expansion it is
+        not static."""
+        c = self.cont
+        for label, written, expected in (
+            ("plain", '$"abc"', (GUARD.WORD_UNRESTORABLE, None)),
+            ("the FR3 form", '$"$' + c() + 'X"', (GUARD.WORD_UNRESTORABLE, None)),
+            ("a dollar before a non-ASCII character", '$"5 $€"', (GUARD.WORD_UNRESTORABLE, None)),
+            ("an expansion", '$"$X"', (GUARD.WORD_NOT_STATIC, None)),
+        ):
+            with self.subTest(label):
+                self.assertEqual(expected, self.static(written))
+
+    def test_the_docstrings_and_the_comment_name_the_fr3_form(self):
+        """AC-6 (FR7, FR10): the docstrings of the readers, step 4 of the
+        decision's docstring and the comment above the Unrestorable ask write
+        the FR3 form the same way."""
+        decision = " ".join(GUARD._mcp_bridge_args_json_chunks.__doc__.split())
+        step4 = decision[decision.index("4. Word outcomes"):decision.index("5. Values")]
+        with open(HOOK, encoding="utf-8") as handle:
+            lines = handle.read().split("\n")
+        at = lines.index("ARGS_JSON_UNRESTORABLE_ASK = (")
+        comment = []
+        for line in reversed(lines[:at]):
+            if not line.startswith("#"):
+                break
+            comment.insert(0, line[1:].strip())
+        texts = {
+            "_read_static_word": GUARD._read_static_word.__doc__,
+            "_read_double_quoted": GUARD._read_double_quoted.__doc__,
+            "_read_word_as_written": GUARD._read_word_as_written.__doc__,
+            "decision step 4": step4,
+            "comment above the ask": " ".join(comment),
+        }
+        for label, text in texts.items():
+            with self.subTest(label):
+                self.assertIn(self.FR3_FORM, " ".join(text.split()))
+
+    def test_the_docstrings_state_that_a_dollar_before_a_non_ascii_character_is_literal(self):
+        """AC-6 (FR4, FR10): the docstrings of `_read_static_word()` and
+        `_read_double_quoted()` say that a `$` before a non-ASCII character is
+        a literal `$`."""
+        for name in ("_read_static_word", "_read_double_quoted"):
+            with self.subTest(name):
+                doc = " ".join(getattr(GUARD, name).__doc__.split())
+                self.assertIn("non-ASCII", doc)
+
+
+class TestNamerefDeclarations(unittest.TestCase):
+    """args-json-quoting-bypass TS-32 (FR1, FR9, NFR6; findings
+    1d971862e2458376, 6083a3b46956a2f0, 4d1573a9f53b167f, 7bb299da67faace7): the
+    nameref declarations the single-word-certain judgment consults are the ones
+    Bash has in effect for the statement. A declaration command is recognised
+    with Bash's word and redirection boundaries and through `command --`, so a
+    glued form reads like its spaced form, and a derived chunk sees the
+    declarations of every chunk around it. The notion call of each command
+    below gives KIND_INSPECTED: its `--format "$r"` may expand to several
+    arguments, so the notion pair is not excluded."""
+
+    ARRAY = "A=(json --mcp desktop-commander --tool start_process); "
+    NOTION = (
+        "mcp-bridge run --mcp notion --tool notion-create-comment "
+        "--format \"$r\" --args-json '{\"command\":\"git branch -D example\"}'"
+    )
+    DECLARE = "declare -n r='A[@]'"
+
+    def kinds(self, command):
+        """The kinds of the `mcp-bridge` statements of a statements() run of
+        COMMAND (the entry point the TS-17 tests use)."""
+        return Spy(command).kinds()
+
+    def glued_and_spaced(self):
+        """(label, the glued form, the spaced form) of every form TS-27 to
+        TS-29 name; the spaced form is the one the scan always read."""
+        notion = "; " + self.NOTION
+        return (
+            (
+                "TS-27 input redirection touching declare",
+                self.ARRAY + "declare</dev/null -n r='A[@]'" + notion,
+                self.ARRAY + "declare </dev/null -n r='A[@]'" + notion,
+            ),
+            (
+                "TS-27 output redirection touching declare",
+                self.ARRAY + "declare>/dev/null -n r='A[@]'" + notion,
+                self.ARRAY + "declare >/dev/null -n r='A[@]'" + notion,
+            ),
+            (
+                "TS-29 source with &> touching it",
+                "source&>/dev/null ./env.sh" + notion,
+                "source &>/dev/null ./env.sh" + notion,
+            ),
+            (
+                "TS-29 dot with &> touching it",
+                ".&>/dev/null ./env.sh" + notion,
+                ". &>/dev/null ./env.sh" + notion,
+            ),
+        )
+
+    def every_command(self):
+        """(label, command) of every command TS-27, TS-28, TS-29 and TS-30
+        name, written out in full."""
+        notion = "; " + self.NOTION
+        commands = []
+        for label, glued, spaced in self.glued_and_spaced():
+            commands.append((label + " (glued)", glued))
+            commands.append((label + " (spaced)", spaced))
+        commands.extend(
+            (
+                (
+                    "TS-28 redirection before the command name",
+                    self.ARRAY + "</dev/null " + self.DECLARE + notion,
+                ),
+                (
+                    "TS-30 command --",
+                    self.ARRAY + "command -- " + self.DECLARE + notion,
+                ),
+                (
+                    "TS-30 command -p --",
+                    self.ARRAY + "command -p -- " + self.DECLARE + notion,
+                ),
+            )
+        )
+        return commands
+
+    def test_the_notion_call_of_every_ts_27_to_30_command_is_inspected(self):
+        """args-json-quoting-bypass TS-32: the `mcp-bridge` statement of every
+        TS-27, TS-28, TS-29 and TS-30 command gives KIND_INSPECTED."""
+        for label, command in self.every_command():
+            with self.subTest(label):
+                self.assertEqual([KIND_INSPECTED], self.kinds(command))
+
+    def test_a_glued_form_gives_the_same_kind_as_its_spaced_form(self):
+        """args-json-quoting-bypass TS-32: a redirection operator that touches
+        the command name gives the kind the same command with a space gives."""
+        for label, glued, spaced in self.glued_and_spaced():
+            with self.subTest(label):
+                self.assertEqual(self.kinds(spaced), self.kinds(glued))
+
+    def test_a_redirection_in_any_place_is_left_out_of_the_command_name(self):
+        """args-json-quoting-bypass TS-32 (6083a3b46956a2f0): a redirection
+        before the name, touching it, or after it, with a file descriptor
+        number, a `{name}` variable or a `>&` target, does not hide the
+        declaration."""
+        notion = "; " + self.NOTION
+        for label, prefix in (
+            ("descriptor number", "declare 2>/dev/null -n r='A[@]'"),
+            ("descriptor variable", "declare {fd}>/dev/null -n r='A[@]'"),
+            ("duplication target", "declare >&2 -n r='A[@]'"),
+            ("before the name, touching", "</dev/null declare -n r='A[@]'"),
+            ("after the options", "declare -n r='A[@]' </dev/null"),
+            ("in a group", "{ declare</dev/null -n r='A[@]'; }"),
+        ):
+            with self.subTest(label):
+                self.assertEqual(
+                    [KIND_INSPECTED], self.kinds(self.ARRAY + prefix + notion)
+                )
+
+    def test_a_prefix_word_before_the_declaration_is_skipped(self):
+        """args-json-quoting-bypass TS-32 (7bb299da67faace7): the words that
+        stand before a command name (`command`, `builtin` and `time` with their
+        own options and `--`, an assignment, a reserved word) do not hide a
+        `declare -n` after them."""
+        notion = "; " + self.NOTION
+        for label, head in (
+            ("command", "command " + self.DECLARE),
+            ("builtin --", "builtin -- " + self.DECLARE),
+            ("time -p --", "time -p -- " + self.DECLARE),
+            ("assignment with +=", "x+=1 " + self.DECLARE),
+            ("elif", "if false; then :; elif " + self.DECLARE + "; then :; fi"),
+            ("command -p command --", "command -p command -- " + self.DECLARE),
+        ):
+            with self.subTest(label):
+                self.assertEqual(
+                    [KIND_INSPECTED], self.kinds(self.ARRAY + head + notion)
+                )
+
+    def test_a_declaration_with_no_nameref_option_does_not_make_the_call_uncertain(self):
+        """args-json-quoting-bypass TS-32 (FR1): a glued redirection on a
+        `declare` without `-n` (or on `echo`), an arithmetic command, and a
+        comment that names a declaration do not mark the shell state, so the
+        notion call keeps its exclusion and is not inspected."""
+        call = self.NOTION.replace('"$r"', '"$SID"')
+        for label, command in (
+            ("declare without -n", self.ARRAY + "declare</dev/null -a r; " + call),
+            ("echo with a glued redirection", self.ARRAY + "echo>/dev/null hello; " + call),
+            ("command -- before echo", self.ARRAY + "command -- echo hello; " + call),
+            ("arithmetic command without blanks", "((x=1)); " + call),
+            ("comment that names a declaration", "echo a\n# " + self.DECLARE + "\n" + call),
+        ):
+            with self.subTest(label):
+                self.assertEqual([KIND_NOTHING], self.kinds(command))
+
+    def test_a_declaration_in_an_enclosing_chunk_counts_at_any_depth(self):
+        """args-json-quoting-bypass TS-32 (1d971862e2458376): the notion call
+        one, two and three command substitutions below a chunk that declares
+        the nameref is inspected, wherever that chunk stands in the chain."""
+        for label, command in (
+            (
+                "declaration one level above the call's chunk",
+                self.ARRAY + "echo $(" + self.DECLARE + "; echo $(" + self.NOTION + "))",
+            ),
+            (
+                "declaration two levels above the call's chunk",
+                self.ARRAY + "echo $(" + self.DECLARE + "; echo $(echo $(" + self.NOTION + ")))",
+            ),
+            (
+                "declaration in the command itself, call three levels down",
+                self.ARRAY + self.DECLARE + "; echo $(echo $(echo $(" + self.NOTION + ")))",
+            ),
+        ):
+            with self.subTest(label):
+                self.assertEqual([KIND_INSPECTED], self.kinds(command))
+
+    def test_no_declaration_anywhere_keeps_the_nested_call_excluded(self):
+        """args-json-quoting-bypass TS-32 (TS-31): with no declaration in any
+        chunk of the chain, a notion call with `--session "$SID"` below one or
+        two command substitutions is not inspected."""
+        call = self.NOTION.replace('"$r"', '"$SID"')
+        for label, command in (
+            ("one level", "echo $(" + call + ")"),
+            ("two levels", "echo $(echo $(" + call + "))"),
+        ):
+            with self.subTest(label):
+                self.assertEqual([KIND_NOTHING], self.kinds(command))
+
+    def test_the_chain_is_walked_without_recursion(self):
+        """args-json-quoting-bypass TS-32 (1d971862e2458376): a declaration at
+        the top of a chain far deeper than the interpreter's recursion limit
+        still reaches the innermost chunk."""
+        top = GUARD._MarkedText.plain(self.DECLARE)
+        node = top
+        for _ in range(3 * sys.getrecursionlimit()):
+            inner = GUARD._MarkedText.plain("echo x")
+            inner._is_derived = True
+            inner._outer_marked = node
+            node = inner
+        self.assertTrue(GUARD._args_json_nameref_declared(node))
+        quiet = GUARD._MarkedText.plain("echo x")
+        node = quiet
+        for _ in range(3 * sys.getrecursionlimit()):
+            inner = GUARD._MarkedText.plain("echo x")
+            inner._is_derived = True
+            inner._outer_marked = node
+            node = inner
+        self.assertFalse(GUARD._args_json_nameref_declared(node))
+
+    def test_a_derived_chunk_without_a_link_reads_as_declared(self):
+        """args-json-quoting-bypass TS-32: a derived chunk that carries no
+        link to the chunk it came from reads as "may declare" (fail safe)."""
+        orphan = GUARD._MarkedText.plain("echo x")
+        orphan._is_derived = True
+        self.assertTrue(GUARD._args_json_nameref_declared(orphan))
+
+
 class TestDeferral(unittest.TestCase):
     """AC-7 (FR7, D3, D6, TM-3, TM-4): on Overrun and on a charge that does
     not fit, the scanned total is unchanged, nothing of the statement is
@@ -1111,6 +1805,137 @@ def judge(command):
     return out["permissionDecision"], rule
 
 
+class TestAnchorLookup(unittest.TestCase):
+    """args-json-quoting-bypass TS-16 (FR5, FR9, NFR4): the collaborator finds
+    the token index of the anchor word of each value that queues something
+    through one walk of the statement's tokens, not one search per value; a
+    value that queues nothing costs no token position; a word without a span
+    is located by _token_index(). The proof is structural: a token list that
+    counts how often it is walked, never elapsed time."""
+
+    MANY = 100
+    HEAD = ["mcp-bridge", "run", "--mcp", "desktop-commander", "--tool", "start_process"]
+
+    class WalkCounting(list):
+        """A token list that counts how many times it is walked."""
+
+        def __init__(self, items):
+            super().__init__(items)
+            self.walks = 0
+
+        def __iter__(self):
+            self.walks += 1
+            return super().__iter__()
+
+    def run_words(self, words):
+        """Drive statements() over the command WORDS spell (joined by a blank,
+        each written as it is to be lexed): (origins, walks), the anchor of
+        each statement it yielded keyed by statement text, and how many times
+        the collaborator walked the token list of the statement whose command
+        word is `mcp-bridge`."""
+        original = GUARD._queue_args_json_chunks
+        walked = []
+
+        def spy(shaped_words, marked_chunk, tokens, *rest):
+            counting = self.WalkCounting(tokens)
+            if tokens and tokens[0] == "mcp-bridge":
+                walked.append(counting)
+            return original(shaped_words, marked_chunk, counting, *rest)
+
+        origins = {}
+        with mock.patch.object(GUARD, "_queue_args_json_chunks", spy):
+            for statement in GUARD.statements(" ".join(words), early_stop=[]):
+                origins[statement[0]] = statement[5][0]
+        (counting,) = walked
+        return origins, counting.walks
+
+    def test_many_values_cost_one_walk_and_the_command_string_keeps_its_origin(self):
+        words = (
+            self.HEAD
+            + ["--args-json", "'{}'"] * self.MANY
+            + ["--args-json", "'{\"command\":\"echo MARK-CMD\"}'"]
+        )
+        origins, walks = self.run_words(words)
+        # The token index of the value word, read off the words as written; the
+        # value has no body, so its command string is the first entry of its word.
+        self.assertEqual(((0, len(words) - 1, 1),), origins["echo MARK-CMD"])
+        self.assertLessEqual(walks, 1)
+
+    def test_values_that_queue_nothing_cost_no_token_position(self):
+        words = self.HEAD + ["--args-json", "'{}'"] * self.MANY
+        origins, walks = self.run_words(words)
+        self.assertEqual(0, walks)
+        self.assertEqual(1, len(origins))
+
+    def test_the_command_strings_of_many_values_share_one_walk_and_keep_their_origins(self):
+        words = list(self.HEAD)
+        expected = {}
+        for i in range(self.MANY):
+            words += ["--args-json", "'{}'"]
+            if i % 10 == 0:
+                words += ["--args-json", "'{\"command\":\"echo MARK-" + str(i) + "\"}'"]
+                expected["echo MARK-" + str(i)] = ((0, len(words) - 1, 1),)
+        origins, walks = self.run_words(words)
+        self.assertEqual(expected, {text: origins[text] for text in expected})
+        self.assertLessEqual(walks, 1)
+
+    # The collaborator over a fixed decision result (the decision replaced by a
+    # stub, as TestDeferral does), the tokens given as they are.
+
+    def queue(self, tokens, *words):
+        """The last origin step (statement index, token index, ordinal) of each
+        entry the collaborator queues over TOKENS when the decision names one
+        value of a single body at each of WORDS."""
+        values = tuple(GUARD.ArgsJsonValue(word, ("echo B",), ()) for word in words)
+        result = GUARD.ArgsJsonResult(values, 1, False, False)
+        pending = []
+        with mock.patch.object(
+            GUARD, "_mcp_bridge_args_json_chunks", lambda shaped_words, marked: result
+        ):
+            GUARD._queue_args_json_chunks(
+                ["mcp-bridge", "run"], None, tokens, True, ("anchor",), 3,
+                GUARD.PY_BODY, pending, GUARD._ScanState(1000), GUARD._DeferredAsks(),
+            )
+        return [entry[1][-1] for entry in pending]
+
+    @staticmethod
+    def tok(text, span=None):
+        token = GUARD.Tok(text)
+        token.span = span
+        return token
+
+    def test_a_word_without_a_span_is_located_by_identity_first(self):
+        first, second = self.tok("dup"), self.tok("dup")
+        tokens = [self.tok("a"), first, second]
+        # Equal text at 1 and 2: the word itself is at 2.
+        self.assertEqual([(3, 2, 1)], self.queue(tokens, second))
+
+    def test_a_word_without_a_span_that_is_not_a_token_is_located_by_text_then_zero(self):
+        tokens = [self.tok("a"), self.tok("b")]
+        self.assertEqual([(3, 1, 1)], self.queue(tokens, self.tok("b")))
+        self.assertEqual([(3, 0, 1)], self.queue(tokens, self.tok("absent")))
+
+    def test_a_word_whose_span_no_token_has_is_located_by_token_index(self):
+        tokens = [self.tok("a", (0, 1)), self.tok("b", (2, 3))]
+        self.assertEqual([(3, 1, 1)], self.queue(tokens, self.tok("b", (40, 41))))
+        self.assertEqual([(3, 0, 1)], self.queue(tokens, self.tok("absent", (40, 41))))
+
+    def test_a_word_with_a_span_gets_the_first_token_with_that_span(self):
+        tokens = [self.tok("a", (0, 1)), self.tok("b", (2, 3)), self.tok("b", (2, 3))]
+        # The word is the token at 2, but the first token with its span is 1.
+        self.assertEqual([(3, 1, 1)], self.queue(tokens, tokens[2]))
+
+    def test_two_values_with_spans_each_get_their_own_index(self):
+        tokens = [self.tok("a", (0, 1)), self.tok("b", (2, 3)), self.tok("c", (4, 5))]
+        self.assertEqual([(3, 2, 1), (3, 0, 1)], self.queue(tokens, tokens[2], tokens[0]))
+
+    def test_the_step_3_docstring_states_the_lookup_rule(self):
+        doc = GUARD._queue_args_json_chunks.__doc__
+        for phrase in ("span", "at most once", "_token_index()"):
+            with self.subTest(phrase):
+                self.assertIn(phrase, doc)
+
+
 class TestDenyWins(unittest.TestCase):
     """AC-5, AC-6 (FR7, FR11, FR12, D6): the deferred asks are settled after
     the queue is drained, so a deny found beside them wins; alone they are
@@ -1331,6 +2156,52 @@ class TestDocstring(unittest.TestCase):
         for phrase in ("Not static", "Unrestorable", "Overrun"):
             with self.subTest(phrase):
                 self.assertIn(phrase, self.doc)
+
+    def test_step_2_and_the_notion_pair_name_the_single_word_certain_condition(self):
+        """args-json-quoting-bypass FR10 (TS-1 to TS-5): step 2 of the
+        decision, the docstring of the notion-pair predicate and the comment
+        above _MCP_RUN_VALUE_FLAGS state that the pair is determined only for
+        single-word-certain value words."""
+        flow = self.doc[: self.doc.index("Out of scope")]
+        step_2 = flow[flow.index("2. Notion pair"): flow.index("3. Flag reading")]
+        pair_doc = " ".join(inspect.getdoc(GUARD._args_json_notion_pair).split())
+        for label, text in (("step 2", step_2), ("predicate", pair_doc)):
+            for phrase in (
+                "single-word-certain",
+                "`--format`, `--session` and `--args-json` value words",
+            ):
+                with self.subTest(label + ": " + phrase):
+                    self.assertIn(phrase, text)
+        with open(HOOK, encoding="utf-8") as handle:
+            source = handle.read()
+        comment = source[: source.index("_MCP_RUN_VALUE_FLAGS = frozenset(")]
+        comment = " ".join(comment[comment.rindex("# The flags of `mcp-bridge run`"):].split())
+        with self.subTest("comment above _MCP_RUN_VALUE_FLAGS"):
+            self.assertIn("single-word-certain", comment)
+
+    def test_o2_item_8_states_the_word_count_shift_in_both_docstrings(self):
+        """args-json-quoting-bypass FR6 (TS-12): O2 item 8 stands directly
+        after item 2 and before item 3, with the scope of the SPEC's O2 (8),
+        in the decision's docstring ("Out of scope" part) and in the
+        out-of-scope declaration of extract_shell_payload_anchored()."""
+        anchored = " ".join(inspect.getdoc(GUARD.extract_shell_payload_anchored).split())
+        for label, text in (("decision", self.scope), ("anchored", anchored)):
+            for phrase in (
+                "2. a word in flag position that is not static in the same sense; 8. a value word of the mcp, tool, format or session flag",
+                "or the value part after the `=` of a flag word",
+                "that Bash expansion turns into a word count other than one",
+                "shifting where mcp-bridge reads flags and values so that a later args-json value is hidden",
+                "the flag reading reads words as written",
+                "keeps its current verdict without the decoded-value inspection and is not sent to ask); 3. an unknown flag",
+            ):
+                with self.subTest(label + ": " + phrase):
+                    self.assertIn(phrase, text)
+        cases = os.path.join(ROOT, "em-workflow", "hooks", "tests", "destructive-guard-cases.json")
+        with open(cases, encoding="utf-8") as handle:
+            labels = [case[1] for case in json.load(handle)]
+        with self.subTest("the TS-12 runner label names O2 (8)"):
+            (label,) = [l for l in labels if l.startswith("args-json-quoting-bypass TS-12:")]
+            self.assertIn("O2 (8)", label)
 
 
 if __name__ == "__main__":

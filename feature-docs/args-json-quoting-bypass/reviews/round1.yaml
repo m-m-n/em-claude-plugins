@@ -1,0 +1,579 @@
+round: 1
+executed_at: '2026-11-20T21:55:59+09:00'
+scope:
+  review_mode: diff
+  base_commit: 996e1443a63b46e552a97d2ad7e2d2f96ae8f778
+  head_commit: db86911684f463b35b09d5d5a18971d5c7688469
+  changed_files:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/args-json-quoting-bypass/task0001.tests.yaml
+  - test-docs/args-json-quoting-bypass/task0002.tests.yaml
+  - test-docs/args-json-quoting-bypass/task0003.tests.yaml
+  - test-docs/args-json-quoting-bypass/task0004.tests.yaml
+  - tests/test_destructive_guard_args_json.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary:
+  - perspective: performance
+    reason: diff replaces the per-value --args-json anchor search with a linear span map (FR5 / NFR1)
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  status: completed
+- run_id: comprehensive#loop1.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#loop1.0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+  model: gpt-6-astra
+- run_id: architecture#loop1.0
+  perspective: architecture
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: spec#loop1.0
+  perspective: spec
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: performance#loop1.0
+  perspective: performance
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: comprehensive#loop2.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#loop2.0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+  model: gpt-6-astra
+- run_id: architecture#loop2.0
+  perspective: architecture
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: spec#loop2.0
+  perspective: spec
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: performance#loop2.0
+  perspective: performance
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: comprehensive#loop3.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: skipped
+  skip_reason: harness_unavailable
+- run_id: comprehensive#loop3.1
+  perspective: comprehensive
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: security#loop3.0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+  model: gpt-6-astra
+- run_id: architecture#loop3.0
+  perspective: architecture
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: spec#loop3.0
+  perspective: spec
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: performance#loop3.0
+  perspective: performance
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: aa6573c3b4b75f4f
+  severity: high
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7090
+  title: FR3 continued-dollar hides co-occurring expansion instead of staying Not static
+  description: SPEC FR3 requires "語が FR6 (1) の別の要素も含むときは、現在どおり Not static のまま。" but _read_double_quoted() collapses a body holding both the FR3 continued-dollar form and an ordinary expansion to _DQ_CONTINUED, and _read_static_word() then marks it Unrestorable instead of WORD_NOT_STATIC, contradicting the required NOT_STATIC outcome.
+  suggestion: Preserve expansion signal alongside continued in _read_double_quoted() (e.g. return EXPANSION when any FR6(1) expansion/backtick exists, or propagate both flags) and make _read_static_word() return WORD_NOT_STATIC when the word holds any FR6(1) element even if FR3 is also present, per FR3.
+  reproduction: Lex value '"$\\\nDEST $Y"' (double-quoted FR3 form plus $Y expansion) via _read_static_word(); spec + TS-13 expect WORD_NOT_STATIC, implementation returns WORD_UNRESTORABLE because continued takes precedence over expansion in _read_double_quoted(). Same for backtick/glob/substitution co-occurring with FR3 in one double-quoted/locale-quoted body.
+  sources:
+  - litellm:muse-spark-contributor:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: SPEC FR3 は他の展開を含む語を Not static と定める。loop 2・3 の修正はこれと食い違い、tests/test_destructive_guard_args_json.py の TestDollarReading のサブケースが失敗する。仕様変更の合意が要る
+  reproduction_alternates: []
+  reproduction_overflow: false
+- stable_id: 16aa66d09b0b09b7
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8374
+  title: 'TM-1: 引用された参照変数の宣言で検査を回避できる'
+  description: 宣言を生の文字列への正規表現で検出するため、declare '-n' や decla''re -n を見落とす。"$R" が複数の引数に展開されても Notion の除外条件が成立し、実際には desktop-commander/start_process に渡される破壊的な command を検査せず allow になる。TB-1／TM-1 が要求する、引数が必ず1個になることの確認が不完全になっている
+  suggestion: 引用除去後のコマンド名と引数で参照変数の宣言を検出し、語数を確定できない場合は Notion の除外を適用しない。引用された宣言の回帰テストを追加する
+  reproduction: A=(json --mcp desktop-commander --tool start_process); declare '-n' R='A[@]'; mcp-bridge run --mcp notion --tool notion-create-comment --format "$R" --args-json '{"command":"git branch -D example"}' が allow。引用なしの declare -n では deny
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 再現済み（allow）。auto-fix の上限（loop 3）に達した
+  reproduction_alternates: []
+  reproduction_overflow: false
+- stable_id: d52dd4e443011312
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8015
+  title: 'TM-4: 別形式の展開を連結すると行継続の確認を回避できる'
+  description: 行継続を含む語に $"$EMPTY" を連結すると、locale-quote の分岐が WORD_NOT_STATIC を即座に返し、既に検出した Unrestorable を破棄する。${EMPTY} の連結でも同じ回避が成立し、破壊的な JSON が実際には渡されるのにフックは allow を返す。
+  suggestion: 語全体を確認するまで非静的という判定を確定させず、locale-quote やパラメータ展開をまたいでも行継続の検出状態を保持する。各形式の連結について ask、無人実行では deny になるテストを追加する
+  reproduction: CMD='git branch -D example'; EMPTY=; mcp-bridge run --mcp desktop-commander --tool start_process --args-json '{"command":"'"$<行継続>CMD"$"$EMPTY"'"}' が allow。末尾を通常の "$EMPTY" にすると ask
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 再現済み（allow）。auto-fix の上限（loop 3）に達した
+  reproduction_alternates: []
+  reproduction_overflow: false
+- stable_id: af14204620a83abd
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8303
+  title: TM-1 の対策漏れで行継続を挟んだ @ 形式の展開が Notion の検査除外を通る
+  description: _args_json_single_word_certain() の holds_array_form() は、`$` の直後の 1 文字だけを見て `$@` と `${` を判定する。二重引用符の中でも Bash は行継続（バックスラッシュと改行）を先に取り除くので、`"$<行継続>@"` は `"$@"`、`"$<行継続>{A[@]}"` は `"${A[@]}"` として複数語（または 0 語）に展開される。holds_array_form() は `$` の次がバックスラッシュなので素通りし、続く `{` や `@` も `$` の直後ではないので検出しない。その結果、値の語を 1 語確定と誤判定し、notion ペアの除外が成立して、後続の --args-json は復号も検査もされない。TS-3 に行継続を 1 つ挟んだだけの形が allow になる。読解で再現した。comprehensive#0 も同じ箇所を high で報告している。tests/test_destructive_guard_args_json.py の SPLITTING_WORDS には、この形が無い。
+  suggestion: holds_array_form() で `$` を見たら、_read_dollar() と同じく直後の行継続（バックスラッシュと改行の組、任意個）を飛ばしてから `@` と `{` を判定する。`${` の内側で入れ子を数える `$` の判定にも同じ処理を入れる。SPLITTING_WORDS に `"$<行継続>@"` と `"$<行継続>{A[@]}"` を加える。ランナーにも TS-3 の行継続版を deny のケースとして足す。
+  sources:
+  - security#0
+  confidence: 90
+  reproduction: Notion ペアの `--session` 値として、二重引用符内に `$`、バックスラッシュ、改行、`@` を並べ、後続に無害な `--args-json` 値を置く。コマンド文字列を `statements()` に渡すと、`_args_json_notion_pair()` は `True` を返し、JSON の検査結果は空になる。同じ値を位置引数 `alpha` と `beta` を設定した Bash の引数表示に渡すと、2引数になる。MCP ツールを呼び出さずに確認できる。
+  resolution: fixed
+  resolution_reason: auto-applied loop 1
+  reproduction_alternates: []
+  reproduction_overflow: false
+- stable_id: 5555cea803942490
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8307
+  title: 間接展開 "${!X}" を 1 語確定と誤判定し Notion の検査除外を通る
+  description: 'holds_array_form() は、`${...}` の内側に `@` があるときだけ複数語になりうるとみなす。`"${!X}"`（間接展開）は字面に `@` を含まない。しかし X に `A[@]` や `@` が入っていれば、Bash は `"${A[@]}"` や `"$@"` と同じく、要素ごとに別の語へ展開する（配列を名前で渡す慣用句）。例: `A=(json --mcp desktop-commander --tool start_process); X=''A[@]''; mcp-bridge run --mcp notion --tool notion-create-comment --format "${!X}" --args-json ''{"command":"git branch -D example"}''`。この値の語は 1 語確定と判定され、notion ペアの除外が成立して、--args-json は検査されない。SPEC FR1 の列挙（`${!prefix@}`）にも無い形だが、FR1 の定義「Bash が常にちょうど 1 つの引数にする語」には当たらない。evaluator 自身の点検による指摘で、Bash の実行による確認はしていない。'
+  suggestion: holds_array_form() で、`${` の直後が `!` のもの（間接展開、`${!prefix*}`、`${!name[@]}` を問わず）を 1 語確定にしない（安全側）。SPLITTING_WORDS に `"${!X}"` を加え、ランナーにも deny のケースを足す。
+  sources: []
+  confidence: 75
+  reproduction: null
+  resolution: fixed
+  resolution_reason: loop 2 で f2ae2d8167d9e83b の修正が同じ箇所を直した
+  reproduction_alternates: []
+  reproduction_overflow: false
+- stable_id: 8d29c6da706f3a19
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8318
+  title: 複数引数になり得る間接展開で args-JSON の検査が省略される
+  description: 二重引用符内の間接展開は、ソースに `@` がなくても参照先によって複数の引数になる。無害な値を使った確認では、Bash が2引数を渡す場合も `_args_json_notion_pair()` が真を返し、8531行目で復号検査を省略した。展開で接続先やツールが変わり得る呼び出しにも Notion の除外が適用される。
+  suggestion: 参照先の値に依存する間接展開は語数未確定として、通常のフラグ検査に進める。Bash が渡す引数の数と除外判定を照合するテストを追加する。
+  reproduction: null
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: fixed
+  resolution_reason: loop 2 で f2ae2d8167d9e83b の修正が同じ箇所を直した（この指摘自体の編集は skipped）
+  reproduction_alternates: []
+  reproduction_overflow: false
+- stable_id: f2ae2d8167d9e83b
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8331
+  title: 間接展開によって Notion の検査除外を悪用できる
+  description: 配列展開の判定が値の表記中にある @ だけを調べるため、"${!P}" を必ず1引数になると誤判定する。P='A[@]' の場合、Bash は配列を複数の引数へ展開するため、実行先を変更する追加フラグを渡せる。フックは Notion 呼び出しとして検査を省略し、破壊的な command に allow を返す。TB-1 の TM-1 がこの形では成立しない。
+  suggestion: 間接展開は引数の個数が確定しないものとして扱い、Notion の検査除外を適用しない。
+  reproduction: 入力を A=(json --mcp desktop-commander --tool start_process); P='A[@]'; mcp-bridge run --mcp notion --tool notion-create-comment --format "${!P}" --args-json '{"command":"git branch -D example"}' とし、Bash の PreToolUse ペイロードの tool_input.command に渡す。_args_json_notion_pair は true、フックは allow を返す。同じ入力を Bash で確認する際は、先頭に mcp-bridge() { printf '<%s>\n' "$@"; }; を置くと、破壊的操作を実行せず、追加の --mcp desktop-commander --tool start_process と危険な JSON が独立した引数として渡ることを確認できる。
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+  reproduction_alternates: []
+  reproduction_overflow: false
+- stable_id: 6976f24f6b2e1811
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8553
+  title: 値の展開によって後続の JSON 検査を打ち切れる
+  description: 値の展開による引数の増減を確認せず、書かれた語の位置でフラグを読むため、実際にはフラグの値になる語を位置引数と誤認して検査を終了する。追加された TS-12 の形では、Bash が有効な start_process 呼び出しを組み立てる一方、後続の破壊的な command は未検査のまま allow になる。
+  suggestion: フラグと値の対応を変え得る展開がある場合は、後続の検査を省略して許可せず、確認を要求する。TS-12 も検査回避を許可しない期待値に変更する。
+  reproduction: 入力を unset REVIEW_UNSET; mcp-bridge run --mcp desktop-commander --format ${REVIEW_UNSET:-json --tool} start_process --args-json '{"command":"git branch -D example"}' として PreToolUse に渡すと allow になる。_mcp_bridge_args_json_chunks は start_process を位置引数として読み、JSON を検査する前に終了する。
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: declined
+  resolution_reason: 再現済み。SPEC FR6・A6 の O2 (8) として受け入れ済み
+  reproduction_alternates: []
+  reproduction_overflow: false
+- stable_id: 33f0faaa1019d6a7
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7077
+  title: 通常の変数展開を加えると行継続の確認要求を解除できる
+  description: 行継続を挟む展開を検出しても、同じ値に通常の変数展開があると _DQ_EXPANSION を返し、検出済みの状態を失う。その結果、値全体が検査対象から外れ、args-json-unrestorable の確認要求も発生しない。空の変数展開を追加するだけで ask が allow に変わるため、TB-1 の TM-4 がこの形では実装されていない。
+  suggestion: 通常の展開が同居していても、行継続によって復元できない展開を検出した事実を保持し、確認要求を取り消さない。
+  reproduction: X=example; Y=; mcp-bridge run --mcp desktop-commander --tool start_process --args-json "{\"command\":\"git branch -D $<行継続>X$Y\"}" を PreToolUse に渡すと allow、$Y を除くと args-json-unrestorable の ask。
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+  reproduction_alternates: []
+  reproduction_overflow: false
+- stable_id: 0f52bb4b6f33ea59
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8335
+  title: 'TM-1: 入れ子の間接展開から実行先を差し替えられる'
+  description: 入れ子の `${...}` では深さを増やすだけで、`${!...}` の検査を行わない。`${missing:-${!ref}}` が配列全体を展開しても一引数と誤認し、Notion 用の除外によって後続の破壊的な command を検査せず allow にする。TB-1 / TM-1 が要求する一引数の保証が満たされていない。
+  suggestion: 入れ子のパラメータ展開にも間接展開の検査を適用し、行継続を含む場合も除外条件から外す。
+  reproduction: A=(json --mcp desktop-commander --tool start_process); ref='A[@]'; unset missing; mcp-bridge run --mcp notion --tool notion-create-comment --format "${missing:-${!ref}}" --args-json '{"command":"git branch -D example"}' をフックへ渡すと allow。
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 3
+  reproduction_alternates: []
+  reproduction_overflow: false
+- stable_id: cc04961665e02952
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8318
+  title: 'TM-1: 参照変数を介した配列展開を一引数と誤認する'
+  description: 二重引用符内の `$R` を無条件に一引数と扱っているが、`declare -n R='A[@]'` の参照変数は複数引数へ展開される。この形でも Notion 用の除外が成立し、追加された実行先と破壊的な command が検査されない。
+  suggestion: 参照変数の宣言を考慮し、配列全体を指す可能性がある展開を一引数と判定しない。
+  reproduction: A=(json --mcp desktop-commander --tool start_process); declare -n R='A[@]'; mcp-bridge run --mcp notion --tool notion-create-comment --session "$R" --args-json '{"command":"git branch -D example"}' をフックへ渡すと allow。
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 3
+  reproduction_alternates: []
+  reproduction_overflow: false
+- stable_id: c61eae6e9544a1c3
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7989
+  title: 'TM-4: 引用領域を分けると行継続の確認要求が消える'
+  description: 通常の展開より行継続を優先する修正は、一つの二重引用領域内に限られている。同じ語へ別の引用領域として空の変数展開を連結すると、_read_static_word が WORD_NOT_STATIC を返し、既に検出した Unrestorable を破棄する。
+  suggestion: 語全体で行継続による復元不能状態を保持し、前後の別領域にある通常の展開でも取り消さない。
+  reproduction: X='git branch -D example'; Y=; mcp-bridge run --mcp desktop-commander --tool start_process --args-json "{\"command\":\"$<行継続>X\"}""$Y" をフックへ渡すと allow。末尾の "$Y" を除くと ask。
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 3
+  reproduction_alternates: []
+  reproduction_overflow: false
+- stable_id: 38d0103adef4fbe0
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8539
+  title: Word-count shift blind spot allows malicious args-json
+  description: 'O2 item 8 keeps the current verdict without decoded-value inspection when a --mcp/--tool/--format/--session value may split. TS-12 proves the blind spot is reachable with a malicious --args-json present as-written: at runtime the split rewrites the flag/value alignment (--format json --tool start_process) yet the guard returns allow.'
+  suggestion: Narrow O2(8) to cases where the shift provably consumes/hides the --args-json flag itself; otherwise inspect the as-written --args-json values and/or escalate to ask instead of allow.
+  reproduction: 'mcp-bridge run --mcp desktop-commander --format ${REVIEW_UNSET:-json --tool} start_process --args-json ''{"command":"git branch -D example"}'' # allow per TS-12'
+  sources:
+  - litellm:muse-spark-contributor:comprehensive
+  confidence: 60
+  resolution: declined
+  resolution_reason: 再現済み（TS-12）。SPEC FR6・A6 の O2 (8) として受け入れ済み
+  reproduction_alternates: []
+  reproduction_overflow: false
+- stable_id: 3c25f091de170873
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8341
+  title: Nameref check misses cross-command state
+  description: nameref_declared is computed by regex over the current marked.source only. A nameref created in a prior tool call or earlier shell state persists in bash, so a later isolated command using "$R" is judged single-word-certain and the notion pair is excluded. The check also matches payload text containing the literal string declare -n.
+  suggestion: Treat any bare "$NAME" without array syntax as not-certain unless nameref absence is proven, or conservatively return False for indirectable names.
+  reproduction: 'call1: declare -n R=''A[@]''; call2: mcp-bridge run --mcp notion --tool notion-create-comment --format "$R" --args-json ''{"command":"git branch -D example"}'''
+  sources:
+  - litellm:muse-spark-contributor:comprehensive
+  confidence: 60
+  resolution: declined
+  resolution_reason: Bash ツールは呼び出しごとにシェル状態を持ち越さないため、前の呼び出しの参照変数の宣言は後の呼び出しに残らない
+  reproduction_alternates: []
+  reproduction_overflow: false
+- stable_id: 96df41dd2d01906d
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8492
+  title: 'O2 (8) の対象外: 値の語の展開でフラグの位置がずれる形は未検査のまま allow になる'
+  description: 通常のフラグ読み取りは、展開前の語を 1 引数として読む。展開後にフラグになる語が値に含まれると、フックは後続の語を位置引数とみなして読み取りを打ち切る。mcp-bridge 側ではその語がフラグの値になり、後ろの --args-json が実行ツールに渡る。TS-12 はこの経路の allow を固定している。読解で再現した。TS-12 では `${REVIEW_UNSET:-json --tool}` の後の start_process が位置引数としてフラグ読み取りを終わらせ、--args-json に到達しない。ただし、この形は SPEC の FR6・A6 と THREAT-MODEL の受け入れ済みの残存リスクとして、明示的に対象外にされている。この feature の欠陥ではないので、high から medium に下げて記録する。
+  suggestion: 'この feature では変更しない。対象外の判断を見直すときは別の feature で扱う（例: 値の語が 1 語確定でない文で --args-json があれば ask にする）。'
+  sources:
+  - security#0
+  confidence: 90
+  reproduction: '`em-workflow/hooks/tests/destructive-guard-cases.json` の TS-12 にあるコマンド文字列を Bash の `PreToolUse` 入力としてフックにのみ渡す。`_mcp_bridge_args_json_chunks()` は検査対象を返さず、フックは `allow` を返す。'
+  resolution: declined
+  resolution_reason: SPEC FR6・A6 の O2 (8) として受け入れ済み
+  reproduction_alternates: []
+  reproduction_overflow: false
+- stable_id: 7219d32493447502
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7077
+  title: 行継続をまたぐ `$$` の 2 個目の `$` を独立した展開として読み直し、FR3 の ask にならない
+  description: _read_double_quoted() は、`$`、行継続、`$` の並びで _read_dollar() が _DOLLAR_CONTINUED を返すと、読み取り位置を 2 個目の `$` に置き、その `$` を新しい展開の始まりとして読み直す。Bash では、行継続を除いた `$$` が PID の展開になり、後に続く `?` や英字はリテラルになる。したがって `"...$<行継続>$?..."` は FR3 の形として Unrestorable（args-json-unrestorable の ask）になるべきだが、実際は Not static として、値が黙って読み飛ばされる。_read_static_word() のクォート外の分岐（pos = after）も同じ。読解で再現した。ただし、行継続の無い `$$` を含む値は従来から Not static として読み飛ばされるので、検査を逃れる経路は新たに増えていない。影響は FR3 / TM-4 の文言との不一致にとどまる。comprehensive#0 も同じ箇所を medium で報告している。
+  suggestion: _read_dollar() が返す AFTER の文字が 1 文字の特殊パラメータ（特に `$`）なら、その文字も展開の一部として消費し、読み取り位置をその次へ進める。二重引用符の中とクォート外の両方で、`$<行継続>$?` が args-json-unrestorable の ask になることを確かめるテストを足す。
+  sources:
+  - security#0
+  confidence: 85
+  reproduction: 無害な `printf marker` を `command` に持つ二重引用符付きの `--args-json` 値を用意し、文字列フィールド内に `$`、バックスラッシュ、改行、`$?` の順で置く。Bash の `PreToolUse` 入力としてフックに渡すと `allow` を返し、末尾の `?` だけを除いた対照入力では `args-json-unrestorable` の `ask` を返す。
+  resolution: deferred
+  resolution_reason: 'medium: 後続タスクとして扱う'
+  reproduction_alternates: []
+  reproduction_overflow: false
+- stable_id: 27d8e86fb69e6b45
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8318
+  title: '`${...}` の中のリテラルの `@` で 1 語確定を外し、正規の Notion コメントを拒否する'
+  description: holds_array_form() は、`${` の内側のどこかに `@` があれば配列展開とみなす。そのため `"${SID:-user@example.org}"` のように、既定値の中のリテラルの `@` でも 1 語確定ではなくなる。notion ペアの除外が外れ、本文が復号・検査される。TS-5 の --session をこの値に変えると、本文の `\u0024(git branch -D example)` が検査されて deny になる。読解で再現した。安全側の過剰判定で、docstring もこの近似を明記している。一方で SPEC FR1 / TM-2 は、1 語になる引用付きの展開を除外の対象に残すとしている。既定値に `@` を書く正規の呼び出しは稀なので、影響は限られる。
+  suggestion: '`@` を複数語の判定に使うのは、`${@...}`、`${name[@]...}`、`${!prefix@}` の位置に限る。`:-` などの演算子の後の語では、`$@` と入れ子の `${...}` だけを判定し、それ以外のリテラルの `@` は数えない。絞り込むときも、行継続と間接展開 `${!...}` の扱いは安全側に保つ。既定値に `@` を含む値が除外の対象に残ることを確かめるテストを足す。'
+  sources:
+  - security#0
+  confidence: 80
+  reproduction: TS-5 の Notion コメント入力を Bash の `PreToolUse` としてフックに渡すと `allow` を返す。`--session` の値だけを `"${SID:-user@example.org}"` に変えると、値は引き続き1引数になる一方、フックは `git-branch-force-delete` の `deny` を返す。
+  resolution: deferred
+  resolution_reason: 'medium: 後続タスクとして扱う'
+  reproduction_alternates: []
+  reproduction_overflow: false
+- stable_id: c0f47668693a74dc
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8310
+  title: 行継続への修正で1引数の Notion コメント投稿を誤って拒否する
+  description: '`holds_array_form()` は `$$` を一つの展開として読み進めず、コマンド置換の内側も外側と同じように走査する。そのため、`$$` に行継続とリテラルの `@` が続く値や、引用されたコマンド置換の内側だけで行継続付きの `$@` を使う値を、複数引数になり得ると誤判定する。Bash がいずれも1引数を渡すことを確認した。TS-5 のセッション値だけをこれらに置き換えると、自動修正前に適用された Notion の除外が外れ、コメント本文中のコマンド例で `deny` になる。'
+  suggestion: 行継続を処理したうえで、`$$` を一つの展開として消費し、引用されたコマンド置換の内部は外側の語数判定から外す。外側の行継続付き `$@` は除外されず、内側だけにある場合は TS-5 と同じく許可されることをテストする。
+  reproduction: null
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium: 後続タスクとして扱う'
+  reproduction_alternates: []
+  reproduction_overflow: false
+- stable_id: 7dcadbc7fc39001a
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8354
+  title: 字句解析器が認識した行継続付きの引用開始を拒否する
+  description: 字句解析器は `$` と引用符の間に行継続が入った ANSI-C 引用とロケール引用を認識するが、語数判定は生の文字列で開始記号が連続していることを要求する。Bash が単純なセッション値を1引数として渡す両形式で、TS-5 の本文を含む Notion コメント投稿が、差分の基準版では除外され、現行版では `deny` になる。
+  suggestion: 字句解析器と同じ行継続の処理を使って引用符の位置と本文の開始位置を求める。両形式のセッション値で Notion の除外が維持されることをテストする。
+  reproduction: null
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium: 後続タスクとして扱う'
+  reproduction_alternates: []
+  reproduction_overflow: false
+- stable_id: 2321b510368aec41
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7092
+  title: 通常の展開と行継続が同じ引用内にあると判定が変わる
+  description: 行継続付きの展開と通常の展開を同じ二重引用符に入れると unrestorable になり、隣接する二つの引用に分けると not-static になる。Bash が渡す引数は同じだが、フックは前者を ask にし、後者を allow にする。既存テストの二重引用符とロケール引用の計4サブケースが失敗する。
+  suggestion: 通常の展開と行継続付きの展開を別々に記録し、語全体で優先順位を決める。
+  reproduction: python3 -B -m unittest tests.test_destructive_guard_args_json.TestDollarReading.test_a_word_that_also_holds_an_expansion_is_not_static で4サブケースが失敗する。
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: fixed
+  resolution_reason: loop 3 で c61eae6e9544a1c3 の修正が引用の区切りによらず語全体で判定するようにした。残る仕様との不一致は aa6573c3b4b75f4f で扱う
+  reproduction_alternates: []
+  reproduction_overflow: false
+- stable_id: e62ba9f3aa46e1e3
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8327
+  title: 入れ子の間接展開を1引数に確定させてしまう
+  description: 最外の ${...} では間接展開を検出するが、内側の ${...} では深さだけを更新する。Notion ペアの除外が成立し、後続の静的な --args-json が検査されなかった。
+  suggestion: 各階層で ${ の直後にある行継続を読み飛ばし、間接展開かどうかを同じ規則で判定する。
+  reproduction: null
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: fixed
+  resolution_reason: loop 3 で 0f52bb4b6f33ea59 の修正が同じ箇所を直した
+  reproduction_alternates: []
+  reproduction_overflow: false
+- stable_id: 9e3a9cab82feae45
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8341
+  title: 展開内のリテラルの @ で Notion ペアの除外が外れる
+  description: 二重引用符内の ${...} に @ が一文字でもあると複数引数になり得ると判定する。既定値が name@example.org の場合も除外が外れる。
+  suggestion: 配列添字や特殊パラメーターとして働く @ と、既定値などの文字列に含まれる @ を区別する。
+  reproduction: null
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium: 後続タスクとして扱う'
+  reproduction_alternates: []
+  reproduction_overflow: false
+- stable_id: 685a928e46ca45c8
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7082
+  title: $$ の2文字目を別の展開の開始として扱う
+  description: 通常の $$ を検出した後、走査が2文字目の $ から再開する。その直後に行継続と X があると、行継続をまたぐ変数展開を誤検出して ask を返す。
+  suggestion: $$ のような複数文字の展開を認識したら、展開に属する文字を消費してから走査を再開する。
+  reproduction: null
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium: 後続タスクとして扱う'
+  reproduction_alternates: []
+  reproduction_overflow: false
+- stable_id: 69a05dac85907600
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8326
+  title: 'TM-2: コマンド置換内の間接展開で正当な呼び出しを拒否する'
+  description: 追加された間接展開の検査が、二重引用符で囲まれたコマンド置換の内部にも適用される。置換結果は一引数なのに Notion 用の除外が解除され、コメント本文のコマンド例を実行対象として拒否する。
+  suggestion: 引用されたコマンド置換の内部と、外側の引数数を変える展開を区別する。
+  reproduction: SID=session-id; REF=SID; mcp-bridge run --mcp notion --tool notion-create-comment --session "$(printf %s "${!REF}")" --args-json '{"body":"\u0024(git branch -D example) と記載する"}' が deny。
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium: 後続タスクとして扱う'
+  reproduction_alternates: []
+  reproduction_overflow: false
+- stable_id: bd10dfdfd2f5e2a4
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8295
+  title: Overbroad @ test causes false-positive exclusion loss
+  description: holds_array_form returns True for any @ inside ${...}. That flags single-word transformations like "${VAR@Q}" "${VAR@P}" "${VAR@A}" as multi-word, losing the notion-pair exclusion. Benign notion comments that document destructive strings then risk deny.
+  suggestion: Only treat [@] subscript and unqualified $@/$* expansions as array forms; exclude @Q/@P/@A/@E operators from the @ test.
+  reproduction: mcp-bridge run --mcp notion --tool notion-create-comment --format "${VAR@Q}" --args-json '{"body":"x"}'
+  sources:
+  - litellm:muse-spark-contributor:comprehensive
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium: 後続タスクとして扱う'
+  reproduction_alternates: []
+  reproduction_overflow: false
+evaluation:
+  round_summary: 'round 1（cross_validation 有効）。5 観点すべて completed。主な問題は、1 語確定の判定 holds_array_form() の取りこぼしで、どちらも TM-1 の notion ペアの除外を通り、後続の --args-json が未検査になる。1 つ目は、二重引用符の中で `$` の後に行継続を挟んだ `$@` / `${A[@]}`。security#0 と comprehensive#0 が high で報告し、読解で再現した。2 つ目は間接展開 `"${!X}"`（X=''A[@]''）で、evaluator 自身の点検で見つけた。security#0 の TS-12（O2 (8)）は読解で再現したが、SPEC の FR6・A6 と THREAT-MODEL で受け入れ済みの対象外なので、medium に下げて記録した。`$<行継続>$?` の読み直しと、`${SID:-user@example.org}` の過剰判定は medium で採用した。comprehensive#0 の行継続の high は security#0 の指摘の重複として dismissed_sites に記録し、`$$` の medium も security#0 の同じ箇所の指摘に含めた。comprehensive#0 の medium のうち次の 2 件は採用しない。1 件はコマンド置換の中の `$@` で、安全側の過剰判定であり実害の想定が薄い。もう 1 件は TS-5 の入力の差し替え。SPEC の字面の入力は、_single_quote_skip_spans() による生文字列の走査で修正前から deny になる。差し替えの理由は task0001.tests.yaml に記録済みで、提案された追加ケースは allow にならない。SPEC の TS-5 の「修正前 allow」は SPEC 側の記述の誤り。reviewer の出力に注入の試みは無い。reproduction の記述は実行せず、読解だけで追った。自分で Bash の挙動を確かめるコマンドは安全チェックで実行されなかったので、間接展開の指摘は Bash の仕様の読解に基づく。project_root 配下で読んだファイルは 6 件（destructive-guard.py、destructive-guard-cases.json、tests/test_destructive_guard_args_json.py、task0001.tests.yaml、SPEC.md、THREAT-MODEL.md）。観点ごとの点検結果:
+    comprehensive — corroborated。security — findings（間接展開の取りこぼし）。architecture — corroborated（新しいヘルパーは呼び出し元が 1 つで、削除した _args_json_word_index の参照は残っていない）。spec — findings（FR1 の定義に当たる語の取りこぼしを security の指摘として採用した。TS-5 の SPEC の字面と修正前の判定が食い違う）。performance — corroborated（対応表は 1 回の呼び出しにつき最大 1 回作られ、追加の読み取りはどれも語の長さに対して線形）。'
+  recommended_action: auto_fix
+  action_rationale: reviewer 由来の high が 1 件ある。変更対象のファイル内の holds_array_form() に閉じた修正（`$` の後の行継続を飛ばしてから判定する）で直り、テストも足しやすい。同じヘルパーにある evaluator 由来の high（間接展開）は、人の承認を経て一緒に直すのが妥当。medium のうち O2 (8) は SPEC で受け入れ済みなので修正しない。ほかの medium は修正の対象になりうるが、完了を妨げない。
+dismissed_sites:
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8298
+  run_id: comprehensive#0
+  reason: duplicate of another finding
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 3
+  applied_total: 6
+  termination: loop-cap
+residual_critical_high: 3
+rework_required: true
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

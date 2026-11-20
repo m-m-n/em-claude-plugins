@@ -1,0 +1,73 @@
+task_id: task0004
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_args_json.TestAnchorLookup.test_many_values_cost_one_walk_and_the_command_string_keeps_its_origin
+      - tests.test_destructive_guard_args_json.TestAnchorLookup.test_values_that_queue_nothing_cost_no_token_position
+      - tests.test_destructive_guard_args_json.TestAnchorLookup.test_the_command_strings_of_many_values_share_one_walk_and_keep_their_origins
+    red_confirmed: true
+    red_reason: >-
+      Against the unchanged hook, the token list the collaborator received was
+      walked once per value: "AssertionError: 101 not less than or equal to 1"
+      (100 empty values and one command value), "AssertionError: 110 not less
+      than or equal to 1" (100 empty values, ten command values), and
+      "AssertionError: 0 != 100" (100 empty values that queue nothing still
+      cost a token search each). No timing and no CPU load; the walks are
+      counted by a token list that counts its iterations.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_args_json.TestAnchorLookup.test_a_word_without_a_span_is_located_by_identity_first
+      - tests.test_destructive_guard_args_json.TestAnchorLookup.test_a_word_without_a_span_that_is_not_a_token_is_located_by_text_then_zero
+      - tests.test_destructive_guard_args_json.TestAnchorLookup.test_a_word_whose_span_no_token_has_is_located_by_token_index
+    red_confirmed: false
+    red_reason: >-
+      The behavior pre-existed: the base rule already falls back to
+      _token_index() for a word without a span or whose span no token has, so
+      these tests passed before the change. They pin the refactor (the lookup
+      that replaced the per-value search must give the same origins); no red
+      state occurred for this change.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_the_anchor_of_a_queued_chunk_is_the_value_word_in_document_order
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_the_anchor_of_the_equals_form_is_the_flag_word
+      - tests.test_destructive_guard_args_json.TestDeferral
+      - tests.test_destructive_guard_args_json.TestAnchorLookup.test_a_word_with_a_span_gets_the_first_token_with_that_span
+      - tests.test_destructive_guard_args_json.TestAnchorLookup.test_two_values_with_spans_each_get_their_own_index
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing TestFlagReading
+      anchor tests and TestDeferral detect a changed queue, order or origin;
+      no red state occurred for this change (queued entries and origins are
+      unchanged by design, and these tests passed before and after). The two
+      added TestAnchorLookup tests pin the first-token-with-a-span rule of
+      the base search and also passed at base.
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_args_json.TestStructure
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing TestStructure
+      detects any args-json logic added to statements() and any extra call
+      site of the collaborator or the decision; no red state occurred for
+      this change. That statements() has no diff is read from the diff of
+      the hook, which touches only _queue_args_json_chunks() and the anchor
+      helper.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_args_json.TestAnchorLookup.test_the_step_3_docstring_states_the_lookup_rule
+    red_confirmed: true
+    red_reason: >-
+      Against the unchanged docstring: "AssertionError: 'span' not found in
+      <docstring>", and the same for "at most once" and "_token_index()".
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_args_json
+    red_confirmed: false
+    red_reason: >-
+      The criterion is the three suite commands passing, which they did before
+      the change (baseline: runner green, unittest discover OK, no failures)
+      and still do; no red state occurred for it. The module named here is the
+      one the change adds its tests to; the runner and the discover run are
+      the project test command itself.
