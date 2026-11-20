@@ -88,7 +88,7 @@ tasks:
     - NFR3
     - NFR5
     - NFR6
-    status: in_progress
+    status: merged
     branch: em-workflow/args-json-quoting-bypass/task0001
     notes: null
   task0002:
@@ -111,7 +111,7 @@ tasks:
     - NFR2
     - NFR3
     - NFR5
-    status: in_progress
+    status: merged
     branch: em-workflow/args-json-quoting-bypass/task0002
     notes: null
   task0003:
