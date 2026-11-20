@@ -257,7 +257,8 @@ tasks:
     - NFR3
     - NFR5
     - NFR6
-    status: pending
+    status: in_progress
+    branch: em-workflow/args-json-quoting-bypass/task0006
     notes: null
     provenance:
       source: verify
