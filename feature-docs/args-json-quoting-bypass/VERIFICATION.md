@@ -22,7 +22,13 @@ All commands run from the repository root of the integration worktree.
 
 TS-1 to TS-18 are SPEC.md's scenarios. TS-19 to TS-23 are added here for the
 SPEC acceptance criteria and non-functional requirements that SPEC.md gives no
-scenario number (AC-6 docstring part, AC-10, AC-11, NFR5, NFR6).
+scenario number (AC-6 docstring part, AC-10, AC-11, NFR5, NFR6). TS-24 to
+TS-32 are added by the review round 2 rework (task0005) for FR1's
+single-word-certain judgment under nameref (`declare -n`) declarations. In
+TS-24 to TS-31, `A=(…)` abbreviates
+`A=(json --mcp desktop-commander --tool start_process)` and `MB` abbreviates
+`mcp-bridge run --mcp notion --tool notion-create-comment --format "$r" --args-json '{"command":"git branch -D example"}'`;
+the runner cases hold the commands written out in full.
 
 | ID | Scenario | Expected Result | Test Type |
 |----|----------|-----------------|-----------|
@@ -49,6 +55,15 @@ scenario number (AC-6 docstring part, AC-10, AC-11, NFR5, NFR6).
 | TS-21 | Regression suite (SPEC AC-11, NFR1, NFR2, NFR3): the runner, `tests.test_destructive_guard_args_json` and `unittest discover -s tests` | All pass; every runner case finishes within the runner's `GUARD_TIMEOUT_SECONDS`; the diff of `destructive-guard-cases.json` adds lines only | Integration |
 | TS-22 | Structure (NFR6): `TestStructure` and the single-word-certain helper | `TestStructure` passes with no change to the test; the helper is one function referenced only from `_args_json_notion_pair()`; `statements()` has no diff | Unit + Manual |
 | TS-23 | Version (NFR5): the feature diff against `workflow.implement.base_commit` | `em-workflow/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` are not in the diff | Manual |
+| TS-24 | `A=(…); echo $(declare -n r='A[@]'; echo $(MB))`: the nameref is declared only in the middle shell of two nested command substitutions (1d971862e2458376, a3fdb05c00db3c03, 21b0ef3d5aaa59ae) | deny (pre-fix allow) | Integration (runner) |
+| TS-25 | `A=(…); echo $(declare -n r='A[@]'; echo $(echo $(MB)))`: the declaration two levels above the statement's chunk, below the top chunk | deny | Integration (runner) |
+| TS-26 | `bash -c` payload that assigns `A`, declares `r` as a nameref to `A[@]` and runs `MB` (with a double-quoted JSON value) in the same payload | deny | Integration (runner) |
+| TS-27 | `A=(…); declare</dev/null -n r='A[@]'; MB` and the same with `declare>/dev/null` (6083a3b46956a2f0) | deny, both (pre-fix allow) | Integration (runner) |
+| TS-28 | `A=(…); declare </dev/null -n r='A[@]'; MB` and `A=(…); </dev/null declare -n r='A[@]'; MB` | deny, both | Integration (runner) |
+| TS-29 | `source&>/dev/null ./env.sh; MB`, `source &>/dev/null ./env.sh; MB` and `.&>/dev/null ./env.sh; MB` (4d1573a9f53b167f) | deny, all three (pre-fix allow for `source&>`) | Integration (runner) |
+| TS-30 | `A=(…); command -- declare -n r='A[@]'; MB` and the same with `command -p --` (7bb299da67faace7) | deny, both (pre-fix allow for `command --`) | Integration (runner) |
+| TS-31 | Notion call with `--session "$SID"` and a static `--args-json` holding `{"command":"git branch -D example"}`, inside one and inside two nested command substitutions, with no nameref declaration anywhere | allow, both | Integration (runner) |
+| TS-32 | `statements()` with the `Spy` on every TS-27 to TS-30 command | KIND_INSPECTED for the `mcp-bridge` statement of each; each glued form gives the same kind as its spaced form | Unit |
 
 ## Code Quality Verification
 - Format: none configured (`format_command` is empty).
@@ -78,23 +93,23 @@ scenario number (AC-6 docstring part, AC-10, AC-11, NFR5, NFR6).
 ### Functional Requirements Coverage
 | Requirement | Tasks | Verification |
 |-------------|-------|--------------|
-| FR1 | task0001 | TS-1, TS-2, TS-3, TS-4, TS-5, TS-17 |
+| FR1 | task0001, task0005 | TS-1, TS-2, TS-3, TS-4, TS-5, TS-17, TS-24 to TS-32 |
 | FR2 | task0002 | TS-6, TS-7, TS-18 |
 | FR3 | task0003 | TS-8, TS-9, TS-13, TS-14 |
 | FR4 | task0003 | TS-10, TS-11, TS-15 |
 | FR5 | task0004 | TS-16 |
 | FR6 | task0001 | TS-12, TS-19 |
 | FR7 | task0003 | TS-8, TS-9, TS-19 |
-| FR8 | task0001, task0002, task0003 | TS-1 to TS-12 |
-| FR9 | task0001, task0002, task0003, task0004 | TS-13 to TS-18 |
+| FR8 | task0001, task0002, task0003, task0005 | TS-1 to TS-12, TS-24 to TS-31 |
+| FR9 | task0001, task0002, task0003, task0004, task0005 | TS-13 to TS-18, TS-32 |
 | FR10 | task0001, task0002, task0003 | TS-19 |
 | FR11 | task0002 | TS-20 |
 | NFR1 | task0004 | TS-16, TS-21 |
-| NFR2 | task0001, task0002, task0003 | TS-8, TS-9, TS-21 |
-| NFR3 | task0001, task0002, task0003, task0004 | TS-21 |
+| NFR2 | task0001, task0002, task0003, task0005 | TS-8, TS-9, TS-21 |
+| NFR3 | task0001, task0002, task0003, task0004, task0005 | TS-21 |
 | NFR4 | task0004 | TS-16 |
-| NFR5 | task0001, task0002, task0003, task0004 | TS-23 |
-| NFR6 | task0001, task0004 | TS-22 |
+| NFR5 | task0001, task0002, task0003, task0004, task0005 | TS-23 |
+| NFR6 | task0001, task0004, task0005 | TS-22 |
 
 ## Manual Testing (E2E Not Possible)
 SPEC.md lists no existing E2E tests and no E2E run command, so there is no E2E
@@ -112,9 +127,11 @@ section.
 - NFR4: TS-16 is structural (spy or mock); no wall-clock measurement and no
   CPU load is used anywhere.
 - TM-1: the notion-pair exclusion applies only to single-word-certain value
-  words — checked by TS-1, TS-2, TS-3, TS-4 (deny) and TS-17.
-- TM-2: legitimate notion calls stay allow — checked by TS-5, TS-17 and the
-  existing notion-pair allow cases (AC-2).
+  words — checked by TS-1, TS-2, TS-3, TS-4 (deny) and TS-17; under nameref
+  declarations in enclosing shells, behind redirections and after
+  `command --` — checked by TS-24 to TS-30 (deny) and TS-32.
+- TM-2: legitimate notion calls stay allow — checked by TS-5, TS-17, TS-31 and
+  the existing notion-pair allow cases (AC-2).
 - TM-3: an unquoted backslash-escaped `=` is the `=` separator — checked by
   TS-6, TS-7 (deny) and TS-18.
 - TM-4: the FR3 form is Unrestorable and holds the `args-json-unrestorable`
@@ -128,8 +145,8 @@ section.
 ## Verification Summary
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
-| Runner scenarios (TS-1 to TS-12) | 12 | 12 | 0 | 0 |
-| Unit scenarios (TS-13 to TS-18, TS-20) | 7 | 7 | 0 | 0 |
+| Runner scenarios (TS-1 to TS-12, TS-24 to TS-31) | 20 | 20 | 0 | 0 |
+| Unit scenarios (TS-13 to TS-18, TS-20, TS-32) | 8 | 8 | 0 | 0 |
 | Docstrings / structure (TS-19, TS-22) | 2 | 2 | 0 | 2 |
 | Regression suite (TS-21) | 1 | 1 | 0 | 0 |
 | Version (TS-23) | 1 | 0 | 0 | 1 |
