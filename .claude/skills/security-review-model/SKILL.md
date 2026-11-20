@@ -8,8 +8,8 @@ description: セキュリティ観点の Codex レビューで使うモデルの
 ## 方針
 
 - セキュリティ観点の Codex レビューは、Codex の最上位モデルを使う。
-- それ以外の観点は `model` を書かず、Codex の推奨既定モデルを使う。
-- 推論の深さはラッパーが固定する `xhigh` のままにする。
+- 各観点の codex エントリは、`reviewers.yaml` にモデル（`model`）と推論の深さ（`effort`）を明示する。
+- セキュリティ観点の推論の深さは、その codex エントリの `effort` が決める。
 
 ## 指定している場所
 
@@ -21,7 +21,7 @@ description: セキュリティ観点の Codex レビューで使うモデルの
 ```yaml
   - perspective: security
     ...
-      - {harness: codex, model: <slug>}
+      - {harness: codex, model: <slug>, effort: <effort>}
 ```
 
 ## 更新手順
@@ -39,12 +39,12 @@ description: セキュリティ観点の Codex レビューで使うモデルの
     '
     ```
 
-2. 対象モデルが `xhigh` に対応していることを確かめる。
-3. その `slug` で 1 回呼べることを確かめる。
+2. 対象モデルが、そのエントリの `effort` に対応していることを確かめる。
+3. その `slug` と `<effort>`（エントリの `effort`）で 1 回呼べることを確かめる。
 
     ```
     cd /tmp && codex exec --color never --skip-git-repo-check --ignore-user-config \
-      -s read-only -m <slug> -c 'model_reasoning_effort="xhigh"' "Reply with just OK" </dev/null
+      -s read-only -m <slug> -c 'model_reasoning_effort="<effort>"' "Reply with just OK" </dev/null
     ```
 
 4. 上の 2 ファイルの security の codex エントリを `<slug>` に書き換える。

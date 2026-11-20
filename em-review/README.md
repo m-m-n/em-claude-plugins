@@ -45,7 +45,7 @@ em-workflow のレビューフェーズのスタンドアロン版。SDD を通�
 
 クロスモデル検証には上記に加えて `vertex-review:vertex-reviewer` も使われる。これは em-review 本体ではなく、別途インストールする `vertex-review` プラグインが提供するエージェントで、`codex exec -p litellm -m <model>` 経由で Vertex AI MaaS と Meta Muse を 1 本の LiteLLM proxy の裏に束ねる。未インストールでも em-review は変わらず動作する（後述）。
 
-ハーネス（どのモデルが存在し、どう到達するか）は vertex-review 側の責務、**観点ごとのモデル選択は em-review 側の責務**。`reviewers.yaml` が渡した `model` をレビュアーはそのまま `-m` に流す。
+ハーネス（どのモデルが存在し、どう到達するか）は vertex-review 側の責務、**観点ごとのモデル選択は em-review 側の責務**。`reviewers.yaml` が渡した `model` をレビュアーはそのまま `-m` に流す。codex エントリの `effort` も同じ経路で、ラッパーの `--effort` に渡る。
 
 ### 観点スキル（レジストリ `references/reviewers.yaml`）
 
@@ -62,8 +62,7 @@ spec 観点は SPEC.md が見つかったときだけ実行される（不在時
 
 | 観点 | チェーン（1st → 2nd） |
 |------|------------------------|
-| security | codex → litellm/muse-spark |
-| performance / spec / architecture | litellm/muse-spark → codex |
+| security / performance / spec / architecture | codex → litellm/muse-spark |
 | comprehensive | （なし。Claude 専用） |
 
 R2b はスキップ理由が retryable なときだけチェーンを進める。`rate_limited` は次のエントリへ、`budget_exhausted` / `harness_unavailable` は**別ハーネス**の次エントリへ飛ぶ。チェーンは 2 エントリなので、フォールバックは 1 観点につき 1 ホップで尽きる。
