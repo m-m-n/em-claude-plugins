@@ -1,0 +1,20 @@
+schema_version: 1
+feature: review-perspective-model-effort
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: b7f2d5f8d1b9a42280dc66f683242f4ef7f2321b
+last_input_digest: sha256:bcea6b7dafa997ccb654a40fa36469922bce6b2b65be05d5f158020c0e40671f
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: dispatched
+    input_digest: sha256:bcea6b7dafa997ccb654a40fa36469922bce6b2b65be05d5f158020c0e40671f
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
