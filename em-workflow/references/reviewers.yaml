@@ -20,6 +20,8 @@
 # A codex entry's `model` is a Codex model slug as listed by
 # `codex debug models`; the reviewer passes it as `-m <model>`. A codex entry
 # without `model` runs Codex's recommended default.
+# A codex entry's `effort` is handed to the reviewer verbatim and becomes the
+# wrapper's `--effort`. A codex entry without `effort` runs at xhigh.
 #
 # The review phase reads this file to drive fan-out: for each SELECTED
 # perspective (per review-rules.yaml + discretion), it dispatches exactly ONE
@@ -29,9 +31,9 @@
 # trigger — neither rule is restated here.
 #
 # requires_spec: perspective only runs when a SPEC.md is available.
-# primary_chain: ordered, non-empty list of {harness, model?} entries -- every
-#   perspective must have one, since a perspective without a chain has no
-#   primary reviewer at all.
+# primary_chain: ordered, non-empty list of {harness, model?, effort?} entries
+#   -- every perspective must have one, since a perspective without a chain
+#   has no primary reviewer at all.
 #   Every chain holds the same two entries — codex and muse-spark — in
 #   the same order: codex leads, muse-spark trails. The trailing entry is
 #   the other harness, so a LiteLLM budget wipeout or a Codex rate-limit
@@ -55,31 +57,31 @@ perspectives:
     claude_skill: review-security
     requires_spec: false
     primary_chain:
-      - {harness: codex, model: gpt-6.2-astra}
+      - {harness: codex, model: gpt-6.2-astra, effort: xhigh}
       - {harness: litellm, model: muse-spark}
   - perspective: performance
     claude_skill: review-performance
     requires_spec: false
     primary_chain:
-      - {harness: codex}
+      - {harness: codex, model: gpt-6.2-sol, effort: xhigh}
       - {harness: litellm, model: muse-spark}
   - perspective: architecture
     claude_skill: review-architecture
     requires_spec: false
     primary_chain:
-      - {harness: codex}
+      - {harness: codex, model: gpt-6.2-astra, effort: high}
       - {harness: litellm, model: muse-spark}
   - perspective: spec
     claude_skill: review-spec
     requires_spec: true
     primary_chain:
-      - {harness: codex}
+      - {harness: codex, model: gpt-6.2-sol, effort: xhigh}
       - {harness: litellm, model: muse-spark}
   - perspective: comprehensive
     claude_skill: review-comprehensive
     requires_spec: false
     primary_chain:
-      - {harness: codex}
+      - {harness: codex, model: gpt-6.2-astra, effort: high}
       - {harness: litellm, model: muse-spark}
   - perspective: license
     # Layer-2-only: never selected by the mechanical floor (review-rules.yaml
@@ -89,5 +91,5 @@ perspectives:
     claude_skill: review-license
     requires_spec: false
     primary_chain:
-      - {harness: codex}
+      - {harness: codex, model: gpt-6.2-sol, effort: low}
       - {harness: litellm, model: muse-spark}

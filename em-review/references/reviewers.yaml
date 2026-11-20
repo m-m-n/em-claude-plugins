@@ -20,6 +20,8 @@
 # A codex entry's `model` is a Codex model slug as listed by
 # `codex debug models`; the reviewer passes it as `-m <model>`. A codex entry
 # without `model` runs Codex's recommended default.
+# A codex entry's `effort` is handed to the reviewer verbatim and becomes the
+# wrapper's `--effort`. A codex entry without `effort` runs at xhigh.
 #
 # The review phase reads this file to drive fan-out:
 # - For each SELECTED perspective (per review-rules.yaml + discretion), launch
@@ -65,25 +67,25 @@ perspectives:
     claude_skill: review-security
     requires_spec: false
     cross_validation:
-      - {harness: codex, model: gpt-6.2-astra}
+      - {harness: codex, model: gpt-6.2-astra, effort: xhigh}
       - {harness: litellm, model: muse-spark}
   - perspective: performance
     claude_skill: review-performance
     requires_spec: false
     cross_validation:
-      - {harness: codex}
+      - {harness: codex, model: gpt-6.2-sol, effort: xhigh}
       - {harness: litellm, model: muse-spark}
   - perspective: architecture
     claude_skill: review-architecture
     requires_spec: false
     cross_validation:
-      - {harness: codex}
+      - {harness: codex, model: gpt-6.2-astra, effort: high}
       - {harness: litellm, model: muse-spark}
   - perspective: spec
     claude_skill: review-spec
     requires_spec: true
     cross_validation:
-      - {harness: codex}
+      - {harness: codex, model: gpt-6.2-sol, effort: xhigh}
       - {harness: litellm, model: muse-spark}
   - perspective: comprehensive
     claude_skill: review-comprehensive

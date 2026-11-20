@@ -1,0 +1,99 @@
+task_id: task0002
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_wrapper_model_flag.CodexEntryModelEffortPinTest.test_each_plugin_pins_the_fr2_model_and_effort_per_perspective
+      - tests.test_reviewers_primary_chains.TestReviewersYamlPerspectiveStructure.test_chains_match_pinned_contract
+    red_confirmed: true
+    red_reason: >-
+      Ran the three target modules against the unchanged registries after
+      writing the new tests. For em-workflow, the pin test failed for
+      plugin='em-workflow' (the codex entries read with no effort and, except
+      security's, no model) and test_chains_match_pinned_contract failed once
+      per perspective, since the six codex entries carried no effort and five
+      of them no model.
+  AC-2:
+    tests:
+      - tests.test_codex_wrapper_model_flag.CodexEntryModelEffortPinTest.test_each_plugin_pins_the_fr2_model_and_effort_per_perspective
+      - tests.test_contributor_tier_criteria.TestAC5ChainImmutability.test_em_review_chains_match_literal_pin
+    red_confirmed: true
+    red_reason: >-
+      Same run, em-review side: the pin test failed for plugin='em-review'
+      and test_em_review_chains_match_literal_pin failed because the four
+      codex entries held no effort (and three of them no model). The
+      comprehensive chain staying [] and the absence of a license
+      perspective are held by the same equality, and those parts already
+      held before the change.
+  AC-3:
+    tests:
+      - tests.test_reviewers_primary_chains.TestReviewersYamlPerspectiveStructure.test_chain_entries_well_formed
+      - tests.test_reviewers_primary_chains.TestChainEntryShapeRejectsForgedEntries.test_rejects_a_litellm_entry_that_carries_effort
+      - tests.test_contributor_tier_criteria.TestAC5ChainImmutability.test_em_review_chains_match_literal_pin
+    red_confirmed: false
+    red_reason: >-
+      The muse-spark entries and both version keys are not edited by this
+      task, so no check of them can fail before the change; the litellm half
+      of test_chain_entries_well_formed and of the em-review literal pin
+      passed before any registry edit. No test pins the two version values
+      (searched tests/ for the registry path and basename), so that half is
+      checked by the diff of the two registry files showing no version line
+      change. As a teeth check, not a red: with an effort temporarily added
+      to the first muse-spark entry of both registries, three tests failed
+      (test_chain_entries_well_formed, test_chains_match_pinned_contract,
+      test_em_review_chains_match_literal_pin); the registries were then
+      restored.
+  AC-4:
+    tests:
+      - tests.test_reviewers_primary_chains.TestReviewersYamlHeaderEffortProse.test_em_workflow_header_states_the_effort_rules
+      - tests.test_reviewers_primary_chains.TestReviewersYamlHeaderEffortProse.test_em_review_header_states_the_effort_rules
+      - tests.test_reviewers_primary_chains.TestReviewersYamlHeaderEffortProse.test_em_workflow_header_describes_chain_entries_with_effort
+      - tests.test_reviewers_primary_chains.TestReviewersYamlHeaderProse
+    red_confirmed: true
+    red_reason: >-
+      The three TestReviewersYamlHeaderEffortProse tests failed against the
+      unchanged headers (the effort statements and the
+      {harness, model?, effort?} description were absent). The existing
+      TestReviewersYamlHeaderProse class is unedited and stays green; it was
+      not red before this change.
+  AC-5:
+    tests:
+      - tests.test_codex_wrapper_model_flag.CodexEntryModelEffortPinTest.test_each_plugin_pins_the_fr2_model_and_effort_per_perspective
+      - tests.test_codex_wrapper_model_flag.CodexEntryModelEffortPinTest.test_both_plugins_give_the_same_model_and_effort_per_shared_perspective
+      - tests.test_codex_wrapper_model_flag.CodexEntryMatchersRejectForgedRegistryTest.test_pin_matcher_rejects_a_registry_where_one_effort_differs
+      - tests.test_codex_wrapper_model_flag.CodexEntryMatchersRejectForgedRegistryTest.test_agreement_matcher_rejects_a_shared_perspective_whose_effort_differs
+    red_confirmed: true
+    red_reason: >-
+      The pin test failed for both plugins before the registries were
+      edited. The agreement test and the two forged-registry rejection tests
+      passed before the edit: the two registries already agreed (only
+      security named a model), and the forged-input tests exercise the
+      matchers on in-memory text, so only the pin test carries the red.
+  AC-6:
+    tests:
+      - tests.test_reviewers_primary_chains.TestReviewersYamlPerspectiveStructure.test_chains_match_pinned_contract
+      - tests.test_reviewers_primary_chains.TestReviewersYamlPerspectiveStructure.test_chain_entries_well_formed
+      - tests.test_reviewers_primary_chains.TestChainEntryShapeRejectsForgedEntries
+      - tests.test_reviewers_primary_chains.TestParserSplitsThreeKeyFlowEntry.test_three_key_entry_is_split_into_harness_model_effort
+      - tests.test_contributor_tier_criteria.TestAC5ChainImmutability.test_em_review_chains_match_literal_pin
+    red_confirmed: true
+    red_reason: >-
+      test_chains_match_pinned_contract (six failures), test_chain_entries_well_formed
+      (six failures, each on a codex entry lacking model or effort, e.g.
+      entry={'harness': 'codex'}) and test_em_review_chains_match_literal_pin
+      failed before the registries were edited. The forged-entry rejection
+      tests and the three-key parser test exercise new helpers on in-memory
+      text and passed on first run.
+  AC-7:
+    tests:
+      - tests.test_codex_wrapper_model_flag
+      - tests.test_reviewers_primary_chains
+      - tests.test_contributor_tier_criteria
+    red_confirmed: true
+    red_reason: >-
+      `python3 -m unittest tests.test_codex_wrapper_model_flag
+      tests.test_reviewers_primary_chains tests.test_contributor_tier_criteria`
+      ended FAILED (failures=18) before the registries were edited, and
+      passes after. The full `python3 -m unittest discover -s tests` run was
+      green at baseline and is re-run after the change.

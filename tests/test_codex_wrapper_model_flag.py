@@ -1,12 +1,13 @@
-"""run_codex_exec.sh `-m MODEL` (both plugin copies) and the security
-perspective's model pin in reviewers.yaml.
+"""run_codex_exec.sh `-m MODEL` (both plugin copies) and the per-perspective
+codex model and effort pins in reviewers.yaml.
 
 - `-m MODEL` reaches `codex exec` as the adjacent argv elements `-m MODEL`.
 - Without `-m`, no `-m` reaches `codex exec`.
 - `-m` with no model argument exits 1 without launching.
 - em-workflow only: `-m` together with `--litellm` exits 1 without launching.
-- The security perspective's codex entry names a model; every other codex
-  entry names none.
+- Every codex entry in both reviewers.yaml files names the model and the
+  effort of the per-perspective table pinned below, and the two plugins give
+  the same model and effort for every perspective they share.
 """
 
 import json
@@ -119,14 +120,20 @@ class ModelFlagTest(unittest.TestCase):
         self.assertEqual(launches, [])
 
 
-CHAIN_ENTRY = re.compile(r"^\s+- \{harness: (\w+)(?:, model: ([\w.-]+))?\}\s*$")
+# One-line flow form with the keys in the registry's order: `harness`, then
+# the optional `model`, then the optional `effort`.
+CHAIN_ENTRY = re.compile(
+    r"^\s+- \{harness: (\w+)(?:, model: ([\w.-]+))?(?:, effort: ([a-z]+))?\}\s*$"
+)
 PERSPECTIVE = re.compile(r"^\s+- perspective: (\w+)\s*$")
 
 
-def _codex_entries(plugin):
-    """Maps perspective -> codex entry model (None when the entry names no
-    model) from the plugin's reviewers.yaml."""
-    text = (REPO_ROOT / plugin / "references" / "reviewers.yaml").read_text(encoding="utf-8")
+def parse_codex_entries(text):
+    """Maps perspective -> (model, effort) for the codex entry of each
+    perspective in a reviewers.yaml text. A key the entry omits reads as
+    None. A codex line that does not follow the one-line flow form in the
+    registry's key order is not read at all, so its perspective is missing
+    from the result."""
     entries = {}
     current = None
     for line in text.splitlines():
@@ -136,25 +143,149 @@ def _codex_entries(plugin):
             continue
         m = CHAIN_ENTRY.match(line)
         if m and current and m.group(1) == "codex":
-            entries[current] = m.group(2)
+            entries[current] = (m.group(2), m.group(3))
     return entries
 
 
-class SecurityModelPinTest(unittest.TestCase):
-    def test_only_security_pins_a_codex_model(self):
+def _codex_entries(plugin):
+    """Maps perspective -> (model, effort) from the plugin's reviewers.yaml."""
+    text = (REPO_ROOT / plugin / "references" / "reviewers.yaml").read_text(encoding="utf-8")
+    return parse_codex_entries(text)
+
+
+def codex_entries_match(text, expected):
+    """Matcher: True iff the codex entries read from the registry `text`
+    equal `expected` exactly -- the same perspectives, each with the same
+    model and effort."""
+    return parse_codex_entries(text) == expected
+
+
+def shared_perspectives_agree(entries_a, entries_b):
+    """Matcher: True iff every perspective present in both `entries_a` and
+    `entries_b` has the same (model, effort) in both."""
+    return all(entries_a[p] == entries_b[p] for p in entries_a.keys() & entries_b.keys())
+
+
+# Refreshed by feature-docs/review-perspective-model-effort/tasks/task0002.md
+# (FR1, FR2): replaces the old "only security names a codex model" pin. Every
+# codex entry now names a model and an effort. The values are the FR2 table
+# as literals, written out per plugin and not read back from the registries.
+# em-review has no license perspective, and its comprehensive chain is empty.
+EXPECTED_CODEX_ENTRIES = {
+    "em-workflow": {
+        "security": ("gpt-6.2-astra", "xhigh"),
+        "performance": ("gpt-6.2-sol", "xhigh"),
+        "architecture": ("gpt-6.2-astra", "high"),
+        "spec": ("gpt-6.2-sol", "xhigh"),
+        "comprehensive": ("gpt-6.2-astra", "high"),
+        "license": ("gpt-6.2-sol", "low"),
+    },
+    "em-review": {
+        "security": ("gpt-6.2-astra", "xhigh"),
+        "performance": ("gpt-6.2-sol", "xhigh"),
+        "architecture": ("gpt-6.2-astra", "high"),
+        "spec": ("gpt-6.2-sol", "xhigh"),
+    },
+}
+
+SHARED_PERSPECTIVES = {"security", "performance", "architecture", "spec"}
+
+
+class CodexEntryModelEffortPinTest(unittest.TestCase):
+    """AC-5 (TS-7): the live registries pin the FR2 model and effort."""
+
+    def test_each_plugin_pins_the_fr2_model_and_effort_per_perspective(self):
         for plugin in PLUGINS:
             with self.subTest(plugin=plugin):
-                entries = _codex_entries(plugin)
-                self.assertIn("security", entries)
-                self.assertIsNotNone(entries["security"])
-                pinned = {p for p, model in entries.items() if model is not None}
-                self.assertEqual(pinned, {"security"})
+                self.assertEqual(_codex_entries(plugin), EXPECTED_CODEX_ENTRIES[plugin])
 
-    def test_both_plugins_pin_the_same_model(self):
-        self.assertEqual(
-            _codex_entries("em-workflow")["security"],
-            _codex_entries("em-review")["security"],
+    def test_both_plugins_give_the_same_model_and_effort_per_shared_perspective(self):
+        workflow = _codex_entries("em-workflow")
+        review = _codex_entries("em-review")
+        # Guards against a vacuous pass: the overlap is exactly the four
+        # perspectives both plugins carry.
+        self.assertEqual(workflow.keys() & review.keys(), SHARED_PERSPECTIVES)
+        self.assertTrue(shared_perspectives_agree(workflow, review))
+
+
+def _render_registry(entries):
+    """Builds registry-shaped text (one-line flow entries, the registry's key
+    order) from a perspective -> (model, effort) mapping. A None model or
+    effort leaves that key out of the line."""
+    lines = ["version: 0", "", "perspectives:"]
+    for perspective, (model, effort) in entries.items():
+        parts = ["harness: codex"]
+        if model is not None:
+            parts.append(f"model: {model}")
+        if effort is not None:
+            parts.append(f"effort: {effort}")
+        lines += [
+            f"  - perspective: {perspective}",
+            "    primary_chain:",
+            "      - {" + ", ".join(parts) + "}",
+            "      - {harness: litellm, model: muse-spark}",
+        ]
+    return "\n".join(lines) + "\n"
+
+
+class CodexEntryMatchersRejectForgedRegistryTest(unittest.TestCase):
+    """AC-5 negative proofs: every case builds a forged registry text in
+    memory, so nothing is read from or written to disk."""
+
+    def setUp(self):
+        self.expected = EXPECTED_CODEX_ENTRIES["em-workflow"]
+
+    def test_pin_matcher_accepts_the_unaltered_registry(self):
+        # Positive control: without it, the rejections below could pass
+        # because the renderer and the reader disagree about the shape.
+        self.assertTrue(codex_entries_match(_render_registry(self.expected), self.expected))
+
+    def test_pin_matcher_rejects_a_registry_where_one_effort_differs(self):
+        forged = dict(self.expected, security=("gpt-6.2-astra", "high"))
+        self.assertFalse(codex_entries_match(_render_registry(forged), self.expected))
+
+    def test_pin_matcher_rejects_a_registry_where_one_model_differs(self):
+        forged = dict(self.expected, spec=("gpt-6.2-astra", "xhigh"))
+        self.assertFalse(codex_entries_match(_render_registry(forged), self.expected))
+
+    def test_pin_matcher_rejects_a_codex_entry_without_effort(self):
+        forged = dict(self.expected, license=("gpt-6.2-sol", None))
+        self.assertFalse(codex_entries_match(_render_registry(forged), self.expected))
+
+    def test_pin_matcher_rejects_a_codex_entry_without_model(self):
+        forged = dict(self.expected, comprehensive=(None, "high"))
+        self.assertFalse(codex_entries_match(_render_registry(forged), self.expected))
+
+    def test_pin_matcher_rejects_a_registry_missing_a_perspective(self):
+        forged = {p: v for p, v in self.expected.items() if p != "license"}
+        self.assertFalse(codex_entries_match(_render_registry(forged), self.expected))
+
+    def test_pin_matcher_rejects_effort_written_before_model(self):
+        text = _render_registry(self.expected).replace(
+            "{harness: codex, model: gpt-6.2-sol, effort: low}",
+            "{harness: codex, effort: low, model: gpt-6.2-sol}",
         )
+        self.assertNotEqual(text, _render_registry(self.expected))
+        self.assertFalse(codex_entries_match(text, self.expected))
+
+    def test_agreement_matcher_accepts_identical_shared_entries(self):
+        workflow = parse_codex_entries(_render_registry(EXPECTED_CODEX_ENTRIES["em-workflow"]))
+        review = parse_codex_entries(_render_registry(EXPECTED_CODEX_ENTRIES["em-review"]))
+        self.assertTrue(shared_perspectives_agree(workflow, review))
+
+    def test_agreement_matcher_rejects_a_shared_perspective_whose_effort_differs(self):
+        workflow = parse_codex_entries(_render_registry(EXPECTED_CODEX_ENTRIES["em-workflow"]))
+        review = parse_codex_entries(
+            _render_registry(dict(EXPECTED_CODEX_ENTRIES["em-review"], spec=("gpt-6.2-sol", "high")))
+        )
+        self.assertFalse(shared_perspectives_agree(workflow, review))
+
+    def test_agreement_matcher_ignores_a_perspective_only_one_plugin_has(self):
+        workflow = parse_codex_entries(_render_registry(EXPECTED_CODEX_ENTRIES["em-workflow"]))
+        review = parse_codex_entries(_render_registry(EXPECTED_CODEX_ENTRIES["em-review"]))
+        self.assertNotIn("license", review)
+        self.assertIn("license", workflow)
+        self.assertTrue(shared_perspectives_agree(workflow, review))
 
 
 if __name__ == "__main__":

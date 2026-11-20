@@ -11,9 +11,9 @@ Claude + cross-model parallel comparison.
   with unchanged `claude_skill` / `requires_spec` values, and no longer
   contains the key `cross_validation`.
 - AC-2: every perspective has a non-empty `primary_chain`; each entry is
-  either a codex entry (with no `model`, except security's, which names a
-  Codex model slug), or a litellm entry whose `model` is one of the litellm
-  model names the header documents.
+  either a codex entry (with a non-empty `model` and `effort`), or a litellm
+  entry whose `model` is one of the litellm model names the header documents
+  and which carries no `effort`.
 - AC-3: every perspective's chain is exactly the two-entry chain pinned
   below, in that order.
 - AC-4: the `reviewers.yaml` header keeps the responsibility-split statement
@@ -44,6 +44,7 @@ import unittest
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REVIEWERS_PATH = os.path.join(REPO_ROOT, "em-workflow", "references", "reviewers.yaml")
 REVIEW_RULES_PATH = os.path.join(REPO_ROOT, "em-workflow", "references", "review-rules.yaml")
+EM_REVIEW_REVIEWERS_PATH = os.path.join(REPO_ROOT, "em-review", "references", "reviewers.yaml")
 
 LITELLM_MODEL_NAMES = {"muse-spark"}
 
@@ -71,32 +72,61 @@ EXPECTED_REQUIRES_SPEC = {
 
 # Every chain is two entries -- codex then muse-spark, in that order.
 # No Vertex model is assigned any more.
+#
+# Refreshed by feature-docs/review-perspective-model-effort/tasks/task0002.md
+# (FR1, FR2): every codex entry now holds a `model` and an `effort`, pinned
+# here as literals of the FR2 table. The muse-spark entries are unchanged and
+# carry no `effort`.
 EXPECTED_CHAINS = {
     "security": [
-        {"harness": "codex", "model": "gpt-6.2-astra"},
+        {"harness": "codex", "model": "gpt-6.2-astra", "effort": "xhigh"},
         {"harness": "litellm", "model": "muse-spark"},
     ],
     "performance": [
-        {"harness": "codex"},
+        {"harness": "codex", "model": "gpt-6.2-sol", "effort": "xhigh"},
         {"harness": "litellm", "model": "muse-spark"},
     ],
     "architecture": [
-        {"harness": "codex"},
+        {"harness": "codex", "model": "gpt-6.2-astra", "effort": "high"},
         {"harness": "litellm", "model": "muse-spark"},
     ],
     "spec": [
-        {"harness": "codex"},
+        {"harness": "codex", "model": "gpt-6.2-sol", "effort": "xhigh"},
         {"harness": "litellm", "model": "muse-spark"},
     ],
     "comprehensive": [
-        {"harness": "codex"},
+        {"harness": "codex", "model": "gpt-6.2-astra", "effort": "high"},
         {"harness": "litellm", "model": "muse-spark"},
     ],
     "license": [
-        {"harness": "codex"},
+        {"harness": "codex", "model": "gpt-6.2-sol", "effort": "low"},
         {"harness": "litellm", "model": "muse-spark"},
     ],
 }
+
+
+def chain_entry_problems(entry):
+    """Shape check for one parsed chain entry (a dict from
+    parse_reviewers_yaml). Returns the list of violations; an empty list
+    means the entry is well-formed: a codex entry holds a non-empty `model`
+    and a non-empty `effort`; a litellm entry holds a `model` from
+    LITELLM_MODEL_NAMES and no `effort`."""
+    harness = entry.get("harness")
+    if harness == "codex":
+        problems = []
+        if not entry.get("model"):
+            problems.append("codex entry has no model")
+        if not entry.get("effort"):
+            problems.append("codex entry has no effort")
+        return problems
+    if harness == "litellm":
+        problems = []
+        if entry.get("model") not in LITELLM_MODEL_NAMES:
+            problems.append("litellm entry model is not a documented litellm model name")
+        if "effort" in entry:
+            problems.append("litellm entry carries effort")
+        return problems
+    return [f"unknown harness {harness!r}"]
 
 
 def parse_reviewers_yaml(text):
@@ -106,7 +136,7 @@ def parse_reviewers_yaml(text):
     `requires_spec`, `chain_key` (the literal YAML key introducing the
     ordered chain -- `primary_chain` post-migration, `cross_validation`
     pre-migration, so this parser reads either shape without raising) and
-    `chain` (list of {harness[, model]} dicts, possibly empty).
+    `chain` (list of {harness[, model][, effort]} dicts, possibly empty).
 
     Raises ValueError if no top-level `perspectives:` key is found or a line
     inside the block violates the expected nesting -- this is what backs a
@@ -246,21 +276,15 @@ class TestReviewersYamlPerspectiveStructure(unittest.TestCase):
                 self.assertTrue(p["chain"], f"{name} has an empty primary_chain")
 
     def test_chain_entries_well_formed(self):
-        # AC-2: each entry is a codex entry with no model (security's names
-        # a Codex model slug), or a litellm entry whose model is one of the
-        # documented litellm model names.
+        # AC-2: each codex entry names a model and an effort; each litellm
+        # entry names one of the documented litellm model names and carries
+        # no effort. Refreshed by
+        # feature-docs/review-perspective-model-effort/tasks/task0002.md
+        # (FR1, FR2): the old "no model except security's" rule is replaced.
         for name, p in self.by_name.items():
             for entry in p["chain"]:
                 with self.subTest(perspective=name, entry=entry):
-                    self.assertIn(entry.get("harness"), ("codex", "litellm"))
-                    if entry["harness"] == "codex":
-                        if name == "security":
-                            self.assertTrue(entry.get("model"))
-                        else:
-                            self.assertNotIn("model", entry)
-                    else:
-                        self.assertIn("model", entry)
-                        self.assertIn(entry["model"], LITELLM_MODEL_NAMES)
+                    self.assertEqual(chain_entry_problems(entry), [])
 
     def test_chains_match_pinned_contract(self):
         # AC-3: comprehensive and license get exactly the new three-entry
@@ -269,6 +293,72 @@ class TestReviewersYamlPerspectiveStructure(unittest.TestCase):
         for name, expected_chain in EXPECTED_CHAINS.items():
             with self.subTest(perspective=name):
                 self.assertEqual(self.by_name[name]["chain"], expected_chain)
+
+
+class TestChainEntryShapeRejectsForgedEntries(unittest.TestCase):
+    """AC-6: negative proofs for the entry-shape check. Each case feeds
+    chain_entry_problems a forged in-memory entry."""
+
+    def test_accepts_a_well_formed_codex_entry(self):
+        entry = {"harness": "codex", "model": "gpt-6.2-sol", "effort": "low"}
+        self.assertEqual(chain_entry_problems(entry), [])
+
+    def test_accepts_a_well_formed_litellm_entry(self):
+        entry = {"harness": "litellm", "model": "muse-spark"}
+        self.assertEqual(chain_entry_problems(entry), [])
+
+    def test_rejects_a_codex_entry_without_effort(self):
+        entry = {"harness": "codex", "model": "gpt-6.2-sol"}
+        self.assertEqual(chain_entry_problems(entry), ["codex entry has no effort"])
+
+    def test_rejects_a_codex_entry_with_an_empty_effort(self):
+        entry = {"harness": "codex", "model": "gpt-6.2-sol", "effort": ""}
+        self.assertEqual(chain_entry_problems(entry), ["codex entry has no effort"])
+
+    def test_rejects_a_codex_entry_without_model(self):
+        entry = {"harness": "codex", "effort": "high"}
+        self.assertEqual(chain_entry_problems(entry), ["codex entry has no model"])
+
+    def test_rejects_a_litellm_entry_that_carries_effort(self):
+        entry = {"harness": "litellm", "model": "muse-spark", "effort": "high"}
+        self.assertEqual(chain_entry_problems(entry), ["litellm entry carries effort"])
+
+    def test_rejects_a_litellm_entry_with_an_undocumented_model(self):
+        entry = {"harness": "litellm", "model": "other-model"}
+        self.assertEqual(
+            chain_entry_problems(entry),
+            ["litellm entry model is not a documented litellm model name"],
+        )
+
+    def test_rejects_an_unknown_harness(self):
+        self.assertEqual(
+            chain_entry_problems({"harness": "other"}), ["unknown harness 'other'"]
+        )
+
+
+class TestParserSplitsThreeKeyFlowEntry(unittest.TestCase):
+    """AC-6: the restricted parser reads a three-key flow entry as three
+    keys, so the pinned chains above are compared on real values."""
+
+    FORGED = (
+        "perspectives:\n"
+        "  - perspective: security\n"
+        "    claude_skill: review-security\n"
+        "    requires_spec: false\n"
+        "    primary_chain:\n"
+        "      - {harness: codex, model: gpt-6.2-astra, effort: xhigh}\n"
+        "      - {harness: litellm, model: muse-spark}\n"
+    )
+
+    def test_three_key_entry_is_split_into_harness_model_effort(self):
+        chain = parse_reviewers_yaml(self.FORGED)[0]["chain"]
+        self.assertEqual(
+            chain,
+            [
+                {"harness": "codex", "model": "gpt-6.2-astra", "effort": "xhigh"},
+                {"harness": "litellm", "model": "muse-spark"},
+            ],
+        )
 
 
 class TestReviewersYamlHeaderProse(unittest.TestCase):
@@ -342,6 +432,87 @@ class TestReviewersYamlHeaderProse(unittest.TestCase):
         self.assertIn("claude generic reviewer agent", synthetic_lower)
         self.assertIn("cross-model reviewer", synthetic_lower)
         self.assertIn("agreement scoring", synthetic_lower)
+
+
+# Header statements about the codex entry's `effort` (task0002,
+# review-perspective-model-effort, FR1). Matched on the normalized, lowered
+# header so a sentence wrapped across comment lines is still one phrase.
+EFFORT_VERBATIM_STATEMENT = (
+    "a codex entry's `effort` is handed to the reviewer verbatim and "
+    "becomes the wrapper's `--effort`"
+)
+EFFORT_DEFAULT_STATEMENT = "a codex entry without `effort` runs at xhigh"
+ENTRY_DESCRIPTION_WITHOUT_EFFORT = "{harness, model?}"
+ENTRY_DESCRIPTION_WITH_EFFORT = "{harness, model?, effort?}"
+
+
+def header_states_effort_rules(header):
+    """True iff the header comment block states both that a codex entry's
+    `effort` is handed to the reviewer verbatim and becomes the wrapper's
+    `--effort`, and that a codex entry without `effort` runs at xhigh."""
+    norm = norm_yaml_comment_block(header).lower()
+    return EFFORT_VERBATIM_STATEMENT in norm and EFFORT_DEFAULT_STATEMENT in norm
+
+
+def header_describes_entries_with_effort(header):
+    """True iff the header describes chain entries as
+    {harness, model?, effort?} and no longer as {harness, model?}."""
+    norm = norm_yaml_comment_block(header)
+    return (
+        ENTRY_DESCRIPTION_WITH_EFFORT in norm
+        and ENTRY_DESCRIPTION_WITHOUT_EFFORT not in norm
+    )
+
+
+def _read_header(path):
+    with open(path, encoding="utf-8") as fh:
+        return fh.read().split("\nversion:", 1)[0]
+
+
+class TestReviewersYamlHeaderEffortProse(unittest.TestCase):
+    """AC-4 (task0002, FR1): both registry headers document `effort`."""
+
+    def test_em_workflow_header_states_the_effort_rules(self):
+        self.assertTrue(header_states_effort_rules(_read_header(REVIEWERS_PATH)))
+
+    def test_em_review_header_states_the_effort_rules(self):
+        self.assertTrue(header_states_effort_rules(_read_header(EM_REVIEW_REVIEWERS_PATH)))
+
+    def test_em_workflow_header_describes_chain_entries_with_effort(self):
+        self.assertTrue(header_describes_entries_with_effort(_read_header(REVIEWERS_PATH)))
+
+    def test_effort_statement_matcher_rejects_a_header_without_the_verbatim_rule(self):
+        forged = (
+            "# A codex entry's `effort` is handed to the wrapper as given.\n"
+            "# A codex entry without `effort` runs at xhigh.\n"
+        )
+        self.assertFalse(header_states_effort_rules(forged))
+
+    def test_effort_statement_matcher_rejects_a_header_without_the_default_rule(self):
+        forged = (
+            "# A codex entry's `effort` is handed to the reviewer verbatim and\n"
+            "# becomes the wrapper's `--effort`.\n"
+        )
+        self.assertFalse(header_states_effort_rules(forged))
+
+    def test_effort_statement_matcher_accepts_the_rules_wrapped_across_lines(self):
+        forged = (
+            "# A codex entry's `effort` is handed to the reviewer\n"
+            "# verbatim and becomes the wrapper's `--effort`. A codex entry\n"
+            "# without `effort` runs at xhigh.\n"
+        )
+        self.assertTrue(header_states_effort_rules(forged))
+
+    def test_entry_description_matcher_rejects_the_old_description(self):
+        forged = "# primary_chain: ordered, non-empty list of {harness, model?} entries\n"
+        self.assertFalse(header_describes_entries_with_effort(forged))
+
+    def test_entry_description_matcher_rejects_a_header_with_both_descriptions(self):
+        forged = (
+            "# primary_chain: ordered list of {harness, model?, effort?} entries,\n"
+            "# formerly {harness, model?} entries.\n"
+        )
+        self.assertFalse(header_describes_entries_with_effort(forged))
 
 
 # review-rules.yaml matchers (task0005, repo-suite-pinned-test-drift).
