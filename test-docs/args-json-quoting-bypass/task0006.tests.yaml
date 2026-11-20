@@ -1,0 +1,105 @@
+task_id: task0006
+baseline_failures: []          # 4a, before any edit: python3 em-workflow/hooks/tests/run-destructive-guard.py -> 1450/1450 passed; python3 -m unittest discover -s tests -> Ran 16653 tests, OK (skipped=1); nothing failing
+final_failures: []             # re-executed after implementation and after this record: the runner passes every case (1451/1451) and unittest discover is OK; nothing failing
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_args_json.TestStructure.test_statements_has_one_call_site_and_no_other_args_json_logic
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope (the base commit is a property of
+      this feature's run, not of the repository), but the existing
+      TestStructure test detects an args-json name or a second call of the
+      collaborator added to statements(); no red state occurred for this
+      change in that test, which passed before and after because the
+      owner-tracking code that was in statements() holds no args-json name.
+      The criterion itself was checked by a comparison run during the task, not
+      added as a test: the text of statements() (def line through last line,
+      taken with ast from the file) against the same function in
+      `git show 996e1443a63b46e552a97d2ad7e2d2f96ae8f778:em-workflow/hooks/destructive-guard.py`.
+      On the unchanged hook it was observed to fail ("MISMATCH, 42 diff lines,
+      hunks: 6"); after the change it reports statements() byte-identical to
+      the base commit (42832 bytes).
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_args_json.TestStructure.test_the_decision_is_referenced_only_from_the_collaborator
+      - tests.test_destructive_guard_args_json.TestStructure.test_statements_has_one_call_site_and_no_other_args_json_logic
+      - tests.test_destructive_guard_args_json.TestStructure.test_the_collaborator_is_called_once_per_yielded_statement
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_the_single_word_judgment_is_one_helper_called_only_by_the_notion_pair
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing TestStructure
+      tests and the single-helper test detect an extra call site of the
+      collaborator or the decision, args-json logic in statements(), a changed
+      call count per yielded statement, and a second caller of the
+      single-word-certain helper; no red state occurred for this change (the
+      behavior pre-existed and these tests passed before and after unchanged).
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >-
+      The TS-33 case was added to the case file first, directly after the last
+      TS-31 case, and run-destructive-guard.py (the runner that the test
+      executes over the whole table and asserts exits 0 with no FAIL line) was
+      run directly against the unchanged hook: 1450/1451 passed. TS-33 FAILed
+      with got=allow where deny is required. The plan expected deny on the
+      unchanged hook; the observed verdict is allow, because the substitution
+      body inside the payload was linked to the chunk that queued it (the top
+      chunk), so the chain skipped the payload that holds the declare -n. After
+      the change the runner passes 1451/1451: TS-33 gives deny, every TS-24 to
+      TS-30 case gives deny and both TS-31 cases give allow.
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing runner cases
+      whose label starts with `args-json-quoting-bypass review round 3` (the
+      unquoted-heredoc case of finding 8d279f2d8674d29f included) detect a
+      changed verdict; no red state occurred for this change: on the unchanged
+      hook the runner failed TS-33 only (1450/1451), so each of them kept its
+      verdict, and all of them pass after the change. The heredoc result was
+      also compared chunk by chunk between the unchanged code and the new code
+      over every runner command and eleven hand-written heredoc commands (quoted
+      and unquoted delimiters, line continuations, `${|`, several operators on
+      one line, inside a substitution): the answers are the same.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_args_json.TestNamerefDeclarations.test_the_notion_call_of_every_ts_27_to_30_command_is_inspected
+      - tests.test_destructive_guard_args_json.TestNamerefDeclarations.test_a_declaration_in_an_enclosing_chunk_counts_at_any_depth
+      - tests.test_destructive_guard_args_json.TestNamerefDeclarations.test_no_declaration_anywhere_keeps_the_nested_call_excluded
+      - tests.test_destructive_guard_args_json.TestNamerefDeclarations.test_the_chain_is_walked_without_recursion
+      - tests.test_destructive_guard_args_json.TestNamerefDeclarations.test_a_derived_chunk_without_a_link_reads_as_declared
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing
+      TestNamerefDeclarations tests (TS-32), which build derivation chains by
+      hand for _args_json_nameref_declared() and run statements() over the
+      TS-24 to TS-31 shapes, detect a changed chain walk or a changed answer;
+      no red state occurred for this change, and they pass before and after
+      unchanged.
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_every_pre_task_command_preserved_with_only_named_changes
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing runner test and
+      the pre-task command table test detect a changed verdict or reason id of
+      an existing case and a removed or edited case; no red state occurred for
+      this change (every existing case kept its verdict on the unchanged hook
+      and after). That the diff of the case file adds the TS-33 line only was
+      checked with git diff --numstat (1 added, 0 deleted); no executable
+      check of that exists to make fail.
+  AC-7:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_args_json
+    red_confirmed: true
+    red_reason: >-
+      With the TS-33 case present and the hook unchanged, the runner ended
+      1450/1451 passed (TS-33 FAIL, got=allow); the args-json module passed
+      (155 tests, which pin no TS-33 shape). After the change the runner passes
+      1451/1451, python3 -m unittest tests.test_destructive_guard_args_json
+      passes and python3 -m unittest discover -s tests passes.
