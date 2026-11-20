@@ -240,6 +240,7 @@ INPUT_FIELD_NAMES = [
     "perspective",
     "perspective_skill",
     "model",
+    "effort",
     "review_mode",
     "protocol_path",
     "schema_path",
@@ -307,10 +308,13 @@ FROZEN_SECTIONS = [
     (
         # Refreshed by feature-docs/threat-model-stride/tasks/task0005.md
         # (FR8): the Inputs section gained the `threat_model_path` bullet.
+        # Refreshed by feature-docs/review-perspective-model-effort/tasks/task0003.md
+        # (FR7): the Inputs section gained the `effort` item after the
+        # `model` item.
         "Inputs",
         "## Inputs (all reviewers)",
         "## Step 0 Fail-Closed Resolution",
-        "74e95ad79cd689fbfc3eabb9407625b2bddf793195dd0e1a7683ea3cb6d4c6c8",
+        "8eaa08780c58113b8c9266856dca7084e7575ede36de5d056274ff8a8a0b6f26",
     ),
     (
         "Investigation Budget",
@@ -706,11 +710,17 @@ CODEX_REVIEWER_FROZEN_FRONTMATTER_LINES = [
 # (FR1/FR2): Step 6 gained the exit-code-124 rule as its first rule, and its
 # non-JSON rule returns a `harness_unavailable` skip object. Nothing else in
 # Steps 0-6 changed.
+#
+# Refreshed by feature-docs/review-perspective-model-effort/tasks/task0003.md
+# (FR6): Step 5 gained one prose paragraph, directly after the `model` paragraph,
+# stating that a supplied `effort` is added as `--effort "<effort>"` right
+# before `"$PROMPT"`. The fenced wrapper lines did not change. Nothing else
+# in Steps 0-6 changed.
 CODEX_REVIEWER_STEPS_START = (
     "## Step 0: Read the protocol (strict fail-closed resolution)"
 )
 CODEX_REVIEWER_STEPS_SHA256 = (
-    "64505b0a77a888b252e3b59f436d1d393f4ddd1aae84ae64e17f1511846670ee"
+    "e7d10d2078ba6c659f7579a82d4fa7515fe779ce8cd199890a0c7881a5adaa32"
 )
 
 PRIMARY_ROLE_PHRASE = "main review"

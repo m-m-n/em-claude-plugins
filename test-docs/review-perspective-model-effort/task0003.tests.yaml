@@ -1,0 +1,84 @@
+task_id: task0003
+baseline_failures: []
+final_failures: []   # actually re-executed after the implementation and this record: 16676 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_reviewer_effort_docs.TestStep5EffortParagraph.test_ac1_step5_states_effort_handling
+      - tests.test_codex_reviewer_effort_docs.TestStep5EffortParagraph.test_ac1_effort_paragraph_is_identical_in_both_plugins
+      - tests.test_codex_reviewer_effort_docs.TestMatchersRejectForgedInput.test_step5_without_the_effort_sentence_fails
+      - tests.test_codex_reviewer_effort_docs.TestMatchersRejectForgedInput.test_step5_that_lets_the_reviewer_choose_an_effort_fails
+      - tests.test_codex_reviewer_effort_docs.TestMatchersRejectForgedInput.test_step5_without_the_rejection_rule_fails
+    red_confirmed: true
+    red_reason: >-
+      Before Step 5 was edited, test_ac1_step5_states_effort_handling failed
+      for both plugins with "expected exactly one Step 5 prose paragraph
+      naming `--effort`, found 0", and the identical-paragraph test failed
+      the same way.
+  AC-2:
+    tests:
+      - tests.test_codex_reviewer_effort_docs.TestStep5EffortParagraph.test_ac2_fenced_step5_blocks_carry_no_effort_and_keep_wrapper_line
+      - tests.test_codex_reviewer_temp_file_isolation.TestWrapperInvocationUnchanged.test_wrapper_invocation_line_is_unchanged_in_both_files
+      - tests.test_codex_wrapper_timeout_alignment.TestFencedInvocationLinesUnchanged.test_em_workflow_invocation_line_present
+      - tests.test_codex_wrapper_timeout_alignment.TestFencedInvocationLinesUnchanged.test_em_review_invocation_line_present
+    red_confirmed: false
+    red_reason: >-
+      Preservation criterion: the fenced wrapper lines already satisfied
+      these checks before the change and still do after it. The existing
+      pins (test_codex_reviewer_temp_file_isolation,
+      test_codex_wrapper_timeout_alignment,
+      test_codex_reviewer_interactive_guidance) detect any edit of the fenced
+      lines and pass unedited; no red state occurred for this change. The
+      new fenced-block test passed before the implementation as well.
+  AC-3:
+    tests:
+      - tests.test_codex_reviewer_effort_docs.TestInputsEffortItem.test_ac3_inputs_effort_item_states_scope_value_default_and_exclusions
+      - tests.test_codex_reviewer_effort_docs.TestMatchersRejectForgedInput.test_inputs_item_that_hands_effort_to_litellm_fails
+      - tests.test_codex_reviewer_effort_docs.TestMatchersRejectForgedInput.test_inputs_item_with_extra_litellm_grant_fails_even_with_required_phrases
+      - tests.test_codex_reviewer_effort_docs.TestMatchersRejectForgedInput.test_inputs_item_without_the_xhigh_default_fails
+      - tests.test_reviewer_roles_protocol.TestSingleReviewerDispatchStatement.test_three_harness_description_bullets_stay_verbatim
+    red_confirmed: true
+    red_reason: >-
+      Before the Inputs section was edited, the new Inputs test failed for
+      both plugins with "expected exactly one Inputs item starting
+      '- `effort`', found 0". PROTOCOL_BULLETS_SHA256 passed before and
+      after, unchanged.
+  AC-4:
+    tests:
+      - tests.test_reviewer_roles_protocol.TestFrozenSectionsUnchanged.test_frozen_sections_hash_unchanged
+      - tests.test_reviewer_roles_protocol.TestCodexReviewerAgentPrimaryRoleStatement.test_steps_including_scratchpad_discipline_section_verbatim
+      - tests.test_reproduction_reviewer_instructions.TestCodexReviewerBriefs.test_ac5_unchanged_ranges_are_byte_identical
+      - tests.test_codex_reviewer_effort_docs.TestPinnedDigestModulesCarryRefreshComments.test_both_pinned_modules_name_this_task_in_a_refresh_comment
+    red_confirmed: true
+    red_reason: >-
+      After the two codex-reviewer.md files and the two review-protocol.md
+      files were edited and before the digests were recomputed, the Inputs
+      entry of FROZEN_SECTIONS, CODEX_REVIEWER_STEPS_SHA256 and both `tail`
+      digests failed with "section byte content changed (expected sha256 ...,
+      got ...)", and the refresh-comment test failed because no comment named
+      this task. The head, step3, step4pre and step4rest digests and every
+      other digest passed unedited.
+  AC-5:
+    tests:
+      - tests.test_codex_reviewer_effort_docs.TestMatchersRejectForgedInput.test_good_step5_fixture_passes
+      - tests.test_codex_reviewer_effort_docs.TestMatchersRejectForgedInput.test_good_inputs_fixture_passes
+      - tests.test_codex_reviewer_effort_docs.TestMatchersRejectForgedInput.test_step5_without_any_effort_paragraph_fails
+      - tests.test_codex_reviewer_effort_docs.TestMatchersRejectForgedInput.test_effort_paragraph_away_from_the_model_paragraph_fails
+      - tests.test_codex_reviewer_effort_docs.TestMatchersRejectForgedInput.test_effort_in_a_fenced_step5_block_fails
+      - tests.test_codex_reviewer_effort_docs.TestMatchersRejectForgedInput.test_inputs_without_the_effort_item_fails
+      - tests.test_codex_reviewer_effort_docs.TestMatchersRejectForgedInput.test_inputs_effort_item_before_the_model_item_fails
+    red_confirmed: false
+    red_reason: >-
+      These are the negative proofs of the new matchers, run against forged
+      text held in the test module. They passed on their first run because
+      they exercise the matchers on fixtures, not on the documents; the red
+      state of the matchers on the real documents is recorded under AC-1 and
+      AC-3.
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      The criterion is the whole-suite command `python3 -m unittest discover
+      -s tests`; it was green before the task (baseline: no failures), so no
+      red state of its own exists. Its red states are the ones recorded under
+      AC-1, AC-3 and AC-4.
