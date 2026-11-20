@@ -3795,9 +3795,10 @@ class _MarkedText:
         self._mask_starts = [lo for lo, _hi in mask_ranges]
         self._quote_starts = [lo for lo, _hi in quote_ranges]
         self._quote_ends = [hi for _lo, hi in quote_ranges]
-        # The marked text of the command's own chunk, for a chunk derived from
-        # it (set by statements()); _is_derived says the chunk is not the top
-        # one, so a missing link reads as "nameref possibly declared".
+        # The marked text of the chunk this one was derived from (set by
+        # statements(), which walks the chain to the command's own chunk);
+        # _is_derived says the chunk is not the top one, so a missing link
+        # reads as "nameref possibly declared".
         self._outer_marked = None
         self._is_derived = False
         self._nameref_declared_cache = None
@@ -8258,165 +8259,274 @@ def _args_json_notion_pair(marked, words):
 
 
 def _args_json_nameref_declared(marked):
-    """Whether MARKED (the _MarkedText) may declare a nameref (`declare -n`,
-    `local -n`, `typeset -n`). Decided from the words as Bash reads them after
-    quote removal, at command position only, so quoted data is not a
-    declaration while `declare "-n"`, `decla''re -n` and `declare -\\<newline>n`
-    are. Fail safe: True when a declaring command's option word cannot be
-    restored statically, when the command word at a command position cannot,
-    or when `eval`, `source` or `.` appears at a command position. Computed
-    once per input and kept on MARKED."""
-    cached = None if marked is None else marked._nameref_declared_cache
-    if cached is not None:
-        return cached
-    result = _args_json_nameref_scan(marked)
-    if not result and marked is not None and marked._is_derived:
-        # A derived chunk (substitution body, payload) inherits the variables
-        # of the command around it: the declarations of the top chunk count.
-        outer = marked._outer_marked
-        result = True if outer is None else _args_json_nameref_declared(outer)
-    if marked is not None:
-        marked._nameref_declared_cache = result
+    """Whether the shell state in effect for the statements of MARKED (the
+    _MarkedText of one chunk) may hold a nameref: the text of the chunk
+    declares one (`declare -n`, `local -n`, `typeset -n`) or leaves the shell
+    state unknown (_args_json_nameref_scan()), or the text of an enclosing
+    chunk does.
+
+    A derived chunk (a command substitution body, a `bash -c` payload, a
+    decoded `--args-json` value, ...) records the chunk it was derived from
+    (MARKED._outer_marked, set by statements()) and inherits the variables of
+    every chunk around it: its answer counts the declarations of its own text
+    and of each enclosing chunk, up to the top chunk, whatever the depth and
+    wherever the declaration stands in that chunk (the safe side). A payload
+    that a new process runs (`bash -c`) is treated the same way, which is the
+    safe side as well. A derived chunk that carries no link reads as "declared".
+
+    Computed once per chunk and kept on it. The chain is walked without
+    recursion, so a deep nest of substitutions never meets the recursion
+    limit."""
+    if marked is None:
+        return True
+    walked = []
+    result = False
+    node = marked
+    while True:
+        cached = node._nameref_declared_cache
+        if cached is not None:
+            result = cached
+            break
+        walked.append(node)
+        if _args_json_nameref_scan(node):
+            result = True
+            break
+        if not node._is_derived:
+            break
+        node = node._outer_marked
+        if node is None:
+            result = True
+            break
+    for visited in walked:
+        visited._nameref_declared_cache = result
     return result
 
 
 def _args_json_nameref_scan(marked):
-    if marked is None:
+    """Whether the text of one chunk, MARKED, may declare a nameref or leave
+    the shell state unknown: some simple command of it is `declare`, `local`
+    or `typeset` with a `-n` option (any option word that holds `n`), or is
+    `eval`, `source` or `.`, or has a command name or a declaration word that
+    cannot be restored statically. The chunk's own enclosing chunks are not
+    read here (_args_json_nameref_declared()).
+
+    Decided from the words as Bash reads them after quote removal, at command
+    position only, so quoted data is not a declaration while `declare "-n"`,
+    `decla''re -n` and `declare -\\<newline>n` are.
+
+    The simple commands and their words come from the lexer's own statements
+    (lex_segments()): the boundaries the rest of the hook works from. A
+    redirection (an operator and its target, a file-descriptor number or
+    `{name}` in front of the operator) is taken out of a simple command before
+    its command name and its options are read, whether it stands before the
+    name, touches it or comes after it, so a glued form and its spaced form
+    read the same. A `(`, `)`, `{` or `}` word begins a new simple command.
+    Fail safe: True for a chunk the lexer could not read as statements."""
+    if marked is None or getattr(marked, "top_regions", None) is None:
         return True
+    for words, lexed, _sep in lex_segments(marked):
+        if not lexed:
+            return True
+        commands = [[]]
+        for tok in _split_fused_closer_redirects(words):
+            if _args_json_command_boundary(tok):
+                commands.append([])
+            else:
+                commands[-1].append(tok)
+        for command in commands:
+            if _args_json_declares_nameref(marked, command):
+                return True
+    return False
+
+
+def _args_json_command_boundary(tok):
+    """Whether TOK, a token of a lexed statement, ends one simple command and
+    begins another inside the statement: an unquoted operator made of
+    parentheses only (`(`, `)`, `((`, `)(`, `()`), or an unquoted `{` or `}`
+    word."""
+    if getattr(tok, "is_operator", False):
+        return bool(tok) and all(c in "()" for c in tok)
+    return tok in ("{", "}") and not getattr(tok, "quoted", False)
+
+
+def _args_json_declares_nameref(marked, toks):
+    """Whether the simple command whose tokens are TOKS (a statement's tokens
+    between two boundaries) may declare a nameref or leave the shell state
+    unknown (_args_json_nameref_scan()).
+
+    The redirections go first. Then the words in front of the command name
+    are skipped: `VAR=value` assignments, the prefixes `builtin`, `command`,
+    `exec`, `time`, `!` and the reserved words that introduce a command
+    (`if`, `elif`, `then`, `else`, `while`, `until`, `do`), each with its own
+    `--` terminator when one follows; `command` and `time` also with their own
+    options (`-p`, `-v`, `-V`, ...), so `command -p -- declare -n r` is read as
+    `declare -n r`. A `-v` or `-V` option is read as if `command` ran the word
+    (the safe side). The word after them is the command name: a name that
+    cannot be restored statically, or `eval`, `source` or `.`, leaves the shell
+    state unknown; for `declare`, `local` and `typeset` an option word that
+    holds `n`, or any word that cannot be restored, does."""
+    words = _args_json_strip_redirections(marked, toks)
+    prefixes = (
+        "builtin", "command", "exec", "time", "!",
+        "if", "elif", "then", "else", "while", "until", "do",
+    )
+    size = len(words)
+    k = 0
+    while k < size:
+        text, ok = _args_json_declaration_word(marked, words[k])
+        if not ok:
+            break
+        if text in prefixes:
+            k += 1
+            if text in ("command", "time"):
+                while k < size:
+                    option, option_ok = _args_json_declaration_word(marked, words[k])
+                    if not (option_ok and re.fullmatch(r"-[A-Za-z]+", option)):
+                        break
+                    k += 1
+            if k < size and _args_json_declaration_word(marked, words[k]) == ("--", True):
+                k += 1
+            continue
+        if re.match(r"[A-Za-z_][A-Za-z0-9_]*(?:\[[^\]]*\])?\+?=", text):
+            k += 1
+            continue
+        break
+    if k >= size:
+        return False
+    name, ok = _args_json_declaration_word(marked, words[k])
+    if not ok or name in ("eval", "source", "."):
+        return True
+    if name in ("declare", "local", "typeset"):
+        for word in words[k + 1:]:
+            option, option_ok = _args_json_declaration_word(marked, word)
+            if not option_ok or re.fullmatch(r"-[A-Za-z]*n[A-Za-z]*", option):
+                return True
+    return False
+
+
+def _args_json_strip_redirections(marked, toks):
+    """The tokens TOKS of one simple command without its redirections: each
+    redirection operator with its target word (split_redirects()), the
+    file-descriptor number it takes, and a `{name}` word that the operator
+    touches (the variable form of the file descriptor). What is left is the
+    command's words in order, wherever the redirections stood."""
+    kept = []
+    for index, tok in enumerate(toks):
+        span = getattr(tok, "span", None)
+        if (
+            span is not None
+            and not tok.is_operator
+            and not tok.quoted
+            and index + 1 < len(toks)
+            and toks[index + 1].is_operator
+            and marked.text[span[1]:span[1] + 1] in ("<", ">")
+            and re.fullmatch(r"\{[A-Za-z_][A-Za-z0-9_]*\}", tok)
+        ):
+            continue
+        kept.append(tok)
+    return split_redirects(kept, True)[0]
+
+
+def _args_json_declaration_word(marked, word):
+    """(text, restorable) of WORD, a word of a statement lexed from MARKED
+    (the _MarkedText): TEXT is the word as Bash passes it on after quote
+    removal, read from the characters it was written with and the lexer's
+    top-level region kinds over them, not from the token's own value, which has
+    lost the quotes. RESTORABLE is False when the word cannot be settled
+    statically: it holds an expansion (an unquoted or double-quoted `$` or
+    backtick, a substitution, a parameter or arithmetic expansion), an ANSI-C
+    quote that does not decode, a region the word does not hold whole or that
+    is not closed, or it has no span. An arithmetic command (`((expr))`) is
+    kept as written and restorable: it is no command name and declares
+    nothing. A trailing `\\r` that the lexing took off the word is not part
+    of it."""
+    value = str(word)
+    span = getattr(word, "span", None)
+    if marked is None or span is None or getattr(word, "is_operator", False):
+        return value, False
+    start, end = span
+    text = marked.text
+    cr = getattr(word, "trailing_cr", "")
+    if cr and text.startswith(cr, end - len(cr)):
+        end -= len(cr)
+    if end <= start:
+        return value, False
+    bounds = _word_source_bounds(marked, start, end)
+    if bounds is None:
+        return value, False
+    lo, hi = bounds
     source = marked.source
-    regions = getattr(marked, "top_regions", None)
-    if regions is None:
-        return True
+    regions = marked.top_regions
+    by_start = {}
+    k = max(bisect.bisect_right(marked.top_starts, lo) - 1, 0)
+    while k < len(regions) and regions[k].start < hi:
+        region = regions[k]
+        k += 1
+        if region.end <= lo:
+            continue
+        if region.start < lo or region.end > hi or not region.closed:
+            return value, False
+        by_start[region.start] = region
     quote_kinds = {
         "single-quote": 1,
         "double-quote": 1,
         "ansi-c-quote": 2,
         "locale-quote": 2,
     }
-    by_start = {r.start: r for r in regions}
-    words = []  # per statement: list of (text, restorable)
-    statement = []
-    cur = []
-    cur_ok = True
-    in_word = False
-
-    def end_word():
-        nonlocal cur, cur_ok, in_word
-        if in_word:
-            statement.append(("".join(cur), cur_ok))
-        cur, cur_ok, in_word = [], True, False
-
-    def end_statement():
-        nonlocal statement
-        end_word()
-        if statement:
-            words.append(statement)
-        statement = []
-
-    pos, size = 0, len(source)
-    while pos < size:
+    restorable = True
+    out = []
+    pos = lo
+    while pos < hi:
         region = by_start.get(pos)
         if region is not None:
             kind = region.kind
-            in_word = True
-            if kind in quote_kinds and region.closed:
-                skip = quote_kinds[kind]
-                body = source[pos + skip:region.end - 1]
-                if kind in ("double-quote", "locale-quote") and ("$" in body or "`" in body):
-                    cur_ok = False
-                if kind in ("double-quote", "locale-quote"):
-                    # Bash drops backslash-newline and unescapes \" \\ \$ \`
-                    # inside double quotes.
-                    restored = []
-                    i = 0
-                    while i < len(body):
-                        c = body[i]
-                        if c == "\\" and i + 1 < len(body) and body[i + 1] in '"\\$`\n':
-                            if body[i + 1] != "\n":
-                                restored.append(body[i + 1])
-                            i += 2
-                            continue
-                        restored.append(c)
-                        i += 1
-                    body = "".join(restored)
-                if kind == "ansi-c-quote":
-                    decoded = _decode_ansi_c(body)
-                    if decoded is None:
-                        cur_ok = False
-                    else:
-                        body = "".join(decoded)
-                cur.append(body)
-            else:
-                cur_ok = False
-                cur.append(source[pos:region.end])
+            if kind == "arithmetic-command":
+                # `((expr))` at command position evaluates an expression: it
+                # is no command name and declares nothing.
+                out.append(source[pos:region.end])
+                pos = region.end
+                continue
+            if kind not in quote_kinds:
+                return value, False
+            skip = quote_kinds[kind]
+            body = source[pos + skip:region.end - 1]
+            if kind in ("double-quote", "locale-quote"):
+                if "$" in body or "`" in body:
+                    restorable = False
+                # Bash drops backslash-newline and unescapes \" \\ \$ \`
+                # inside double quotes.
+                restored = []
+                i = 0
+                while i < len(body):
+                    c = body[i]
+                    if c == "\\" and i + 1 < len(body) and body[i + 1] in '"\\$`\n':
+                        if body[i + 1] != "\n":
+                            restored.append(body[i + 1])
+                        i += 2
+                        continue
+                    restored.append(c)
+                    i += 1
+                body = "".join(restored)
+            elif kind == "ansi-c-quote":
+                decoded = _decode_ansi_c(body)
+                if decoded is None:
+                    restorable = False
+                else:
+                    body = "".join(decoded)
+            out.append(body)
             pos = max(region.end, pos + 1)
             continue
         ch = source[pos]
         if ch == "\\":
-            if pos + 1 < size and source[pos + 1] == "\n":
-                pos += 2
-                continue
-            in_word = True
-            if pos + 1 < size:
-                cur.append(source[pos + 1])
+            if pos + 1 < hi and source[pos + 1] != "\n":
+                out.append(source[pos + 1])
             pos += 2
             continue
-        if ch in "&|" and (
-            (
-                pos > 0
-                and source[pos - 1] in "<>"
-                and not (pos > 1 and source[pos - 2] == "\\")
-                and pos - 1 not in by_start
-            )
-            or (ch == "&" and pos + 1 < size and source[pos + 1] == ">"
-                and not (pos > 0 and source[pos - 1] in "&\\"))
-        ):
-            # Redirection operators holding `&` or `|` (`>&`, `<&`, `>|`,
-            # `&>`, `&>>`) stay inside the word, not a statement separator.
-            in_word = True
-            cur.append(ch)
-        elif ch in ";&|\n(){}":
-            end_statement()
-        elif ch in " \t":
-            end_word()
-        else:
-            in_word = True
-            if ch in "$`":
-                cur_ok = False
-            cur.append(ch)
+        if ch in "$`":
+            restorable = False
+        out.append(ch)
         pos += 1
-    end_statement()
-    prefixes = {"builtin", "command", "exec", "then", "do", "else", "if", "while", "until", "!", "time"}
-    for statement in words:
-        k = 0
-        while k < len(statement) and statement[k][1]:
-            text = statement[k][0]
-            if text in prefixes or re.match(r"[A-Za-z_][A-Za-z0-9_]*=", text):
-                k += 1
-                continue
-            redir = re.fullmatch(
-                r"(?:\{[A-Za-z_][A-Za-z0-9_]*\}|[0-9]*)(?:<<<|<<-?|&>>|&>|>>|>&|<&|<>|>\||<|>)(.*)",
-                text,
-                re.S,
-            )
-            if redir is None:
-                break
-            # Redirection: skip it and, when the operand is a separate word, that word.
-            k += 1 if redir.group(1) else 2
-        if k >= len(statement):
-            continue
-        name, ok = statement[k]
-        if not ok:
-            return True
-        if name in ("eval", "source", "."):
-            return True
-        if name in ("declare", "local", "typeset"):
-            for opt, opt_ok in statement[k + 1:]:
-                if not opt_ok:
-                    return True
-                if re.fullmatch(r"-[A-Za-z]*n[A-Za-z]*", opt):
-                    return True
-    return False
+    return "".join(out), restorable
 
 
 def _args_json_single_word_certain(marked, word):
@@ -9280,6 +9390,11 @@ def statements(command, unsettled=None, early_stop=None):
     # from one; the masking-stop check reads it (_masking_stop_reached()) and
     # nothing else does.
     pending = [(command, (), None, PY_BODY_NONE)]
+    # Parallel to PENDING, one per entry: the _MarkedText of the chunk the
+    # entry was derived from (None for the command itself), whatever the kind
+    # of derivation. What a chunk queues while it is processed derives from it;
+    # the loop below records that at its top, before it pops the next entry.
+    owners = [None]
     # {ALL_SUBS index: origin position of that substitution's marker}, kept
     # by _register_marker_positions(); a later (deeper) registration
     # replaces an earlier one.
@@ -9330,9 +9445,11 @@ def statements(command, unsettled=None, early_stop=None):
     masking_stopped = False
     deferred_python_bodies = []
     command_chunk = True
-    top_marked = None  # the marked text of the command's own chunk
+    enclosing = None  # the marked text of the chunk being processed
     while pending:
+        owners.extend([enclosing] * (len(pending) - len(owners)))
         chunk, anchor, sub_index, py_mark = pending.pop()
+        outer = owners.pop()
         is_command, command_chunk = command_chunk, False
         # What a chunk derived from this one carries (Component 5): the mark
         # as it stands, except that the substitution bodies and unclosed
@@ -9410,16 +9527,14 @@ def statements(command, unsettled=None, early_stop=None):
         # SEG_ENDS (where each statement's separator starts) lets a heredoc
         # body queued below be anchored between the right two statements.
         marked_chunk = _mark_substitutions(chunk, top_spans, offset)
-        # A nameref declared anywhere in the command the hook received may be
-        # inherited by a derived chunk (a substitution body, a payload): the
-        # nameref answer for such a chunk also reads the top chunk's marked
-        # text (_args_json_nameref_declared()). A chunk that cannot carry the
-        # link reads as "declared" there.
-        if is_command:
-            top_marked = marked_chunk
-        else:
+        # A nameref declared in a chunk around this one may be inherited by
+        # it (a substitution body, a payload): the chunk links to the chunk it
+        # was derived from, and the nameref answer for it walks that chain up
+        # to the command's own chunk (_args_json_nameref_declared()).
+        if outer is not None:
             marked_chunk._is_derived = True
-            marked_chunk._outer_marked = top_marked
+            marked_chunk._outer_marked = outer
+        enclosing = marked_chunk
         segments, seg_ends = _lex_segments_with_ends(marked_chunk)
         # Where each statement begins in the marked text: the end of the
         # separator before it (the same offsets _lex_layout() reports).

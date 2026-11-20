@@ -1374,6 +1374,212 @@ class TestDollarReading(unittest.TestCase):
                 self.assertIn("non-ASCII", doc)
 
 
+class TestNamerefDeclarations(unittest.TestCase):
+    """args-json-quoting-bypass TS-32 (FR1, FR9, NFR6; findings
+    1d971862e2458376, 6083a3b46956a2f0, 4d1573a9f53b167f, 7bb299da67faace7): the
+    nameref declarations the single-word-certain judgment consults are the ones
+    Bash has in effect for the statement. A declaration command is recognised
+    with Bash's word and redirection boundaries and through `command --`, so a
+    glued form reads like its spaced form, and a derived chunk sees the
+    declarations of every chunk around it. The notion call of each command
+    below gives KIND_INSPECTED: its `--format "$r"` may expand to several
+    arguments, so the notion pair is not excluded."""
+
+    ARRAY = "A=(json --mcp desktop-commander --tool start_process); "
+    NOTION = (
+        "mcp-bridge run --mcp notion --tool notion-create-comment "
+        "--format \"$r\" --args-json '{\"command\":\"git branch -D example\"}'"
+    )
+    DECLARE = "declare -n r='A[@]'"
+
+    def kinds(self, command):
+        """The kinds of the `mcp-bridge` statements of a statements() run of
+        COMMAND (the entry point the TS-17 tests use)."""
+        return Spy(command).kinds()
+
+    def glued_and_spaced(self):
+        """(label, the glued form, the spaced form) of every form TS-27 to
+        TS-29 name; the spaced form is the one the scan always read."""
+        notion = "; " + self.NOTION
+        return (
+            (
+                "TS-27 input redirection touching declare",
+                self.ARRAY + "declare</dev/null -n r='A[@]'" + notion,
+                self.ARRAY + "declare </dev/null -n r='A[@]'" + notion,
+            ),
+            (
+                "TS-27 output redirection touching declare",
+                self.ARRAY + "declare>/dev/null -n r='A[@]'" + notion,
+                self.ARRAY + "declare >/dev/null -n r='A[@]'" + notion,
+            ),
+            (
+                "TS-29 source with &> touching it",
+                "source&>/dev/null ./env.sh" + notion,
+                "source &>/dev/null ./env.sh" + notion,
+            ),
+            (
+                "TS-29 dot with &> touching it",
+                ".&>/dev/null ./env.sh" + notion,
+                ". &>/dev/null ./env.sh" + notion,
+            ),
+        )
+
+    def every_command(self):
+        """(label, command) of every command TS-27, TS-28, TS-29 and TS-30
+        name, written out in full."""
+        notion = "; " + self.NOTION
+        commands = []
+        for label, glued, spaced in self.glued_and_spaced():
+            commands.append((label + " (glued)", glued))
+            commands.append((label + " (spaced)", spaced))
+        commands.extend(
+            (
+                (
+                    "TS-28 redirection before the command name",
+                    self.ARRAY + "</dev/null " + self.DECLARE + notion,
+                ),
+                (
+                    "TS-30 command --",
+                    self.ARRAY + "command -- " + self.DECLARE + notion,
+                ),
+                (
+                    "TS-30 command -p --",
+                    self.ARRAY + "command -p -- " + self.DECLARE + notion,
+                ),
+            )
+        )
+        return commands
+
+    def test_the_notion_call_of_every_ts_27_to_30_command_is_inspected(self):
+        """args-json-quoting-bypass TS-32: the `mcp-bridge` statement of every
+        TS-27, TS-28, TS-29 and TS-30 command gives KIND_INSPECTED."""
+        for label, command in self.every_command():
+            with self.subTest(label):
+                self.assertEqual([KIND_INSPECTED], self.kinds(command))
+
+    def test_a_glued_form_gives_the_same_kind_as_its_spaced_form(self):
+        """args-json-quoting-bypass TS-32: a redirection operator that touches
+        the command name gives the kind the same command with a space gives."""
+        for label, glued, spaced in self.glued_and_spaced():
+            with self.subTest(label):
+                self.assertEqual(self.kinds(spaced), self.kinds(glued))
+
+    def test_a_redirection_in_any_place_is_left_out_of_the_command_name(self):
+        """args-json-quoting-bypass TS-32 (6083a3b46956a2f0): a redirection
+        before the name, touching it, or after it, with a file descriptor
+        number, a `{name}` variable or a `>&` target, does not hide the
+        declaration."""
+        notion = "; " + self.NOTION
+        for label, prefix in (
+            ("descriptor number", "declare 2>/dev/null -n r='A[@]'"),
+            ("descriptor variable", "declare {fd}>/dev/null -n r='A[@]'"),
+            ("duplication target", "declare >&2 -n r='A[@]'"),
+            ("before the name, touching", "</dev/null declare -n r='A[@]'"),
+            ("after the options", "declare -n r='A[@]' </dev/null"),
+            ("in a group", "{ declare</dev/null -n r='A[@]'; }"),
+        ):
+            with self.subTest(label):
+                self.assertEqual(
+                    [KIND_INSPECTED], self.kinds(self.ARRAY + prefix + notion)
+                )
+
+    def test_a_prefix_word_before_the_declaration_is_skipped(self):
+        """args-json-quoting-bypass TS-32 (7bb299da67faace7): the words that
+        stand before a command name (`command`, `builtin` and `time` with their
+        own options and `--`, an assignment, a reserved word) do not hide a
+        `declare -n` after them."""
+        notion = "; " + self.NOTION
+        for label, head in (
+            ("command", "command " + self.DECLARE),
+            ("builtin --", "builtin -- " + self.DECLARE),
+            ("time -p --", "time -p -- " + self.DECLARE),
+            ("assignment with +=", "x+=1 " + self.DECLARE),
+            ("elif", "if false; then :; elif " + self.DECLARE + "; then :; fi"),
+            ("command -p command --", "command -p command -- " + self.DECLARE),
+        ):
+            with self.subTest(label):
+                self.assertEqual(
+                    [KIND_INSPECTED], self.kinds(self.ARRAY + head + notion)
+                )
+
+    def test_a_declaration_with_no_nameref_option_does_not_make_the_call_uncertain(self):
+        """args-json-quoting-bypass TS-32 (FR1): a glued redirection on a
+        `declare` without `-n` (or on `echo`), an arithmetic command, and a
+        comment that names a declaration do not mark the shell state, so the
+        notion call keeps its exclusion and is not inspected."""
+        call = self.NOTION.replace('"$r"', '"$SID"')
+        for label, command in (
+            ("declare without -n", self.ARRAY + "declare</dev/null -a r; " + call),
+            ("echo with a glued redirection", self.ARRAY + "echo>/dev/null hello; " + call),
+            ("command -- before echo", self.ARRAY + "command -- echo hello; " + call),
+            ("arithmetic command without blanks", "((x=1)); " + call),
+            ("comment that names a declaration", "echo a\n# " + self.DECLARE + "\n" + call),
+        ):
+            with self.subTest(label):
+                self.assertEqual([KIND_NOTHING], self.kinds(command))
+
+    def test_a_declaration_in_an_enclosing_chunk_counts_at_any_depth(self):
+        """args-json-quoting-bypass TS-32 (1d971862e2458376): the notion call
+        one, two and three command substitutions below a chunk that declares
+        the nameref is inspected, wherever that chunk stands in the chain."""
+        for label, command in (
+            (
+                "declaration one level above the call's chunk",
+                self.ARRAY + "echo $(" + self.DECLARE + "; echo $(" + self.NOTION + "))",
+            ),
+            (
+                "declaration two levels above the call's chunk",
+                self.ARRAY + "echo $(" + self.DECLARE + "; echo $(echo $(" + self.NOTION + ")))",
+            ),
+            (
+                "declaration in the command itself, call three levels down",
+                self.ARRAY + self.DECLARE + "; echo $(echo $(echo $(" + self.NOTION + ")))",
+            ),
+        ):
+            with self.subTest(label):
+                self.assertEqual([KIND_INSPECTED], self.kinds(command))
+
+    def test_no_declaration_anywhere_keeps_the_nested_call_excluded(self):
+        """args-json-quoting-bypass TS-32 (TS-31): with no declaration in any
+        chunk of the chain, a notion call with `--session "$SID"` below one or
+        two command substitutions is not inspected."""
+        call = self.NOTION.replace('"$r"', '"$SID"')
+        for label, command in (
+            ("one level", "echo $(" + call + ")"),
+            ("two levels", "echo $(echo $(" + call + "))"),
+        ):
+            with self.subTest(label):
+                self.assertEqual([KIND_NOTHING], self.kinds(command))
+
+    def test_the_chain_is_walked_without_recursion(self):
+        """args-json-quoting-bypass TS-32 (1d971862e2458376): a declaration at
+        the top of a chain far deeper than the interpreter's recursion limit
+        still reaches the innermost chunk."""
+        top = GUARD._MarkedText.plain(self.DECLARE)
+        node = top
+        for _ in range(3 * sys.getrecursionlimit()):
+            inner = GUARD._MarkedText.plain("echo x")
+            inner._is_derived = True
+            inner._outer_marked = node
+            node = inner
+        self.assertTrue(GUARD._args_json_nameref_declared(node))
+        quiet = GUARD._MarkedText.plain("echo x")
+        node = quiet
+        for _ in range(3 * sys.getrecursionlimit()):
+            inner = GUARD._MarkedText.plain("echo x")
+            inner._is_derived = True
+            inner._outer_marked = node
+            node = inner
+        self.assertFalse(GUARD._args_json_nameref_declared(node))
+
+    def test_a_derived_chunk_without_a_link_reads_as_declared(self):
+        """args-json-quoting-bypass TS-32: a derived chunk that carries no
+        link to the chunk it came from reads as "may declare" (fail safe)."""
+        orphan = GUARD._MarkedText.plain("echo x")
+        orphan._is_derived = True
+        self.assertTrue(GUARD._args_json_nameref_declared(orphan))
+
+
 class TestDeferral(unittest.TestCase):
     """AC-7 (FR7, D3, D6, TM-3, TM-4): on Overrun and on a charge that does
     not fit, the scanned total is unchanged, nothing of the statement is
