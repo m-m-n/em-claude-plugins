@@ -1,0 +1,93 @@
+schema_version: 2
+feature: review-perspective-model-effort
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 2.0
+    confidence: 0.97
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.01
+      '2': 0.97
+      '3': 0.02
+    expectation_clear: 0.92
+  observed_at: '2026-11-20T22:16:03+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 2.01
+    confidence: 0.97
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.01
+      '2': 0.97
+      '3': 0.02
+    expectation_clear: 0.94
+  observed_at: '2026-11-20T22:16:03+09:00'
+pre_survey_estimate:
+  files_expected:
+  - .claude/skills/security-review-model/SKILL.md
+  - em-review/README.md
+  - em-review/agents/codex-reviewer.md
+  - em-review/references/review-phase.md
+  - em-review/references/review-protocol.md
+  - em-review/references/reviewers.yaml
+  - em-review/scripts/run_codex_exec.sh
+  - em-workflow/README.md
+  - em-workflow/agents/codex-reviewer.md
+  - em-workflow/references/review-phase.md
+  - em-workflow/references/review-protocol.md
+  - em-workflow/references/reviewers.yaml
+  - em-workflow/scripts/run_codex_exec.sh
+  - tests/test_codex_hook_wrapper_args.py
+  - tests/test_codex_wrapper_model_flag.py
+  - tests/test_codex_wrapper_single_invocation.py
+  - tests/test_contributor_tier_criteria.py
+  - tests/test_llm_led_review_user_docs.py
+  - tests/test_reproduction_reviewer_instructions.py
+  - tests/test_reviewer_roles_protocol.py
+  - tests/test_reviewers_primary_chains.py
+  - tests/test_tier_record_schema_v2.py
+  changed_lines_approx: 210
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules:
+  - em-review/README.md
+  - em-workflow/README.md
+  - tests/test_codex_hook_wrapper_args.py
+  - tests/test_codex_wrapper_single_invocation.py
+  - tests/test_llm_led_review_user_docs.py
+  - tests/test_reproduction_reviewer_instructions.py
+  - tests/test_reviewer_roles_protocol.py
+  - tests/test_tier_record_schema_v2.py
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 3
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  caller_and_dependency_count: 13
+  changes_external_contract: true
+  changes_behavior: true
+  evidence: git diff で既存の4ファイルの差分を確認し、行数は残作業のみを見積もった。両プラグインの R2、プロトコルの入力欄、エージェントの
+    Step 5、ラッパーの xhigh 固定、README の旧順、テストの使用法とハッシュの固定値を確認した。呼出・依存数はレビュー入口3件と両プラグインのレビュー経路の直接接続10件を数えた。ファイルを書き込まない既存テスト107件が通った
+decided_at: '2026-11-20T22:16:03+09:00'
