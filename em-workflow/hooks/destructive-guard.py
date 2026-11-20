@@ -7923,7 +7923,10 @@ def _read_static_word(marked, tok):
 
     The whole word is read before the outcome is settled, so a word that holds
     an element of FR6 (1) is not static whatever else it holds: it sets
-    nothing."""
+    nothing. The FR3 line-continuation form is held for the whole word: when
+    any region of the word (however the word is split into quoted regions)
+    holds it, the word is Unrestorable, even if another region holds an
+    ordinary expansion (which would otherwise make it not static)."""
     span = getattr(tok, "span", None)
     if getattr(tok, "substitution_only", False):
         return WORD_NOT_STATIC, None
@@ -7964,6 +7967,8 @@ def _read_static_word(marked, tok):
             unrestorable = True  # a quote the word does not hold whole
             continue
         by_start[region.start] = region
+    plain_expansion = False  # an ordinary expansion seen in some region
+    continued = False  # an FR3 line-continuation form seen in some region
     chars = []  # the restored characters
     bare = []  # parallel: whether the character stands unquoted and unescaped
     pos = lo
@@ -7988,12 +7993,16 @@ def _read_static_word(marked, tok):
             if region.kind == "double-quote":
                 outcome, body = _read_double_quoted(body)
                 if outcome == _DQ_EXPANSION:
-                    return WORD_NOT_STATIC, None
-                if outcome == _DQ_CONTINUED:
+                    # Settled after the whole word is read: an FR3 form in
+                    # any region makes the word Unrestorable.
+                    plain_expansion = True
+                    body = "\x00"
+                elif outcome == _DQ_CONTINUED:
                     # The FR3 form: Bash reads an expansion the restoration
                     # cannot. The reading goes on, so a later non-static
                     # element still makes the word not static.
                     unrestorable = True
+                    continued = True
                     body = "\x00"  # a quoted placeholder, never read as unquoted text
             elif region.kind == "ansi-c-quote":
                 body = _decode_ansi_c(body)
@@ -8034,9 +8043,10 @@ def _read_static_word(marked, tok):
             # reading goes on.
             kind, after = _read_dollar(source, pos, hi, False)
             if kind == _DOLLAR_EXPANSION:
-                return WORD_NOT_STATIC, None
+                plain_expansion = True
             if kind == _DOLLAR_CONTINUED:
                 unrestorable = True
+                continued = True
             chars.append(ch)
             bare.append(True)
             pos = after
@@ -8060,7 +8070,9 @@ def _read_static_word(marked, tok):
             return WORD_NOT_STATIC, None
         if bare[-1] and chars[-1] in "?*+@!" and text[end:end + 1] == "(":
             return WORD_NOT_STATIC, None
-    if unrestorable:
+    if plain_expansion and not continued:
+        return WORD_NOT_STATIC, None
+    if unrestorable or plain_expansion:
         return WORD_UNRESTORABLE, None
     return WORD_STATIC, "".join(chars)
 
@@ -8256,7 +8268,10 @@ def _args_json_single_word_certain(marked, word):
       array expansion: `$@`, or a `${...}` whose content holds `@` (which
       covers `${name[@]...}` and `${!prefix@}`). A command substitution or a
       parameter expansion inside the double quotes (`"$(cat comment.json)"`,
-      `"$SID"`) is certain. A locale quote region is checked the same way.
+      `"$SID"`) is certain, unless the command declares a nameref
+      (`declare -n`, `local -n`, `typeset -n`), in which case a `$` inside
+      the double quotes is not certain. A locale quote region is checked the
+      same way.
     - Any other top-level region kind (a command, process, parameter or
       arithmetic expansion, an array subscript) is not certain.
     - An unquoted `$` that does not open an ANSI-C or locale quote, and an
@@ -8299,8 +8314,9 @@ def _args_json_single_word_certain(marked, word):
     def holds_array_form(body):
         """Whether BODY, the content of a double-quote or locale-quote
         region as written, holds an unescaped `$@`, a `${...}` with an `@`
-        in its content, or an indirect `${!...}` expansion (its word count is
-        not settled; line continuations after `${` are skipped) (a `${` nests only with another `${`; one that is never
+        in its content, or an indirect `${!...}` expansion, nested ones
+        included (its word count is not settled; line continuations after
+        `${` are skipped) (a `${` nests only with another `${`; one that is never
         closed cannot be settled and counts as holding one)."""
         i, size = 0, len(body)
 
@@ -8335,6 +8351,8 @@ def _args_json_single_word_certain(marked, word):
                         if c == "$":
                             m = after_continuations(j + 1)
                             if body.startswith("{", m):
+                                if body.startswith("!", after_continuations(m + 1)):
+                                    return True  # nested indirect expansion
                                 depth += 1
                                 j = m + 1
                                 continue
@@ -8350,6 +8368,13 @@ def _args_json_single_word_certain(marked, word):
             i += 1
         return False
 
+    # A `declare -n` / `local -n` / `typeset -n` in the command can make a
+    # variable a nameref to an array (`R='A[@]'`), so `"$R"` may expand to
+    # several words.
+    nameref_declared = (
+        re.search(r"\b(?:declare|local|typeset)\b[^\n;&|]*\s-[A-Za-z]*n", source)
+        is not None
+    )
     opened = {"[": False, "{": False}
     leading = True  # no character of the word has been read yet
     last_bare = None  # the last character read, when it stands unquoted
@@ -8369,10 +8394,12 @@ def _args_json_single_word_certain(marked, word):
                 return False
             if not source.startswith(opener, pos) or source[region.end - 1] != closer:
                 return False
-            if region.kind in ("double-quote", "locale-quote") and holds_array_form(
-                source[pos + skip:region.end - 1]
-            ):
-                return False
+            if region.kind in ("double-quote", "locale-quote"):
+                body_text = source[pos + skip:region.end - 1]
+                if holds_array_form(body_text):
+                    return False
+                if nameref_declared and "$" in body_text:
+                    return False  # a nameref may make the expansion an array
             leading = False
             last_bare = None
             pos = region.end
