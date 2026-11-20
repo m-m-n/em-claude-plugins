@@ -1,16 +1,16 @@
 schema_version: 1
 feature: args-json-quoting-bypass
 phase: create-plan
-status: dispatched
+status: applying_patch
 generation: 1
 base_revision: 8386cf14bc57910801a0c9395781bf6cc7a519ab
 last_input_digest: sha256:bcddd7393368ff618c9025e49ca9d88bcf02e9a0b55945cbf4903d259e8c1169
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:bcddd7393368ff618c9025e49ca9d88bcf02e9a0b55945cbf4903d259e8c1169
   dispatch_digest_inputs:
     em-workflow/references/contracts/planner-contract.md: sha256:df2bf3f0321c2627a31b878a14adb176ee7c2131638245112e5d3bb27f7a3682
@@ -23,9 +23,43 @@ worker_runs:
     em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
     feature-docs/args-json-quoting-bypass/SPEC.md: sha256:57a223a5e7f1ee7d27ea09d4fe6be38890fb82875b76b37a1813db9a650b45ec
     feature-docs/args-json-quoting-bypass/workflow.yaml: sha256:d1ae4bd254934c0b0306cf7f050abac18745422fb9c09482ab20d1622bcb6a98
-artifacts: []
+  output_digest: sha256:5948cb70f3a6f053b89d93fcbc23d0472a51099689727bd5edbda4737fa8d50a
+  self_write_set:
+  - feature-docs/args-json-quoting-bypass/IMPLEMENTATION.md
+  - feature-docs/args-json-quoting-bypass/THREAT-MODEL.md
+  - feature-docs/args-json-quoting-bypass/VERIFICATION.md
+  - feature-docs/args-json-quoting-bypass/tasks/task0001.md
+  - feature-docs/args-json-quoting-bypass/tasks/task0002.md
+  - feature-docs/args-json-quoting-bypass/tasks/task0003.md
+  - feature-docs/args-json-quoting-bypass/tasks/task0004.md
+artifacts:
+- path: feature-docs/args-json-quoting-bypass/IMPLEMENTATION.md
+  sha256: sha256:36182e7f97ff4a7c7365694a858500dbfed473dafac6ae4d80d4aea7fa5dd595
+  produced_by: create-plan-run-0001
+- path: feature-docs/args-json-quoting-bypass/VERIFICATION.md
+  sha256: sha256:e40c7f75f6f240d965f437f701b13def9f36e71eb3204558c53ba0e3ac6edc1d
+  produced_by: create-plan-run-0001
+- path: feature-docs/args-json-quoting-bypass/THREAT-MODEL.md
+  sha256: sha256:11d975f322e53587101b776c415a0dfa4eb1211d16f87588e0fbaf212874865f
+  produced_by: create-plan-run-0001
+- path: feature-docs/args-json-quoting-bypass/tasks/task0001.md
+  sha256: sha256:a2c900155a7726e82d09bf5ff07fb229d73832231b95bd20bc4090b653b2616f
+  produced_by: create-plan-run-0001
+- path: feature-docs/args-json-quoting-bypass/tasks/task0002.md
+  sha256: sha256:f7fbb8fa4d3154d97200f769b18d7778edfe41a1a12c20ae6dd6630961cbe0ef
+  produced_by: create-plan-run-0001
+- path: feature-docs/args-json-quoting-bypass/tasks/task0003.md
+  sha256: sha256:b3455e8e4cad294099013706a3727a90fc409d4fc5c3066d9f4a548157ab1f12
+  produced_by: create-plan-run-0001
+- path: feature-docs/args-json-quoting-bypass/tasks/task0004.md
+  sha256: sha256:2106dcfe0d937c4c48bb5b031120871ad21b12ae4b48c0b1a58f6c81ed6ef1a7
+  produced_by: create-plan-run-0001
 other_feature_doc_fixes: []
-patches: []
+patches:
+- patch_id: args-json-quoting-bypass-p0001
+  status: pending
+  base_input_digest: sha256:bcddd7393368ff618c9025e49ca9d88bcf02e9a0b55945cbf4903d259e8c1169
+  base_workflow_blob: fb6806549d1a401d2ce6672976dbd9d70fa594a4
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
