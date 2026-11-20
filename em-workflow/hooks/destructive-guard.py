@@ -7046,23 +7046,28 @@ def _read_double_quoted(body):
       symbol, or at the end) is passed on as a literal `$`, as Bash does. A
       `$` before a non-ASCII character is a literal `$` (FR4). A character not
       known to be literal counts as an expansion (safe side).
-    - (_DQ_CONTINUED, None): it holds no expansion, but it holds the FR3 form:
+    - (_DQ_CONTINUED, None): it holds the FR3 form (with or without an
+      ordinary expansion elsewhere in the body):
       a `$`, one or more line continuations (a backslash and a newline), and a
       character that starts an expansion. Bash removes the continuations first
       and reads an expansion, which this reading does not restore. A `$` whose
       next character after the continuations starts no expansion (or that ends
       the body) is a literal `$`, and the continuations vanish.
 
-    The whole body is read first: an expansion anywhere wins over the FR3
-    form, whichever comes first."""
+    The whole body is read first. The FR3 form, once found, is kept even when
+    an ordinary expansion is also in the body: the outcome is then
+    _DQ_CONTINUED, so the unrestorable form is never hidden by an expansion
+    added next to it."""
     out = []
     continued = False
+    expansion = False
     i, size = 0, len(body)
     while i < size:
         ch = body[i]
         if ch == "\\":
             if i + 1 >= size:
-                return _DQ_EXPANSION, None
+                expansion = True
+                break
             nxt = body[i + 1]
             if nxt == "\n":
                 i += 2
@@ -7072,12 +7077,12 @@ def _read_double_quoted(body):
                 i += 2
                 continue
         elif ch == "`":
-            return _DQ_EXPANSION, None
+            expansion = True
         elif ch == "$":
             kind, after = _read_dollar(body, i, size, True)
             if kind == _DOLLAR_EXPANSION:
-                return _DQ_EXPANSION, None
-            if kind == _DOLLAR_CONTINUED:
+                expansion = True
+            elif kind == _DOLLAR_CONTINUED:
                 continued = True
             out.append(ch)
             i = after
@@ -7086,6 +7091,8 @@ def _read_double_quoted(body):
         i += 1
     if continued:
         return _DQ_CONTINUED, None
+    if expansion:
+        return _DQ_EXPANSION, None
     return _DQ_RESTORED, "".join(out)
 
 
@@ -8291,8 +8298,9 @@ def _args_json_single_word_certain(marked, word):
 
     def holds_array_form(body):
         """Whether BODY, the content of a double-quote or locale-quote
-        region as written, holds an unescaped `$@` or a `${...}` with an `@`
-        in its content (a `${` nests only with another `${`; one that is never
+        region as written, holds an unescaped `$@`, a `${...}` with an `@`
+        in its content, or an indirect `${!...}` expansion (its word count is
+        not settled; line continuations after `${` are skipped) (a `${` nests only with another `${`; one that is never
         closed cannot be settled and counts as holding one)."""
         i, size = 0, len(body)
 
@@ -8316,6 +8324,8 @@ def _args_json_single_word_certain(marked, word):
                 if nxt == "@":
                     return True
                 if nxt == "{":
+                    if body.startswith("!", after_continuations(k + 1)):
+                        return True  # indirect expansion: the word count is open
                     depth, j = 1, k + 1
                     while j < size and depth:
                         c = body[j]
