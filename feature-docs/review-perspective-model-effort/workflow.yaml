@@ -84,7 +84,11 @@ workflow:
 - id: retrospect
   status: pending
 tasks: {}
-review: {}
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
 requirements:
   FR1:
     title: reviewers.yaml の codex エントリに effort を追加
