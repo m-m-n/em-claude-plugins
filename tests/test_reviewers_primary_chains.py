@@ -69,24 +69,24 @@ EXPECTED_REQUIRES_SPEC = {
     "license": "false",
 }
 
-# Every chain is two entries -- codex and muse-spark -- differing only in
-# which one leads. No Vertex model is assigned any more.
+# Every chain is two entries -- codex then muse-spark, in that order.
+# No Vertex model is assigned any more.
 EXPECTED_CHAINS = {
     "security": [
-        {"harness": "codex", "model": "gpt-6-astra"},
+        {"harness": "codex", "model": "gpt-6.2-astra"},
         {"harness": "litellm", "model": "muse-spark"},
     ],
     "performance": [
-        {"harness": "litellm", "model": "muse-spark"},
         {"harness": "codex"},
+        {"harness": "litellm", "model": "muse-spark"},
     ],
     "architecture": [
-        {"harness": "litellm", "model": "muse-spark"},
         {"harness": "codex"},
+        {"harness": "litellm", "model": "muse-spark"},
     ],
     "spec": [
-        {"harness": "litellm", "model": "muse-spark"},
         {"harness": "codex"},
+        {"harness": "litellm", "model": "muse-spark"},
     ],
     "comprehensive": [
         {"harness": "codex"},
