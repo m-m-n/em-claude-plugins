@@ -3795,10 +3795,13 @@ class _MarkedText:
         self._mask_starts = [lo for lo, _hi in mask_ranges]
         self._quote_starts = [lo for lo, _hi in quote_ranges]
         self._quote_ends = [hi for _lo, hi in quote_ranges]
-        # The marked text of the chunk this one was derived from (set by
-        # statements(), which walks the chain to the command's own chunk);
-        # _is_derived says the chunk is not the top one, so a missing link
-        # reads as "nameref possibly declared".
+        # The marked text of the chunk this one was derived from, which the
+        # nameref answer walks up to the command's own chunk; _is_derived says
+        # the chunk is not the top one, so a missing link reads as "nameref
+        # possibly declared". Both, and the answer cached for a chunk whose
+        # unquoted heredoc body holds a current-shell substitution, are set by
+        # _ChunkLinks.register(), which _queue_args_json_chunks() calls for
+        # the chunk before it asks for any decision -- not by statements().
         self._outer_marked = None
         self._is_derived = False
         self._nameref_declared_cache = None
@@ -4518,6 +4521,34 @@ class HeredocRecord:
         self.quoted = quoted
 
 
+class _StrippedWithShellSubstitution(str):
+    """A chunk with its heredoc bodies removed (_strip_heredocs_mapped()), one
+    of which has an unquoted delimiter and holds a Bash 5.3 current-shell
+    substitution (args-json-quoting-bypass TM-1): the shell expands such a
+    body, so `${ cmd; }` / `${| cmd; }` in it runs in the current shell and
+    its state change (a nameref included) outlasts the heredoc. The text is
+    equal to, and hashed like, the plain stripped text; the type alone carries
+    the fact, to the _MarkedText built from it (MARKED.source), where
+    _ChunkLinks.register() reads it. Nothing is kept outside the value, so the
+    answer for a chunk never depends on what was judged before it."""
+
+    __slots__ = ()
+
+
+def _bodies_hold_current_shell_substitution(records):
+    """Whether one of the HeredocRecord RECORDS has an unquoted delimiter and a
+    body that holds a current-shell substitution opener: `${` followed by
+    whitespace or `|`, line continuations removed. The body of a quoted
+    delimiter is not expanded and is left out."""
+    for record in records:
+        if record.quoted:
+            continue
+        body = record.body.replace("\\\r\n", "").replace("\\\n", "")
+        if re.search(r"\$\{[\s|]", body):
+            return True
+    return False
+
+
 def _strip_heredocs_mapped(chunk, lexmap=None):
     """(CHUNK with every real heredoc body removed, the ordered list of
     HeredocRecord, the original-to-stripped _PositionMap). Which `<<` is a
@@ -4528,7 +4559,12 @@ def _strip_heredocs_mapped(chunk, lexmap=None):
     Each removed body -- the body lines and the delimiter line, through its
     line end -- is one `replace` segment of the map (its stripped range
     empty, its REF the body's HeredocRecord); the text between bodies is
-    copied verbatim. Construction is linear in the chunk."""
+    copied verbatim. Construction is linear in the chunk.
+
+    The stripped text is a plain str, except when a removed body with an
+    unquoted delimiter holds a current-shell substitution: it is then a
+    _StrippedWithShellSubstitution, so that the fact outlives the removal of
+    the body (_bodies_hold_current_shell_substitution())."""
     if lexmap is None:
         lexmap = lex_shell(chunk, "shell")
     ops = [op for op in lexmap.heredocs if op.body_start is not None]
@@ -4574,7 +4610,10 @@ def _strip_heredocs_mapped(chunk, lexmap=None):
             ("copy", cursor, len(chunk), new_cursor, new_cursor + length, None)
         )
         new_cursor += length
-    return "".join(out), records, _PositionMap(segments, len(chunk), new_cursor)
+    stripped = "".join(out)
+    if _bodies_hold_current_shell_substitution(records):
+        stripped = _StrippedWithShellSubstitution(stripped)
+    return stripped, records, _PositionMap(segments, len(chunk), new_cursor)
 
 
 def strip_heredocs(chunk):
@@ -8267,12 +8306,15 @@ def _args_json_nameref_declared(marked):
 
     A derived chunk (a command substitution body, a `bash -c` payload, a
     decoded `--args-json` value, ...) records the chunk it was derived from
-    (MARKED._outer_marked, set by statements()) and inherits the variables of
-    every chunk around it: its answer counts the declarations of its own text
-    and of each enclosing chunk, up to the top chunk, whatever the depth and
-    wherever the declaration stands in that chunk (the safe side). A payload
-    that a new process runs (`bash -c`) is treated the same way, which is the
-    safe side as well. A derived chunk that carries no link reads as "declared".
+    (MARKED._outer_marked, set when _queue_args_json_chunks() registers the
+    chunk, _ChunkLinks.register()) and inherits the variables of every chunk
+    around it: its answer counts the declarations of its own text and of each
+    enclosing chunk, up to the top chunk, whatever the depth and wherever the
+    declaration stands in that chunk (the safe side). A payload that a new
+    process runs (`bash -c`) is treated the same way, which is the safe side
+    as well. A derived chunk that carries no link reads as "declared". So does
+    a chunk with a heredoc body of an unquoted delimiter that holds a
+    current-shell substitution: its cache is set at registration too.
 
     Computed once per chunk and kept on it. The chain is walked without
     recursion, so a deep nest of substitutions never meets the recursion
@@ -9059,18 +9101,76 @@ def ask_lex_unsettled(exc):
     decide("ask", *lex_unsettled_ask(exc))
 
 
+class _ChunkLinks:
+    """The chunks one statements() run has met, kept for the nameref answer of
+    a chunk (_args_json_nameref_declared()), which walks from a derived chunk
+    to the chunk it was derived from, up to the command's own chunk
+    (args-json-quoting-bypass FR1, NFR6). statements() records no derivation:
+    the `--args-json` collaborator, which it calls with each chunk's marked
+    text, registers the chunk here.
+
+    BY_ANCHOR maps the origin-position prefix of each chunk registered so far
+    (the ANCHOR statements() gives the collaborator; the command's own chunk
+    has the empty one) to its _MarkedText, the chunk registered last for equal
+    anchors. LAST is the chunk registered last: the statements of one chunk
+    are handed over one after the other, so a later statement of it finds it
+    there."""
+
+    __slots__ = ("by_anchor", "last")
+
+    def __init__(self):
+        self.by_anchor = {}
+        self.last = None
+
+    def register(self, marked_chunk, anchor):
+        """Register MARKED_CHUNK, the _MarkedText of the chunk being processed
+        (None registers nothing), under ANCHOR, once: the call for a later
+        statement of the chunk registered last does nothing. It sets, before
+        the nameref answer of the chunk is first asked for:
+
+        - the derivation link. A chunk with a non-empty anchor is derived
+          (_is_derived), and is linked (_outer_marked) to the registered chunk
+          with the longest anchor that is a proper prefix of its own: the
+          anchor of a derived chunk extends the anchor of the chunk it was
+          derived from, so the chain reaches that chunk and the command's own
+          chunk. When several registered chunks qualify, or the refined
+          anchor of a substitution body points into a payload derived from the
+          true parent, the chain may name a chunk below the true parent; it
+          still reaches the true parent and counts more chunks than the true
+          chain, which is the safe side. A derived chunk with no registered
+          prefix keeps no link, which the chain walk reads as "declared".
+        - the heredoc result. A chunk whose source is a
+          _StrippedWithShellSubstitution reads as "may hold a nameref"."""
+        if marked_chunk is None or marked_chunk is self.last:
+            return
+        self.last = marked_chunk
+        if anchor:
+            marked_chunk._is_derived = True
+            for end in range(len(anchor) - 1, -1, -1):
+                parent = self.by_anchor.get(anchor[:end])
+                if parent is not None:
+                    marked_chunk._outer_marked = parent
+                    break
+        if isinstance(marked_chunk.source, _StrippedWithShellSubstitution):
+            marked_chunk._nameref_declared_cache = True
+        self.by_anchor[anchor] = marked_chunk
+
+
 class _ScanState:
     """The relative scan-cost state of one statements() run (TM-5): SCANNED is
     the running total of the text scanned so far, BUDGET the cap on it
     (statements() sets it from the length of the command). The `--args-json`
     step's collaborator adds its charge to SCANNED, or leaves SCANNED unchanged
-    when the charge does not fit (mcp-bridge-args-json-exec-guard D3, NFR5)."""
+    when the charge does not fit (mcp-bridge-args-json-exec-guard D3, NFR5).
+    LINKS is the run's _ChunkLinks, which the collaborator registers each
+    chunk in (the derivation links of the nameref answer)."""
 
-    __slots__ = ("scanned", "budget")
+    __slots__ = ("scanned", "budget", "links")
 
     def __init__(self, budget):
         self.scanned = 0
         self.budget = budget
+        self.links = _ChunkLinks()
 
 
 class _DeferredAsks:
@@ -9153,6 +9253,15 @@ def _queue_args_json_chunks(
     SCAN its _ScanState (scanned total and budget) and ASKS its _DeferredAsks
     record.
 
+    Before step 1 it registers MARKED_CHUNK in the run's chunk record
+    (SCAN.links, _ChunkLinks.register()): once for each chunk, at the first of
+    its statements the collaborator is called for, whatever LEXED says and
+    before the early return of step 1, so a chunk that holds statements is
+    never skipped by the chain a derived chunk walks. The registration sets the
+    chunk's derivation link and its heredoc result for the nameref answer
+    (_args_json_nameref_declared()), which the decision asks for after it. It
+    queues nothing and changes nothing that steps 1 to 4 queue, charge or hold.
+
     1. A statement from the parse-failure fallback, and any statement once this
        step has held the scan-budget ask in the run, are left alone.
     2. On Overrun, or when the charge would take the scanned total past the
@@ -9178,6 +9287,7 @@ def _queue_args_json_chunks(
        3 did (FR11).
 
     It never emits a decision and never ends the scan."""
+    scan.links.register(marked_chunk, anchor)
     if not lexed or asks.args_json_stopped:
         return
     result = _mcp_bridge_args_json_chunks(shaped_words, marked_chunk)
@@ -9441,11 +9551,6 @@ def statements(command, unsettled=None, early_stop=None):
     # from one; the masking-stop check reads it (_masking_stop_reached()) and
     # nothing else does.
     pending = [(command, (), None, PY_BODY_NONE)]
-    # Parallel to PENDING, one per entry: the _MarkedText of the chunk the
-    # entry was derived from (None for the command itself), whatever the kind
-    # of derivation. What a chunk queues while it is processed derives from it;
-    # the loop below records that at its top, before it pops the next entry.
-    owners = [None]
     # {ALL_SUBS index: origin position of that substitution's marker}, kept
     # by _register_marker_positions(); a later (deeper) registration
     # replaces an earlier one.
@@ -9496,11 +9601,8 @@ def statements(command, unsettled=None, early_stop=None):
     masking_stopped = False
     deferred_python_bodies = []
     command_chunk = True
-    enclosing = None  # the marked text of the chunk being processed
     while pending:
-        owners.extend([enclosing] * (len(pending) - len(owners)))
         chunk, anchor, sub_index, py_mark = pending.pop()
-        outer = owners.pop()
         is_command, command_chunk = command_chunk, False
         # What a chunk derived from this one carries (Component 5): the mark
         # as it stands, except that the substitution bodies and unclosed
@@ -9578,14 +9680,6 @@ def statements(command, unsettled=None, early_stop=None):
         # SEG_ENDS (where each statement's separator starts) lets a heredoc
         # body queued below be anchored between the right two statements.
         marked_chunk = _mark_substitutions(chunk, top_spans, offset)
-        # A nameref declared in a chunk around this one may be inherited by
-        # it (a substitution body, a payload): the chunk links to the chunk it
-        # was derived from, and the nameref answer for it walks that chain up
-        # to the command's own chunk (_args_json_nameref_declared()).
-        if outer is not None:
-            marked_chunk._is_derived = True
-            marked_chunk._outer_marked = outer
-        enclosing = marked_chunk
         segments, seg_ends = _lex_segments_with_ends(marked_chunk)
         # Where each statement begins in the marked text: the end of the
         # separator before it (the same offsets _lex_layout() reports).
@@ -9595,24 +9689,6 @@ def statements(command, unsettled=None, early_stop=None):
         )
         in_tail = _statements_in_tail(marked_chunk, seg_starts, len(segments))
         if heredocs:
-            # args-json-quoting-bypass (TM-1): the body of a heredoc with an
-            # unquoted delimiter is expanded by the shell, so a Bash 5.3
-            # current-shell substitution in it (`${ cmd; }` / `${| cmd; }`, a
-            # `${` followed by whitespace or `|`, line continuations removed)
-            # runs in the current shell and its state change (a nameref
-            # included) outlasts the heredoc. The body was stripped from
-            # CHUNK above, so the nameref answer of this chunk is settled here:
-            # it reads as "may hold a nameref" (the safe side), through the
-            # chunk's nameref cache (_args_json_nameref_declared()), which a
-            # chunk derived from this one inherits. A quoted delimiter's body
-            # is not expanded and is left out.
-            for _hd_record in heredocs:
-                if _hd_record.quoted:
-                    continue
-                _hd_body = _hd_record.body.replace("\\\r\n", "").replace("\\\n", "")
-                if re.search(r"\$\{[\s|]", _hd_body):
-                    marked_chunk._nameref_declared_cache = True
-                    break
             # Component 2/3 (task0001): each heredoc is judged on its own
             # destination, not on whether a sink word appears ANYWHERE in
             # the chunk -- see _heredoc_destinations().
