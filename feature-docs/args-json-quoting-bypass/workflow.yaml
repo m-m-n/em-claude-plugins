@@ -1,0 +1,287 @@
+schema_version: 1
+feature: args-json-quoting-bypass
+created: '2026-11-20'
+base_branch: main
+goal: |
+  # destructive-guard の --args-json 検査を引用・エスケープの書き方で回避できる残件
+
+  ## 脆弱性の概要 (必須)
+
+  `em-workflow/hooks/destructive-guard.py` の `mcp-bridge run --args-json` の検査を、引用・エスケープ・展開の書き方を変えるだけで回避できる経路が残っている。feature mcp-bridge-args-json-exec-guard の review round 4 で、自動修正の上限に達して持ち越した high 2 件と関連する medium の残件。
+
+  ## 参照 (必須)
+
+  - CVE / GHSA ID: 該当なし
+  - アドバイザリ URL: 該当なし
+  - severity: high
+  - 該当パッケージ: 該当なし
+  - 現在のバージョン: integration ブランチ em-workflow/mcp-bridge-args-json-exec-guard/integration の時点
+  - 修正済みバージョン: 無し
+
+  ## 攻撃シナリオ (必須)
+
+  シェルを実行する MCP ツールが mcp-bridge に登録された環境で、Bash から `mcp-bridge run` を実行し、`--args-json` の `command` に破壊的なコマンドを入れる。次の書き方では、フックが JSON を検査せず allow にする。
+
+  1. `3f7145c6c8c0b26a`（high）: notion の組の除外判定（`_args_json_notion_pair`）を、引用していない展開の単語分割で偽装できる。`--format ${UNSET:-json --mcp desktop-commander --tool start_process}` の形にすると、フックは notion 宛てと読むが、実際は別の MCP ツールに送られる。
+     - loop 2 で除外を狭める修正を入れたが、既存の正規の notion 呼び出し 6 件を誤って deny にしたため、Codex と相談して取り消した。除外の条件を、展開が単語分割で別のフラグを作れない形に限る方向で直す必要がある。
+  2. `f16e5bb8d5da2621`（high）: `=` 形式のフラグ語で、引用の外のバックスラッシュ付き `=`（`--mcp\="$S"`）を区切りとして認識せず、後続の静的な `--args-json` が検査から外れる。
+
+  ## 影響範囲 (必須)
+
+  無人実行で、破壊的なコマンドが destructive-guard の deny を通らずに MCP 経由のシェルで実行される。
+
+  ## 完了の定義 (必須)
+
+  - [ ] 攻撃シナリオが成立しない
+  - [ ] 修正版に追随している（修正版が無い場合は暫定緩和策の欄に対応を記載）
+  - [ ] 既存の allow ケース（notion の正規の呼び出し）を deny にしない
+  - [ ] 上の 2 件を `em-workflow/hooks/tests/destructive-guard-cases.json` の deny ケースとして固定する
+
+  ## 該当箇所 (任意)
+
+  - `em-workflow/hooks/destructive-guard.py` の `_args_json_notion_pair()`、`_flag_equals_prefix_name()`
+  - 同時に扱うとよい medium の残件
+    - `dc2fdf65ce30d198`: `$` と変数名の間に行継続があると、展開を固定文字列として扱う（`_read_double_quoted()` / `_read_static_word()`）
+    - `f35ed060564bcf20`: `$` の後に非 ASCII 文字が続くと、Bash は文字どおりに渡すのに展開として扱い、検査を打ち切る
+    - `0379cf2eb7ad4e92` / `9981fd673b28e7e4`: `--args-json` を多数並べると、値ごとの位置検索が二乗時間になる
+    - `3340375b4b50c4b0`: 単体テスト `equals form with a destination` の期待値が現行の判定と逆
+  - 詳細はリポジトリの `feature-docs/mcp-bridge-args-json-exec-guard/reviews/round4.yaml`
+
+  ## 暫定緩和策 (任意)
+
+  \<修正までの回避手段。あれば>
+parent_branch: em-workflow/args-json-quoting-bypass/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.69
+      '2': 0.31
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.86
+      '2': 0.14
+      '3': 0.0
+  at: '2026-11-20T19:47:44+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
+      format_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: a0b5833958ae75eb5b2c42e11e325af665eea80b
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'tier reduced により design step を削減（UI を持たないフックの静的解析の修正、design-system 候補 0 件。create-spec.design-step: decide_autonomously → skip）'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: 996e1443a63b46e552a97d2ad7e2d2f96ae8f778
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  round: 0
+  passed_ids: []
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: Notion-pair exclusion only for single-word-certain value words
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
+    - TS-17
+  FR2:
+    title: Unquoted `\=` is the `=`-form separator
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-6
+    - TS-7
+    - TS-18
+  FR3:
+    title: '`$` followed by line continuations'
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-8
+    - TS-9
+    - TS-13
+    - TS-14
+  FR4:
+    title: Non-ASCII character after `$` is literal
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-10
+    - TS-11
+    - TS-15
+  FR5:
+    title: Linear anchor lookup
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-16
+  FR6:
+    title: Record value-word word-count shifts as out of scope (O2 (8))
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-12
+  FR7:
+    title: FR11 amended to name the line-continuation form
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-8
+    - TS-9
+  FR8:
+    title: Runner cases
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
+    - TS-6
+    - TS-7
+    - TS-8
+    - TS-9
+    - TS-10
+    - TS-11
+    - TS-12
+  FR9:
+    title: Unit tests
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-13
+    - TS-14
+    - TS-15
+    - TS-16
+    - TS-17
+    - TS-18
+  FR10:
+    title: Docstrings and comments
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR11:
+    title: Confirm 3340375b4b50c4b0
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: Performance
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: Fail-closed
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-8
+    - TS-9
+  NFR3:
+    title: Test procedure
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: No load-based testing
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-16
+  NFR5:
+    title: Version
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR6:
+    title: Maintainability
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

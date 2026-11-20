@@ -1,7 +1,7 @@
 schema_version: 1
 feature: args-json-quoting-bypass
 phase: create-spec
-status: applying_patch
+status: completed
 generation: 1
 base_revision: bf9e061a6b33351693970839bc4e17cbf15e4e01
 last_input_digest: sha256:f3c19eef0468684146e46a3d09ead7b1c2e91fd82898c1778b2e08d50f5ae23f
