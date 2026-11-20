@@ -1,11 +1,11 @@
 schema_version: 1
 feature: review-perspective-model-effort
 phase: create-plan
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: 321580409a0f61a943a19f2251e1207bddb91c46
 last_input_digest: sha256:c035ff54d8baf01960129c38b812aee29a03b82cc7095d90b970347e74c5f866
-active_request_id: create-plan-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -25,7 +25,7 @@ worker_runs:
     plugin:references/workflow-schema.md: sha256:5bd8500c203c4f17cde4193ee43d561073fe7f47099d61a55eb593e098881d87
     plugin:skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
 - request_id: create-plan-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:c035ff54d8baf01960129c38b812aee29a03b82cc7095d90b970347e74c5f866
   dispatch_digest_inputs:
     feature-docs/review-perspective-model-effort/IMPLEMENTATION.md: sha256:4937c649b9688ddc9640c897cff51422a8388adf2f9d8f47f557e61b904db8fc
@@ -48,11 +48,48 @@ worker_runs:
     plugin:references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
     plugin:references/workflow-schema.md: sha256:5bd8500c203c4f17cde4193ee43d561073fe7f47099d61a55eb593e098881d87
     plugin:skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
-artifacts: []
+  self_write_set:
+  - feature-docs/review-perspective-model-effort/tasks/task0001.md
+  - feature-docs/review-perspective-model-effort/tasks/task0002.md
+  - feature-docs/review-perspective-model-effort/tasks/task0003.md
+  - feature-docs/review-perspective-model-effort/tasks/task0004.md
+  - feature-docs/review-perspective-model-effort/tasks/task0005.md
+  - feature-docs/review-perspective-model-effort/tasks/task0006.md
+artifacts:
+- path: feature-docs/review-perspective-model-effort/IMPLEMENTATION.md
+  sha256: sha256:4937c649b9688ddc9640c897cff51422a8388adf2f9d8f47f557e61b904db8fc
+  produced_by: create-plan-run-0002
+- path: feature-docs/review-perspective-model-effort/VERIFICATION.md
+  sha256: sha256:b9584822317c57ff1c74805b490d57d480dc0b3e1b16ed4ab8f2948b56c742d0
+  produced_by: create-plan-run-0002
+- path: feature-docs/review-perspective-model-effort/THREAT-MODEL.md
+  sha256: sha256:6c8a92ea55579dfba6aaf8d2da1d27e30952f27136c9350a854a61d9aee67db8
+  produced_by: create-plan-run-0002
+- path: feature-docs/review-perspective-model-effort/tasks/task0001.md
+  sha256: sha256:f0fbad093a655a44d1d93475c5f89b7dd6c18cb1b6bb8f934fbe904a2480fc98
+  produced_by: create-plan-run-0002
+- path: feature-docs/review-perspective-model-effort/tasks/task0002.md
+  sha256: sha256:0bb14a58921da9a2909ed66f5e8dd029d520f174004cc82b733bf8db5edd6aa1
+  produced_by: create-plan-run-0002
+- path: feature-docs/review-perspective-model-effort/tasks/task0003.md
+  sha256: sha256:2c3411964cff6a24ac26b9b2757610caaeb84fb46a8c62d4ca630d6377c1552e
+  produced_by: create-plan-run-0002
+- path: feature-docs/review-perspective-model-effort/tasks/task0004.md
+  sha256: sha256:d5f91296b1b9ad0d39bac5436946d4cc01e0de899dd77dfcec2532b73037716a
+  produced_by: create-plan-run-0002
+- path: feature-docs/review-perspective-model-effort/tasks/task0005.md
+  sha256: sha256:14637f9e14bbe3cf9646a6cddb4cacde6086ca81b46bd67c07741de0efba1b48
+  produced_by: create-plan-run-0002
+- path: feature-docs/review-perspective-model-effort/tasks/task0006.md
+  sha256: sha256:10ae9c3f4ca9dad33bf5c691cf535d57221a2812322f3f13b9db28f77f182bfe
+  produced_by: create-plan-run-0002
 other_feature_doc_fixes: []
-patches: []
+patches:
+- patch_id: create-plan-p0002
+  status: validated
+  base_input_digest: sha256:c035ff54d8baf01960129c38b812aee29a03b82cc7095d90b970347e74c5f866
+  base_workflow_blob: fa4b9ff998775d2fea125b9ef4d30ff4a212471a
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
-last_error: 'create-plan-run-0001: validate-worker-output task-plan-files / task-plan-files-mismatch
-  (Files bullets with multiple backtick paths or (none))'
+last_error: null
