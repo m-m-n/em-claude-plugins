@@ -8295,26 +8295,39 @@ def _args_json_single_word_certain(marked, word):
         in its content (a `${` nests only with another `${`; one that is never
         closed cannot be settled and counts as holding one)."""
         i, size = 0, len(body)
+
+        def after_continuations(k):
+            # Bash drops backslash-newline pairs before reading further.
+            while body.startswith("\\\n", k):
+                k += 2
+            return k
+
         while i < size:
             ch = body[i]
             if ch == "\\":
                 i += 2
                 continue
-            if ch == "$" and i + 1 < size:
-                nxt = body[i + 1]
+            if ch == "$":
+                k = after_continuations(i + 1)
+                if k >= size:
+                    i += 1
+                    continue
+                nxt = body[k]
                 if nxt == "@":
                     return True
                 if nxt == "{":
-                    depth, j = 1, i + 2
+                    depth, j = 1, k + 1
                     while j < size and depth:
                         c = body[j]
                         if c == "\\":
                             j += 2
                             continue
-                        if c == "$" and body.startswith("{", j + 1):
-                            depth += 1
-                            j += 2
-                            continue
+                        if c == "$":
+                            m = after_continuations(j + 1)
+                            if body.startswith("{", m):
+                                depth += 1
+                                j = m + 1
+                                continue
                         if c == "@":
                             return True
                         if c == "}":
