@@ -1,0 +1,100 @@
+task_id: task0001
+baseline_failures: []          # 4a, before any edit: python3 em-workflow/hooks/tests/run-destructive-guard.py -> 1412/1412 passed; python3 -m unittest discover -s tests -> Ran 16603 tests, one failure (see notes: test_runner_reports_every_case_passing, caused by this task's own case-file edit landing while that run was in progress, not inherited); nothing else failing
+final_failures: []             # re-executed after implementation and after this record: the runner passes every case and unittest discover is OK; nothing failing
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >
+      The six new cases (TS-1 to TS-5, TS-12) were added before any hook
+      change and the runner (the table that existing test executes and asserts
+      exits 0) was run against the unchanged hook: TS-1, TS-2, TS-3 and TS-4
+      each FAILed with got=allow rule=None where deny is required, and the
+      suite ended 1414/1418 passed. The same existing test failed in the
+      baseline run that overlapped the case-file edit.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: false
+    red_reason: >
+      TS-5, TS-12 and the existing notion-pair allow cases (lines 1161, 1162,
+      1163, 1200, 1201, 1374 and 1405 of the base case file) are pins for
+      allow verdicts that must not move: they gave allow on the unchanged hook
+      before any change, so no red state occurred for this criterion. TS-5 is
+      written with the JSON escape of the dollar sign in the body: the literal
+      form of the SPEC (a raw dollar-paren inside the single-quoted JSON) gives
+      deny on the unchanged hook through the raw-string scan, because the
+      non-static --session word makes _single_quote_skip_spans() (not owned by
+      this task) name no skip; the escaped form gives allow before and after
+      and fails (deny) if the pair were no longer excluded.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_a_format_or_session_value_that_may_split_is_not_excluded
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_a_decoded_command_after_a_split_format_value_is_inspected
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_an_args_json_value_that_may_split_leaves_the_pair_undetermined
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_the_pair_is_not_excluded_for_any_one_of_several_value_words
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_a_value_that_is_always_one_word_keeps_the_pair_excluded
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_the_session_variable_and_the_comment_substitution_stay_excluded
+    red_confirmed: true
+    red_reason: >
+      Run against the unchanged hook (python3 -m unittest
+      tests.test_destructive_guard_args_json, 63 failures and 1 error in all):
+      every subtest of the three splitting-word tests failed with
+      AssertionError [False] != [True] (the pair was excluded, the kind was
+      Nothing), and test_a_decoded_command_after_a_split_format_value_is_inspected
+      ERRORed with ValueError: not enough values to unpack (expected 1, got 0)
+      (no value was inspected). The two always-one-word tests passed before the
+      change: they are the allow-side pins (--session "$SID", --args-json
+      "$(cat comment.json)", an ANSI-C value stay excluded with no Unrestorable
+      flag).
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_the_single_word_judgment_is_one_helper_called_only_by_the_notion_pair
+      - tests.test_destructive_guard_args_json.TestStructure.test_statements_has_one_call_site_and_no_other_args_json_logic
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_the_notion_pair_is_not_inspected
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_the_notion_pair_in_another_flag_order_is_not_inspected
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_an_excluded_statement_sets_no_unrestorable_flag
+    red_confirmed: true
+    red_reason: >
+      The new structure test failed on the unchanged hook with
+      AssertionError: 1 != 0 : [] (no helper existed). The existing
+      TestStructure and notion tests are unchanged and passed before and after.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDocstring.test_o2_item_8_states_the_word_count_shift_in_both_docstrings
+      - tests.test_destructive_guard_args_json.TestDocstring.test_o2_forms
+      - tests.test_destructive_guard_args_json.TestDocstring.test_neither_form_is_sent_to_ask
+      - tests.test_destructive_guard_args_json.TestDocstring.test_no_form_that_is_not_out_of_scope_is_listed
+    red_confirmed: true
+    red_reason: >
+      Run against the unchanged hook, every phrase subtest of the new pin
+      failed for both docstrings (the decision's and
+      extract_shell_payload_anchored()'s) with AssertionError: the phrase was
+      not found. The subtest that reads the TS-12 label (it names O2 (8)) was
+      green before the change because the case was added first. The other three
+      TestDocstring tests are existing tests that keep passing unchanged (the
+      forbidden-phrase test holds the list the new wording avoids).
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDocstring.test_step_2_and_the_notion_pair_name_the_single_word_certain_condition
+    red_confirmed: true
+    red_reason: >
+      The step 2 and notion-pair docstring subtests failed on the unchanged
+      hook (the phrases single-word-certain and the three flag names were not
+      found). The subtest for the comment above _MCP_RUN_VALUE_FLAGS was added
+      after the comment edit; the same extraction run over the text of the
+      unchanged hook (git show of the base file) finds no single-word-certain,
+      so it fails there.
+  AC-7:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_args_json
+    red_confirmed: true
+    red_reason: >
+      With the new cases in the table and the hook unchanged, the runner
+      exited 1 (1414/1418) and the existing test that runs it failed; the unit
+      module failed 63 tests and 1 error. After the change the runner, the unit
+      module and python3 -m unittest discover -s tests all pass. That the case
+      file's diff adds lines only is read from git diff --numstat (6 added, 0
+      deleted); no executable check in the suite asserts it.

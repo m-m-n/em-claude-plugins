@@ -490,6 +490,163 @@ class TestFlagReading(unittest.TestCase):
         self.assertEqual(nothing_result(), result)
         self.assertEqual([], spy.early_stop)
 
+    # args-json-quoting-bypass TS-17 (FR1, FR9; finding 3f7145c6c8c0b26a): the
+    # notion pair excludes a statement only when the `--format`, `--session`
+    # and `--args-json` value words are single-word-certain.
+
+    NOTION = "mcp-bridge run --mcp notion --tool notion-create-comment "
+    COMMAND_VALUE = "'{\"command\":\"ls\"}'"
+
+    def notion_pair(self, command):
+        """(the answers of _args_json_notion_pair() over a statements() run of
+        COMMAND, in call order; the Spy of the run)."""
+        answers = []
+        original = GUARD._args_json_notion_pair
+
+        def wrapper(marked, words):
+            answer = original(marked, words)
+            answers.append(answer)
+            return answer
+
+        with mock.patch.object(GUARD, "_args_json_notion_pair", wrapper):
+            run = Spy(command)
+        return answers, run
+
+    # Value words that Bash may turn into a word count other than one.
+    SPLITTING_WORDS = (
+        ("unquoted parameter expansion with a default", "${REVIEW_UNSET:-json --mcp desktop-commander --tool start_process}"),
+        ("unquoted variable", "$FORMAT"),
+        ("unquoted command substitution", "$(echo json)"),
+        ("unquoted arithmetic expansion", "$((1 + 2))"),
+        ("unquoted brace list", "{json,--mcp=desktop-commander}"),
+        ("unquoted brace range", "{1..3}"),
+        ("unquoted glob", "*"),
+        ("unquoted bracket glob", "[jt]son"),
+        ("leading tilde", "~root"),
+        ("quoted at-sign parameter", '"$@"'),
+        ("quoted at-sign array", '"${A[@]}"'),
+        ("quoted at-sign array with a modifier", '"${A[@]#x}"'),
+        ("quoted prefix names", '"${!PREFIX@}"'),
+        ("quoted braced at-sign parameter", '"${@}"'),
+        ("quoted at-sign array between other text", 'x"${A[@]}"y'),
+    )
+
+    def test_a_format_or_session_value_that_may_split_is_not_excluded(self):
+        for flag in ("--format", "--session"):
+            for label, word in self.SPLITTING_WORDS:
+                with self.subTest(flag + " " + label):
+                    command = self.NOTION + flag + " " + word + " --args-json " + self.COMMAND_VALUE
+                    answers, run = self.notion_pair(command)
+                    self.assertEqual([False], answers)
+                    self.assertEqual([KIND_INSPECTED], run.kinds())
+
+    def test_a_decoded_command_after_a_split_format_value_is_inspected(self):
+        command = (
+            self.NOTION + "--format ${REVIEW_UNSET:-json --mcp desktop-commander --tool start_process} "
+            "--args-json '{\"command\":\"git branch -D example\"}'"
+        )
+        (result,) = Spy(command).inspected()
+        self.assertEqual(("git branch -D example",), sole_value(result).commands)
+
+    def test_an_args_json_value_that_may_split_leaves_the_pair_undetermined(self):
+        for label, word in self.SPLITTING_WORDS:
+            with self.subTest(label):
+                answers, run = self.notion_pair(self.NOTION + "--args-json " + word)
+                self.assertEqual([False], answers)
+                # A value word that is not static is skipped by the flag
+                # reading (O2 (1)), so the kind alone does not show the
+                # exclusion; the answer above does.
+                self.assertEqual([KIND_NOTHING], run.kinds())
+
+    def test_the_pair_is_not_excluded_for_any_one_of_several_value_words(self):
+        command = (
+            self.NOTION + "--format json --session $SID --args-json " + self.COMMAND_VALUE
+        )
+        answers, run = self.notion_pair(command)
+        self.assertEqual([False], answers)
+        self.assertEqual([KIND_INSPECTED], run.kinds())
+        command = (
+            self.NOTION + "--format json --format \"${A[@]}\" --args-json " + self.COMMAND_VALUE
+        )
+        answers, run = self.notion_pair(command)
+        self.assertEqual([False], answers)
+        self.assertEqual([KIND_INSPECTED], run.kinds())
+
+    # Value words that Bash always passes as exactly one argument.
+    ONE_WORD_FORMS = (
+        ("plain word", "json"),
+        ("single-quoted", "'json'"),
+        ("double-quoted", '"json"'),
+        ("double-quoted variable", '"$SID"'),
+        ("double-quoted braced variable", '"${SID}"'),
+        ("double-quoted command substitution", '"$(cat comment.json)"'),
+        ("double-quoted star array", '"${A[*]}"'),
+        ("double-quoted star parameter", '"$*"'),
+        ("double-quoted escaped dollar", '"\\$@"'),
+        ("single-quoted at-sign", "'$@'"),
+        ("single-quoted glob", "'*'"),
+        ("single-quoted braces", "'{a,b}'"),
+        ("backslashed glob", "\\*"),
+        ("backslashed braces", "\\{a,b\\}"),
+        ("double-quoted tilde", '"~"'),
+        ("double-quoted text with a space", '"a b"'),
+        ("ANSI-C quote", "$'json'"),
+        ("ANSI-C quote that does not decode", "$'a\\0b'"),
+        ("locale quote", '$"json"'),
+        ("mixed quotes", "a'b'\"c\"\\d"),
+    )
+
+    def test_a_value_that_is_always_one_word_keeps_the_pair_excluded(self):
+        for flag in ("--format", "--session", "--args-json"):
+            for label, word in self.ONE_WORD_FORMS:
+                with self.subTest(flag + " " + label):
+                    command = self.NOTION + flag + " " + word
+                    if flag != "--args-json":
+                        command += " --args-json " + self.COMMAND_VALUE
+                    answers, run = self.notion_pair(command)
+                    self.assertEqual([True], answers)
+                    self.assertEqual([nothing_result()], run.results)
+                    self.assertEqual([], run.early_stop)
+
+    def test_the_session_variable_and_the_comment_substitution_stay_excluded(self):
+        for label, command in (
+            (
+                "session variable",
+                self.NOTION + "--session \"$SID\" --args-json "
+                "'{\"body\":\"$(git branch -D example) と記載する\"}'",
+            ),
+            (
+                "args-json command substitution",
+                self.NOTION + "--args-json \"$(cat comment.json)\"",
+            ),
+            (
+                "args-json ANSI-C value",
+                self.NOTION + "--args-json $'{\"body\":\"x\"}\\0'",
+            ),
+        ):
+            with self.subTest(label):
+                answers, run = self.notion_pair(command)
+                self.assertEqual([True], answers)
+                self.assertEqual([KIND_NOTHING], run.kinds())
+                (result,) = run.results
+                self.assertFalse(result.unrestorable)
+                self.assertEqual([], run.early_stop)
+
+    def test_the_single_word_judgment_is_one_helper_called_only_by_the_notion_pair(self):
+        """AC-4 (NFR6): the judgment has one home, and the notion-pair
+        predicate is its only caller."""
+        with open(HOOK, encoding="utf-8") as handle:
+            tree = ast.parse(handle.read())
+        helpers = [
+            node.name for node in ast.walk(tree)
+            if isinstance(node, ast.FunctionDef) and "single_word" in node.name
+        ]
+        self.assertEqual(1, len(helpers), helpers)
+        sites = _CallSites()
+        sites.visit(tree)
+        places = {where for name, where in sites.references if name == helpers[0]}
+        self.assertEqual({"_args_json_notion_pair"}, places)
+
     def test_other_forms_that_read_as_flags_are_inspected(self):
         value = self.VALUE
         for label, command in (
@@ -1462,6 +1619,52 @@ class TestDocstring(unittest.TestCase):
         for phrase in ("Not static", "Unrestorable", "Overrun"):
             with self.subTest(phrase):
                 self.assertIn(phrase, self.doc)
+
+    def test_step_2_and_the_notion_pair_name_the_single_word_certain_condition(self):
+        """args-json-quoting-bypass FR10 (TS-1 to TS-5): step 2 of the
+        decision, the docstring of the notion-pair predicate and the comment
+        above _MCP_RUN_VALUE_FLAGS state that the pair is determined only for
+        single-word-certain value words."""
+        flow = self.doc[: self.doc.index("Out of scope")]
+        step_2 = flow[flow.index("2. Notion pair"): flow.index("3. Flag reading")]
+        pair_doc = " ".join(inspect.getdoc(GUARD._args_json_notion_pair).split())
+        for label, text in (("step 2", step_2), ("predicate", pair_doc)):
+            for phrase in (
+                "single-word-certain",
+                "`--format`, `--session` and `--args-json` value words",
+            ):
+                with self.subTest(label + ": " + phrase):
+                    self.assertIn(phrase, text)
+        with open(HOOK, encoding="utf-8") as handle:
+            source = handle.read()
+        comment = source[: source.index("_MCP_RUN_VALUE_FLAGS = frozenset(")]
+        comment = " ".join(comment[comment.rindex("# The flags of `mcp-bridge run`"):].split())
+        with self.subTest("comment above _MCP_RUN_VALUE_FLAGS"):
+            self.assertIn("single-word-certain", comment)
+
+    def test_o2_item_8_states_the_word_count_shift_in_both_docstrings(self):
+        """args-json-quoting-bypass FR6 (TS-12): O2 item 8 stands directly
+        after item 2 and before item 3, with the scope of the SPEC's O2 (8),
+        in the decision's docstring ("Out of scope" part) and in the
+        out-of-scope declaration of extract_shell_payload_anchored()."""
+        anchored = " ".join(inspect.getdoc(GUARD.extract_shell_payload_anchored).split())
+        for label, text in (("decision", self.scope), ("anchored", anchored)):
+            for phrase in (
+                "2. a word in flag position that is not static in the same sense; 8. a value word of the mcp, tool, format or session flag",
+                "or the value part after the `=` of a flag word",
+                "that Bash expansion turns into a word count other than one",
+                "shifting where mcp-bridge reads flags and values so that a later args-json value is hidden",
+                "the flag reading reads words as written",
+                "keeps its current verdict without the decoded-value inspection and is not sent to ask); 3. an unknown flag",
+            ):
+                with self.subTest(label + ": " + phrase):
+                    self.assertIn(phrase, text)
+        cases = os.path.join(ROOT, "em-workflow", "hooks", "tests", "destructive-guard-cases.json")
+        with open(cases, encoding="utf-8") as handle:
+            labels = [case[1] for case in json.load(handle)]
+        with self.subTest("the TS-12 runner label names O2 (8)"):
+            (label,) = [l for l in labels if l.startswith("args-json-quoting-bypass TS-12:")]
+            self.assertIn("O2 (8)", label)
 
 
 if __name__ == "__main__":

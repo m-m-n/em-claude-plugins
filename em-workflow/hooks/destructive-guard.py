@@ -4315,6 +4315,12 @@ def extract_shell_payload_anchored(toks, lexed, quoted_toks=None):
          substitution, a variable expansion or the like (a substitution Bash
          itself runs is still re-scanned);
       2. a word in flag position that is not static in the same sense;
+      8. a value word of the mcp, tool, format or session flag, or the value
+         part after the `=` of a flag word, that Bash expansion turns into a
+         word count other than one, shifting where mcp-bridge reads flags and
+         values so that a later args-json value is hidden (the flag reading
+         reads words as written, and the form keeps its current verdict
+         without the decoded-value inspection and is not sent to ask);
       3. an unknown flag;
       4. a value-taking flag with no value word;
       5. no `--args-json`;
@@ -7655,9 +7661,13 @@ def _single_quote_skip_spans(chunk, lexmap, real_spans, lexed):
 MAX_ARGS_JSON_DEPTH = 100
 
 # The flags of `mcp-bridge run` the canonical flag reading knows
-# (mcp-bridge-exec-tool-rescan D1): each takes the next word as its value,
-# whatever it holds. `--dry-run` takes none. Only the notion-pair reading
-# (FR2) uses this canonical form.
+# (mcp-bridge-exec-tool-rescan D1): each takes the next word as its value. The
+# reading takes that word whatever it holds, but it determines the notion pair
+# only when the `--format`, `--session` and `--args-json` value words are
+# single-word-certain (args-json-quoting-bypass FR1: Bash always passes them
+# as exactly one argument, so none of them can shift where the flags and
+# values sit). `--dry-run` takes none. Only the notion-pair reading (FR2) uses
+# this canonical form.
 _MCP_RUN_VALUE_FLAGS = frozenset(
     {"--mcp", "--tool", "--args-json", "--format", "--session"}
 )
@@ -8078,15 +8088,24 @@ def _args_json_notion_pair(marked, words):
     """Whether the words WORDS (the words after `run`) read as a complete flag
     sequence in the canonical form that determines the `--mcp notion` /
     `--tool notion-create-comment` pair (mcp-bridge-args-json-exec-guard FR2,
-    D2; mcp-bridge-exec-tool-rescan FR1). This reading is not widened: a word
-    in flag position must be exactly one of the known flags as one unquoted
-    run (_args_json_unquoted_run()), `--dry-run` takes no value, the other
-    flags take the next word as their value whatever it holds, and any other
-    word -- a quoted, `=`-form or single-dash flag word, `--`, a positional
-    word, an unknown name -- or a value-taking flag with no value word makes
-    the pair undeterminable. `--mcp`, `--tool` and `--args-json` must each
-    appear exactly once, and the `--mcp` value and the `--tool` value must be
-    `notion` and `notion-create-comment`, each as one unquoted run."""
+    D2; mcp-bridge-exec-tool-rescan FR1; args-json-quoting-bypass FR1). This
+    reading is not widened: a word in flag position must be exactly one of the
+    known flags as one unquoted run (_args_json_unquoted_run()), `--dry-run`
+    takes no value, the other flags take the next word as their value, and any
+    other word -- a quoted, `=`-form or single-dash flag word, `--`, a
+    positional word, an unknown name -- or a value-taking flag with no value
+    word makes the pair undeterminable. `--mcp`, `--tool` and `--args-json`
+    must each appear exactly once, and the `--mcp` value and the `--tool`
+    value must be `notion` and `notion-create-comment`, each as one unquoted
+    run.
+
+    The flags take the next word as their value whatever it holds, but the
+    pair is determined only when the `--format`, `--session` and `--args-json`
+    value words (every occurrence) are single-word-certain
+    (_args_json_single_word_certain()): Bash always passes each as exactly one
+    argument. A value word that Bash may turn into a different number of words
+    would move where mcp-bridge reads the flags and values, so such a
+    statement is not excluded and goes on to the flag reading unchanged."""
     values = {flag: [] for flag in _MCP_RUN_VALUE_FLAGS}
     k = 0
     while k < len(words):
@@ -8102,7 +8121,162 @@ def _args_json_notion_pair(marked, words):
         len(values["--mcp"]) == len(values["--tool"]) == len(values["--args-json"]) == 1
         and _args_json_unquoted_run(marked, values["--mcp"][0]) == "notion"
         and _args_json_unquoted_run(marked, values["--tool"][0]) == "notion-create-comment"
+        and all(
+            _args_json_single_word_certain(marked, value)
+            for flag in ("--format", "--session", "--args-json")
+            for value in values[flag]
+        )
     )
+
+
+def _args_json_single_word_certain(marked, word):
+    """Whether Bash always passes WORD -- a word of a statement lexed from
+    MARKED (the _MarkedText) -- as exactly one argument
+    (args-json-quoting-bypass FR1, NFR6). True only for a word that is certain;
+    False for everything else, and for anything this reading cannot settle: a
+    word without a span or without MARKED, one that holds marker residue, a
+    quote region the word does not hold whole, an unclosed region. This is the
+    only place the judgment is made; the word readers are not used, since the
+    reading here must not move with how they treat `$`
+    (_read_double_quoted(), _read_static_word() and _read_word_as_written()
+    are not called).
+
+    The word is read from the characters it was written with in MARKED and the
+    lexer's top-level region kinds over them, left to right:
+
+    - A single-quote region, an ANSI-C quote region (whether or not
+      _decode_ansi_c() decodes it) and unquoted literal characters, a
+      backslash escape included, are certain.
+    - A double-quote region is certain unless its content holds an `@`-form
+      array expansion: `$@`, or a `${...}` whose content holds `@` (which
+      covers `${name[@]...}` and `${!prefix@}`). A command substitution or a
+      parameter expansion inside the double quotes (`"$(cat comment.json)"`,
+      `"$SID"`) is certain. A locale quote region is checked the same way.
+    - Any other top-level region kind (a command, process, parameter or
+      arithmetic expansion, an array subscript) is not certain.
+    - An unquoted `$` that does not open an ANSI-C or locale quote, and an
+      unquoted backtick, are not certain.
+    - An unquoted brace pair, an unquoted glob character (`*`, `?`), an
+      unquoted bracket pair, an extended-glob form (an unquoted `+`, `@` or `!`
+      that ends the word directly before a `(`) and an unquoted `~` as the
+      first character are not certain."""
+    span = getattr(word, "span", None)
+    if marked is None or span is None or getattr(word, "is_operator", False):
+        return False
+    start, end = span
+    text = marked.text
+    cr = getattr(word, "trailing_cr", "")
+    if cr and text.startswith(cr, end - len(cr)):
+        end -= len(cr)  # bash passes the CR on; the reading disregards it
+    if end <= start:
+        return False
+    bounds = _word_source_bounds(marked, start, end)
+    if bounds is None:
+        return False  # its first character is a substitution's residue
+    lo, hi = bounds
+    source = marked.source
+    if any(
+        mark in source[lo:hi] for mark in (UNRESOLVED_MARK, QUOTED_MARK, _MARK_TERMINATOR)
+    ):
+        return False
+    regions = marked.top_regions
+    by_start = {}
+    k = max(bisect.bisect_right(marked.top_starts, lo) - 1, 0)
+    while k < len(regions) and regions[k].start < hi:
+        region = regions[k]
+        k += 1
+        if region.end <= lo:
+            continue
+        if region.start < lo or region.end > hi or not region.closed:
+            return False
+        by_start[region.start] = region
+
+    def holds_array_form(body):
+        """Whether BODY, the content of a double-quote or locale-quote
+        region as written, holds an unescaped `$@` or a `${...}` with an `@`
+        in its content (a `${` nests only with another `${`; one that is never
+        closed cannot be settled and counts as holding one)."""
+        i, size = 0, len(body)
+        while i < size:
+            ch = body[i]
+            if ch == "\\":
+                i += 2
+                continue
+            if ch == "$" and i + 1 < size:
+                nxt = body[i + 1]
+                if nxt == "@":
+                    return True
+                if nxt == "{":
+                    depth, j = 1, i + 2
+                    while j < size and depth:
+                        c = body[j]
+                        if c == "\\":
+                            j += 2
+                            continue
+                        if c == "$" and body.startswith("{", j + 1):
+                            depth += 1
+                            j += 2
+                            continue
+                        if c == "@":
+                            return True
+                        if c == "}":
+                            depth -= 1
+                        j += 1
+                    if depth:
+                        return True
+                    i = j
+                    continue
+            i += 1
+        return False
+
+    opened = {"[": False, "{": False}
+    leading = True  # no character of the word has been read yet
+    last_bare = None  # the last character read, when it stands unquoted
+    pos = lo
+    while pos < hi:
+        region = by_start.get(pos)
+        if region is not None:
+            if region.kind == "single-quote":
+                opener, closer, skip = "'", "'", 1
+            elif region.kind == "double-quote":
+                opener, closer, skip = '"', '"', 1
+            elif region.kind == "ansi-c-quote":
+                opener, closer, skip = "$'", "'", 2
+            elif region.kind == "locale-quote":
+                opener, closer, skip = '$"', '"', 2
+            else:
+                return False
+            if not source.startswith(opener, pos) or source[region.end - 1] != closer:
+                return False
+            if region.kind in ("double-quote", "locale-quote") and holds_array_form(
+                source[pos + skip:region.end - 1]
+            ):
+                return False
+            leading = False
+            last_bare = None
+            pos = region.end
+            continue
+        ch = source[pos]
+        if ch == "\\":
+            if pos + 1 >= hi or pos + 1 in by_start:
+                return False
+            if source[pos + 1] != "\n":
+                leading = False
+            last_bare = None
+            pos += 2
+            continue
+        if ch in "$`*?":
+            return False
+        if ch == "~" and leading:
+            return False
+        if ch in "[{":
+            opened[ch] = True
+        elif ch in "]}" and opened["[" if ch == "]" else "{"]:
+            return False
+        leading = False
+        last_bare = ch
+        pos += 1
+    return not (last_bare is not None and last_bare in "+@!" and text[end:end + 1] == "(")
 
 
 def _mcp_bridge_args_json_chunks(shaped_words, marked):
@@ -8141,8 +8315,13 @@ def _mcp_bridge_args_json_chunks(shaped_words, marked):
        only text inside another command's argument has another command word.
     2. Notion pair (FR2): the canonical reading (_args_json_notion_pair()) that
        determines the `--mcp notion` / `--tool notion-create-comment` pair
-       makes the statement nothing to do, and sets no Unrestorable flag. Only
-       this reading excludes a statement; it is not widened.
+       makes the statement nothing to do, and sets no Unrestorable flag. The
+       reading takes the next word of a flag as its value whatever it holds,
+       but it determines the pair only when the `--format`, `--session` and
+       `--args-json` value words are single-word-certain
+       (_args_json_single_word_certain(): Bash always passes the word as
+       exactly one argument); a statement for which it does not goes on to
+       step 3. Only this reading excludes a statement; it is not widened.
     3. Flag reading (FR3, FR6, FR11): every other statement is read left to
        right the way mcp-bridge reads its options; the first word after `run`
        is in flag position. A word in flag position is read by
@@ -8209,6 +8388,13 @@ def _mcp_bridge_args_json_chunks(shaped_words, marked):
            substitution, a variable expansion or the like (a substitution Bash
            itself runs is still re-scanned);
         2. a word in flag position that is not static in the same sense;
+        8. a value word of the mcp, tool, format or session flag, or the
+           value part after the `=` of a flag word, that Bash expansion turns
+           into a word count other than one, shifting where mcp-bridge reads
+           flags and values so that a later args-json value is hidden (the
+           flag reading reads words as written, and the form keeps its current
+           verdict without the decoded-value inspection and is not sent to
+           ask);
         3. an unknown flag;
         4. a value-taking flag with no value word;
         5. no `--args-json`;
