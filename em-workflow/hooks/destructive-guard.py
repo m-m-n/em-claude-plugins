@@ -3719,6 +3719,7 @@ class _MarkedText:
         "source", "text", "posmap", "view", "mask_char", "mask_ranges",
         "subscript_ranges", "tail_start", "pairs", "_mask_starts",
         "_quote_starts", "_quote_ends", "top_regions", "top_starts",
+        "_outer_marked", "_is_derived", "_nameref_declared_cache",
     )
 
     def __init__(self, source, text, posmap):
@@ -3794,6 +3795,12 @@ class _MarkedText:
         self._mask_starts = [lo for lo, _hi in mask_ranges]
         self._quote_starts = [lo for lo, _hi in quote_ranges]
         self._quote_ends = [hi for _lo, hi in quote_ranges]
+        # The marked text of the command's own chunk, for a chunk derived from
+        # it (set by statements()); _is_derived says the chunk is not the top
+        # one, so a missing link reads as "nameref possibly declared".
+        self._outer_marked = None
+        self._is_derived = False
+        self._nameref_declared_cache = None
 
     @classmethod
     def plain(cls, text):
@@ -8259,14 +8266,17 @@ def _args_json_nameref_declared(marked):
     restored statically, when the command word at a command position cannot,
     or when `eval`, `source` or `.` appears at a command position. Computed
     once per input and kept on MARKED."""
-    cached = getattr(marked, "_nameref_declared_cache", None)
+    cached = None if marked is None else marked._nameref_declared_cache
     if cached is not None:
         return cached
     result = _args_json_nameref_scan(marked)
-    try:
+    if not result and marked is not None and marked._is_derived:
+        # A derived chunk (substitution body, payload) inherits the variables
+        # of the command around it: the declarations of the top chunk count.
+        outer = marked._outer_marked
+        result = True if outer is None else _args_json_nameref_declared(outer)
+    if marked is not None:
         marked._nameref_declared_cache = result
-    except Exception:
-        pass
     return result
 
 
@@ -8314,6 +8324,21 @@ def _args_json_nameref_scan(marked):
                 body = source[pos + skip:region.end - 1]
                 if kind in ("double-quote", "locale-quote") and ("$" in body or "`" in body):
                     cur_ok = False
+                if kind in ("double-quote", "locale-quote"):
+                    # Bash drops backslash-newline and unescapes \" \\ \$ \`
+                    # inside double quotes.
+                    restored = []
+                    i = 0
+                    while i < len(body):
+                        c = body[i]
+                        if c == "\\" and i + 1 < len(body) and body[i + 1] in '"\\$`\n':
+                            if body[i + 1] != "\n":
+                                restored.append(body[i + 1])
+                            i += 2
+                            continue
+                        restored.append(c)
+                        i += 1
+                    body = "".join(restored)
                 if kind == "ansi-c-quote":
                     decoded = _decode_ansi_c(body)
                     if decoded is None:
@@ -8336,7 +8361,21 @@ def _args_json_nameref_scan(marked):
                 cur.append(source[pos + 1])
             pos += 2
             continue
-        if ch in ";&|\n(){}":
+        if ch in "&|" and (
+            (
+                pos > 0
+                and source[pos - 1] in "<>"
+                and not (pos > 1 and source[pos - 2] == "\\")
+                and pos - 1 not in by_start
+            )
+            or (ch == "&" and pos + 1 < size and source[pos + 1] == ">"
+                and not (pos > 0 and source[pos - 1] in "&\\"))
+        ):
+            # Redirection operators holding `&` or `|` (`>&`, `<&`, `>|`,
+            # `&>`, `&>>`) stay inside the word, not a statement separator.
+            in_word = True
+            cur.append(ch)
+        elif ch in ";&|\n(){}":
             end_statement()
         elif ch in " \t":
             end_word()
@@ -9291,6 +9330,7 @@ def statements(command, unsettled=None, early_stop=None):
     masking_stopped = False
     deferred_python_bodies = []
     command_chunk = True
+    top_marked = None  # the marked text of the command's own chunk
     while pending:
         chunk, anchor, sub_index, py_mark = pending.pop()
         is_command, command_chunk = command_chunk, False
@@ -9370,6 +9410,16 @@ def statements(command, unsettled=None, early_stop=None):
         # SEG_ENDS (where each statement's separator starts) lets a heredoc
         # body queued below be anchored between the right two statements.
         marked_chunk = _mark_substitutions(chunk, top_spans, offset)
+        # A nameref declared anywhere in the command the hook received may be
+        # inherited by a derived chunk (a substitution body, a payload): the
+        # nameref answer for such a chunk also reads the top chunk's marked
+        # text (_args_json_nameref_declared()). A chunk that cannot carry the
+        # link reads as "declared" there.
+        if is_command:
+            top_marked = marked_chunk
+        else:
+            marked_chunk._is_derived = True
+            marked_chunk._outer_marked = top_marked
         segments, seg_ends = _lex_segments_with_ends(marked_chunk)
         # Where each statement begins in the marked text: the end of the
         # separator before it (the same offsets _lex_layout() reports).
