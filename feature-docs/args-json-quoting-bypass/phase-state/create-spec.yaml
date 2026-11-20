@@ -1,17 +1,87 @@
 schema_version: 1
 feature: args-json-quoting-bypass
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: bf9e061a6b33351693970839bc4e17cbf15e4e01
 last_input_digest: sha256:93fdd2943444eaa31df044b08e34ec2c8a4984a9e715f64d4228c3ce32cbb662
 active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-11-20T19:56:24+09:00'
+    questions:
+    - question_id: requirement.scope.medium-findings
+      status: answered
+    - question_id: security.value-word-arity
+      status: answered
+    - question_id: security.dollar-line-continuation
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+answers:
+  requirement.scope.medium-findings:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-20T19:56:24+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - listed_mediums
+    freeform: null
+    normalized_answer: high 2 件に加えて、列挙された medium（dc2fdf65ce30d198 / f35ed060564bcf20
+      / 0379cf2eb7ad4e92・9981fd673b28e7e4 / 3340375b4b50c4b0 の確認）を扱う。他の round 4 の
+      medium は範囲外
+    resolution_note: 'gate: create-spec.requirement-clarification; options: listed_mediums
+      / highs_only / listed_plus_others; choice: listed_mediums; recorded as assumption;
+      codex_consulted: true (entry codex, 1 turn, converged); orchestrator judged
+      mapping; opus_escalation: false; key point: タスク本文が同時に扱うとよいと挙げた範囲に一致'
+  security.value-word-arity:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-20T19:56:24+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - record_out_of_scope
+    freeform: null
+    normalized_answer: 一般のフラグ読み取りは書かれたとおりに語を読む。値語の展開で語数がずれて後続の --args-json が隠れる形は、O2
+      (2) と並べて範囲外として記録する。notion の組の除外は値語が確実に 1 語になる場合に限るので、攻撃シナリオ 1 は deny になる
+    resolution_note: 'gate: create-spec.requirement-clarification (category security,
+      batch relaxed route); options: record_out_of_scope / inspect_after_uncertain
+      / ask; choice: record_out_of_scope; recorded as assumption; codex_consulted:
+      true (entry codex, 1 turn, converged); orchestrator judged mapping; opus_escalation:
+      false; key point: 既存の TS-27（フラグ位置の非静的語は allow）と同じ線引き。ask は --session $SID のような通常の書き方を
+      batch で deny にする'
+  security.dollar-line-continuation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-20T19:56:24+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - ask_unrestorable
+    freeform: null
+    normalized_answer: $ の後に行継続が続き、その先で展開が始まる語は復元できない語として扱い、args-json-unrestorable
+      の ask を保持する（batch では deny）。FR11 の定義にこの形を明記する
+    resolution_note: 'gate: create-spec.requirement-clarification (category security,
+      batch relaxed route); options: not_static / ask_unrestorable / keep_literal;
+      choice: ask_unrestorable; recorded as assumption; codex_consulted: true (entry
+      codex, 1 turn, converged); orchestrator judged mapping; opus_escalation: false;
+      key point: 既存の deny を allow に変えず、先行 feature の NFR2（fail-closed）を守れる'
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-20T19:56:24+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - skip
+    freeform: null
+    normalized_answer: デザインステップをスキップする（UI なし）
+    resolution_note: 'gate: create-spec.design-step; policy option decide_autonomously
+      (accept analyst design_step_recommendation=skip); the packet omitted the decide_autonomously
+      option, so the recommendation''s own option_id skip was recorded'
 worker_runs:
-  - request_id: create-spec-run-0001
-    status: dispatched
-    input_digest: sha256:93fdd2943444eaa31df044b08e34ec2c8a4984a9e715f64d4228c3ce32cbb662
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:93fdd2943444eaa31df044b08e34ec2c8a4984a9e715f64d4228c3ce32cbb662
 artifacts: []
 progress_fingerprint: null
 stale_redispatch_count: 0
