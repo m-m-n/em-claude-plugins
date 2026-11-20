@@ -41,8 +41,9 @@ What to review and how to get the data. Contains:
 The output shape. Contains:
 - "Output MUST validate against the provided JSON schema" (the schema itself
   goes via `--output-schema`, not inline).
-- Field-value pinning: `"category": "<perspective>"`, `"source": "codex"` on
-  every finding; all fields present (null for unknown line numbers).
+- Field-value pinning: `"category": "<perspective>"` on every finding;
+  `"source": "codex"` at the top level only; all fields present (null for
+  unknown line numbers).
 - The empty-result form when nothing is found.
 
 ### `<grounding_rules>`

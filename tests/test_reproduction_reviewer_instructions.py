@@ -373,20 +373,26 @@ TEMP_FILE_HEADING = "## Temp-file discipline (only if writing a file to disk)"
 # gained one prose paragraph stating that a supplied `effort` is added as
 # `--effort "<effort>"` right before `"$PROMPT"`. The `head`, `step3`,
 # `step4pre` and `step4rest` digests are unchanged.
+#
+# Refreshed again: the `<structured_output_contract>` bullet now pins
+# `"source": "codex"` at the top level only, and Step 6 returns Codex's JSON
+# verbatim (the rule that forced `source` / `category` onto every finding was
+# removed). Both `step4rest` and both `tail` digests were recomputed. The
+# `head`, `step3` and `step4pre` digests are unchanged.
 UNCHANGED_RANGE_SHA256 = {
     "em-workflow": {
         "head": "54028155df297a7642404d52600cb3a3d65c63399a3ab45dcdc29538974a59a5",
         "step3": "c873b8184432641ebd4a9ccc2127376f5e1d74abe3c00b30cdf88c3954537813",
         "step4pre": "75339de2a62cd48e20a419e3487973c533ec9968a0a025cd1aceafd9192c3e00",
-        "step4rest": "6b81b6ff0b1c177cc6d2f8c1cfab5f38330a285d49418204660b0f24f6f7e534",
-        "tail": "eb6a60a98a3e02dd90b1ac7deda426720e055c2ed1a6af788ebee9f6a03092a6",
+        "step4rest": "e25245b2a79deda537e29a7d09282477ff0b015029d054691b510594343ad992",
+        "tail": "0b997576368b44d069524fa3c16e279ca41b046a2159ad2808e938fbc1c76bb4",
     },
     "em-review": {
         "head": "d4e7a6f7f19c104d6243d15414e4197eb1d9f18a8cc9cf133447cb8cd741e191",
         "step3": "2d929f478b3b6cd316f42c347d7da7c2dbbebc72d9038f1dd684aa213898c366",
         "step4pre": "75339de2a62cd48e20a419e3487973c533ec9968a0a025cd1aceafd9192c3e00",
-        "step4rest": "0c68d4eac8375e6ce0f58a9b68090a5fcead8c43babb0993a83c80951100df50",
-        "tail": "57d926cd027f9b1dca92d2c973974b141384be4eafbba1bc47b13fbd464ce4d2",
+        "step4rest": "8953cf49a9de3b9c59704342e804b55c7ad796323da2af74e3b1ee90fd3b852b",
+        "tail": "731c5863956d23adc26721bceeac654389e3e84fd10794f99193c2b517a5718b",
     },
 }
 

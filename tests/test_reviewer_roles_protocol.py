@@ -716,11 +716,16 @@ CODEX_REVIEWER_FROZEN_FRONTMATTER_LINES = [
 # stating that a supplied `effort` is added as `--effort "<effort>"` right
 # before `"$PROMPT"`. The fenced wrapper lines did not change. Nothing else
 # in Steps 0-6 changed.
+#
+# Refreshed again: Step 4's `<structured_output_contract>` bullet now pins
+# `"source": "codex"` at the top level only, and Step 6 returns Codex's JSON
+# verbatim (the rule that forced `source` / `category` onto every finding was
+# removed). Nothing else in Steps 0-6 changed.
 CODEX_REVIEWER_STEPS_START = (
     "## Step 0: Read the protocol (strict fail-closed resolution)"
 )
 CODEX_REVIEWER_STEPS_SHA256 = (
-    "e7d10d2078ba6c659f7579a82d4fa7515fe779ce8cd199890a0c7881a5adaa32"
+    "89cb508c9e7aa7877704a6e4a282c6d167f5373055e408cee7a61fc93b20b27e"
 )
 
 PRIMARY_ROLE_PHRASE = "main review"
