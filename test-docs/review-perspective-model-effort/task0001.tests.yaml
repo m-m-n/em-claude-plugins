@@ -1,5 +1,12 @@
 task_id: task0001
-baseline_failures: []
+# baseline_failures is the run right after the parent-side adoption (the
+# parent's version of tests/test_codex_wrapper_model_flag.py replaced mine, so
+# the test classes named below did not exist yet and this record did not
+# resolve); the run before the first merge attempt had no failure.
+baseline_failures:
+  - test_tests_yaml_id_resolution.TestRecordResolution.test_record__test_docs_review_perspective_model_effort_task0001_tests_yaml
+# final_failures is the full suite re-run after re-implementing the wrapper
+# half of tests/test_codex_wrapper_model_flag.py on the adopted parent file.
 final_failures: []
 acceptance_tests:
   AC-1:
