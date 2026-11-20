@@ -54,64 +54,48 @@ perspective_runs:
   perspective: architecture
   role: primary
   source: codex
-  model: gpt-6.2-astra
-  effort: high
   status: completed
 - run_id: architecture@s2#0
   perspective: architecture
   role: primary
   source: codex
-  model: gpt-6.2-astra
-  effort: high
   status: completed
 - run_id: comprehensive@s1#0
   perspective: comprehensive
   role: primary
   source: codex
-  model: gpt-6.2-astra
-  effort: high
   status: completed
 - run_id: comprehensive@s2#0
   perspective: comprehensive
   role: primary
   source: codex
-  model: gpt-6.2-astra
-  effort: high
   status: completed
 - run_id: performance@s1#0
   perspective: performance
   role: primary
   source: codex
-  model: gpt-6.2-sol
-  effort: xhigh
   status: completed
 - run_id: performance@s2#0
   perspective: performance
   role: primary
   source: codex
-  model: gpt-6.2-sol
-  effort: xhigh
   status: completed
 - run_id: security@s1#0
   perspective: security
   role: primary
   source: codex
   model: gpt-6.2-astra
-  effort: xhigh
   status: completed
 - run_id: security@s2#0
   perspective: security
   role: primary
   source: codex
   model: gpt-6.2-astra
-  effort: xhigh
   status: completed
 - run_id: spec#0
   perspective: spec
   role: primary
   source: codex
-  model: gpt-6.2-sol
-  effort: xhigh
   status: completed
 - run_id: evaluator
   role: evaluator

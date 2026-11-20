@@ -84,7 +84,41 @@ workflow:
   status: completed
   completed_at_commit: 85de50146b307124ba2659fe52469d4a5823fd36
 - id: verify
-  status: pending
+  status: completed
+  completed_at_commit: c77a22469449e78c34e3387967e0e657f6c2697e
+  result: pass
+  failed_items: []
+  round: 1
+  passed_ids:
+  - TS-1
+  - TS-2
+  - TS-3
+  - TS-4
+  - TS-5
+  - TS-6
+  - TS-7
+  - TS-8
+  - TS-9
+  - TS-10
+  - TS-11
+  - TS-12
+  - TS-13
+  - TS-14
+  - TS-15
+  - TS-16
+  - TS-17
+  - TS-18
+  - AC1
+  - AC2
+  - AC3
+  - AC4
+  - AC5
+  - AC6
+  - AC7
+  - AC8
+  - AC9
+  - AC10
+  verified_commit: c77a22469449e78c34e3387967e0e657f6c2697e
 - id: retrospect
   status: pending
 tasks:
