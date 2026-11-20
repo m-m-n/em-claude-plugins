@@ -1,0 +1,19 @@
+schema_version: 1
+feature: args-json-quoting-bypass
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: bf9e061a6b33351693970839bc4e17cbf15e4e01
+last_input_digest: sha256:93fdd2943444eaa31df044b08e34ec2c8a4984a9e715f64d4228c3ce32cbb662
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: dispatched
+    input_digest: sha256:93fdd2943444eaa31df044b08e34ec2c8a4984a9e715f64d4228c3ce32cbb662
+artifacts: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
