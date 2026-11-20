@@ -8302,6 +8302,28 @@ def _args_json_nameref_declared(marked):
     return result
 
 
+def _args_json_has_brace_substitution(marked):
+    """Whether the chunk MARKED holds a Bash 5.3 current-shell substitution
+    (`${ cmd; }` / `${| cmd; }`) the lexer recognises as a
+    LEX_BRACE_COMMAND_SUBSTITUTION region. Text in single quotes, comments or
+    after an escaped `$` is not a region. A chunk with a line continuation
+    whose removal makes the opener appear is read as holding one (the safe
+    side), in case the lexer does not see the opener across the continuation."""
+    source = getattr(marked, "source", "") or ""
+    try:
+        regions = lex_shell(source, "shell", False).regions
+    except Exception:
+        return True
+    for region in regions:
+        if region.kind == LEX_BRACE_COMMAND_SUBSTITUTION:
+            return True
+    if "\\\n" in source and re.search(
+        r"\$\{[\s|]", source.replace("\\\r\n", "").replace("\\\n", "")
+    ):
+        return True
+    return False
+
+
 def _args_json_nameref_scan(marked):
     """Whether the text of one chunk, MARKED, may declare a nameref or leave
     the shell state unknown: some simple command of it is `declare`, `local`
@@ -8326,11 +8348,13 @@ def _args_json_nameref_scan(marked):
     A substitution that runs in the current shell (Bash 5.3 `${ command; }`
     and `${| command; }`, a `${` followed by whitespace or `|`) may change the
     shell state, a nameref included, and the change stays after it. Its side
-    effects are not tracked: a chunk holding one anywhere, quoted or not,
-    reads as "may declare" (the safe side)."""
+    effects are not tracked: a chunk holding one, as the lexer reads it
+    (a LEX_BRACE_COMMAND_SUBSTITUTION region, also across a line
+    continuation), reads as "may declare" (the safe side). Text in single
+    quotes, in a comment or after an escaped `$` is not one."""
     if marked is None or getattr(marked, "top_regions", None) is None:
         return True
-    if re.search(r"\$\{[\s|]", getattr(marked, "source", "") or ""):
+    if _args_json_has_brace_substitution(marked):
         return True
     for words, lexed, _sep in lex_segments(marked):
         if not lexed:
@@ -9564,6 +9588,24 @@ def statements(command, unsettled=None, early_stop=None):
         )
         in_tail = _statements_in_tail(marked_chunk, seg_starts, len(segments))
         if heredocs:
+            # args-json-quoting-bypass (TM-1): the body of a heredoc with an
+            # unquoted delimiter is expanded by the shell, so a Bash 5.3
+            # current-shell substitution in it (`${ cmd; }` / `${| cmd; }`, a
+            # `${` followed by whitespace or `|`, line continuations removed)
+            # runs in the current shell and its state change (a nameref
+            # included) outlasts the heredoc. The body was stripped from
+            # CHUNK above, so the nameref answer of this chunk is settled here:
+            # it reads as "may hold a nameref" (the safe side), through the
+            # chunk's nameref cache (_args_json_nameref_declared()), which a
+            # chunk derived from this one inherits. A quoted delimiter's body
+            # is not expanded and is left out.
+            for _hd_record in heredocs:
+                if _hd_record.quoted:
+                    continue
+                _hd_body = _hd_record.body.replace("\\\r\n", "").replace("\\\n", "")
+                if re.search(r"\$\{[\s|]", _hd_body):
+                    marked_chunk._nameref_declared_cache = True
+                    break
             # Component 2/3 (task0001): each heredoc is judged on its own
             # destination, not on whether a sink word appears ANYWHERE in
             # the chunk -- see _heredoc_destinations().
