@@ -1,0 +1,110 @@
+task_id: task0003
+baseline_failures: []          # 4a, before any edit: python3 em-workflow/hooks/tests/run-destructive-guard.py -> passed (exit 0); python3 -m unittest discover -s tests -> Ran 16603 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 em-workflow/hooks/tests/run-destructive-guard.py -> 1416/1416 passed; python3 -m unittest discover -s tests -> Ran 16620 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >
+      The four new cases (TS-8 to TS-11) were added to the case file before any
+      hook change, and run-destructive-guard.py (the runner that this existing
+      test executes over the whole table and asserts exits 0 with no FAIL line)
+      was run directly against the unchanged hook: it reported 1412/1416
+      passed. TS-8 FAILed with got=allow rule=None (ask with the rule
+      args-json-unrestorable required) and TS-9 FAILed with got=deny
+      rule=git-branch-force-delete (the same ask required), the two pre-fix
+      verdicts the plan names; every one of the 1412 other cases still passed.
+      After the change the runner reports 1416/1416 passed and both cases give
+      ask with the reason id args-json-unrestorable.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDollarReading.test_a_double_quoted_dollar_continuation_expansion_start_is_unrestorable
+      - tests.test_destructive_guard_args_json.TestDollarReading.test_an_unquoted_dollar_continuation_name_is_unrestorable
+      - tests.test_destructive_guard_args_json.TestDollarReading.test_an_unquoted_dollar_continuation_quote_is_unrestorable
+      - tests.test_destructive_guard_args_json.TestDollarReading.test_a_dollar_continuation_paren_is_a_substitution_and_not_static
+      - tests.test_destructive_guard_args_json.TestDollarReading.test_a_word_that_also_holds_an_expansion_is_not_static
+      - tests.test_destructive_guard_args_json.TestDollarReading.test_a_dollar_continuation_before_no_expansion_is_a_literal_dollar
+    red_confirmed: true
+    red_reason: >
+      The new class TestDollarReading was run against the unchanged hook (the
+      base commit's file loaded in place of the current one for the reader
+      tests; 32 subtest failures over its 16 tests). The double-quoted test
+      FAILed for the
+      name, two-continuation, three-continuation, brace, bracket, digit,
+      underscore, special-parameter and text-around forms (the reader gave
+      static with the text `$DEST` where unrestorable is required), and the
+      unquoted-name test FAILed for the name, two-continuation, digit and
+      text-around forms (static `$X`). The unquoted-quoted-part test, the paren
+      and brace substitution test, the also-holds-an-expansion test and the
+      literal-dollar test passed on the unchanged hook: they pin outcomes that
+      the plan keeps (a quote opener split by a continuation was already
+      unrestorable through the lexer's region, a substitution or an expansion
+      anywhere stays not static, a `$` before a space or the closing quote
+      stays literal with the continuation removed).
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDollarReading.test_the_masking_stop_reading_does_not_determine_the_fr3_form
+      - tests.test_destructive_guard_args_json.TestDollarReading.test_the_masking_stop_reading_of_a_word_without_the_fr3_form_is_as_before
+    red_confirmed: true
+    red_reason: >
+      Run against the unchanged hook, the first test FAILed for the name,
+      two-continuation, brace, special-parameter and text-around forms
+      (_read_word_as_written() returned the restored text where None is
+      required). The second test, which pins the words without the FR3 form
+      (and the unquoted forms the reading already gave None for), passed on the
+      unchanged hook.
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >
+      The same direct run of the runner against the unchanged hook (1412/1416
+      passed): TS-10 and TS-11 each FAILed with got=allow rule=None where deny
+      is required. After the change both give deny (1416/1416 passed).
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDollarReading.test_a_dollar_before_a_non_ascii_character_is_literal
+      - tests.test_destructive_guard_args_json.TestDollarReading.test_a_dollar_before_a_non_ascii_character_is_literal_in_every_position
+      - tests.test_destructive_guard_args_json.TestDollarReading.test_a_non_ascii_character_after_a_continuation_is_literal
+      - tests.test_destructive_guard_args_json.TestDollarReading.test_a_locale_quote_is_unrestorable_unless_it_holds_an_expansion
+    red_confirmed: true
+    red_reason: >
+      Run against the unchanged hook, the `"5 $€"` subtest of the first test
+      FAILed (not static where static with the text `5 $€` is required); the
+      `\$€` subtest passed (the text was already read that way). The second test
+      FAILed in all six subtests (double-quote symbol, letter and letter with
+      text around, unquoted symbol and letter, and the single-quoted parts
+      around an unquoted `$€`). The locale-quote test FAILed for `$"5 $€"`
+      (not static where unrestorable is required). The after-continuation test
+      passed on the unchanged hook, where a `$` and a continuation before a
+      non-ASCII character already read as a literal `$`.
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDollarReading.test_the_docstrings_and_the_comment_name_the_fr3_form
+      - tests.test_destructive_guard_args_json.TestDollarReading.test_the_docstrings_state_that_a_dollar_before_a_non_ascii_character_is_literal
+      - tests.test_destructive_guard_args_json.TestUnrestorable.test_the_ask_constant
+    red_confirmed: true
+    red_reason: >
+      Run against the unchanged hook, the first test FAILed for all five
+      places (the docstrings of _read_static_word(), _read_double_quoted() and
+      _read_word_as_written(), step 4 of the decision's docstring, the comment
+      above ARGS_JSON_UNRESTORABLE_ASK did not hold the phrase; the comment
+      subtest reads the hook file itself, so it was observed in the first run
+      on the unmodified file), and the second
+      FAILed for both docstrings (no mention of a non-ASCII character).
+      TestUnrestorable.test_the_ask_constant guards that the reason id and the
+      reason text are unchanged; it passed before and after.
+  AC-7:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_args_json
+      - tests.test_destructive_guard_args_json.TestDocstring.test_no_form_that_is_not_out_of_scope_is_listed
+    red_confirmed: false
+    red_reason: >
+      No red state occurred: the criterion is that every existing case and test
+      still passes unchanged, which holds before and after the change (the
+      existing runner cases, the 110 existing tests of the args-json module, and
+      the rest of the suite passed on the unchanged hook in step 4a). The
+      case file's diff adding lines only was checked with git diff --numstat
+      (4 added, 0 deleted); no executable check of that exists to make fail.

@@ -6988,23 +6988,81 @@ def _decode_ansi_c(body):
     return "".join(out)
 
 
+# What reading a `$` found (_read_dollar()).
+_DOLLAR_LITERAL = "literal"  # a literal `$`
+_DOLLAR_EXPANSION = "expansion"  # an expansion, with no line continuation after the `$`
+_DOLLAR_CONTINUED = "continued"  # an expansion started across a line continuation (FR3)
+
+# The outcomes of _read_double_quoted().
+_DQ_RESTORED = "restored"  # the restored text
+_DQ_EXPANSION = "expansion"  # the body holds an expansion
+_DQ_CONTINUED = "continued"  # the body holds the FR3 form and no expansion
+
+
+def _starts_expansion(ch, quoted):
+    """Whether the character CH, directly after a `$` (and the line
+    continuations after it, if any), starts an expansion: an ASCII letter, an
+    ASCII digit, `_`, a special-parameter character (`@*#?-$!`), `{`, `(` or
+    `[`, and, outside double quotes (QUOTED false), `'` or `"` (the opener of
+    an ANSI-C or locale quote). A non-ASCII character starts none (FR4)."""
+    if not ch.isascii():
+        return False
+    if ch.isalnum() or ch in "_@*#?-$!{([":
+        return True
+    return not quoted and ch in "'\""
+
+
+def _read_dollar(text, pos, limit, quoted):
+    """Reads the `$` at TEXT[POS] of a text that ends at LIMIT: (KIND, AFTER).
+    AFTER is the offset of the first character after the `$` and the line
+    continuations (a backslash and a newline each, any number) directly after
+    it; the reading goes on there, and the continuations vanish. KIND is
+    _DOLLAR_LITERAL when no character follows or the character at AFTER starts
+    no expansion (_starts_expansion(); QUOTED tells whether the `$` is inside
+    double quotes), _DOLLAR_EXPANSION when it starts one and no continuation
+    was skipped, and _DOLLAR_CONTINUED when it starts one and at least one was
+    skipped (the FR3 form)."""
+    after = pos + 1
+    skipped = False
+    while after + 1 < limit and text[after] == "\\" and text[after + 1] == "\n":
+        after += 2
+        skipped = True
+    if after >= limit or not _starts_expansion(text[after], quoted):
+        return _DOLLAR_LITERAL, after
+    return (_DOLLAR_CONTINUED if skipped else _DOLLAR_EXPANSION), after
+
+
 def _read_double_quoted(body):
-    """BODY -- the content of a double-quoted region -- with a backslash
-    before `$`, a backtick, `"`, `\\` or a newline resolved (a backslash and a
-    newline vanish), or None when it holds an unescaped backtick or an
-    unescaped `$` that starts an expansion. A `$` starts one only when the
-    next character is a name character, a digit, a special-parameter character
-    (`@*#?-$!`), `{`, `(` or `[`; any other `$` (before a space, the closing
-    quote, a backslash or another symbol, or at the end) is passed on as a
-    literal `$`, as Bash does. A character not known to be literal counts as
-    an expansion (safe side)."""
+    """BODY -- the content of a double-quoted region -- read once, left to
+    right, as (OUTCOME, TEXT):
+
+    - (_DQ_RESTORED, TEXT): the body with a backslash before `$`, a backtick,
+      `"`, `\\` or a newline resolved (a backslash and a newline vanish).
+    - (_DQ_EXPANSION, None): it holds an unescaped backtick or an unescaped
+      `$` that starts an expansion with no line continuation between them. A
+      `$` starts one only when the next character is an ASCII letter, an ASCII
+      digit, `_`, a special-parameter character (`@*#?-$!`), `{`, `(` or `[`;
+      any other `$` (before a space, the closing quote, a backslash or another
+      symbol, or at the end) is passed on as a literal `$`, as Bash does. A
+      `$` before a non-ASCII character is a literal `$` (FR4). A character not
+      known to be literal counts as an expansion (safe side).
+    - (_DQ_CONTINUED, None): it holds no expansion, but it holds the FR3 form:
+      a `$`, one or more line continuations (a backslash and a newline), and a
+      character that starts an expansion. Bash removes the continuations first
+      and reads an expansion, which this reading does not restore. A `$` whose
+      next character after the continuations starts no expansion (or that ends
+      the body) is a literal `$`, and the continuations vanish.
+
+    The whole body is read first: an expansion anywhere wins over the FR3
+    form, whichever comes first."""
     out = []
+    continued = False
     i, size = 0, len(body)
     while i < size:
         ch = body[i]
         if ch == "\\":
             if i + 1 >= size:
-                return None
+                return _DQ_EXPANSION, None
             nxt = body[i + 1]
             if nxt == "\n":
                 i += 2
@@ -7014,16 +7072,21 @@ def _read_double_quoted(body):
                 i += 2
                 continue
         elif ch == "`":
-            return None
+            return _DQ_EXPANSION, None
         elif ch == "$":
-            nxt = body[i + 1] if i + 1 < size else ""
-            if nxt and (
-                nxt.isalnum() or nxt in "_@*#?-$!{([" or ord(nxt) > 127
-            ):
-                return None
+            kind, after = _read_dollar(body, i, size, True)
+            if kind == _DOLLAR_EXPANSION:
+                return _DQ_EXPANSION, None
+            if kind == _DOLLAR_CONTINUED:
+                continued = True
+            out.append(ch)
+            i = after
+            continue
         out.append(ch)
         i += 1
-    return "".join(out)
+    if continued:
+        return _DQ_CONTINUED, None
+    return _DQ_RESTORED, "".join(out)
 
 
 def _word_source_bounds(marked, start, end):
@@ -7051,14 +7114,19 @@ def _read_word_as_written(marked, tok):
     region is its content with `\\$`, `` \\` ``, `\\"`, `\\\\` and backslash-
     newline resolved; an ANSI-C quote is decoded (_decode_ansi_c()); a
     backslash outside quotes keeps the next character, and with a newline
-    after it vanishes. Undeterminable: a locale quote, any other region kind
-    (a substitution, a parameter or arithmetic expansion, an array subscript),
-    an unquoted `$` or backtick, an unquoted `*` or `?`, an unquoted `[` with
-    a later unquoted `]`, an unquoted `{` with a later unquoted `}`, an
-    unquoted `~` as the first character, an unquoted `?`, `*`, `+`, `@` or `!`
-    that ends the word directly before a `(` (an extended-glob pattern, which
-    the tokenizer splits at the parenthesis), a word that holds marker residue
-    of a substitution, and a region the word does not hold whole.
+    after it vanishes. Undeterminable: a locale quote, a double-quoted region
+    that holds an expansion or the form of a `$`, one or more line
+    continuations (a backslash and a newline), and a character that starts an
+    expansion (Bash removes the continuations and reads the expansion; a `$`
+    before a non-ASCII character is a literal `$`, so it is not one), any
+    other region kind (a substitution, a parameter or arithmetic expansion, an
+    array subscript), an unquoted `$` or backtick, an unquoted `*` or `?`, an
+    unquoted `[` with a later unquoted `]`, an unquoted `{` with a later
+    unquoted `}`, an unquoted `~` as the first character, an unquoted `?`,
+    `*`, `+`, `@` or `!` that ends the word directly before a `(` (an
+    extended-glob pattern, which the tokenizer splits at the parenthesis), a
+    word that holds marker residue of a substitution, and a region the word
+    does not hold whole.
 
     A word without a span (a token no tokenizer read) or without MARKED (the
     parse-failure fallback's plain split) has no as-written reading: it is
@@ -7122,7 +7190,9 @@ def _read_word_as_written(marked, tok):
                 return None
             body = source[pos + skip:region.end - 1]
             if region.kind == "double-quote":
-                body = _read_double_quoted(body)
+                outcome, body = _read_double_quoted(body)
+                if outcome != _DQ_RESTORED:
+                    return None  # an expansion, or the FR3 form: undeterminable
             elif region.kind == "ansi-c-quote":
                 body = _decode_ansi_c(body)
             if body is None:
@@ -7818,22 +7888,31 @@ def _read_static_word(marked, tok):
       character (and with a newline after it vanishes). The marker residue the
       marking left for a single-quote candidate -- a `$(` or backtick inside a
       single-quote or ANSI-C-quote region of the word -- does not count
-      against the word: its characters are the literal text Bash passes on.
+      against the word: its characters are the literal text Bash passes on. A
+      `$` before a non-ASCII character is a literal `$` (FR4), and so is a `$`
+      whose next character after its line continuations starts no expansion
+      (the continuations vanish).
     - (WORD_NOT_STATIC, None): the word holds an element of FR6 (1): a region
       of a kind other than a single-quote, double-quote, ANSI-C or locale quote
       (a substitution, a parameter or arithmetic expansion, an array
-      subscript); an unescaped `$` or backtick inside a double-quote or
-      locale-quote region; an unquoted `$` or backtick; an unquoted glob,
-      brace, tilde or extended-glob form that _read_word_as_written()
-      rejects; residue of a real substitution; a word that is a substitution as
-      a whole. A word with no as-written reading (no span, no marked text) is
-      not static unless _read_plain_word() accepts it.
+      subscript); an unescaped `$` that starts an expansion, or a backtick,
+      inside a double-quote or locale-quote region; an unquoted `$` that starts
+      an expansion, or a backtick; an unquoted glob, brace, tilde or
+      extended-glob form that _read_word_as_written() rejects; residue of a
+      real substitution; a word that is a substitution as a whole. A word with
+      no as-written reading (no span, no marked text) is not static unless
+      _read_plain_word() accepts it.
     - (WORD_UNRESTORABLE, None): the word holds none of those, and its quoting
       still cannot be restored (FR11): an ANSI-C quote that
       _decode_ansi_c() gives no result for (a NUL, a character outside ASCII,
       an escape it does not handle), a locale quote whose content holds no
-      unescaped `$` or backtick, a marker character the source itself holds, or
-      any other failure of the restoration.
+      unescaped `$` that starts an expansion or backtick, a marker character
+      the source itself holds, the form of a `$`, one or more line
+      continuations (a backslash and a newline), and a character that starts an
+      expansion (FR3; inside double quotes or outside quotes, where the
+      character may also be `'` or `"`; Bash removes the continuations and
+      reads an expansion, which is not restored), or any other failure of the
+      restoration.
 
     The whole word is read before the outcome is settled, so a word that holds
     an element of FR6 (1) is not static whatever else it holds: it sets
@@ -7900,9 +7979,15 @@ def _read_static_word(marked, tok):
                 continue
             body = source[pos + skip:region.end - 1]
             if region.kind == "double-quote":
-                body = _read_double_quoted(body)
-                if body is None:
+                outcome, body = _read_double_quoted(body)
+                if outcome == _DQ_EXPANSION:
                     return WORD_NOT_STATIC, None
+                if outcome == _DQ_CONTINUED:
+                    # The FR3 form: Bash reads an expansion the restoration
+                    # cannot. The reading goes on, so a later non-static
+                    # element still makes the word not static.
+                    unrestorable = True
+                    body = "\x00"  # a quoted placeholder, never read as unquoted text
             elif region.kind == "ansi-c-quote":
                 body = _decode_ansi_c(body)
                 if body is None:
@@ -7911,7 +7996,7 @@ def _read_static_word(marked, tok):
             elif region.kind == "locale-quote":
                 # A locale quote expands like a double-quote region, and the
                 # translation of its text cannot be told statically.
-                if _read_double_quoted(body) is None:
+                if _read_double_quoted(body)[0] == _DQ_EXPANSION:
                     return WORD_NOT_STATIC, None
                 unrestorable = True
                 body = "\x00"
@@ -7934,17 +8019,21 @@ def _read_static_word(marked, tok):
             return WORD_NOT_STATIC, None
         if ch == "$":
             # An unquoted `$` is literal when it ends the word or the next
-            # character cannot start an expansion (same rule as
-            # _read_double_quoted). `$'` and `$"` keep the non-static handling.
-            if pos + 1 < hi:
-                nxt = source[pos + 1]
-                if (
-                    nxt.isalnum()
-                    or nxt == "_"
-                    or nxt in "@*#?-$!{([\"'"
-                    or not nxt.isascii()
-                ):
-                    return WORD_NOT_STATIC, None
+            # character after its line continuations cannot start an expansion
+            # (same rule as _read_double_quoted(), with `'` and `"` added: the
+            # opener of an ANSI-C or locale quote). A non-ASCII character
+            # starts none. With no continuation, an expansion is not static;
+            # with one or more (the FR3 form) the word is unrestorable and the
+            # reading goes on.
+            kind, after = _read_dollar(source, pos, hi, False)
+            if kind == _DOLLAR_EXPANSION:
+                return WORD_NOT_STATIC, None
+            if kind == _DOLLAR_CONTINUED:
+                unrestorable = True
+            chars.append(ch)
+            bare.append(True)
+            pos = after
+            continue
         chars.append(ch)
         bare.append(True)
         pos += 1
@@ -8356,14 +8445,17 @@ def _mcp_bridge_args_json_chunks(shaped_words, marked):
        examined. No `--args-json` makes the statement nothing to do.
     4. Word outcomes (D5): _read_static_word() gives a word one of three
        outcomes. Not static: it holds an element of FR6 (1) (a substitution, a
-       parameter or arithmetic expansion, an unquoted `$` or backtick, an
-       unquoted glob, brace or tilde form, residue of a real substitution).
-       Unrestorable: it holds none of those, and its quoting still cannot be
-       restored (an ANSI-C quote that _decode_ansi_c() gives no result for, a
-       locale quote). Static: the characters Bash passes on (a single-quote
-       region is its content, a double-quote region has its backslash escapes
-       resolved, an ANSI-C quote is decoded, a backslash outside quotes keeps
-       the next character).
+       parameter or arithmetic expansion, an unquoted `$` or backtick that
+       starts an expansion, an unquoted glob, brace or tilde form, residue of a
+       real substitution). Unrestorable: it holds none of those, and its
+       quoting still cannot be restored (an ANSI-C quote that _decode_ansi_c()
+       gives no result for, a locale quote, a `$`, one or more line
+       continuations (a backslash and a newline), and a character that starts
+       an expansion, which Bash reads as the expansion). Static: the
+       characters Bash passes on (a single-quote region is its content, a
+       double-quote region has its backslash escapes resolved, an ANSI-C quote
+       is decoded, a backslash outside quotes keeps the next character, a `$`
+       before a non-ASCII character is a literal `$`).
     5. Values (FR3): every `--args-json` value is handled on its own, in
        order. A value word of its own is read by _read_static_word(): Not
        static skips that value, Unrestorable skips it and sets Unrestorable,
@@ -8510,9 +8602,11 @@ SCAN_BUDGET_ASK = (
 # The `ask` (reason id, reason text) for an `mcp-bridge run` `--args-json`
 # value word or flag-position word that holds no non-static element but whose
 # quoting cannot be restored statically (mcp-bridge-args-json-exec-guard FR11,
-# D5): an ANSI-C quote the decoder gives no result for, a locale quote. The
-# `--args-json` step holds it in the _DeferredAsks record and statements()
-# settles it once the queue is drained; the scan-budget ask outranks it (D6).
+# D5): an ANSI-C quote the decoder gives no result for, a locale quote, a `$`,
+# one or more line continuations (a backslash and a newline), and a character
+# that starts an expansion (args-json-quoting-bypass FR3). The `--args-json`
+# step holds it in the _DeferredAsks record and statements() settles it once
+# the queue is drained; the scan-budget ask outranks it (D6).
 ARGS_JSON_UNRESTORABLE_ASK = (
     "args-json-unrestorable",
     "mcp-bridge run の --args-json の値、またはフラグの語の引用を静的に"
