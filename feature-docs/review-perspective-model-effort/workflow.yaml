@@ -74,7 +74,8 @@ workflow:
   - VERIFICATION.md
   - THREAT-MODEL.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: 27b0af0da3a02774cb70a4b1ee438025182ae2d8
 - id: implement
   status: pending
 - id: review
@@ -83,7 +84,140 @@ workflow:
   status: pending
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: wrapper --effort LEVEL option (both copies)
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/run_codex_exec.sh
+    - em-review/scripts/run_codex_exec.sh
+    - tests/test_codex_wrapper_model_flag.py
+    - tests/test_codex_hook_wrapper_args.py
+    - tests/test_codex_wrapper_single_invocation.py
+    skills:
+    - infra-impl
+    domains:
+    - input-handling
+    - config-infra
+    complexity: high
+    requirements:
+    - FR3
+    - FR4
+    - FR5
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR6
+    status: pending
+    notes: null
+    branch: null
+  task0002:
+    title: per-perspective model and effort in both registries
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/references/reviewers.yaml
+    - em-review/references/reviewers.yaml
+    - tests/test_codex_wrapper_model_flag.py
+    - tests/test_reviewers_primary_chains.py
+    - tests/test_contributor_tier_criteria.py
+    skills:
+    - infra-impl
+    domains:
+    - config-infra
+    complexity: medium
+    requirements:
+    - FR1
+    - FR2
+    - NFR4
+    - NFR6
+    status: pending
+    notes: null
+    branch: null
+  task0003:
+    title: codex-reviewer passes effort, protocol Inputs documents it
+    plan: tasks/task0003.md
+    files:
+    - em-workflow/agents/codex-reviewer.md
+    - em-review/agents/codex-reviewer.md
+    - em-workflow/references/review-protocol.md
+    - em-review/references/review-protocol.md
+    - tests/test_reviewer_roles_protocol.py
+    - tests/test_reproduction_reviewer_instructions.py
+    - tests/test_codex_reviewer_temp_file_isolation.py
+    - tests/test_codex_reviewer_effort_docs.py
+    skills: []
+    domains:
+    - api-contract
+    complexity: medium
+    requirements:
+    - FR6
+    - FR7
+    - NFR4
+    - NFR6
+    status: pending
+    notes: null
+    branch: null
+  task0004:
+    title: review phase sends effort and records it
+    plan: tasks/task0004.md
+    files:
+    - em-workflow/references/review-phase.md
+    - em-review/references/review-phase.md
+    - tests/test_tier_record_schema_v2.py
+    - tests/test_review_phase_effort_docs.py
+    skills: []
+    domains:
+    - api-contract
+    - data-persistence
+    complexity: medium
+    requirements:
+    - FR7
+    - FR8
+    - NFR4
+    - NFR6
+    status: pending
+    notes: null
+    branch: null
+  task0005:
+    title: READMEs and the security-review-model skill
+    plan: tasks/task0005.md
+    files:
+    - em-workflow/README.md
+    - em-review/README.md
+    - .claude/skills/security-review-model/SKILL.md
+    - tests/test_llm_led_review_user_docs.py
+    - tests/test_effort_user_docs.py
+    skills: []
+    domains: []
+    complexity: low
+    requirements:
+    - FR9
+    - FR10
+    - NFR4
+    - NFR6
+    status: pending
+    notes: null
+    branch: null
+  task0006:
+    title: minor version bump of em-workflow and em-review
+    plan: tasks/task0006.md
+    files:
+    - em-workflow/.claude-plugin/plugin.json
+    - em-review/.claude-plugin/plugin.json
+    - .claude-plugin/marketplace.json
+    - tests/test_review_perspective_model_effort_version_bump.py
+    skills:
+    - infra-impl
+    domains:
+    - config-infra
+    complexity: low
+    requirements:
+    - NFR4
+    - NFR5
+    status: pending
+    notes: null
+    branch: null
 review:
   status: pending
   rounds_completed: 0
@@ -95,113 +229,180 @@ requirements:
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS-7
+    - TS-8
   FR2:
     title: 観点ごとの model と effort
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS-7
+    - TS-8
+    - TS-9
   FR3:
     title: ラッパーの --effort 引数
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-3
+    - TS-5
+    - TS-6
+    - TS-10
   FR4:
     title: モードごとの既定値
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
   FR5:
     title: --litellm との併用（em-workflow のみ）
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-4
   FR6:
     title: codex-reviewer が effort を渡す
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0003
+    tests:
+    - TS-11
+    - TS-13
   FR7:
     title: オーケストレーターが effort を渡す
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0003
+    - task0004
+    tests:
+    - TS-11
+    - TS-13
+    - TS-14
   FR8:
     title: round record に effort を記録
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0004
+    tests:
+    - TS-11
+    - TS-15
   FR9:
     title: README
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0005
+    tests:
+    - TS-12
+    - TS-16
   FR10:
     title: security-review-model スキル
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0005
+    tests:
+    - TS-17
   NFR1:
     title: '互換性: --effort 未指定時の launch argv をバイト単位で維持'
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-2
   NFR2:
     title: '入力検証: effort は ^[a-z]+$ に一致した場合だけ埋め込む'
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-5
   NFR3:
     title: 2 つのラッパーの --effort の扱いを揃える
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-3
+    - TS-5
   NFR4:
     title: テストは標準ライブラリと stub だけを使う
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    - task0006
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
+    - TS-6
   NFR5:
     title: em-workflow と em-review の version の minor を上げる
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0006
+    tests:
+    - TS-18
   NFR6:
     title: ハッシュと literal で固定した既存テストの固定値を更新する
     status: resolved
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    tests:
+    - TS-8
+    - TS-9
+    - TS-10
+    - TS-11
+    - TS-12
 batch:
   review_rework_count: 0
   verify_rework:
