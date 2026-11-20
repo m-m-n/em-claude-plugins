@@ -8305,11 +8305,17 @@ def _args_json_nameref_declared(marked):
 def _args_json_has_brace_substitution(marked):
     """Whether the chunk MARKED holds a Bash 5.3 current-shell substitution
     (`${ cmd; }` / `${| cmd; }`) the lexer recognises as a
-    LEX_BRACE_COMMAND_SUBSTITUTION region. Text in single quotes, comments or
-    after an escaped `$` is not a region. A chunk with a line continuation
+    LEX_BRACE_COMMAND_SUBSTITUTION region, or holds the opener anywhere in its
+    text, quoted or not (a quoted value can be evaluated later). A chunk with a line continuation
     whose removal makes the opener appear is read as holding one (the safe
     side), in case the lexer does not see the opener across the continuation."""
     source = getattr(marked, "source", "") or ""
+    # Quoted text is not safe to leave out: a value assigned in single quotes
+    # can be evaluated later in the current shell (an arithmetic context or
+    # an array subscript, `${var@P}`), so an opener anywhere in the chunk,
+    # quoted or not, reads as one (the safe side).
+    if re.search(r"\$\{[\s|]", source):
+        return True
     try:
         regions = lex_shell(source, "shell", False).regions
     except Exception:
@@ -8350,8 +8356,9 @@ def _args_json_nameref_scan(marked):
     shell state, a nameref included, and the change stays after it. Its side
     effects are not tracked: a chunk holding one, as the lexer reads it
     (a LEX_BRACE_COMMAND_SUBSTITUTION region, also across a line
-    continuation), reads as "may declare" (the safe side). Text in single
-    quotes, in a comment or after an escaped `$` is not one."""
+    continuation, or the opener anywhere in the text, quoted or not, since a
+    quoted value can be evaluated later), reads as "may declare" (the safe
+    side)."""
     if marked is None or getattr(marked, "top_regions", None) is None:
         return True
     if _args_json_has_brace_substitution(marked):
