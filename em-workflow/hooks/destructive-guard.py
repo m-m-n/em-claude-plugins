@@ -8321,8 +8321,16 @@ def _args_json_nameref_scan(marked):
     its command name and its options are read, whether it stands before the
     name, touches it or comes after it, so a glued form and its spaced form
     read the same. A `(`, `)`, `{` or `}` word begins a new simple command.
-    Fail safe: True for a chunk the lexer could not read as statements."""
+    Fail safe: True for a chunk the lexer could not read as statements.
+
+    A substitution that runs in the current shell (Bash 5.3 `${ command; }`
+    and `${| command; }`, a `${` followed by whitespace or `|`) may change the
+    shell state, a nameref included, and the change stays after it. Its side
+    effects are not tracked: a chunk holding one anywhere, quoted or not,
+    reads as "may declare" (the safe side)."""
     if marked is None or getattr(marked, "top_regions", None) is None:
+        return True
+    if re.search(r"\$\{[\s|]", getattr(marked, "source", "") or ""):
         return True
     for words, lexed, _sep in lex_segments(marked):
         if not lexed:
