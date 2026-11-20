@@ -1,7 +1,7 @@
 schema_version: 1
 feature: args-json-quoting-bypass
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 8386cf14bc57910801a0c9395781bf6cc7a519ab
 last_input_digest: sha256:bcddd7393368ff618c9025e49ca9d88bcf02e9a0b55945cbf4903d259e8c1169
@@ -57,7 +57,7 @@ artifacts:
 other_feature_doc_fixes: []
 patches:
 - patch_id: args-json-quoting-bypass-p0001
-  status: pending
+  status: applied
   base_input_digest: sha256:bcddd7393368ff618c9025e49ca9d88bcf02e9a0b55945cbf4903d259e8c1169
   base_workflow_blob: fb6806549d1a401d2ce6672976dbd9d70fa594a4
 progress_fingerprint: null
