@@ -1,0 +1,185 @@
+task_id: task0003
+baseline_failures: []          # 4a, before any edit: python3 em-workflow/hooks/tests/run-destructive-guard.py -> 1398/1398 passed; python3 -m unittest discover -s tests -> Ran 16529 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 em-workflow/hooks/tests/run-destructive-guard.py -> 1411/1411 passed; python3 -m unittest discover -s tests -> Ran 16597 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >
+      The 13 new cases (TS-17 to TS-29) were committed before any hook change,
+      and run-destructive-guard.py (the runner that existing test executes over
+      the whole table and asserts exits 0) was run against the unchanged hook:
+      it reported 1400/1411 passed. The 11 new deny and ask cases (TS-17 to
+      TS-26 and TS-29) each FAILed with got=allow rule=None; the 2 new allow
+      cases (TS-27, TS-28) passed, as the plan expected. Every one of the 1398
+      cases of the base commit still passed. Each stored command was read back
+      from the case file and compared with the shell text of its row in the
+      task plan (all 13 equal; 25 repetitions counted in TS-18, TS-19 and
+      TS-22; the six characters backslash, u, 0024 present in TS-29; backslash
+      and 0 inside the ANSI-C quote of TS-21). Only TS-21 and TS-22 carry a
+      fourth element, holding only their reason ID. The first 1397 entries of
+      the file equal the base commit's. Before the hook changed, the existing
+      cases were searched for an allow case that holds 26 or more `-c` /
+      `eval` / here-string payloads (statements() run over each case with the
+      counter lifted and the extractions counted): the most any case holds is
+      2, so no existing allow case turns into an ask through FR12, and the run
+      after the change passed 1411/1411.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_a_quoted_double_quoted_or_backslashed_flag_name_is_inspected
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_the_equals_form_is_inspected
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_single_dash_flags_are_inspected
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_a_value_before_the_terminator_or_a_positional_word_is_inspected
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_every_value_of_a_repeated_args_json_is_inspected
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_a_repeated_args_json_is_judged_value_by_value
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_a_destination_that_is_not_static_is_inspected
+    red_confirmed: true
+    red_reason: >
+      The runner run against the unchanged hook: TS-17, TS-20, TS-23, TS-24,
+      TS-25 and TS-26 each FAILed with got=allow rule=None where deny is
+      required. The unit tests were run against a copy of the unchanged hook
+      (the base commit's file, loaded in place of the current one): each ERRORed
+      with AttributeError, the unchanged hook's result has no attribute
+      'values' / 'overrun' (the step read only the canonical flag sequence and
+      returned one value per statement).
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_the_notion_pair_is_not_inspected
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_the_notion_pair_in_another_flag_order_is_not_inspected
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_an_excluded_statement_sets_no_unrestorable_flag
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_the_notion_pair_written_with_a_quoted_flag_name_is_inspected
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_other_forms_that_read_as_flags_are_inspected
+      - tests.test_destructive_guard_args_json.TestUnrestorable.test_the_notion_pair_sets_nothing
+    red_confirmed: true
+    red_reason: >
+      The runner run against the unchanged hook: TS-29 FAILed with got=allow
+      rule=None where deny is required (the quoted flag name '--mcp' kept the
+      statement out of the inspection). TS-9 and the notion regression set
+      passed before the change, as the plan expected: they are pins for the
+      allow verdicts that must not move (no red state occurred for those). The
+      unit tests ERRORed on the copy of the unchanged hook (its result has no
+      attribute 'values' / 'overrun' / 'unrestorable').
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_forms_that_are_not_inspected
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_a_flag_position_word_that_is_not_static_is_not_inspected
+      - tests.test_destructive_guard_args_json.TestFlagReading.test_a_non_static_value_word_is_not_inspected
+      - tests.test_destructive_guard_args_json.TestDocstring.test_o1_and_o2_are_named
+      - tests.test_destructive_guard_args_json.TestDocstring.test_o1_forms
+      - tests.test_destructive_guard_args_json.TestDocstring.test_o2_forms
+      - tests.test_destructive_guard_args_json.TestDocstring.test_neither_form_is_sent_to_ask
+      - tests.test_destructive_guard_args_json.TestDocstring.test_no_form_that_is_not_out_of_scope_is_listed
+    red_confirmed: true
+    red_reason: >
+      On the copy of the unchanged hook, test_o2_forms (the old docstring lacks
+      the new O2 wording: the FR6 forms, a word in flag position that is not
+      static, an unknown flag, a value-taking flag with no value word, no
+      `--args-json`) and
+      test_no_form_that_is_not_out_of_scope_is_listed (it found destination,
+      the `=` form, repeated and canonical flag sequence in the out-of-scope
+      section) FAILed with assertion errors; the unit tests of
+      the FR6 forms ERRORed on the result shape. TS-27 and TS-28 pass before
+      and after the change: they and TS-10, TS-13 and TS-14 are pins for the
+      allow verdicts of the out-of-scope forms (no red state occurred for
+      those cases), and test_o1_and_o2_are_named, test_o1_forms and
+      test_neither_form_is_sent_to_ask pass on the unchanged docstring, which
+      already carried that wording.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_args_json.TestUnrestorable.test_a_value_word_that_cannot_be_restored_sets_unrestorable
+      - tests.test_destructive_guard_args_json.TestUnrestorable.test_the_inline_value_of_the_equals_form_sets_unrestorable
+      - tests.test_destructive_guard_args_json.TestUnrestorable.test_a_flag_position_word_that_cannot_be_restored_sets_unrestorable
+      - tests.test_destructive_guard_args_json.TestUnrestorable.test_a_flag_position_word_that_cannot_be_restored_leaves_no_value_inspected
+      - tests.test_destructive_guard_args_json.TestUnrestorable.test_a_word_that_also_holds_a_non_static_element_sets_nothing
+      - tests.test_destructive_guard_args_json.TestUnrestorable.test_the_notion_pair_sets_nothing
+      - tests.test_destructive_guard_args_json.TestUnrestorable.test_the_settled_early_stop_list_is_the_unrestorable_ask_alone
+      - tests.test_destructive_guard_args_json.TestUnrestorable.test_the_settled_early_stop_list_is_the_scan_budget_ask_alone_when_both_are_held
+      - tests.test_destructive_guard_args_json.TestUnrestorable.test_with_no_early_stop_list_the_ask_is_emitted
+      - tests.test_destructive_guard_args_json.TestDenyWins.test_the_forms_alone_are_asks
+      - tests.test_destructive_guard_args_json.TestDenyWins.test_an_unconditional_destructive_statement_beside_the_unrestorable_form_is_deny
+    red_confirmed: true
+    red_reason: >
+      The runner run against the unchanged hook: TS-21 FAILed with got=allow
+      rule=None where ask with reason ID args-json-unrestorable is required.
+      On the copy of the unchanged hook the unrestorable unit tests ERRORed
+      (no 'unrestorable' flag, no ARGS_JSON_UNRESTORABLE_ASK) and
+      test_the_forms_alone_are_asks FAILed (the hook judged TS-21's form and
+      the used-up counter's form as allow). The deny-wins test
+      test_an_unconditional_destructive_statement_beside_the_unrestorable_form_is_deny
+      passes before the change (a destructive statement alone is deny): it pins
+      that the new ask never weakens a deny.
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_args_json.TestPayloadCounter.test_with_the_counter_used_up_the_command_string_is_still_queued
+      - tests.test_destructive_guard_args_json.TestPayloadCounter.test_a_command_string_takes_no_count
+      - tests.test_destructive_guard_args_json.TestPayloadCounter.test_command_strings_ahead_leave_the_counter_alone
+      - tests.test_destructive_guard_args_json.TestPayloadCounter.test_a_payload_after_the_counter_is_used_up_is_not_queued_and_holds_the_ask
+      - tests.test_destructive_guard_args_json.TestPayloadCounter.test_the_other_payload_forms_are_counted_and_hold_the_ask_too
+      - tests.test_destructive_guard_args_json.TestPayloadCounter.test_a_payload_in_a_substitution_body_holds_the_ask_too
+      - tests.test_destructive_guard_args_json.TestPayloadCounter.test_the_settled_ask_is_emitted_when_there_is_no_early_stop_list
+      - tests.test_destructive_guard_args_json.TestDenyWins.test_an_unconditional_destructive_statement_beside_the_used_up_counter_is_deny
+    red_confirmed: true
+    red_reason: >
+      The runner run against the unchanged hook: TS-18 and TS-19 FAILed with
+      got=allow rule=None where deny is required, and TS-22 FAILed with
+      got=allow rule=None where ask with reason ID scan-budget-exceeded is
+      required. On the copy of the unchanged hook the payload-counter tests
+      FAILed with assertion errors (a command string was not queued with the
+      counter used up; the 26th payload was dropped with an empty early-stop
+      list instead of the scan-budget ask). The deny-wins test beside the
+      used-up counter passes before the change (a destructive statement alone
+      is deny) and pins that the ask never weakens a deny.
+  AC-7:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDeferral.test_overrun_leaves_the_total_unchanged_and_queues_nothing
+      - tests.test_destructive_guard_args_json.TestDeferral.test_a_charge_that_does_not_fit_leaves_the_total_unchanged_and_queues_nothing
+      - tests.test_destructive_guard_args_json.TestDeferral.test_after_the_scan_budget_ask_the_step_does_nothing
+      - tests.test_destructive_guard_args_json.TestDeferral.test_overrun_in_a_run_still_yields_a_payload_queued_before_it
+      - tests.test_destructive_guard_args_json.TestDeferral.test_a_charge_that_does_not_fit_in_a_run_ends_as_the_scan_budget_ask
+      - tests.test_destructive_guard_args_json.TestDeferral.test_the_scan_budget_ask_outranks_the_unrestorable_ask
+      - tests.test_destructive_guard_args_json.TestDeferral.test_the_record_is_settled_once_with_the_strongest_ask
+      - tests.test_destructive_guard_args_json.TestDeferral.test_a_charge_that_fits_is_added_and_everything_is_queued
+      - tests.test_destructive_guard_args_json.TestCharge.test_the_charge_is_added_to_the_scanned_total
+      - tests.test_destructive_guard_args_json.TestDecoderFailure.test_failure_that_is_not_a_syntax_error_is_overrun
+      - tests.test_destructive_guard_args_json.TestDecoderFailure.test_nesting_above_the_bound_is_overrun_before_the_decoder_runs
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >
+      On the copy of the unchanged hook the deferral tests ERRORed with
+      AttributeError, no '_ScanState' / '_DeferredAsks' / 'ArgsJsonValue' (the
+      collaborator, the scan state and the record did not exist), and the
+      decoder-failure and charge tests ERRORed on the result shape. Both TS-15
+      cases passed before the change and pass after it (1411/1411 within the
+      runner's GUARD_TIMEOUT_SECONDS): they are pins for the existing
+      scan-budget-exceeded asks (no red state occurred for them);
+      test_overrun_ends_the_scan_with_the_scan_budget_ask passes on the
+      unchanged hook for the same reason.
+  AC-8:
+    tests:
+      - tests.test_destructive_guard_args_json.TestStructure.test_the_decision_is_referenced_only_from_the_collaborator
+      - tests.test_destructive_guard_args_json.TestStructure.test_statements_has_one_call_site_and_no_other_args_json_logic
+      - tests.test_destructive_guard_args_json.TestStructure.test_the_collaborator_is_called_once_per_yielded_statement
+      - tests.test_destructive_guard_args_json.TestStructure.test_the_collaborator_is_called_for_a_fallback_statement_too
+      - tests.test_destructive_guard_args_json.TestStructure.test_the_record_is_one_per_run
+      - tests.test_destructive_guard_args_json.TestPayloadCounter.test_a_payload_after_the_counter_is_used_up_is_not_queued_and_holds_the_ask
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >
+      On the copy of the unchanged hook the structure tests FAILed or ERRORed
+      (the decision was referenced from statements() itself, statements() held
+      the inline `--args-json` logic and the per-chunk flags, and
+      '_queue_args_json_chunks' / '_DeferredAsks' did not exist). The other
+      parts of this criterion are checked by the commands it names, which pass
+      on the changed tree: python3 -m unittest tests.test_destructive_guard_args_json,
+      python3 em-workflow/hooks/tests/run-destructive-guard.py (1411/1411) and
+      python3 -m unittest discover -s tests. "What stays unchanged" was checked
+      by reading the diff against the base commit and by one differential run:
+      the base commit's _read_word_as_written() and the changed one were called
+      on the same 2936 words (every statement of every case plus 13 extra
+      commands) and gave the same result every time.

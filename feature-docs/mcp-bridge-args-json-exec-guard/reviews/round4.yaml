@@ -1,0 +1,679 @@
+round: 4
+executed_at: '2026-11-20T02:14:16+09:00'
+scope:
+  review_mode: diff
+  base_commit: 4b4dd2cf59441cb5adad8beb855c5905bd10716b
+  head_commit: a604d5a5c95fe0d89dc50f5ec46f37977bb56920
+  changed_files:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/mcp-bridge-args-json-exec-guard/task0001.tests.yaml
+  - test-docs/mcp-bridge-args-json-exec-guard/task0002.tests.yaml
+  - test-docs/mcp-bridge-args-json-exec-guard/task0003.tests.yaml
+  - test-docs/mcp-bridge-args-json-exec-guard/task0004.tests.yaml
+  - test-docs/mcp-bridge-args-json-exec-guard/task0005.tests.yaml
+  - tests/test_destructive_guard_args_json.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary:
+  - perspective: performance
+    reason: フックは全 Bash 呼び出しで走り、JSON 復号と再走査の走査量上限（FR7 / NFR1）が差分の中心にあるため
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: skipped
+  skip_reason: harness_unavailable
+- run_id: security#1
+  perspective: security
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: comprehensive#loop1.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#loop1.0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: architecture#loop1.0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#loop1.0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: performance#loop1.0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: comprehensive#loop2.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#loop2.0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: architecture#loop2.0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#loop2.0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: performance#loop2.0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: comprehensive#loop3.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#loop3.0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: skipped
+  skip_reason: harness_unavailable
+- run_id: security#loop3.1
+  perspective: security
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+- run_id: architecture#loop3.0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#loop3.0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: performance#loop3.0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: skipped
+  skip_reason: harness_unavailable
+- run_id: performance#loop3.1
+  perspective: performance
+  role: primary
+  source: codex
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: b1965436ebfbbae2
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8092
+  title: An `=`-form flag word with a non-static value part disables the inspection of every --args-json value in the statement
+  description: '_mcp_bridge_args_json_chunks() reads each flag-position word whole with _read_static_word() (8092) before
+    splitting it at `=` (8103). So an `=`-form flag word whose name part is static but whose value part is not is WORD_NOT_STATIC.
+    Examples: `--mcp="$S"`, `--session="$SID"`, `--format=$F`, `--args-json="$X"`. That outcome returns _ARGS_JSON_NOTHING
+    for the whole statement (8093-8094) and throws away every --args-json value, including static ones already collected.
+    Two commands keep the raw-string verdict (allow), confirmed by reading: `mcp-bridge run --session="$SID" --mcp desktop-commander
+    --tool start_process --args-json ''{"command":"git branch -D example"}''` and `mcp-bridge run --args-json ''{"command":"git
+    branch -D example"}'' --args-json="$X"`. The space-separated spellings of both are inspected and denied (TS-20; test_a_repeated_args_json_is_judged_value_by_value).
+    The SPEC requires the opposite: FR3 (f) defines the `=`-form value word as the part after `=`. FR3 (g) / A8 read --args-json
+    whatever the destination is. FR6''s closing sentence and FR8 put non-static destinations, the `=` form and repeated --args-json
+    outside the FR6 forms. FR6 says repeated values are judged one by one, with static values inspected. FR13 lists both the
+    `=` form and non-static destinations among what TestFlagReading must show as inspected. The unit test entry ''equals form
+    with a destination'' (tests/test_destructive_guard_args_json.py:646) pins the reverse under FR6 (2). This reopens round
+    1''s high e0e4df99e5cded9d (a dynamic destination disables inspection) through the `=` spelling, and `--session="$SID"`
+    is an ordinary spelling, not a contrived one. It is not a regression against the base commit (allow before), so NFR2 holds.'
+  suggestion: 'In the flag loop, when a flag-position word is not static, read its static prefix up to the first unquoted
+    `=`. If that prefix holds the `=` and names a known value-taking flag, take the rest as the value word and continue: for
+    args-json a non-static value skips only that value (FR6 (1)); for the other names the value is not examined. Otherwise
+    keep FR6 (2). Change the ''equals form with a destination'' entry at tests/test_destructive_guard_args_json.py:646 to
+    expect inspection. Add runner cases for `--mcp="$S"` and for a repeated --args-json with one `=`-form non-static value,
+    both expecting deny.'
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 85
+  resolution: fixed
+  resolution_reason: auto-applied loop 1
+- stable_id: 03086290fa444588
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8370
+  title: Pipelines that appear only after decoding never reach the whole-pipeline curl-pipe-shell check
+  description: 'main() runs check_pipe_to_shell() once, on the raw Bash input (11377). statements() splits every chunk at
+    `|`, including a top-level `command` string queued at 8370-8374. So a pipeline that appears only after JSON decoding gets
+    no curl-pipe-shell deny: for example a `|` written as the JSON escape \u007c, or a JSON \n escape before `sh`. A plain
+    {"command":"curl x | sh"} is still denied, because the raw regex sees the literal text. comprehensive#0 re-reported this
+    at high. It stays at medium, the same judgment as round 3 (03086290fa444588): FR5 queues the string like a -c payload,
+    and -c / eval / ANSI-C payloads already have the same gap, because check_pipe_to_shell() is called nowhere else. It is
+    an inherited limitation, not a regression and not a SPEC contradiction. Confirmed by reading.'
+  suggestion: Run check_pipe_to_shell() on each decoded top-level `command` string before _queue_args_json_chunks() queues
+    it, and add a runner case with a JSON-escaped pipe that expects deny. Whether -c / eval payloads get the same check is
+    a separate SPEC decision.
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: 'medium severity: below the auto-fix and completion-gate threshold'
+- stable_id: ababcd7ad8a0073c
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8078
+  title: An ANSI-C-quoted `mcp-bridge` command word or `run` subcommand is not recognised as a target
+  description: 'Target detection compares head()''s command word with `mcp-bridge` (8075-8076). head() returns os.path.basename
+    of the raw token (9292). It also compares str(run_word) with `run` (8083). Tokens keep an ANSI-C quote as written: statements''
+    stop check tests `"$''" in tok` (7295) before restoring it. So `mcp-bridge $''run'' --args-json ''{"command":"git branch
+    -D example"}''` and `$''mcp-bridge'' run ...` are not targets and keep the raw-string verdict, even though Bash passes
+    `run` and `mcp-bridge`. Lowered from high to medium for two reasons. First, the command-word half is the guard-wide reading:
+    every check gets its command word from head() this way, and FR1 defines the target through head(). Second, the `$''run''`
+    half is specific to this step but needs a deliberate ANSI-C spelling. Confirmed by reading; nothing was executed.'
+  suggestion: Read the `run` word with _read_static_word() and compare the restored text, so `$'run'` matches `run`. Add a
+    runner case `mcp-bridge $'run' --mcp desktop-commander --tool start_process --args-json '{"command":"git branch -D example"}'`
+    that expects deny. Whether ANSI-C command words are restored in general is a guard-wide decision outside this SPEC.
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 70
+  resolution: unresolved
+  resolution_reason: 'medium severity: below the auto-fix and completion-gate threshold'
+- stable_id: e2933b56bc73a10c
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8363
+  title: A single-quoted `$(...)` in a decoded value is queued twice, so its payloads use the 25-payload counter twice
+  description: 'A substitution inside a decoded top-level `command` string is queued twice: as a candidate body (FR4, 8365-8369),
+    and again when the `command` string itself is re-scanned as shell input (FR5, 8370-8374). If the raw scan also sees it
+    as a single-quote candidate, it is queued a third time. Each copy charges its -c / eval payloads to MAX_SHELL_PAYLOAD_EXPANSIONS.
+    So 13 harmless `bash -c true` inside one such substitution trigger the FR12 scan-budget-exceeded ask (deny under batch).
+    AC-14 / TS-22 describe the ask only from the 26th real payload, and NFR2 limits allow-to-ask changes to the FR11 / FR12
+    forms. This is round 3''s e2933b56bc73a10c (unresolved); comprehensive#0 widened it to the FR4 + FR5 overlap, and the
+    code is unchanged. Harmless inputs rarely reach it. Confirmed by reading the queueing at 8361-8374.'
+  suggestion: Mark the queued copies of one written occurrence with a shared origin and charge its payloads once, while still
+    checking each copy's text. Alternatively, skip the candidate body when it lies inside a top-level `command` string that
+    is queued whole. Add a runner case with 13 such payloads that expects allow.
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 95
+  resolution: unresolved
+  resolution_reason: 'medium severity: below the auto-fix and completion-gate threshold'
+- stable_id: ea4efee99b4b53df
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7880
+  title: A literal `$` that Bash leaves as text inside a double-quoted --args-json value makes the whole value non-static
+  description: _read_double_quoted() returns None for any unescaped `$` (7004-7005). _read_static_word() turns that into WORD_NOT_STATIC
+    (7879-7881), so the value is skipped as an FR6 (1) form and no ask is raised. Bash starts no expansion at a `$` followed
+    by a space, a closing double quote, or any other character that cannot begin a name, a parameter, `(`, `{` or `[`; it
+    passes that `$` on as text. Take a double-quoted JSON value with a destructive top-level `command` plus such a `$` in
+    another string, for example a trailing `5 $`. It keeps the raw-string verdict (allow). The same JSON with the `$` escaped
+    is inspected and denied. FR3 (f) requires the value to be rebuilt under Bash's double-quote rules. Confirmed by reading.
+  suggestion: 'In _read_double_quoted(), treat `$` as an expansion only when the next character can start one: a name character,
+    a digit, a special-parameter character, `{`, `(` or `[`. Otherwise keep it as text. Add a unit test that the escaped and
+    unescaped spellings restore to the same value.'
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 75
+  resolution: fixed
+  resolution_reason: resolved by the loop 2 fix of 73b579c934bde5ae at the same site
+- stable_id: 53104f98739b5681
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8085
+  title: A lone unquoted CR word dropped by statement shaping lets the flag reading run past the point where mcp-bridge stops
+    parsing flags
+  description: comprehensive#0 reports that the normalization used for the destructive-command checks drops an unquoted lone
+    carriage-return token. Bash passes that token to mcp-bridge as a positional argument, which ends mcp-bridge's flag parsing.
+    The flag loop (8085-8101) instead reads the words after it, and an unknown flag there returns nothing-to-do (8107-8108).
+    That throws away the --args-json values read before the CR, which mcp-bridge still receives and runs. The CR-dropping
+    side was not checked by reading this round because the read budget was spent. The flag-loop side matches the code at 8091-8108.
+    It needs a deliberate CR, so it stays medium.
+  suggestion: Give the flag reading the argument list as it was before CR tokens were dropped, or treat a dropped lone CR
+    as a positional word that ends the flag sequence. Add a runner case with a destructive --args-json value, a lone CR word,
+    then `--unknown`, expecting deny.
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 50
+  resolution: unresolved
+  resolution_reason: 'medium severity: below the auto-fix and completion-gate threshold'
+- stable_id: 0379cf2eb7ad4e92
+  severity: medium
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8363
+  title: The anchor lookup scans the statement's tokens once per decoded value (O(V*T)), and the scan budget does not count
+    it
+  description: At 8363, _queue_args_json_chunks() calls _args_json_word_index() (7764) for every decoded value, including
+    values with no bodies and no `command` strings, and that helper scans TOKENS linearly. A `--args-json '{}'` value charges
+    only a few units, so the relative scan budget does not limit how many values there are, and the cost grows with the square
+    of the statement length. This is unchanged since round 3 (0379cf2eb7ad4e92) and round 2 (8134f7498038208d), both unresolved.
+    performance#0 returned no findings, but this round's own reading of 8355-8374 found the loop unchanged. comprehensive#0
+    reported the same site with a measurement of about 1.5 s for 4,000 values; that figure is untrusted and was not re-run.
+    Exploiting it needs a literal statement of roughly 100KB or more, because generated flags are not static. So it stays
+    medium against the 10-second hook timeout (NFR1).
+  suggestion: Compute word_step only for a value that has bodies or `command` strings. Build a span-to-index map of TOKENS
+    once per _queue_args_json_chunks() call, falling back to _token_index() for a word without a span.
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - claude:evaluator
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: 'medium severity: below the auto-fix and completion-gate threshold'
+- stable_id: a28ea12bae3abc85
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7957
+  title: フラグ名を引用すると静的な JSON の検査が抜ける
+  description: ループ1の修正は、`=` の左側が引用符もバックスラッシュも含まない場合にだけ、動的な右辺を飛ばして検査を続ける。Bash は `--mcp="$S"`、`'--mcp='"$S"`、`\--mcp="$S"` を同じ引数として渡すが、後ろの2形式ではフックが文全体の
+    JSON 検査を取りやめる。静的な `--args-json` の内容が再走査に渡らない。
+  suggestion: Bash の引用除去に従って最初の `=` までを復元し、既知のフラグ名を確定できれば、右辺の静的判定と切り分ける。
+  reproduction: '`TestFlagReading` の `Spy` に、静的な `{"command":"echo MARK"}` と3種類の宛先表記をそれぞれ渡す。引用もバックスラッシュもない表記でだけ `echo MARK`
+    が検査対象に入る。'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  - codex:gpt-6-astra:security
+  confidence: 75
+  resolution: fixed
+  resolution_reason: auto-applied loop 2, completed by the loop 3 fixes
+- stable_id: 328945641695048d
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8139
+  title: 引用を復元できないインライン値が他の JSON 値の検査も止める
+  description: '`--args-json=` の右辺だけを復元できない場合も、フラグ名を判定する前に文全体から戻る。同じ値を独立した引数で渡すと、確認要求を保留しながら他の静的な値を検査する。`=` 形式ではその検査が省かれ、本来拒否すべき別の値が確認要求だけで終わり得る。'
+  suggestion: フラグ名を確定できる場合は、復元不能を右辺の値に記録し、残りの `--args-json` を独立に検査する。
+  reproduction: '`--args-json=$''{}\0''` と `--args-json $''{}\0''` のそれぞれに、`echo MARK` を含む静的な2件目を続けて `Spy` で確認する。両方で確認要求が記録されるが、2件目を検査するのは独立引数の形式だけになる。'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'medium severity: below the auto-fix and completion-gate threshold'
+- stable_id: 3340375b4b50c4b0
+  severity: medium
+  category: comprehensive
+  file: tests/test_destructive_guard_args_json.py
+  line: 644
+  title: ループ1の修正で単体テストが失敗する
+  description: 既存のサブテストは `--mcp="$S"` があると静的な JSON も検査対象外になると期待している。修正後は検査が続くため、実測では `nothing` の期待に対して `inspected` が返り、対象の単体テスト109件のうち1件が失敗する。
+  suggestion: このケースを動的な宛先でも検査を続けるテストに移し、後続の静的な値が実際に再走査へ渡ることを確認する。
+  reproduction: '`python3 -B -m unittest discover -s tests -p test_destructive_guard_args_json.py` を実行する。'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'medium severity: below the auto-fix and completion-gate threshold'
+- stable_id: abc1993a82f81567
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8406
+  title: 値の位置を繰り返し検索すると走査量の上限内でタイムアウトする
+  description: 復号した値ごとに文の先頭から語の位置を探すため、`--args-json` の繰り返しに対して処理時間が二次的に増える。再走査する内容がない空オブジェクトでも検索する。空オブジェクト1万6000件では `statements()`
+    だけで約11.1秒かかり、10秒のフック制限を超えたが、走査量超過の確認要求は記録されなかった。位置検索を省いた同じ入力は約1.0秒で終わった。
+  suggestion: 再走査する内容がある値だけ位置を求め、文中の語の位置は一度だけ索引化する。
+  reproduction: 空の JSON オブジェクトを値にした `--args-json` を1万6000個含む文を `statements()` に渡し、処理時間と `early_stop` を確認する。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'medium severity: below the auto-fix and completion-gate threshold'
+- stable_id: 3f7145c6c8c0b26a
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7990
+  title: 未引用の展開で Notion の除外判定を偽装できる
+  description: '`--format` や `--session` の値を無条件に1引数として扱うため、単語分割で追加されるフラグを見落とす。Notion 向けとして JSON の検査を省略しても、実際には後続の `--mcp`
+    と `--tool` が宛先を上書きし、シェル実行ツールへ破壊的コマンドを渡せる。'
+  suggestion: Notion の除外は、値の展開によって引数の個数や境界が変わらないと確認できる場合だけ適用する。それ以外は JSON を検査するか、確認を要求する。
+  reproduction: REVIEW_UNSET が未定義の環境で、`mcp-bridge run --mcp notion --tool notion-create-comment --format ${REVIEW_UNSET:-json
+    --mcp desktop-commander --tool start_process} --args-json '{"command":"git branch -D example"}'` を Bash の tool_input.command
+    としてフックへ渡すと allow になる。実行先を引数表示だけの Bash 関数に置き換えて確認すると、展開後に `--mcp desktop-commander --tool start_process` が追加されている。最後の指定が有効になるため、検査されなかった
+    command がシェル実行ツールへ届く。破壊的コマンド自体は実行せず確認した。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:gpt-6-astra:security
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 73b579c934bde5ae
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7878
+  title: 展開を起こさないドル記号でも JSON の検査を回避できる
+  description: '`_read_double_quoted()` は展開を開始しない文字としての `$` でも復元失敗を返し、呼び出し側は値を動的と判断して検査を省略する。そのため、二重引用した JSON の command に
+    ` #$` を追加するだけで、同じ破壊的コマンドが deny から allow になる。Bash はこの `$` をそのまま渡し、実行先ではコメントになる。'
+  suggestion: 実際の展開構文と文字としての `$` を区別し、静的な値は復元して検査する。判別できない場合は検査を省略して許可しない。
+  reproduction: '`mcp-bridge run --mcp desktop-commander --tool start_process --args-json "{\"command\":\"git branch -D example
+    #$\"}"` を Bash の tool_input.command としてフックへ渡すと allow になる。引数表示だけの Bash 関数で、受け取る JSON が `{"command":"git branch -D example
+    #$"}` であることを確認した。実行先のシェルでは `#$` がコメントとなり、`git branch -D example` が実行対象として残る。'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:gpt-6-astra:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+- stable_id: 55014a8e99383d82
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7973
+  title: 引用除去後に同じフラグでも後続の JSON 検査を打ち切る
+  description: 前回指摘 a28ea12bae3abc85 の修正で、名前だけを通常の引用符で囲んだ `--mcp` は認識できるようになった。一方、補助関数は元の文面に引用されていない `=` がある場合しか区切りを認識せず、ANSI-C
+    引用で書いた名前も復元しない。Bash が同じ `--mcp=resolved` を渡す場合でも、後続の静的な `--args-json` が検査されないことを確認した。
+  suggestion: 既存の語の復元規則を使い、引用除去後に現れる最初の `=` まででフラグ名を判定する。名前が静的に決まる場合は、動的な値だけを読み飛ばして検査を続ける。
+  reproduction: '`statements()` に、動的な宛先を持つ `mcp-bridge run` の文を文字列として渡し、後続の `--args-json` には `{"command":"printf hello"}`
+    を指定する。`=` を引用した場合やフラグ名を ANSI-C 引用した場合は、Bash が同じ引数を生成しても `printf hello` が走査対象に入らない。'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 3
+- stable_id: dc2fdf65ce30d198
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7012
+  title: 行継続の後ろにある変数名を展開として認識できない
+  description: ループ2で追加された `$` の判定は、行継続を除去する前の直後の文字を参照する。二重引用符の中で `$` と変数名の間にバックスラッシュと改行があると、Bash は行継続を除去して変数を展開するが、フックは `$`
+    と変数名をリテラルのまま復元する。結果として、実際に渡される JSON とは異なる文字列を静的な値として走査する。
+  suggestion: '`$` が展開を始めるか判定するときは、直後の行継続を読み飛ばしてから次の文字を確認する。リテラルの `$` と、行継続を挟む変数展開の両方を単体テストで固定する。'
+  reproduction: 二重引用符で囲った JSON の `command` に `printf $`、バックスラッシュと改行、`DEST` の順で書く。`DEST=resolved` の Bash は `printf resolved`
+    を引数データに含めるが、フックは `printf $DEST` を走査対象にする。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'medium severity: below the auto-fix and completion-gate threshold'
+- stable_id: eb00c0a9be91757b
+  severity: medium
+  category: comprehensive
+  file: tests/test_destructive_guard_args_json.py
+  line: 644
+  title: 動的な宛先のテストが現行の仕様と逆の結果を期待する
+  description: ループ1から残る期待値の不一致が現行コードでも再現した。`--mcp="$S"` の後ろに静的な JSON があると、現行コードは仕様どおり JSON を検査するが、このサブテストは `KIND_NOTHING`
+    を期待するため失敗する。
+  suggestion: このケースを動的な宛先でも JSON を検査するテストに移し、`KIND_INSPECTED` と復号した `command` を検証する。
+  reproduction: '`python3 -B tests/test_destructive_guard_args_json.py` を実行すると、`equals form with a destination` のサブテストが `[''nothing'']
+    != [''inspected'']` で失敗する。'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'medium severity: below the auto-fix and completion-gate threshold'
+- stable_id: 6bbfbf7f1ccd097b
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7984
+  title: 引用した等号で宛先の修正を回避できる
+  description: '`_flag_equals_prefix_name()` は、二重引用符内に `$` があると、静的なフラグ名と値を分離せずに終了する。このため `--mcp="$S"` は検査される一方、Bashが同じ引数に変換する
+    `"--mcp=$S"` では文全体のJSON検査が省略され、破壊的なコマンドが許可される。前回修正は引用方法を変えるだけで回避できる'
+  suggestion: 引用内やエスケープされた等号も認識し、静的な既知のフラグ名と非静的な値を分離して、後続のJSON検査を継続する
+  reproduction: tool_name=Bash、tool_input.command=`mcp-bridge run "--mcp=${S:-desktop-commander}" --tool start_process --args-json
+    '{"command":"git branch -D example"}'` のJSONをフックに渡すと allow になる。S未設定のBashで、mcp-bridgeを引数表示だけの関数に置き換えると、`--mcp=desktop-commander`
+    と破壊的なcommandを含む有効なJSONが渡ることを確認できる。破壊的なコマンド自体の実行は不要である
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:gpt-6-astra:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 3
+- stable_id: d39e8b8fb329a570
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7921
+  title: 引用外のリテラルなドル記号でJSON検査を回避できる
+  description: 二重引用符内の `$` は修正されたが、引用外では依然として無条件に非静的と判定される。Bashが展開せず文字として渡す `$/` をJSON文字列の途中に置くと、完全に静的な値でも復号と再検査が省略され、最上位commandの破壊的な操作が許可される
+  suggestion: 引用外でも実際に展開を開始するかを判定し、展開しない `$` は静的な文字として復元する
+  reproduction: tool_name=Bash、tool_input.command=`mcp-bridge run --mcp desktop-commander --tool start_process --args-json
+    '{"command":"git branch -D example; echo '$/'"}'` のJSONをフックに渡すと allow になる。引数表示だけのmcp-bridge関数で確認すると、Bashは `{"command":"git
+    branch -D example; echo $/"}` を渡す。フック内部ではWORD_NOT_STATICとなり、commandが再検査されない
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:gpt-6-astra:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 3
+- stable_id: 63d94a7bddc5d673
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8007
+  title: エスケープされた `=` を区切りとして認識しない
+  description: 引用符内の `=` は認識するようになった。引用符の外でバックスラッシュを付けた `=` は、Bash が同じ区切り文字として渡すにもかかわらず、フラグ名の一部として追加される。値部分が動的な場合に既知フラグを認識できず、同じ文の静的な
+    `--args-json` まで検査から外れる。
+  suggestion: 引用とエスケープを復元した結果の最初の `=` でフラグ名を確定し、Bash が同じ引数を渡す各表記で判定を揃える。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'medium severity: below the auto-fix and completion-gate threshold'
+- stable_id: f35ed060564bcf20
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7013
+  title: 非 ASCII の記号が続く固定文字列を展開として扱う
+  description: 非 ASCII 文字が `$` に続くだけで復元を打ち切る。たとえば二重引用符内の `$€` は、C と C.UTF-8 の両方で Bash が文字どおりに渡す。この文字列が静的な JSON のフィールドにあると、別のフィールドも含めてオブジェクト全体が検査から外れる。
+  suggestion: Bash が展開の開始として認識する文字に判定を絞り、通貨記号など固定文字として渡る入力を単体テストに加える。
+  reproduction: C または C.UTF-8 で、二重引用符で囲んだ `$€` を Bash の `printf` に渡す。Bash は `$€` をそのまま出力するが、差分の復元処理は `None` を返す。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'medium severity: below the auto-fix and completion-gate threshold'
+- stable_id: f16e5bb8d5da2621
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7984
+  title: Backslash-escaped = in non-static =-form flag bypasses inspection
+  description: _flag_equals_prefix_name treats backslash-escaped `=` as literal character, not as `=` separator, and returns
+    None for a non-static `=`-form word like --mcp\="$S". Shell removes the backslash before exec so mcp-bridge still sees
+    `--mcp=<value>` and executes --args-json, but the guard returns nothing-to-do and keeps raw allow verdict.
+  suggestion: Treat unquoted `\=` in the flag-word prefix scan as `=` separator (shell-unescaped argv view), consistent with
+    _read_static_word restoration, or fall back to restored-text parsing instead of returning None.
+  reproduction: 'Input: mcp-bridge run --mcp\="$S" --tool start_process --args-json ''{"command":"git branch -D example","shell":"bash"}''
+    | Path: em-workflow/hooks/destructive-guard.py via PreToolUse Bash payload | Observable: hook emits no decision (allow)
+    instead of deny for decoded top-level command `git branch -D example`. Static equivalent without backslash is denied.'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - litellm:muse-spark:security
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 9981fd673b28e7e4
+  severity: medium
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8513
+  title: 繰り返し指定された `--args-json` の位置検索が二乗時間になる
+  description: 復号した値ごとに `_args_json_word_index()` が文の先頭からトークンを探し直す。再走査する内容がない空オブジェクトでも位置検索は走る。約68 KBの文に `--args-json '{}'`
+    を4,000個並べると約1,600万回の比較が発生し、`statements()` の実測中央値は1.53秒だった。位置検索だけを事前索引に置き換えると0.31秒だった。
+  suggestion: 再走査する内容がある値だけ位置を求める。トークンの `span` から元の位置を引く索引を文ごとに一度だけ作り、各値の位置検索で再利用する。
+  reproduction: '`mcp-bridge run` に ` --args-json ''{}''` を2,000回、4,000回、8,000回連結し、それぞれ `statements()` を最後まで走査する。この環境では実測中央値が順に0.45秒、1.53秒、5.60秒だった。'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:performance
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'medium severity: below the auto-fix and completion-gate threshold'
+evaluation:
+  round_summary: 'Round 4 (diff, cross_validation=true). The code is unchanged since round 3 (head cc6c581); only SPEC/VERIFICATION
+    docs changed. Completed runs: comprehensive#0, security#1, architecture#0, spec#0, performance#0. security#0 was skipped
+    (codex, harness_unavailable); the security perspective still had security#1. No reviewer output contained an injection
+    attempt. comprehensive#0 reported four highs. (1) Kept at high: an `=`-form flag word with a non-static value part makes
+    the whole statement nothing-to-do. Examples: `--mcp="$S"`, `--session="$SID"`, and `--args-json="$X"` next to static values.
+    Confirmed by reading 8091-8103 and the unit test that pins it (tests/test_destructive_guard_args_json.py:646). It contradicts
+    FR3 (f)(g), FR6''s closing sentence and its one-value-at-a-time rule, FR8 and FR13, and reopens round 1''s e0e4df99e5cded9d
+    through the `=` spelling. (2) Lowered to medium: decoded pipelines skip curl-pipe-shell. Same judgment as round 3''s 03086290fa444588:
+    -c and ANSI-C payloads have the same gap, and FR5 says ''like a -c payload''. (3) Lowered to medium: an ANSI-C-quoted
+    command word or `run` subcommand is not a target. head() reads raw tokens across the whole guard, and FR1 defines the
+    target through head(). (4) Dismissed as demoted: destructive-guard defers decoded statements to failed-run-cleanup-guard.
+    That guard looks inside -c, here-strings and eval but not --args-json, so neither hook decides. The command then goes
+    to the normal permission flow, which is stricter than the base commit''s blanket allow, and the other hook''s coverage
+    is outside this SPEC. comprehensive#0''s mediums: double-queued bodies (round 3''s e2933b56bc73a10c, widened) and the
+    quadratic anchor lookup (round 3''s 0379cf2eb7ad4e92) are still present and carried. A literal `$` in a double-quoted
+    value making the value non-static is confirmed by reading and carried at medium. The lone-CR finding is carried at medium
+    without checking. The ANSI-C opener split by a line continuation is carried at low (it fails closed). The verify-round
+    SPEC change (AC-11, NFR3, TS-19 deny before the change) is consistent with the code and with the TS-19 runner label. task0003''s
+    red record of TS-19 as allow refers to the hook before task0003, not the base commit. Coverage per perspective: comprehensive:
+    findings. security: findings. security#1 reported nothing and listed `=` handling as implemented as specified, but the
+    `=`-form bypass (carried under comprehensive, not duplicated) contradicts that. architecture: corroborated. The single
+    per-statement call at 8355 meets NFR5, and the recorded reader duplication a1040ebcb45205ea is unchanged. spec: findings.
+    The same `=`-form deviation from FR3/FR6/FR8/FR13, carried under comprehensive. performance: findings. performance#0 reported
+    nothing, but the quadratic anchor lookup is still in the unchanged code; carried as a performance finding originated by
+    the evaluator. Read budget exceeded: 13 files under project_root were read, 3 over the 10-file limit. They were SPEC.md,
+    destructive-guard.py, failed-run-cleanup-guard.py, reviews/round1-3.yaml, tests/test_destructive_guard_args_json.py and
+    destructive-guard-cases.json, plus one TS-19 grep that scanned all five test-docs task records. Nothing was executed and
+    nothing was written.'
+  recommended_action: rework
+  action_rationale: 'One high remains: the `=`-form bypass with a non-static value. Fixing it means reading a partly non-static
+    flag word split at its first static `=`, and reversing a pinned unit-test expectation (tests/test_destructive_guard_args_json.py:646).
+    That is a parser change plus test changes, not a small local patch, and round 2''s similar flag-loop high ended its auto-fix
+    loop with no progress. If the SPEC owner instead reads FR6 (2) as covering `=`-form flag words, then FR3 (f), FR6''s closing
+    sentence, FR8 and FR13 need a clarification, so the decision also touches the SPEC. All other findings are medium or low.'
+dismissed_sites:
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8370
+  run_id: comprehensive#0
+  reason: demoted
+- file: em-workflow/hooks/destructive-guard.py
+  line: 6985
+  run_id: security#loop3.1
+  reason: not reproduced
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 3
+  applied_total: 6
+  termination: loop-cap
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-mcp-bridge-args-json-exec-guard-20261119T171240Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

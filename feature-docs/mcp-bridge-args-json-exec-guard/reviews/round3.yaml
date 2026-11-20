@@ -1,0 +1,146 @@
+round: 3
+executed_at: '2026-11-20T00:18:33+09:00'
+scope:
+  review_mode: diff
+  base_commit: 4b4dd2cf59441cb5adad8beb855c5905bd10716b
+  head_commit: cc6c58163e0f1c4cab23ddba1190cec7be666fdb
+  changed_files:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/mcp-bridge-args-json-exec-guard/task0001.tests.yaml
+  - test-docs/mcp-bridge-args-json-exec-guard/task0002.tests.yaml
+  - test-docs/mcp-bridge-args-json-exec-guard/task0003.tests.yaml
+  - test-docs/mcp-bridge-args-json-exec-guard/task0004.tests.yaml
+  - test-docs/mcp-bridge-args-json-exec-guard/task0005.tests.yaml
+  - tests/test_destructive_guard_args_json.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary:
+  - perspective: performance
+    reason: フックは全 Bash 呼び出しで走り、JSON 復号と再走査の走査量上限（FR7 / NFR1）が差分の中心にあるため
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: skipped
+  skip_reason: harness_unavailable
+- run_id: security#1
+  perspective: security
+  role: primary
+  source: litellm
+  model: muse-spark
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 03086290fa444588
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8370
+  title: Pipelines that appear only after decoding never reach the whole-pipeline curl-pipe-shell check
+  description: 'main() calls check_pipe_to_shell() once, on the raw Bash input (line 11377). statements() splits every chunk at `|`. A top-level `command` string queued at 8370-8374 is split the same way. So a pipeline that only appears after JSON decoding gets no curl-pipe-shell deny. Examples: a `|` written as the JSON escape \u007c, or a `|` followed by a JSON \n escape before `sh`. A plain {"command":"curl x | sh"} is still denied, because the raw regex sees the literal text. The mechanics were confirmed by reading. Demoted from high: SPEC FR5 queues the string ''like a -c payload'', and `-c` / eval / ANSI-C payloads already have the same gap (`bash -c $''curl x \x7c sh''` is not denied today). This is an existing limitation that the new decoded channel inherits. It is not a regression and does not contradict the SPEC.'
+  suggestion: Run check_pipe_to_shell() on each decoded top-level `command` string before it is queued (in _queue_args_json_chunks()). Add a runner case with a JSON-escaped pipe that expects deny. Whether `-c` / eval payloads get the same check is a separate SPEC decision. Applying it to every popped chunk would also catch heredoc data bodies.
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: 'medium severity: below the auto-fix and completion-gate threshold'
+- stable_id: e2933b56bc73a10c
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8363
+  title: A single-quoted `$(...)` in a decoded value is queued twice, so its payloads use the 25-payload counter twice
+  description: For an `mcp-bridge run` statement other than the notion pair, the raw scan queues every single-quote candidate body. The statements() comment at 8698-8715 says a body is queued unless _single_quote_skip_spans() names it, and that function names candidates only for the notion pair. _queue_args_json_chunks() (8363-8369) then queues the same body again from the decoded string. A `bash -c` / eval payload inside that body takes one MAX_SHELL_PAYLOAD_EXPANSIONS count per copy (9041-9056). As a result, 13 `$(bash -c true)` in one single-quoted value use 26 counts and hold the FR12 `scan-budget-exceeded` ask (deny under batch). The hook before this change allowed that input. AC-14 / TS-22 describe the ask only from the 26th real payload, and NFR2 limits allow->ask changes to the FR11/FR12 forms; here the FR12 ask fires at half the documented threshold. Confirmed by reading. Benign inputs rarely hit this in practice.
+  suggestion: When a decoded body comes from the same written occurrence as a raw single-quote candidate already queued for that value word, queue it once or exempt the copy from the payload count. Keep checking a body found at a different position. Add a runner case with 13 such substitutions that expects allow.
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: 'medium severity: below the auto-fix and completion-gate threshold'
+- stable_id: 0379cf2eb7ad4e92
+  severity: medium
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8363
+  title: The anchor lookup scans the statement's tokens once per decoded value (O(V*T)), and the scan budget does not count it
+  description: '_queue_args_json_chunks() calls _args_json_word_index() (defined at 7764) for every decoded value, including values with no bodies and no commands. That helper scans TOKENS linearly. A `--args-json ''{}''` or `-args-json={}` value charges only a few units to the scan budget, so the relative budget does not limit V, and the cost grows with the square of the statement length. THREAT-MODEL TM-4 names the 10-second hook timeout as a point where the verdict is lost, and NFR1 requires the step not to grow without bound. This loop is the one part of the step whose cost the charge does not cover. Exploiting it needs a literal statement of roughly 100KB or more: generating the flags with brace expansion or a substitution makes the words non-static. So it stays medium. This is the same issue as round-2 finding 8134f7498038208d (still unresolved). performance#0''s cited line 7695 is off: the helper is at 7764 and the call at 8363.'
+  suggestion: Build a span-to-index dict of TOKENS once per _queue_args_json_chunks() call, falling back to _token_index() for a word without a span. Alternatively, compute word_step only when the value has bodies or commands.
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - litellm:muse-spark-contributor:performance
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: 'medium severity: below the auto-fix and completion-gate threshold'
+evaluation:
+  round_summary: 'Round 3 (diff, cross_validation=true). Completed runs: comprehensive#0, security#1, architecture#0, spec#0, performance#0. Skipped: security#0 (codex, harness_unavailable); the security perspective still had completed run security#1. No injection attempt was found in any reviewer output. The round-2 high ca547a9f716957df (trailing lone `-`) is fixed: line 8100 now ends the flag sequence at a word shorter than two characters, and TS-30 plus TestFlagReading pin it. comprehensive#0''s high (decoded pipeline skips curl-pipe-shell) was confirmed by reading and carried at medium: it is the same gap `-c` / ANSI-C payloads already have, and FR5 says ''like a -c payload''. comprehensive#0''s double-queued-body counter medium was confirmed and carried. comprehensive#0''s medium on `$(printf ...) mcp-bridge run` was not carried: FR1 defines the target through head(), which skips a substitution-only word because it can expand to nothing, so inspecting the statement is the fail-closed
+    reading. performance#0''s high (decode/walk before the budget check) was dismissed as a false positive, the same judgment as round 2. performance#0''s per-character rebuild medium was not carried: it is a linear constant factor, not a defect. performance#0''s quadratic anchor-lookup medium (round-2 8134f7498038208d) is still present and carried. Evaluator-originated: a low SPEC drift on the lone `-` stop (SPEC FR3 (d) / FR6 (3) do not describe it; dropped by the severity gate). Coverage: comprehensive, security, architecture, performance - corroborated; spec - low finding only. Read budget: 8 of 10 files used.'
+  recommended_action: complete
+  action_rationale: No critical or high finding remains. The round-2 lone-dash high is fixed and pinned. comprehensive#0's high is an existing payload-path limitation, carried at medium. performance#0's high is a false positive. The remaining findings are three mediums and one low, all below the auto-fix threshold.
+dismissed_sites:
+- file: em-workflow/hooks/destructive-guard.py
+  line: 7905
+  run_id: performance#0
+  reason: false positive
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-mcp-bridge-args-json-exec-guard-20261119T151729Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

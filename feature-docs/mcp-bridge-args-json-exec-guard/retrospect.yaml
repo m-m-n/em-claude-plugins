@@ -1,0 +1,50 @@
+feature: mcp-bridge-args-json-exec-guard
+collected_at: "2026-11-20T19:44:03+09:00"
+session_ids: [01a1f88d-1596-7756-b7c7-e3e019eaa348.jsonl]
+signals:
+  review_critical_high:
+    - {stable_id: 2a7b7391eec63ca0, category: comprehensive, file: em-workflow/hooks/destructive-guard.py, title: "JSON の上限超過でキュー済みの従来の検査が打ち切られる", resolution: fixed}
+    - {stable_id: 65c5a71c6af6cb06, category: security, file: em-workflow/hooks/destructive-guard.py, title: "引数名を引用符で囲むだけで破壊的コマンドの検査を回避できる", resolution: unresolved}
+    - {stable_id: 32aa9e6e947c325d, category: security, file: em-workflow/hooks/destructive-guard.py, title: "TM-2: 検査回数の上限で破壊的な command が未検査のまま許可される", resolution: unresolved}
+    - {stable_id: e0e4df99e5cded9d, category: security, file: em-workflow/hooks/destructive-guard.py, title: "接続先を変数にすると静的な危険コマンドまで検査されない", resolution: unresolved}
+    - {stable_id: 934ab7486f2cfbfb, category: comprehensive, file: em-workflow/hooks/destructive-guard.py, title: "復号した command が既存のペイロードの枠を使い切る", resolution: unresolved}
+    - {stable_id: ed852daefce04839, category: architecture, file: em-workflow/hooks/destructive-guard.py, title: "God function statements() expanded with args-json queueing and budget logic", resolution: unresolved}
+    - {stable_id: ca547a9f716957df, category: security, file: em-workflow/hooks/destructive-guard.py, title: "A lone - after the --args-json value is read as an unknown flag", resolution: unresolved}
+    - {stable_id: b1965436ebfbbae2, category: comprehensive, file: em-workflow/hooks/destructive-guard.py, title: "An =-form flag word with a non-static value part disables the inspection of every --args-json value", resolution: fixed}
+    - {stable_id: a28ea12bae3abc85, category: comprehensive, file: em-workflow/hooks/destructive-guard.py, title: "フラグ名を引用すると静的な JSON の検査が抜ける", resolution: fixed}
+    - {stable_id: 3f7145c6c8c0b26a, category: security, file: em-workflow/hooks/destructive-guard.py, title: "未引用の展開で Notion の除外判定を偽装できる", resolution: deferred}
+    - {stable_id: 73b579c934bde5ae, category: security, file: em-workflow/hooks/destructive-guard.py, title: "展開を起こさないドル記号でも JSON の検査を回避できる", resolution: fixed}
+    - {stable_id: 55014a8e99383d82, category: comprehensive, file: em-workflow/hooks/destructive-guard.py, title: "引用除去後に同じフラグでも後続の JSON 検査を打ち切る", resolution: fixed}
+    - {stable_id: 6bbfbf7f1ccd097b, category: security, file: em-workflow/hooks/destructive-guard.py, title: "引用した等号で宛先の修正を回避できる", resolution: fixed}
+    - {stable_id: d39e8b8fb329a570, category: security, file: em-workflow/hooks/destructive-guard.py, title: "引用外のリテラルなドル記号でJSON検査を回避できる", resolution: fixed}
+    - {stable_id: f16e5bb8d5da2621, category: security, file: em-workflow/hooks/destructive-guard.py, title: "Backslash-escaped = in non-static =-form flag bypasses inspection", resolution: deferred}
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives:
+    - {perspective: performance, reason: "フックは全 Bash 呼び出しで走り、JSON 復号と再走査の走査量上限（FR7 / NFR1）が差分の中心にあるため"}
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の最終読み（score 1.67、confidence 0.67）と事前調査（body_change_kind: new_logic、changes_behavior: true）から評価器が full を返した"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.86, confidence: 0.81}
+        observed_at: "2026-11-19T19:29:03+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.67, confidence: 0.67}
+        observed_at: "2026-11-19T19:29:03+09:00"
+    pre_survey_estimate:
+      changed_lines_approx: -1
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      body_change_kind: new_logic
+      change_containment: single_module
+      changes_external_contract: false
+follow_up_drafts: []
+lessons_candidates:
+  - "事前調査は single_module・追加テスト 1 件の見込みだったが、実際は 6 タスク・review 4 ラウンド・verify 3 ラウンドかかった。シェルの引用規則を読む静的解析は見積りより大きく膨らむ"
+  - "review round 4 で high の回避経路が新たに 7 件出て、2 件（3f7145c6c8c0b26a / f16e5bb8d5da2621）が rework cap で deferred になった。引用・エスケープの組み合わせごとに回避経路が湧く構造"
+  - "verify は round 1・2 で AC-11 / NFR3 / AC-17 が失敗し、round 3 で pass"
+  - "task0003 は implementer が merged を出さずに止まり failed になったが、自動 retry で merged に到達した"

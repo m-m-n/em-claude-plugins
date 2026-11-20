@@ -1,0 +1,281 @@
+round: 1
+executed_at: '2026-11-19T21:24:51+09:00'
+scope:
+  review_mode: diff
+  base_commit: 4b4dd2cf59441cb5adad8beb855c5905bd10716b
+  head_commit: 5481b5e534d0346923af739d8747ae52cb409ef7
+  changed_files:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/mcp-bridge-args-json-exec-guard/task0001.tests.yaml
+  - test-docs/mcp-bridge-args-json-exec-guard/task0002.tests.yaml
+  - tests/test_destructive_guard_args_json.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary:
+  - perspective: performance
+    reason: フックは全 Bash 呼び出しで走り、JSON 復号と再走査の走査量上限（FR7 / NFR1）が差分の中心にあるため
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6-astra
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: comprehensive#loop1.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: completed
+- run_id: security#loop1.0
+  perspective: security
+  role: primary
+  source: codex
+  status: completed
+  model: gpt-6-astra
+- run_id: architecture#loop1.0
+  perspective: architecture
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: spec#loop1.0
+  perspective: spec
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: performance#loop1.0
+  perspective: performance
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: failed
+findings:
+- stable_id: 2a7b7391eec63ca0
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8665
+  title: JSON の上限超過でキュー済みの従来の検査が打ち切られる
+  description: JSON の深さ超過などでこの分岐に入ると、現在のチャンクの文を返した直後に走査を終了する。従来の処理がすでにキューに入れたシェル置換や -c の本体は検査されず、deny
+    が scan-budget-exceeded の ask に弱まる。
+  suggestion: JSON の検査が上限に達したら確認要求を保留し、従来の検査キューを既存の上限内で処理してから最終判定を確定する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 1
+- stable_id: 65c5a71c6af6cb06
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7861
+  title: 引数名を引用符で囲むだけで破壊的コマンドの検査を回避できる
+  description: _args_json_unquoted_run() は引用符付きの引数名を受け付けず、JSON の検査全体を省略する。Bash が渡す引数は引用符なしの場合と同一なのに、通常は
+    deny になる破壊的コマンドが allow になる。
+  suggestion: Bash の引用符を除去した引数名で解析する。安全に解釈できない形式を、未検査のまま allow にしない。
+  reproduction: mcp-bridge run --mcp desktop-commander --tool start_process '--args-json' '{"command":"git
+    branch -D example","shell":"bash"}' を tool_input.command としてフックへ渡すと allow、引用符を外すと deny
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'batch auto-rework (review round 1): residual after auto-fix loop 1; loop-1 edit
+    aborted (pins test ''quoted flag'' and D2; needs test/SPEC FR8 update)'
+- stable_id: 32aa9e6e947c325d
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8652
+  title: 'TM-2: 検査回数の上限で破壊的な command が未検査のまま許可される'
+  description: 共有カウンターを使い切ると、残りの command を確認要求もなく捨てる。無害な command を 25 件先行させるだけで末尾の破壊的 command が allow
+    になり、THREAT-MODEL の TB-1/TM-2 が求める重複値の全件検査を満たさない。
+  suggestion: 上限到達時に未検査の実行内容が残る場合は ask にする（SPEC A4 の改訂が要る）。
+  reproduction: '''{'' + ''"command":"true",'' * 25 + ''"command":"git branch -D example","shell":"bash"}''
+    を --args-json の値としてフックへ渡すと allow'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: 'batch auto-rework (review round 1): residual after auto-fix loop 1; loop-1 edit
+    aborted (contradicts SPEC A4 and two unit tests)'
+- stable_id: e0e4df99e5cded9d
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7877
+  title: 接続先を変数にすると静的な危険コマンドまで検査されない
+  description: --mcp / --tool の値を静的に読めない場合、静的な --args-json も検査しない（7877 行）。同じ箇所の 7880 行では、_decode_ansi_c()
+    が復元できない ANSI-C エスケープ（有効な JSON の後ろの \0 など）で JSON 全体を検査せず allow にする。どちらも SPEC FR6 / THREAT-MODEL の受け入れ済みの残りに当たる。
+  suggestion: 除外対象の接続先だと確定できない場合も、静的な --args-json の command を検査する。Bash と一致する文字列復元を行い、復元できない値は ask にする（SPEC
+    FR6 / FR8 の改訂が要る）。
+  reproduction: s=desktop-commander; mcp-bridge run --mcp "$s" --tool start_process --args-json '{"command":"git
+    branch -D example","shell":"bash"}' をフックへ渡すと allow
+  reproduction_alternates:
+  - mcp-bridge run --mcp desktop-commander --tool start_process --args-json $'{"command":"git branch -D
+    example","shell":"bash"}\0ignored' をフックへ渡すと allow
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'batch auto-rework (review round 1): residual after auto-fix loop 1; loop-1 edit
+    aborted (broke existing deny cases FR2(d)/W4 and TS-13; contradicts SPEC FR6)'
+- stable_id: 934ab7486f2cfbfb
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8652
+  title: 復号した command が既存のペイロードの枠を使い切る
+  description: 復号した command が先に共有カウンターを減らすため、後続の bash -c の本体が走査されなくなる。上限到達時に確認も挟まれないため、従来その本体で得ていた deny
+    が allow に変わる（NFR2 違反）。
+  suggestion: 既存のペイロードを従来の順序で処理し、共有上限の残り枠を JSON 由来の command に割り当てる。回帰テストを追加する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: 'batch auto-rework (review round 1): residual after auto-fix loop 1; loop-1 edit
+    aborted (contradicts SPEC A4 and two unit tests)'
+- stable_id: ed852daefce04839
+  severity: high
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8627
+  title: God function statements() expanded with args-json queueing and budget logic
+  description: statements() already owns lexing, skipping, payload queuing, scan-budget and early-stop.
+    The diff adds args-json decision, charge accounting, body/command queueing, payload-counter consumption,
+    per-chunk stop flag and deferred scan-budget ask inside the same loop.
+  suggestion: Extract an args-json queueing/budget collaborator that returns queued chunks and charge/overrun
+    signals, leaving statements() generic.
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - litellm:muse-spark-contributor:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'batch auto-rework (review round 1): residual after auto-fix loop 1; loop-1 editor
+    skipped (needs new top-level constructs)'
+- stable_id: 3be0fecc1174dfe2
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8686
+  title: JSON の走査量が上限を超えると既存のキューが処理されない
+  description: 前回の 2a7b7391eec63ca0 の一部が残る。JSON の処理費用を scanned_chars に加えた結果として上限を超えた場合は即座に終了し、既存のキューの
+    deny が ask に変わる。
+  suggestion: 既存の走査に必要な予算を先に確保し、残りを JSON の復号と再走査に使う。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: medium; not an auto-fix candidate
+- stable_id: c7437c587af92da4
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7016
+  title: Boolean-mode expansion of word-as-written reader couples two verdict paths
+  description: _read_word_as_written() now has two validation paths selected by quote_residue.
+  suggestion: Split into two explicit readers sharing a common bounds helper.
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - litellm:muse-spark-contributor:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: medium; not an auto-fix candidate
+- stable_id: 30db27aa5111d331
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 4289
+  title: Shotgun-surgery scope contract duplicated across docstrings without SSOT
+  description: O1/O2 scope is restated in several docstrings without a single source of truth.
+  suggestion: Define O1/O2 once and reference it from the other docstrings.
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - litellm:muse-spark-contributor:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: medium; not an auto-fix candidate
+evaluation:
+  round_summary: 'evaluator output lacked the required root field dismissed_sites; the round degraded
+    to reviewer self-reports per Phase R3b (evaluator run recorded failed). Auto-fix loop 1: 6 candidates;
+    1 applied and kept (2a7b7391eec63ca0); 2 skipped by the editor (new top-level constructs needed);
+    3 applied then reverted by the orchestrator because they broke existing tests or contradicted SPEC
+    A4/FR6 (Codex consulted). Loop terminated no-progress: the remaining candidates are the same sites,
+    whose fixes need SPEC/test changes beyond a single-file edit.'
+  recommended_action: null
+  action_rationale: null
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 1
+  applied_total: 1
+  termination: no-progress
+residual_critical_high: 5
+rework_required: true
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

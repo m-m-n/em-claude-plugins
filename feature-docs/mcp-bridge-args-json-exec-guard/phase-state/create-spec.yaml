@@ -1,0 +1,181 @@
+schema_version: 1
+feature: mcp-bridge-args-json-exec-guard
+phase: create-spec
+status: completed
+generation: 3
+base_revision: ef0980ca31722cf1d13d84f48f69d9bacdf6f7ae
+last_input_digest: sha256:90ef7a253b7a8e10272ede68edae9edc257e6ed5a37158816910a6471e867ba1
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-11-19T19:36:01+09:00'
+    questions:
+    - question_id: requirement.args-json.inspection-scope
+      status: answered
+    - question_id: requirement.args-json.undeterminable-forms
+      status: answered
+    - question_id: requirement.args-json.statement-scope
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+  create-spec-q0002:
+    status: answered
+    issued_at: '2026-11-19T22:10:00+09:00'
+    questions:
+    - question_id: requirement.args-json.payload-counter-exhaustion
+      status: answered
+    - question_id: requirement.args-json.ask-reason-id
+      status: answered
+    - question_id: requirement.args-json.noncanonical-flag-forms
+      status: answered
+answers:
+  requirement.args-json.inspection-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-19T19:36:01+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - subs_all_strings_plus_command_payload
+    freeform: null
+    normalized_answer: 復号した全文字列値の $( / バッククォートを再走査し、トップレベルの command をシェル入力として再走査する。シェルとして読む範囲はトップレベルの
+      command に絞る
+    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation, record_as_assumption);
+      codex_consulted: true (entry codex, 1 turn); Codex suggestion mapped onto option subs_all_strings_plus_command_payload;
+      orchestrator judged mapping; opus_escalation: false'
+  requirement.args-json.undeterminable-forms:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-19T19:36:01+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - keep_current_out_of_scope
+    freeform: null
+    normalized_answer: 静的に決まらない形は今の判定（生の文字列の走査）を保ち、範囲外として SPEC に記録する
+    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation, record_as_assumption);
+      codex_consulted: true (entry codex, 1 turn); Codex suggestion mapped onto option keep_current_out_of_scope;
+      orchestrator judged mapping; opus_escalation: false'
+  requirement.args-json.statement-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-19T19:36:01+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - every_statement
+    freeform: null
+    normalized_answer: コマンド位置で mcp-bridge run と静的に確定できるすべての文に適用する
+    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation, record_as_assumption);
+      codex_consulted: true (entry codex, 1 turn); Codex suggestion mapped onto option every_statement;
+      orchestrator judged mapping; opus_escalation: false'
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-19T19:36:01+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - skip
+    freeform: null
+    normalized_answer: デザインステップをスキップする（UI なし）
+    resolution_note: 'gate: create-spec.design-step; policy option decide_autonomously (accept analyst
+      design_step_recommendation=skip); the packet omitted the decide_autonomously option, so the recommendation''s
+      own option_id skip was recorded'
+  requirement.args-json.payload-counter-exhaustion:
+    packet_id: create-spec-q0002
+    answered_at: '2026-11-19T22:10:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - separate_count_fail_closed
+    freeform: null
+    normalized_answer: トップレベルの command は展開数 25 に入れず scan_budget で上限を持つ。-c / eval / ヒアストリングのペイロードを使い切りで積めなかったときは、キューを処理し終えた後に
+      ask（それまでの deny が勝つ）
+    resolution_note: 'gate: create-spec.requirement-clarification (category security -> batch relaxed
+      route); options: separate_count_fail_closed / shared_count_fail_closed / provenance_count_fail_closed;
+      chosen: separate_count_fail_closed; not chosen: shared_count_fail_closed, provenance_count_fail_closed;
+      codex_consulted: true (entry codex, 1 turn); key points: decoded command is checked within the overall
+      scan budget without spending the expansion count; when the count is exhausted, ask after draining
+      if no deny (batch demotes it to deny); orchestrator judged the mapping; opus_escalation: false'
+  requirement.args-json.ask-reason-id:
+    packet_id: create-spec-q0002
+    answered_at: '2026-11-19T22:10:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - budget_for_bounds_new_for_unrestorable
+    freeform: null
+    normalized_answer: 展開数の使い切りは既存の scan-budget-exceeded。復元できない静的な語は新しい理由 ID args-json-unrestorable と専用の文言
+    resolution_note: 'gate: create-spec.requirement-clarification (category security -> batch relaxed
+      route); options: budget_for_bounds_new_for_unrestorable / reuse_scan_budget / new_ids_for_both;
+      chosen: budget_for_bounds_new_for_unrestorable; not chosen: reuse_scan_budget, new_ids_for_both;
+      codex_consulted: true (entry codex, 1 turn); key points: exhaustion is a bound like scan-budget-exceeded;
+      unrestorable static words have a different cause and get args-json-unrestorable; orchestrator judged
+      the mapping; opus_escalation: false'
+  requirement.args-json.noncanonical-flag-forms:
+    packet_id: create-spec-q0002
+    answered_at: '2026-11-19T22:10:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - read_mcp_bridge_forms
+    freeform: null
+    normalized_answer: mcp-bridge が受理する静的な形（引用符付きのフラグ名、= の形、単ダッシュ、-- や位置引数の後ろ）を読み、重複した --args-json はすべての値を検査する
+    resolution_note: 'gate: create-spec.requirement-clarification (category security -> batch relaxed
+      route); options: read_mcp_bridge_forms / keep_out_of_scope / ask_noncanonical; chosen: read_mcp_bridge_forms;
+      not chosen: keep_out_of_scope, ask_noncanonical; codex_consulted: true (entry codex, 1 turn); key
+      points: inspect every static form the executor accepts including quoted and = forms; duplicates
+      all inspected so an overridden value with a destructive command still denies; orchestrator judged
+      the mapping; opus_escalation: false'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:854e453ab582238f9d55d6df701573bb0d6f4b0b1902e5d73567897d6c1e89d6
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:22df4eb71329f2f6eafa4c0f657c16d971591df738f85cfc4193b82c0c8dd2b6
+  output_digest: sha256:685f1b0f3dfa95a6e6f7c799303f83d604f17bcae34cc89038f2d26f59236f23
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:1241296914e9b5e3d173a1e401534e6964318d40e92cf373e31b42931e539a49
+  self_write_set:
+  - feature-docs/mcp-bridge-args-json-exec-guard/REQUIREMENTS.md
+  - feature-docs/mcp-bridge-args-json-exec-guard/SPEC.md
+- request_id: create-spec-run-0004
+  status: needs_user_input
+  input_digest: sha256:5efb71ceb492872566b8a767faa6d5aeda61cb1a2c7bdafad8bcf43d0235ccbc
+- request_id: create-spec-run-0005
+  status: completed
+  input_digest: sha256:c1cee4d2abebcdb06354601f90a0337f7fe4f541ec4db42ec89208efa17a2e99
+- request_id: create-spec-run-0006
+  status: completed
+  input_digest: sha256:6d06cd9bf3fa6cc3aa3379e82be37f08717101259e3dea5574b366e137149d31
+  self_write_set:
+  - feature-docs/mcp-bridge-args-json-exec-guard/REQUIREMENTS.md
+  - feature-docs/mcp-bridge-args-json-exec-guard/SPEC.md
+  dispatch_digest_inputs:
+    feature-docs/mcp-bridge-args-json-exec-guard/REQUIREMENTS.md: sha256:ad202dac6fd26562c5c3ea2793eab15a00d49206c063dc6841b4448ed2ffad57
+    feature-docs/mcp-bridge-args-json-exec-guard/SPEC.md: sha256:d05af362397a2be074eb4ab232b784ca6fd8923c3b2fbbea0ad5d40df39ebd36
+- request_id: create-spec-run-0007
+  status: completed
+  input_digest: sha256:90ef7a253b7a8e10272ede68edae9edc257e6ed5a37158816910a6471e867ba1
+- request_id: create-spec-run-0008
+  status: completed
+  input_digest: sha256:f2b1b80a6aefa071750ef9123ca5cf50ae1f18ef22ceebfd6675ddbde58c23d3
+  dispatch_digest_inputs:
+    feature-docs/mcp-bridge-args-json-exec-guard/REQUIREMENTS.md: sha256:4070a541012ff40cc39d2e279cf295327fcdd81ccda3547de2c9acf398b8f224
+    feature-docs/mcp-bridge-args-json-exec-guard/SPEC.md: sha256:ad98591bde591f470abb1e792c986a720fa8f4673356d25ac1e44e0a5371261b
+  self_write_set:
+  - feature-docs/mcp-bridge-args-json-exec-guard/REQUIREMENTS.md
+  - feature-docs/mcp-bridge-args-json-exec-guard/SPEC.md
+  scope_note: 'the worker''s write also decoded literal JSON escapes (\u0024, \u0060, \u00e9) in unrelated lines; the orchestrator restored both files from the snapshot and re-applied only the worker''s intended AC-11 / NFR3 / TS-19 edits'
+artifacts:
+- path: feature-docs/mcp-bridge-args-json-exec-guard/REQUIREMENTS.md
+  sha256: sha256:48542f59f3a9cee1be18e0f619d8dacc6d6464c8961534c3e3108d60af534894
+  produced_by: create-spec-run-0008
+- path: feature-docs/mcp-bridge-args-json-exec-guard/SPEC.md
+  sha256: sha256:a7c51b945ecd97772a08f38c4348250e4b9961e49c999abf2df111313c4066f7
+  produced_by: create-spec-run-0008
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

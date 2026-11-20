@@ -1,0 +1,251 @@
+schema_version: 1
+feature: mcp-bridge-args-json-exec-guard
+phase: rework
+worker_runs:
+- request_id: rework-run-0001
+  status: needs_user_input
+  source: review
+  review_round: 1
+  input_digest: sha256:9ee742d16cfa7190f6b70359a3e1ef703e5bf51c39a837ee754e65a7591ab490
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/rework-planner-contract.md: sha256:0c9f82099c3546b6b675856539d8244628b7170ce7a4442ec951e13e16577ec3
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/mcp-bridge-args-json-exec-guard/IMPLEMENTATION.md: sha256:13e9c7c7a625790b49c2feacb24f0b2e0d743b1959055dfc88a2426ad96996c7
+    feature-docs/mcp-bridge-args-json-exec-guard/SPEC.md: sha256:d05af362397a2be074eb4ab232b784ca6fd8923c3b2fbbea0ad5d40df39ebd36
+    feature-docs/mcp-bridge-args-json-exec-guard/VERIFICATION.md: sha256:5f63a6416c87d18877a2978a2a5f8bb41f104ddd77a9c668bb1b1d7c4a58e80a
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0001.md: sha256:8250386aafa3b089c46b768a873b71ae10e549cb7565e47210d7545e4b7fc289
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0002.md: sha256:506a4a91980ecf002ebaa6e715c70606e0be16f80f66f7989f902837918129bb
+    feature-docs/mcp-bridge-args-json-exec-guard/workflow.yaml: sha256:9837764cfdc608143fd0e85794d403bedbe6a0cb6a06556bcdd1782826a45e64
+  self_write_set: []
+- request_id: rework-run-0002
+  status: rejected
+  source: review
+  review_round: 2
+  input_digest: sha256:6cf36a97f4f824640ba70083593b06ebc4db9f87d2b865e3904c2ad3c4a2701d
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/rework-planner-contract.md: sha256:0c9f82099c3546b6b675856539d8244628b7170ce7a4442ec951e13e16577ec3
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/mcp-bridge-args-json-exec-guard/IMPLEMENTATION.md: sha256:8e3544b5a3ea11b504bb7704c0ca77e99130b8a79fca2ec270d502da816e5799
+    feature-docs/mcp-bridge-args-json-exec-guard/SPEC.md: sha256:ad98591bde591f470abb1e792c986a720fa8f4673356d25ac1e44e0a5371261b
+    feature-docs/mcp-bridge-args-json-exec-guard/VERIFICATION.md: sha256:fce28ad385080f1e1b329d14f95c70486367dcaf73be62411990c2ac65b5ab11
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0001.md: sha256:8250386aafa3b089c46b768a873b71ae10e549cb7565e47210d7545e4b7fc289
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0002.md: sha256:506a4a91980ecf002ebaa6e715c70606e0be16f80f66f7989f902837918129bb
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0003.md: sha256:fc1aefb8b22bf340c5d93295b87c3941f2e030e8a565fa7b15237e3280b3b531
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0004.md: sha256:43bb71f55214287739f130a074dd2a3cd7c6903e7b892afe2c30fe5381201e7a
+    feature-docs/mcp-bridge-args-json-exec-guard/workflow.yaml: sha256:51b39b8fe23ab5e83325ae5748b783d2d3d67b593ffbbc47d27630685d08f7e2
+  self_write_set: []
+  rejection: 'layer-3/6 validation failed: expected-mismatch (review step status), task-plan-files, rework-index;
+    written artifacts discarded'
+- request_id: rework-run-0003
+  status: completed
+  source: review
+  review_round: 2
+  input_digest: sha256:320f16105ece6235eb6e5df0508dc27ed450074e7962d89467ea49af3ae4246c
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/rework-planner-contract.md: sha256:0c9f82099c3546b6b675856539d8244628b7170ce7a4442ec951e13e16577ec3
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/mcp-bridge-args-json-exec-guard/IMPLEMENTATION.md: sha256:8e3544b5a3ea11b504bb7704c0ca77e99130b8a79fca2ec270d502da816e5799
+    feature-docs/mcp-bridge-args-json-exec-guard/SPEC.md: sha256:ad98591bde591f470abb1e792c986a720fa8f4673356d25ac1e44e0a5371261b
+    feature-docs/mcp-bridge-args-json-exec-guard/VERIFICATION.md: sha256:fce28ad385080f1e1b329d14f95c70486367dcaf73be62411990c2ac65b5ab11
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0001.md: sha256:8250386aafa3b089c46b768a873b71ae10e549cb7565e47210d7545e4b7fc289
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0002.md: sha256:506a4a91980ecf002ebaa6e715c70606e0be16f80f66f7989f902837918129bb
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0003.md: sha256:fc1aefb8b22bf340c5d93295b87c3941f2e030e8a565fa7b15237e3280b3b531
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0004.md: sha256:43bb71f55214287739f130a074dd2a3cd7c6903e7b892afe2c30fe5381201e7a
+    feature-docs/mcp-bridge-args-json-exec-guard/workflow.yaml: sha256:aa2ed7d4ef3686dadfd2b4366d91292247fe02d2bc532aa4405e2dc6faa0a1b7
+  self_write_set:
+  - feature-docs/mcp-bridge-args-json-exec-guard/IMPLEMENTATION.md
+  - feature-docs/mcp-bridge-args-json-exec-guard/VERIFICATION.md
+  - feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0005.md
+- request_id: rework-run-0004
+  status: needs_user_input
+  source: verify
+  verify_round: 1
+  input_digest: sha256:2f789c7441d62b5eab998d11d1fb57eaf15395a133fe54d51bd8c16c10df5ecb
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/rework-planner-contract.md: sha256:0c9f82099c3546b6b675856539d8244628b7170ce7a4442ec951e13e16577ec3
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/mcp-bridge-args-json-exec-guard/IMPLEMENTATION.md: sha256:def5755d9a89a4559fd6ab06201f7440d4f7ed4500f1eb8caf571a572004eedd
+    feature-docs/mcp-bridge-args-json-exec-guard/SPEC.md: sha256:ad98591bde591f470abb1e792c986a720fa8f4673356d25ac1e44e0a5371261b
+    feature-docs/mcp-bridge-args-json-exec-guard/VERIFICATION.md: sha256:473c79aa98130faf71cb103d6233b6d77ae64c69625ad52b86f8c63771b5a007
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0001.md: sha256:8250386aafa3b089c46b768a873b71ae10e549cb7565e47210d7545e4b7fc289
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0002.md: sha256:506a4a91980ecf002ebaa6e715c70606e0be16f80f66f7989f902837918129bb
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0003.md: sha256:fc1aefb8b22bf340c5d93295b87c3941f2e030e8a565fa7b15237e3280b3b531
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0004.md: sha256:43bb71f55214287739f130a074dd2a3cd7c6903e7b892afe2c30fe5381201e7a
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0005.md: sha256:a0b1dc62d19f66cdd8fd40a4927349d62565ccebef5e265fc956d4dd2dcf9c42
+    feature-docs/mcp-bridge-args-json-exec-guard/workflow.yaml: sha256:4a16c09fb08198949d3e2e5450773958e06a3e780393eedb98f2c8af5c51cf8b
+  self_write_set: []
+- request_id: rework-run-0005
+  status: rejected
+  source: verify
+  verify_round: 2
+  input_digest: sha256:c40cb2c9514589a956ad3a3ab24d0784f8602a2a60563fb3260a7dc871656c3f
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/rework-planner-contract.md: sha256:0c9f82099c3546b6b675856539d8244628b7170ce7a4442ec951e13e16577ec3
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/mcp-bridge-args-json-exec-guard/IMPLEMENTATION.md: sha256:e321d95c108c877e551e87efe3fca8106382b5f2f392796dd245bff2fbb2a53a
+    feature-docs/mcp-bridge-args-json-exec-guard/SPEC.md: sha256:a7c51b945ecd97772a08f38c4348250e4b9961e49c999abf2df111313c4066f7
+    feature-docs/mcp-bridge-args-json-exec-guard/VERIFICATION.md: sha256:6e639e8992cfabaece51d2332dfc69f1df7bb6747ad8b7f4628684029728dbd1
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0001.md: sha256:8250386aafa3b089c46b768a873b71ae10e549cb7565e47210d7545e4b7fc289
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0002.md: sha256:506a4a91980ecf002ebaa6e715c70606e0be16f80f66f7989f902837918129bb
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0003.md: sha256:fc1aefb8b22bf340c5d93295b87c3941f2e030e8a565fa7b15237e3280b3b531
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0004.md: sha256:43bb71f55214287739f130a074dd2a3cd7c6903e7b892afe2c30fe5381201e7a
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0005.md: sha256:a0b1dc62d19f66cdd8fd40a4927349d62565ccebef5e265fc956d4dd2dcf9c42
+    feature-docs/mcp-bridge-args-json-exec-guard/workflow.yaml: sha256:a84cd1458ab436021190b36f4190472579e578ee196a2437658fde2fa4974528
+  self_write_set: []
+  rejection: 'layer-3/6 validation failed: task-plan-files, task-plan-files-mismatch (task0006 Files to
+    Modify bullet quotes `=` in backticks), rework-index (verification_index was nested under rework_source
+    in the envelope); written artifacts discarded'
+- request_id: rework-run-0006
+  status: completed
+  source: verify
+  verify_round: 2
+  input_digest: sha256:be7e464b3d7813401db5e6932df6c5a3bf021f809248d24c45677ba924f06137
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/rework-planner-contract.md: sha256:0c9f82099c3546b6b675856539d8244628b7170ce7a4442ec951e13e16577ec3
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/mcp-bridge-args-json-exec-guard/IMPLEMENTATION.md: sha256:e321d95c108c877e551e87efe3fca8106382b5f2f392796dd245bff2fbb2a53a
+    feature-docs/mcp-bridge-args-json-exec-guard/SPEC.md: sha256:a7c51b945ecd97772a08f38c4348250e4b9961e49c999abf2df111313c4066f7
+    feature-docs/mcp-bridge-args-json-exec-guard/VERIFICATION.md: sha256:6e639e8992cfabaece51d2332dfc69f1df7bb6747ad8b7f4628684029728dbd1
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0001.md: sha256:8250386aafa3b089c46b768a873b71ae10e549cb7565e47210d7545e4b7fc289
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0002.md: sha256:506a4a91980ecf002ebaa6e715c70606e0be16f80f66f7989f902837918129bb
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0003.md: sha256:fc1aefb8b22bf340c5d93295b87c3941f2e030e8a565fa7b15237e3280b3b531
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0004.md: sha256:43bb71f55214287739f130a074dd2a3cd7c6903e7b892afe2c30fe5381201e7a
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0005.md: sha256:a0b1dc62d19f66cdd8fd40a4927349d62565ccebef5e265fc956d4dd2dcf9c42
+    feature-docs/mcp-bridge-args-json-exec-guard/workflow.yaml: sha256:a84cd1458ab436021190b36f4190472579e578ee196a2437658fde2fa4974528
+  self_write_set:
+  - feature-docs/mcp-bridge-args-json-exec-guard/IMPLEMENTATION.md
+  - feature-docs/mcp-bridge-args-json-exec-guard/VERIFICATION.md
+  - feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0006.md
+status: completed
+packets:
+- packet_id: rework-q0001
+  status: answered
+  request_id: rework-run-0001
+  questions:
+  - question_id: rework.spec-change.round1
+    gate_id: rework.spec-change
+    status: answered
+- packet_id: rework-q0002
+  status: answered
+  request_id: rework-run-0004
+  issued_at: '2026-11-20T00:38:26+09:00'
+  worker_packet_id: rework-q0001
+  questions:
+  - question_id: rework.spec-change.ts19-pre-change
+    gate_id: rework.spec-change
+    status: answered
+answers:
+- question_id: rework.spec-change.round1
+  packet_id: rework-q0001
+  answered_at: '2026-11-19T21:58:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - change-spec
+  freeform: null
+  normalized_answer: change-spec
+  resolution_note: 'classification gate: goal block present; origin verification passed (32aa9e6e947c325d,
+    934ab7486f2cfbfb, e0e4df99e5cded9d are members of reviews/round1.yaml); direction 2 tripped (bound
+    set holds security-category findings) -> batch relaxed route -> one batched Codex consultation (codex
+    harness, 1 turn). Codex: change-spec; verdict (a) under the current SPEC; basis FR5/AC-2, NFR2/AC-8,
+    FR6/FR8, FR2/AC-5, AC-6. Orchestrator mapped the suggestion to option change-spec. Opus escalation:
+    not run.'
+- question_id: rework.spec-change.ts19-pre-change
+  packet_id: rework-q0002
+  answered_at: '2026-11-20T00:38:26+09:00'
+  source: batch-classification-gate
+  answer_mode: single_select
+  selected_option_ids:
+  - change-spec
+  freeform: null
+  normalized_answer: change-spec
+  resolution_note: 'classification gate (classification entry 2): goal block present; origin verification
+    passed (AC-11, NFR3 are members of verify.failed_items); direction 2 not tripped (bound set categories
+    spec, spec; no reversible:false). Codex verdict (b) spec_gap citing AC-1, AC-2, FR5, FR7 (divergence
+    in AC-11, NFR3, TS-19); Claude convinced -> change-spec. The worker returned packet_id rework-q0001,
+    already used in this feature; the orchestrator recorded it as rework-q0002.'
+spec_change:
+  reason: 'verify round 1: SPEC AC-11 / TS-19 / NFR3 state TS-19 is allow before the change, but the base-commit
+    hook gives deny (it never decodes --args-json, so the trailing bash -c payload is caught); correct
+    the pre-change expectation of TS-19 to deny and drop it from the NFR3 reproduction set; no code change'
+  origin_kind: verify
+  origin_id: AC-11
+  recorded_at_commit: a05479704a7423314ecef809f03c856407cd30ce
+  consumed: true
+  replan_authorized: false
+classification:
+- classifier: codex
+  verdict: goal_not_met
+  evidence_ids:
+  - FR5
+  - AC-2
+  - NFR2
+  - AC-8
+  - FR6
+  - FR8
+  - FR2
+  - AC-5
+  - AC-6
+  decision: proceed
+  reason: 'batch relaxed route (direction 2: the round''s bound set contains security findings): resolved
+    by the batched Codex consultation, which recommended change-spec because the current SPEC A4 / FR6
+    / FR8 let the goal''s attack scenario stand'
+- classifier: codex
+  verdict: spec_gap
+  evidence_ids:
+  - AC-1
+  - AC-2
+  - FR5
+  - FR7
+  - AC-11
+  - NFR3
+  - TS-19
+  decision: proceed
+  reason: 'Codex verdict (b): the implementation satisfies the goal (AC-1, AC-2, FR5, FR7 met; TS-19 deny
+    after the change) but SPEC AC-11 / NFR3 / TS-19 misstate the pre-change result of TS-19'
+artifacts:
+- path: feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0005.md
+  sha256: sha256:a0b1dc62d19f66cdd8fd40a4927349d62565ccebef5e265fc956d4dd2dcf9c42
+  produced_by: rework-run-0003
+- path: feature-docs/mcp-bridge-args-json-exec-guard/IMPLEMENTATION.md
+  sha256: sha256:b7aabe571e75e5f0b16ac112f6a44dab7f15d18eaef5df7b87653d4de93ed3ba
+  produced_by: rework-run-0006
+- path: feature-docs/mcp-bridge-args-json-exec-guard/VERIFICATION.md
+  sha256: sha256:2fade1eba13aff10b6fb7816c7f74af043fb110a3e01dc5996f60f0e801125b7
+  produced_by: rework-run-0006
+- path: feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0006.md
+  sha256: sha256:e4765e0d72e20055e37df75b532d5469a6a52785eddb3b2353b5216a85b2ffc2
+  produced_by: rework-run-0006
+patches:
+- patch_id: rework-run-0003-p0001
+  status: applied
+  base_input_digest: sha256:320f16105ece6235eb6e5df0508dc27ed450074e7962d89467ea49af3ae4246c
+  base_workflow_blob: 8fe71494dbd82ee8fca13684e88fcb63db310488
+- patch_id: rework-run-0006-p0001
+  status: applied
+  base_input_digest: sha256:be7e464b3d7813401db5e6932df6c5a3bf021f809248d24c45677ba924f06137
+  base_workflow_blob: 09049ba33e10bfceafbaaee56282b493403e8210

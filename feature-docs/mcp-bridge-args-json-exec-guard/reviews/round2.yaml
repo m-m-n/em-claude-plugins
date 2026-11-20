@@ -1,0 +1,254 @@
+round: 2
+executed_at: '2026-11-19T23:20:19+09:00'
+scope:
+  review_mode: diff
+  base_commit: 4b4dd2cf59441cb5adad8beb855c5905bd10716b
+  head_commit: 64025cda53f4db050977147e38bca1dc8e9029ca
+  changed_files:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/mcp-bridge-args-json-exec-guard/task0001.tests.yaml
+  - test-docs/mcp-bridge-args-json-exec-guard/task0002.tests.yaml
+  - test-docs/mcp-bridge-args-json-exec-guard/task0003.tests.yaml
+  - test-docs/mcp-bridge-args-json-exec-guard/task0004.tests.yaml
+  - tests/test_destructive_guard_args_json.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary:
+  - perspective: performance
+    reason: フックは全 Bash 呼び出しで走り、JSON 復号と再走査の走査量上限（FR7 / NFR1）が差分の中心にあるため
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  status: skipped
+  model: gpt-6-astra
+  skip_reason: harness_unavailable
+- run_id: security#1
+  perspective: security
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  status: skipped
+  skip_reason: harness_unavailable
+- run_id: comprehensive#1
+  perspective: comprehensive
+  role: primary
+  source: litellm
+  status: completed
+  model: muse-spark-contributor
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: ca547a9f716957df
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8101
+  title: A lone `-` after the --args-json value is read as an unknown flag, so the decoded value goes
+    uninspected while mcp-bridge still runs it
+  description: 'Evaluator-originated (Independent Inspection Duty). The flag loop in _mcp_bridge_args_json_chunks()
+    (lines 8089-8102) reads the word `-` with _read_static_word() as static ''-''. It is not ''--'' and
+    it starts with ''-'', so line 8096 strips one dash to an empty name. That name is not in _MCP_RUN_VALUE_NAMES,
+    so line 8101-8102 returns _ARGS_JSON_NOTHING and discards the --args-json value it already collected.
+    The raw-string scan finds no candidate in a single-quoted plain `command` or in `\u0024(`, so the
+    verdict is allow. mcp-bridge-exec-tool-rescan IMPLEMENTATION.md D1 (which A11 says the flag reading
+    follows) records that `mcp-bridge run` uses Go''s standard flag parsing. In Go''s flag package, `-`
+    is a non-flag argument: parsing stops there and the earlier flags take effect. D1''s Basis (form 3)
+    also records that a trailing positional word does not stop mcp-bridge from running. So `mcp-bridge
+    run --mcp desktop-commander --tool start_process --args-json ''{"command":"git branch -D example"}''
+    -` is allowed, yet mcp-bridge runs the command. It is the same threat as TS-25 (`-- extra`, pinned
+    deny) and as THREAT-MODEL.md''s Elevation-of-privilege row (a value before `--` or a positional word),
+    which the SPEC brings into scope. The trailing form is not covered: the cases file has no lone-dash
+    case, and TestFlagReading (line 602) only pins `mcp-bridge run - --args-json ...` under the unknown-flag
+    group. That leading form is NOTHING under Go semantics too, because no value is parsed before `-`.'
+  suggestion: In the flag loop, treat a restored flag-position word shorter than two characters (`-`,
+    as well as the empty word already handled) as a positional word that ends the flag sequence, as Go's
+    flag.parseOne does (`len(s) < 2 || s[0] != '-'`). Values collected before it are still inspected.
+    Add a runner case `mcp-bridge run --mcp desktop-commander --tool start_process --args-json '{"command":"git
+    branch -D example"}' -` expecting deny, and move the lone-dash entry of TestFlagReading out of the
+    unknown-flag group (the leading `- --args-json` form stays nothing-to-do). The SPEC's FR3 (d) / FR6
+    (3) wording ('a word not beginning with `-` is positional') may need a matching clarification under
+    A11.
+  reproduction: 'Input (read only, not executed): mcp-bridge run --mcp desktop-commander --tool start_process
+    --args-json ''{"command":"git branch -D example"}'' - . Guard trace: the flag loop collects the --args-json
+    value (8104-8112). The word `-` reads as WORD_STATIC ''-''. rest='''' gives flag_name ''''. That name
+    is not in _MCP_RUN_VALUE_NAMES, so _ARGS_JSON_NOTHING is returned (8101-8102). No raw candidate exists,
+    so the verdict is allow. Runtime: Go flag parsing stops at the non-flag `-`, the --args-json value
+    is used, and start_process runs `git branch -D example`.'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - claude:evaluator
+  confidence: 80
+  resolution: unresolved
+  resolution_reason: 'batch auto-rework (review round 2): evaluator-only source, forced to needs-judgment
+    and skipped in batch auto-fix loop 1; orchestrator confirmed the hook returns allow for the trailing
+    lone-dash form (the same statement without the trailing `-` is denied)'
+- stable_id: 34c91ffd68c9bb6e
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7790
+  title: A non-static flag-position word (e.g. an empty `$EMPTY`) disables the --args-json inspection,
+    as SPEC O2 (2) accepts
+  description: 'Reproduction verified by reading: reproduced. `$EMPTY` in flag position reads as WORD_NOT_STATIC
+    through _read_static_word() (an unquoted `$` or a parameter region). The flag loop in _mcp_bridge_args_json_chunks()
+    (lines 8089-8091) then returns _ARGS_JSON_NOTHING. The single-quoted `\u0024(` gives the raw scan
+    no candidate, so the verdict is allow. Bash drops the empty unquoted word, so mcp-bridge receives
+    a fully static invocation and runs the decoded substitution. The form is, however, exactly the out-of-scope
+    form O2 (2) that the SPEC records: FR6 (2), FR8, and TS-27 pinned allow under AC-6. The static guard
+    accepts the same class of bypass in O2 (1) (`--args-json "$X"`). The finding is therefore carried
+    at medium as a residual the SPEC accepts. Changing it is a SPEC decision, not a defect against the
+    current SPEC. A sub-case the SPEC does not need to give up: when the non-static word comes after an
+    already collected static --args-json value (`... --args-json ''<v>'' $X`), that value is discarded
+    too.'
+  suggestion: 'Raise this with the SPEC owner rather than auto-fixing it, because TS-27 / AC-6 pin the
+    current allow. Options: hold an ask for a non-static flag-position word in an `mcp-bridge run` statement
+    that is not the notion pair, or at least still inspect the static --args-json values collected before
+    the first non-static flag word.'
+  reproduction: 'Input: mcp-bridge run $EMPTY --mcp desktop-commander --tool start_process --args-json
+    ''{"command":"echo \u0024(git branch -D example)"}'' with EMPTY unset/empty, via Bash tool. Guard
+    path: _mcp_bridge_args_json_chunks flag loop _read_static_word->$EMPTY=WORD_NOT_STATIC=>return _ARGS_JSON_NOTHING
+    (cf. TS-27 allow pin). Observable: verdict allow, while Bash executes mcp-bridge run --mcp ... --args-json
+    ... which decodes to $(git branch -D example) and re-scans to deny when inspected directly (TS-1).'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - litellm:muse-spark-contributor:security
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: 'medium: SPEC-accepted out-of-scope form O2 (2); not an auto-fix candidate; changing
+    it is a SPEC decision'
+- stable_id: 8134f7498038208d
+  severity: medium
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8357
+  title: 'Quadratic anchor lookup: one linear token scan per decoded --args-json value'
+  description: _queue_args_json_chunks() calls _args_json_word_index(tokens, value.word) once for each
+    decoded value (line 8357). That helper (lines 7764-7773) scans the statement's tokens linearly for
+    a matching span. A statement with V static --args-json object values over T tokens therefore costs
+    O(V*T). Each value of a cheap form such as `--args-json '{}'` charges only a few units, so the 8*len+4096
+    scan budget does not cut this off. For a statement with thousands of repeated --args-json values,
+    the lookup grows quadratically toward the 10-second hook timeout. The code shape is confirmed by reading;
+    the timing was not measured.
+  suggestion: Build a span-to-index map of TOKENS once per call to _queue_args_json_chunks(), falling
+    back to _token_index() for a word without a span. Look each value's word up in that map instead of
+    rescanning TOKENS.
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - litellm:muse-spark-contributor:performance
+  confidence: 70
+  resolution: unresolved
+  resolution_reason: 'medium: not an auto-fix candidate (severity below high)'
+- stable_id: a1040ebcb45205ea
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 7064
+  title: Bash-quoting restoration duplicated between _read_word_as_written() and _read_static_word()
+  description: _read_static_word() (7782-7932) repeats the region walk, the quote-kind dispatch, the backslash
+    handling and the glob/brace/tilde/extglob checks of _read_word_as_written() (7023-7150) almost line
+    for line. The differences are the three-way outcome, locale quotes, and acceptance of single-quote
+    marker residue. A later fix to one reader's quoting rules (e.g. a new ANSI-C or glob case) can silently
+    miss the other. That would make the masking-stop check and the --args-json step disagree about the
+    same word. This is a maintainability risk, not a present defect, and D5 deliberately chose a separate
+    reader. It is therefore medium rather than high.
+  suggestion: Factor the shared walk into one helper that returns the restored text plus flags (not-static,
+    unrestorable, bare positions). Keep _read_word_as_written() as a thin wrapper that maps any non-static
+    or unrestorable outcome to None, with its existing stricter residue and bounds checks preserved.
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - litellm:muse-spark-contributor:architecture
+  confidence: 80
+  resolution: unresolved
+  resolution_reason: 'medium: not an auto-fix candidate (severity below high); D5 chose a separate reader'
+evaluation:
+  round_summary: 'Round 2 (diff, cross_validation=true). Completed runs: security#1, performance#0, architecture#0,
+    spec#0, comprehensive#1. Skipped: security#0 and comprehensive#0 (codex harness_unavailable); each
+    of those perspectives still had a completed litellm run. No injection attempt was found in any reviewer
+    output. security#1''s high finding (non-static flag word) was reproduced by reading and carried at
+    medium as the SPEC-accepted out-of-scope form O2 (2). comprehensive#1''s high finding (scan budget
+    checked after decode/walk) dismissed as a false positive: decode and walk are linear in a value already
+    charged, and the step stops after the first overrun. comprehensive#1''s notion-behind-wrapper medium
+    dismissed (FR2 keeps the W1-W4 raw-skip limit; fail-closed). Evaluator-originated high: a trailing
+    lone `-` after the --args-json value is read as an unknown flag, making the statement nothing-to-do,
+    while Go flag parsing (D1) treats `-` as positional and mcp-bridge still runs the value. architecture#0
+    quoting-duplication high->medium; O1/O2 docstring pin and data-clump findings low. Read budget: 8
+    of 10 files used.'
+  recommended_action: auto_fix
+  action_rationale: 'One high remains: the evaluator-originated lone `-` bypass, with a small local fix
+    in the flag loop plus one runner case and a regrouped unit-test entry. If evaluator-originated findings
+    are kept out of bounded auto-fix, it should go to rework, possibly with a one-line SPEC clarification
+    of FR3 (d) / FR6 (3). The medium security residual (O2 (2)) is SPEC-accepted and needs a SPEC owner
+    decision.'
+dismissed_sites:
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8124
+  run_id: comprehensive#1
+  reason: false positive
+- file: em-workflow/hooks/destructive-guard.py
+  line: 7598
+  run_id: comprehensive#1
+  reason: false positive
+- file: em-workflow/hooks/destructive-guard.py
+  line: 4309
+  run_id: comprehensive#1
+  reason: duplicate of another finding
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 1
+  applied_total: 0
+  termination: no-progress
+residual_critical_high: 1
+rework_required: true
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-mcp-bridge-args-json-exec-guard-20261119T141847Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

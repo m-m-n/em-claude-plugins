@@ -1,0 +1,190 @@
+schema_version: 1
+feature: mcp-bridge-args-json-exec-guard
+phase: create-plan
+status: completed
+generation: 3
+base_revision: bd5eed8518b54901c5231a5bfe82c911a345b6ca
+last_input_digest: sha256:3095a47df18902c0256b637bc5a6321aaf0523e6cfd51d5d8f7a7c6b80df75e4
+active_request_id: null
+packets:
+  create-plan-run-0003-q0001:
+    status: answered
+    request_id: create-plan-run-0003
+    questions:
+    - question_id: create-plan.existing-files
+      gate_id: create-plan.existing-files
+      status: answered
+answers:
+  create-plan.existing-files:
+    question_id: create-plan.existing-files
+    packet_id: create-plan-run-0003-q0001
+    answered_at: '2026-11-20T00:54:39+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - merge
+    freeform: null
+    normalized_answer: merge
+    resolution_note: 'gate create-plan.existing-files: batch-policies.yaml entry (select merge); fail-closed
+      classification not tripped (category existing-files, no assumptions); options: merge / overwrite
+      / cancel; chosen: merge; codex_consulted: false'
+worker_runs:
+- request_id: create-plan-run-0001
+  status: completed
+  input_digest: sha256:2c970f1efea09113634a3a40a29acf67e384ef3e913b81536c39e40a11c62ab0
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/planner-contract.md: sha256:df2bf3f0321c2627a31b878a14adb176ee7c2131638245112e5d3bb27f7a3682
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
+    em-workflow/references/workflow-schema.md: sha256:5bd8500c203c4f17cde4193ee43d561073fe7f47099d61a55eb593e098881d87
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/mcp-bridge-args-json-exec-guard/REQUIREMENTS.md: sha256:ad202dac6fd26562c5c3ea2793eab15a00d49206c063dc6841b4448ed2ffad57
+    feature-docs/mcp-bridge-args-json-exec-guard/SPEC.md: sha256:d05af362397a2be074eb4ab232b784ca6fd8923c3b2fbbea0ad5d40df39ebd36
+    feature-docs/mcp-bridge-args-json-exec-guard/workflow.yaml: sha256:f759671c0ebeb70c4b94684ff6f9a404af240d2fe61f76f118ba7aefc5299875
+  output_digest: sha256:8bcd0de6b9023ad9e763827d338ad56ecdb3cd1f553f58a7d6f42c0d5f8c033f
+  self_write_set:
+  - feature-docs/mcp-bridge-args-json-exec-guard/IMPLEMENTATION.md
+  - feature-docs/mcp-bridge-args-json-exec-guard/THREAT-MODEL.md
+  - feature-docs/mcp-bridge-args-json-exec-guard/VERIFICATION.md
+  - feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0001.md
+  - feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0002.md
+- request_id: create-plan-run-0002
+  status: completed
+  input_digest: sha256:f8b90219cde88a591bcd387fee859c32c0412c7791cf65f7a9f6403aef22391d
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/planner-contract.md: sha256:df2bf3f0321c2627a31b878a14adb176ee7c2131638245112e5d3bb27f7a3682
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
+    em-workflow/references/workflow-schema.md: sha256:5bd8500c203c4f17cde4193ee43d561073fe7f47099d61a55eb593e098881d87
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/mcp-bridge-args-json-exec-guard/IMPLEMENTATION.md: sha256:13e9c7c7a625790b49c2feacb24f0b2e0d743b1959055dfc88a2426ad96996c7
+    feature-docs/mcp-bridge-args-json-exec-guard/REQUIREMENTS.md: sha256:4070a541012ff40cc39d2e279cf295327fcdd81ccda3547de2c9acf398b8f224
+    feature-docs/mcp-bridge-args-json-exec-guard/SPEC.md: sha256:ad98591bde591f470abb1e792c986a720fa8f4673356d25ac1e44e0a5371261b
+    feature-docs/mcp-bridge-args-json-exec-guard/THREAT-MODEL.md: sha256:b171278d8d3bd77de9e50b8aeb87412d3168f9a73904124daf94fdd64013fd9b
+    feature-docs/mcp-bridge-args-json-exec-guard/VERIFICATION.md: sha256:5f63a6416c87d18877a2978a2a5f8bb41f104ddd77a9c668bb1b1d7c4a58e80a
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0001.md: sha256:8250386aafa3b089c46b768a873b71ae10e549cb7565e47210d7545e4b7fc289
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0002.md: sha256:506a4a91980ecf002ebaa6e715c70606e0be16f80f66f7989f902837918129bb
+    feature-docs/mcp-bridge-args-json-exec-guard/workflow.yaml: sha256:ff17aeefd610419e0bfa48326736b5baf8feea78618764895b25eb762cd41a3b
+  output_digest: sha256:1602dcc111122887e8951dd7f45526be1e3143ad88381bb521e40de949d1c9c0
+  self_write_set:
+  - feature-docs/mcp-bridge-args-json-exec-guard/IMPLEMENTATION.md
+  - feature-docs/mcp-bridge-args-json-exec-guard/THREAT-MODEL.md
+  - feature-docs/mcp-bridge-args-json-exec-guard/VERIFICATION.md
+  - feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0003.md
+  - feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0004.md
+- request_id: create-plan-run-0003
+  status: needs_user_input
+  input_digest: sha256:84b2161ba58414053c01c53acbba10f482ea855adbed4cf76e87797c75ca1d4b
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/planner-contract.md: sha256:df2bf3f0321c2627a31b878a14adb176ee7c2131638245112e5d3bb27f7a3682
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
+    em-workflow/references/workflow-schema.md: sha256:5bd8500c203c4f17cde4193ee43d561073fe7f47099d61a55eb593e098881d87
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/mcp-bridge-args-json-exec-guard/IMPLEMENTATION.md: sha256:def5755d9a89a4559fd6ab06201f7440d4f7ed4500f1eb8caf571a572004eedd
+    feature-docs/mcp-bridge-args-json-exec-guard/REQUIREMENTS.md: sha256:48542f59f3a9cee1be18e0f619d8dacc6d6464c8961534c3e3108d60af534894
+    feature-docs/mcp-bridge-args-json-exec-guard/SPEC.md: sha256:a7c51b945ecd97772a08f38c4348250e4b9961e49c999abf2df111313c4066f7
+    feature-docs/mcp-bridge-args-json-exec-guard/THREAT-MODEL.md: sha256:b8defa565f8e73e99f830e5ef02eac7298c1a7098c942171af350a5962330f4d
+    feature-docs/mcp-bridge-args-json-exec-guard/VERIFICATION.md: sha256:473c79aa98130faf71cb103d6233b6d77ae64c69625ad52b86f8c63771b5a007
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0001.md: sha256:8250386aafa3b089c46b768a873b71ae10e549cb7565e47210d7545e4b7fc289
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0002.md: sha256:506a4a91980ecf002ebaa6e715c70606e0be16f80f66f7989f902837918129bb
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0003.md: sha256:fc1aefb8b22bf340c5d93295b87c3941f2e030e8a565fa7b15237e3280b3b531
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0004.md: sha256:43bb71f55214287739f130a074dd2a3cd7c6903e7b892afe2c30fe5381201e7a
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0005.md: sha256:a0b1dc62d19f66cdd8fd40a4927349d62565ccebef5e265fc956d4dd2dcf9c42
+    feature-docs/mcp-bridge-args-json-exec-guard/workflow.yaml: sha256:a669e9d400e8e292c5796fd69696b9458f2b1915c326b196aa5db3e4548f0fb0
+  self_write_set: []
+- request_id: create-plan-run-0004
+  status: completed
+  input_digest: sha256:3095a47df18902c0256b637bc5a6321aaf0523e6cfd51d5d8f7a7c6b80df75e4
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/planner-contract.md: sha256:df2bf3f0321c2627a31b878a14adb176ee7c2131638245112e5d3bb27f7a3682
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
+    em-workflow/references/workflow-schema.md: sha256:5bd8500c203c4f17cde4193ee43d561073fe7f47099d61a55eb593e098881d87
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/mcp-bridge-args-json-exec-guard/IMPLEMENTATION.md: sha256:def5755d9a89a4559fd6ab06201f7440d4f7ed4500f1eb8caf571a572004eedd
+    feature-docs/mcp-bridge-args-json-exec-guard/REQUIREMENTS.md: sha256:48542f59f3a9cee1be18e0f619d8dacc6d6464c8961534c3e3108d60af534894
+    feature-docs/mcp-bridge-args-json-exec-guard/SPEC.md: sha256:a7c51b945ecd97772a08f38c4348250e4b9961e49c999abf2df111313c4066f7
+    feature-docs/mcp-bridge-args-json-exec-guard/THREAT-MODEL.md: sha256:b8defa565f8e73e99f830e5ef02eac7298c1a7098c942171af350a5962330f4d
+    feature-docs/mcp-bridge-args-json-exec-guard/VERIFICATION.md: sha256:473c79aa98130faf71cb103d6233b6d77ae64c69625ad52b86f8c63771b5a007
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0001.md: sha256:8250386aafa3b089c46b768a873b71ae10e549cb7565e47210d7545e4b7fc289
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0002.md: sha256:506a4a91980ecf002ebaa6e715c70606e0be16f80f66f7989f902837918129bb
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0003.md: sha256:fc1aefb8b22bf340c5d93295b87c3941f2e030e8a565fa7b15237e3280b3b531
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0004.md: sha256:43bb71f55214287739f130a074dd2a3cd7c6903e7b892afe2c30fe5381201e7a
+    feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0005.md: sha256:a0b1dc62d19f66cdd8fd40a4927349d62565ccebef5e265fc956d4dd2dcf9c42
+    feature-docs/mcp-bridge-args-json-exec-guard/workflow.yaml: sha256:a669e9d400e8e292c5796fd69696b9458f2b1915c326b196aa5db3e4548f0fb0
+  output_digest: sha256:7c97172e61caa8d83a48b537e8c6248efefbd579fcd6516e06d078dff2fc450c
+  self_write_set:
+  - feature-docs/mcp-bridge-args-json-exec-guard/IMPLEMENTATION.md
+  - feature-docs/mcp-bridge-args-json-exec-guard/THREAT-MODEL.md
+  - feature-docs/mcp-bridge-args-json-exec-guard/VERIFICATION.md
+artifacts:
+- path: feature-docs/mcp-bridge-args-json-exec-guard/IMPLEMENTATION.md
+  sha256: sha256:13e9c7c7a625790b49c2feacb24f0b2e0d743b1959055dfc88a2426ad96996c7
+  produced_by: create-plan-run-0001
+- path: feature-docs/mcp-bridge-args-json-exec-guard/THREAT-MODEL.md
+  sha256: sha256:b171278d8d3bd77de9e50b8aeb87412d3168f9a73904124daf94fdd64013fd9b
+  produced_by: create-plan-run-0001
+- path: feature-docs/mcp-bridge-args-json-exec-guard/VERIFICATION.md
+  sha256: sha256:5f63a6416c87d18877a2978a2a5f8bb41f104ddd77a9c668bb1b1d7c4a58e80a
+  produced_by: create-plan-run-0001
+- path: feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0001.md
+  sha256: sha256:8250386aafa3b089c46b768a873b71ae10e549cb7565e47210d7545e4b7fc289
+  produced_by: create-plan-run-0001
+- path: feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0002.md
+  sha256: sha256:506a4a91980ecf002ebaa6e715c70606e0be16f80f66f7989f902837918129bb
+  produced_by: create-plan-run-0001
+- path: feature-docs/mcp-bridge-args-json-exec-guard/IMPLEMENTATION.md
+  sha256: sha256:8e3544b5a3ea11b504bb7704c0ca77e99130b8a79fca2ec270d502da816e5799
+  produced_by: create-plan-run-0002
+- path: feature-docs/mcp-bridge-args-json-exec-guard/VERIFICATION.md
+  sha256: sha256:fce28ad385080f1e1b329d14f95c70486367dcaf73be62411990c2ac65b5ab11
+  produced_by: create-plan-run-0002
+- path: feature-docs/mcp-bridge-args-json-exec-guard/THREAT-MODEL.md
+  sha256: sha256:b8defa565f8e73e99f830e5ef02eac7298c1a7098c942171af350a5962330f4d
+  produced_by: create-plan-run-0002
+- path: feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0003.md
+  sha256: sha256:fc1aefb8b22bf340c5d93295b87c3941f2e030e8a565fa7b15237e3280b3b531
+  produced_by: create-plan-run-0002
+- path: feature-docs/mcp-bridge-args-json-exec-guard/tasks/task0004.md
+  sha256: sha256:43bb71f55214287739f130a074dd2a3cd7c6903e7b892afe2c30fe5381201e7a
+  produced_by: create-plan-run-0002
+- path: feature-docs/mcp-bridge-args-json-exec-guard/IMPLEMENTATION.md
+  sha256: sha256:e321d95c108c877e551e87efe3fca8106382b5f2f392796dd245bff2fbb2a53a
+  produced_by: create-plan-run-0004
+- path: feature-docs/mcp-bridge-args-json-exec-guard/THREAT-MODEL.md
+  sha256: sha256:7c43f6664e3dd7546ea67a63fe167344ed40020812ae42a0b5e02d6f4f8ed6f3
+  produced_by: create-plan-run-0004
+- path: feature-docs/mcp-bridge-args-json-exec-guard/VERIFICATION.md
+  sha256: sha256:6e639e8992cfabaece51d2332dfc69f1df7bb6747ad8b7f4628684029728dbd1
+  produced_by: create-plan-run-0004
+other_feature_doc_fixes: []
+patches:
+- patch_id: create-plan-p0001
+  status: applied
+  base_input_digest: sha256:2c970f1efea09113634a3a40a29acf67e384ef3e913b81536c39e40a11c62ab0
+  base_workflow_blob: db66bea05350b34b18d9e5618cdde568d5289369
+- patch_id: create-plan-p0002
+  status: applied
+  base_input_digest: sha256:f8b90219cde88a591bcd387fee859c32c0412c7791cf65f7a9f6403aef22391d
+  base_workflow_blob: 7a27f46c02ed9444ecd08b4cb10ba7b41c8950f6
+- patch_id: create-plan-p0003
+  status: applied
+  base_input_digest: sha256:3095a47df18902c0256b637bc5a6321aaf0523e6cfd51d5d8f7a7c6b80df75e4
+  base_workflow_blob: 249146b283713da07863e181cfdb450d361da93f
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

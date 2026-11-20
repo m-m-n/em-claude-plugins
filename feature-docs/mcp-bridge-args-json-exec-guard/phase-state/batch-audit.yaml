@@ -1,0 +1,168 @@
+schema_version: 1
+feature: mcp-bridge-args-json-exec-guard
+records:
+- question_id: review.auto-fix-grouping
+  packet_id: null
+  answered_at: '2026-11-19T21:05:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: merge 5a49eeb09b71ffc3 + c678f9aca23d274f into one needs-judgment item
+  normalized_answer: merge 5a49eeb09b71ffc3 + c678f9aca23d274f into one needs-judgment item
+  resolution_note: 'gate: Phase R4 same-site grouping (compatible prose vs conflict) for destructive-guard.py:8649;
+    options: compatible-merge (needs-judgment, Apply as-is) / conflict (batch skip site); chosen: compatible-merge;
+    not chosen: conflict; codex_consulted: true; key points: A (legacy bodies first on the shared payload
+    budget) and B (ask when JSON commands are left unchecked) are compatible; both need a SPEC A4 revision;
+    limit the ask to inputs that actually leave a JSON command unchecked to bound batch false-deny cost;
+    opus_escalation: false'
+- question_id: review.auto-fix-keep-or-revert
+  packet_id: null
+  answered_at: '2026-11-19T21:10:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: revert the loop-1 edit for 027272e4f5501990 and treat the finding as residual needing a SPEC
+    change
+  normalized_answer: revert the loop-1 edit for 027272e4f5501990 and treat the finding as residual needing
+    a SPEC change
+  resolution_note: 'gate: keep or revert an applied auto-fix that broke existing tests (destructive-guard.py:7877/7880);
+    options: (a) keep / (b) revert and route as SPEC-change residual / (c) other; chosen: (b); not chosen:
+    (a),(c); codex_consulted: true; key points: SPEC FR6 requires the current verdict for dynamic destinations
+    and the threat model accepts unrestorable ANSI-C; the edit weakened existing deny cases FR2(d)/W4
+    to ask (NFR2, AC-8) and turned TS-13 / --args-json "$J" into ask, which batch demotes to deny; opus_escalation:
+    false'
+- question_id: review.auto-fix-keep-or-revert
+  packet_id: null
+  answered_at: '2026-11-19T21:16:00+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: revert the loop-1 edits for 5a49eeb09b71ffc3 and 65c5a71c6af6cb06
+  normalized_answer: revert the loop-1 edits for 5a49eeb09b71ffc3 and 65c5a71c6af6cb06
+  resolution_note: 'gate: keep or revert applied auto-fixes that broke unit tests; options: keep / revert;
+    chosen: revert (same criterion as the Codex-consulted decision for 027272e4f5501990: an edit that
+    contradicts a SPEC assumption or a test pinned by the plan goes to rework instead); 5a49eeb09b71ffc3
+    broke TestPayloadCounter (SPEC A4), 65c5a71c6af6cb06 broke the ''quoted flag'' case pinned by D2;
+    codex_consulted: false (reused the earlier consultation''s criterion); opus_escalation: false'
+- question_id: rework.spec-change.round1
+  packet_id: rework-q0001
+  answered_at: '2026-11-19T21:58:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - change-spec
+  freeform: null
+  normalized_answer: change-spec
+  resolution_note: 'gate: rework.spec-change (relaxed route, direction 2); options: change-spec / keep-spec;
+    chosen: change-spec; not chosen: keep-spec; codex_consulted: true (1 turn, codex harness); key points:
+    A4 lets JSON-derived commands go unchecked once the shared payload counter is used up, so the goal''s
+    attack scenario stands (FR5/AC-2); give legacy payloads the counter first (NFR2/AC-8) and send unchecked
+    JSON commands to ask; FR6/FR8: inspect a static --args-json even with a dynamic destination and send
+    values the guard cannot restore to ask, while keeping the notion exclusion (FR2/AC-5) and TS-13 (AC-6);
+    opus_escalation: false'
+- question_id: requirement.args-json.payload-counter-exhaustion
+  packet_id: create-spec-q0002
+  answered_at: '2026-11-19T22:10:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - separate_count_fail_closed
+  freeform: null
+  normalized_answer: トップレベルの command は展開数 25 に入れず scan_budget で上限を持つ。-c / eval / ヒアストリングのペイロードを使い切りで積めなかったときは、キューを処理し終えた後に
+    ask（それまでの deny が勝つ）
+  resolution_note: 'gate: create-spec.requirement-clarification (category security -> batch relaxed route);
+    options: separate_count_fail_closed / shared_count_fail_closed / provenance_count_fail_closed; chosen:
+    separate_count_fail_closed; not chosen: shared_count_fail_closed, provenance_count_fail_closed; codex_consulted:
+    true (entry codex, 1 turn); key points: decoded command is checked within the overall scan budget
+    without spending the expansion count; when the count is exhausted, ask after draining if no deny (batch
+    demotes it to deny); orchestrator judged the mapping; opus_escalation: false'
+- question_id: requirement.args-json.ask-reason-id
+  packet_id: create-spec-q0002
+  answered_at: '2026-11-19T22:10:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - budget_for_bounds_new_for_unrestorable
+  freeform: null
+  normalized_answer: 展開数の使い切りは既存の scan-budget-exceeded。復元できない静的な語は新しい理由 ID args-json-unrestorable と専用の文言
+  resolution_note: 'gate: create-spec.requirement-clarification (category security -> batch relaxed route);
+    options: budget_for_bounds_new_for_unrestorable / reuse_scan_budget / new_ids_for_both; chosen: budget_for_bounds_new_for_unrestorable;
+    not chosen: reuse_scan_budget, new_ids_for_both; codex_consulted: true (entry codex, 1 turn); key
+    points: exhaustion is a bound like scan-budget-exceeded; unrestorable static words have a different
+    cause and get args-json-unrestorable; orchestrator judged the mapping; opus_escalation: false'
+- question_id: requirement.args-json.noncanonical-flag-forms
+  packet_id: create-spec-q0002
+  answered_at: '2026-11-19T22:10:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - read_mcp_bridge_forms
+  freeform: null
+  normalized_answer: mcp-bridge が受理する静的な形（引用符付きのフラグ名、= の形、単ダッシュ、-- や位置引数の後ろ）を読み、重複した --args-json はすべての値を検査する
+  resolution_note: 'gate: create-spec.requirement-clarification (category security -> batch relaxed route);
+    options: read_mcp_bridge_forms / keep_out_of_scope / ask_noncanonical; chosen: read_mcp_bridge_forms;
+    not chosen: keep_out_of_scope, ask_noncanonical; codex_consulted: true (entry codex, 1 turn); key
+    points: inspect every static form the executor accepts including quoted and = forms; duplicates all
+    inspected so an overridden value with a destructive command still denies; orchestrator judged the
+    mapping; opus_escalation: false'
+- question_id: implement.deviation-auto-addition.task0003
+  packet_id: null
+  answered_at: '2026-11-19T22:58:00+09:00'
+  source: batch-safe-default
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: decline auto-addition of test-docs/mcp-bridge-args-json-exec-guard/task0001.tests.yaml
+  normalized_answer: declined
+  resolution_note: 'implement wake phase deviation auto-addition rule; task_id: task0003; path: test-docs/mcp-bridge-args-json-exec-guard/task0001.tests.yaml
+    (passes the shape check, not under a workflow control path); missing evidence part: identifier (the
+    deviation names no AC-n of task0003''s plan and no registered requirement id); the observable outcome
+    part was given (tests.test_tests_yaml_id_resolution fails on three renamed test ids); not added to
+    tasks.task0003.files; the containment check handles it as an ordinary deviation; codex_consulted:
+    false; opus_escalation: false'
+- question_id: develop.once-boundary.review-rework.round2
+  packet_id: null
+  answered_at: '2026-11-19T23:33:12+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - continue_into_implement
+  freeform: null
+  normalized_answer: continue into implement in the same --once launch
+  resolution_note: 'unlisted orchestrator decision: whether an applied review-sourced rework patch is
+    a --once phase boundary; options: end_turn_now / continue_into_implement; chosen: continue_into_implement;
+    not chosen: end_turn_now; codex_consulted: true (codex, 1 turn); key points: the boundary table lists
+    only verify-sourced rework, review did not reach completed, so the next pending step (implement) runs
+    in this launch; opus_escalation: false'
+- question_id: verify.round1.ts19-pre-change-judgment
+  packet_id: null
+  answered_at: '2026-11-20T00:38:38+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - record-failed
+  freeform: null
+  normalized_answer: record AC-11 and NFR3 as failed items
+  resolution_note: 'unlisted orchestrator decision in verify round 1: TS-19 is deny after the change,
+    but also deny at the base commit, against the documented allow-before premise (SPEC AC-11 / NFR3,
+    VERIFICATION Pre-change Reproduction); options: record-failed / pass-as-doc-inaccuracy; chosen: record-failed;
+    not chosen: pass-as-doc-inaccuracy; codex_consulted: true (codex, 1 turn); key points: the pre-change
+    allow is a stated verification condition, passing would falsify verification, rework should only correct
+    the documented pre-change expectation; opus_escalation: false'
+- question_id: review.round4.loop2.regressing-fix
+  packet_id: null
+  answered_at: '2026-11-20T02:05:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - revert-regressing-fix-only
+  freeform: null
+  normalized_answer: revert only the 3f7145c6c8c0b26a application, commit the other two loop-2 fixes
+  resolution_note: 'unlisted orchestrator decision in review round 4 auto-fix loop 2: the applied fix for
+    3f7145c6c8c0b26a (notion pair spoofing by an unquoted expansion) made the canonical notion pair exclusion
+    fail, turning six existing allow runner cases (TS-2, TS-9, TS-3, TS-4, TS-22 x2) and four unit tests
+    into failures; Phase R4 does not define the handling of an applied fix that breaks tests; options:
+    commit-all (A) / revert-regressing-fix-only (B) / revert-whole-loop (C); chosen: B; not chosen: A, C;
+    codex_consulted: true (codex, 1 turn); key points: the failures come only from the 3f7145c6c8c0b26a
+    change, removing it restores 1412/1412 runner cases, A would ship false denies that stop unattended
+    runs, C would discard two non-regressing fixes; 3f7145c6c8c0b26a is aborted for the auto-fix loop and
+    stays an open high; opus_escalation: false'

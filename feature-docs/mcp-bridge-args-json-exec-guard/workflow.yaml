@@ -1,0 +1,646 @@
+schema_version: 1
+feature: mcp-bridge-args-json-exec-guard
+created: '2026-11-19'
+base_branch: main
+goal: '# destructive-guard が mcp-bridge run --args-json の JSON エスケープで書いたコマンド置換をシェル実行型 MCP ツール宛てでも検出しない
+
+
+  種別: セキュリティ
+
+
+  ## 脆弱性の概要
+
+
+  `em-workflow/hooks/destructive-guard.py` は `mcp-bridge run` の `--args-json` を JSON として復号しない。シェルを実行する
+  MCP ツール宛ての呼び出しで、`command` の中のコマンド置換を JSON のエスケープ（例: `$(...)`）で書くと、置換の候補にならず再走査をすり抜ける。
+
+
+  ## 参照
+
+
+  - CVE / GHSA ID: 該当なし
+
+  - severity: medium
+
+  - 現在のバージョン: feature mcp-bridge-exec-tool-rescan の時点
+
+  - 修正済みバージョン: 無し
+
+
+  ## 攻撃シナリオ
+
+
+  シェルを実行する MCP ツール（例: desktop-commander の `start_process`）が mcp-bridge に登録された環境で、Bash から `mcp-bridge run
+  --mcp desktop-commander --tool start_process --args-json` を実行し、`command` に JSON エスケープで書いた置換を入れる。フックは置換を検出せず
+  allow にし、復号後の値を受け取った MCP ツールがシェルで評価する。
+
+
+  置換を使わずに破壊的なコマンドを平文で `command` に書く形も、変更前から allow になっている。フックは MCP の実行ツールに渡す引数の意味を解析していない。
+
+
+  ## 影響範囲
+
+
+  destructive-guard が止めるべき破壊的な git 操作・ファイル削除が、シェル実行型 MCP ツール経由で素通りする。feature mcp-bridge-exec-tool-rescan
+  が持ち込んだものではなく、それより前からある設計上の境界。
+
+
+  ## 完了の定義
+
+
+  - [ ] 攻撃シナリオが成立しない
+
+  - [ ] 修正版に追随している（修正版が無い場合は暫定緩和策の欄に対応を記載）
+
+  - [ ] notion の組以外の mcp-bridge run について、`--args-json` を復号して実行ツールの `command` をシェル入力として検査するか、宛先や実行文字列が静的に決まらない形を
+  ask に回すかを SPEC で決める（batch では ask が deny に降格する誤 deny の費用も考える）
+
+
+  ## 該当箇所
+
+
+  - `em-workflow/hooks/destructive-guard.py` の置換候補の収集（chunk_subs）と、mcp-bridge の `--args-json` を扱う判定
+
+  - review の stable_id: 553233b6be6ecdc3（feature mcp-bridge-exec-tool-rescan の review round 1）
+
+
+  ## 暫定緩和策
+
+
+  シェルを実行する MCP ツールを mcp-bridge に登録しない。
+
+
+  ## 追加の指示
+
+
+  - 不明点は Codex に相談し、比較してより良いと判断した選択肢を採用する。
+
+  '
+parent_branch: em-workflow/mcp-bridge-args-json-exec-guard/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.02
+      '1': 0.13
+      '2': 0.83
+      '3': 0.02
+    description_plus_code:
+      '0': 0.0
+      '1': 0.33
+      '2': 0.67
+      '3': 0.0
+  at: '2026-11-19T19:29:03+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover
+        -s tests
+      format_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 93a163ecdef293ffbd301e58743919d624e48fa2
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'UI を持たないフックの静的解析の修正、design-system 候補 0 件（create-spec.design-step: decide_autonomously
+    -> skipped）'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: completed
+  completed_at_commit: bd5eed8518b54901c5231a5bfe82c911a345b6ca
+- id: implement
+  status: completed
+  completed_at_commit: e7d1e3c50d966e43bd7aeecd436f47a49f821f4c
+  base_commit: 4b4dd2cf59441cb5adad8beb855c5905bd10716b
+- id: review
+  status: completed
+  completed_at_commit: a604d5a5c95fe0d89dc50f5ec46f37977bb56920
+- id: verify
+  status: completed
+  completed_at_commit: b9cde6640dd02f01c6fb3ea96a9d9bfab569c0bd
+  result: pass
+  round: 3
+  failed_items: []
+  passed_ids:
+  - TS-1
+  - TS-2
+  - TS-3
+  - TS-4
+  - TS-5
+  - TS-6
+  - TS-7
+  - TS-8
+  - TS-9
+  - TS-10
+  - TS-11
+  - TS-12
+  - TS-13
+  - TS-14
+  - TS-15
+  - TS-16
+  - TS-17
+  - TS-18
+  - TS-19
+  - TS-20
+  - TS-21
+  - TS-22
+  - TS-23
+  - TS-24
+  - TS-25
+  - TS-26
+  - TS-27
+  - TS-28
+  - TS-29
+  - TS-30
+  - AC-1
+  - AC-2
+  - AC-3
+  - AC-4
+  - AC-5
+  - AC-6
+  - AC-7
+  - AC-8
+  - AC-9
+  - AC-10
+  - AC-11
+  - AC-12
+  - AC-13
+  - AC-14
+  - AC-15
+  - AC-16
+  - AC-17
+  - TM-1
+  - TM-2
+  - TM-3
+  - TM-4
+  - TM-5
+  - TM-6
+  - TM-7
+  - TM-8
+  - NFR1
+  - NFR3
+  - NFR4
+  - NFR5
+- id: retrospect
+  status: completed
+  completed_at_commit: 4b483384eecd247e9338fc60b8d0fbb0097fffce
+tasks:
+  task0001:
+    title: Decode and inspect the --args-json value of mcp-bridge run statements
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_args_json.py
+    skills:
+    - backend-impl
+    domains:
+    - auth
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - FR8
+    - FR9
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: merged
+    branch: em-workflow/mcp-bridge-args-json-exec-guard/task0001
+    notes: null
+  task0002:
+    title: Update the in-code explanations of --args-json handling
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    skills: []
+    domains:
+    - input-handling
+    complexity: low
+    requirements:
+    - FR8
+    - FR10
+    - NFR2
+    - NFR3
+    - NFR4
+    status: merged
+    branch: em-workflow/mcp-bridge-args-json-exec-guard/task0002
+    notes: null
+  task0003:
+    title: Read mcp-bridge run flags as mcp-bridge does, and ask instead of skipping silently
+    plan: tasks/task0003.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_args_json.py
+    skills:
+    - backend-impl
+    domains:
+    - auth
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - FR8
+    - FR9
+    - FR10
+    - FR11
+    - FR12
+    - FR13
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    status: merged
+    branch: em-workflow/mcp-bridge-args-json-exec-guard/task0003
+    notes: null
+  task0004:
+    title: Update the in-code explanations to the revised --args-json judgment
+    plan: tasks/task0004.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    skills: []
+    domains:
+    - input-handling
+    complexity: low
+    requirements:
+    - FR8
+    - FR10
+    - NFR2
+    - NFR3
+    - NFR4
+    status: merged
+    branch: em-workflow/mcp-bridge-args-json-exec-guard/task0004
+    notes: null
+  task0005:
+    title: Read a lone dash in flag position as a positional word that ends the mcp-bridge run flag sequence
+    plan: tasks/task0005.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_args_json.py
+    skills:
+    - backend-impl
+    domains:
+    - auth
+    - input-handling
+    complexity: high
+    requirements:
+    - FR3
+    - FR6
+    - FR9
+    - FR10
+    - FR13
+    - NFR2
+    - NFR3
+    status: merged
+    provenance:
+      source: review
+      source_ids:
+      - ca547a9f716957df
+      review_round: 2
+    notes: null
+    branch: em-workflow/mcp-bridge-args-json-exec-guard/task0005
+  task0006:
+    title: Pin the inspection of a static --args-json value beside an equals-form flag word with a non-static
+      destination
+    plan: tasks/task0006.md
+    files:
+    - tests/test_destructive_guard_args_json.py
+    skills: []
+    domains:
+    - input-handling
+    complexity: low
+    requirements:
+    - FR3
+    - FR6
+    - FR13
+    status: merged
+    branch: em-workflow/mcp-bridge-args-json-exec-guard/task0006
+    provenance:
+      source: verify
+      source_ids:
+      - AC-17
+    notes: null
+review:
+  status: completed
+  rounds_completed: 4
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  - performance
+  residual_critical_high: 0
+  needs_rework: false
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary:
+    - perspective: performance
+      reason: フックは全 Bash 呼び出しで走り、JSON 復号と再走査の走査量上限（FR7 / NFR1）が差分の中心にあるため
+    cross_validation: true
+requirements:
+  FR1:
+    title: 対象の文
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0003
+    tests:
+    - TS-7
+    - TS-8
+    - TS-11
+  FR2:
+    title: notion の組は除外する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0003
+    tests:
+    - TS-9
+    - TS-29
+  FR3:
+    title: フラグの読み方と --args-json の値の再構成
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0003
+    - task0005
+    - task0006
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-17
+    - TS-20
+    - TS-23
+    - TS-24
+    - TS-25
+    - TS-26
+    - TS-30
+  FR4:
+    title: JSON の復号と全文字列の置換の再走査
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0003
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-6
+    - TS-7
+  FR5:
+    title: トップレベルの command のシェル入力としての再走査
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0003
+    tests:
+    - TS-5
+    - TS-8
+    - TS-10
+    - TS-12
+    - TS-18
+    - TS-19
+  FR6:
+    title: 静的に決まらない形は今の判定を保つ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0003
+    - task0005
+    - task0006
+    tests:
+    - TS-13
+    - TS-14
+    - TS-20
+    - TS-27
+    - TS-28
+  FR7:
+    title: 走査量の上限と、未検査を allow にしないこと
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0003
+    tests:
+    - TS-15
+    - TS-18
+    - TS-19
+    - TS-22
+  FR8:
+    title: 範囲外の記録
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS-10
+    - TS-13
+    - TS-14
+    - TS-27
+    - TS-28
+  FR9:
+    title: ケースの追加
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0003
+    - task0005
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
+    - TS-6
+    - TS-7
+    - TS-8
+    - TS-9
+    - TS-10
+    - TS-11
+    - TS-12
+    - TS-13
+    - TS-14
+    - TS-15
+    - TS-16
+    - TS-17
+    - TS-18
+    - TS-19
+    - TS-20
+    - TS-21
+    - TS-22
+    - TS-23
+    - TS-24
+    - TS-25
+    - TS-26
+    - TS-27
+    - TS-28
+    - TS-29
+    - TS-30
+  FR10:
+    title: コード内の説明の更新
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    tests: []
+  NFR1:
+    title: Performance
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0003
+    tests:
+    - TS-15
+  NFR2:
+    title: Fail-closed
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    tests:
+    - TS-16
+  NFR3:
+    title: Test procedure
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    - task0005
+    tests:
+    - TS-1
+    - TS-5
+    - TS-16
+  NFR4:
+    title: Version
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    tests: []
+  FR11:
+    title: 復元できない静的な語は ask にする
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0003
+    tests:
+    - TS-21
+  FR12:
+    title: ペイロードの展開数の使い切りは ask にする
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0003
+    tests:
+    - TS-22
+  FR13:
+    title: 単体テストの更新
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0003
+    - task0005
+    - task0006
+    tests: []
+  NFR5:
+    title: Maintainability
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0003
+    tests: []
+batch:
+  review_rework_count: 1
+  verify_rework:
+    rounds: 2
+    failed_id_counts:
+      AC-11: 1
+      NFR3: 1
+      AC-17: 1
+  infra_resume:
+    rounds: 0
+    cap: 2
