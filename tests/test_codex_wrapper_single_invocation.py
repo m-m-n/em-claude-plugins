@@ -88,9 +88,12 @@ REVIEWERS_REGISTRY_PATH = REPO_ROOT / "em-workflow" / "references" / "reviewers.
 # script's own text.
 FALLBACK_MARKER_PREFIXES = ("CODEX_FALLBACK:", "CODEX_FALLBACK_UNCONFIGURED:")
 
+# Refreshed by feature-docs/review-perspective-model-effort/tasks/task0001.md
+# (FR3): the usage line now carries `[--effort LEVEL]` right after
+# `[-m MODEL]`.
 USAGE_MESSAGE = (
     'Usage: run_codex_exec.sh <readonly|readwrite> [-C DIR] '
-    '[--output-schema F] [-m MODEL] [--litellm MODEL] "prompt"'
+    '[--output-schema F] [-m MODEL] [--effort LEVEL] [--litellm MODEL] "prompt"'
 )
 
 STUB_SOURCE = """#!/usr/bin/env python3

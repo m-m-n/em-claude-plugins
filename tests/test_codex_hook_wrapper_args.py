@@ -123,13 +123,16 @@ STOP_KEY_PREFIX = "hooks.Stop="
 MODEL = "test-model-xyz"
 MODES = ("readonly", "readwrite")
 
+# Refreshed by feature-docs/review-perspective-model-effort/tasks/task0001.md
+# (FR3): both usage lines now carry `[--effort LEVEL]` right after
+# `[-m MODEL]`.
 WORKFLOW_USAGE = (
     'Usage: run_codex_exec.sh <readonly|readwrite> [-C DIR] '
-    '[--output-schema F] [-m MODEL] [--litellm MODEL] "prompt"'
+    '[--output-schema F] [-m MODEL] [--effort LEVEL] [--litellm MODEL] "prompt"'
 )
 REVIEW_USAGE = (
     'Usage: run_codex_exec.sh <readonly|readwrite> [-C DIR] '
-    '[--output-schema F] [-m MODEL] "prompt"'
+    '[--output-schema F] [-m MODEL] [--effort LEVEL] "prompt"'
 )
 
 # Launch paths: (label, plugin scripts dir, wrapper-specific args placed

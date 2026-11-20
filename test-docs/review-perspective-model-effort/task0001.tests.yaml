@@ -1,0 +1,99 @@
+task_id: task0001
+baseline_failures: []
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_codex_wrapper_model_flag.EffortOptionLaunchTest.test_readonly_effort_replaces_the_xhigh_pair
+    red_confirmed: true
+    red_reason: >-
+      Before the wrapper edit, both plugin copies answered
+      `readonly --effort high "prompt"` with exit 1 and
+      "ERROR: Unknown flag '--effort'", so the test failed with
+      AssertionError: 1 != 0 : ERROR: Unknown flag '--effort' for em-workflow
+      and for em-review.
+  AC-2:
+    tests:
+      - tests.test_codex_wrapper_model_flag.EffortDefaultUnchangedTest.test_readonly_without_effort_keeps_one_xhigh_pair_after_the_sandbox_pair
+      - tests.test_codex_wrapper_model_flag.EffortDefaultUnchangedTest.test_readwrite_without_effort_has_no_effort_element
+      - tests.test_codex_wrapper_model_flag.EffortDefaultUnchangedTest.test_litellm_route_without_effort_keeps_the_mode_default
+      - tests.test_codex_hook_wrapper_args.TestConfigIsolationIsPreserved.test_reasoning_effort_override_is_still_present_in_readonly
+      - tests.test_codex_hook_wrapper_args.TestStopRegistrationLeavesTheLaunchContractAlone.test_stop_ac5_isolation_flags_and_overrides_survive_next_to_the_stop_value
+      - tests.test_codex_wrapper_single_invocation.TestArgumentHandlingSurfaceUnchanged.test_accepted_flag_set_on_the_launch_is_unchanged
+    red_confirmed: false
+    red_reason: >-
+      The criterion is "the default argv does not move" (NFR1, D3), so the
+      behavior pre-exists and no red state occurred: all six tests passed
+      before the wrapper edit and were kept green through it. The three new
+      tests pin the exact single xhigh pair directly after the sandbox pair,
+      the absence of any effort element in readwrite, and both on the
+      --litellm route; the three existing tests are the argv tests named in
+      the criterion and their argv assertions are not edited.
+      tests/test_codex_litellm_launch_home_location.py and
+      tests/test_codex_repo_hook_trust.py (searched by relative path and by
+      basename) carry no effort assertion; they read the same wrapper files
+      and stayed green.
+  AC-3:
+    tests:
+      - tests.test_codex_wrapper_model_flag.EffortOptionLaunchTest.test_readwrite_effort_adds_one_pair
+      - tests.test_codex_wrapper_model_flag.EffortOptionLaunchTest.test_litellm_route_effort_replaces_the_xhigh_pair
+      - tests.test_codex_wrapper_model_flag.EffortOptionLaunchTest.test_litellm_route_accepts_effort_before_litellm
+      - tests.test_codex_wrapper_model_flag.EffortOptionLaunchTest.test_model_with_litellm_still_exits_1_when_effort_is_given
+    red_confirmed: true
+    red_reason: >-
+      Before the wrapper edit every case failed on "ERROR: Unknown flag
+      '--effort'" (AssertionError: 1 != 0 for the readwrite and the litellm
+      launches; for the -m plus --litellm case the unknown-flag error came
+      before the "-m and --litellm cannot be combined" error the test expects).
+  AC-4:
+    tests:
+      - tests.test_codex_wrapper_model_flag.EffortValueRejectionTest.test_missing_value_is_rejected_with_one_fixed_line
+      - tests.test_codex_wrapper_model_flag.EffortValueRejectionTest.test_non_matching_value_is_rejected_with_one_fixed_line
+      - tests.test_codex_wrapper_model_flag.EffortValueRejectionTest.test_litellm_route_rejects_a_non_matching_value
+      - tests.test_codex_wrapper_model_flag.EffortValueRejectionTest.test_the_rejected_value_is_never_echoed
+    red_confirmed: true
+    red_reason: >-
+      Before the wrapper edit the missing-value and non-matching-value cases
+      failed with AssertionError: "ERROR: Unknown flag '--effort'\n" !=
+      'ERROR: --effort requires an effort argument\n' (and the same against the
+      value-rule line). test_the_rejected_value_is_never_echoed already held
+      then, because the unknown-flag line never echoes the value either; it
+      guards the final message and is not the red of this criterion.
+  AC-5:
+    tests:
+      - tests.test_codex_wrapper_model_flag.EffortCombinationTest.test_effort_with_model_workdir_and_schema_in_any_order
+      - tests.test_codex_wrapper_model_flag.EffortCombinationTest.test_effort_with_litellm_workdir_and_schema_in_any_order
+      - tests.test_codex_wrapper_model_flag.EffortCombinationTest.test_the_last_effort_wins
+      - tests.test_codex_wrapper_model_flag.EffortCombinationTest.test_the_last_effort_wins_on_the_litellm_route
+    red_confirmed: true
+    red_reason: >-
+      Before the wrapper edit every order of the four option groups failed
+      with the unknown-flag exit 1 ("AssertionError: 1 != 0 : ERROR: Unknown
+      flag '--effort'"), and the repeated-option cases failed the same way.
+  AC-6:
+    tests:
+      - tests.test_codex_hook_wrapper_args.TestWrapperContractIsUnchanged.test_usage_text_is_unchanged
+      - tests.test_codex_wrapper_single_invocation.TestArgumentHandlingSurfaceUnchanged.test_missing_all_arguments_produces_usage_message
+      - tests.test_codex_wrapper_single_invocation.TestArgumentHandlingSurfaceUnchanged.test_mode_only_with_no_further_args_produces_usage_message
+      - tests.test_codex_wrapper_model_flag.EffortWrapperTextTest.test_each_wrapper_documents_the_effort_option_in_its_header
+      - tests.test_codex_wrapper_model_flag.EffortWrapperTextTest.test_each_wrapper_has_codex_exec_once_in_non_comment_lines
+    red_confirmed: true
+    red_reason: >-
+      With the three pinned usage literals refreshed and the wrappers not yet
+      edited, test_usage_text_is_unchanged failed for both copies (the old
+      usage line lacked "[--effort LEVEL]"), both usage-message tests in
+      test_codex_wrapper_single_invocation failed the same way, and the header
+      test failed because "--effort LEVEL" was absent from the header comment.
+      The codex-exec-once test already held and stays green (D5).
+  AC-7:
+    tests:
+      - tests.test_codex_wrapper_model_flag.EffortTestModuleIsStdlibOnlyTest.test_this_module_imports_only_the_standard_library
+      - tests.test_codex_wrapper_model_flag.EffortTestModuleIsStdlibOnlyTest.test_the_import_reader_flags_a_third_party_import
+    red_confirmed: false
+    red_reason: >-
+      The criterion constrains the new tests themselves (standard library and
+      the PATH stub only) plus the suite result, so there is no behavior that
+      could be absent before the implementation: the import check passed as
+      soon as it was written. Its matcher is proven on a forged source that
+      imports yaml and requests. The suite result is the project test command
+      run after the implementation.
