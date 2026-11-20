@@ -703,6 +703,39 @@ class TestFlagReading(unittest.TestCase):
                 self.assertTrue(str(value.word).endswith('"command":"ls"}'), str(value.word))
                 self.assertIn("args-json=", str(value.word))
 
+    def test_an_unquoted_backslash_escaped_equals_ends_the_name_part(self):
+        """args-json-quoting-bypass TS-18 (FR2, FR9): outside quotes a
+        backslash-escaped `=` ends the name part of a non-static flag word the
+        way an unquoted `=` does, so the static `--args-json` value after it is
+        inspected; inside double quotes `\\=` keeps its backslash, the name is
+        not a known one, and the statement stays nothing to do."""
+        for label, command in (
+            ("server", 'mcp-bridge run --mcp\\="$S" --args-json ' + self.VALUE),
+            ("session", 'mcp-bridge run --session\\="$SID" --args-json ' + self.VALUE),
+        ):
+            with self.subTest(label):
+                spy = Spy(command)
+                self.assertEqual([KIND_INSPECTED], spy.kinds())
+                self.assertEqual(("ls",), sole_value(spy.results[0]).commands)
+        with self.subTest("escaped equals inside double quotes"):
+            command = 'mcp-bridge run "--mcp\\=$S" --args-json ' + self.VALUE
+            self.assertEqual([KIND_NOTHING], self.kinds(command))
+
+    def test_the_name_reading_docstring_states_the_escaped_equals(self):
+        """args-json-quoting-bypass TS-18 (FR10): the docstring of
+        _flag_equals_prefix_name() says that an unquoted `=` or an unquoted
+        backslash-escaped `=` ends the name part and that a `\\=` inside double
+        quotes keeps its backslash."""
+        doc = " ".join(inspect.getdoc(GUARD._flag_equals_prefix_name).split())
+        for phrase in (
+            "an unquoted `=` or an unquoted backslash-escaped `=`",
+            "either one ends the name part",
+            "A `\\=` inside double quotes",
+            "keeps its backslash",
+        ):
+            with self.subTest(phrase):
+                self.assertIn(phrase, doc)
+
     def test_single_dash_flags_are_inspected(self):
         command = "mcp-bridge run -mcp x -tool y -args-json " + self.VALUE
         self.assertEqual([KIND_INSPECTED], self.kinds(command))
