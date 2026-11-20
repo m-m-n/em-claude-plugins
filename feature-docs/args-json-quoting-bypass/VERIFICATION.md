@@ -24,8 +24,9 @@ TS-1 to TS-18 are SPEC.md's scenarios. TS-19 to TS-23 are added here for the
 SPEC acceptance criteria and non-functional requirements that SPEC.md gives no
 scenario number (AC-6 docstring part, AC-10, AC-11, NFR5, NFR6). TS-24 to
 TS-32 are added by the review round 2 rework (task0005) for FR1's
-single-word-certain judgment under nameref (`declare -n`) declarations. In
-TS-24 to TS-31, `A=(…)` abbreviates
+single-word-certain judgment under nameref (`declare -n`) declarations. TS-33
+is added by the verify round 1 rework (task0006), which moves the chunk
+derivation links out of `statements()`. In TS-24 to TS-31, `A=(…)` abbreviates
 `A=(json --mcp desktop-commander --tool start_process)` and `MB` abbreviates
 `mcp-bridge run --mcp notion --tool notion-create-comment --format "$r" --args-json '{"command":"git branch -D example"}'`;
 the runner cases hold the commands written out in full.
@@ -52,7 +53,7 @@ the runner cases hold the commands written out in full.
 | TS-18 | `TestFlagReading`: `--mcp\="$S"` and `--session\="$SID"` before a static `--args-json`; `"--mcp\=$S"` | KIND_INSPECTED with the decoded command; KIND_NOTHING for the double-quoted form | Unit |
 | TS-19 | Docstrings and comment (SPEC AC-6 docstring part, FR6, FR7, FR10): O2 (8) in the `_mcp_bridge_args_json_chunks()` and `extract_shell_payload_anchored()` docstrings with SPEC's scope; the FR3 form named in the `_read_static_word()` docstring, step 4 and the `ARGS_JSON_UNRESTORABLE_ASK` comment; the FR10 places describe the new behaviour | `TestDocstring` (with the O2 (8) pin) passes; inspection confirms each place | Unit + Manual |
 | TS-20 | Subtest 'equals form with a destination' of `test_a_destination_that_is_not_static_is_inspected` (SPEC AC-10, FR11) | Passes (KIND_INSPECTED) | Unit |
-| TS-21 | Regression suite (SPEC AC-11, NFR1, NFR2, NFR3): the runner, `tests.test_destructive_guard_args_json` and `unittest discover -s tests` | All pass; every runner case finishes within the runner's `GUARD_TIMEOUT_SECONDS`; the diff of `destructive-guard-cases.json` adds lines only | Integration |
+| TS-21 | Regression suite (SPEC AC-11, NFR1, NFR2, NFR3): the runner, `tests.test_destructive_guard_args_json` and `unittest discover -s tests` | All pass; every runner case finishes within the runner's `GUARD_TIMEOUT_SECONDS`; the diff of `destructive-guard-cases.json` against `workflow.implement.base_commit` deletes no case and changes no existing case's elements: it adds lines, and the only existing line it changes is the formerly-last case line, which gains a trailing comma and nothing else | Integration |
 | TS-22 | Structure (NFR6): `TestStructure` and the single-word-certain helper | `TestStructure` passes with no change to the test; the helper is one function referenced only from `_args_json_notion_pair()`; `statements()` has no diff | Unit + Manual |
 | TS-23 | Version (NFR5): the feature diff against `workflow.implement.base_commit` | `em-workflow/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` are not in the diff | Manual |
 | TS-24 | `A=(…); echo $(declare -n r='A[@]'; echo $(MB))`: the nameref is declared only in the middle shell of two nested command substitutions (1d971862e2458376, a3fdb05c00db3c03, 21b0ef3d5aaa59ae) | deny (pre-fix allow) | Integration (runner) |
@@ -64,6 +65,7 @@ the runner cases hold the commands written out in full.
 | TS-30 | `A=(…); command -- declare -n r='A[@]'; MB` and the same with `command -p --` (7bb299da67faace7) | deny, both (pre-fix allow for `command --`) | Integration (runner) |
 | TS-31 | Notion call with `--session "$SID"` and a static `--args-json` holding `{"command":"git branch -D example"}`, inside one and inside two nested command substitutions, with no nameref declaration anywhere | allow, both | Integration (runner) |
 | TS-32 | `statements()` with the `Spy` on every TS-27 to TS-30 command | KIND_INSPECTED for the `mcp-bridge` statement of each; each glued form gives the same kind as its spaced form | Unit |
+| TS-33 | `bash -c` payload that assigns `A` and declares `r` as a nameref to `A[@]`, then runs `MB` (with a double-quoted JSON value) inside a command substitution in the same payload (TS-22, verify round 1) | deny | Integration (runner) |
 
 ## Code Quality Verification
 - Format: none configured (`format_command` is empty).
@@ -93,23 +95,23 @@ the runner cases hold the commands written out in full.
 ### Functional Requirements Coverage
 | Requirement | Tasks | Verification |
 |-------------|-------|--------------|
-| FR1 | task0001, task0005 | TS-1, TS-2, TS-3, TS-4, TS-5, TS-17, TS-24 to TS-32 |
+| FR1 | task0001, task0005, task0006 | TS-1, TS-2, TS-3, TS-4, TS-5, TS-17, TS-24 to TS-33 |
 | FR2 | task0002 | TS-6, TS-7, TS-18 |
 | FR3 | task0003 | TS-8, TS-9, TS-13, TS-14 |
 | FR4 | task0003 | TS-10, TS-11, TS-15 |
 | FR5 | task0004 | TS-16 |
 | FR6 | task0001 | TS-12, TS-19 |
 | FR7 | task0003 | TS-8, TS-9, TS-19 |
-| FR8 | task0001, task0002, task0003, task0005 | TS-1 to TS-12, TS-24 to TS-31 |
+| FR8 | task0001, task0002, task0003, task0005, task0006 | TS-1 to TS-12, TS-24 to TS-31, TS-33 |
 | FR9 | task0001, task0002, task0003, task0004, task0005 | TS-13 to TS-18, TS-32 |
 | FR10 | task0001, task0002, task0003 | TS-19 |
 | FR11 | task0002 | TS-20 |
 | NFR1 | task0004 | TS-16, TS-21 |
-| NFR2 | task0001, task0002, task0003, task0005 | TS-8, TS-9, TS-21 |
-| NFR3 | task0001, task0002, task0003, task0004, task0005 | TS-21 |
+| NFR2 | task0001, task0002, task0003, task0005, task0006 | TS-8, TS-9, TS-21 |
+| NFR3 | task0001, task0002, task0003, task0004, task0005, task0006 | TS-21 |
 | NFR4 | task0004 | TS-16 |
-| NFR5 | task0001, task0002, task0003, task0004, task0005 | TS-23 |
-| NFR6 | task0001, task0004, task0005 | TS-22 |
+| NFR5 | task0001, task0002, task0003, task0004, task0005, task0006 | TS-23 |
+| NFR6 | task0001, task0004, task0005, task0006 | TS-22 |
 
 ## Manual Testing (E2E Not Possible)
 SPEC.md lists no existing E2E tests and no E2E run command, so there is no E2E
@@ -129,7 +131,7 @@ section.
 - TM-1: the notion-pair exclusion applies only to single-word-certain value
   words — checked by TS-1, TS-2, TS-3, TS-4 (deny) and TS-17; under nameref
   declarations in enclosing shells, behind redirections and after
-  `command --` — checked by TS-24 to TS-30 (deny) and TS-32.
+  `command --` — checked by TS-24 to TS-30, TS-33 (deny) and TS-32.
 - TM-2: legitimate notion calls stay allow — checked by TS-5, TS-17, TS-31 and
   the existing notion-pair allow cases (AC-2).
 - TM-3: an unquoted backslash-escaped `=` is the `=` separator — checked by
@@ -145,7 +147,7 @@ section.
 ## Verification Summary
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
-| Runner scenarios (TS-1 to TS-12, TS-24 to TS-31) | 20 | 20 | 0 | 0 |
+| Runner scenarios (TS-1 to TS-12, TS-24 to TS-31, TS-33) | 21 | 21 | 0 | 0 |
 | Unit scenarios (TS-13 to TS-18, TS-20, TS-32) | 8 | 8 | 0 | 0 |
 | Docstrings / structure (TS-19, TS-22) | 2 | 2 | 0 | 2 |
 | Regression suite (TS-21) | 1 | 1 | 0 | 0 |

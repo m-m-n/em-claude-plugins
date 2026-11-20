@@ -61,6 +61,7 @@ its body are owned by no task and do not change.
 | `_read_double_quoted(body)` | Restores a double-quoted body | Owned by task0003, which may change its result shape; its callers are all inside task0003's regions. No other task adds a call to it. | task0003 only |
 | `_queue_args_json_chunks(...)` | Queues the decision's chunks | Signature unchanged; queued entries and their origin positions (anchor, statement index, token index, ordinal) identical to base for every input. | Changed by task0004; called by `statements()`, unchanged |
 | `ArgsJsonResult`, `ArgsJsonValue`, `WORD_*` constants, `ARGS_JSON_UNRESTORABLE_ASK` value | Shared result and ask shapes | Unchanged by every task (only the comment above the ask constant changes, in task0003). The reason id `args-json-unrestorable` and its text stay as they are. | All |
+| Chunk derivation link (task0006) | The link from a derived chunk's marked text to the chunk it was derived from, which `_args_json_nameref_declared()` (task0005) walks, and the "may hold a nameref" result of a chunk whose unquoted heredoc body holds a current-shell substitution | Set by code outside `statements()`, which stays byte-identical to the implement base commit. The link fields of `_MarkedText` (`_is_derived`, `_outer_marked`, `_nameref_declared_cache`) and the chain walk keep their meaning; the link is in place before the notion-pair predicate is first asked about the chunk. When `_queue_args_json_chunks()` sets it, the collaborator gains that registration step only: its signature, its queued entries and their origin positions stay as task0004's row above states. | Built by task0006; read by the task0005 chain walk |
 
 ## Conventions
 
@@ -80,8 +81,13 @@ its body are owned by no task and do not change.
       `mcp-bridge-args-json-exec-guard TS-23:`.
     - task0003: after the case whose label starts with
       `mcp-bridge-args-json-exec-guard TS-29:`.
-  - No existing line changes, not even its trailing comma, and no case is
-    deleted (NFR2, FR8). Inserted lines each end with a comma.
+  - No case is deleted and no existing case's elements change (NFR2, FR8).
+    An inserted block placed between two existing cases leaves every
+    existing line unchanged, its trailing comma included, and each inserted
+    line ends with a comma. When cases are appended after the file's last
+    case, that formerly-last line gains the trailing comma the JSON list
+    needs and nothing else on it changes; the new last line has no trailing
+    comma.
 - **Unit tests** (`tests/test_destructive_guard_args_json.py`):
   - No task edits the module docstring, the imports or the module-level
     helpers; the existing imports suffice. Helpers a task needs live inside

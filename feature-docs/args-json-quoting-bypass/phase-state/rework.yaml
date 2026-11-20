@@ -1,11 +1,11 @@
 schema_version: 1
 feature: args-json-quoting-bypass
 phase: rework
-status: dispatching
+status: completed
 generation: 3
 base_revision: b74304bc75d55ac2337eb5b9c49663f495d9fef9
 last_input_digest: sha256:4e28527ae0ad47209b778836c5eb986e7cff7a9c508d5f20c7c9bb12efb6f207
-active_request_id: rework-run-0003
+active_request_id: null
 packets:
   rework-q0001:
     status: obsolete
@@ -57,7 +57,7 @@ worker_runs:
   - feature-docs/args-json-quoting-bypass/VERIFICATION.md
   - feature-docs/args-json-quoting-bypass/tasks/task0005.md
 - request_id: rework-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:4e28527ae0ad47209b778836c5eb986e7cff7a9c508d5f20c7c9bb12efb6f207
   dispatch_digest_inputs:
     em-workflow/references/contracts/rework-planner-contract.md: sha256:0c9f82099c3546b6b675856539d8244628b7170ce7a4442ec951e13e16577ec3
@@ -75,15 +75,26 @@ worker_runs:
     feature-docs/args-json-quoting-bypass/tasks/task0004.md: sha256:2106dcfe0d937c4c48bb5b031120871ad21b12ae4b48c0b1a58f6c81ed6ef1a7
     feature-docs/args-json-quoting-bypass/tasks/task0005.md: sha256:b40b2854d84429cc24c0184c63f0a0c900b82937fb9abdbd57f82a5954a6ebc6
     feature-docs/args-json-quoting-bypass/workflow.yaml: sha256:a4e1f71f30873897ccad5907f3a95c69cc02701a2624b713b7a3906e2670a0ac
+  self_write_set:
+  - feature-docs/args-json-quoting-bypass/IMPLEMENTATION.md
+  - feature-docs/args-json-quoting-bypass/VERIFICATION.md
+  - feature-docs/args-json-quoting-bypass/tasks/task0006.md
 artifacts:
 - path: feature-docs/args-json-quoting-bypass/tasks/task0005.md
   sha256: sha256:b40b2854d84429cc24c0184c63f0a0c900b82937fb9abdbd57f82a5954a6ebc6
 - path: feature-docs/args-json-quoting-bypass/VERIFICATION.md
-  sha256: sha256:0f320f18f60089ec549447b9dde440807673f105e3b29dcdfb211dea828d9416
+  sha256: sha256:21047b386b33a7aa2593536ffaa483d28eda65e80091a44a3f9e9d12f60f3faf
+- path: feature-docs/args-json-quoting-bypass/tasks/task0006.md
+  sha256: sha256:8317eccd348edccbf542ed4b8432446001053fc2f6ce7e079d11ebc6b2cc0e69
+- path: feature-docs/args-json-quoting-bypass/IMPLEMENTATION.md
+  sha256: sha256:56793642ea7d7780112ad59bf6db741b9aac23239c2cd8dfd252b80d003e6a59
 patches:
 - patch_id: rework-run-0002-p0001
   status: applied
   applied_at: '2026-11-20T23:20:01+09:00'
+- patch_id: rework-run-0003-p0001
+  status: applied
+  applied_at: '2026-11-21T01:59:35+09:00'
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
