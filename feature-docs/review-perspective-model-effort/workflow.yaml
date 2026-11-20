@@ -156,7 +156,7 @@ tasks:
     - FR7
     - NFR4
     - NFR6
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/review-perspective-model-effort/task0003
   task0004:
