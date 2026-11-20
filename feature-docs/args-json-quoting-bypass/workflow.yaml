@@ -56,7 +56,7 @@ workflow:
   status: completed
   completed_at_commit: 4618bd2b8c514e4b0f0cea0984a7347fb766b0e1
 - id: implement
-  status: pending
+  status: in_progress
   completed_at_commit: 0cd9fa4b0907dce2a9e8543e17ae87e72c3ef3c1
   base_commit: 996e1443a63b46e552a97d2ad7e2d2f96ae8f778
 - id: review
