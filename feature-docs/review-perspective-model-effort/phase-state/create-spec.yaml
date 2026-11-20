@@ -4,14 +4,143 @@ phase: create-spec
 status: dispatching
 generation: 1
 base_revision: b7f2d5f8d1b9a42280dc66f683242f4ef7f2321b
-last_input_digest: sha256:bcea6b7dafa997ccb654a40fa36469922bce6b2b65be05d5f158020c0e40671f
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+last_input_digest: sha256:4af5646d87dbf4128d9f9f7f1e51d4189dc07c077f38250399b1574198026c13
+active_request_id: create-spec-run-0002
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-11-20T22:23:15+09:00'
+    questions:
+    - question_id: wrapper.effort-flag
+      status: answered
+    - question_id: wrapper.effort-readwrite
+      status: answered
+    - question_id: wrapper.effort-litellm
+      status: answered
+    - question_id: docs.readme-chain-table
+      status: answered
+    - question_id: skill.security-review-model-scope
+      status: answered
+    - question_id: record.effort-in-round-record
+      status: answered
+    - question_id: version.bump-level
+      status: answered
+    - question_id: design-step
+      status: answered
+answers:
+  wrapper.effort-flag:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-20T22:23:15+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - effort_flag_pattern
+    freeform: null
+    normalized_answer: --effort LEVEL を受け取り、^[a-z]+$ に一致すればそのまま渡す。値が無い・形式に合わない場合は
+      exit 1 で codex を起動しない
+    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation,
+      record_as_assumption); codex_consulted: true (entry codex, 1 turn); Codex suggestion
+      mapped onto option effort_flag_pattern; orchestrator judged mapping; opus_escalation:
+      false'
+  wrapper.effort-readwrite:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-20T22:23:15+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - apply_in_readwrite
+    freeform: null
+    normalized_answer: readwrite でも指定があれば -c で effort を付ける。指定が無ければ何も付けない
+    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation,
+      record_as_assumption); codex_consulted: true (entry codex, 1 turn); Codex suggestion
+      mapped onto option apply_in_readwrite; orchestrator judged mapping; opus_escalation:
+      false'
+  wrapper.effort-litellm:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-20T22:23:15+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - allow_with_litellm
+    freeform: null
+    normalized_answer: --litellm ルートでも指定した effort が xhigh の代わりに付く
+    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation,
+      record_as_assumption); codex_consulted: true (entry codex, 1 turn); Codex suggestion
+      mapped onto option allow_with_litellm; orchestrator judged mapping; opus_escalation:
+      false'
+  docs.readme-chain-table:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-20T22:23:15+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - fix_order_and_note_effort
+    freeform: null
+    normalized_answer: 両 README のチェーン表と PINNED_CHAINS を codex → litellm muse-spark
+      に直し、effort も model と同じ経路でラッパーに渡すことを 1 文足す
+    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation,
+      record_as_assumption); codex_consulted: true (entry codex, 1 turn); Codex suggestion
+      mapped onto option fix_order_and_note_effort; orchestrator judged mapping; opus_escalation:
+      false'
+  skill.security-review-model-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-20T22:23:15+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - fix_all_contradictions
+    freeform: null
+    normalized_answer: 11・12 行目と手順 2・3 を reviewers.yaml の effort を使う形に直す。対象は security
+      観点のまま
+    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation,
+      record_as_assumption); codex_consulted: true (entry codex, 1 turn); Codex suggestion
+      mapped onto option fix_all_contradictions; orchestrator judged mapping; opus_escalation:
+      false'
+  record.effort-in-round-record:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-20T22:23:15+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - record_effort
+    freeform: null
+    normalized_answer: effort を渡した codex の run に effort を記録する（両プラグインの review-phase.md）
+    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation,
+      record_as_assumption); codex_consulted: true (entry codex, 1 turn); Codex suggestion
+      mapped onto option record_effort; orchestrator judged mapping; opus_escalation:
+      false'
+  version.bump-level:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-20T22:23:15+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - minor_bump
+    freeform: null
+    normalized_answer: em-workflow と em-review の version の minor を手で上げる（plugin.json
+      と marketplace.json）
+    resolution_note: 'gate: create-spec.requirement-clarification (policy codex_consultation,
+      record_as_assumption); codex_consulted: true (entry codex, 1 turn); Codex suggestion
+      mapped onto option minor_bump; orchestrator judged mapping; opus_escalation:
+      false'
+  design-step:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-20T22:23:15+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - skip_design
+    freeform: null
+    normalized_answer: 設計ステップは skip（requirements-analyst の推奨を採用）
+    resolution_note: 'gate: create-spec.design-step (policy select decide_autonomously
+      -> analyst recommendation skip_design accepted)'
 worker_runs:
-  - request_id: create-spec-run-0001
-    status: dispatched
-    input_digest: sha256:bcea6b7dafa997ccb654a40fa36469922bce6b2b65be05d5f158020c0e40671f
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:bcea6b7dafa997ccb654a40fa36469922bce6b2b65be05d5f158020c0e40671f
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:4af5646d87dbf4128d9f9f7f1e51d4189dc07c077f38250399b1574198026c13
 artifacts: []
 patches: []
 progress_fingerprint: null
