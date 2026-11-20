@@ -1,0 +1,291 @@
+round: 1
+executed_at: '2026-11-20T23:46:00+09:00'
+scope:
+  review_mode: diff
+  base_commit: 55190058f9bc0475cd979574aa871cd215c5213a
+  head_commit: b324080f03adf99ce13f0f246009c9f68e46a6c7
+  changed_files:
+  - .claude-plugin/marketplace.json
+  - .claude/skills/security-review-model/SKILL.md
+  - em-review/.claude-plugin/plugin.json
+  - em-review/README.md
+  - em-review/agents/codex-reviewer.md
+  - em-review/references/review-phase.md
+  - em-review/references/review-protocol.md
+  - em-review/references/reviewers.yaml
+  - em-review/scripts/run_codex_exec.sh
+  - em-workflow/.claude-plugin/plugin.json
+  - em-workflow/README.md
+  - em-workflow/agents/codex-reviewer.md
+  - em-workflow/references/review-phase.md
+  - em-workflow/references/review-protocol.md
+  - em-workflow/references/reviewers.yaml
+  - em-workflow/scripts/run_codex_exec.sh
+  - test-docs/review-perspective-model-effort/task0001.tests.yaml
+  - test-docs/review-perspective-model-effort/task0002.tests.yaml
+  - test-docs/review-perspective-model-effort/task0003.tests.yaml
+  - test-docs/review-perspective-model-effort/task0004.tests.yaml
+  - test-docs/review-perspective-model-effort/task0005.tests.yaml
+  - test-docs/review-perspective-model-effort/task0006.tests.yaml
+  - tests/test_codex_hook_wrapper_args.py
+  - tests/test_codex_reviewer_effort_docs.py
+  - tests/test_codex_wrapper_model_flag.py
+  - tests/test_codex_wrapper_single_invocation.py
+  - tests/test_contributor_tier_criteria.py
+  - tests/test_effort_user_docs.py
+  - tests/test_llm_led_review_user_docs.py
+  - tests/test_reproduction_reviewer_instructions.py
+  - tests/test_review_perspective_model_effort_version_bump.py
+  - tests/test_review_phase_effort_docs.py
+  - tests/test_reviewer_roles_protocol.py
+  - tests/test_reviewers_primary_chains.py
+  - tests/test_tier_record_schema_v2.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - spec
+  - performance
+  - architecture
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: architecture@s1#0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: architecture@s2#0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: comprehensive@s1#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: comprehensive@s2#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: performance@s1#0
+  perspective: performance
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: performance@s2#0
+  perspective: performance
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: security@s1#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: security@s2#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 04f8eeb0f6d415be
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/review-phase.md
+  line: 485
+  title: R2b のフォールバックが Codex 専用の effort を LiteLLM / Claude に引き継ぐ
+  description: 'R2（202〜209行）は codex エントリの `effort: E` を観点の input block に加える。R2b（485〜489行）は、chain walk
+    のすべての dispatch（chain-exhaustion の Claude フォールバックを含む）に「Phase R2 がその観点に組み立てた同じ review-protocol input
+    block」を渡すよう指示している。codex が `rate_limited` などで skip して LiteLLM や Claude に進むと、文面どおりなら `effort` が残る。review-protocol.md
+    の Inputs（61〜64行）と SPEC FR7 は、Claude reviewer と litellm reviewer は effort を受け取らないと定めており、矛盾する。R2 の『Only
+    this bullet adds `effort`』は R2 の初回選択にしか効かない。Phase R4 の再レビューも R2b をそのまま使うので同じ。architecture@s1#0 と spec#0
+    も同じ箇所を独立に指摘した。'
+  suggestion: R2b の 485〜489 行を書き直す。共通の入力項目は引き継ぎ、`model` と `effort` は各 hop の chain エントリから組み立て直す。`effort`
+    は送信先が codex で、そのエントリが値を持つときだけ付け、Claude フォールバックには付けない。review-phase.md を固定しているハッシュのテストは NFR6 の慣例どおり更新し、R2b
+    の文面を確かめるテストを足す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 90
+  resolution: deferred
+  resolution_reason: 'medium: below the auto-fix candidate threshold (critical/high only); left for the
+    human reviewer'
+- stable_id: 53f0b14aaf286786
+  severity: medium
+  category: spec
+  file: em-review/references/review-phase.md
+  line: 547
+  title: R5 の記録例の model / effort がレジストリの値と食い違う
+  description: 'SPEC FR8 は R5 の perspective_runs の例と注記を effort 記録の対象に含める。em-review R5 の 547 行は performance
+    の codex 実行を `model: gpt-6.2-astra, effort: high` としているが、em-review/references/reviewers.yaml の 76 行と
+    FR2 は `gpt-6.2-sol` / `xhigh`。em-workflow/references/review-phase.md の 1133 行は security の codex 実行を
+    `effort: high` としているが、em-workflow/references/reviewers.yaml の 60 行と FR2 は `xhigh`。評価者の読み取りでは、em-review
+    の 544 行の security の codex 行にも、レジストリが model と effort を持つのに両方とも付いておらず、548〜550 行の注記の規則と合わない。例を写すと、実際に渡した値と違う記録になる。architecture@s1#0
+    と comprehensive@s2#0 も独立に指摘した。'
+  suggestion: 'em-review の 547 行を `model: gpt-6.2-sol, effort: xhigh` に、544 行に `model: gpt-6.2-astra,
+    effort: xhigh` を加え、em-workflow の 1133 行を `effort: xhigh` に直す。両ファイルを固定しているハッシュ（tests/test_tier_record_schema_v2.py
+    など）を NFR6 の慣例どおり更新する。'
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 90
+  resolution: deferred
+  resolution_reason: 'medium: below the auto-fix candidate threshold (critical/high only); left for the
+    human reviewer'
+- stable_id: ea24c3b34698d92d
+  severity: medium
+  category: comprehensive
+  file: .claude/skills/security-review-model/SKILL.md
+  line: 51
+  title: security-review-model の更新手順が EXPECTED_CODEX_ENTRIES の更新を欠く
+  description: 手順 5（51〜53行）は、tests/test_reviewers_primary_chains.py の EXPECTED_CHAINS と tests/test_contributor_tier_criteria.py
+    の EM_REVIEW_EXPECTED_CHAINS だけを書き換え対象に挙げる。今回 tests/test_codex_wrapper_model_flag.py の 592〜607 行に、両プラグインの
+    security の model を literal で固定する EXPECTED_CODEX_ENTRIES が加わった。手順 6 はこのテストを走らせるので、手順どおりに model を変えると
+    test_each_plugin_pins_the_fr2_model_and_effort_per_perspective（618行）が失敗する。architecture@s1#0 も同じ不整合をテスト側から指摘した。ただし固定を外す案は
+    NFR6（固定そのものは外さない）とテストの意図（592 行のコメント）に反するため、手順側の修正を採る。
+  suggestion: 手順 5 に `tests/test_codex_wrapper_model_flag.py` の `EXPECTED_CODEX_ENTRIES`（em-workflow と
+    em-review の security 項目）を加える。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 90
+  resolution: deferred
+  resolution_reason: 'medium: below the auto-fix candidate threshold (critical/high only); left for the
+    human reviewer'
+- stable_id: 89b73ec3618fae46
+  severity: medium
+  category: comprehensive
+  file: tests/test_review_perspective_model_effort_version_bump.py
+  line: 108
+  title: 版数テストが patch 0 と今回の minor を恒久的に要求し、次の自動 patch 更新で失敗する
+  description: _assert_minor_bump_over_baseline（108〜121行）は、現在のマニフェストに対して major が基準と同じ、minor が基準 +1、patch
+    が 0 であることを要求する（基準は 63〜64 行の 0.4.28 / 0.5.54）。.claude/rules/core-plugin-version-bump.md のとおり、main への
+    push 後は Actions がそのプラグインの patch を上げる。この変更の次に em-workflow か em-review を変えて push すると patch が 1 になり、このモジュールは失敗し続ける。次の
+    minor 更新でも失敗する。無人実行の検証段で全テストを流すと、無関係な機能でもこの失敗に当たる。
+  suggestion: 継続実行されるアサーションを、(major, minor, patch) が (基準の major, 基準の minor + 1, 0) 以上という下限比較と、マニフェストとマーケットプレイスの一致に変える。patch
+    == 0 と minor == 基準 + 1 の厳密な確認は、受け入れ時の git diff による検証に回す。否定の証明（patch だけの更新を拒否するなど）は下限比較に合わせて直す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 90
+  resolution: deferred
+  resolution_reason: 'medium: below the auto-fix candidate threshold (critical/high only); left for the
+    human reviewer'
+- stable_id: 4f185753962d81bc
+  severity: medium
+  category: security
+  file: em-workflow/scripts/run_codex_exec.sh
+  line: 68
+  title: nocasematch を継承すると effort の検証が大文字を通す
+  description: is_effort_word（66〜69行）は `local LC_ALL=C` のうえで `[[ "$1" =~ ^[a-z]+$ ]]` を使う。bash のマニュアルによると、nocasematch
+    が有効なとき `=~` は大文字と小文字を区別せず、環境変数 BASHOPTS にある shell option は起動時に有効になる。スクリプトは nocasematch を解除しないので、その環境では
+    `HIGH` が検証を通り、`model_reasoning_effort` の -c に入る。SPEC FR3 / NFR2 と脅威モデル TM-1 の『^[a-z]+$ に一致しない値は exit
+    1 で、codex を起動しない』から外れる。通るのは英字だけなので、引用符・バックスラッシュ・空白による TOML への注入は起きない。BASHOPTS を操作できる前提も要るため、実害は仕様との不一致に限られる。security@s1#0
+    と spec#0 は em-review のラッパーにも同じ検証があると報告している（評価者は読み取りの上限のため未読）。spec#0 も同じ箇所を独立に指摘した。
+  suggestion: 両ラッパーで、スクリプトの冒頭か is_effort_word の中で `shopt -u nocasematch` を実行してから検証する。NFR3 のとおり両ラッパーを同じ形にし、環境に
+    BASHOPTS=nocasematch を置いた stub 起動で `HIGH` が exit 1 になり、codex を起動しないことを確かめるテストを足す。
+  reproduction: 親の Bash で `shopt -s nocasematch` と `export BASHOPTS` を実行し、各ラッパーを `readonly --effort HIGH
+    'Review marker'` で呼ぶ。起動処理をスタブに置き換えて確認すると、em-review では `model_reasoning_effort="HIGH"` が起動引数に渡り、em-workflow
+    では検証を通過して起動準備に進む。`nocasematch` を無効にした同じ呼び出しでは、両方とも検証エラーを出して終了コード1を返す
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 90
+  resolution: deferred
+  resolution_reason: 'medium: below the auto-fix candidate threshold (critical/high only); left for the
+    human reviewer'
+evaluation:
+  round_summary: 9 run の critical / high は 0 件。medium 12 件を 5 件にまとめて採った（R2b の effort 引き継ぎ、R5 記録例の値の食い違い、security-review-model
+    の手順漏れ、版数テストの恒久固定、nocasematch による検証のすり抜け）。重複 6 件と、FR7 の『許可リストの検査はしない』に反する performance@s1#0 の 1 件は dismissed_sites
+    に記録した。
+  recommended_action: auto_fix
+  action_rationale: 採った 5 件はすべて medium で、修正の範囲が狭く手順も決まっている。設計のやり直しは要らない。
+dismissed_sites:
+- file: em-workflow/references/review-phase.md
+  line: 485
+  run_id: architecture@s1#0
+  reason: duplicate of another finding
+- file: em-workflow/references/review-phase.md
+  line: 205
+  run_id: spec#0
+  reason: duplicate of another finding
+- file: em-review/references/review-phase.md
+  line: 546
+  run_id: architecture@s1#0
+  reason: duplicate of another finding
+- file: tests/test_tier_record_schema_v2.py
+  line: 507
+  run_id: comprehensive@s2#0
+  reason: duplicate of another finding
+- file: tests/test_codex_wrapper_model_flag.py
+  line: 592
+  run_id: architecture@s1#0
+  reason: duplicate of another finding
+- file: em-workflow/scripts/run_codex_exec.sh
+  line: 66
+  run_id: spec#0
+  reason: duplicate of another finding
+- file: em-workflow/references/review-phase.md
+  line: 202
+  run_id: performance@s1#0
+  reason: false positive
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-review-perspective-model-effort-20261120T144515Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

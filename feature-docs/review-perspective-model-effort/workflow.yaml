@@ -221,8 +221,8 @@ tasks:
     notes: null
     branch: em-workflow/review-perspective-model-effort/task0006
 review:
-  status: in_progress
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
   residual_critical_high: 0
   needs_rework: false
   plan:
@@ -234,6 +234,12 @@ review:
     - architecture
     discretionary: []
     cross_validation: true
+  perspectives:
+  - comprehensive
+  - security
+  - spec
+  - performance
+  - architecture
 requirements:
   FR1:
     title: reviewers.yaml の codex エントリに effort を追加
