@@ -1,11 +1,11 @@
 schema_version: 1
 feature: args-json-quoting-bypass
 phase: rework
-status: in_progress
+status: completed
 generation: 2
 base_revision: b74304bc75d55ac2337eb5b9c49663f495d9fef9
 last_input_digest: sha256:b123482d56e9956d5006759c5208fe8eb5bf7f8b1276298d299a48d2e56e361d
-active_request_id: rework-run-0002
+active_request_id: null
 packets:
   rework-q0001:
     status: obsolete
@@ -36,7 +36,7 @@ worker_runs:
     feature-docs/args-json-quoting-bypass/workflow.yaml: sha256:d5f5e28a422931b04d31d9ccadd611731067f1409fa978b45c26c37c6bd578c5
   self_write_set: []
 - request_id: rework-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:b123482d56e9956d5006759c5208fe8eb5bf7f8b1276298d299a48d2e56e361d
   dispatch_digest_inputs:
     em-workflow/references/contracts/rework-planner-contract.md: sha256:0c9f82099c3546b6b675856539d8244628b7170ce7a4442ec951e13e16577ec3
@@ -53,9 +53,18 @@ worker_runs:
     feature-docs/args-json-quoting-bypass/tasks/task0003.md: sha256:b3455e8e4cad294099013706a3727a90fc409d4fc5c3066d9f4a548157ab1f12
     feature-docs/args-json-quoting-bypass/tasks/task0004.md: sha256:2106dcfe0d937c4c48bb5b031120871ad21b12ae4b48c0b1a58f6c81ed6ef1a7
     feature-docs/args-json-quoting-bypass/workflow.yaml: sha256:981c195da5283d79463ac734ba8eb9248c9a38d8d8a73067bd387ecbb13d4665
-  self_write_set: []
-artifacts: []
-patches: []
+  self_write_set:
+  - feature-docs/args-json-quoting-bypass/VERIFICATION.md
+  - feature-docs/args-json-quoting-bypass/tasks/task0005.md
+artifacts:
+- path: feature-docs/args-json-quoting-bypass/tasks/task0005.md
+  sha256: sha256:b40b2854d84429cc24c0184c63f0a0c900b82937fb9abdbd57f82a5954a6ebc6
+- path: feature-docs/args-json-quoting-bypass/VERIFICATION.md
+  sha256: sha256:0f320f18f60089ec549447b9dde440807673f105e3b29dcdfb211dea828d9416
+patches:
+- patch_id: rework-run-0002-p0001
+  status: applied
+  applied_at: '2026-11-20T23:20:01+09:00'
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}

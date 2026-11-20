@@ -56,7 +56,7 @@ workflow:
   status: completed
   completed_at_commit: 4618bd2b8c514e4b0f0cea0984a7347fb766b0e1
 - id: implement
-  status: completed
+  status: pending
   completed_at_commit: 0cd9fa4b0907dce2a9e8543e17ae87e72c3ef3c1
   base_commit: 996e1443a63b46e552a97d2ad7e2d2f96ae8f778
 - id: review
@@ -162,6 +162,38 @@ tasks:
     status: merged
     branch: em-workflow/args-json-quoting-bypass/task0004
     notes: null
+  task0005:
+    title: 'Nameref declarations: enclosing-shell chain and Bash word boundaries'
+    plan: tasks/task0005.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_args_json.py
+    skills: []
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR8
+    - FR9
+    - NFR2
+    - NFR3
+    - NFR5
+    - NFR6
+    status: pending
+    branch: null
+    notes: null
+    provenance:
+      source: review
+      source_ids:
+      - 1d971862e2458376
+      - a3fdb05c00db3c03
+      - 6083a3b46956a2f0
+      - 7bb299da67faace7
+      - 4d1573a9f53b167f
+      - 21b0ef3d5aaa59ae
+      review_round: 2
 review:
   status: pending
   rounds_completed: 2
@@ -191,6 +223,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0005
     tests:
     - TS-1
     - TS-2
@@ -198,6 +231,15 @@ requirements:
     - TS-4
     - TS-5
     - TS-17
+    - TS-24
+    - TS-25
+    - TS-26
+    - TS-27
+    - TS-28
+    - TS-29
+    - TS-30
+    - TS-31
+    - TS-32
   FR2:
     title: Unquoted `\=` is the `=`-form separator
     status: ok
@@ -271,6 +313,7 @@ requirements:
     - task0001
     - task0002
     - task0003
+    - task0005
     tests:
     - TS-1
     - TS-2
@@ -284,6 +327,14 @@ requirements:
     - TS-10
     - TS-11
     - TS-12
+    - TS-24
+    - TS-25
+    - TS-26
+    - TS-27
+    - TS-28
+    - TS-29
+    - TS-30
+    - TS-31
   FR9:
     title: Unit tests
     status: ok
@@ -294,6 +345,7 @@ requirements:
     - task0002
     - task0003
     - task0004
+    - task0005
     tests:
     - TS-13
     - TS-14
@@ -301,6 +353,7 @@ requirements:
     - TS-16
     - TS-17
     - TS-18
+    - TS-32
   FR10:
     title: Docstrings and comments
     status: ok
@@ -340,6 +393,7 @@ requirements:
     - task0001
     - task0002
     - task0003
+    - task0005
     tests:
     - TS-8
     - TS-9
@@ -354,6 +408,7 @@ requirements:
     - task0002
     - task0003
     - task0004
+    - task0005
     tests:
     - TS-21
   NFR4:
@@ -375,6 +430,7 @@ requirements:
     - task0002
     - task0003
     - task0004
+    - task0005
     tests:
     - TS-23
   NFR6:
@@ -385,10 +441,11 @@ requirements:
     tasks:
     - task0001
     - task0004
+    - task0005
     tests:
     - TS-22
 batch:
-  review_rework_count: 0
+  review_rework_count: 1
   verify_rework:
     rounds: 0
     failed_id_counts: {}
