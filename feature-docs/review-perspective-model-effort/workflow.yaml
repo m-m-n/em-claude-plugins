@@ -110,9 +110,9 @@ tasks:
     - NFR3
     - NFR4
     - NFR6
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/review-perspective-model-effort/task0001
   task0002:
     title: per-perspective model and effort in both registries
     plan: tasks/task0002.md
@@ -132,9 +132,9 @@ tasks:
     - FR2
     - NFR4
     - NFR6
-    status: pending
+    status: merged
     notes: null
-    branch: null
+    branch: em-workflow/review-perspective-model-effort/task0002
   task0003:
     title: codex-reviewer passes effort, protocol Inputs documents it
     plan: tasks/task0003.md
@@ -156,9 +156,9 @@ tasks:
     - FR7
     - NFR4
     - NFR6
-    status: pending
+    status: in_progress
     notes: null
-    branch: null
+    branch: em-workflow/review-perspective-model-effort/task0003
   task0004:
     title: review phase sends effort and records it
     plan: tasks/task0004.md
@@ -177,9 +177,9 @@ tasks:
     - FR8
     - NFR4
     - NFR6
-    status: pending
+    status: merged
     notes: null
-    branch: null
+    branch: em-workflow/review-perspective-model-effort/task0004
   task0005:
     title: READMEs and the security-review-model skill
     plan: tasks/task0005.md
@@ -197,9 +197,9 @@ tasks:
     - FR10
     - NFR4
     - NFR6
-    status: pending
+    status: merged
     notes: null
-    branch: null
+    branch: em-workflow/review-perspective-model-effort/task0005
   task0006:
     title: minor version bump of em-workflow and em-review
     plan: tasks/task0006.md
@@ -216,9 +216,9 @@ tasks:
     requirements:
     - NFR4
     - NFR5
-    status: pending
+    status: merged
     notes: null
-    branch: null
+    branch: em-workflow/review-perspective-model-effort/task0006
 review:
   status: pending
   rounds_completed: 0

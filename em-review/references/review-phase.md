@@ -178,16 +178,21 @@ Read references/reviewers.yaml. For each selected perspective (skip
   paths** before interpolating them into the block — reviewers must never
   resolve a relative path against a context of their own choosing.
 - When `cross_validation` fired: walk the perspective's registry
-  `cross_validation` chain (an ordered list of `{harness, model?}` entries)
-  and pick the FIRST entry whose harness is available (`codex_available` for
-  `codex`, `litellm_available` for `litellm`). No entry available → no
-  cross-model dispatch for this perspective in this phase (R2b never adds one
-  either — it only advances an already-dispatched chain). Otherwise ALSO
-  launch ONE reviewer, with the same input block:
+  `cross_validation` chain (an ordered list of `{harness, model?, effort?}`
+  entries) and pick the FIRST entry whose harness is available
+  (`codex_available` for `codex`, `litellm_available` for `litellm`). No entry
+  available → no cross-model dispatch for this perspective in this phase (R2b
+  never adds one either — it only advances an already-dispatched chain).
+  Otherwise ALSO launch ONE reviewer, with the same input block:
   - `{harness: codex}` → `Task(subagent_type="em-review:codex-reviewer")`; when
     the entry names `model: M`, add `model: M` to the input block, passed
     through verbatim. No allow-list check: Codex itself rejects an
     unsupported model, and the reviewer then skips with `harness_unavailable`.
+    When the entry names `effort: E`, add `effort: E` to the same input block,
+    passed through verbatim, with no allow-list check: the wrapper alone
+    validates the value, and a value Codex rejects ends in the same
+    `harness_unavailable` skip. Only this bullet adds `effort`; the litellm
+    entry below never does.
   - `{harness: litellm, model: M}` →
     `Task(subagent_type="vertex-review:vertex-reviewer")` with `model: M`
     added to the input block (a separately-installed plugin; the block is
@@ -539,9 +544,11 @@ perspective_runs:
   - {perspective: security, source: codex, status: skipped, skip_reason: "rate_limited"}
   - {perspective: security, source: litellm, model: muse-spark, status: completed}
   - {perspective: performance, source: litellm, model: muse-spark, status: skipped, skip_reason: "budget_exhausted"}
-  - {perspective: performance, source: codex, status: completed}
-  # `model` は litellm ハーネスと、`model` を渡した codex のときだけ付ける。R2b の chain walk は
-  # 1 観点につき複数行になる — 最後の行がその観点のクロスモデル結果。
+  - {perspective: performance, source: codex, model: gpt-6.2-astra, effort: high, status: completed}
+  # `model` は litellm ハーネスと、`model` を渡した codex のときだけ付ける。
+  # `effort` は `effort` を渡した codex のときだけ付ける。litellm の行には付けず、
+  # `effort` を渡していない codex の行にも付けない。
+  # R2b の chain walk は 1 観点につき複数行になる — 最後の行がその観点のクロスモデル結果。
 findings:                    # post-dedupe, post-sanitize; FULL detail
   - stable_id: {id}
     severity: high

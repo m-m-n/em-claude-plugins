@@ -499,8 +499,12 @@ class TestRetrospectTierDecisionBlock(unittest.TestCase):
 # Refreshed by task0003 of verify-pass-resolves-deferred-findings (FR5): Phase
 # R5 gained the `verify_resolution` field definition of a finding fixed by
 # verify pass.
+# Refreshed by feature-docs/review-perspective-model-effort/tasks/task0004.md
+# (FR7, FR8): Phase R2's codex bullet gained the `effort` input field, and the
+# Phase R3a `perspectives_dispatched` description and the Phase R5
+# `perspective_runs` example and comment gained the `effort` record field.
 REVIEW_PHASE_SHA256 = (
-    "ba925ee8ae76edce8d1681f83987546d7750aafa7e2dc5ab5ee7bac900fee882"
+    "f04bcbbf76623331e4f062020f22f4fdc2ce8f918d6127efd90ed90fc0a11a73"
 )
 REVIEW_RULES_SHA256 = (
     "56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931"

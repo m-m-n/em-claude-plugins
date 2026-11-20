@@ -261,21 +261,26 @@ class TestSubstitutionExceptionInReviewPhaseDocs(unittest.TestCase):
 # Literal pin of em-review's `cross_validation` chains. Not recomputed
 # from the same file -- a self-referential comparison would pass no matter
 # what changed.
+#
+# Refreshed by feature-docs/review-perspective-model-effort/tasks/task0002.md
+# (FR2): every codex entry now holds a `model` and an `effort`, pinned here as
+# literals of the FR2 table. em-review has no license perspective and its
+# comprehensive chain stays empty. The muse-spark entries are unchanged.
 EM_REVIEW_EXPECTED_CHAINS = {
     "security": [
-        {"harness": "codex", "model": "gpt-6.2-astra"},
+        {"harness": "codex", "model": "gpt-6.2-astra", "effort": "xhigh"},
         {"harness": "litellm", "model": "muse-spark"},
     ],
     "performance": [
-        {"harness": "codex"},
+        {"harness": "codex", "model": "gpt-6.2-sol", "effort": "xhigh"},
         {"harness": "litellm", "model": "muse-spark"},
     ],
     "architecture": [
-        {"harness": "codex"},
+        {"harness": "codex", "model": "gpt-6.2-astra", "effort": "high"},
         {"harness": "litellm", "model": "muse-spark"},
     ],
     "spec": [
-        {"harness": "codex"},
+        {"harness": "codex", "model": "gpt-6.2-sol", "effort": "xhigh"},
         {"harness": "litellm", "model": "muse-spark"},
     ],
     "comprehensive": [],
@@ -284,7 +289,7 @@ EM_REVIEW_EXPECTED_CHAINS = {
 
 def parse_perspective_chains(text, chain_key):
     """Minimal restricted parser: returns {perspective: [ {harness[,
-    model]}, ... ]} for the given literal chain key (`primary_chain` or
+    model][, effort]}, ... ]} for the given literal chain key (`primary_chain` or
     `cross_validation`). Raises ValueError on unexpected structure -- this
     intentionally does not tolerate a shape it was not told to expect,
     matching tests/test_reviewers_primary_chains.py's parser discipline."""

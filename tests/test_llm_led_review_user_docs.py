@@ -122,11 +122,15 @@ DOTTED_NUMERIC_VERSION_RE = re.compile(r"^\d+(?:\.\d+)+$")
 # The chain each perspective advertises in the README, pinned literally
 # here rather than read back from references/reviewers.yaml -- a
 # self-referential comparison would pass no matter what changed.
+# Refreshed by feature-docs/review-perspective-model-effort/tasks/task0005.md
+# (FR9): performance, spec and architecture now read
+# "codex → litellm `muse-spark`" (they read "litellm `muse-spark` → codex"
+# before); every perspective in em-workflow's chain table is codex first.
 PINNED_CHAINS = {
     "security": "codex → litellm `muse-spark`",
-    "performance": "litellm `muse-spark` → codex",
-    "spec": "litellm `muse-spark` → codex",
-    "architecture": "litellm `muse-spark` → codex",
+    "performance": "codex → litellm `muse-spark`",
+    "spec": "codex → litellm `muse-spark`",
+    "architecture": "codex → litellm `muse-spark`",
     "comprehensive": "codex → litellm `muse-spark`",
     "license": "codex → litellm `muse-spark`",
 }
