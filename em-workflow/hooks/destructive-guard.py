@@ -7046,18 +7046,16 @@ def _read_double_quoted(body):
       symbol, or at the end) is passed on as a literal `$`, as Bash does. A
       `$` before a non-ASCII character is a literal `$` (FR4). A character not
       known to be literal counts as an expansion (safe side).
-    - (_DQ_CONTINUED, None): it holds the FR3 form (with or without an
-      ordinary expansion elsewhere in the body):
+    - (_DQ_CONTINUED, None): it holds the FR3 form and no other expansion:
       a `$`, one or more line continuations (a backslash and a newline), and a
       character that starts an expansion. Bash removes the continuations first
       and reads an expansion, which this reading does not restore. A `$` whose
       next character after the continuations starts no expansion (or that ends
       the body) is a literal `$`, and the continuations vanish.
 
-    The whole body is read first. The FR3 form, once found, is kept even when
-    an ordinary expansion is also in the body: the outcome is then
-    _DQ_CONTINUED, so the unrestorable form is never hidden by an expansion
-    added next to it."""
+    The whole body is read first. When an ordinary expansion or backtick is
+    also in the body, the outcome is _DQ_EXPANSION (SPEC FR3: a word that
+    holds another FR6 (1) element stays not static)."""
     out = []
     continued = False
     expansion = False
@@ -7089,10 +7087,10 @@ def _read_double_quoted(body):
             continue
         out.append(ch)
         i += 1
-    if continued:
-        return _DQ_CONTINUED, None
     if expansion:
         return _DQ_EXPANSION, None
+    if continued:
+        return _DQ_CONTINUED, None
     return _DQ_RESTORED, "".join(out)
 
 
@@ -7923,10 +7921,9 @@ def _read_static_word(marked, tok):
 
     The whole word is read before the outcome is settled, so a word that holds
     an element of FR6 (1) is not static whatever else it holds: it sets
-    nothing. The FR3 line-continuation form is held for the whole word: when
-    any region of the word (however the word is split into quoted regions)
-    holds it, the word is Unrestorable, even if another region holds an
-    ordinary expansion (which would otherwise make it not static)."""
+    nothing. The FR3 line-continuation form makes the word Unrestorable only
+    when it is the word's sole non-static element: a word that also holds any
+    other FR6 (1) element, in any region, is not static."""
     span = getattr(tok, "span", None)
     if getattr(tok, "substitution_only", False):
         return WORD_NOT_STATIC, None
@@ -7993,8 +7990,8 @@ def _read_static_word(marked, tok):
             if region.kind == "double-quote":
                 outcome, body = _read_double_quoted(body)
                 if outcome == _DQ_EXPANSION:
-                    # Settled after the whole word is read: an FR3 form in
-                    # any region makes the word Unrestorable.
+                    # Settled after the whole word is read: any ordinary
+                    # expansion makes the word not static.
                     plain_expansion = True
                     body = "\x00"
                 elif outcome == _DQ_CONTINUED:
@@ -8039,8 +8036,8 @@ def _read_static_word(marked, tok):
             # (same rule as _read_double_quoted(), with `'` and `"` added: the
             # opener of an ANSI-C or locale quote). A non-ASCII character
             # starts none. With no continuation, an expansion is not static;
-            # with one or more (the FR3 form) the word is unrestorable and the
-            # reading goes on.
+            # with one or more (the FR3 form) the word is unrestorable unless
+            # another non-static element is present; the reading goes on.
             kind, after = _read_dollar(source, pos, hi, False)
             if kind == _DOLLAR_EXPANSION:
                 plain_expansion = True
@@ -8070,9 +8067,9 @@ def _read_static_word(marked, tok):
             return WORD_NOT_STATIC, None
         if bare[-1] and chars[-1] in "?*+@!" and text[end:end + 1] == "(":
             return WORD_NOT_STATIC, None
-    if plain_expansion and not continued:
+    if plain_expansion:
         return WORD_NOT_STATIC, None
-    if unrestorable or plain_expansion:
+    if unrestorable:
         return WORD_UNRESTORABLE, None
     return WORD_STATIC, "".join(chars)
 
@@ -8246,6 +8243,121 @@ def _args_json_notion_pair(marked, words):
     )
 
 
+def _args_json_nameref_declared(marked):
+    """Whether MARKED (the _MarkedText) may declare a nameref (`declare -n`,
+    `local -n`, `typeset -n`). Decided from the words as Bash reads them after
+    quote removal, at command position only, so quoted data is not a
+    declaration while `declare "-n"`, `decla''re -n` and `declare -\\<newline>n`
+    are. Fail safe: True when a declaring command's option word cannot be
+    restored statically, when the command word at a command position cannot,
+    or when `eval`, `source` or `.` appears at a command position. Computed
+    once per input and kept on MARKED."""
+    cached = getattr(marked, "_nameref_declared_cache", None)
+    if cached is not None:
+        return cached
+    result = _args_json_nameref_scan(marked)
+    try:
+        marked._nameref_declared_cache = result
+    except Exception:
+        pass
+    return result
+
+
+def _args_json_nameref_scan(marked):
+    if marked is None:
+        return True
+    source = marked.source
+    regions = getattr(marked, "top_regions", None)
+    if regions is None:
+        return True
+    quote_kinds = {
+        "single-quote": 1,
+        "double-quote": 1,
+        "ansi-c-quote": 2,
+        "locale-quote": 2,
+    }
+    by_start = {r.start: r for r in regions}
+    words = []  # per statement: list of (text, restorable)
+    statement = []
+    cur = []
+    cur_ok = True
+    in_word = False
+
+    def end_word():
+        nonlocal cur, cur_ok, in_word
+        if in_word:
+            statement.append(("".join(cur), cur_ok))
+        cur, cur_ok, in_word = [], True, False
+
+    def end_statement():
+        nonlocal statement
+        end_word()
+        if statement:
+            words.append(statement)
+        statement = []
+
+    pos, size = 0, len(source)
+    while pos < size:
+        region = by_start.get(pos)
+        if region is not None:
+            kind = region.kind
+            in_word = True
+            if kind in quote_kinds and region.closed:
+                skip = quote_kinds[kind]
+                body = source[pos + skip:region.end - 1]
+                if kind in ("double-quote", "locale-quote") and ("$" in body or "`" in body):
+                    cur_ok = False
+                cur.append(body)
+            else:
+                cur_ok = False
+                cur.append(source[pos:region.end])
+            pos = max(region.end, pos + 1)
+            continue
+        ch = source[pos]
+        if ch == "\\":
+            if pos + 1 < size and source[pos + 1] == "\n":
+                pos += 2
+                continue
+            in_word = True
+            if pos + 1 < size:
+                cur.append(source[pos + 1])
+            pos += 2
+            continue
+        if ch in ";&|\n(){}":
+            end_statement()
+        elif ch in " \t":
+            end_word()
+        else:
+            in_word = True
+            if ch in "$`":
+                cur_ok = False
+            cur.append(ch)
+        pos += 1
+    end_statement()
+    prefixes = {"builtin", "command", "exec", "then", "do", "else", "if", "while", "until", "!", "time"}
+    for statement in words:
+        k = 0
+        while k < len(statement) and (
+            statement[k][1]
+            and (statement[k][0] in prefixes or re.match(r"[A-Za-z_][A-Za-z0-9_]*=", statement[k][0]))
+        ):
+            k += 1
+        if k >= len(statement):
+            continue
+        name, ok = statement[k]
+        if not ok:
+            return True
+        if name in ("eval", "source", "."):
+            return True
+        if name in ("declare", "local", "typeset"):
+            for opt, opt_ok in statement[k + 1:]:
+                if not opt_ok:
+                    return True
+                if re.fullmatch(r"-[A-Za-z]*n[A-Za-z]*", opt):
+                    return True
+    return False
+
+
 def _args_json_single_word_certain(marked, word):
     """Whether Bash always passes WORD -- a word of a statement lexed from
     MARKED (the _MarkedText) -- as exactly one argument
@@ -8371,10 +8483,7 @@ def _args_json_single_word_certain(marked, word):
     # A `declare -n` / `local -n` / `typeset -n` in the command can make a
     # variable a nameref to an array (`R='A[@]'`), so `"$R"` may expand to
     # several words.
-    nameref_declared = (
-        re.search(r"\b(?:declare|local|typeset)\b[^\n;&|]*\s-[A-Za-z]*n", source)
-        is not None
-    )
+    nameref_declared = _args_json_nameref_declared(marked)
     opened = {"[": False, "{": False}
     leading = True  # no character of the word has been read yet
     last_bare = None  # the last character read, when it stands unquoted
