@@ -1,0 +1,65 @@
+schema_version: 2
+feature: args-json-quoting-bypass
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.31
+    confidence: 0.69
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.69
+      '2': 0.31
+      '3': 0.0
+    expectation_clear: 0.89
+  observed_at: '2026-11-20T19:47:44+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.14
+    confidence: 0.86
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.86
+      '2': 0.14
+      '3': 0.0
+    expectation_clear: 0.88
+  observed_at: '2026-11-20T19:47:44+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  changed_lines_approx: 40
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 2
+  body_change_kind: new_logic
+  change_containment: single_module
+  caller_and_dependency_count: 5
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: 現在の main には JSON 復号検査が未取り込み。対象の統合ブランチでは Notion 除外が展開後の単語分割を確認せず、フラグ解析はエスケープされた等号を名前の一部として扱う。既存の
+    Notion 向け allow ケースを確認した。見積もりは統合ブランチ上の必須2件を対象とした
+decided_at: '2026-11-20T19:47:44+09:00'
