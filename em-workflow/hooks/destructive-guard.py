@@ -8362,8 +8362,8 @@ def _args_json_declares_nameref(marked, toks):
     options (`-p`, `-v`, `-V`, ...), so `command -p -- declare -n r` is read as
     `declare -n r`. A `-v` or `-V` option is read as if `command` ran the word
     (the safe side). The word after them is the command name: a name that
-    cannot be restored statically, or `eval`, `source` or `.`, leaves the shell
-    state unknown; for `declare`, `local` and `typeset` an option word that
+    cannot be restored statically, or `eval`, `source`, `.`, `trap`, `alias`,
+    `mapfile` or `readarray`, leaves the shell state unknown; for `declare`, `local` and `typeset` an option word that
     holds `n`, or any word that cannot be restored, does."""
     words = _args_json_strip_redirections(marked, toks)
     prefixes = (
@@ -8394,7 +8394,9 @@ def _args_json_declares_nameref(marked, toks):
     if k >= size:
         return False
     name, ok = _args_json_declaration_word(marked, words[k])
-    if not ok or name in ("eval", "source", "."):
+    if not ok or name in (
+        "eval", "source", ".", "trap", "alias", "mapfile", "readarray",
+    ):
         return True
     if name in ("declare", "local", "typeset"):
         for word in words[k + 1:]:
@@ -8438,8 +8440,10 @@ def _args_json_declaration_word(marked, word):
     quote that does not decode, a region the word does not hold whole or that
     is not closed, or it has no span. An arithmetic command (`((expr))`) is
     kept as written and restorable: it is no command name and declares
-    nothing. A trailing `\\r` that the lexing took off the word is not part
-    of it."""
+    nothing. A form Bash may rewrite (an unquoted brace pair, an unquoted
+    `*` or `?`, an unquoted bracket pair) is not restorable, since brace and
+    pathname expansion can change the word's spelling or count. A trailing
+    `\\r` that the lexing took off the word is not part of it."""
     value = str(word)
     span = getattr(word, "span", None)
     if marked is None or span is None or getattr(word, "is_operator", False):
@@ -8474,6 +8478,7 @@ def _args_json_declaration_word(marked, word):
         "locale-quote": 2,
     }
     restorable = True
+    unquoted_marks = set()
     out = []
     pos = lo
     while pos < hi:
@@ -8522,10 +8527,17 @@ def _args_json_declaration_word(marked, word):
                 out.append(source[pos + 1])
             pos += 2
             continue
-        if ch in "$`":
+        if ch in "$`*?":
             restorable = False
+        elif ch in "{}[]":
+            unquoted_marks.add(ch)
         out.append(ch)
         pos += 1
+    # Bash rewrites a word with an unquoted brace pair or bracket pair
+    # (brace and pathname expansion), so such a word is not restorable. A
+    # lone `[`, `[[`, `]`, `]]`, `{` or `}` word is no pair and stays so.
+    if {"{", "}"} <= unquoted_marks or {"[", "]"} <= unquoted_marks:
+        restorable = False
     return "".join(out), restorable
 
 
