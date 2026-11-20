@@ -886,6 +886,304 @@ class TestUnrestorable(unittest.TestCase):
         self.assertEqual([GUARD.ARGS_JSON_UNRESTORABLE_ASK], spy.early_stop)
 
 
+class TestDollarReading(unittest.TestCase):
+    """args-json-quoting-bypass TS-13 to TS-15 (FR3, FR4, FR7, FR9, FR10, TM-4,
+    TM-5): how the word readers read a `$`. A `$`, one or more line
+    continuations (a backslash and a newline) and a character that starts an
+    expansion make the word Unrestorable; a `$` before a character that starts
+    no expansion, a non-ASCII character included, is a literal `$`."""
+
+    NL = "\n"
+    FR3_FORM = (
+        "a `$`, one or more line continuations (a backslash and a newline), "
+        "and a character that starts an expansion"
+    )
+
+    def lex(self, written):
+        """The marked text and the value word of the `mcp-bridge run`
+        statement whose `--args-json` value is WRITTEN, as the decision
+        receives them (a spy on the decision records its arguments). The
+        statement is checked to end with WRITTEN as written, line continuations
+        included, and the word to span it (unless it starts with a
+        substitution's residue)."""
+        seen = []
+        original = GUARD._mcp_bridge_args_json_chunks
+
+        def spy(shaped_words, marked):
+            seen.append((shaped_words, marked))
+            return original(shaped_words, marked)
+
+        with mock.patch.object(GUARD, "_mcp_bridge_args_json_chunks", spy):
+            list(GUARD.statements("mcp-bridge run --args-json " + written, early_stop=[]))
+        ((shaped_words, marked),) = [
+            s for s in seen if GUARD.head(s[0])[0] == "mcp-bridge"
+        ]
+        word = shaped_words[-1]
+        self.assertTrue(marked.source.endswith(written))
+        bounds = GUARD._word_source_bounds(marked, *word.span)
+        if bounds is not None:  # None: the word starts with a substitution's residue
+            self.assertEqual(written, marked.source[bounds[0]:bounds[1]])
+        return marked, word
+
+    def static(self, written):
+        """_read_static_word() over the value word WRITTEN."""
+        return GUARD._read_static_word(*self.lex(written))
+
+    def as_written(self, written):
+        """_read_word_as_written() over the value word WRITTEN."""
+        return GUARD._read_word_as_written(*self.lex(written))
+
+    def cont(self, count=1):
+        """COUNT line continuations: a backslash and a newline, each."""
+        return ("\\" + self.NL) * count
+
+    def test_a_double_quoted_dollar_continuation_expansion_start_is_unrestorable(self):
+        """TS-13 (AC-2, FR3): `"$`, a line continuation and a character that
+        starts an expansion`"` is Unrestorable."""
+        c = self.cont
+        for label, written in (
+            ("name", '"$' + c() + 'DEST"'),
+            ("two continuations", '"$' + c(2) + 'DEST"'),
+            ("three continuations", '"$' + c(3) + 'DEST"'),
+            ("brace", '"$' + c() + '{DEST}"'),
+            ("bracket", '"$' + c() + '[DEST]"'),
+            ("digit", '"$' + c() + '1"'),
+            ("underscore", '"$' + c() + '_"'),
+            ("special parameter", '"$' + c() + '@"'),
+            ("text around", '"a $' + c() + 'DEST b"'),
+        ):
+            with self.subTest(label):
+                self.assertEqual((GUARD.WORD_UNRESTORABLE, None), self.static(written))
+
+    def test_a_dollar_continuation_paren_is_a_substitution_and_not_static(self):
+        """TS-13 (AC-2, FR3): a `$`, a line continuation and a `(` is a
+        substitution Bash runs (the marking reads it as one), not a quoting
+        that cannot be restored: the word stays Not static, in double quotes
+        and outside. A `{` after an unquoted `$` and a continuation is a
+        parameter expansion region, also Not static."""
+        c = self.cont
+        for label, written in (
+            ("double quote, paren", '"$' + c() + '(DEST)"'),
+            ("unquoted, paren", "$" + c() + "(DEST)"),
+            ("unquoted, brace", "$" + c() + "{DEST}"),
+        ):
+            with self.subTest(label):
+                self.assertEqual((GUARD.WORD_NOT_STATIC, None), self.static(written))
+
+    def test_an_unquoted_dollar_continuation_name_is_unrestorable(self):
+        """TS-13 (AC-2, FR3): an unquoted `$`, a line continuation and a name
+        character is Unrestorable."""
+        c = self.cont
+        for label, written in (
+            ("name", "$" + c() + "X"),
+            ("two continuations", "$" + c(2) + "X"),
+            ("digit", "$" + c() + "1"),
+            ("text around", "a$" + c() + "Xb"),
+        ):
+            with self.subTest(label):
+                self.assertEqual((GUARD.WORD_UNRESTORABLE, None), self.static(written))
+
+    def test_an_unquoted_dollar_continuation_quote_is_unrestorable(self):
+        """TS-13 (AC-2, FR3): an unquoted `$`, a line continuation and a quoted
+        part (the opener of an ANSI-C or locale quote split by the
+        continuation) is Unrestorable."""
+        c = self.cont
+        for label, written in (
+            ("single quote", "$" + c() + "'abc'"),
+            ("double quote", "$" + c() + '"abc"'),
+            ("two continuations", "$" + c(2) + "'abc'"),
+        ):
+            with self.subTest(label):
+                self.assertEqual((GUARD.WORD_UNRESTORABLE, None), self.static(written))
+
+    def test_a_word_that_also_holds_an_expansion_is_not_static(self):
+        """TS-13 (AC-2, FR3): an expansion anywhere in the word wins over the
+        FR3 form, whichever comes first."""
+        c = self.cont
+        for label, written in (
+            ("double quote, expansion after", '"$' + c() + 'DEST $Y"'),
+            ("double quote, expansion before", '"$Y $' + c() + 'DEST"'),
+            ("double quote, backtick after", '"$' + c() + 'DEST `x`"'),
+            ("double quote, expansion in a second region", '"$' + c() + 'DEST"$Y'),
+            ("unquoted, expansion after", "$" + c() + "X$Y"),
+            ("unquoted, expansion before", "$Y$" + c() + "X"),
+            ("unquoted, substitution after", "$" + c() + "X$(echo x)"),
+            ("unquoted, glob after", "$" + c() + "X*"),
+            ("locale quote, expansion after", '$"$' + c() + "X $Y" + '"'),
+        ):
+            with self.subTest(label):
+                self.assertEqual((GUARD.WORD_NOT_STATIC, None), self.static(written))
+
+    def test_a_dollar_continuation_before_no_expansion_is_a_literal_dollar(self):
+        """TS-13 (AC-2, FR3): a `$` whose next character after the line
+        continuations starts no expansion (a space, the closing quote, another
+        symbol, the end) is a literal `$`; the continuations vanish."""
+        c = self.cont
+        for label, written, text in (
+            ("space", '"a $' + c() + ' b"', "a $ b"),
+            ("closing quote", '"a $' + c() + '"', "a $"),
+            ("two continuations then a space", '"a $' + c(2) + ' b"', "a $ b"),
+            ("two continuations then the closing quote", '"a $' + c(2) + '"', "a $"),
+            ("only the dollar and a continuation", '"$' + c() + '"', "$"),
+            ("percent sign", '"$' + c() + '%"', "$%"),
+            ("a backslash escape", '"$' + c() + '\\"x"', '$"x'),
+            ("unquoted, percent sign", "a$" + c() + "%b", "a$%b"),
+            ("unquoted, a backslash escape", "$" + c() + "\\x", "$x"),
+        ):
+            with self.subTest(label):
+                self.assertEqual((GUARD.WORD_STATIC, text), self.static(written))
+
+    def test_a_continuation_without_a_dollar_vanishes_as_before(self):
+        """TS-13 (AC-7): a line continuation that does not follow a `$` is
+        read as before."""
+        c = self.cont
+        for label, written, text in (
+            ("double quote", '"a' + c() + 'b"', "ab"),
+            ("unquoted", "a" + c() + "b", "ab"),
+        ):
+            with self.subTest(label):
+                self.assertEqual((GUARD.WORD_STATIC, text), self.static(written))
+
+    def test_a_dollar_without_a_continuation_is_read_as_before(self):
+        """TS-13 (AC-7): both sides of the continuation rule: with no
+        continuation, a `$` before an expansion-start character is not static
+        and a `$` before any other ASCII character is a literal `$`."""
+        for label, written, expected in (
+            ("double quote, name", '"$DEST"', (GUARD.WORD_NOT_STATIC, None)),
+            ("double quote, brace", '"${DEST}"', (GUARD.WORD_NOT_STATIC, None)),
+            ("double quote, special parameter", '"$@"', (GUARD.WORD_NOT_STATIC, None)),
+            ("double quote, space", '"a $ b"', (GUARD.WORD_STATIC, "a $ b")),
+            ("double quote, percent sign", '"$%"', (GUARD.WORD_STATIC, "$%")),
+            ("double quote, end", '"a $"', (GUARD.WORD_STATIC, "a $")),
+            ("unquoted, name", "$X", (GUARD.WORD_NOT_STATIC, None)),
+            ("unquoted, special parameter", "$@", (GUARD.WORD_NOT_STATIC, None)),
+            ("unquoted, end", "a$", (GUARD.WORD_STATIC, "a$")),
+            ("unquoted, percent sign", "a$%b", (GUARD.WORD_STATIC, "a$%b")),
+        ):
+            with self.subTest(label):
+                self.assertEqual(expected, self.static(written))
+
+    def test_the_masking_stop_reading_does_not_determine_the_fr3_form(self):
+        """TS-14 (AC-3, FR3): `_read_word_as_written()` gives None for a
+        double-quoted word holding a `$`, a line continuation and a character
+        that starts an expansion."""
+        c = self.cont
+        for label, written in (
+            ("name", '"$' + c() + 'DEST"'),
+            ("two continuations", '"$' + c(2) + 'DEST"'),
+            ("brace", '"$' + c() + '{DEST}"'),
+            ("special parameter", '"$' + c() + '@"'),
+            ("text around", '"a $' + c() + 'DEST b"'),
+        ):
+            with self.subTest(label):
+                self.assertIsNone(self.as_written(written))
+
+    def test_the_masking_stop_reading_of_a_word_without_the_fr3_form_is_as_before(self):
+        """TS-14 (AC-3, AC-7): a word without the FR3 form is read as before."""
+        c = self.cont
+        for label, written, expected in (
+            ("plain", "plain", "plain"),
+            ("double quote, space", '"a $ b"', "a $ b"),
+            ("double quote, end", '"a $"', "a $"),
+            ("double quote, dollar continuation space", '"a $' + c() + ' b"', "a $ b"),
+            ("double quote, dollar continuation end", '"a $' + c() + '"', "a $"),
+            ("double quote, continuation only", '"a' + c() + 'b"', "ab"),
+            ("double quote, name", '"$DEST"', None),
+            ("double quote, brace", '"${DEST}"', None),
+            ("unquoted, dollar", "$X", None),
+            ("unquoted, dollar continuation", "$" + c() + "X", None),
+        ):
+            with self.subTest(label):
+                self.assertEqual(expected, self.as_written(written))
+
+    def test_a_dollar_before_a_non_ascii_character_is_literal(self):
+        """TS-15 (AC-5, FR4): the double-quoted value `"5 $€"` is read as
+        static text `5 $€`, and the same value written with `\\$€` is read as
+        the same text."""
+        for label, written in (
+            ("bare", '"5 $€"'),
+            ("escaped", '"5 \\$€"'),
+        ):
+            with self.subTest(label):
+                self.assertEqual((GUARD.WORD_STATIC, "5 $€"), self.static(written))
+
+    def test_a_dollar_before_a_non_ascii_character_is_literal_in_every_position(self):
+        """TS-15 (FR4): a `$` before a non-ASCII character is literal in a
+        double-quoted body and outside quotes, a non-ASCII letter included."""
+        for label, written, text in (
+            ("double quote, symbol", '"$€"', "$€"),
+            ("double quote, letter", '"$é"', "$é"),
+            ("double quote, letter, text around", '"a $é b"', "a $é b"),
+            ("unquoted, symbol", "a$€b", "a$€b"),
+            ("unquoted, letter", "$é", "$é"),
+            ("single-quoted parts around an unquoted one", "'{\"a\":\"'$€'\"}'", '{"a":"$€"}'),
+        ):
+            with self.subTest(label):
+                self.assertEqual((GUARD.WORD_STATIC, text), self.static(written))
+
+    def test_a_non_ascii_character_after_a_continuation_is_literal(self):
+        """TS-15 (FR3, FR4): a `$`, a line continuation and a non-ASCII
+        character is a literal `$` and the character; the continuation
+        vanishes."""
+        c = self.cont
+        for label, written, text in (
+            ("double quote", '"5 $' + c() + '€"', "5 $€"),
+            ("double quote, two continuations", '"5 $' + c(2) + '€"', "5 $€"),
+            ("unquoted", "a$" + c() + "€b", "a$€b"),
+        ):
+            with self.subTest(label):
+                self.assertEqual((GUARD.WORD_STATIC, text), self.static(written))
+
+    def test_a_locale_quote_is_unrestorable_unless_it_holds_an_expansion(self):
+        """TS-13, TS-15 (FR3, FR4): a locale quote whose body holds the FR3
+        form or a `$` before a non-ASCII character holds no expansion, so it is
+        Unrestorable (as any locale quote without one); with an expansion it is
+        not static."""
+        c = self.cont
+        for label, written, expected in (
+            ("plain", '$"abc"', (GUARD.WORD_UNRESTORABLE, None)),
+            ("the FR3 form", '$"$' + c() + 'X"', (GUARD.WORD_UNRESTORABLE, None)),
+            ("a dollar before a non-ASCII character", '$"5 $€"', (GUARD.WORD_UNRESTORABLE, None)),
+            ("an expansion", '$"$X"', (GUARD.WORD_NOT_STATIC, None)),
+        ):
+            with self.subTest(label):
+                self.assertEqual(expected, self.static(written))
+
+    def test_the_docstrings_and_the_comment_name_the_fr3_form(self):
+        """AC-6 (FR7, FR10): the docstrings of the readers, step 4 of the
+        decision's docstring and the comment above the Unrestorable ask write
+        the FR3 form the same way."""
+        decision = " ".join(GUARD._mcp_bridge_args_json_chunks.__doc__.split())
+        step4 = decision[decision.index("4. Word outcomes"):decision.index("5. Values")]
+        with open(HOOK, encoding="utf-8") as handle:
+            lines = handle.read().split("\n")
+        at = lines.index("ARGS_JSON_UNRESTORABLE_ASK = (")
+        comment = []
+        for line in reversed(lines[:at]):
+            if not line.startswith("#"):
+                break
+            comment.insert(0, line[1:].strip())
+        texts = {
+            "_read_static_word": GUARD._read_static_word.__doc__,
+            "_read_double_quoted": GUARD._read_double_quoted.__doc__,
+            "_read_word_as_written": GUARD._read_word_as_written.__doc__,
+            "decision step 4": step4,
+            "comment above the ask": " ".join(comment),
+        }
+        for label, text in texts.items():
+            with self.subTest(label):
+                self.assertIn(self.FR3_FORM, " ".join(text.split()))
+
+    def test_the_docstrings_state_that_a_dollar_before_a_non_ascii_character_is_literal(self):
+        """AC-6 (FR4, FR10): the docstrings of `_read_static_word()` and
+        `_read_double_quoted()` say that a `$` before a non-ASCII character is
+        a literal `$`."""
+        for name in ("_read_static_word", "_read_double_quoted"):
+            with self.subTest(name):
+                doc = " ".join(getattr(GUARD, name).__doc__.split())
+                self.assertIn("non-ASCII", doc)
+
+
 class TestDeferral(unittest.TestCase):
     """AC-7 (FR7, D3, D6, TM-3, TM-4): on Overrun and on a charge that does
     not fit, the scanned total is unchanged, nothing of the statement is
