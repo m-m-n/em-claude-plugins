@@ -87,14 +87,13 @@ SDD・並列実装・多観点レビューを統合した開発ワークフロ�
 
 選択された各観点には、その観点の `primary_chain`（`reviewers.yaml`）先頭から利用可能な最初のエントリを非 Claude レビュアーとして 1 体だけ起動する。チェーンの全エントリが利用不可のときだけ、その観点は Claude 汎用レビュアーにフォールバックする。両者は排他 — Claude レビュアーが非 Claude レビュアーと並行に同一観点を二重実行することはない。レビュー入力が大きい（200,000 文字超）ときは、入力をファイル単位のシャードに分割し、シャードごとに専用のレビュアーを起動する。全観点の結果が確定した後、Opus 評価者サブエージェントが 1 体、ラウンド全体を横断評価する。評価結果（`recommended_action` を含む）は次アクション（auto-fix / もう1ラウンド / rework / 完了）の参考情報であり、決定は常にオーケストレーターが行う。
 
-ハーネス（どのモデルが存在し、どう到達するか）は vertex-review 側の責務、**観点ごとのモデル選択は em-workflow 側の責務**。`reviewers.yaml` が渡した `model` をレビュアーはそのまま `-m` に流す。
+ハーネス（どのモデルが存在し、どう到達するか）は vertex-review 側の責務、**観点ごとのモデル選択は em-workflow 側の責務**。`reviewers.yaml` が渡した `model` をレビュアーはそのまま `-m` に流す。codex エントリの `effort` も同じ経路で、ラッパーの `--effort` に渡る。
 
 ### primary-reviewer チェーン表
 
 | 観点 | チェーン（1st → 2nd） |
 |------|------------------------|
-| security / comprehensive / license | codex → litellm `muse-spark` |
-| performance / spec / architecture | litellm `muse-spark` → codex |
+| security / comprehensive / license / performance / spec / architecture | codex → litellm `muse-spark` |
 
 R2b はスキップ理由が retryable なときだけチェーンを進める。`rate_limited` / `contributor_consent_missing` は次のエントリへ、`budget_exhausted` / `harness_unavailable` / `review_data_too_large` は**別ハーネス**の次エントリへ飛ぶ。チェーンは 2 エントリなので、フォールバックは 1 観点につき 1 ホップで尽きる。入力を分割したときは、ホップ数はシャードごとに数える。
 

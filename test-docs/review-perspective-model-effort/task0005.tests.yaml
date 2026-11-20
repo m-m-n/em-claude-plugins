@@ -1,0 +1,71 @@
+task_id: task0005
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 16656 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 16705 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_effort_user_docs.TestEmWorkflowChainTableRows.test_ac1_real_readme_chain_table_is_codex_first_for_all_six
+      - tests.test_llm_led_review_user_docs.TestReadmeReviewSection.test_chain_table_lists_all_six_perspectives_with_pinned_chains
+    red_confirmed: true
+    red_reason: "The row-level test failed against the unchanged README: AssertionError: Lists differ: ['litellm-first-row', 'chain-not-codex-first:performance', ...] != [] (the performance / spec / architecture row read litellm `muse-spark` -> codex). The existing pinned-chains test is not the red: with PINNED_CHAINS refreshed in place and the README still unchanged it stayed green, because it looks for each chain string anywhere in the table block and the security row already held 'codex -> litellm `muse-spark`'. It is listed because it is the check AC-1 names; the row-level test is the one observed to fail. The other tests of test_llm_led_review_user_docs pass unedited."
+  AC-2:
+    tests:
+      - tests.test_effort_user_docs.TestEmReviewChainTable.test_ac2_real_readme_chain_table_is_codex_first
+      - tests.test_effort_user_docs.TestEmReviewChainTable.test_ac2_each_perspective_is_listed_with_the_codex_first_chain
+      - tests.test_effort_user_docs.TestEmReviewChainTable.test_ac2_no_row_puts_litellm_first
+    red_confirmed: true
+    red_reason: "All three failed against the unchanged em-review README: AssertionError: Lists differ: ['litellm-first-row', 'chain-not-codex-first:performance', ...] != []; the per-perspective subtests failed for performance, spec and architecture; the no-litellm-first test failed on the row 'litellm/muse-spark -> codex'."
+  AC-3:
+    tests:
+      - tests.test_effort_user_docs.TestEmWorkflowReadmeEffortSentence.test_ac3_real_readme_has_the_effort_sentence_after_the_model_sentence
+      - tests.test_effort_user_docs.TestEmReviewReadmeEffortSentence.test_ac3_real_readme_has_the_effort_sentence_after_the_model_sentence
+      - tests.test_effort_user_docs.TestEmWorkflowReadmeEffortSentence.test_ac3_the_sentence_right_after_the_model_sentence_names_effort_and_the_flag
+      - tests.test_effort_user_docs.TestEmReviewReadmeEffortSentence.test_ac3_the_sentence_right_after_the_model_sentence_names_effort_and_the_flag
+    red_confirmed: true
+    red_reason: "Both READMEs failed against the unchanged text: AssertionError: Lists differ: ['effort-sentence-missing'] != [] (nothing follows the model sentence in its paragraph). The second pair failed on its first assertion, because no sentence follows the model sentence (assertIsNotNone)."
+  AC-4:
+    tests:
+      - tests.test_effort_user_docs.TestSecurityReviewModelSkill.test_ac4_real_skill_has_no_problems
+      - tests.test_effort_user_docs.TestSecurityReviewModelSkill.test_ac4_wrapper_fixed_phrase_is_gone
+      - tests.test_effort_user_docs.TestSecurityReviewModelSkill.test_ac4_other_perspectives_write_no_model_statement_is_gone
+      - tests.test_effort_user_docs.TestSecurityReviewModelSkill.test_ac4_literal_xhigh_effort_override_is_gone
+      - tests.test_effort_user_docs.TestSecurityReviewModelSkill.test_ac4_security_entry_effort_sets_the_reasoning_depth
+      - tests.test_effort_user_docs.TestSecurityReviewModelSkill.test_ac4_step_2_checks_support_for_the_entry_effort
+      - tests.test_effort_user_docs.TestSecurityReviewModelSkill.test_ac4_step_3_command_uses_the_effort_placeholder
+      - tests.test_effort_user_docs.TestSecurityReviewModelSkill.test_ac4_location_example_shows_the_codex_entry_with_effort
+      - tests.test_effort_user_docs.TestSecurityReviewModelSkill.test_ac4_description_still_names_the_security_review
+    red_confirmed: true
+    red_reason: "Against the unchanged SKILL.md the whole-skill test failed (AssertionError: Lists differ: ['wrapper-fixed-phrase', 'other-perspectives-write-no-model', ...] != []), and the separate checks for the wrapper-fixed phrase, the no-model statement, the xhigh literal, the security effort-depth statement, step 2, step 3 and the location example each failed. The description check (test_ac4_description_still_names_the_security_review) passed against the unchanged file because the description is not edited and must stay as it is; it is a guard, not a red."
+  AC-5:
+    tests:
+      - tests.test_effort_user_docs.TestEmReviewChainTable.test_ac5_forged_litellm_first_row_is_rejected
+      - tests.test_effort_user_docs.TestEmReviewChainTable.test_ac5_forged_litellm_first_security_row_is_rejected
+      - tests.test_effort_user_docs.TestEmReviewChainTable.test_ac5_forged_chain_without_the_codex_entry_is_rejected
+      - tests.test_effort_user_docs.TestEmReviewChainTable.test_ac5_forged_table_without_a_perspective_is_rejected
+      - tests.test_effort_user_docs.TestEmReviewChainTable.test_ac5_forged_readme_without_the_table_is_rejected
+      - tests.test_effort_user_docs.TestEmWorkflowReadmeEffortSentence.test_ac5_forged_readme_without_the_effort_sentence_is_rejected
+      - tests.test_effort_user_docs.TestEmReviewReadmeEffortSentence.test_ac5_forged_readme_without_the_effort_sentence_is_rejected
+      - tests.test_effort_user_docs.TestEmWorkflowReadmeEffortSentence.test_ac5_effort_mentioned_elsewhere_does_not_satisfy_the_check
+      - tests.test_effort_user_docs.TestEmReviewReadmeEffortSentence.test_ac5_effort_mentioned_elsewhere_does_not_satisfy_the_check
+      - tests.test_effort_user_docs.TestEmWorkflowReadmeEffortSentence.test_ac5_forged_sentence_without_the_wrapper_flag_is_rejected
+      - tests.test_effort_user_docs.TestEmWorkflowReadmeEffortSentence.test_ac5_forged_sentence_that_is_not_about_codex_is_rejected
+      - tests.test_effort_user_docs.TestEmWorkflowReadmeEffortSentence.test_ac5_forged_readme_without_the_model_sentence_is_rejected
+      - tests.test_effort_user_docs.TestSkillMatcherDetectsRegressions.test_ac5_skill_that_still_holds_the_xhigh_fixed_line_is_rejected
+      - tests.test_effort_user_docs.TestSkillMatcherDetectsRegressions.test_ac5_skill_that_still_says_other_perspectives_write_no_model_is_rejected
+      - tests.test_effort_user_docs.TestSkillMatcherDetectsRegressions.test_ac5_skill_that_still_holds_the_literal_xhigh_override_is_rejected
+      - tests.test_effort_user_docs.TestSkillMatcherDetectsRegressions.test_ac5_skill_whose_step_2_checks_xhigh_support_is_rejected
+      - tests.test_effort_user_docs.TestSkillMatcherDetectsRegressions.test_ac5_skill_whose_step_3_command_lacks_the_effort_placeholder_is_rejected
+      - tests.test_effort_user_docs.TestSkillMatcherDetectsRegressions.test_ac5_skill_whose_location_example_lacks_effort_is_rejected
+      - tests.test_effort_user_docs.TestSkillMatcherDetectsRegressions.test_ac5_skill_without_the_security_effort_depth_statement_is_rejected
+      - tests.test_effort_user_docs.TestSkillMatcherDetectsRegressions.test_ac5_skill_without_the_per_perspective_statement_is_rejected
+      - tests.test_effort_user_docs.TestSkillMatcherDetectsRegressions.test_ac5_skill_whose_description_drops_the_security_review_is_rejected
+      - tests.test_effort_user_docs.TestEmWorkflowChainTableRows.test_ac1_forged_litellm_first_row_is_rejected
+    red_confirmed: true
+    red_reason: "The negative proofs exist to fail when a matcher stops rejecting forged text, and that was observed: with the four matchers (em-review chain, em-workflow chain, effort sentence, skill) replaced in-process by functions that accept any text (no file edited), all 26 negative-proof tests of the module failed and none stayed green, while every other test of the module (the real-file checks and the stdlib-only check) was unaffected by the neutering."
+  AC-6:
+    tests:
+      - tests.test_llm_led_review_user_docs
+      - tests.test_review_phase_shard_dispatch.TestAC7ReadmeAndUnchangedInterfaces
+      - tests.test_reproduction_review_phase_em_review
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope: the criterion is the exit status of the project test command over the whole suite. The existing tests that read the changed READMEs (test_llm_led_review_user_docs, the README anchors of test_review_phase_shard_dispatch, the Auto-fix section of test_reproduction_review_phase_em_review) detect rewording of the existing README sentences; no red state occurred for this change because every one of them passed against the unchanged files and still passes. The baseline run was green (16656 tests, OK)."
