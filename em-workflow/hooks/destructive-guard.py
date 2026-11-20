@@ -7084,6 +7084,9 @@ def _read_double_quoted(body):
                 continued = True
             out.append(ch)
             i = after
+            if kind != _DOLLAR_LITERAL and body[after] in "@*#?-$!0123456789":
+                out.append(body[after])
+                i = after + 1
             continue
         out.append(ch)
         i += 1
@@ -8047,6 +8050,10 @@ def _read_static_word(marked, tok):
             chars.append(ch)
             bare.append(True)
             pos = after
+            if kind != _DOLLAR_LITERAL and source[after] in "@*#?-$!0123456789":
+                chars.append(source[after])
+                bare.append(False)
+                pos = after + 1
             continue
         chars.append(ch)
         bare.append(True)
@@ -8307,6 +8314,12 @@ def _args_json_nameref_scan(marked):
                 body = source[pos + skip:region.end - 1]
                 if kind in ("double-quote", "locale-quote") and ("$" in body or "`" in body):
                     cur_ok = False
+                if kind == "ansi-c-quote":
+                    decoded = _decode_ansi_c(body)
+                    if decoded is None:
+                        cur_ok = False
+                    else:
+                        body = "".join(decoded)
                 cur.append(body)
             else:
                 cur_ok = False
@@ -8337,11 +8350,20 @@ def _args_json_nameref_scan(marked):
     prefixes = {"builtin", "command", "exec", "then", "do", "else", "if", "while", "until", "!", "time"}
     for statement in words:
         k = 0
-        while k < len(statement) and (
-            statement[k][1]
-            and (statement[k][0] in prefixes or re.match(r"[A-Za-z_][A-Za-z0-9_]*=", statement[k][0]))
-        ):
-            k += 1
+        while k < len(statement) and statement[k][1]:
+            text = statement[k][0]
+            if text in prefixes or re.match(r"[A-Za-z_][A-Za-z0-9_]*=", text):
+                k += 1
+                continue
+            redir = re.fullmatch(
+                r"(?:\{[A-Za-z_][A-Za-z0-9_]*\}|[0-9]*)(?:<<<|<<-?|&>>|&>|>>|>&|<&|<>|>\||<|>)(.*)",
+                text,
+                re.S,
+            )
+            if redir is None:
+                break
+            # Redirection: skip it and, when the operand is a separate word, that word.
+            k += 1 if redir.group(1) else 2
         if k >= len(statement):
             continue
         name, ok = statement[k]
