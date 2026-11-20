@@ -1,0 +1,208 @@
+schema_version: 1
+feature: review-perspective-model-effort
+created: '2026-11-20'
+base_branch: main
+goal: "# レビュー観点ごとの Codex モデルと effort の指定\n\n## 前提（作業ツリーの未コミット変更）\n\n次の変更は作業ツリーに入っていて、まだコミットしていない。このタスクに含める。\n\
+  \n- security 観点の codex エントリのモデルを `gpt-6-astra` から `gpt-6.2-astra` に変更した。\n- performance / architecture\
+  \ / spec 観点の `primary_chain` を、codex が 1 番目、`muse-spark` が 2 番目の順に入れ替えた。\n- 上の 2 点に合わせて、両方の `reviewers.yaml`\
+  \ の説明コメントと、テストの期待値を更新した。\n\n対象ファイル:\n\n- `em-workflow/references/reviewers.yaml`\n- `em-review/references/reviewers.yaml`\n\
+  - `tests/test_reviewers_primary_chains.py`\n- `tests/test_contributor_tier_criteria.py`\n\n## ゴール\n\n\
+  各観点の codex エントリで、モデルと effort を次のとおりに指定する。\n\n| 観点 | モデル | effort |\n| --- | --- | --- |\n| security\
+  \ | `gpt-6.2-astra` | xhigh |\n| comprehensive | `gpt-6.2-astra` | high |\n| architecture | `gpt-6.2-astra`\
+  \ | high |\n| spec | `gpt-6.2-sol` | xhigh |\n| performance | `gpt-6.2-sol` | xhigh |\n| license | `gpt-6.2-sol`\
+  \ | low |\n\n- license 観点は em-workflow にだけある。\n- em-review の comprehensive 観点は chain が空なので、codex エントリは無い。\n\
+  - 2 番目のエントリ（`{harness: litellm, model: muse-spark}`）は変更しない。\n\n## 現状\n\n- codex エントリの `model` は、security\
+  \ 以外は指定していない。\n- effort は、`run_codex_exec.sh` が readonly モードで `-c 'model_reasoning_effort=\"xhigh\"\
+  '` を固定で付けている。\n    - `em-workflow/scripts/run_codex_exec.sh`\n    - `em-review/scripts/run_codex_exec.sh`\n\
+  - `reviewers.yaml` に effort を指定する項目は無い。\n\n## やること\n\n1. `reviewers.yaml` の codex エントリに effort を指定する項目を追加する（em-workflow\
+  \ / em-review の両方）。\n2. `run_codex_exec.sh` が effort を引数で受け取れるようにする（em-workflow / em-review の両方）。\n\
+  \    - 指定しないときは、今と同じ xhigh にする。\n3. codex-reviewer が `reviewers.yaml` の effort をラッパーに渡すようにする（em-workflow\
+  \ / em-review の両方）。\n    - `model` の受け渡しと同じ経路にする。\n4. オーケストレーター側で、codex-reviewer に effort を渡す箇所を更新する（`review-protocol.md`\
+  \ などで `model` の受け渡しを定義している箇所）。\n5. ゴールの表のとおりに、両方の `reviewers.yaml` のモデルと effort を書き換える。\n6. テストの期待値を更新し、effort\
+  \ のテストを追加する。\n    - `tests/test_reviewers_primary_chains.py` の `EXPECTED_CHAINS`\n    - `tests/test_contributor_tier_criteria.py`\
+  \ の `EM_REVIEW_EXPECTED_CHAINS`\n    - `tests/test_codex_wrapper_model_flag.py`（ラッパーの effort 引数）\n7.\
+  \ `.claude/skills/security-review-model/SKILL.md` の「推論の深さはラッパーが固定する xhigh」という記述を、新しい指定方法に合わせて直す。\n\n\
+  ## 受け入れ条件\n\n- 各観点の codex レビュアーが、ゴールの表のモデルと effort で `codex exec` を呼ぶ。\n- effort を指定しないエントリでは、今と同じく\
+  \ xhigh で呼ぶ。\n- em-workflow と em-review の 2 つのコピーで、ラッパーの effort の扱いが揃っている。\n- 次のテストが通る。\n\n    ```\n\
+  \    python3 -m unittest tests.test_codex_wrapper_model_flag \\\n      tests.test_reviewers_primary_chains\
+  \ tests.test_contributor_tier_criteria\n    ```\n\n- `python3 -m unittest discover -s tests` が通る。\n"
+parent_branch: em-workflow/review-perspective-model-effort/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.01
+      '2': 0.97
+      '3': 0.02
+    description_plus_code:
+      '0': 0.0
+      '1': 0.01
+      '2': 0.97
+      '3': 0.02
+  at: '2026-11-20T22:16:03+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 2d5713c9642cfb43dc0e43b805f5e4450e8f369e
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'UI と視覚的な成果物が無い、設定・シェルスクリプト・エージェント文書・テストだけの変更、design-system 候補 0 件（create-spec.design-step:
+    decide_autonomously -> skipped）'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review: {}
+requirements:
+  FR1:
+    title: reviewers.yaml の codex エントリに effort を追加
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: 観点ごとの model と effort
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: ラッパーの --effort 引数
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: モードごとの既定値
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: --litellm との併用（em-workflow のみ）
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: codex-reviewer が effort を渡す
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: オーケストレーターが effort を渡す
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: round record に effort を記録
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR9:
+    title: README
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR10:
+    title: security-review-model スキル
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: '互換性: --effort 未指定時の launch argv をバイト単位で維持'
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: '入力検証: effort は ^[a-z]+$ に一致した場合だけ埋め込む'
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: 2 つのラッパーの --effort の扱いを揃える
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: テストは標準ライブラリと stub だけを使う
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: em-workflow と em-review の version の minor を上げる
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR6:
+    title: ハッシュと literal で固定した既存テストの固定値を更新する
+    status: resolved
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

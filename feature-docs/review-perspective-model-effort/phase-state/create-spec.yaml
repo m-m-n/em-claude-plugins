@@ -1,7 +1,7 @@
 schema_version: 1
 feature: review-perspective-model-effort
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: b7f2d5f8d1b9a42280dc66f683242f4ef7f2321b
 last_input_digest: sha256:70355628f2e24a46f5db8ab361fb1eb2f294b8f9224e0bba09f5d88f75ba730e
