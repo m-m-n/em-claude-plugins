@@ -7961,10 +7961,13 @@ def _flag_equals_prefix_name(marked, tok):
     """For a flag-position word that is not static as a whole: the flag name
     when the word begins with one or two `-` and a name (letters, digits, `_`,
     `-`, possibly written with single quotes, double quotes without `$`, backtick
-    or backslash, or backslash escapes) followed directly by an unquoted `=`,
-    so that only the value part after the `=` is non-static. None for any other
-    word (no `=` after the name, a `$` or backtick in the name part, an
-    unterminated quote, no span or marked text)."""
+    or backslash, or backslash escapes) followed directly by an unquoted `=` or
+    an unquoted backslash-escaped `=` (`\\=`; either one ends the name part),
+    so that only the value part after the `=` is non-static. A `\\=` inside
+    double quotes is not an end: it keeps its backslash, which makes the name
+    one that is not valid. None for any other word (no `=` after the name, a
+    `$` or backtick in the name part, an unterminated quote, no span or marked
+    text)."""
     span = getattr(tok, "span", None)
     if marked is None or span is None:
         return None
@@ -8007,6 +8010,12 @@ def _flag_equals_prefix_name(marked, tok):
         if ch == "\\":
             if pos + 1 >= hi:
                 return None
+            if source[pos + 1] == "=":
+                # An unquoted backslash-escaped `=` ends the name part the way
+                # an unquoted `=` does: Bash's quote removal makes it the `=`
+                # of the `=`-form word. POS moves onto the `=` itself.
+                pos += 1
+                break
             if source[pos + 1] != "\n":
                 chars.append(source[pos + 1])
             pos += 2
