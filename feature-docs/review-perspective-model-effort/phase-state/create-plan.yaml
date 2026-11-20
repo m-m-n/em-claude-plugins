@@ -4,17 +4,41 @@ phase: create-plan
 status: dispatching
 generation: 1
 base_revision: 321580409a0f61a943a19f2251e1207bddb91c46
-last_input_digest: sha256:ea2c3967814ed4d82b1f4d738732a40697c11cc8fce8877d086561bca75727e2
-active_request_id: create-plan-run-0001
+last_input_digest: sha256:c035ff54d8baf01960129c38b812aee29a03b82cc7095d90b970347e74c5f866
+active_request_id: create-plan-run-0002
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: invalid_input
   input_digest: sha256:ea2c3967814ed4d82b1f4d738732a40697c11cc8fce8877d086561bca75727e2
   dispatch_digest_inputs:
     feature-docs/review-perspective-model-effort/REQUIREMENTS.md: sha256:f1988252b3c78946b8ef74b421a77279bb2cdb7b832b599fbc59f0489fda6ca9
     feature-docs/review-perspective-model-effort/SPEC.md: sha256:84707fa963e76852551e1dc3352321f2046b4ed3f56c5010f85add7551c45822
+    feature-docs/review-perspective-model-effort/workflow.yaml: sha256:146546ab9c4269e9180ab103fa47741924cf39b7e6227834f886cb4b493aac7e
+    plugin:references/contracts/planner-contract.md: sha256:df2bf3f0321c2627a31b878a14adb176ee7c2131638245112e5d3bb27f7a3682
+    plugin:references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    plugin:references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    plugin:references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    plugin:references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    plugin:references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
+    plugin:references/workflow-schema.md: sha256:5bd8500c203c4f17cde4193ee43d561073fe7f47099d61a55eb593e098881d87
+    plugin:skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+- request_id: create-plan-run-0002
+  status: dispatched
+  input_digest: sha256:c035ff54d8baf01960129c38b812aee29a03b82cc7095d90b970347e74c5f866
+  dispatch_digest_inputs:
+    feature-docs/review-perspective-model-effort/IMPLEMENTATION.md: sha256:4937c649b9688ddc9640c897cff51422a8388adf2f9d8f47f557e61b904db8fc
+    feature-docs/review-perspective-model-effort/REQUIREMENTS.md: sha256:f1988252b3c78946b8ef74b421a77279bb2cdb7b832b599fbc59f0489fda6ca9
+    feature-docs/review-perspective-model-effort/SPEC.md: sha256:84707fa963e76852551e1dc3352321f2046b4ed3f56c5010f85add7551c45822
+    feature-docs/review-perspective-model-effort/THREAT-MODEL.md: sha256:6c8a92ea55579dfba6aaf8d2da1d27e30952f27136c9350a854a61d9aee67db8
+    feature-docs/review-perspective-model-effort/VERIFICATION.md: sha256:b9584822317c57ff1c74805b490d57d480dc0b3e1b16ed4ab8f2948b56c742d0
+    feature-docs/review-perspective-model-effort/tasks/task0001.md: sha256:fdaa2ef85471e948a1c2ac51e7da42e7aaa5e0f7131b22f5de0d0f55ef1080ad
+    feature-docs/review-perspective-model-effort/tasks/task0002.md: sha256:c315a27dbc378d32a919023403b1ced9c303ca57c69158c285bff515c0a72479
+    feature-docs/review-perspective-model-effort/tasks/task0003.md: sha256:89f86847e9e3c3d55609a3dac3b5242c8814785ee7eaf5c28f3446601003a4c6
+    feature-docs/review-perspective-model-effort/tasks/task0004.md: sha256:cf4bff1714d1b8bcb486f0cf2689c944d7d9f120d45282a444792b34a0dd82d6
+    feature-docs/review-perspective-model-effort/tasks/task0005.md: sha256:74a908755fab1f79431d0c48abcdca1b25f7d122df2193aeb6fffe69fd973c5d
+    feature-docs/review-perspective-model-effort/tasks/task0006.md: sha256:6f9d6fa54d1b828882489ab318000ffc0882359816f0b77741b95255616c2c1e
     feature-docs/review-perspective-model-effort/workflow.yaml: sha256:146546ab9c4269e9180ab103fa47741924cf39b7e6227834f886cb4b493aac7e
     plugin:references/contracts/planner-contract.md: sha256:df2bf3f0321c2627a31b878a14adb176ee7c2131638245112e5d3bb27f7a3682
     plugin:references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
@@ -30,4 +54,5 @@ patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
-last_error: null
+last_error: 'create-plan-run-0001: validate-worker-output task-plan-files / task-plan-files-mismatch
+  (Files bullets with multiple backtick paths or (none))'
