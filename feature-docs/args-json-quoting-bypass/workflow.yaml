@@ -112,7 +112,8 @@ workflow:
   - AC-11
   failed_items: []
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: eefd88f230c0204ccb376017b44782feb585cacc
 tasks:
   task0001:
     title: Notion-pair exclusion only for single-word-certain value words, and O2 (8)
