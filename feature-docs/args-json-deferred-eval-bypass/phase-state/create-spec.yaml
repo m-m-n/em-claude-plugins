@@ -1,0 +1,30 @@
+schema_version: 1
+feature: args-json-deferred-eval-bypass
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: 9d768daa4d35e4a2d39d43bc1f3dc97a823bc602
+last_input_digest: sha256:98332fb16fabe39e861e46dc0a224067bf618c099d79df83e25a734fb1e25207
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:98332fb16fabe39e861e46dc0a224067bf618c099d79df83e25a734fb1e25207
+  output_digest: null
+  dispatch_digest_inputs:
+    .claude/rules/hook-tests.md: sha256:e8a9cfcff172935cad123f42a6f201b70922a7b2c5eab8cedd4b6ac1aae38162
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    em-workflow/hooks/destructive-guard.py: sha256:1778dc212f035f919b4a6e16ff56af33234b4a6af5f86f7c1be627434e916602
+    em-workflow/hooks/tests/destructive-guard-cases.json: sha256:c814b0db66c711ccdb64b37e900ce6fcd255f5dbd62d61a06bb3020e946bbb43
+    em-workflow/hooks/tests/run-destructive-guard.py: sha256:b0a03dbaf2c8f0b466be8c735cba283ff50492832599bdabac2bdc4c23a880a2
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+    tests/test_destructive_guard_args_json.py: sha256:b196292fcbc65be9b06a2b8af0820728949a381b0100c6ebe3bf71873103bb96
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
