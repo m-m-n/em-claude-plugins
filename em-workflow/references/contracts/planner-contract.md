@@ -148,7 +148,11 @@ path_correction:                   # null on every other dispatch
   contract fixes their paths only. The orchestrator chooses their actions
   (`replace_own`, or the outcome of the digest-mismatch branch) by
   `references/contracts/spec-writer-contract.md`, "How the orchestrator
-  chooses each target's action before dispatch".
+  chooses each target's action before dispatch". Before writing anything,
+  the planner checks the action of every plan document it must edit on this
+  dispatch (each target's task plan, IMPLEMENTATION.md, VERIFICATION.md);
+  when a document it must edit carries `preserve`, it writes nothing and
+  returns `status: blocked` naming that path.
 - **Output**: the `workflow_patch` is `replace_planning` carrying
   `tasks_patch.path_corrections`, whose shape and permission conditions are
   owned by `references/workflow-patch.md`, section
@@ -193,7 +197,11 @@ feature_docs_correction:           # null on every other dispatch
   branch) by `references/contracts/spec-writer-contract.md`, "How the
   orchestrator chooses each target's action before dispatch"; an
   `amend_other_feature` target keeps its own action. `allowed_write_roots` is
-  empty.
+  empty. Before writing anything, the planner checks the action of every plan
+  document it must edit on this dispatch (each target's task plan,
+  IMPLEMENTATION.md, VERIFICATION.md); when a document it must edit carries
+  `preserve`, it writes nothing and returns `status: blocked` naming that
+  path.
 - **Output**: the `workflow_patch` is `replace_planning` carrying
   `tasks_patch.feature_docs_removals`, whose shape and permission conditions
   are owned by `references/workflow-patch.md`, section
