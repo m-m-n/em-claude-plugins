@@ -174,8 +174,8 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/args-json-deferred-eval-bypass/task0001
     notes: null
   task0002:
     title: Command-name allowlist and command-level evaluation triggers
@@ -201,8 +201,8 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/args-json-deferred-eval-bypass/task0002
     notes: null
 review:
   status: pending
