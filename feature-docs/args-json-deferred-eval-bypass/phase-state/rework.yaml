@@ -1,11 +1,11 @@
 schema_version: 1
 feature: args-json-deferred-eval-bypass
 phase: rework
-status: applying_patch
+status: completed
 generation: 2
 base_revision: 33357606a6a522f75e960607e27a112c09eeb3a3
 last_input_digest: sha256:461662ebca699a478b77e2e44d274985129fe58a20c1710e4bf2d72c908677a5
-active_request_id: rework-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -68,7 +68,7 @@ patches:
   base_input_digest: sha256:fd28ba8626c57fad66bbe7e3cb5e6af0a3da12dbd1504e3041fb60944416aaae
   base_workflow_blob: 9333106b46000fe1bec548f967131210dccf6def
 - patch_id: args-json-deferred-eval-bypass-rework-p0002
-  status: validated
+  status: applied
   base_input_digest: sha256:461662ebca699a478b77e2e44d274985129fe58a20c1710e4bf2d72c908677a5
   base_workflow_blob: 017d989f72e47f3a98346a6356c0b56b8b1d90ce
 classification: []

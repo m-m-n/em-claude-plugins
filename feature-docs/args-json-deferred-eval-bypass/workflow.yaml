@@ -138,14 +138,14 @@ workflow:
   status: completed
   completed_at_commit: e3da86233593a337e0923cde4bbbd095ce260e3c
 - id: implement
-  status: completed
+  status: pending
   base_commit: 33b987897f0a15fda44678f97e11936ea6f98108
   completed_at_commit: e723ab9286f730833f325d414aa873e33037e043
 - id: review
   status: completed
   completed_at_commit: 659d039f7de144c92d9c4312ce39202f40afa028
 - id: verify
-  status: failed
+  status: pending
   result: fail
   round: 1
   passed_ids:
@@ -175,7 +175,9 @@ workflow:
   failed_items:
   - id: TS-8
     category: comprehensive
-    note: 'unit test test_the_words_of_a_compound_assignment_are_no_command fails on subTest A=([@]=1 [12]=2): the chunk reads as uncertain while the test expects KIND_NOTHING (Bash itself rejects [@]= as an indexed-array element subscript)'
+    note: 'unit test test_the_words_of_a_compound_assignment_are_no_command fails
+      on subTest A=([@]=1 [12]=2): the chunk reads as uncertain while the test expects
+      KIND_NOTHING (Bash itself rejects [@]= as an indexed-array element subscript)'
   - id: SC-1
     category: comprehensive
     note: FR6 is not fully verified because TS-8 fails
@@ -184,7 +186,10 @@ workflow:
     note: TS-8 fails
   - id: SC-5
     category: comprehensive
-    note: 'python3 -m unittest discover -s tests exits 1 (TS-8 subTest). The 4 failures in tests/test_review_perspective_model_effort_version_bump.py also fail on the base commit (Actions patch bump) and are excluded from this feature as pre-existing and out of scope'
+    note: python3 -m unittest discover -s tests exits 1 (TS-8 subTest). The 4 failures
+      in tests/test_review_perspective_model_effort_version_bump.py also fail on the
+      base commit (Actions patch bump) and are excluded from this feature as pre-existing
+      and out of scope
 - id: retrospect
   status: pending
 tasks:
@@ -271,6 +276,37 @@ tasks:
       - 9a42fe083737c591
       - 8016dc2435c250f7
       review_round: 1
+  task0004:
+    title: One classification for compound-assignment element subscripts
+    plan: tasks/task0004.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_args_json.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR3
+    - FR5
+    - FR6
+    - FR8
+    - NFR1
+    - NFR3
+    - NFR5
+    status: pending
+    branch: null
+    notes: null
+    provenance:
+      source: verify
+      source_ids:
+      - TS-8
+      - SC-1
+      - SC-2
+      - SC-5
 review:
   status: completed
   rounds_completed: 2
@@ -303,6 +339,7 @@ requirements:
     - task0001
     - task0002
     - task0003
+    - task0004
     tests:
     - TS-1
     - TS-2
@@ -313,6 +350,7 @@ requirements:
     - TS-12
     - TS-16
     - TS-17
+    - TS-18
   FR2:
     title: 算術コマンドを「何も宣言しない」とする扱いをやめる
     status: ok
@@ -330,6 +368,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0002
+    - task0004
     tests:
     - TS-3
     - TS-5
@@ -353,6 +392,7 @@ requirements:
     - task0001
     - task0002
     - task0003
+    - task0004
     tests:
     - TS-1
     - TS-2
@@ -363,6 +403,7 @@ requirements:
     - TS-10
     - TS-16
     - TS-17
+    - TS-18
   FR6:
     title: 既存の除外が保たれる形を維持する
     status: ok
@@ -372,6 +413,7 @@ requirements:
     - task0001
     - task0002
     - task0003
+    - task0004
     tests:
     - TS-7
     - TS-8
@@ -379,6 +421,7 @@ requirements:
     - TS-11
     - TS-16
     - TS-17
+    - TS-18
   FR7:
     title: 算術コマンドを固定していた単体テストを改める
     status: ok
@@ -397,6 +440,7 @@ requirements:
     - task0001
     - task0002
     - task0003
+    - task0004
     tests:
     - TS-10
   NFR1:
@@ -408,6 +452,7 @@ requirements:
     - task0001
     - task0002
     - task0003
+    - task0004
     tests:
     - TS-14
   NFR2:
@@ -428,6 +473,7 @@ requirements:
     - task0001
     - task0002
     - task0003
+    - task0004
     tests:
     - TS-15
   NFR4:
@@ -449,6 +495,7 @@ requirements:
     - task0001
     - task0002
     - task0003
+    - task0004
     tests:
     - TS-7
 batch:
