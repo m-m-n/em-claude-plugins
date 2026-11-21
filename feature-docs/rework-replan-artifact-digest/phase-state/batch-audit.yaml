@@ -1,0 +1,16 @@
+schema_version: 1
+feature: rework-replan-artifact-digest
+records:
+- question_id: rework.validator-false-negative
+  packet_id: null
+  answered_at: '2026-11-22T00:24:23+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - reject_and_redispatch
+  freeform: null
+  normalized_answer: 'rework-run-0003 の結果を不採用にして書き込みを破棄し、既存 TS-10 行の見出し風の表記（行中の ### ）を意味を保って言い換えるよう指示して rework-planner を再 dispatch する'
+  resolution_note: 'gate: rework result validation (no gate_id; unlisted non-packet site); options: A accept as validator false negative and file a follow-up / B reject and re-dispatch with a TS-10 rewording
+    / C other; choice: B; not chosen: A, C; key points: validate-worker-output.py extract_markdown_section matches ''### '' anywhere in a line, so the pre-existing TS-10 row''s inline ''### feature_docs_correction''
+    truncates the Test Scenarios section and the new TS-11 row is not seen; Codex judged that an unattended run should not override a validation error with an audit note alone, and that a one-row rewording
+    keeps the validator unchanged and the run moving; Claude agreed; codex_consulted: true; opus_escalation: false'
