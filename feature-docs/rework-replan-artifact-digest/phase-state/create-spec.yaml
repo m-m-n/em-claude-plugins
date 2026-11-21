@@ -1,14 +1,17 @@
 schema_version: 1
 feature: rework-replan-artifact-digest
 phase: create-spec
-status: initialized
+status: dispatching
 generation: 1
 base_revision: 5718f4784244e7e10ca40ee6973bb40f01b53e83
-last_input_digest: null
-active_request_id: null
+last_input_digest: sha256:d770e0a80b2b507ba0ccf93922f64056ef2ba1f66d3ce4121a15e0b3b8b12e4f
+active_request_id: create-spec-run-0001
 packets: {}
 answers: {}
-worker_runs: []
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:d770e0a80b2b507ba0ccf93922f64056ef2ba1f66d3ce4121a15e0b3b8b12e4f
 artifacts: []
 patches: []
 progress_fingerprint: null
