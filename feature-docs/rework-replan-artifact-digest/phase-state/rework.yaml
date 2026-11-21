@@ -1,11 +1,11 @@
 schema_version: 1
 feature: rework-replan-artifact-digest
 phase: rework
-status: in_progress
+status: completed
 generation: 1
 base_revision: 0367095a78e28dbba54a8ea64b40e3acc3d0ec0c
 last_input_digest: sha256:ea0fe8b1e281d212cd2960ad9025bc562b2f02419cb4a08eabfd88be04e8ef78
-active_request_id: rework-run-0004
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -103,7 +103,7 @@ patches:
   base_input_digest: sha256:ea0fe8b1e281d212cd2960ad9025bc562b2f02419cb4a08eabfd88be04e8ef78
   base_workflow_blob: 4437c7ce46b786b7e8dee3803f8d3a13ab5d6474
 - patch_id: rework-replan-artifact-digest-rework-p0004
-  status: validated
+  status: applied
   base_input_digest: sha256:ea0fe8b1e281d212cd2960ad9025bc562b2f02419cb4a08eabfd88be04e8ef78
   base_workflow_blob: 4437c7ce46b786b7e8dee3803f8d3a13ab5d6474
 progress_fingerprint: null
