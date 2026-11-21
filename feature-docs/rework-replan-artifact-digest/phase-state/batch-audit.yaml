@@ -14,3 +14,13 @@ records:
     / C other; choice: B; not chosen: A, C; key points: validate-worker-output.py extract_markdown_section matches ''### '' anywhere in a line, so the pre-existing TS-10 row''s inline ''### feature_docs_correction''
     truncates the Test Scenarios section and the new TS-11 row is not seen; Codex judged that an unattended run should not override a validation error with an audit note alone, and that a one-row rewording
     keeps the validator unchanged and the run moving; Claude agreed; codex_consulted: true; opus_escalation: false'
+- question_id: review.auto-fix-judgment
+  packet_id: null
+  answered_at: '2026-11-22T01:09:27+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - skip_site
+  freeform: null
+  normalized_answer: 'review round 3 loop 1: implementation-planner.md の Write check first 箇条（402 行 / 472 行）に extend_only の停止条件を足す high 指摘 5ecafb62af6aaa17 を auto-fix せず skip し、batch rework cap 到達として deferred にする'
+  resolution_note: 'gate: review.auto-fix-judgment (non-packet; batch default Apply as-is); options: A Apply as-is on implementation-planner.md / B Apply as-is limited to the feature-docs correction bullet (472) / C skip the site and defer; choice: C; not chosen: A, B; key points: the review-editor may edit only implementation-planner.md, while tests/test_artifact_digest_docs.py FPC_WRITE_CHECK_TEXT pins the 402 bullet word for word, so A breaks the full test command and a TS-6 recurrence would hit the verify lineage cap; B leaves the high at 402; Codex judged C comparatively better, with a follow-up task that updates both bullets and the pin test together; Claude agreed; codex_consulted: true; opus_escalation: false'
