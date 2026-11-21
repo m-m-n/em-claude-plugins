@@ -120,11 +120,47 @@ workflow:
   status: completed
   completed_at_commit: 91fdbd79d9e727eda4b7ceabd410cc74f44e25c7
 - id: verify
-  status: in_progress
-  result: null
-  round: 0
-  passed_ids: []
-  failed_items: []
+  status: failed
+  result: fail
+  round: 1
+  passed_ids:
+  - TS-1
+  - TS-2
+  - TS-3
+  - TS-4
+  - TS-5
+  - TS-6
+  - TS-7
+  - TS-8
+  - TS-9
+  - TS-10
+  - TS-11
+  - TS-12
+  - TS-13
+  - TS-14
+  - TS-15
+  - TS-17
+  - TS-18
+  - TS-19
+  - TS-20
+  - TS-21
+  - TS-23
+  - TS-24
+  - TS-25
+  - TS-26
+  - TS-27
+  - AC1
+  - AC2
+  - AC3
+  - AC4
+  - AC5
+  - AC6
+  - AC7
+  - AC8
+  failed_items:
+  - id: TS-16
+    note: 'unittest discover が 16973 件中 4 件失敗（tests/test_review_perspective_model_effort_version_bump.py の patch==0 検査。em-workflow 0.5.2 / em-review 0.6.1 で patch が 0 でない）。base_branch でも同じ 4 件が再現し、この feature の差分は当該テストにも version にも触れていない。destructive-guard ランナーは 1525/1525 pass'
+    category: comprehensive
 - id: retrospect
   status: pending
 tasks:
@@ -371,8 +407,9 @@ requirements:
 batch:
   review_rework_count: 1
   verify_rework:
-    rounds: 0
-    failed_id_counts: {}
+    rounds: 1
+    failed_id_counts:
+      TS-16: 1
   infra_resume:
     rounds: 0
     cap: 2
