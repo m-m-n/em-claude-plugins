@@ -1,7 +1,7 @@
 schema_version: 1
 feature: mcp-bridge-function-shadow
 phase: create-plan
-status: in_progress
+status: completed
 generation: 1
 base_revision: 7937443fe3a9555be05172096b55e89ab2bb729c
 last_input_digest: sha256:c9a847e3a641690baaf8361ad8d7528c73152f0f53995cfc2da4629eebde3ba4
@@ -40,7 +40,7 @@ artifacts:
 other_feature_doc_fixes: []
 patches:
 - patch_id: mcp-bridge-function-shadow-p0001
-  status: applying
+  status: applied
   base_input_digest: sha256:c9a847e3a641690baaf8361ad8d7528c73152f0f53995cfc2da4629eebde3ba4
   base_workflow_blob: c1b4fd2018db7db5b6ed02f371cb3b47eb5c5454
 progress_fingerprint: null
