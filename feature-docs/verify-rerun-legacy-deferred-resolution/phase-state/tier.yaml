@@ -1,0 +1,71 @@
+schema_version: 2
+feature: verify-rerun-legacy-deferred-resolution
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.2
+    confidence: 0.8
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.8
+      '2': 0.2
+      '3': 0.0
+  observed_at: '2026-11-21T22:11:00+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.57
+    confidence: 0.57
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.43
+      '2': 0.57
+      '3': 0.0
+  observed_at: '2026-11-21T22:13:16+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/skills/develop/SKILL.md
+  - tests/test_verify_pass_resolution_procedure.py
+  - tests/test_resolve_verified_findings.py
+  changed_lines_approx: 45
+  new_functions_needed: 0
+  new_files_needed: []
+  new_dependencies_needed: []
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 1
+  body_change_kind: wording_or_rule_addition
+  change_containment: multiple_modules
+  caller_and_dependency_count: 3
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: em-workflow/skills/develop/SKILL.md:196–207,497–499 は、再開時に統合ブランチの記録から未完了の
+    step を選ぶ。1048–1058,1075–1083 は、旧形式でも欠落した round を 0 として加算し、今回の passed_ids を書いてから、対応表があればスクリプトを呼ぶ。欠落時の既定値は
+    em-workflow/references/workflow-schema.md:235–259 にあり、em-workflow/scripts/resolve-verified-findings.py:242–254,362–384,464–472
+    は記録済みの合格結果を検査して fixed にする。em-workflow/skills/develop/SKILL.md:1064–1074 は未達以外の内容を含む指摘を広く除外し、tests/test_verify_pass_resolution_procedure.py:274–282
+    がその文言を固定している。tests/test_resolve_verified_findings.py:372–434 の proceed ケースは最初から
+    round と passed_ids を持つため、両方が欠けた完了済み状態から verify をやり直す回帰ケースが必要。tests/test_merge_preflight.py:719–752
+    は最新記録での停止と通過を個別に確認し、判定は em-workflow/scripts/merge-preflight.py:349–389,511–522
+    にある。feature-docs/verify-pass-resolves-deferred-findings/REQUIREMENTS.md:28–31
+    は当時の no-backfill を明記し、同ディレクトリの workflow.yaml:15–27 に対象事象の記述がある。件数は develop の呼び出し元、入力の定義、出力を読む事前判定の計3件。行数は見積もりで、テストは未実行。
+decided_at: '2026-11-21T22:13:20+09:00'
