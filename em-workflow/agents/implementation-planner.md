@@ -393,15 +393,16 @@ section. The input shape is owned by
   backtick or a colon, is never proposed.
 - **Path strings only.** Replace the old path, and the bare old file name, in
   the target's task plan, IMPLEMENTATION.md and VERIFICATION.md. Change
-  nothing else. Before writing anything, determine every file this dispatch
-  will actually edit and check each one's `write_policy.targets` action; if
-  any file it must edit carries `preserve`, write nothing and return
-  `status: blocked` naming that path.
+  nothing else.
 - **Other plans.** In the plan of an unmerged task that is not a target, only
   references to the old path or to the bare old file name may be replaced, and
   only when that plan is listed in `write_policy.targets`; otherwise the
   planner leaves that plan unedited, because the old reference may remain
   there. The plan of a merged task is not edited.
+- **Write check first.** Before writing anything, determine every file this
+  dispatch will actually edit and check each one's `write_policy.targets`
+  action; if any file it must edit carries `preserve`, write nothing and
+  return `status: blocked` naming that path.
 - **Shared bare name.** Several corrections can share one old file name. In a
   target task's plan a bare occurrence of it is replaced by the new file name
   of the correction of the target task that uses the plan; when a plan is used

@@ -2617,5 +2617,300 @@ class TestNoTask0002PlaceRestatesTheOwner(unittest.TestCase):
                 self.assertFalse(_names_git_hash_object(_read(path)))
 
 
+# ---------------------------------------------------------------------------
+# rework-replan-artifact-digest task0003 (FR3, FR7, NFR4; TS-11)
+#
+# In `## Final-path correction` of implementation-planner.md the write check
+# ("Before writing anything, determine every file this dispatch will actually
+# edit ...") is its own bullet labelled **Write check first.**, placed directly
+# after the **Other plans.** bullet and directly before the **Shared bare
+# name.** bullet. The **Path strings only.** bullet no longer carries it, so
+# the first sentence and the first bullet of the section that hold
+# `write_policy.targets` are the **Other plans.** ones.
+#
+# The section is cut out by its heading and split into its intro and its
+# top-level `- ` bullets; matching is on whitespace-normalized text, so the
+# document's hard line wrapping does not matter. Every presence and order
+# matcher has a forged copy on which it fails, and every absence matcher has a
+# forged copy on which it fires. Existing test methods and the helpers above
+# stay unchanged.
+# ---------------------------------------------------------------------------
+
+FINAL_PATH_CORRECTION_TITLE = "Final-path correction"
+FPC_PATH_STRINGS = "Path strings only."
+FPC_OTHER_PLANS = "Other plans."
+FPC_WRITE_CHECK = "Write check first."
+FPC_SHARED_BARE_NAME = "Shared bare name."
+FPC_WRITE_POLICY_TARGETS = "`write_policy.targets`"
+FPC_PRESERVE = "`preserve`"
+
+# The text of the **Write check first.** bullet after its label (AC-1).
+FPC_WRITE_CHECK_TEXT = (
+    "Before writing anything, determine every file this dispatch will "
+    "actually edit and check each one's `write_policy.targets` action; if "
+    "any file it must edit carries `preserve`, write nothing and return "
+    "`status: blocked` naming that path."
+)
+# The text of the **Path strings only.** bullet after its label (AC-2).
+FPC_PATH_STRINGS_TEXT = (
+    "Replace the old path, and the bare old file name, in the target's task "
+    "plan, IMPLEMENTATION.md and VERIFICATION.md. Change nothing else."
+)
+# The tokens the write check bullet states.
+FPC_WRITE_CHECK_TOKENS = (
+    "Before writing anything",
+    "will actually edit",
+    FPC_WRITE_POLICY_TARGETS,
+    FPC_PRESERVE,
+    "write nothing",
+    "`status: blocked` naming that path",
+)
+# The labels of the section's bullets, in order, after the change.
+FPC_EXPECTED_LABELS = (
+    "Exception to the `### 2a.` pass.",
+    "Path choice.",
+    "Path form.",
+    FPC_PATH_STRINGS,
+    FPC_OTHER_PLANS,
+    FPC_WRITE_CHECK,
+    FPC_SHARED_BARE_NAME,
+    "Patch shape.",
+    "Entries and requirements.",
+    "Canonical plan.",
+    "References in tests.",
+    "Re-planning pass.",
+)
+
+_FPC_LABEL_RE = re.compile(r"^\*\*(.+?)\*\*\s*(.*)$", re.DOTALL)
+
+
+def _fpc_model(section_body):
+    """[(label, text)] for the section: the intro as `(None, text)` first,
+    then one `(label, text after the label)` per top-level `- ` bullet.
+    Texts are whitespace-normalized. A bullet runs to the next line that
+    starts with `- ` in column 0, so a nested list and the blank lines inside
+    a bullet belong to it."""
+    intro = []
+    bullets = []
+    for line in section_body.splitlines():
+        if line.startswith("- "):
+            bullets.append([line[2:]])
+        elif bullets:
+            bullets[-1].append(line)
+        else:
+            intro.append(line)
+    model = [(None, _norm("\n".join(intro)))]
+    for chunk in bullets:
+        text = _norm("\n".join(chunk))
+        match = _FPC_LABEL_RE.match(text)
+        if match:
+            model.append((match.group(1), match.group(2)))
+        else:
+            model.append((None, text))
+    return model
+
+
+def _fpc_labels(model):
+    return [label for label, _text in model if label is not None]
+
+
+def _fpc_text(model, label):
+    """The text after `label`, or None when no bullet carries it."""
+    for found, text in model:
+        if found == label:
+            return text
+    return None
+
+
+def _fpc_has_write_check(model):
+    """Presence matcher: a bullet labelled **Write check first.** states every
+    token of the write check."""
+    text = _fpc_text(model, FPC_WRITE_CHECK)
+    return text is not None and all(t in text for t in FPC_WRITE_CHECK_TOKENS)
+
+
+def _fpc_write_check_is_placed_after_other_plans(model):
+    """Order matcher: the write check bullet comes directly after the
+    **Other plans.** bullet and directly before the **Shared bare name.**
+    bullet."""
+    labels = _fpc_labels(model)
+    if (
+        FPC_OTHER_PLANS not in labels
+        or FPC_WRITE_CHECK not in labels
+        or FPC_SHARED_BARE_NAME not in labels
+    ):
+        return False
+    at = labels.index(FPC_WRITE_CHECK)
+    return (
+        labels.index(FPC_OTHER_PLANS) == at - 1
+        and labels.index(FPC_SHARED_BARE_NAME) == at + 1
+    )
+
+
+def _fpc_path_strings_carries_the_write_check(model):
+    """Absence matcher: fires when the **Path strings only.** bullet holds
+    `write_policy.targets` or `preserve`."""
+    text = _fpc_text(model, FPC_PATH_STRINGS)
+    if text is None:
+        return False
+    return FPC_WRITE_POLICY_TARGETS in text or FPC_PRESERVE in text
+
+
+def _fpc_targets_named_before_other_plans(model):
+    """Absence matcher: fires when any text placed before the **Other
+    plans.** bullet (the intro and the earlier bullets, labels included)
+    holds `write_policy.targets`."""
+    for label, text in model:
+        if label == FPC_OTHER_PLANS:
+            return False
+        if FPC_WRITE_POLICY_TARGETS in text or (
+            label is not None and FPC_WRITE_POLICY_TARGETS in label
+        ):
+            return True
+    return False
+
+
+def _fpc_with_text(model, label, text):
+    """A copy of `model` whose bullet `label` carries `text`."""
+    return [(l, text if l == label else t) for l, t in model]
+
+
+def _load_fpc_model():
+    return _fpc_model(
+        _section(_read(PLANNER_AGENT_PATH), FINAL_PATH_CORRECTION_TITLE, level=2)
+    )
+
+
+class TestFinalPathCorrectionMatchersFireOnForgedText(unittest.TestCase):
+    """Each matcher of the write check placement has a forged copy of the
+    real section on which it fails (presence, order) or fires (absence)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.model = _load_fpc_model()
+
+    def test_the_section_model_has_an_intro_and_twelve_bullets(self):
+        self.assertIsNone(self.model[0][0])
+        self.assertEqual(len(self.model), 13)
+
+    def test_presence_matcher_fails_without_the_write_check_bullet(self):
+        forged = [(l, t) for l, t in self.model if l != FPC_WRITE_CHECK]
+        self.assertTrue(_fpc_has_write_check(self.model))
+        self.assertFalse(_fpc_has_write_check(forged))
+
+    def test_presence_matcher_fails_when_one_token_is_missing(self):
+        for token in FPC_WRITE_CHECK_TOKENS:
+            with self.subTest(token=token):
+                forged = _fpc_with_text(
+                    self.model,
+                    FPC_WRITE_CHECK,
+                    _fpc_text(self.model, FPC_WRITE_CHECK).replace(token, ""),
+                )
+                self.assertFalse(_fpc_has_write_check(forged))
+
+    def test_presence_matcher_fails_when_the_text_stands_under_another_label(self):
+        forged = [
+            (FPC_PATH_STRINGS if l == FPC_WRITE_CHECK else l, t)
+            for l, t in self.model
+        ]
+        self.assertFalse(_fpc_has_write_check(forged))
+
+    def test_order_matcher_fails_when_the_bullet_stands_before_other_plans(self):
+        self.assertTrue(_fpc_write_check_is_placed_after_other_plans(self.model))
+        rest = [m for m in self.model if m[0] != FPC_WRITE_CHECK]
+        check = [m for m in self.model if m[0] == FPC_WRITE_CHECK]
+        at = [m[0] for m in rest].index(FPC_OTHER_PLANS)
+        forged = rest[:at] + check + rest[at:]
+        self.assertEqual(len(forged), len(self.model))
+        self.assertFalse(_fpc_write_check_is_placed_after_other_plans(forged))
+
+    def test_order_matcher_fails_when_the_bullet_stands_after_shared_bare_name(self):
+        rest = [m for m in self.model if m[0] != FPC_WRITE_CHECK]
+        check = [m for m in self.model if m[0] == FPC_WRITE_CHECK]
+        at = [m[0] for m in rest].index(FPC_SHARED_BARE_NAME)
+        forged = rest[: at + 1] + check + rest[at + 1:]
+        self.assertFalse(_fpc_write_check_is_placed_after_other_plans(forged))
+
+    def test_order_matcher_fails_without_the_write_check_bullet(self):
+        forged = [(l, t) for l, t in self.model if l != FPC_WRITE_CHECK]
+        self.assertFalse(_fpc_write_check_is_placed_after_other_plans(forged))
+
+    def test_absence_matcher_fires_when_path_strings_holds_the_write_check(self):
+        self.assertFalse(_fpc_path_strings_carries_the_write_check(self.model))
+        for tail in (
+            " Check each file's `write_policy.targets` action.",
+            " A file that carries `preserve` is never edited.",
+            " " + FPC_WRITE_CHECK_TEXT,
+        ):
+            with self.subTest(tail=tail):
+                forged = _fpc_with_text(
+                    self.model,
+                    FPC_PATH_STRINGS,
+                    _fpc_text(self.model, FPC_PATH_STRINGS) + tail,
+                )
+                self.assertTrue(_fpc_path_strings_carries_the_write_check(forged))
+
+    def test_absence_matcher_fires_when_a_text_before_other_plans_names_targets(self):
+        self.assertFalse(_fpc_targets_named_before_other_plans(self.model))
+        forged_intro = [
+            (l, t + " See `write_policy.targets`." if l is None else t)
+            for l, t in self.model
+        ]
+        self.assertTrue(_fpc_targets_named_before_other_plans(forged_intro))
+        forged_path = _fpc_with_text(
+            self.model,
+            FPC_PATH_STRINGS,
+            _fpc_text(self.model, FPC_PATH_STRINGS) + " " + FPC_WRITE_CHECK_TEXT,
+        )
+        self.assertTrue(_fpc_targets_named_before_other_plans(forged_path))
+
+    def test_absence_matcher_stays_quiet_for_targets_in_and_after_other_plans(self):
+        # `write_policy.targets` is named by the Other plans bullet and by
+        # the write check bullet; neither is "before" the Other plans bullet.
+        self.assertIn(
+            FPC_WRITE_POLICY_TARGETS, _fpc_text(self.model, FPC_OTHER_PLANS)
+        )
+        self.assertFalse(_fpc_targets_named_before_other_plans(self.model))
+
+
+class TestFinalPathCorrectionPlacesTheWriteCheckAfterOtherPlans(unittest.TestCase):
+    """AC-1 and AC-2 of task0003: the real section of the planner agent."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.model = _load_fpc_model()
+
+    def test_ac1_the_section_has_a_write_check_first_bullet(self):
+        self.assertTrue(_fpc_has_write_check(self.model))
+
+    def test_ac1_the_write_check_text_is_the_sentence_word_for_word(self):
+        self.assertEqual(
+            _fpc_text(self.model, FPC_WRITE_CHECK), FPC_WRITE_CHECK_TEXT
+        )
+
+    def test_ac1_the_write_check_bullet_follows_other_plans_and_precedes_shared_bare_name(self):
+        self.assertTrue(_fpc_write_check_is_placed_after_other_plans(self.model))
+
+    def test_ac2_the_path_strings_bullet_is_the_two_sentences_only(self):
+        self.assertEqual(
+            _fpc_text(self.model, FPC_PATH_STRINGS), FPC_PATH_STRINGS_TEXT
+        )
+
+    def test_ac2_the_path_strings_bullet_names_neither_targets_nor_preserve(self):
+        self.assertFalse(_fpc_path_strings_carries_the_write_check(self.model))
+
+    def test_ac2_no_text_before_other_plans_names_write_policy_targets(self):
+        self.assertFalse(_fpc_targets_named_before_other_plans(self.model))
+
+    def test_ac2_the_bullets_keep_their_labels_and_order(self):
+        self.assertEqual(tuple(_fpc_labels(self.model)), FPC_EXPECTED_LABELS)
+
+    def test_ac2_the_write_check_is_stated_once_in_the_section(self):
+        count = sum(
+            text.count("Before writing anything") for _label, text in self.model
+        )
+        self.assertEqual(count, 1)
+
+
 if __name__ == "__main__":
     unittest.main()
