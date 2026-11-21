@@ -1,7 +1,7 @@
 schema_version: 1
 feature: rework-replan-artifact-digest
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 93983bf140ed46352ea87a8b9f3e9b8ed19ea1e9
 last_input_digest: sha256:9e85c0f0d6f1800f24f51bbae97e09cae1cad16173cdbb9ea5bf3e11f0b89412
@@ -41,7 +41,7 @@ artifacts:
 other_feature_doc_fixes: []
 patches:
 - patch_id: create-plan-p0001
-  status: pending
+  status: applied
   base_input_digest: sha256:9e85c0f0d6f1800f24f51bbae97e09cae1cad16173cdbb9ea5bf3e11f0b89412
   base_workflow_blob: b0fc2e3983bbdc58354990e746d5e25a410cbc3a
 progress_fingerprint: null
