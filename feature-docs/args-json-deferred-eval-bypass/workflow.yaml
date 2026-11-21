@@ -8,7 +8,9 @@ goal: '# destructive-guard: 後から評価される値（算術式・${var@P}�
   ## 脆弱性の概要 (必須)
 
 
-  `em-workflow/hooks/destructive-guard.py` の notion ペアの除外（`_args_json_notion_pair()`）は、先行するコマンドが名前参照を作り得るかを `_args_json_nameref_scan()` で判定する。値を後から現在のシェルで評価し直す構文（算術式、`${var@P}` など）を経由すると、この判定をすり抜けて `--args-json` の検査を省かせられる。
+  `em-workflow/hooks/destructive-guard.py` の notion ペアの除外（`_args_json_notion_pair()`）は、先行するコマンドが名前参照を作り得るかを
+  `_args_json_nameref_scan()` で判定する。値を後から現在のシェルで評価し直す構文（算術式、`${var@P}` など）を経由すると、この判定をすり抜けて
+  `--args-json` の検査を省かせられる。
 
 
   ## 参照 (必須)
@@ -22,7 +24,8 @@ goal: '# destructive-guard: 後から評価される値（算術式・${var@P}�
 
   - 該当パッケージ: 該当なし
 
-  - 現在のバージョン: integration ブランチ em-workflow/args-json-quoting-bypass/integration の時点（review round 3 完了後）
+  - 現在のバージョン: integration ブランチ em-workflow/args-json-quoting-bypass/integration の時点（review
+  round 3 完了後）
 
   - 修正済みバージョン: 無し
 
@@ -30,7 +33,10 @@ goal: '# destructive-guard: 後から評価される値（算術式・${var@P}�
   ## 攻撃シナリオ (必須)
 
 
-  シェルを実行する MCP ツールが mcp-bridge に登録された環境で、次のどれかの形で名前参照 `r` を配列に向け、`mcp-bridge run --mcp notion --tool notion-create-comment --format "$r" --args-json ''{"command":"<破壊的なコマンド>"}''` を実行する。フックは notion 宛てと判定して JSON を検査せず allow にするが、Bash では `"$r"` が `json --mcp desktop-commander --tool start_process` に展開され、別のツールに送られる。
+  シェルを実行する MCP ツールが mcp-bridge に登録された環境で、次のどれかの形で名前参照 `r` を配列に向け、`mcp-bridge run --mcp
+  notion --tool notion-create-comment --format "$r" --args-json ''{"command":"<破壊的なコマンド>"}''`
+  を実行する。フックは notion 宛てと判定して JSON を検査せず allow にするが、Bash では `"$r"` が `json --mcp desktop-commander
+  --tool start_process` に展開され、別のツールに送られる。
 
 
   - ANSI-C で開始記号を隠した値を `${p@P}` で評価する（`p=$''$\x7b declare -gn r=A[@]; }''`）
@@ -64,11 +70,13 @@ goal: '# destructive-guard: 後から評価される値（算術式・${var@P}�
 
   - `em-workflow/hooks/destructive-guard.py` の `_args_json_has_brace_substitution()`、`_args_json_nameref_scan()`、`_args_json_declares_nameref()`（算術コマンドを「何も宣言しない」と扱う箇所）
 
-  - 方向性: 値をコードとして評価し直す構文（`((...))`、`let`、`$((...))`、`[[ ]]` の算術比較、変数を使う配列添字、`declare -i` 付きの代入、`${x@P}`）をチャンクが持つときは、シェル状態を不明として除外を外す。字面検索は補助にする
+  - 方向性: 値をコードとして評価し直す構文（`((...))`、`let`、`$((...))`、`[[ ]]` の算術比較、変数を使う配列添字、`declare
+  -i` 付きの代入、`${x@P}`）をチャンクが持つときは、シェル状態を不明として除外を外す。字面検索は補助にする
 
   - 同時に扱うとよい残件: 文字列を評価する組み込みの拒否リストが不完全（`fc`、`history`、`enable`、`compgen`、`complete`、`bind`）。許可リスト方式も検討する
 
-  - 詳細は integration ブランチの `feature-docs/args-json-quoting-bypass/reviews/round3.yaml`（findings の `50060ea113b79522`）
+  - 詳細は integration ブランチの `feature-docs/args-json-quoting-bypass/reviews/round3.yaml`（findings
+  の `50060ea113b79522`）
 
 
   ## 暫定緩和策 (任意)
@@ -104,7 +112,8 @@ project:
     main:
       language: python
       build_command: ''
-      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3
+        -m unittest discover -s tests
       format_command: ''
 workflow:
 - id: create-spec
@@ -118,14 +127,16 @@ workflow:
   - DESIGN.md
   - design/
   status: skipped
-  skipped_reason: 'UI を持たないフックの静的解析の修正で、design-system 候補 0 件（create-spec.design-step: decide_autonomously → skip）'
+  skipped_reason: 'UI を持たないフックの静的解析の修正で、design-system 候補 0 件（create-spec.design-step:
+    decide_autonomously → skip）'
 - id: create-plan
   artifacts:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - THREAT-MODEL.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: e3da86233593a337e0923cde4bbbd095ce260e3c
 - id: implement
   status: pending
   base_commit: 33b987897f0a15fda44678f97e11936ea6f98108
@@ -139,7 +150,60 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Expansion-level deferred-evaluation detection
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_args_json.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR4
+    - FR5
+    - FR6
+    - FR8
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    status: pending
+    branch: null
+    notes: null
+  task0002:
+    title: Command-name allowlist and command-level evaluation triggers
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_args_json.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR5
+    - FR6
+    - FR7
+    - FR8
+    - NFR1
+    - NFR3
+    - NFR4
+    - NFR5
+    status: pending
+    branch: null
+    notes: null
 review:
   status: pending
   rounds_completed: 0
@@ -149,19 +213,24 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
     tests:
     - TS-1
     - TS-2
     - TS-3
     - TS-4
     - TS-9
+    - TS-11
+    - TS-12
   FR2:
     title: 算術コマンドを「何も宣言しない」とする扱いをやめる
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0002
     tests:
     - TS-2
     - TS-4
@@ -170,7 +239,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0002
     tests:
     - TS-3
     - TS-5
@@ -181,7 +251,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-7
   FR5:
@@ -189,7 +260,9 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
     tests:
     - TS-1
     - TS-2
@@ -203,17 +276,21 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
     tests:
     - TS-7
     - TS-8
     - TS-9
+    - TS-11
   FR7:
     title: 算術コマンドを固定していた単体テストを改める
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0002
     tests:
     - TS-8
   FR8:
@@ -221,7 +298,9 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
     tests:
     - TS-10
   NFR1:
@@ -229,35 +308,48 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-14
   NFR2:
     title: チャンクごとのキャッシュと再帰を使わない遡り
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-13
   NFR3:
     title: テストは標準ライブラリだけで書く
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-15
   NFR4:
     title: em-workflow の version を変更しない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-15
   NFR5:
     title: 同じ変更の中で run-destructive-guard.py を走らせる
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
     tests:
     - TS-7
 batch:
