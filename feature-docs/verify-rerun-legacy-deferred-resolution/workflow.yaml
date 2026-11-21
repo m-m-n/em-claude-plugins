@@ -118,7 +118,7 @@ workflow:
   base_commit: 6308e8539e6c85ef55d2ec41cdf5bf0ce217f57e
   completed_at_commit: 8cf19045b30629a5d288a643759d28572c4f89cf
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -172,6 +172,15 @@ tasks:
 review:
   status: pending
   rounds_completed: 0
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - performance
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
 requirements:
   FR1:
     title: 旧形式の workflow.yaml での verify のやり直し
