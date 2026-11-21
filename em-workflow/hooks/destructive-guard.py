@@ -8632,6 +8632,16 @@ def _args_json_shadow_scan(marked):
             for word in _ARGS_JSON_SHADOW_ENVIRONMENT_WORDS
         ):
             return True
+        # The same substring match on the restored value of a word that can be
+        # restored statically (ANSI-C quoting such as `$'BASH\x5fFUNC_x'`).
+        for tok in toks:
+            if getattr(tok, "is_operator", False):
+                continue
+            restored, restored_ok = _args_json_declaration_word(marked, tok)
+            if restored_ok and any(
+                word in restored for word in _ARGS_JSON_SHADOW_ENVIRONMENT_WORDS
+            ):
+                return True
         fused = _split_fused_closer_redirects(toks)
         words_only, _redirects = split_redirects(fused, lexed)
         lead = _shape_leading(words_only, case_stack, in_tail[index])
@@ -9162,7 +9172,12 @@ def _mcp_bridge_args_json_chunks(shaped_words, marked):
     for word in (command_word, run_word):
         if getattr(word, "unresolved", False) or getattr(word, "substitution_only", False):
             return _ARGS_JSON_NOTHING
-    if str(run_word) != "run":
+    run_outcome, run_text = _read_static_word(marked, run_word)
+    if run_outcome == WORD_NOT_STATIC:
+        return _ARGS_JSON_NOTHING
+    if run_outcome == WORD_UNRESTORABLE:
+        return _ARGS_JSON_UNRESTORABLE
+    if run_text != "run":
         return _ARGS_JSON_NOTHING
     words = args[1:]
     if _args_json_notion_pair(marked, words) and not _args_json_notion_lifted(marked):
@@ -10361,8 +10376,8 @@ def _skip_assignments_and_wrappers(toks, start=0, end=None, skipped=None):
             after_env
             and not getattr(t, "is_operator", False)
             and t.find("=") > 0
-            and not t.startswith("-")
-        ):  # VAR=value prefix
+        ):  # VAR=value prefix (env's option scan has already ended here, so a
+            # leading `-` word, e.g. after `--`, is still an assignment)
             if skipped is not None:
                 skipped.words.append(t)
             i += 1
