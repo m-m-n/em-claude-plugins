@@ -516,7 +516,12 @@ those of section 2 (`references/phases/create-spec-phase.md`, "Scope
 verification"), unchanged. The orchestrator chooses the action of each
 `write_policy.targets` entry by the rule of
 `references/contracts/spec-writer-contract.md`, "How the orchestrator chooses
-each target's action before dispatch".
+each target's action before dispatch". From
+`references/contracts/planner-contract.md` this correction takes only the
+target paths; the actions that document names for `IMPLEMENTATION.md`,
+`VERIFICATION.md` and the task plan do not apply here, and the ordinary
+plan-document action decision is left to that spec-writer-contract rule. An
+approved `amend_other_feature` target stays fixed as approved.
 
 **Dispatch.** `Task(subagent_type="em-workflow:implementation-planner")` with
 `planning_inputs.path_correction` (resolved by the orchestrator from the entry

@@ -164,11 +164,15 @@ upgrade), and the final-path correction dispatch and the feature-docs
 correction dispatch of its section 13.
 
 The rule applies only to ordinary planning artifacts, where the choice is
-between `replace_own` and the digest-mismatch branch. It does not re-decide a
-target whose action another contract fixes: the minimal-tier `TASK.md` and the
-design step's `design-system/tokens.yaml` stay `extend_only`, and a target
-given `amend_other_feature` stays `amend_other_feature`. Such a target keeps
-its fixed action whether or not its digest matches a recorded entry, and the
+between `replace_own` and the digest-mismatch branch. Another contract
+(for example `planner-contract.md` for the two correction dispatches) may
+specify only the target paths of such artifacts; the action of those paths
+is then chosen by this rule, not fixed by that contract. The rule does not
+re-decide a target whose action another contract explicitly fixes as an
+exception: the minimal-tier `TASK.md` and the design step's
+`design-system/tokens.yaml` stay `extend_only`, and a target given
+`amend_other_feature` stays `amend_other_feature`. Such a target keeps its
+fixed action whether or not its digest matches a recorded entry, and the
 `create-plan.artifact-overwrite` gate and the `batch-policies.yaml` decision
 are not used for it.
 
