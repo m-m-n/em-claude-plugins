@@ -1,11 +1,11 @@
 schema_version: 1
 feature: mcp-bridge-function-shadow
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: d42e00bb0d6379f40470c88cc8877934d7191608
-last_input_digest: sha256:fc98c645e3a938e8f38c67e871dd9d167f84acb9bfc6cd879bcce874a3f479ea
-active_request_id: create-spec-run-0001
+last_input_digest: sha256:3e91cbcd46c20e1ee87a390e0e42f2f4dde06cba1492ae78589c8d911dbb8ea7
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     status: answered
@@ -77,6 +77,9 @@ worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
   input_digest: sha256:fc98c645e3a938e8f38c67e871dd9d167f84acb9bfc6cd879bcce874a3f479ea
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:3e91cbcd46c20e1ee87a390e0e42f2f4dde06cba1492ae78589c8d911dbb8ea7
 artifacts: []
 patches: []
 progress_fingerprint: null
