@@ -1,7 +1,7 @@
 schema_version: 1
 feature: verify-rerun-legacy-deferred-resolution
 phase: create-spec
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 1a44fc527825bcba1ea69c4456d5ec3b208ea5be
 last_input_digest: sha256:82e303adc09c476d449b05f3a3304aeb7892062fb5403d0a1453d2b51404643d

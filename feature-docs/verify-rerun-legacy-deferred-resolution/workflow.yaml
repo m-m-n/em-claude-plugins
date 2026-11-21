@@ -1,0 +1,187 @@
+schema_version: 1
+feature: verify-rerun-legacy-deferred-resolution
+created: '2026-11-21'
+base_branch: main
+goal: |
+  # 完了済み feature で verify をやり直したとき deferred の指摘を解決済みにできるようにする
+
+  ## やりたいこと
+
+  完了済み feature で verify をやり直したとき、review で deferred になった high の指摘を、verify の合格に基づいて解決済みにできるようにする。
+
+  ## 背景・なぜ
+
+  web-sip-phone の feature `inbound-reject-e2e-registration-wait` は、全 step が completed のまま main に未マージで止まっている。
+
+  - review round 2 で、high の指摘 `f171409f76fe2785`（AC5 未達。category は spec）が rework 上限に達して deferred になった
+  - その後、先行タスクの修正を取り込んだ verify round 2 で、AC5 を含めて合格した
+  - merge の事前判定 `scripts/merge-preflight.py:349` の `check_review_findings` は、最新 review round の critical/high で resolution が fixed/declined でないものがあると `unresolved_findings` で止める。この判定は、base の取り込みと検証コマンド（merge スキルの手順 8〜10）より前にある
+  - `scripts/resolve-verified-findings.py`（f1fad8224）は、develop の verify 中にしか呼ばれない。さらに、verify step の `round` が 1 以上で `passed_ids` があることを前提にしている。この feature の workflow.yaml の verify step には、どちらも無い
+  - 完了済み feature の救済は、`feature-docs/verify-pass-resolves-deferred-findings/REQUIREMENTS.md` で no-backfill として対象外になっている
+  - develop SKILL.md の対応づけの規則（未達そのもの以外の内容を含む指摘は対応づけない）は、原因の分析や範囲の判断が書き添えてある指摘を対応づけから外す可能性がある
+
+  ## 受け入れ条件 / 完了の定義
+
+  - [ ] verify を pending に戻して develop を再開すると、verify step に `round` / `passed_ids` が無い旧形式の workflow.yaml でも、`resolve-verified-findings.py` が実行される
+  - [ ] 指摘の主張がその基準 ID の未達であれば、原因の分析や修正案が書き添えてあっても対応づけの対象になる。この規則が SKILL.md に明記されている
+  - [ ] 上記の feature と同じ形の review round 記録と workflow.yaml で verify をやり直すと、指摘が fixed になり、`merge-preflight.py` が proceed を返す。これがテストで固定されている
+
+  ## スコープ外
+
+  - `merge-preflight.py` の判定条件の変更
+  - verify をやり直す起点（loop-develop の要確認の見直し側で扱う）
+
+  ## 制約・前提
+
+  \<触ってほしくない箇所 / 使う技術 / 互換性など。あれば>
+parent_branch: em-workflow/verify-rerun-legacy-deferred-resolution/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.8
+      '2': 0.2
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.43
+      '2': 0.57
+      '3': 0.0
+  at: '2026-11-21T22:13:20+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 50cda86bfcb36d7636bf9bdbeaef603b89f9e7c8
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: no UI; the change is limited to the develop skill's procedure text and tests
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  round: 0
+  passed_ids: []
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: 旧形式の workflow.yaml での verify のやり直し
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+  FR2:
+    title: スクリプトは変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+  FR3:
+    title: 対応づけの規則
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-2
+  FR4:
+    title: 手順の記述をテストで固定する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+  FR5:
+    title: やり直しから merge-preflight までのシナリオテスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-3
+    - TS-4
+  FR6:
+    title: 変えない文書とスクリプト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+  NFR1:
+    title: テストの形
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: SKILL.md の固定文言を保つ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: ゲートを追加しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: version を手で変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
