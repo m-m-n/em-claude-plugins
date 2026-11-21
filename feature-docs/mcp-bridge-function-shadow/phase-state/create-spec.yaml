@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: d42e00bb0d6379f40470c88cc8877934d7191608
 last_input_digest: sha256:cfa4a3e833926a95f6c742757328f55f7e41de47b9a0eb967debe18604ca9277
-active_request_id: create-spec-run-0004
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -106,9 +106,13 @@ worker_runs:
   input_digest: sha256:242fdc75e2c9e82bc69dab38c2f6448d5e095e9a076460b17cd6d1bf40757f49
   output_digest: sha256:27f4d0702c7c005d2f2eadf17bd16a516cc4d7f7e68ddf1829e6110ea4ac9a41
 - request_id: create-spec-run-0004
-  status: dispatched
+  status: completed
   input_digest: sha256:cfa4a3e833926a95f6c742757328f55f7e41de47b9a0eb967debe18604ca9277
-artifacts: []
+  self_write_set: []
+artifacts:
+- path: feature-docs/mcp-bridge-function-shadow/SPEC.md
+  sha256: sha256:d68fee00679eb87e4aa8dad9a150fb86346c95f273ead8084efa81d9448f7aad
+  produced_by: create-spec-run-0004
 patches: []
 progress_fingerprint: sha256:9be403fe4010b8866902532713044bf84d1b4a69ca30893d062401d694a4c078
 stale_redispatch_count: 0
