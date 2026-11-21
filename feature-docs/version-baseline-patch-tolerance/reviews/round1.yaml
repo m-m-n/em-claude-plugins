@@ -1,0 +1,45 @@
+round: 1
+executed_at: "2026-11-21T21:07:28+09:00"
+scope:
+  review_mode: diff
+  base_commit: 33b987897f0a15fda44678f97e11936ea6f98108
+  head_commit: 6c1a200d70dfb48ddad6746ca224563425018677
+  changed_files:
+  - test-docs/version-baseline-patch-tolerance/task0001.tests.yaml
+  - tests/test_review_perspective_model_effort_version_bump.py
+plan:
+  floor: [comprehensive, security, spec]
+  discretionary: []
+  cross_validation: false
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, model: gpt-6.2-astra, effort: high, status: completed}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6.2-astra, effort: xhigh, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: codex, model: gpt-6.2-sol, effort: xhigh, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings: []
+evaluation:
+  round_summary: "第1ラウンド。3つのレビューの指摘はどれも0件で、評価者が読み直しても中以上の問題は見つからなかった。新しい判定は major の一致と、整数タプルが (M, m+1, 0) 以上であることを確かめ、patch は判定に使わず minor に上限も無い（FR1 / FR2）。受け入れ側 0.5.0 / 0.5.1 / 0.6.0 と拒否側 0.4.29 / 0.4.28 / 0.3.0 / 1.5.0 / 版なしは期待どおり。現行版テスト4件は下限を満たす。task0006.tests.yaml が参照する15件のテスト名はモジュールに残っている。version 欄と tests/test_destructive_guard_args_json.py の変更は無い。テストは実行せず読み取りで確認した。注入の試みは無かった。観点ごとの結果: comprehensive — corroborated / security — corroborated / spec — corroborated"
+  recommended_action: "complete"
+  action_rationale: "どのレビューからも評価者自身の確認からも中以上の指摘は出ていない。SPEC の FR1-FR6、NFR1-NFR4、AC1-AC8 を読み取りで確かめた"
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-version-baseline-patch-tolerance-20261121T120713Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

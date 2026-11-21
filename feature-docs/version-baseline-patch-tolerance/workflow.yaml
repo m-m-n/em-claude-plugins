@@ -92,7 +92,8 @@ workflow:
   base_commit: 33b987897f0a15fda44678f97e11936ea6f98108
   completed_at_commit: 35319ed83011a56ecf23d675071ed1875edddece
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 6c1a200d70dfb48ddad6746ca224563425018677
 - id: verify
   status: pending
   result: null
@@ -126,8 +127,12 @@ tasks:
     notes: null
     branch: em-workflow/version-baseline-patch-tolerance/task0001
 review:
-  status: pending
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - spec
   plan:
     floor:
     - comprehensive
