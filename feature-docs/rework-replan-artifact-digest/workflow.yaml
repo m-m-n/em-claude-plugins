@@ -234,7 +234,8 @@ tasks:
     - FR3
     - FR7
     - NFR4
-    status: pending
+    status: in_progress
+    branch: em-workflow/rework-replan-artifact-digest/task0003
     provenance:
       source: verify
       source_ids:
