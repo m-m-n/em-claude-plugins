@@ -1,16 +1,28 @@
 schema_version: 1
 feature: rework-replan-artifact-digest
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: 5718f4784244e7e10ca40ee6973bb40f01b53e83
 last_input_digest: sha256:d770e0a80b2b507ba0ccf93922f64056ef2ba1f66d3ce4121a15e0b3b8b12e4f
 active_request_id: create-spec-run-0001
-packets: {}
+packets:
+  create-spec-q0001:
+    status: issued
+    issued_at: '2026-11-21T20:31:00+09:00'
+    questions:
+    - question_id: requirement.fix-mechanism
+      status: issued
+    - question_id: requirement.match-scope
+      status: issued
+    - question_id: requirement.applicability
+      status: issued
+    - question_id: requirement.test-form
+      status: issued
 answers: {}
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:d770e0a80b2b507ba0ccf93922f64056ef2ba1f66d3ce4121a15e0b3b8b12e4f
 artifacts: []
 patches: []
