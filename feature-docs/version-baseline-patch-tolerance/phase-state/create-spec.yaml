@@ -1,11 +1,11 @@
 schema_version: 1
 feature: version-baseline-patch-tolerance
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: eb05424afcbd137fb5a83e0fe71b078b1c78d4d5
-last_input_digest: sha256:ec2d223fc4a83632b75b4c956205f9e915f7db95784b3c7fdd9969b24683fc6c
-active_request_id: create-spec-run-0001
+last_input_digest: sha256:fac3e0d611db947c6c9a2aac9ded44ebfc9ea34604cd21b94e8d96602f44470e
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     status: answered
@@ -63,6 +63,9 @@ worker_runs:
 - request_id: create-spec-run-0001
   status: completed
   input_digest: sha256:ec2d223fc4a83632b75b4c956205f9e915f7db95784b3c7fdd9969b24683fc6c
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:fac3e0d611db947c6c9a2aac9ded44ebfc9ea34604cd21b94e8d96602f44470e
 artifacts: []
 patches: []
 progress_fingerprint: null
