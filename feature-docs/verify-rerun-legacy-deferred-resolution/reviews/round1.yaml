@@ -1,0 +1,144 @@
+round: 1
+executed_at: '2026-11-21T23:14:26+09:00'
+scope:
+  review_mode: diff
+  base_commit: 6308e8539e6c85ef55d2ec41cdf5bf0ce217f57e
+  head_commit: 55dea51964ba02e18cd057b75a8770b99d45d391
+  changed_files:
+  - em-workflow/skills/develop/SKILL.md
+  - test-docs/verify-rerun-legacy-deferred-resolution/task0001.tests.yaml
+  - test-docs/verify-rerun-legacy-deferred-resolution/task0002.tests.yaml
+  - tests/test_verify_pass_resolution_procedure.py
+  - tests/test_verify_rerun_legacy_resolution.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: f4dd38f84e6d1532
+  severity: medium
+  category: security
+  file: tests/test_verify_rerun_legacy_resolution.py
+  line: 495
+  title: 隔離テストが失敗すると、ユーザーの Git 設定の生データがログに出る
+  description: real_repository_state()（455〜463 行）は ~/.gitconfig と XDG の git/config の生のバイト列を辞書に入れ、495 行の assertEqual に渡している。作業ツリーの状態だけが変わって失敗した場合も、unittest の辞書比較は変わっていない設定値まで出力する。差分が maxDiff（既定 640 文字）以内なら全文が出て、超える場合も短縮表示に設定の先頭が入ることがある。設定に認証情報（URL に埋め込んだトークンや http.extraHeader）があれば、それがテストログに出る。
+  suggestion: 設定ファイルは hashlib のダイジェストで比べ、一致しないときはパスだけを出す。作業ツリーの状態は別のアサーションで比べる。
+  reproduction: 実ファイルを使わず、460 行目で読み取る Git 設定を示す user_configs に、ダミーのヘッダー値 REVIEW_MARKER を含む同一のバイト列を入れた辞書を2つ用意する。片方の status だけを空から未追跡ファイル report.txt を示す値に変え、495 行目と同じ unittest.TestCase().assertEqual で比較すると、失敗メッセージにダミーのヘッダー値が表示されることを確認した
+  sources:
+  - codex:security
+  confidence: 90
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: a24b946ecf5445db
+  severity: medium
+  category: spec
+  file: tests/test_verify_pass_resolution_procedure.py
+  line: 551
+  title: 旧形式で再実行したとき、pass なら対応づけを行うことがテストで固定されていない
+  description: 'このテストは「`result: pass` のときは」「3. の対応づけ」「4. の `resolve-verified-findings.py` の実行を行い」を別々に探している。_contains は空白を除いた部分一致なので、SKILL.md の手順 7 の「3. の対応づけと」を「3. の対応づけを省略し、」に書き換えても 3 つとも見つかり、テストは通る。SPEC の FR4 と TS-1 は、pass なら対応づけとスクリプトの実行を行うという記述をテストで固定するよう求めている。'
+  suggestion: '「`result: pass` のときは、3. の対応づけと4. の `resolve-verified-findings.py` の実行を行い」を 1 つの文言として固定する。'
+  reproduction: null
+  sources:
+  - codex:spec
+  confidence: 80
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: unresolved
+  resolution_reason: null
+- stable_id: 0b77e0c9e323ba0d
+  severity: medium
+  category: spec
+  file: tests/test_verify_pass_resolution_procedure.py
+  line: 601
+  title: 対応づけない指摘を除外することが必須の規則として固定されていない
+  description: 601〜611 行のテストは「次の指摘は対応づけない」と、除外する 3 種類の指摘を別々に探している。「指摘は対応づけない:」を「指摘は対応づけない場合がある:」に書き換えても、「次の指摘は対応づけない」は部分一致で見つかるので、テストは通る。3 種類の指摘がその除外の対象として並んでいることも確かめていない。SPEC の FR3・FR4・TS-2 は、この 3 種類を対応づけないという記述の固定を求めている。
+  suggestion: '「次の指摘は対応づけない: 対応が曖昧な指摘、pass 済みでない別の基準の未達や別の欠陥も主張している指摘、本文に ID が現れているだけの指摘」を 1 つの文言として固定する。'
+  reproduction: null
+  sources:
+  - codex:spec
+  confidence: 80
+  reproduction_alternates: []
+  reproduction_overflow: false
+  resolution: unresolved
+  resolution_reason: null
+evaluation:
+  round_summary: 'critical と high の指摘は無い。medium が 3 件、low が 2 件。security の medium 1 件は Git 設定がログに出る件で、spec の medium 2 件は文書テストが規則の弱化を検出できない件。low の 2 件は隔離テストとコミット内容テストの精度の件。security の再現手順は、プロジェクト側をコードで追って確かめた（455〜463 行と 495 行）。unittest 側の差分表示はプロジェクトの外にあり読んでいないので、標準ライブラリの既知の動作に基づいて判断し、medium のまま残した。spec の 2 件は、書き換え後の文でもテストの探す文言がすべて部分一致することを読んで確かめた。comprehensive#0 が 495 行で挙げた設定の露出は security の指摘に統合した。同じ箇所の誤検出の件と 269 行の件は low に下げた。architecture#0 の 2 件はこの 2 件の重複として扱った。注入の試みは無かった。観点ごとの確認: comprehensive は corroborated（重大度を下げた）、security は corroborated、performance は corroborated（空の結果を、シナリオと git status の負荷を読んで支持した）、architecture は corroborated（重複として統合した）、spec は corroborated。読んだファイルは 10 件で、上限に達した。'
+  recommended_action: auto_fix
+  action_rationale: critical と high は無い。medium の 3 件は、どれもテストファイルの中で閉じる小さな修正で直せる（設定をダイジェストで比べる、文言を 1 つにつないで固定する）。SKILL.md の手順とスクリプトは変わらない。
+dismissed_sites:
+- file: tests/test_verify_rerun_legacy_resolution.py
+  line: 269
+  run_id: architecture#0
+  reason: duplicate of another finding
+- file: tests/test_verify_rerun_legacy_resolution.py
+  line: 495
+  run_id: architecture#0
+  reason: duplicate of another finding
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-verify-rerun-legacy-deferred-resolution-20261121T141349Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
