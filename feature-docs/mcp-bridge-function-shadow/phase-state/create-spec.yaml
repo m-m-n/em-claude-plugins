@@ -1,17 +1,82 @@
 schema_version: 1
 feature: mcp-bridge-function-shadow
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: d42e00bb0d6379f40470c88cc8877934d7191608
 last_input_digest: sha256:fc98c645e3a938e8f38c67e871dd9d167f84acb9bfc6cd879bcce874a3f479ea
 active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-11-21T14:14:31+09:00'
+    questions:
+    - question_id: req.shadow-constructs
+      status: answered
+    - question_id: req.shadow-reach
+      status: answered
+    - question_id: req.shadow-verdict
+      status: answered
+    - question_id: design-step.recommendation
+      status: answered
+answers:
+  req.shadow-constructs:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-21T14:14:31+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - fr7-and-state-unknown
+    freeform: null
+    normalized_answer: FR7 の上書き構文（名前を問わない関数定義、alias / hash / enable、PATH への代入、BASH_CMDS）と、シェル状態が不明になる文（eval
+      / source / . / 現在のシェルで実行される置換 / 静的に読めないコマンド名）があれば notion ペアの除外を外す
+    resolution_note: 'gate: create-spec.requirement-clarification; policy codex_consultation;
+      Codex consulted (codex entry, 1 turn); chosen fr7-and-state-unknown; not chosen
+      mcp-bridge-function-only, fr7-only; key points: alias / PATH / eval / source
+      でも mcp-bridge の解決先は変わり得る。名前を問わない関数定義で除外が外れる誤検知の余地はあるが、既存 allow ケースの function
+      f() は引用内かコメント内で関数定義の構文に当たらない; Opus escalation not run'
+  req.shadow-reach:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-21T14:14:31+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - chain-position-independent
+    freeform: null
+    normalized_answer: 文のチャンクと最上位までの囲むチャンクの連鎖のどこかに構文があれば、呼び出しの前後を問わず除外を外す
+    resolution_note: 'gate: create-spec.requirement-clarification; policy codex_consultation;
+      Codex consulted (codex entry, 1 turn); chosen chain-position-independent; not
+      chosen same-chunk-preceding; key points: _args_json_nameref_declared は _outer_marked
+      をたどり最上位まで全文を調べる先例。override_seen は走査順に立つため、前後を問わず調べるのが妥当; Opus escalation not
+      run'
+  req.shadow-verdict:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-21T14:14:31+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - inspect-like-other-pairs
+    freeform: null
+    normalized_answer: 除外を外した notion 呼び出しは、ほかの組と同じく --args-json を復号して検査する
+    resolution_note: 'gate: create-spec.requirement-clarification; policy codex_consultation;
+      Codex consulted (codex entry, 1 turn); chosen inspect-like-other-pairs; not
+      chosen ask-always; key points: 復号後が無害なら allow を維持できる。decide() は無人実行で ask を deny
+      に変えるため、常に ask だと無害なコメント投稿も止まる; Opus escalation not run'
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-21T14:14:31+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - skip
+    freeform: null
+    normalized_answer: デザインのステップを省く
+    resolution_note: 'gate: create-spec.design-step; policy decide_autonomously →
+      analyst recommendation skip（UI の無いフックの静的解析の修正）'
 worker_runs:
-  - request_id: create-spec-run-0001
-    status: dispatched
-    input_digest: sha256:fc98c645e3a938e8f38c67e871dd9d167f84acb9bfc6cd879bcce874a3f479ea
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:fc98c645e3a938e8f38c67e871dd9d167f84acb9bfc6cd879bcce874a3f479ea
 artifacts: []
 patches: []
 progress_fingerprint: null
