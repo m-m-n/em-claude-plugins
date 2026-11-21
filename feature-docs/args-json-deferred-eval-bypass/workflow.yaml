@@ -186,7 +186,7 @@ workflow:
       is not 0). They fail identically on the base commit; the feature changes no
       version (NFR4), so they cannot be fixed within this feature''s scope'
 - id: retrospect
-  status: pending
+  status: completed
 tasks:
   task0001:
     title: Expansion-level deferred-evaluation detection

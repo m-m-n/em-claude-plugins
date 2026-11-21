@@ -1,0 +1,49 @@
+feature: args-json-deferred-eval-bypass
+collected_at: "2026-11-21T15:45:00+09:00"
+session_ids: [01a1fcc4-ee03-763f-91e3-ccdea7aee785.jsonl]
+signals:
+  review_critical_high:
+    - {stable_id: 0690d8db82fc3ee1, category: security, file: em-workflow/hooks/destructive-guard.py, title: "長い変数名で演算子が読み取り範囲の外に出ると、再評価を見落とす", resolution: fixed}
+    - {stable_id: 38fdc4ff88dbf0c5, category: security, file: em-workflow/hooks/destructive-guard.py, title: "`$` と `{` の間の行継続で、パラメータ展開の再評価を見落とす", resolution: fixed}
+    - {stable_id: 73ea2b1bdc1a19f3, category: security, file: em-workflow/hooks/destructive-guard.py, title: "`[[ ]]` の `&&`・`||` より後ろにある算術比較を見落とす", resolution: fixed}
+    - {stable_id: 08c4983eb1c84ee0, category: security, file: em-workflow/hooks/destructive-guard.py, title: "引用した配列の複合代入を宣言組み込みが展開し直す経路を見落とす", resolution: fixed}
+    - {stable_id: 9a42fe083737c591, category: security, file: em-workflow/hooks/destructive-guard.py, title: "`{名前[添字]}` 形式のリダイレクトが添字を算術評価する経路を見落とす", resolution: unresolved}
+    - {stable_id: 8bd8e986a76e621b, category: comprehensive, file: em-workflow/hooks/destructive-guard.py, title: "読み取り境界で行継続が分断されると、遅延評価を見落とす", resolution: fixed}
+    - {stable_id: 8016dc2435c250f7, category: comprehensive, file: em-workflow/hooks/destructive-guard.py, title: "バックスラッシュで引用した `]]` が条件式を閉じてしまう", resolution: unresolved}
+    - {stable_id: bfed9739094acc29, category: spec, file: em-workflow/hooks/destructive-guard.py, title: "グループ内の `[[ ]]` で算術比較を見落とす", resolution: fixed}
+    - {stable_id: 2c5b925b8e6daed0, category: spec, file: em-workflow/hooks/destructive-guard.py, title: "複合条件内の算術比較を見落とし、Notion の除外を維持する", resolution: fixed}
+    - {stable_id: 59ee406bbb437801, category: comprehensive, file: em-workflow/hooks/destructive-guard.py, title: "引用した `]]` を条件式の終端と誤認し、後続の算術比較を見落とす", resolution: fixed}
+    - {stable_id: d86916ae221553ee, category: security, file: em-workflow/hooks/destructive-guard.py, title: "TM-3：引用した `]]` やグループ内の `[[` により算術比較を見落とす", resolution: fixed}
+    - {stable_id: de5f0adc26d94f60, category: security, file: em-workflow/hooks/destructive-guard.py, title: "宣言の引数にある `}` で検査が途切れ、後続の配列代入を見落とす", resolution: fixed}
+    - {stable_id: a03aa1f45bc1f7bc, category: security, file: em-workflow/hooks/destructive-guard.py, title: "TM-1: 行継続を挟んだリダイレクト変数の配列添字の評価を見落とす", resolution: fixed}
+    - {stable_id: 592c64f701e13409, category: security, file: em-workflow/hooks/destructive-guard.py, title: "TM-2：未引用のチルダ展開で宣言オプションを見落とす", resolution: fixed}
+    - {stable_id: 5952376b00124bbc, category: spec, file: em-workflow/hooks/destructive-guard.py, title: "条件式を開いた区間で算術比較を見落とす", resolution: deferred}
+    - {stable_id: 08932193df94af3b, category: security, file: em-workflow/hooks/destructive-guard.py, title: "同名のシェル関数にも Notion コメント用の検査除外が適用される", resolution: deferred}
+    - {stable_id: 02afd7e3a8eadb97, category: security, file: em-workflow/hooks/destructive-guard.py, title: "TM-2・TM-3：行継続後のチルダ展開を確定した宣言引数として扱う", resolution: fixed}
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures:
+    - id: SC-5
+      category: comprehensive
+      note: "python3 -m unittest discover -s tests exits 1 with 4 failures in tests/test_review_perspective_model_effort_version_bump.py (plugin version patch is not 0); they fail identically on the base commit and the feature changes no version (NFR4). The destructive-guard runner (1598/1598) and the feature unit tests pass"
+  discretionary_perspectives:
+    - {perspective: performance, reason: "destructive-guard は毎回の Bash 呼び出しで走るフックで、差分がその判定経路に走査処理を足しているため"}
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の最終スコア 1.42（confidence 0.58）から閾値表で full と判定"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.47, confidence: 0.54}
+        observed_at: "2026-11-21T10:09:30+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.42, confidence: 0.58}
+        observed_at: "2026-11-21T10:11:50+09:00"
+    pre_survey_estimate: {files_expected: [em-workflow/hooks/destructive-guard.py, em-workflow/hooks/tests/destructive-guard-cases.json], test_change_kind: extend_existing_one_to_one, added_test_cases_approx: 5, body_change_kind: new_logic, change_containment: single_module, caller_and_dependency_count: 10, changes_external_contract: false, changes_behavior: true}
+follow_up_drafts:
+  - origin_kind: verify
+    origin_id: SC-5
+    title: "tests/test_review_perspective_model_effort_version_bump.py が Actions の patch 上げ後に常に失敗する"
+    body: "python3 -m unittest discover -s tests で TestEmWorkflowManifest / TestEmReviewManifest / TestMarketplaceEntries の minor bump テスト 4 件が失敗する（patch が 0 でない: em-workflow 0.5.2、em-review 0.6.1）。main の基準コミットでも同じく失敗する。main への push で Actions が patch を上げるため、patch を 0 と固定するテストは成り立たない"
+lessons_candidates:
+  - "verify の成功基準が unittest discover 全体の終了コードに依存していると、feature と無関係な既存の失敗で cap 到達まで進む"
