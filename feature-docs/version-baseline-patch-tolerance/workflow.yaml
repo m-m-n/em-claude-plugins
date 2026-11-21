@@ -102,7 +102,8 @@ workflow:
   failed_items: []
   completed_at_commit: f0cc034e2fb7427e25a23ee2350a16c5b8419cbb
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: 097e0ac82ba2e5eccc38429111aee4681469bf8f
 tasks:
   task0001:
     title: Lower-bound version check in the version-bump test module

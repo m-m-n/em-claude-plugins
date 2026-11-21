@@ -1,0 +1,48 @@
+feature: version-baseline-patch-tolerance
+collected_at: "2026-11-21T21:20:00+09:00"
+session_ids: [01a1fe0b-58c8-7724-bc3c-93dd4785c0bd.jsonl]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: "最終読み（description_plus_code）で bucket 1 の確率が 0.94 となり、閾値表どおり reduced に決まった"
+    bases:
+      - basis: description_only
+        score:
+          type: score
+          score: 1.01
+          confidence: 0.97
+          probabilities: {'0': 0.01, '1': 0.97, '2': 0.02, '3': 0.0}
+        observed_at: "2026-11-21T20:14:59+09:00"
+      - basis: description_plus_code
+        score:
+          type: score
+          score: 1.06
+          confidence: 0.94
+          probabilities: {'0': 0.0, '1': 0.94, '2': 0.06, '3': 0.0}
+        observed_at: "2026-11-21T20:18:38+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - tests/test_review_perspective_model_effort_version_bump.py
+      changed_lines_approx: 35
+      new_functions_needed: 1
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: true
+      spillover_modules: []
+      work_still_required: true
+      test_change_kind: extend_existing_one_to_one
+      added_test_cases_approx: 2
+      body_change_kind: new_logic
+      change_containment: single_module
+      caller_and_dependency_count: 7
+      changes_external_contract: false
+      changes_behavior: false
+follow_up_drafts: []
+lessons_candidates:
+  - "タスク記述の 5 件の失敗のうち複合代入のサブテスト 1 件は、事前調査の時点で別ブランチの修正により解消済みだった（FR6 でスコープ外とした）"
