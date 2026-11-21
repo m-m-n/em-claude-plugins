@@ -3110,5 +3110,391 @@ class TestExpansionLevelDeferredEvaluation(unittest.TestCase):
                     self.assertEqual("allow", case[0])
 
 
+class TestSourceTextReadings(unittest.TestCase):
+    """args-json-deferred-eval-bypass task0003 (FR1, FR5, FR6, FR8, NFR1, NFR3,
+    NFR5; TS-16, TS-17): the per-chunk scan reads two pieces of syntax from the
+    word as written, not from its quote-removed value. A `{name[subscript]}`
+    word that a `<` or `>` redirection operator touches, whose subscript is
+    anything but digits, `@` or `*`, has its subscript evaluated as arithmetic
+    in the current shell; the brackets of a `[[ ]]` conditional are the words
+    written exactly `[[` and `]]`, never a backslash-escaped or quoted bracket.
+    Each leaves the chunk uncertain, so the notion call after it is inspected
+    (KIND_INSPECTED); a form that evaluates nothing keeps the exclusion
+    (KIND_NOTHING)."""
+
+    ARRAY = "A=(json --mcp desktop-commander --tool start_process); "
+    NOTION = (
+        "mcp-bridge run --mcp notion --tool notion-create-comment "
+        "--format \"$r\" --args-json '{\"command\":\"git branch -D example\"}'"
+    )
+    NOTION_SID = NOTION.replace('--format "$r"', '--session "$SID"')
+
+    # (label, form): TS-16, the redirection variable with a subscript that
+    # evaluates.
+    FD_DENY = (
+        ("the finding's form",
+         "x=$'$\\x7b declare -gn r=A[@]; }'; : {a[x]}>/dev/null"),
+        ("> after a name subscript", ": {a[x]}>/dev/null"),
+        (">> after a name subscript", ": {a[x]}>>/dev/null"),
+        ("< after a name subscript", ": {a[x]}</dev/null"),
+        ("<> after a name subscript", ": {a[x]}<>/dev/null"),
+        (">&- after a name subscript", ": {a[x]}>&-"),
+        ("<<< after a name subscript", ": {a[x]}<<< word"),
+        (">| after a name subscript", ": {a[x]}>|/dev/null"),
+        ("<& after a name subscript", ": {a[x]}<&0"),
+        ("a heredoc operator after a name subscript", ": {a[x]}<<EOF\nx\nEOF\n"),
+        ("a $ expansion subscript", "echo {a[$i]}>/dev/null"),
+        ("an expression subscript", ": {a[i+1]}>/dev/null"),
+        ("a quoted subscript", ': {a["x"]}>/dev/null'),
+        ("a subscript made of digits and a name", ": {a[1x]}>/dev/null"),
+        ("an empty subscript", ": {a[]}>/dev/null"),
+        ("a command substitution subscript", ": {a[$(true)]}>/dev/null"),
+        ("a closing `done`", "while false; do :; done {a[x]}>/dev/null"),
+        ("a closing `fi`", "if true; then :; fi {a[x]}>/dev/null"),
+        ("a closing `}`", "{ :; } {a[x]}>/dev/null"),
+        ("a command with no command name", "{a[x]}>/dev/null"),
+        ("a name before another redirection", ": >/dev/null {a[x]}>/dev/null"),
+    )
+    # (label, form): TS-16, forms that evaluate nothing.
+    FD_ALLOW = (
+        ("a redirection variable without a subscript", ": {fd}>/dev/null"),
+        ("a subscript of digits", ": {a[12]}>/dev/null"),
+        ("a subscript of @", ": {a[@]}>/dev/null"),
+        ("a subscript of *", ": {a[*]}>/dev/null"),
+        ("a blank before the operator", "echo {a[x]} >/dev/null"),
+        ("single quotes", "echo '{a[x]}>/dev/null'"),
+        ("double quotes", 'echo "{a[x]}">/dev/null'),
+        ("ANSI-C quotes", "echo $'{a[x]}>/dev/null'"),
+        ("a comment", "echo hi # {a[x]}>/dev/null\n"),
+        ("a word with no operator after it", "echo {a[x]}"),
+        ("an escaped opening brace", "echo \\{a[x]}>/dev/null"),
+        ("a name that is no identifier", "echo {1a[x]}>/dev/null"),
+    )
+    # The operands that look like a closing `]]` and are not.
+    CLOSER_OPERANDS = ("\\]\\]", "\\]]", "]\\]", '"]"]', "$']]'")
+    # (label, form): TS-17, a conditional that stays open for Bash.
+    CONDITIONAL_DENY = (
+        ("an escaped closer, then && and -eq", "[[ \\]\\] == x && true -eq 0 ]]"),
+        ("an escaped closer, then || and -eq", "[[ a == \\]\\] || true -eq 0 ]]"),
+        ("an escaped opener", "\\[\\[ a == b ]]"),
+        ("a double-quoted opener", '"[[" a == b ]]'),
+        ("a single-quoted opener", "'[[' a == b ]]"),
+        ("a half-escaped opener", "[\\[ a == b ]]"),
+        ("a half-quoted opener", '"["[ a == b ]]'),
+        ("an ANSI-C opener", "$'\\x5b\\x5b' a == b ]]"),
+        ("an opener after a skipped prefix", "if \\[\\[ a == b ]]; then :; fi"),
+        ("an unclosed conditional met by a semicolon", "[[ a == \\]\\]; echo ok"),
+        ("an unclosed conditional met by a lone ampersand",
+         "[[ a == \\]\\] & echo ok"),
+        ("an unclosed conditional at the end of the chunk", "[[ a == b"),
+        ("a quoted closer that ends the chunk", '[[ a == "]]"'),
+        ("a closer split by a line continuation",
+         "[[ a == b ]\\\n]; read x; [[ c == d ]]"),
+    )
+    # (label, form): TS-17, a conditional read correctly.
+    CONDITIONAL_ALLOW = (
+        ("an escaped closer as an operand", "[[ \\]\\] == x ]]"),
+        ("a quoted closer as an operand", '[[ a == "]]" ]]'),
+        ("a single-quoted closer as an operand", "[[ a == ']]' ]]"),
+        ("a closed conditional, then &&", "[[ a == b ]] && echo ok"),
+        ("two closed conditionals", "[[ a == b ]] && [[ c == d ]]"),
+        ("a quoted bracket as the argument of a command", 'echo "[["'),
+        ("an escaped bracket as the argument of a command", "echo \\[\\["),
+        ("an escaped closer in a closed conditional", "[[ a == \\]] ]]"),
+    )
+
+    def plain(self, text):
+        return GUARD._MarkedText.plain(text)
+
+    def scan(self, text):
+        """The per-chunk answer for the chunk TEXT (no heredoc)."""
+        return GUARD._args_json_nameref_scan(self.plain(text))
+
+    def scans(self, command):
+        """([(chunk source, result), ...] of the per-chunk scans a
+        statements() run of COMMAND asked for, the kinds of its `mcp-bridge`
+        statements). The first scan is the one of the chunk that holds the
+        notion call."""
+        original = GUARD._args_json_nameref_scan
+        calls = []
+
+        def spy(marked):
+            result = original(marked)
+            calls.append((str(marked.source), result))
+            return result
+
+        with mock.patch.object(GUARD, "_args_json_nameref_scan", spy):
+            kinds = Spy(command).kinds()
+        return calls, kinds
+
+    def joined(self, form, notion):
+        """FORM then the notion call: a form that ends in a heredoc newline is
+        followed directly, any other by `; `."""
+        return self.ARRAY + form + ("" if form.endswith("\n") else "; ") + notion
+
+    def assert_uncertain(self, form):
+        """The notion call after FORM is inspected; the chunk's scan, the
+        first one asked for, reads true."""
+        calls, kinds = self.scans(self.joined(form, self.NOTION))
+        self.assertEqual([KIND_INSPECTED], kinds)
+        self.assertTrue(calls and calls[0][1], calls)
+
+    def assert_certain(self, form):
+        """The notion call (with `--session "$SID"`) after FORM keeps the
+        exclusion; the chunk's scan, the first one asked for, reads false."""
+        calls, kinds = self.scans(self.joined(form, self.NOTION_SID))
+        self.assertEqual([KIND_NOTHING], kinds)
+        self.assertTrue(calls and not calls[0][1], calls)
+
+    # --- AC-1 / AC-2: the subscripted redirection variable ---------------
+
+    def test_every_subscripted_redirection_variable_reads_the_chunk_as_uncertain(self):
+        """AC-1 (TS-16): the scan of the chunk reads true and the notion call
+        after it is inspected, whatever command carries the redirection."""
+        for label, form in self.FD_DENY:
+            if form.endswith("\n"):
+                continue  # a heredoc body leaves the chunk text: checked apart
+            with self.subTest(label + ": per-chunk scan"):
+                self.assertTrue(self.scan(form))
+            with self.subTest(label + ": notion call"):
+                self.assert_uncertain(form)
+
+    def test_an_allowlisted_command_name_does_not_hide_the_variable(self):
+        """AC-1 (TS-16): `:`, `echo` and `mcp-bridge` are certain whatever
+        words they hold, yet the redirection variable in their redirections is
+        read."""
+        for name in (":", "echo", "mcp-bridge list", "true", "false"):
+            with self.subTest(name):
+                self.assertTrue(self.scan(name + " {a[x]}>/dev/null"))
+
+    def test_a_heredoc_operator_after_a_subscripted_variable_is_read(self):
+        """AC-1 (TS-16): the body of the heredoc leaves the chunk text; the
+        word before the `<<` operator is still read."""
+        for label, form in self.FD_DENY:
+            if not form.endswith("\n"):
+                continue
+            with self.subTest(label):
+                self.assert_uncertain(form)
+
+    def test_a_form_that_evaluates_nothing_keeps_the_exclusion(self):
+        """AC-2 (TS-16): no subscript, a subscript of digits, `@` or `*`, a
+        blank before the operator, quoted, commented or escaped text, a word
+        with no operator after it, and a name that is no identifier."""
+        for label, form in self.FD_ALLOW:
+            with self.subTest(label + ": per-chunk scan"):
+                self.assertFalse(self.scan(form))
+            with self.subTest(label + ": notion call"):
+                self.assert_certain(form)
+
+    def test_a_quoted_delimiter_heredoc_body_is_data(self):
+        """AC-2 (TS-16): the same text in the body of a heredoc whose
+        delimiter is quoted is not read."""
+        self.assert_certain(": <<'EOF'\n{a[x]}>/dev/null\nEOF\n")
+
+    def test_a_word_inside_a_substitution_body_belongs_to_that_chunk(self):
+        """AC-2 (TS-16, D2): a redirection variable inside a command
+        substitution, a backtick substitution or a process substitution is
+        read in the chunk of the body; the chunk around it keeps the
+        exclusion."""
+        for label, form in (
+            ("command substitution", "echo $( : {a[x]}>/dev/null )"),
+            ("backtick substitution", "echo `: {a[x]}>/dev/null`"),
+            ("process substitution", "echo <( : {a[x]}>/dev/null )"),
+        ):
+            with self.subTest(label):
+                self.assert_certain(form)
+
+    # --- AC-3 / AC-4 / AC-5: the brackets of a conditional ---------------
+
+    def test_every_misread_closer_leaves_the_conditional_open(self):
+        """AC-3 (TS-17): a backslash-escaped or quoted `]]` is an operand; the
+        `-eq` after the `&&` or `||` is a word of the conditional, which
+        evaluates its operand."""
+        for operand in self.CLOSER_OPERANDS:
+            for joiner in ("&&", "||"):
+                form = "[[ a == " + operand + " " + joiner + " true -eq 0 ]]"
+                with self.subTest(operand + " " + joiner + ": per-chunk scan"):
+                    self.assertTrue(self.scan(form))
+                with self.subTest(operand + " " + joiner + ": notion call"):
+                    self.assert_uncertain(form)
+
+    def test_every_conditional_deny_form_reads_the_chunk_as_uncertain(self):
+        """AC-3 / AC-4 (TS-17): the per-chunk scan reads true and the notion
+        call after the form is inspected."""
+        for label, form in self.CONDITIONAL_DENY:
+            with self.subTest(label + ": per-chunk scan"):
+                self.assertTrue(self.scan(form))
+            with self.subTest(label + ": notion call"):
+                self.assert_uncertain(form)
+
+    def test_every_conditional_allow_form_keeps_the_exclusion(self):
+        """AC-5 (TS-17): a conditional that Bash reads the way the scan does
+        evaluates nothing."""
+        for label, form in self.CONDITIONAL_ALLOW:
+            with self.subTest(label + ": per-chunk scan"):
+                self.assertFalse(self.scan(form))
+            with self.subTest(label + ": notion call"):
+                self.assert_certain(form)
+
+    def test_a_statement_after_an_open_conditional_is_not_swallowed(self):
+        """AC-4 (NFR1, TS-17): the conditional stays open for a misread closer
+        only until a `;` or a lone `&`; the chunk is uncertain there, and the
+        statements after it are not read as words of the conditional."""
+        for form in (
+            "[[ a == \\]\\]; echo ok; echo done",
+            "[[ a == \\]\\] & echo ok",
+            "[[ a == \\]\\] && true == c; echo ok",
+        ):
+            with self.subTest(form):
+                self.assertTrue(self.scan(form))
+
+    def test_a_real_closer_in_a_later_statement_closes_the_conditional(self):
+        """AC-5 (TS-17): a conditional that `&&` splits into statements and
+        that a real closer ends is closed there; the statements after it are
+        read as commands again."""
+        for form in (
+            "[[ a == b && true == d ]]; echo ok",
+            "[[ \\]\\] == x && true == y ]]; echo ok",
+        ):
+            with self.subTest(form):
+                self.assertFalse(self.scan(form))
+
+    def test_the_word_as_written_is_what_the_readings_judge(self):
+        """AC-3 / AC-4: the helper that reads a word from the characters it was
+        written with gives them back, quotes and backslashes included."""
+        chunk = self.plain("\\[\\[ '[[' \"[[\" [[ \\]\\] ]]")
+        words = [
+            GUARD._args_json_word_source(chunk, tok)
+            for tok in GUARD.lex_segments(chunk)[0][0]
+        ]
+        self.assertEqual(
+            ["\\[\\[", "'[['", '"[["', "[[", "\\]\\]", "]]"], words
+        )
+
+    def test_the_command_name_word_is_found_past_redirections_prefixes_and_assignments(self):
+        """AC-3 / AC-4: the opener is the word Bash reads as the command name,
+        found the way the command-level reading finds it."""
+        for command, name in (
+            ("ls a", "ls"),
+            ("FOO=1 BAR=2 ls a", "ls"),
+            ("if ! time -p ls a", "ls"),
+            ("command -p -- ls a", "ls"),
+            (">/dev/null ls a", "ls"),
+            ("ls a >/dev/null", "ls"),
+        ):
+            with self.subTest(command):
+                chunk = self.plain(command)
+                ((words, _lexed, _sep),) = GUARD.lex_segments(chunk)
+                word = GUARD._args_json_command_name_word(chunk, words)
+                self.assertEqual(name, str(word))
+        chunk = self.plain("FOO=1")
+        ((words, _lexed, _sep),) = GUARD.lex_segments(chunk)
+        self.assertIsNone(GUARD._args_json_command_name_word(chunk, words))
+
+    def test_only_a_semicolon_or_a_lone_ampersand_breaks_an_open_conditional(self):
+        """AC-4: `&&`, `||` and the pipes may stand inside a conditional; a
+        `;` or a lone `&` may not."""
+        reads = GUARD._args_json_separator_breaks_conditional
+        for sep in (";", "&", ";;", ";&", "&\n", ";\n", "&;"):
+            with self.subTest(repr(sep)):
+                self.assertTrue(reads(sep))
+        for sep in (None, "", "&&", "||", "|", "|&", "\n", "&&\n"):
+            with self.subTest(repr(sep)):
+                self.assertFalse(reads(sep))
+
+    # --- AC-6: conventions -------------------------------------------------
+
+    def test_the_docstring_of_the_scan_names_the_two_readings_and_no_command(self):
+        """AC-6 / Conventions: the docstring of `_args_json_nameref_scan()`
+        names the two readings among its sources and still names no command;
+        it refers to `_args_json_declares_nameref()` for the command-name
+        rules."""
+        doc = " ".join(inspect.getdoc(GUARD._args_json_nameref_scan).split())
+        for phrase in (
+            "_args_json_fd_variable_deferred()",
+            "_args_json_conditional_step()",
+            "_args_json_declares_nameref()",
+        ):
+            with self.subTest(phrase):
+                self.assertIn(phrase, doc)
+        for command in (
+            "declare", "local", "typeset", "eval", "source", "trap", "alias",
+            "mapfile", "readarray", "echo", "mcp-bridge", "printf",
+        ):
+            with self.subTest("no " + command):
+                self.assertIsNone(re.search(r"\b" + re.escape(command) + r"\b", doc))
+
+    def test_the_readings_are_called_only_from_the_scan(self):
+        """AC-6 (NFR2): their results are kept with the per-chunk answer
+        because nothing but the scan calls them."""
+        with open(HOOK, encoding="utf-8") as handle:
+            sites = _CallSites()
+            sites.visit(ast.parse(handle.read()))
+        for name in ("_args_json_fd_variable_deferred", "_args_json_conditional_step"):
+            with self.subTest(name):
+                places = {where for ref, where in sites.references if ref == name}
+                self.assertEqual({"_args_json_nameref_scan"}, places)
+
+    def test_the_readings_make_no_decision_and_name_no_reason(self):
+        """AC-6 (FR8): the helpers of the two readings build no decision and
+        carry no reason ID."""
+        for name in (
+            "_args_json_word_source",
+            "_args_json_fd_variable_deferred",
+            "_args_json_command_name_word",
+            "_args_json_separator_breaks_conditional",
+            "_args_json_conditional_step",
+        ):
+            text = inspect.getsource(getattr(GUARD, name))
+            with self.subTest(name):
+                self.assertNotIn("destructive-guard/", text)
+                self.assertNotIn("permissionDecision", text)
+
+    def test_every_case_of_this_task_is_in_the_table_with_its_decision(self):
+        """AC-1 to AC-6 (FR5; TS-10, TS-16, TS-17): each form of the unit
+        tables stands in the case table with the decision the tests expect,
+        under a label that starts with `args-json-deferred-eval-bypass`; each
+        deny entry carries the reason ID of the decoded command. The command
+        is the JSON-decoded text, so a backslash in it is the one the form
+        holds."""
+        with open(CASES_PATH, encoding="utf-8") as handle:
+            table = {case[2]: case for case in json.load(handle)}
+        wanted = [("deny", self.NOTION, form) for _, form in self.FD_DENY]
+        wanted += [("allow", self.NOTION_SID, form) for _, form in self.FD_ALLOW]
+        wanted += [("deny", self.NOTION, form) for _, form in self.CONDITIONAL_DENY]
+        wanted += [
+            ("deny", self.NOTION, "[[ a == " + operand + " || true -eq 0 ]]")
+            for operand in self.CLOSER_OPERANDS
+        ]
+        wanted += [
+            ("allow", self.NOTION_SID, form) for _, form in self.CONDITIONAL_ALLOW
+        ]
+        found = 0
+        for decision, notion, form in wanted:
+            command = self.joined(form, notion)
+            case = table.get(command)
+            if case is None:
+                continue  # the unit table holds forms the case table does not
+            found += 1
+            with self.subTest(form):
+                self.assertEqual(decision, case[0])
+                self.assertTrue(case[1].startswith("args-json-deferred-eval-bypass"))
+                if decision == "deny":
+                    self.assertEqual({"rule": "git-branch-force-delete"}, case[3])
+        self.assertGreaterEqual(found, 30)
+        added = [
+            case for case in table.values()
+            if case[1].startswith("args-json-deferred-eval-bypass TS-16:")
+            or case[1].startswith("args-json-deferred-eval-bypass TS-17:")
+        ]
+        self.assertEqual(30, len(added))
+        for case in added:
+            with self.subTest("label: " + case[1][:60]):
+                if case[0] == "deny":
+                    self.assertEqual({"rule": "git-branch-force-delete"}, case[3])
+                else:
+                    self.assertEqual("allow", case[0])
+
+
 if __name__ == "__main__":
     unittest.main()
