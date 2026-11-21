@@ -236,8 +236,8 @@ tasks:
       - 8016dc2435c250f7
       review_round: 1
 review:
-  status: pending
-  rounds_completed: 1
+  status: completed
+  rounds_completed: 2
   perspectives:
   - comprehensive
   - security
@@ -245,7 +245,8 @@ review:
   - spec
   - performance
   residual_critical_high: 2
-  needs_rework: true
+  needs_rework: false
+  deferred_reason: 'batch mode: rework cap reached'
   plan:
     floor:
     - comprehensive
