@@ -163,6 +163,15 @@ re-dispatch, and re-planning after a spec-change transition or a tier
 upgrade), and the final-path correction dispatch and the feature-docs
 correction dispatch of its section 13.
 
+The rule applies only to ordinary planning artifacts, where the choice is
+between `replace_own` and the digest-mismatch branch. It does not re-decide a
+target whose action another contract fixes: the minimal-tier `TASK.md` and the
+design step's `design-system/tokens.yaml` stay `extend_only`, and a target
+given `amend_other_feature` stays `amend_other_feature`. Such a target keeps
+its fixed action whether or not its digest matches a recorded entry, and the
+`create-plan.artifact-overwrite` gate and the `batch-policies.yaml` decision
+are not used for it.
+
 - Match. The orchestrator gives an existing target path the action
   `replace_own` when the path's current digest equals the last `artifacts`
   entry for that path in `phase-state/create-plan.yaml`, or the last
