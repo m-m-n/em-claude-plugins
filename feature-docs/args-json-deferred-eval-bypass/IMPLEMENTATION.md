@@ -8,7 +8,10 @@ expansion-level reading of constructs that re-evaluate a value as code in the
 current shell (task0001), and a command-level reading that classifies command
 names by an allowlist and reads the command-level evaluation triggers
 (task0002). Either reading marks the chunk as shell-state-uncertain; nothing
-else in the hook changes.
+else in the hook changes. The review round 1 rework (task0003) adds two
+readings of the per-chunk scan that judge syntax from a token's source text:
+subscripted fd-variable redirection words and the brackets of a `[[ ]]`
+conditional.
 
 ## Technology Stack
 
@@ -30,7 +33,7 @@ else in the hook changes.
 
 | Component | Responsibility | Contract (pre/postcondition) | Used by tasks |
 |-----------|----------------|------------------------------|---------------|
-| `_args_json_nameref_scan(marked)` | The per-chunk answer: may the chunk's own text declare a nameref or leave the shell state uncertain | Pre: the marked text of one chunk, or none. Post: true when there is no chunk or it carries no top regions (unchanged), when the round-3 literal / brace substitution check holds (FR4, unchanged), when the expansion-level reading holds (task0001), when the lexer cannot read the chunk as statements (unchanged), or when any simple command of the chunk is uncertain under `_args_json_declares_nameref()`; false otherwise. It reads the chunk's own text only, executes nothing and lets no lexer exception escape. task0001 owns its body and docstring; task0002 does not edit it. | task0001, task0002 |
+| `_args_json_nameref_scan(marked)` | The per-chunk answer: may the chunk's own text declare a nameref or leave the shell state uncertain | Pre: the marked text of one chunk, or none. Post: true when there is no chunk or it carries no top regions (unchanged), when the round-3 literal / brace substitution check holds (FR4, unchanged), when the expansion-level reading holds (task0001), when the lexer cannot read the chunk as statements (unchanged), when any simple command of the chunk is uncertain under `_args_json_declares_nameref()`, when a `{name[subscript]}` word directly followed by a `<` / `>` redirection operator has a subscript that is not digits only, `@` or `*` (task0003), or when a `[[ ]]` conditional, its opener and closer judged from the token's source text (a backslash-escaped or quoted bracket is neither), is opened by a quoted or escaped `[[` command word, is left without a closer, or meets a `;` or a lone `&` while open (task0003); false otherwise. It reads the chunk's own text only, executes nothing and lets no lexer exception escape. task0001 owns its body and docstring; task0002 does not edit it; task0003 adds its two readings to the body and the docstring. | task0001, task0002, task0003 |
 | `_args_json_declares_nameref(marked, toks)` | Command-level classification of one simple command | Pre: the tokens of one simple command between two command boundaries. Signature unchanged. Post: true when the command may declare a nameref or leave the state uncertain; false for a command with no command name; false for a command whose name is `mcp-bridge` or `echo`, whatever its argument words hold (double-quoted expansions, substitutions, redirections, here-documents, here-strings). task0002 owns its body and docstring; task0001 only relies on the false cases stated here. | task0001, task0002 |
 | `_args_json_nameref_declared(marked)` | Walks from a chunk to its enclosing chunks and caches the answer per chunk | Unchanged by both tasks: computed once per chunk, walked without recursion (NFR2). Everything either task adds runs inside `_args_json_nameref_scan()` and is therefore cached with it. | task0001, task0002 |
 
@@ -54,18 +57,20 @@ else in the hook changes.
     that uses them, never at the top of the module. task0001 places its
     helpers between `_args_json_has_brace_substitution()` and
     `_args_json_nameref_scan()`; task0002 places its sets and helpers between
-    `_args_json_declares_nameref()` and `_args_json_strip_redirections()`.
-  - Case table: task0001 appends its entries at the end of the array;
+    `_args_json_declares_nameref()` and `_args_json_strip_redirections()`;
+    task0003 places its helpers directly before `_args_json_nameref_scan()`.
+  - Case table: task0001 and task0003 append their entries at the end of the array;
     task0002 inserts its entries directly before the first existing entry
     whose label starts with `args-json-quoting-bypass review round 3`.
   - Unit tests: task0002 edits `TestNamerefDeclarations` (FR7) and adds its
-    new test class directly after it; task0001 adds its new test class
-    directly before the module's main guard. Neither task edits the module
-    docstring.
+    new test class directly after it; task0001 and task0003 each add a new
+    test class directly before the module's main guard. No task edits the
+    module docstring.
 - **Docstring ownership**: task0001 owns the docstrings of
   `_args_json_nameref_scan()`, the heredoc-body predicate, the stripped-text
   marker type and `_ChunkLinks.register()`; task0002 owns those of
-  `_args_json_declares_nameref()` and `_args_json_declaration_word()`.
+  `_args_json_declares_nameref()` and `_args_json_declaration_word()`;
+  task0003 adds its two readings to `_args_json_nameref_scan()`'s docstring.
   `_args_json_nameref_scan()`'s docstring names no command; it refers to
   `_args_json_declares_nameref()` for the command-name rules.
 - **Hook tests (NFR5)**: every task runs
@@ -130,6 +135,9 @@ Affected tasks: task0001, task0002.
       length that is not a digit string, and an assigning parameter expansion
       (`=` / `:=`). Both re-evaluate a value as arithmetic, or assign one that
       may be an integer-attribute variable or `PS4`.
+- [ ] task0003 counts the subscript of a `{name[subscript]}` fd-variable
+      redirection word, a subscript position FR1's parenthetical list does not
+      name. Bash evaluates it as arithmetic when it assigns the descriptor.
 - [ ] task0002 reads `test` / `[` with a word that cannot be restored, and
       `printf` with an option or format word that cannot be restored, as
       uncertain (such a word may expand to `-v` or to a `%n` format). This is
