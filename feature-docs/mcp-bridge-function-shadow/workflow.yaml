@@ -156,6 +156,16 @@ tasks:
 review:
   status: pending
   rounds_completed: 0
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary:
+    - perspective: performance
+      reason: NFR2（走査コスト）が追加走査の計算量を要件にしているため
+    cross_validation: true
   perspectives: {}
   residual_critical_high: 0
   needs_rework: false
