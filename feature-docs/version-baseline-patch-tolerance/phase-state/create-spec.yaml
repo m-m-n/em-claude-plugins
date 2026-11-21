@@ -1,17 +1,68 @@
 schema_version: 1
 feature: version-baseline-patch-tolerance
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: eb05424afcbd137fb5a83e0fe71b078b1c78d4d5
 last_input_digest: sha256:ec2d223fc4a83632b75b4c956205f9e915f7db95784b3c7fdd9969b24683fc6c
 active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-11-21T20:22:32+09:00'
+    questions:
+    - question_id: requirement.scope.compound-assignment-subtest
+      status: answered
+    - question_id: requirement.version-check.minor-strictness
+      status: answered
+    - question_id: requirement.version-check.nonzero-patch-test
+      status: answered
+answers:
+  requirement.scope.compound-assignment-subtest:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-21T20:22:32+09:00'
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids:
+    - q1_exclude
+    freeform: null
+    normalized_answer: 複合代入 [@] のサブテストは main に無く、args-json-deferred-eval-bypass の
+      integration ブランチで 854fbb33b により A=([0]=1 [12]=2) に置き換え済みのため、この機能の対象外とする。tests/test_destructive_guard_args_json.py
+      は変更しない。
+    resolution_note: gate create-spec.requirement-clarification (orchestrator-raised
+      from analyst run 0001 output); Codex consulted (1 turn), Codex choice adopted;
+      recorded as assumption
+  requirement.version-check.minor-strictness:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-21T20:22:32+09:00'
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids:
+    - q2_lower_bound
+    freeform: null
+    normalized_answer: major が baseline と等しく、version が数値として (major, baseline minor
+      + 1, 0) 以上なら受け入れる。patch の値も、その後の minor 上げも問わない。major の変更と、(major, baseline minor
+      + 1, 0) 未満の値は拒否する。
+    resolution_note: gate create-spec.requirement-clarification (orchestrator-raised
+      from analyst run 0001 output); Codex consulted (1 turn), Codex choice adopted;
+      recorded as assumption
+  requirement.version-check.nonzero-patch-test:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-21T20:22:32+09:00'
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids:
+    - q3_invert
+    freeform: null
+    normalized_answer: test_rejects_minor_bump_with_nonzero_patch は、minor 上げ後の patch
+      が 0 でない値を受け入れることを確かめるテストに置き換える。minor を 2 上げた値を拒否するテストも、受け入れを確かめる形に変える。
+    resolution_note: gate create-spec.requirement-clarification (orchestrator-raised
+      from analyst run 0001 output); Codex consulted (1 turn), Codex choice adopted;
+      recorded as assumption
 worker_runs:
-  - request_id: create-spec-run-0001
-    status: dispatched
-    input_digest: sha256:ec2d223fc4a83632b75b4c956205f9e915f7db95784b3c7fdd9969b24683fc6c
+- request_id: create-spec-run-0001
+  status: completed
+  input_digest: sha256:ec2d223fc4a83632b75b4c956205f9e915f7db95784b3c7fdd9969b24683fc6c
 artifacts: []
 patches: []
 progress_fingerprint: null
