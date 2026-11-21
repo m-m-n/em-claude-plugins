@@ -8619,10 +8619,20 @@ def _args_json_fd_variable_deferred(marked, words):
             span is None
             or getattr(word, "is_operator", False)
             or not getattr(words[index + 1], "is_operator", False)
-            or marked.text[span[1]:span[1] + 1] not in ("<", ">")
         ):
             continue
+        # Bash removes line continuations before reading the word, so skip
+        # them between the word and the operator.
+        after = span[1]
+        while marked.text.startswith("\\\n", after):
+            after += 2
+        if marked.text[after:after + 1] not in ("<", ">"):
+            continue
         source = _args_json_word_source(marked, word)
+        if source is not None:
+            # Read the word the way Bash does: line continuations removed
+            # (also inside quotes, which errs toward counting the word).
+            source = source.replace("\\\n", "")
         match = None if source is None else _ARGS_JSON_FD_VARIABLE.fullmatch(source)
         if match and _ARGS_JSON_QUIET_SUBSCRIPT.fullmatch(match.group(1)) is None:
             return True
