@@ -8453,7 +8453,12 @@ def _args_json_parameter_defers(head, whole):
       `:?` and `:+` are not substrings. A substring whose text is longer than
       the window reads as evaluating.
 
-    A line continuation is removed first. Reads nothing but HEAD."""
+    A line continuation is removed first. A window that ends inside an
+    unfinished line continuation (a backslash, or a backslash and a carriage
+    return, at its end) is not settled and reads as evaluating. Reads nothing
+    but HEAD."""
+    if not whole and (head.endswith("\\") or head.endswith("\\\r")):
+        return True  # the window cut a line continuation in two
     head = head.replace("\\\r\n", "").replace("\\\n", "")
     if not head.startswith("${"):
         return True  # not settled: the opener itself is not readable
