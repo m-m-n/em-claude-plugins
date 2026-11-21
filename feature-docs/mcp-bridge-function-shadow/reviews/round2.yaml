@@ -1,0 +1,393 @@
+round: 2
+executed_at: '2026-11-21T18:51:19+09:00'
+scope:
+  review_mode: diff
+  base_commit: 93a21ad299242542960f5c4a497f255626ef9707
+  head_commit: 91fdbd79d9e727eda4b7ceabd410cc74f44e25c7
+  changed_files:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/mcp-bridge-function-shadow/task0001.tests.yaml
+  - test-docs/mcp-bridge-function-shadow/task0002.tests.yaml
+  - tests/test_destructive_guard_args_json.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary:
+  - perspective: performance
+    reason: NFR2（走査コスト）が追加走査の計算量を要件にしているため
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: '5027414116337746'
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 10882
+  title: env の単独の - とパスで書いた env の子コマンドが通常の検査を通らない（基準版からの欠落）
+  description: _skip_assignments_and_wrappers() の env のオプション読みは単独の `-` で止まり、head() は `-` を実行名として返す。WRAPPERS との照合は完全一致なので `/usr/bin/env` も env として読まれず、head() は `env` を実行名として返す。このため `env - git branch -D example` や `/usr/bin/env bash -c "git branch -D example"` は通常の破壊操作検査と -c 本文の取り出しを通らない。基準版から同じ欠落で、round 1 の c0598deb75b9d2c7 / 8ec945002f0cf118 の rework は notion ペアの経路（_args_json_env_payload_values()）だけを直し、一般の経路は残した。今回の差分はこの関数に after_env を足しているが、この欠落には触れていない。notion 経路の追加の穴（字句解析の上限、入れ子、代入値の展開、`-ec`、代入値の basename 誤認など）はどれもこの一般の欠落より攻撃が簡単にならないため、本ラウンドでは medium とした。SPEC の範囲（notion ペアの除外）の外なので、別タスクで直すことを推奨する。
+  suggestion: 別タスクで、env のオプション読みが単独の `-` を消費し、ラッパーの照合を basename で行うようにする（failed-run-cleanup-guard.py の head() は既に basename で照合している）。直すときは TS-25 の該当ケース（destructive-guard-cases.json 1538〜1541 行）を deny に改め、誤爆が無いことを runner で確かめる。
+  reproduction: '`env - bash -c ''echo REVIEW_MARKER''` を文字列として `statements()` に渡すと、子の `echo REVIEW_MARKER` は検査対象に現れない。直接起動する無害な `env - printf OK` でも、`head()` が返す実行名は `printf` ではなく `-` になる'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 90
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外。後続タスクとして起票'
+- stable_id: f8f1498d8e31e7e6
+  severity: medium
+  category: security
+  file: em-workflow/hooks/tests/destructive-guard-cases.json
+  line: 1538
+  title: 既知の見逃しを「誤爆防止」の allow ケースとして固定している
+  description: 追加された TS-25（1538〜1542 行）と TS-27（1525〜1527 行）は、Bash が実際に破壊操作を実行するコマンドを allow と期待し、ラベルに「誤爆防止」と書いている。対象は `/usr/bin/env bash -c "git branch -D example"`、`env - bash -c "git branch -D example"`、`env $'A\x3d1' bash -c "git branch -D example"`、`env - git branch -D example`、`$'mcp-bridge' run --mcp desktop-commander --tool start_process --args-json '{"command":"git branch -D example"}'` など。task0002.tests.yaml の記録どおり、どれも変更前から allow の見逃しで、誤爆ではない。TS-27 の desktop-commander の 3 件は FR7 が求める据え置きだが、TS-25 が引く FR7 は --args-json の判定だけを対象にしており、git branch -D の直接実行や -c 本文の取り出しは含まない。ラベルが見逃しであることを隠すため、後で head() を直すとこれらのケースが退行のように見える。hook-tests ルールは見逃しを見つけたら正しい期待値のケースを足すとしている。
+  suggestion: これらのケースのラベルを「既知の見逃し（基準版から同じ、後続タスクで直す）」に改め、対応する後続タスクを参照させる。head() の env の読みを直すタスクでは、TS-25 の git branch -D の 4 件を deny に改める。`/usr/bin/env ls` など無害なコマンドの 3 件は、誤爆防止として残す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - claude:evaluator
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外。後続タスクとして起票'
+- stable_id: 9c9e68f58018c435
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 9501
+  title: 復元したコマンド語の notion 経路で、--mcp 'notion' のように正規形でないペアが検査されない
+  description: _args_json_lifted_notion_words() は、_args_json_notion_pair() が真で、かつ除外が外れたときだけ語を返す。`--mcp 'notion'` のように値を引用すると、正規形の読みは偽になる。そのため `f() { :; }; $'mcp-bridge' run --mcp 'notion' ...` は None になり、続く _args_json_env_payload_values() も -c が無いので NOTHING を返す。--args-json の command は検査されない。素の `mcp-bridge` では、正規形でないペアは _args_json_read_values() に進んで検査されるので、この取りこぼしは復元したコマンド語の経路と、/usr/bin/env の本文の経路だけにある。$'mcp-bridge' を使う他のペアは FR7 により変更前から検査されない（TS-27 が allow に固定）。そのため攻撃は簡単にならず、medium とした。
+  suggestion: 復元したコマンド語の経路で除外が外れているときは、--mcp と --tool の値を _read_static_word() で復元する。値が notion / notion-create-comment になる文は、正規形でなくても _args_json_read_values() に渡す。他のペアは FR7 どおり据え置く。`--mcp 'notion'` と `--tool "notion-create-comment"` の deny ケースを足す。
+  reproduction: '`TestNotionPathCommandWord` の無害な関数定義と ANSI-C 引用の実行名を使い、JSON の `command` を `echo REVIEW_MARKER` にして `statements()` に渡す。`--mcp notion` ではマーカーが検査対象に1回現れ、`--mcp ''notion''` に変えると0回になる。いずれも確認要求は出ない'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 80
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外。後続タスクとして起票'
+- stable_id: aa1bb96bdd2fd168
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 9580
+  title: env 経由の本文で字句解析が上限を超えると、確認要求を出さず「検査対象なし」になる
+  description: _args_json_payload_chunk() は LexBudgetExceeded を捕まえて None を返し、呼び出し側は overrun の立っていない _ARGS_JSON_NOTHING を返す。LexUnmatchedSubscript も LexBudgetExceeded の派生なので、本文に閉じていない配列添字を 1 つ置くだけでこの経路に入る。FR5 は、除外を外した notion の文の解析量の上限を他のペアと同じ ask にすると定めているが、この経路では静かに検査を省く。通常の経路では同じ例外が scan-budget の ask になる。ただしこの経路は head() が env を読み違える形（/usr/bin/env、単独の -、ANSI-C の =）にしか使われず、その形の本文は変更前から一切検査されない（TS-25）。そのため medium とした。
+  suggestion: _args_json_payload_chunk() の LexBudgetExceeded を、ArgsJsonResult の overrun を立てた結果として呼び出し側へ返す。_queue_args_json_chunks() は既存の処理でそれを scan-budget の ask にする。閉じていない添字を本文に持つ /usr/bin/env の notion 呼び出しが ask になるケースを足す。
+  reproduction: 無害な Notion テスト本文を使い、子シェル本文を読む `lex_shell()` に限って `LexBudgetExceeded` を返すよう単体テストで例外を注入する。`_args_json_payload_chunk()` は `None` を返し、9718–9719行の分岐が `overrun` の立っていない `_ARGS_JSON_NOTHING` を返す
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  - codex:comprehensive
+  - codex:architecture
+  confidence: 100
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外。後続タスクとして起票'
+- stable_id: 783e35805b668ab2
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 9736
+  title: env 経由で復号した値が本文のチャンクを親として持たず、本文内の関数定義をたどれない
+  description: _args_json_env_payload_values() は、本文の文から得た bodies と commands をすべて外側の payload_word に結び直して返す。本文のチャンクは _ChunkLinks に登録されないので、キューに入った値の親は env の文のチャンクになる。関数定義が本文の中だけにあると、復号した command の中の notion 呼び出しはその定義を鎖の上に見つけられず、除外されたままになる。通常の bash -c 経路では本文が登録されるので、この 2 段の呼び出しは検査される。これは FR4 の探索範囲と食い違う。/usr/bin/env などの形だけの問題で、その形は変更前から検査されないので medium とした。
+  suggestion: 復号した値をキューに渡すときに、値の取得元の本文チャンクも _ChunkLinks に登録し、アンカーをそのチャンクの下に置く。本文内だけに関数定義がある 2 段の notion 呼び出しで、通常の bash -c 経路と /usr/bin/env 経路の判定が一致するテストを足す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  - codex:comprehensive
+  confidence: 90
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外。後続タスクとして起票'
+- stable_id: ed0aef8ddfb4269b
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 9536
+  title: env の子コマンドの探索が、先行する代入語の値の basename を env と誤認する
+  description: _args_json_env_child_index() は、先頭から head_index までで静的に復元した文字列の basename が env になる最初の語を env とみなす。代入語と実行名を区別しないため、`ROOT=/opt/env /usr/bin/env ... bash -c '...'` では代入語を env とし、本物の /usr/bin/env をその子として返す。子の位置が head_index と同じになり、本文の notion 検査が丸ごと省かれる。/usr/bin/env の経路だけの問題で、その形は変更前から検査されないので medium とした。
+  suggestion: env の探索では、_args_json_command_start() と同じく代入語とラッパーのオプション値を飛ばし、コマンド位置の語だけを env の候補にする。代入値の basename が env になるケースを足す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  - codex:architecture
+  confidence: 95
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外。後続タスクとして起票'
+- stable_id: 72b2cf0803c43076
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 9725
+  title: env 経由の本文は直下の文しか見ず、入れ子の bash -c やコマンド置換の中の notion 呼び出しを検査しない
+  description: _args_json_env_payload_values() は、_args_json_chunk_statements() で本文の直下の文だけを列挙し、_args_json_lifted_notion_words() が mcp-bridge と読む文だけを扱う。本文の中の `bash -c '...'` は実行名が bash なので飛ばされ、`$(...)` の本文は別チャンクなので列挙されない。本文そのものもキューに入らないため、外側に関数定義や BASH_FUNC_ があっても内側の --args-json は検査されない。/usr/bin/env などの形だけの問題で、その形は変更前から検査されないので medium とした。
+  suggestion: 復元した本文を通常の入れ子の解析に渡す。キューに入れ、_ChunkLinks で外側のチャンクに結び、解析量の上限も保つ。そのうえで notion 以外の判定が変わらないことを確かめる。それが FR7 と衝突するなら、本文のチャンクから入れ子の置換と -c 本文を同じ方法でたどる。
+  reproduction: '`TestNotionPathEnvReading.NOTION` の `command` を `echo REVIEW_MARKER` にし、無害な環境変数 `BASH_FUNC_probe=marker` を付けた `/usr/bin/env` の静的なシェル本文として `statements()` に渡す。直接の呼び出しではマーカーが1回現れ、同じ本文をもう一段の `bash -c` に入れると0回になり、確認要求も出ない'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  - codex:spec
+  confidence: 95
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外。後続タスクとして起票'
+- stable_id: 74935add7990f35f
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 9555
+  title: env の代入値に展開があると、子コマンドの探索が代入語で止まる
+  description: _args_json_env_child_index() の代入の読み飛ばしは、語全体が静的に復元できることを求める。`TAG="$USER"` や `X=$HOME` は 1 語の代入引数だが、ここで探索が止まり、その語が子コマンドとして返る。子がシェルではないので、後続の bash -c 本文は検査されない。/usr/bin/env などの形だけの問題で、その形は変更前から検査されないので medium とした。
+  suggestion: 語が 1 語として渡ることが確かで、名前と `=` までが静的に読める場合は、値を復元せずに代入として読み飛ばす。`/usr/bin/env BASH_FUNC_x=... TAG="$USER" bash -c '<notion 呼び出し>'` の deny ケースを足す。
+  reproduction: '`/usr/bin/env` に `BASH_FUNC_probe=marker`、`TAG=sample`、既存テストの `bash -c` による Notion 呼び出しを順に渡す入力を `statements()` で解析する。JSON 内の `echo REVIEW_MARKER` は1回検査されるが、`TAG=sample` を `TAG="$USER"` にすると0回になり、確認要求も出ない'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  - codex:spec
+  confidence: 95
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外。後続タスクとして起票'
+- stable_id: c5004b080dd84304
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 9644
+  title: -ec / -lc のようにまとめた短いオプションの -c 本文を取り出さない（ae32730787ed203e の継続）
+  description: _args_json_has_dash_c() と env 経路の -c の探索は、単独の `-c` だけを探す。通常のシェル本文の取り出しも同じで、`bash -ec '...'` の本文はどの経路でも検査されない。round 1 で基準版からの欠落として deferred にした ae32730787ed203e と同じ欠落が、新しい env 経路にもそのまま残っている。
+  suggestion: 別タスクで、シェルのオプションを読む共通の処理を作る。まとめた短いオプションの中の c を見つけ、その本文を取り出す。そのうえで、通常の取り出しと env 経路の両方からその処理を使う。
+  reproduction: 無害な `BASH_FUNC_probe=marker` と、JSON に `echo REVIEW_MARKER` を持つ既存の Notion テスト入力を使う。`statements()` では子シェルの `-c` を `-ec` に変えるだけでマーカーの検査回数が1回から0回になる。`env` と `/usr/bin/env` の両方で確認した
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 80
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外。後続タスクとして起票'
+- stable_id: cafc40b019f00a8e
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8660
+  title: 展開を含む二重引用の部分を捨てるため、引用をまたいだ BASH_FUNC_ を見落とす
+  description: _args_json_static_runs() は、$ を含む二重引用の部分全体を静的でない部分として捨てる。そのため `$'BASH\x5f'"FUNC_demo$USER"` の静的な部分は `BASH_` だけになり、BASH_FUNC_ に一致しない。生の文字列でも、語全体の復元でも一致しない。round 1 の 444c158592ba641c への対応は、展開が別の引用にある形（`$'BASH\x5fFUNC_x'"$USER"`）だけを直した。THREAT-MODEL.md は、ANSI-C エスケープや展開で組み立てた関数インポート名を受け入れた残存リスクとして記録している。また、destructive-guard.py の BASH_FUNC_ への言及は notion 経路だけで、環境から取り込む関数の本体をコードとして読む検査は他に無い。そのため medium とした。
+  suggestion: 二重引用の中では展開の部分だけで run を区切る。その前後のリテラルは、隣の部分とつなげて照合する。`$'BASH\x5f'"FUNC_x$USER"` が除外を外すケースを足す。
+  reproduction: 無害な `:` の引数として `$'BASH\x5f'"FUNC_demo$USER"` を `_MarkedText.plain()` から `_args_json_shadow_scan()` に渡すと `False` になる。展開前に確定する接頭辞が同じ `$'BASH\x5fFUNC_demo'"$USER"` では `True` になる
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外。後続タスクとして起票'
+- stable_id: d7e6433203c64cb3
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 9706
+  title: env 経由の -c 探索が、スクリプト名より後ろの -c も本文の指定として扱う
+  description: _args_json_env_payload_values() は、子シェルより後ろの全引数から最初の -c を探す。`/usr/bin/env bash report.sh -c TEXT` の TEXT はスクリプトの引数だが、本文として解析される。除外が外れた notion 呼び出しが TEXT にあれば検査され、データとして渡した文字列で判定が変わり得る。
+  suggestion: シェルの起動オプションを先頭から読み、`--` か最初のオプションでない語（スクリプト名）に達したら -c の探索をやめる。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  - codex:architecture
+  confidence: 90
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外。後続タスクとして起票'
+- stable_id: c8c00938bfe1b29d
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 9373
+  title: run の静的な復元が notion 以外のペアと他のサブコマンドにも効き、FR7 の判定が変わる
+  description: _mcp_bridge_args_json_chunks() は、ペアを判定する前に run の語を _read_static_word() で読む。復元できない語では _ARGS_JSON_UNRESTORABLE を返す。そのため `mcp-bridge $"help"` のようにサブコマンドをロケール引用で書くと、変更前には無かった args-json-unrestorable の ask が出る。また、`mcp-bridge $'run' --mcp desktop-commander ...` の --args-json は、変更前は検査されなかったが、今は検査される。FR7 は notion 以外のペアの --args-json 判定を変えないと定めている。round 1 の c5db2225b8cdfdb9 / 51af3b97bb813d96（deferred）と同じ箇所で、まだ直っていない。
+  suggestion: 通常の経路では、変更前の `str(run_word) != "run"` の判定を保つ。run の静的な復元は、除外が外れた notion ペアを判定する経路（_args_json_lifted_notion_words() と同じ条件）に限る。`mcp-bridge $"help"` が allow のままであるケースを足す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  - codex:comprehensive
+  confidence: 95
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外。後続タスクとして起票'
+- stable_id: 395515c1dbe13591
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 10864
+  title: 共通の head() の env の代入語の読みが変わり、notion 以外の判定と failed-run-cleanup-guard.py の head() に波及する
+  description: _skip_assignments_and_wrappers() の after_env により、env の後の `=` を含む語は、名前が識別子でなくても代入として読み飛ばされる。この関数は head() とすべての検査が使う。そのため `env 'A%%=1' bash -c` の本文は、notion 以外のペアの呼び出しも含めて通常の検査に渡る。FR3 はこの語を notion の除外の判定だけに使うとし、FR7 は他のペアの判定を変えないとしている。一方、同期を求められている failed-run-cleanup-guard.py の head() は識別子の代入だけを読み飛ばすので、同じ入力で別の実行名を返す。追加のテストは同期の文言が残っていることしか確かめない。round 1 の ef3bf3d8bbef2d62 / c5db2225b8cdfdb9（deferred）と同じ箇所。
+  suggestion: 変更を共通の head() に残すなら、SPEC の FR7 に検査範囲が広がることを書き足す。そして failed-run-cleanup-guard.py の head() も同じ規則にし、両方に同じ入力を渡して同じ子コマンドを返すテストを足す。残さないなら、識別子でない代入語の読みを notion 経路（_args_json_env_child_index()）に限る。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  - codex:comprehensive
+  confidence: 95
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外。後続タスクとして起票'
+- stable_id: 225b48189d76347d
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8776
+  title: コメント・引用・兄弟の置換にある `${ ` の文字列だけで notion ペアの除外が外れる
+  description: _args_json_shadow_scan() が使う _args_json_has_brace_substitution() は、チャンクの source 全体から `${` に空白か `|` が続く箇所を探す。そのため、コメントの `# ${ :; }` や、別のコマンド置換の中の記述だけでも除外が外れる。そして本文に操作例（`\u0024(git branch -D example)`）を書いた正当な notion 投稿が deny になる。FR6 はコメントの中の FR2 の構文を対象外としており、SPEC の Assumptions は兄弟のチャンクを FR4 の範囲に含めていない。この補助関数は、nameref の判定で安全側として引用の中も数える既存の関数で、round 1 の 1d283b0a24152ef8（deferred）と同じ箇所。
+  suggestion: notion の除外の判定では、字句解析の領域を使い、コメントと別チャンクの置換の本文を除いた範囲で `${ ` の置換を探す。nameref の判定は今のままにする。コメントに `# ${ :; }` を付けた notion 投稿が allow のままであるケースを足す。
+  reproduction: 既存テストと同じ形式で、JSON の `body` に `\u0024(git branch -D example)` という操作例だけを記載し、Bash フックに入力すると `allow` になる。同じ入力の末尾にシェルコメント `# ${ :; }` を加えると `git-branch-force-delete` の `deny` になる
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  - codex:spec
+  - codex:comprehensive
+  confidence: 100
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外。後続タスクとして起票'
+- stable_id: 82413c9513c3e85a
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8818
+  title: 文字列を実行するコマンドの判定が、配列要素や case のパターンをコマンド名として読む
+  description: _args_json_shadow_scan() は、_shape_leading() で求めたコマンド位置を使わず、元のトークン列を括弧の演算子で区切り直して _args_json_runs_string_as_code() に渡す。そのため、配列代入 `items=(eval)` の要素 `eval` や、独立した行の case の既定パターン `*)` の `*` が、コマンド名として読まれる。前者は文字列を実行するコマンド、後者は静的に読めない名前になる。何も変更しない文だけで除外が外れ、操作例を含む正当な notion 投稿が deny になり得る。round 1 の 99996ddf73fca708（deferred）と同じ箇所。
+  suggestion: '文字列を実行するコマンドの判定を、_shape_leading() が求めたコマンド位置と case の状態に合わせる。配列代入の括弧の中は対象から外す。`items=(eval);` と `case x in *) : ;; esac` を前に置いた notion 投稿が allow のままであるケースを足す。'
+  reproduction: JSON の `body` に `\u0024(git branch -D example)` という操作例を載せた Notion 投稿は、単独では `allow` になる。先頭に無害な配列代入 `items=(eval);` を加えると `deny` になる。未選択の `eval` パターンを持つ `case` 文でも同じ結果を確認した
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  - codex:comprehensive
+  confidence: 95
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外。後続タスクとして起票'
+- stable_id: 8ea0d802f438cbd8
+  severity: medium
+  category: spec
+  file: test-docs/mcp-bridge-function-shadow/task0002.tests.yaml
+  line: 7
+  title: AC9 / NFR1 / TS-16 の全テスト成功を満たしていない（変更前からの失敗 4 件）
+  description: task0001 と task0002 の記録は、どちらも `python3 -m unittest discover -s tests` が tests.test_review_perspective_model_effort_version_bump の 4 件で失敗したと記録している。4 件とも作業前から失敗しており、この差分が触っていないバージョン検査で、新しい失敗は無い。それでも AC9 と NFR1 は、両方のテストコマンドがすべて通ることを求めているので、受け入れ基準は文字どおりには満たされていない。
+  suggestion: このバージョン検査の失敗は別に直すか、人の判断で AC9 の例外として記録する。この機能の差分の中では直さない。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 85
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外。後続タスクとして起票'
+- stable_id: eb148248b0cb2789
+  severity: medium
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 9684
+  title: env を含まない普通の -c オプションの文でも、チャンク全体を字句解析し直す
+  description: _args_json_env_payload_values() は、軽い条件 _args_json_has_dash_c() の次に、env があるかを確かめる前に _args_json_statement_words() を呼ぶ。この関数は、チャンク全体を 1 回字句解析し直して全単語の索引を作る。そのため `grep -c` のような普通の -c を 1 つ含むだけの大きな入力で、追加の解析が走る。reviewer の計測では、33 KB の入力で 79 ms から 109 ms に増えた（読んだ範囲では、索引はチャンクごとに 1 回だけ作られる）。
+  suggestion: head() が返した実行名が env（basename）か単独の `-` のときなど、head() が env を読み違えた形のときだけ、索引を作る処理に進む。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:performance
+  confidence: 70
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外。後続タスクとして起票'
+- stable_id: 35f71b96de1b7900
+  severity: medium
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 9717
+  title: env 経由の本文に mcp-bridge の候補が無くても、本文全体を解析する
+  description: env 経路は、本文に mcp-bridge の候補があるかを確かめる前に _args_json_payload_chunk() で本文をチャンクにし、構造解析と字句解析を行う。reviewer の計測では、echo だけの 63 KB の本文で 75 ms から 222 ms に増えた。
+  suggestion: 静的に復元した本文に、引用やエスケープを外しても mcp-bridge になり得る文字列が無いと確定できる場合だけ、解析を省く。確定できない場合は今の解析に渡す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:performance
+  confidence: 70
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外。後続タスクとして起票'
+evaluation:
+  round_summary: 'round 2（diff、cross_validation=true）。5 観点の計 33 件（high 13 件）を評価し、17 件にまとめた。自分の指摘 1 件を足して 18 件を残した。すべて medium で、critical / high は残っていない。主な目標の形（関数・alias・PATH・eval・BASH_FUNC_ の後の notion 呼び出し、ANSI-C で書いたコマンド語、外側のチャンクの構文）は、追加ケースと読んだコードで閉じていると確認した。high の報告の多くは、rework で足した notion 専用の経路（復元したコマンド語の経路、/usr/bin/env などの本文の経路）の取りこぼしで、読んで再現した。ただし同じ形には変更前からの一般の見逃しがある。`env - git branch -D`、`/usr/bin/env bash -c ''...''`、`bash -ec`、`$''mcp-bridge''` の他のペアは notion を使わずに通り、TS-25 / TS-27 が「誤爆防止」の allow として固定している。そのため取りこぼしは攻撃を簡単にしないので、medium に下げた。この一般の見逃し（head() の env の読みと -c のオプションの読み）は SPEC の範囲外なので、別タスクで優先して直すことを推奨する。architecture#0 の high（9732 行、後続の文の上限超過で先行の結果も捨てる）は ask で止まり allow にはならないので、demoted として落とした。medium の security の builtin export / declare -x PATH は THREAT-MODEL.md が受け入れた残存リスクなので、残さなかった。spec の `"X=$HOME"` を代入とみなす件は、mcp-bridge の実行内容を変えられないので残さなかった。trap / mapfile / readarray の件は THREAT-MODEL.md の TM-2 に書かれた設計判断で、round 1 の 57329316813eaa64（deferred）が記録に残っているので、残さなかった。security の再現手順は読んで追い、9 件を再現とした。builtin export / declare -x の 1 件は追い切れず unverifiable とした。not reproduced は無い。コードは実行していない。読んだファイルは 9 件で、変更ファイル 5 件すべてを含む。注入の試みは無かった。観点ごとの確認結果: comprehensive=corroborated, security=findings（TS-25 / TS-27 の見逃しの固定を自分で指摘した）, architecture=corroborated, spec=corroborated, performance=corroborated（計測値は確かめておらず、読んだコードは費用の構造を裏づける）。'
+  recommended_action: complete
+  action_rationale: 評価の後に critical / high は残っておらず、SPEC の主な形（AC1〜AC8）は追加ケースで固定されている。残った指摘はすべて medium で、多くは round 1 の deferred の続きか、変更前からの一般の見逃しの下にある notion 専用経路の取りこぼしになる。直すと全検査が共有する head() やシェルのオプションの読みが変わるので、無人の auto-fix ではなく後続タスクで扱うのがよい。AC9 の 4 件は差分の外の変更前からの失敗で、人の判断が要る。
+dismissed_sites:
+- file: em-workflow/hooks/destructive-guard.py
+  line: 9732
+  run_id: architecture#0
+  reason: demoted
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
