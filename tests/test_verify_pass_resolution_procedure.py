@@ -27,6 +27,26 @@ Covers task0002 Acceptance Criteria
   tests/test_verify_rework_lineage_cap.py is kept (those modules are not
   edited and run as part of the suite).
 
+Covers task0001 Acceptance Criteria of verify-rerun-legacy-deferred-resolution
+(feature-docs/verify-rerun-legacy-deferred-resolution/tasks/task0001.md):
+
+- AC-1: the subsection states that a verify re-run on a workflow.yaml whose
+  verify step lacks `round` / `passed_ids` follows the same procedure, that
+  `round` becomes 1, that `passed_ids` is written in the same workflow.yaml
+  write as `result`, and that on pass the mapping and the script run are
+  performed (TestRerunAC1LegacyRerun).
+- AC-2 / AC-3: the mapping rule maps a finding whose claim is the criterion's
+  miss even with cause analysis, a fix suggestion or a scope judgment
+  alongside it, does not map ambiguous findings, findings that also claim
+  another not-passed criterion's miss or another defect, or findings where
+  the ID merely appears, and the old exclusion phrase is gone
+  (TestRerunAC2MappingRule, and the updated
+  TestAC2MappingRule.test_ac2_ambiguous_and_mixed_content_findings_are_left_out).
+- AC-4: the subsection keeps its fixed phrases and the Untrusted-Input
+  Handling reference, adds no gate or question, and the verify section
+  carries no backticked category vocabulary (TestRerunAC4FixedPhrases).
+- AC-6: this module imports the standard library only (TestOwnModuleStdlibOnly).
+
 Documentation task: structural / textual assertions over the two markdown
 documents, following tests/test_verify_rework_lineage_cap.py (same target
 files, self-contained helpers, no cross-module import). The subsection is
@@ -66,6 +86,37 @@ PINNED_VERIFY_PHRASES = (
 # AC-5: tokens the subsection must not contain (no new gate, question or
 # batch non-packet gate).
 FORBIDDEN_GATE_TOKENS = ("gate_id", "AskUserQuestion", "batch-policies.yaml")
+
+# The exclusion phrase the mapping rule used to carry; replaced by the
+# add-on tolerance (verify-rerun-legacy-deferred-resolution, FR3).
+OLD_EXCLUSION_PHRASE = "未達そのもの以外の内容を含む指摘は対応づけない"
+
+# Labels of the numbered steps of the subsection that the assertions below
+# read one step at a time.
+MAPPING_STEP_LABEL = "対応づけ"
+LEGACY_RERUN_STEP_LABEL = "旧形式の workflow.yaml での再実行"
+
+# The fixed phrases the subsection keeps (NFR2).
+FIXED_SUBSECTION_PHRASES = (
+    "interactive でも batch でも同じ",
+    "ゲートも質問も batch の non-packet ゲートも追加しない",
+    "未達そのものであるときだけ",
+    "本文に ID が現れているだけでは足りない",
+    "対応が曖昧な指摘",
+    "Untrusted-Input Handling",
+)
+
+# The category vocabulary the verify section must not backtick-quote
+# (tests/test_failed_items_category.py defines the same closed list).
+CATEGORY_VOCAB = (
+    "comprehensive",
+    "spec",
+    "security",
+    "performance",
+    "architecture",
+    "license",
+    "unknown",
+)
 
 # NFR2 for workflow-schema.md: no digit 1 or 3 within WINDOW characters of
 # these keywords (tests/test_verify_rework_lineage_cap.py).
@@ -148,6 +199,27 @@ def _verify_step_block(schema_text):
 
 def _forbidden_phrases_present(text, phrases):
     return [p for p in phrases if _contains(text, p)]
+
+
+_STEP_START = re.compile(r"^[ \t]*\d+\. \*\*", re.MULTILINE)
+
+
+def _step_by_label(subsection, label):
+    """The text of the numbered step `N. **label**` of the subsection, up to
+    the next numbered step. Raises AssertionError when no such step exists,
+    so an assertion on a step never passes on text found elsewhere."""
+    start = re.search(
+        r"^[ \t]*\d+\. \*\*" + re.escape(label) + r"\*\*", subsection, re.MULTILINE
+    )
+    if start is None:
+        raise AssertionError(f"step not found: {label!r}")
+    following = _STEP_START.search(subsection, start.end())
+    end = following.start() if following else len(subsection)
+    return subsection[start.start():end]
+
+
+def _backtick_quoted_vocab_present(text):
+    return [v for v in CATEGORY_VOCAB if f"`{v}`" in text]
 
 
 def _cap_numeral_violations(text, window=CAP_WINDOW):
@@ -278,8 +350,13 @@ class TestAC2MappingRule(SkillTestCase):
         self.assertTrue(_contains(self.sub, "本文に ID が現れているだけでは足りない"))
 
     def test_ac2_ambiguous_and_mixed_content_findings_are_left_out(self):
-        self.assertTrue(_contains(self.sub, "対応が曖昧な指摘"))
-        self.assertTrue(_contains(self.sub, "未達そのもの以外の内容を含む指摘は対応づけない"))
+        step = _step_by_label(self.sub, MAPPING_STEP_LABEL)
+        self.assertTrue(_contains(step, "対応が曖昧な指摘"))
+        self.assertTrue(
+            _contains(step, "pass 済みでない別の基準の未達や別の欠陥も主張している指摘")
+        )
+        # The exclusion this rule replaced must not come back.
+        self.assertFalse(_contains(self.sub, OLD_EXCLUSION_PHRASE))
 
     def test_ac2_cites_untrusted_input_handling_of_worker_envelope(self):
         self.assertIn("Untrusted-Input Handling", self.sub)
@@ -442,6 +519,151 @@ class TestAC6PinnedWording(SkillTestCase, SchemaTestCase):
 
 
 # ---------------------------------------------------------------------
+# verify-rerun-legacy-deferred-resolution task0001 AC-1: legacy re-run
+# ---------------------------------------------------------------------
+
+
+class TestRerunAC1LegacyRerun(SkillTestCase):
+    def setUp(self):
+        self.step = _step_by_label(self.sub, LEGACY_RERUN_STEP_LABEL)
+
+    def test_ac1_rerun_on_a_workflow_lacking_round_or_passed_ids_follows_the_same_procedure(self):
+        self.assertTrue(
+            _contains(
+                self.step,
+                "verify step に `round` や `passed_ids` が無い workflow.yaml で "
+                "verify を再実行するときも、同じ手順に従う",
+            )
+        )
+
+    def test_ac1_round_becomes_one_because_the_absent_round_is_read_as_zero(self):
+        self.assertTrue(_contains(self.step, "`round` が無ければ、`round` は 1 になる"))
+        self.assertTrue(_contains(self.step, "0 として読み"))
+
+    def test_ac1_passed_ids_is_written_in_the_same_write_as_result(self):
+        self.assertTrue(
+            _contains(
+                self.step,
+                "`passed_ids` は、`result` を書くのと同じ workflow.yaml の書き込みで書く",
+            )
+        )
+
+    def test_ac1_on_pass_the_mapping_and_the_script_run_are_performed(self):
+        self.assertTrue(_contains(self.step, "`result: pass` のときは"))
+        self.assertTrue(_contains(self.step, "3. の対応づけ"))
+        self.assertTrue(_contains(self.step, "4. の `resolve-verified-findings.py` の実行を行い"))
+
+    def test_ac1_on_pass_the_existing_commit_step_follows(self):
+        self.assertTrue(_contains(self.step, "続けて 5. のコミットを行う"))
+
+    def test_ac1_when_result_is_not_pass_neither_is_performed(self):
+        self.assertTrue(
+            _contains(self.step, "`pass` でないときは、対応づけもスクリプトの実行も行わない")
+        )
+
+    def test_ac1_cites_the_schema_for_the_absent_key_reading_without_restating_it(self):
+        self.assertNotIn("No migration", self.step)
+        self.assertNotIn("empty set", self.step)
+
+    def test_ac1_does_not_describe_returning_verify_to_pending(self):
+        self.assertNotIn("pending", self.sub)
+
+
+# ---------------------------------------------------------------------
+# verify-rerun-legacy-deferred-resolution task0001 AC-2: mapping rule
+# ---------------------------------------------------------------------
+
+
+class TestRerunAC2MappingRule(SkillTestCase):
+    def setUp(self):
+        self.step = _step_by_label(self.sub, MAPPING_STEP_LABEL)
+
+    def test_ac2_a_finding_is_mapped_only_when_its_claim_is_the_criterion_miss_itself(self):
+        self.assertTrue(
+            _contains(
+                self.step,
+                "その指摘の主張が、それらの特定の基準の未達そのものであるときだけ",
+            )
+        )
+
+    def test_ac2_cause_analysis_fix_suggestion_and_scope_judgment_do_not_prevent_the_mapping(self):
+        self.assertTrue(
+            _contains(
+                self.step,
+                "原因の分析・修正案・範囲の判断が書き添えてあっても、"
+                "主張がその基準の未達そのものであれば対応づける",
+            )
+        )
+
+    def test_ac2_add_ons_do_not_count_as_a_second_claim(self):
+        self.assertTrue(_contains(self.step, "別の主張には数えない"))
+
+    def test_ac2_an_ambiguous_finding_is_not_mapped(self):
+        self.assertTrue(_contains(self.step, "次の指摘は対応づけない"))
+        self.assertTrue(_contains(self.step, "対応が曖昧な指摘"))
+
+    def test_ac2_a_finding_also_claiming_another_unpassed_criterion_or_another_defect_is_not_mapped(self):
+        self.assertTrue(
+            _contains(self.step, "pass 済みでない別の基準の未達や別の欠陥も主張している指摘")
+        )
+
+    def test_ac2_a_finding_where_the_id_merely_appears_is_not_mapped(self):
+        self.assertTrue(_contains(self.step, "本文に ID が現れているだけの指摘"))
+
+    def test_ac3_the_old_exclusion_phrase_is_absent_from_the_subsection(self):
+        self.assertFalse(_contains(self.sub, OLD_EXCLUSION_PHRASE))
+
+    def test_ac3_the_old_exclusion_phrase_is_absent_from_the_whole_skill(self):
+        self.assertFalse(_contains(self.skill_text, OLD_EXCLUSION_PHRASE))
+
+
+# ---------------------------------------------------------------------
+# verify-rerun-legacy-deferred-resolution task0001 AC-4: fixed phrases kept
+# ---------------------------------------------------------------------
+
+
+class TestRerunAC4FixedPhrases(SkillTestCase):
+    def test_ac4_the_subsection_keeps_every_fixed_phrase(self):
+        for phrase in FIXED_SUBSECTION_PHRASES:
+            self.assertTrue(_contains(self.sub, phrase), phrase)
+
+    def test_ac4_the_untrusted_input_handling_reference_sits_in_the_mapping_step(self):
+        step = _step_by_label(self.sub, MAPPING_STEP_LABEL)
+        self.assertIn("Untrusted-Input Handling", step)
+        self.assertIn("references/contracts/worker-envelope.md", step)
+
+    def test_ac4_an_id_appearing_in_the_text_is_not_enough_in_the_mapping_step(self):
+        step = _step_by_label(self.sub, MAPPING_STEP_LABEL)
+        self.assertTrue(_contains(step, "本文に ID が現れているだけでは足りない"))
+
+    def test_ac4_the_kept_phrase_and_the_add_on_tolerance_state_one_rule(self):
+        # The claim is the miss itself (kept phrase), and add-ons are written
+        # alongside that same claim: both sentences sit in the one mapping step.
+        step = _step_by_label(self.sub, MAPPING_STEP_LABEL)
+        self.assertTrue(_contains(step, "未達そのものであるときだけ"))
+        self.assertTrue(_contains(step, "書き添えてあっても"))
+
+    def test_ac4_the_subsection_adds_no_gate_question_or_batch_policy_token(self):
+        self.assertEqual(_forbidden_phrases_present(self.sub, FORBIDDEN_GATE_TOKENS), [])
+
+    def test_ac4_the_legacy_rerun_is_the_same_in_both_modes_with_no_new_gate(self):
+        # The mode / gate step still closes the subsection and so covers the
+        # legacy re-run step before it.
+        self.assertTrue(_states_modes_and_gates(self.sub))
+        self.assertLess(
+            self.sub.index(LEGACY_RERUN_STEP_LABEL), self.sub.index("モードとゲート")
+        )
+
+    def test_ac4_the_verify_section_backticks_no_category_vocabulary(self):
+        self.assertEqual(_backtick_quoted_vocab_present(self.verify_section), [])
+
+    def test_ac4_the_subsection_gives_deferred_to_nothing_in_verify(self):
+        self.assertEqual(
+            _forbidden_phrases_present(self.sub, FORBIDDEN_DEFERRED_ASSIGNMENTS), []
+        )
+
+
+# ---------------------------------------------------------------------
 # Negative proofs / non-vacuity guards for the helpers and matchers
 # ---------------------------------------------------------------------
 
@@ -517,6 +739,43 @@ class TestHelpersCanFail(unittest.TestCase):
         self.assertFalse(_states_modes_and_gates(ok + " AskUserQuestion で確認"))
         self.assertFalse(_states_modes_and_gates(ok + " batch-policies.yaml に登録"))
         self.assertFalse(_states_modes_and_gates("interactive と batch で別の手順。"))
+
+    STEPS = (
+        "intro line\n"
+        "\n"
+        "1. **First**: first body\n"
+        "   still first\n"
+        "2. **Second**: second body\n"
+        "3. **Third**: third body\n"
+    )
+
+    def test_step_by_label_ends_at_the_next_numbered_step(self):
+        step = _step_by_label(self.STEPS, "Second")
+        self.assertIn("second body", step)
+        self.assertNotIn("first body", step)
+        self.assertNotIn("third body", step)
+
+    def test_step_by_label_runs_to_the_end_for_the_last_step(self):
+        self.assertIn("third body", _step_by_label(self.STEPS, "Third"))
+
+    def test_step_by_label_keeps_continuation_lines_of_the_step(self):
+        self.assertIn("still first", _step_by_label(self.STEPS, "First"))
+
+    def test_step_by_label_raises_for_an_absent_label(self):
+        with self.assertRaises(AssertionError):
+            _step_by_label(self.STEPS, "Absent")
+
+    def test_step_by_label_does_not_match_a_label_that_is_only_mentioned_in_prose(self):
+        with self.assertRaises(AssertionError):
+            _step_by_label("see the **Second** step for details\n", "Second")
+
+    def test_backtick_vocab_matcher_reports_quoted_terms_and_not_bare_ones(self):
+        self.assertEqual(_backtick_quoted_vocab_present("category が `spec` のもの"), ["spec"])
+        self.assertEqual(_backtick_quoted_vocab_present("category が spec のもの"), [])
+
+    def test_old_exclusion_phrase_is_detected_across_a_line_wrap(self):
+        wrapped = "曖昧な指摘と、未達そのもの以外の内容を\n含む指摘は対応づけない。"
+        self.assertTrue(_contains(wrapped, OLD_EXCLUSION_PHRASE))
 
     def test_verify_step_block_stops_at_the_next_step(self):
         schema = (
