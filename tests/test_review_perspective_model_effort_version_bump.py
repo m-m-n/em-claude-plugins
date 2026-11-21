@@ -6,9 +6,13 @@ Covers task0006 Acceptance Criteria
 (feature-docs/review-perspective-model-effort/tasks/task0006.md; TS-18,
 NFR4, NFR5):
 
-- AC-1: `em-workflow/.claude-plugin/plugin.json` carries the base major, the
-  base minor plus one, and patch 0, against the base-commit version recorded
-  below as `EM_WORKFLOW_BASELINE`.
+- AC-1: `em-workflow/.claude-plugin/plugin.json` carries the base major and
+  is at or above (base major, base minor + 1, 0), against the base-commit
+  version recorded below as `EM_WORKFLOW_BASELINE`. This is a lower bound:
+  the patch is unchecked beyond that comparison and the minor has no upper
+  bound, so a later CI patch bump or a later minor bump still passes. A
+  patch-only bump, an unchanged version, a lowered minor and a different
+  major are rejected.
 - AC-2: `em-review/.claude-plugin/plugin.json` follows the same rule against
   `EM_REVIEW_BASELINE`.
 - AC-3: the `em-workflow` and `em-review` entries of
@@ -36,10 +40,12 @@ Matcher -> negative-proof inventory:
   whitespace, leading zeros).
 - `_assert_minor_bump_over_baseline`: negative proofs are
   `test_rejects_patch_only_bump`, `test_rejects_unchanged_version`,
-  `test_rejects_minor_raised_by_two`, `test_rejects_minor_bump_with_nonzero_patch`,
-  `test_rejects_major_change` and `test_rejects_lowered_minor`; the numeric
-  (not textual) comparison is shown by `test_string_ordering_trap_accepts_a_numeric_bump`
-  and `test_string_ordering_trap_rejects_a_numerically_lower_version`.
+  `test_rejects_major_change` and `test_rejects_lowered_minor`; the lower
+  bound's tolerance (patch unchecked, minor without an upper bound) is shown
+  by `test_accepts_minor_bump_with_nonzero_patch` and
+  `test_accepts_minor_raised_by_two`; the numeric (not textual) comparison is
+  shown by `test_string_ordering_trap_accepts_a_numeric_bump` and
+  `test_string_ordering_trap_rejects_a_numerically_lower_version`.
 - `_assert_versions_agree`: negative proof is
   `test_rejects_a_disagreeing_marketplace_entry`.
 - `_marketplace_entry`: negative proofs are
@@ -106,19 +112,28 @@ def _version_tuple(version):
 
 
 def _assert_minor_bump_over_baseline(test, version, baseline):
-    """The bump rule: same major, minor one greater than the baseline's,
-    patch 0. Compared by integer components."""
-    major, minor, patch = _version_tuple(version)
+    """The bump rule, a lower bound: the candidate has the baseline's major
+    and is at or above (baseline major, baseline minor + 1, 0), compared by
+    integer components. The patch is unchecked beyond that comparison and the
+    minor has no upper bound, so a later CI patch bump or a later minor bump
+    still passes. A patch-only bump, an unchanged version and a lowered minor
+    are rejected, and so is a different major even when it is numerically
+    above the bound. A missing or malformed version is rejected by
+    `_version_tuple` before the comparison."""
+    candidate = _version_tuple(version)
     base_major, base_minor, _base_patch = baseline
     test.assertEqual(
-        major, base_major, f"major of {version!r} differs from baseline {baseline}"
+        candidate[0],
+        base_major,
+        f"major of {version!r} differs from baseline {baseline}",
     )
-    test.assertEqual(
-        minor,
-        base_minor + 1,
-        f"minor of {version!r} is not the baseline minor {base_minor} plus one",
+    lower_bound = (base_major, base_minor + 1, 0)
+    test.assertGreaterEqual(
+        candidate,
+        lower_bound,
+        f"{version!r} is below the lower bound {lower_bound} "
+        f"(baseline minor {base_minor} plus one, patch 0)",
     )
-    test.assertEqual(patch, 0, f"patch of {version!r} is not 0")
 
 
 def _assert_versions_agree(test, version_a, version_b):
@@ -220,13 +235,15 @@ class TestBumpRuleDetectsRegressions(unittest.TestCase):
         with self.assertRaises(AssertionError):
             _assert_minor_bump_over_baseline(self, "0.4.28", self.BASELINE)
 
-    def test_rejects_minor_raised_by_two(self):
-        with self.assertRaises(AssertionError):
-            _assert_minor_bump_over_baseline(self, "0.6.0", self.BASELINE)
+    def test_accepts_minor_raised_by_two(self):
+        # The minor has no upper bound: a later minor bump still satisfies
+        # the lower-bound rule.
+        _assert_minor_bump_over_baseline(self, "0.6.0", self.BASELINE)
 
-    def test_rejects_minor_bump_with_nonzero_patch(self):
-        with self.assertRaises(AssertionError):
-            _assert_minor_bump_over_baseline(self, "0.5.1", self.BASELINE)
+    def test_accepts_minor_bump_with_nonzero_patch(self):
+        # The patch is unchecked: a CI patch bump after the minor bump still
+        # satisfies the lower-bound rule.
+        _assert_minor_bump_over_baseline(self, "0.5.1", self.BASELINE)
 
     def test_rejects_major_change(self):
         with self.assertRaises(AssertionError):
