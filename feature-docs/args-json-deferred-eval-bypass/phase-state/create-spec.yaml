@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 9d768daa4d35e4a2d39d43bc1f3dc97a823bc602
 last_input_digest: sha256:47127e043413b4d2a1b3773f3757b635a7b3fd7be440827b6d1c50b0a0d94012
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -74,14 +74,23 @@ worker_runs:
     tests/test_destructive_guard_args_json.py: sha256:b196292fcbc65be9b06a2b8af0820728949a381b0100c6ebe3bf71873103bb96
   self_write_set: []
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:47127e043413b4d2a1b3773f3757b635a7b3fd7be440827b6d1c50b0a0d94012
-  output_digest: null
+  output_digest: sha256:6ed330aead8e345099eb2a934ac4c77211bebbf036366d41094415d4a2a69942
   dispatch_digest_inputs:
     em-workflow/references/contracts/spec-writer-contract.md: sha256:1e63f69687c6850e890f66b5ca92af7f3b0d02645cc464fca88455ad2269d671
     em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
     em-workflow/references/templates/spec-document.md: sha256:a5d0106c39a5df7dc2365357a9546588275ed6c7a1651c866e75fa327a7fa592
-artifacts: []
+  self_write_set:
+  - feature-docs/args-json-deferred-eval-bypass/REQUIREMENTS.md
+  - feature-docs/args-json-deferred-eval-bypass/SPEC.md
+artifacts:
+- path: feature-docs/args-json-deferred-eval-bypass/REQUIREMENTS.md
+  sha256: sha256:b1bf0e2f656cd44cd414728149719ebc4815f4e2b7d3402b79740821bc8b476b
+  produced_by: create-spec-run-0003
+- path: feature-docs/args-json-deferred-eval-bypass/SPEC.md
+  sha256: sha256:c40e90f087fa2c80cc199e82af2d539beeed173b9370d96df4fd2ce8b0311910
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: sha256:e437dec7c2b315c628e398c488367dee073b9859fd58a0d85b9f9f522d04e8f6
 stale_redispatch_count: 0
