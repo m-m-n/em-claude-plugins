@@ -1,0 +1,17 @@
+schema_version: 1
+feature: rework-replan-artifact-digest
+phase: create-spec
+status: initialized
+generation: 1
+base_revision: 5718f4784244e7e10ca40ee6973bb40f01b53e83
+last_input_digest: null
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
