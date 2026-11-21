@@ -142,7 +142,7 @@ workflow:
   base_commit: 33b987897f0a15fda44678f97e11936ea6f98108
   completed_at_commit: c27cd505ea546698cc69f0b3d24063e15e6c3726
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
   result: null
@@ -208,6 +208,16 @@ tasks:
 review:
   status: pending
   rounds_completed: 0
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary:
+    - perspective: performance
+      reason: destructive-guard は毎回の Bash 呼び出しで走るフックで、差分がその判定経路に走査処理を足しているため
+    cross_validation: true
 requirements:
   FR1:
     title: 後から評価される構文を持つチャンクはシェル状態を不明とする
