@@ -8551,6 +8551,204 @@ def _args_json_has_deferred_evaluation(marked):
         return True
 
 
+# --- Syntax read from a word as written (args-json-deferred-eval-bypass FR1) -
+#
+# Two readings of the per-chunk scan judge a word by the characters it was
+# written with, not by its quote-removed value: a backslash or a quote changes
+# what Bash makes of a `{name[subscript]}` word in front of a redirection
+# operator, and of the words that open and close a `[[ ]]` conditional. The
+# helpers below read those characters (_args_json_word_source()) and are
+# called only from _args_json_nameref_scan(), so their result is kept with the
+# chunk's answer.
+
+# A word Bash may take as the variable of a redirection and that names an array
+# element: `{`, a name, a bracketed subscript (group 1) and `}`.
+_ARGS_JSON_FD_VARIABLE = re.compile(r"\{[A-Za-z_][A-Za-z0-9_]*(\[.*)\}", re.DOTALL)
+
+
+def _args_json_word_source(marked, word):
+    r"""The characters WORD, a word of a statement lexed from MARKED (the
+    _MarkedText), was written with: the slice of MARKED.source it stands for,
+    its quotes, backslashes and line continuations included. None when they
+    cannot be read: an operator, a token with no span, a word whose first
+    character is a substitution's residue. A trailing carriage return that the
+    lexing took off the word is not part of it."""
+    span = getattr(word, "span", None)
+    if marked is None or span is None or getattr(word, "is_operator", False):
+        return None
+    start, end = span
+    cr = getattr(word, "trailing_cr", "")
+    if cr and marked.text.startswith(cr, end - len(cr)):
+        end -= len(cr)
+    if end <= start:
+        return None
+    bounds = _word_source_bounds(marked, start, end)
+    if bounds is None:
+        return None
+    return marked.source[bounds[0]:bounds[1]]
+
+
+def _args_json_fd_variable_deferred(marked, words):
+    """Whether WORDS, the tokens of one statement lexed from MARKED, hold the
+    variable word of a redirection whose subscript Bash evaluates as
+    arithmetic in the current shell.
+
+    Bash takes a word as the variable of a redirection when it starts with
+    `{`, ends with `}` and is touched, with no blank between, by a redirection
+    operator that starts with `<` or `>`. For `{name[subscript]}` it evaluates
+    the subscript and assigns the file-descriptor number to that array
+    element. The word counts when it is written (_args_json_word_source()) as
+    `{`, a name, a bracketed subscript and `}`, and the subscript is anything
+    but digits only, `@` or `*`: a name, a `$` expansion, an expression, a
+    quoted or an empty subscript, one that cannot be read. It counts whatever
+    command carries the redirection (a name the allowlist keeps certain, a
+    closing reserved word, no command name at all), since it is read here and
+    not by _args_json_declares_nameref(), which takes the redirections out
+    first.
+
+    Not counted: `{name}` with no subscript, a subscript of digits, `@` or
+    `*`, a word that a blank separates from the operator (an argument word), a
+    word whose braces are quoted or escaped, and text that is no word of the
+    statement (single quotes, ANSI-C quotes, a comment, the body of a heredoc
+    whose delimiter is quoted, the body of a substitution, which is a chunk of
+    its own)."""
+    for index in range(len(words) - 1):
+        word = words[index]
+        span = getattr(word, "span", None)
+        if (
+            span is None
+            or getattr(word, "is_operator", False)
+            or not getattr(words[index + 1], "is_operator", False)
+            or marked.text[span[1]:span[1] + 1] not in ("<", ">")
+        ):
+            continue
+        source = _args_json_word_source(marked, word)
+        match = None if source is None else _ARGS_JSON_FD_VARIABLE.fullmatch(source)
+        if match and _ARGS_JSON_QUIET_SUBSCRIPT.fullmatch(match.group(1)) is None:
+            return True
+    return False
+
+
+def _args_json_command_name_word(marked, toks):
+    """The word of the simple command TOKS (the tokens between two command
+    boundaries) that Bash reads as the command name, found the way
+    _args_json_declares_nameref() finds it: the redirections are taken out,
+    then the assignment words and the prefixes (`builtin`, `command`, `exec`,
+    `time`, `!` and the reserved words that introduce a command, with the
+    options of `command` and `time` and the `--` that follows) are skipped. A
+    word that cannot be restored stops the skipping and is the result. None
+    when no word is left and when TOKS are the elements of a compound
+    assignment, which are data."""
+    if _args_json_in_array_literal(marked, toks):
+        return None
+    words = _args_json_strip_redirections(marked, toks)
+    prefixes = (
+        "builtin", "command", "exec", "time", "!",
+        "if", "elif", "then", "else", "while", "until", "do",
+    )
+    size = len(words)
+    k = 0
+    while k < size:
+        text, ok = _args_json_declaration_word(marked, words[k])
+        if not ok:
+            break
+        if text in prefixes:
+            k += 1
+            if text in ("command", "time"):
+                while k < size:
+                    option, option_ok = _args_json_declaration_word(marked, words[k])
+                    if not (option_ok and re.fullmatch(r"-[A-Za-z]+", option)):
+                        break
+                    k += 1
+            if k < size and _args_json_declaration_word(marked, words[k]) == ("--", True):
+                k += 1
+            continue
+        if _args_json_assignment_target(text) is not None:
+            k += 1
+            continue
+        break
+    return words[k] if k < size else None
+
+
+def _args_json_separator_breaks_conditional(sep):
+    """Whether SEP, the separator text that ended a statement (None for the
+    last statement of a chunk), holds a `;` or a lone `&`: Bash accepts
+    neither inside a `[[ ]]` conditional. `&&`, `||` and the pipes do not
+    count."""
+    if not sep:
+        return False
+    return any(
+        piece in (";", "&") for piece in re.findall(r"&&|\|&|\|\||[;&|]", sep)
+    )
+
+
+def _args_json_conditional_step(marked, words, commands, sep, was_open):
+    r"""One statement's share of the `[[ ]]` reading of
+    _args_json_nameref_scan(): (UNCERTAIN, OPEN). WORDS are the tokens of the
+    statement, COMMANDS its simple commands (split at the boundaries of
+    _args_json_command_boundary()), SEP the separator that ended it and
+    WAS_OPEN whether a conditional opened in an earlier statement of the chunk
+    is still open: `&&`, `||` and the parentheses of a conditional split it
+    into several statements. OPEN is whether one is open after the statement.
+
+    Opener and closer are judged from each word as written
+    (_args_json_word_source()). An opener is the command-name word of a simple
+    command (_args_json_command_name_word()) written exactly `[[`. A
+    command-name word whose restored text is `[[` but which is written with a
+    backslash, a quote or a line continuation (`\[\[`, `\[[`, `"[["`, `'[['`)
+    opens no conditional: Bash runs it as an ordinary command name, which the
+    allowlist does not keep certain, so the statement is uncertain. A closer
+    is a word written exactly `]]` after the opener, in its statement or a
+    later one. A word whose restored text is `]]` but which is written with a
+    backslash or a quote (`\]\]`, `\]]`, `]\]`, `"]"]`, `$']]'`) is an
+    operand: the conditional stays open and the words of the later statements
+    are the conditional's.
+
+    While a conditional is open, a word that is an operator evaluating its
+    operand (_ARGS_JSON_DOUBLE_BRACKET_WORDS) is uncertain, and so is a `;` or
+    a lone `&` that ends a statement before the closer
+    (_args_json_separator_breaks_conditional()). So a closer that was misread
+    never lets the reading swallow the statements after it, and a closer
+    written across a line continuation (`]`, a backslash, a newline, `]`) is
+    not read as one: the conditional stays open until a `;` or a lone `&`, and
+    a conditional still open at the end of the chunk is uncertain too (the
+    caller). Called only from _args_json_nameref_scan()."""
+    flat = [tok for tok in words if not getattr(tok, "is_operator", False)]
+    is_open = was_open
+    if was_open:
+        for tok in flat:
+            if _args_json_declaration_word(marked, tok)[0] in _ARGS_JSON_DOUBLE_BRACKET_WORDS:
+                return True, True
+        if any(_args_json_word_source(marked, tok) == "]]" for tok in flat):
+            is_open = False
+    else:
+        opener = None
+        for command in commands:
+            name = _args_json_command_name_word(marked, command)
+            if name is None:
+                continue
+            text, ok = _args_json_declaration_word(marked, name)
+            if not ok or text != "[[":
+                continue
+            if _args_json_word_source(marked, name) != "[[":
+                return True, False
+            if opener is None:
+                opener = name
+        if opener is not None:
+            seen = False
+            closed = False
+            for tok in flat:
+                if tok is opener:
+                    seen = True
+                elif seen and _args_json_word_source(marked, tok) == "]]":
+                    closed = True
+                    break
+            is_open = not closed
+    if is_open and _args_json_separator_breaks_conditional(sep):
+        return True, True
+    return False, is_open
+
+
 def _args_json_nameref_scan(marked):
     """Whether the text of one chunk, MARKED, may bring a nameref into being or
     leave the shell state unknown. The chunk's own enclosing chunks are not read
@@ -8585,6 +8783,17 @@ def _args_json_nameref_scan(marked):
        or `}` word begins a new simple command. That function holds the rules
        for command names, options and words, decided from the words as Bash
        reads them after quote removal, at command position only.
+    5. Two readings of the lexed statements that judge a word by the
+       characters it was written with, not by its quote-removed value, each
+       read from every statement whatever command it holds. A word that Bash
+       takes as the variable of a redirection and whose subscript it
+       evaluates as arithmetic, `{name[subscript]}` touched by a `<` or `>`
+       operator, with a subscript that is anything but digits only, `@` or
+       `*` (_args_json_fd_variable_deferred()). The brackets of a `[[ ]]`
+       conditional, which `&&`, `||` and parentheses split across statements:
+       an opener or closer written with a backslash or a quote is neither,
+       and a conditional left open at a `;`, at a lone `&` or at the end of
+       the chunk is uncertain (_args_json_conditional_step()).
 
     False otherwise. Only the chunk's own text is read; nothing is executed
     and no lexer exception escapes."""
@@ -8595,36 +8804,25 @@ def _args_json_nameref_scan(marked):
     if _args_json_has_deferred_evaluation(marked):
         return True
     in_dbracket = False
-    for words, lexed, _sep in lex_segments(marked):
+    for words, lexed, sep in lex_segments(marked):
         if not lexed:
             return True
-        # A `[[ ]]` that `&&` or `||` split into several statements: every
-        # fragment up to the one holding `]]` is read as `[[` words.
-        # `[[` and `]]` count only when unquoted (a quoted one is an operand).
-        texts = []
-        unquoted = []
-        for tok in words:
-            if getattr(tok, "is_operator", False):
-                continue
-            text = _args_json_declaration_word(marked, tok)[0]
-            texts.append(text)
-            unquoted.append(None if getattr(tok, "quoted", False) else text)
-        if in_dbracket:
-            if any(text in _ARGS_JSON_DOUBLE_BRACKET_WORDS for text in texts):
-                return True
-            if "]]" in unquoted:
-                in_dbracket = False
-        else:
-            for idx, text in enumerate(unquoted):
-                if text == "[[" and "]]" not in unquoted[idx + 1:]:
-                    in_dbracket = True
-                    break
+        if _args_json_fd_variable_deferred(marked, words):
+            return True
         commands = [[]]
         for tok in _split_fused_closer_redirects(words):
             if _args_json_command_boundary(tok):
                 commands.append([])
             else:
                 commands[-1].append(tok)
+        # A `[[ ]]` that `&&` or `||` split into several statements: the words
+        # of every statement up to the one holding the closer are the
+        # conditional's.
+        uncertain, in_dbracket = _args_json_conditional_step(
+            marked, words, commands, sep, in_dbracket
+        )
+        if uncertain:
+            return True
         for command in commands:
             if _args_json_declares_nameref(marked, command):
                 return True
@@ -8641,7 +8839,7 @@ def _args_json_nameref_scan(marked):
         ):
             if _args_json_declares_nameref(marked, whole):
                 return True
-    return False
+    return in_dbracket
 
 
 def _args_json_command_boundary(tok):
