@@ -1,7 +1,7 @@
 schema_version: 1
 feature: version-baseline-patch-tolerance
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: eb05424afcbd137fb5a83e0fe71b078b1c78d4d5
 last_input_digest: sha256:0de140e130fd9f4a452253e04ffa44971f063758a9e694e9c7da633cedbcc0c5
