@@ -3,9 +3,9 @@ feature: rework-replan-artifact-digest
 phase: rework
 status: in_progress
 generation: 1
-base_revision: e65136da395668df253e977a09a10662d98e0fc2
-last_input_digest: sha256:e5a8e1d2c5e1bd724c1f778b03edd5a221496b7cdad2d1377bf43bcb529af4ff
-active_request_id: rework-run-0002
+base_revision: 82fe93f36b5dd83b4495cb193cda9557c52d9b7a
+last_input_digest: sha256:ea0fe8b1e281d212cd2960ad9025bc562b2f02419cb4a08eabfd88be04e8ef78
+active_request_id: rework-run-0003
 packets: {}
 answers: {}
 worker_runs:
@@ -30,6 +30,21 @@ worker_runs:
 - request_id: rework-run-0002
   status: failed
   input_digest: sha256:e5a8e1d2c5e1bd724c1f778b03edd5a221496b7cdad2d1377bf43bcb529af4ff
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/rework-planner-contract.md: sha256:0c9f82099c3546b6b675856539d8244628b7170ce7a4442ec951e13e16577ec3
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/rework-replan-artifact-digest/SPEC.md: sha256:b8c7a7a70580d83eb1d2ba5bc4526f8ebf4c083e348cf4f7028db389d9bf77d4
+    feature-docs/rework-replan-artifact-digest/VERIFICATION.md: sha256:bb51bc514dd09c31f03cc20701a1ddd40012a391070db2b5d333de92ef983316
+    feature-docs/rework-replan-artifact-digest/tasks/task0001.md: sha256:db35737ce81cee757b00be5252ce890884addb16cb3275609134815d9e8addc7
+    feature-docs/rework-replan-artifact-digest/tasks/task0002.md: sha256:fa6a4d2335260167b8f835d037832ff9c6612c2625145f821b79bd5e47f0588b
+    feature-docs/rework-replan-artifact-digest/workflow.yaml: sha256:111986fbd4864a4f31b9a8b747c76fc0e04b86d4759bd14886cd81d8c32c3635
+- request_id: rework-run-0003
+  status: dispatched
+  input_digest: sha256:ea0fe8b1e281d212cd2960ad9025bc562b2f02419cb4a08eabfd88be04e8ef78
   dispatch_digest_inputs:
     em-workflow/references/contracts/rework-planner-contract.md: sha256:0c9f82099c3546b6b675856539d8244628b7170ce7a4442ec951e13e16577ec3
     em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
