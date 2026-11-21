@@ -148,7 +148,8 @@ workflow:
   - SC-10
   failed_items: []
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: 41e932a6a2d56524a48e46ae1c151e148546bc42
 tasks:
   task0001:
     title: 'create-plan action decision: planning-lineage match, site citations and pin tests'
