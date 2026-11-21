@@ -2,7 +2,8 @@ schema_version: 1
 feature: rework-replan-artifact-digest
 created: '2026-11-21'
 base_branch: main
-goal: '# em-workflow: 仕様変更後の create-plan 再計画で、rework-planner が書き換えた VERIFICATION.md が digest 不一致として preserve になり batch が止まる
+goal: '# em-workflow: 仕様変更後の create-plan 再計画で、rework-planner が書き換えた VERIFICATION.md が digest 不一致として preserve
+  になり batch が止まる
 
 
   種別: バグ
@@ -11,17 +12,21 @@ goal: '# em-workflow: 仕様変更後の create-plan 再計画で、rework-plann
   ## 現象
 
 
-  仕様変更の遷移のあとで create-plan を再計画すると、verify の手戻りで rework-planner が書き換えた VERIFICATION.md が digest 不一致と判定される。batch では `create-plan.artifact-overwrite` = `preserve_and_reuse` により VERIFICATION.md が読み取り専用になり、改訂後の SPEC に合わせられないため planner が blocked を返す。無人実行は `step_needs_intervention` で停止する。
+  仕様変更の遷移のあとで create-plan を再計画すると、verify の手戻りで rework-planner が書き換えた VERIFICATION.md が digest 不一致と判定される。batch
+  では `create-plan.artifact-overwrite` = `preserve_and_reuse` により VERIFICATION.md が読み取り専用になり、改訂後の SPEC
+  に合わせられないため planner が blocked を返す。無人実行は `step_needs_intervention` で停止する。
 
 
   ## 再現手順
 
 
-  1. batch で develop を実行し、verify の手戻りで rework-planner が VERIFICATION.md を書き換える（記録は `phase-state/rework.yaml` に入る）
+  1. batch で develop を実行し、verify の手戻りで rework-planner が VERIFICATION.md を書き換える（記録は `phase-state/rework.yaml`
+  に入る）
 
   2. 分類ゲートが `spec_gap` を選び、仕様変更の遷移（create-spec を needs_update、create-plan〜verify を pending）を取る
 
-  3. create-spec の再実行後、create-plan の Pre-dispatch verification が `phase-state/create-plan.yaml` の記録とだけ digest を照合し、VERIFICATION.md を不一致とする
+  3. create-spec の再実行後、create-plan の Pre-dispatch verification が `phase-state/create-plan.yaml` の記録とだけ
+  digest を照合し、VERIFICATION.md を不一致とする
 
   4. batch の方針で preserve になり、planner が blocked を返して停止する
 
@@ -43,7 +48,8 @@ goal: '# em-workflow: 仕様変更後の create-plan 再計画で、rework-plann
   ## 該当箇所
 
 
-  - `em-workflow/references/artifact-digest.md` の `Pre-dispatch verification` / `Layer 5 recording`（記録先は dispatch したフェーズの phase-state ファイル）
+  - `em-workflow/references/artifact-digest.md` の `Pre-dispatch verification` / `Layer 5 recording`（記録先は
+  dispatch したフェーズの phase-state ファイル）
 
   - `em-workflow/references/phases/create-plan-phase.md` の `4. Planner dispatch`
 
@@ -53,7 +59,8 @@ goal: '# em-workflow: 仕様変更後の create-plan 再計画で、rework-plann
   ## 実害・発生条件
 
 
-  発生事例: feature `mcp-bridge-function-shadow`、2026-11-21 19:23 JST のコミット `bf82e71da`（create-plan aborted (preserved VERIFICATION.md blocked)）。
+  発生事例: feature `mcp-bridge-function-shadow`、2026-11-21 19:23 JST のコミット `bf82e71da`（create-plan aborted
+  (preserved VERIFICATION.md blocked)）。
 
   '
 parent_branch: em-workflow/rework-replan-artifact-digest/integration
@@ -84,7 +91,8 @@ project:
     main:
       language: python
       build_command: ''
-      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover
+        -s tests
       format_command: ''
 workflow:
 - id: create-spec
@@ -97,7 +105,8 @@ workflow:
   - DESIGN.md
   - design/
   status: skipped
-  skipped_reason: 'tier reduced により design step を削減（UI を持たない手順文書とテストの修正、design-system 候補 0 件。create-spec.design-step: decide_autonomously → skip）'
+  skipped_reason: 'tier reduced により design step を削減（UI を持たない手順文書とテストの修正、design-system 候補 0 件。create-spec.design-step:
+    decide_autonomously → skip）'
 - id: create-plan
   artifacts:
   - IMPLEMENTATION.md
@@ -111,7 +120,8 @@ workflow:
   base_commit: 33b987897f0a15fda44678f97e11936ea6f98108
   completed_at_commit: e035afdf8f06526ce4d148fdf15d53d99e9da201
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: dd4f360cb8b0bfb9c536fc13b9481fd4562d30ff
 - id: verify
   status: pending
   result: null
@@ -184,15 +194,15 @@ tasks:
       review_round: 1
     notes: null
 review:
-  status: pending
-  rounds_completed: 1
+  status: completed
+  rounds_completed: 2
   perspectives:
   - comprehensive
   - security
   - architecture
   - spec
   residual_critical_high: 5
-  needs_rework: true
+  needs_rework: false
   plan:
     floor:
     - comprehensive
