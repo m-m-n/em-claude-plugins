@@ -1,18 +1,18 @@
 schema_version: 1
 feature: rework-replan-artifact-digest
 phase: rework
-status: dispatching
+status: completed
 generation: 1
-base_revision: 89b1548cebfd1ad0e179a54bfab31a1fd3229f1d
+base_revision: 660c05238780faabd7697475cbac658a27fb34b1
 last_input_digest: sha256:cd3a4d6bf45b71e5b7d952bd8a3ead48fbf0d1a2b0183081a28916b505ddb2c0
-active_request_id: rework-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
 - request_id: rework-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:cd3a4d6bf45b71e5b7d952bd8a3ead48fbf0d1a2b0183081a28916b505ddb2c0
-  output_digest: null
+  output_digest: sha256:52a1105a98b1f9e347c7b79da5903d0698be4746a4d9f22a6394f59b86e1f1ea
   dispatch_digest_inputs:
     em-workflow/references/contracts/rework-planner-contract.md: sha256:0c9f82099c3546b6b675856539d8244628b7170ce7a4442ec951e13e16577ec3
     em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
@@ -24,8 +24,21 @@ worker_runs:
     feature-docs/rework-replan-artifact-digest/VERIFICATION.md: sha256:f3156b8ab6ca56483e81bf8cba3e3f1e603fa89c27f8fee55550a06e54a7d634
     feature-docs/rework-replan-artifact-digest/tasks/task0001.md: sha256:db35737ce81cee757b00be5252ce890884addb16cb3275609134815d9e8addc7
     feature-docs/rework-replan-artifact-digest/workflow.yaml: sha256:5137959c8a84b9c92e8370698ed38ad940ff4ee185b84bf82e8b61016aaff1af
-artifacts: []
-patches: []
+  self_write_set:
+  - feature-docs/rework-replan-artifact-digest/VERIFICATION.md
+  - feature-docs/rework-replan-artifact-digest/tasks/task0002.md
+artifacts:
+- path: feature-docs/rework-replan-artifact-digest/tasks/task0002.md
+  sha256: sha256:fa6a4d2335260167b8f835d037832ff9c6612c2625145f821b79bd5e47f0588b
+  produced_by: rework-run-0001
+- path: feature-docs/rework-replan-artifact-digest/VERIFICATION.md
+  sha256: sha256:bb51bc514dd09c31f03cc20701a1ddd40012a391070db2b5d333de92ef983316
+  produced_by: rework-run-0001
+patches:
+- patch_id: rework-p0001
+  status: applied
+  base_input_digest: sha256:cd3a4d6bf45b71e5b7d952bd8a3ead48fbf0d1a2b0183081a28916b505ddb2c0
+  base_workflow_blob: cc16ffb793ba8ffa541d84ba615eb88aad69b992
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
