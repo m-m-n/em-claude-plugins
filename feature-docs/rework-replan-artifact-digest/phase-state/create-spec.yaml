@@ -1,7 +1,7 @@
 schema_version: 1
 feature: rework-replan-artifact-digest
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 5718f4784244e7e10ca40ee6973bb40f01b53e83
 last_input_digest: sha256:fdaf785dcd1c51bbd3c5c02cb437995e061b7958ec0735fcadba344d54f813f4
@@ -9,7 +9,7 @@ active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
-    issued_at: '2026-11-21T20:31:00+09:00'
+    issued_at: '2026-11-21T20:18:10+09:00'
     questions:
     - question_id: requirement.fix-mechanism
       status: answered
@@ -22,7 +22,7 @@ packets:
 answers:
   requirement.fix-mechanism:
     packet_id: create-spec-q0001
-    answered_at: '2026-11-21T20:36:00+09:00'
+    answered_at: '2026-11-21T20:19:30+09:00'
     source: batch-codex-consultation
     answer_mode: single_select
     selected_option_ids:
@@ -38,7 +38,7 @@ answers:
       key point: rework-planner-contract.md が既に両プランナーの出力を同じ計画系統として扱っており、外部編集へのダイジェスト保護を保てる'
   requirement.match-scope:
     packet_id: create-spec-q0001
-    answered_at: '2026-11-21T20:36:00+09:00'
+    answered_at: '2026-11-21T20:19:30+09:00'
     source: batch-codex-consultation
     answer_mode: single_select
     selected_option_ids:
@@ -52,7 +52,7 @@ answers:
       mapping; opus_escalation: false; key point: phase-state の artifacts にファイル間の順序を示す項目が無く、現行形式のまま照合できる'
   requirement.applicability:
     packet_id: create-spec-q0001
-    answered_at: '2026-11-21T20:36:00+09:00'
+    answered_at: '2026-11-21T20:19:30+09:00'
     source: batch-codex-consultation
     answer_mode: single_select
     selected_option_ids:
@@ -67,7 +67,7 @@ answers:
       を replace_own で扱い、文書のみの rework の後に同じ誤判定が起きうる'
   requirement.test-form:
     packet_id: create-spec-q0001
-    answered_at: '2026-11-21T20:36:00+09:00'
+    answered_at: '2026-11-21T20:19:30+09:00'
     source: batch-codex-consultation
     answer_mode: single_select
     selected_option_ids:

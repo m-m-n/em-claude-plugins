@@ -1,0 +1,210 @@
+schema_version: 1
+feature: rework-replan-artifact-digest
+created: '2026-11-21'
+base_branch: main
+goal: '# em-workflow: 仕様変更後の create-plan 再計画で、rework-planner が書き換えた VERIFICATION.md が digest 不一致として preserve になり batch が止まる
+
+
+  種別: バグ
+
+
+  ## 現象
+
+
+  仕様変更の遷移のあとで create-plan を再計画すると、verify の手戻りで rework-planner が書き換えた VERIFICATION.md が digest 不一致と判定される。batch では `create-plan.artifact-overwrite` = `preserve_and_reuse` により VERIFICATION.md が読み取り専用になり、改訂後の SPEC に合わせられないため planner が blocked を返す。無人実行は `step_needs_intervention` で停止する。
+
+
+  ## 再現手順
+
+
+  1. batch で develop を実行し、verify の手戻りで rework-planner が VERIFICATION.md を書き換える（記録は `phase-state/rework.yaml` に入る）
+
+  2. 分類ゲートが `spec_gap` を選び、仕様変更の遷移（create-spec を needs_update、create-plan〜verify を pending）を取る
+
+  3. create-spec の再実行後、create-plan の Pre-dispatch verification が `phase-state/create-plan.yaml` の記録とだけ digest を照合し、VERIFICATION.md を不一致とする
+
+  4. batch の方針で preserve になり、planner が blocked を返して停止する
+
+
+  ## 期待する挙動
+
+
+  verify の手戻りで rework-planner が書き換えた計画成果物があっても、仕様変更の遷移後の create-plan 再計画が batch で止まらず、改訂後の SPEC に合わせて成果物を更新できる。
+
+
+  ## 完了の定義
+
+
+  - [ ] 再現手順で現象が起きない
+
+  - [ ] 再発を検出するテストがある
+
+
+  ## 該当箇所
+
+
+  - `em-workflow/references/artifact-digest.md` の `Pre-dispatch verification` / `Layer 5 recording`（記録先は dispatch したフェーズの phase-state ファイル）
+
+  - `em-workflow/references/phases/create-plan-phase.md` の `4. Planner dispatch`
+
+  - `em-workflow/references/batch-policies.yaml` の `create-plan.artifact-overwrite`
+
+
+  ## 実害・発生条件
+
+
+  発生事例: feature `mcp-bridge-function-shadow`、2026-11-21 19:23 JST のコミット `bf82e71da`（create-plan aborted (preserved VERIFICATION.md blocked)）。
+
+  '
+parent_branch: em-workflow/rework-replan-artifact-digest/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.01
+      '1': 0.65
+      '2': 0.34
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.86
+      '2': 0.14
+      '3': 0.0
+  at: '2026-11-21T20:11:50+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
+      format_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: c86d17ebe9135b6659576c42551115a5ac3f1d66
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'tier reduced により design step を削減（UI を持たない手順文書とテストの修正、design-system 候補 0 件。create-spec.design-step: decide_autonomously → skip）'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: 33b987897f0a15fda44678f97e11936ea6f98108
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  round: 0
+  passed_ids: []
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: Planning-lineage match in create-plan's action decision
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: Mismatch branch unchanged
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: Every create-plan action decision
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: Site sections cite the action-decision owner
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: rework.yaml read conditions
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: Legacy records apply to rework.yaml values
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: Regression document tests
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: Recording and owner structure unchanged
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: Pinned statements kept
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: No restatement in site sections
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: Test constraints
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
