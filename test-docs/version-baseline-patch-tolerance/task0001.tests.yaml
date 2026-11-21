@@ -1,0 +1,51 @@
+task_id: task0001
+baseline_failures:             # 4a: python3 -m unittest discover -s tests -> Ran 16931 tests, FAILED (failures=4, skipped=1); the four failures are the current-version tests, which asserted patch 0 against em-workflow 0.5.2 and em-review 0.6.1
+  - tests.test_review_perspective_model_effort_version_bump.TestEmWorkflowManifest.test_version_is_a_minor_bump_over_baseline
+  - tests.test_review_perspective_model_effort_version_bump.TestEmReviewManifest.test_version_is_a_minor_bump_over_baseline
+  - tests.test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_workflow_entry_version_is_a_minor_bump_over_baseline
+  - tests.test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_review_entry_version_is_a_minor_bump_over_baseline
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests (result noted in the task report)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_review_perspective_model_effort_version_bump.TestBumpRuleDetectsRegressions.test_accepts_the_correct_bump
+      - tests.test_review_perspective_model_effort_version_bump.TestBumpRuleDetectsRegressions.test_accepts_minor_bump_with_nonzero_patch
+      - tests.test_review_perspective_model_effort_version_bump.TestBumpRuleDetectsRegressions.test_accepts_minor_raised_by_two
+    red_confirmed: true
+    red_reason: "Against the unchanged exact rule, test_accepts_minor_bump_with_nonzero_patch failed with AssertionError: 1 != 0 : patch of '0.5.1' is not 0, and test_accepts_minor_raised_by_two failed with AssertionError: 6 != 5 : minor of '0.6.0' is not the baseline minor 4 plus one. test_accepts_the_correct_bump passed before the change (the (M, m + 1, 0) case was accepted under the old rule too)."
+  AC-2:
+    tests:
+      - tests.test_review_perspective_model_effort_version_bump.TestBumpRuleDetectsRegressions.test_rejects_patch_only_bump
+      - tests.test_review_perspective_model_effort_version_bump.TestBumpRuleDetectsRegressions.test_rejects_unchanged_version
+      - tests.test_review_perspective_model_effort_version_bump.TestBumpRuleDetectsRegressions.test_rejects_major_change
+      - tests.test_review_perspective_model_effort_version_bump.TestBumpRuleDetectsRegressions.test_rejects_lowered_minor
+      - tests.test_review_perspective_model_effort_version_bump.TestBumpRuleDetectsRegressions.test_entry_without_a_version_fails_the_bump_check
+    red_confirmed: false
+    red_reason: "These rejections held under the old exact rule and are kept unchanged, so they passed before the implementation and no red state occurred for this change. Non-vacuity under the new lower-bound rule was shown with in-memory weakened copies of the helper: dropping the major check made test_rejects_major_change fail (a tuple comparison alone accepts 1.5.0 over a 0.4.28 baseline), and dropping the lower bound made test_rejects_patch_only_bump, test_rejects_unchanged_version and test_rejects_lowered_minor fail."
+  AC-3:
+    tests:
+      - tests.test_review_perspective_model_effort_version_bump.TestBumpRuleDetectsRegressions.test_string_ordering_trap_accepts_a_numeric_bump
+      - tests.test_review_perspective_model_effort_version_bump.TestBumpRuleDetectsRegressions.test_string_ordering_trap_rejects_a_numerically_lower_version
+    red_confirmed: false
+    red_reason: "The two string-ordering-trap tests are unchanged and passed before the change; the integer-component comparison pre-existed and is kept. A weakened helper that compared the version as a string made test_string_ordering_trap_rejects_a_numerically_lower_version fail in an in-memory check; no red state occurred for this change."
+  AC-4:
+    tests:
+      - tests.test_review_perspective_model_effort_version_bump.TestEmWorkflowManifest.test_version_is_a_minor_bump_over_baseline
+      - tests.test_review_perspective_model_effort_version_bump.TestEmReviewManifest.test_version_is_a_minor_bump_over_baseline
+      - tests.test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_workflow_entry_version_is_a_minor_bump_over_baseline
+      - tests.test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_review_entry_version_is_a_minor_bump_over_baseline
+    red_confirmed: true
+    red_reason: "Before any edit, all four failed against the repository's actual versions: AssertionError: 2 != 0 : patch of '0.5.2' is not 0 (em-workflow manifest and marketplace entry) and AssertionError: 1 != 0 : patch of '0.6.1' is not 0 (em-review manifest and marketplace entry)."
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: "The criterion is the removal of two test names and the wording of the module and helper docstrings; TS-8 is an inspection scenario and no executable check can be made to fail for it. Searching the tests directory by the repository-relative path and by the filename test_review_perspective_model_effort_version_bump found no test that reads this module's docstring or its test names (the only hit is the test-docs record of task0006, which is data). Verified by inspection: every test name in the docstring's negative-proof list exists in the module, and neither removed name occurs in the module."
+  AC-6:
+    tests:
+      - tests.test_review_perspective_model_effort_version_bump.TestOwnModuleStdlibOnly.test_only_standard_library_imports
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing test_only_standard_library_imports detects a non-standard-library import in this module; no red state occurred for this change because the module still imports only the standard library. The name check against test-docs/review-perspective-model-effort/task0006.tests.yaml is an inspection (TS-10): all 15 test names it references resolve to methods of the module."
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: "The criterion is checked from the git diff against the task base (TS-9, inspection); no executable check can be made to fail for it. Searching the tests directory by the repository-relative path and by the filename tests/test_destructive_guard_args_json.py found no test that reads the diff. Verified from the diff: the only file changed by this task, apart from this record, is tests/test_review_perspective_model_effort_version_bump.py."
