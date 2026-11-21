@@ -1,0 +1,101 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests before any edit: see the note below
+final_failures: []             # python3 -m unittest discover -s tests after the implementation, re-run after this record was written: OK
+# baseline_failures note: the 4a run was started before any edit and reported
+# one failure, test_verify_pass_resolution_procedure.TestAC2MappingRule.
+# test_ac2_ambiguous_and_mixed_content_findings_are_left_out. That failure is
+# not inherited: SKILL.md was edited (the old exclusion phrase removed, as this
+# task's AC-3 requires) while the run was still in progress, after the run had
+# already loaded the old test module whose body asserts that phrase. It is
+# therefore not part of the inherited state; every other test passed in that run.
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_verify_pass_resolution_procedure.TestRerunAC1LegacyRerun.test_ac1_rerun_on_a_workflow_lacking_round_or_passed_ids_follows_the_same_procedure
+      - tests.test_verify_pass_resolution_procedure.TestRerunAC1LegacyRerun.test_ac1_round_becomes_one_because_the_absent_round_is_read_as_zero
+      - tests.test_verify_pass_resolution_procedure.TestRerunAC1LegacyRerun.test_ac1_passed_ids_is_written_in_the_same_write_as_result
+      - tests.test_verify_pass_resolution_procedure.TestRerunAC1LegacyRerun.test_ac1_on_pass_the_mapping_and_the_script_run_are_performed
+      - tests.test_verify_pass_resolution_procedure.TestRerunAC1LegacyRerun.test_ac1_on_pass_the_existing_commit_step_follows
+      - tests.test_verify_pass_resolution_procedure.TestRerunAC1LegacyRerun.test_ac1_when_result_is_not_pass_neither_is_performed
+      - tests.test_verify_pass_resolution_procedure.TestRerunAC1LegacyRerun.test_ac1_cites_the_schema_for_the_absent_key_reading_without_restating_it
+      - tests.test_verify_pass_resolution_procedure.TestRerunAC1LegacyRerun.test_ac1_does_not_describe_returning_verify_to_pending
+    red_confirmed: true
+    red_reason: >-
+      Run before SKILL.md was edited: all eight failed with
+      "AssertionError: step not found: '旧形式の workflow.yaml での再実行'"
+      (the legacy re-run step did not exist in the subsection).
+  AC-2:
+    tests:
+      - tests.test_verify_pass_resolution_procedure.TestRerunAC2MappingRule.test_ac2_a_finding_is_mapped_only_when_its_claim_is_the_criterion_miss_itself
+      - tests.test_verify_pass_resolution_procedure.TestRerunAC2MappingRule.test_ac2_cause_analysis_fix_suggestion_and_scope_judgment_do_not_prevent_the_mapping
+      - tests.test_verify_pass_resolution_procedure.TestRerunAC2MappingRule.test_ac2_add_ons_do_not_count_as_a_second_claim
+      - tests.test_verify_pass_resolution_procedure.TestRerunAC2MappingRule.test_ac2_an_ambiguous_finding_is_not_mapped
+      - tests.test_verify_pass_resolution_procedure.TestRerunAC2MappingRule.test_ac2_a_finding_also_claiming_another_unpassed_criterion_or_another_defect_is_not_mapped
+      - tests.test_verify_pass_resolution_procedure.TestRerunAC2MappingRule.test_ac2_a_finding_where_the_id_merely_appears_is_not_mapped
+    red_confirmed: true
+    red_reason: >-
+      Run before SKILL.md was edited: all six failed with "AssertionError:
+      False is not true" (the mapping step carried none of the add-on
+      tolerance or the three not-mapped statements).
+  AC-3:
+    tests:
+      - tests.test_verify_pass_resolution_procedure.TestRerunAC2MappingRule.test_ac3_the_old_exclusion_phrase_is_absent_from_the_subsection
+      - tests.test_verify_pass_resolution_procedure.TestRerunAC2MappingRule.test_ac3_the_old_exclusion_phrase_is_absent_from_the_whole_skill
+      - tests.test_verify_pass_resolution_procedure.TestAC2MappingRule.test_ac2_ambiguous_and_mixed_content_findings_are_left_out
+    red_confirmed: true
+    red_reason: >-
+      Run before SKILL.md was edited: the two absence tests failed with
+      "AssertionError: True is not false" (the old phrase was present), and
+      the updated test_ac2_ambiguous_and_mixed_content_findings_are_left_out
+      failed with "AssertionError: False is not true" (the new not-mapped
+      wording was absent).
+  AC-4:
+    tests:
+      - tests.test_verify_pass_resolution_procedure.TestRerunAC4FixedPhrases.test_ac4_the_subsection_keeps_every_fixed_phrase
+      - tests.test_verify_pass_resolution_procedure.TestRerunAC4FixedPhrases.test_ac4_the_untrusted_input_handling_reference_sits_in_the_mapping_step
+      - tests.test_verify_pass_resolution_procedure.TestRerunAC4FixedPhrases.test_ac4_an_id_appearing_in_the_text_is_not_enough_in_the_mapping_step
+      - tests.test_verify_pass_resolution_procedure.TestRerunAC4FixedPhrases.test_ac4_the_kept_phrase_and_the_add_on_tolerance_state_one_rule
+      - tests.test_verify_pass_resolution_procedure.TestRerunAC4FixedPhrases.test_ac4_the_subsection_adds_no_gate_question_or_batch_policy_token
+      - tests.test_verify_pass_resolution_procedure.TestRerunAC4FixedPhrases.test_ac4_the_legacy_rerun_is_the_same_in_both_modes_with_no_new_gate
+      - tests.test_verify_pass_resolution_procedure.TestRerunAC4FixedPhrases.test_ac4_the_verify_section_backticks_no_category_vocabulary
+      - tests.test_verify_pass_resolution_procedure.TestRerunAC4FixedPhrases.test_ac4_the_subsection_gives_deferred_to_nothing_in_verify
+      - tests.test_verify_pass_resolution_procedure.TestAC2MappingRule.test_ac2_cites_untrusted_input_handling_of_worker_envelope
+      - tests.test_verify_pass_resolution_procedure.TestAC2MappingRule.test_ac2_an_id_appearing_in_the_text_is_not_enough
+      - tests.test_verify_pass_resolution_procedure.TestAC5ModesAndGates.test_ac5_same_in_interactive_and_batch_and_no_gate_tokens
+      - tests.test_verify_pass_resolution_procedure.TestAC5ModesAndGates.test_ac5_states_no_new_gate_question_or_batch_non_packet_gate
+      - tests.test_verify_pass_resolution_procedure.TestAC5ModesAndGates.test_ac5_none_of_the_gate_tokens_appear
+      - tests.test_failed_items_category.TestVerifyStepDoesNotRestateVocabulary.test_no_vocabulary_terms_backtick_quoted_in_verify_section
+    red_confirmed: true
+    red_reason: >-
+      Run before SKILL.md was edited: two of these went red,
+      test_ac4_the_kept_phrase_and_the_add_on_tolerance_state_one_rule
+      ("AssertionError: False is not true": the add-on tolerance was absent)
+      and test_ac4_the_legacy_rerun_is_the_same_in_both_modes_with_no_new_gate
+      ("ValueError: substring not found": the legacy re-run step was absent).
+      The remaining tests are preservation guards of wording and tokens that
+      already held before the change (Untrusted-Input Handling reference, the
+      ID-appearing phrase, the gate tokens, the category vocabulary); they
+      passed before and pass after, so they carry no red of their own.
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      The criterion is a diff-scope check on the task branch (only
+      em-workflow/skills/develop/SKILL.md and
+      tests/test_verify_pass_resolution_procedure.py change), verified by
+      git diff --name-only against the base; no executable check that can be
+      made to fail exists for it. Existing tests that read
+      skills/develop/SKILL.md or exercise resolve-verified-findings.py
+      (tests/test_resolve_verified_findings.py) detect behavior of those
+      files; none asserts the diff scope, and no red state occurred for this
+      change.
+  AC-6:
+    tests:
+      - tests.test_verify_pass_resolution_procedure.TestOwnModuleStdlibOnly.test_own_imports_are_all_stdlib
+    red_confirmed: false
+    red_reason: >-
+      The module's import statements were not changed (the new tests use the
+      ast / re / sys / unittest / pathlib imports already present), so the
+      existing test_own_imports_are_all_stdlib passed before and after; no
+      red state occurred for this change. The exit-0 half of the criterion is
+      the full-suite run recorded in final_failures.
