@@ -149,7 +149,7 @@ tasks:
     - FR8
     - NFR1
     - NFR2
-    status: in_progress
+    status: merged
     branch: em-workflow/mcp-bridge-function-shadow/task0001
     notes: null
 review:
