@@ -44,6 +44,7 @@ import importlib.util
 import inspect
 import json
 import os
+import re
 import subprocess
 import sys
 import unittest
@@ -2202,6 +2203,534 @@ class TestDocstring(unittest.TestCase):
         with self.subTest("the TS-12 runner label names O2 (8)"):
             (label,) = [l for l in labels if l.startswith("args-json-quoting-bypass TS-12:")]
             self.assertIn("O2 (8)", label)
+
+
+
+CASES_PATH = os.path.join(ROOT, "em-workflow", "hooks", "tests", "destructive-guard-cases.json")
+
+
+class TestExpansionLevelDeferredEvaluation(unittest.TestCase):
+    """args-json-deferred-eval-bypass task0001 (FR1, FR4, FR5, FR6, FR8, NFR1,
+    NFR2; TS-1, TS-4, TS-9, TS-11, TS-12, TS-13, TS-14): a chunk that holds an
+    expansion re-evaluating a value as code in the current shell, wherever the
+    lexer reads it as syntax and in the body of an unquoted-delimiter heredoc,
+    leaves the shell state uncertain, so the notion call of the chunk is
+    inspected (KIND_INSPECTED). A construct that only stands in a data
+    position (single quotes, a quoted-delimiter heredoc body), in a subshell
+    body or as a harmless subscript or offset keeps the exclusion
+    (KIND_NOTHING)."""
+
+    ARRAY = "A=(json --mcp desktop-commander --tool start_process); "
+    NOTION = (
+        "mcp-bridge run --mcp notion --tool notion-create-comment "
+        "--format \"$r\" --args-json '{\"command\":\"git branch -D example\"}'"
+    )
+    NOTION_SID = NOTION.replace('--format "$r"', '--session "$SID"')
+
+    # (label, a form that carries the construct, with echo or `:` as the
+    # command): the constructs of the table in the task plan, the enumerated
+    # FR1 rows first.
+    COUNTED = (
+        ("arithmetic expansion", "echo $((a))"),
+        ("bracket arithmetic", "echo $[a]"),
+        ("assignment-word subscript with a $ expansion", "a[$i]=1"),
+        ("assignment-word subscript with a name", "a[i]=1"),
+        ("compound-assignment element with a $ expansion", "b=([$i]=v)"),
+        ("compound-assignment element with a name", "b=([i]=v)"),
+        ("compound assignment with a digit and a name element", "b=([2]=v [i]=w)"),
+        ("parameter-expansion subscript with a $ expansion", 'echo "${a[$i]}"'),
+        ("parameter-expansion subscript with a name", 'echo "${a[i]}"'),
+        ("length of a subscripted name", 'echo "${#a[i]}"'),
+        ("subscript followed by an operator", 'echo "${a[i]:-x}"'),
+        ("subscript with a space around a digit", 'echo "${a[ 0 ]}"'),
+        ("subscript with a sign", 'echo "${a[-1]}"'),
+        ("subscript in the operand of another expansion", 'echo "${x:-${a[i]}}"'),
+        ("@P transformation", 'echo "${x@P}"'),
+        ("@P transformation of a subscripted name", 'echo "${a[0]@P}"'),
+        ("@P transformation of a positional parameter", 'echo "${1@P}"'),
+        ("@P transformation of a special parameter", 'echo "${@@P}"'),
+        ("indirect expansion", 'echo "${!x}"'),
+        ("indirect expansion with a subscript", 'echo "${!a[0]}"'),
+        ("key list", 'echo "${!a[@]}"'),
+        ("prefix list", "echo ${!pre*}"),
+        ("assigning expansion with =", 'echo "${x=y}"'),
+        ("assigning expansion with :=", 'echo "${x:=y}"'),
+        ("assigning expansion of a subscripted name", 'echo "${a[0]:=y}"'),
+        ("assigning expansion of PS4", 'echo "${PS4:=y}"'),
+        ("substring with a name offset", 'echo "${s:p}"'),
+        ("substring with a name length", 'echo "${s:0:n}"'),
+        ("substring with an arithmetic offset", 'echo "${s:0-1}"'),
+        ("substring of an array with a name offset", 'echo "${a[@]:n}"'),
+        ("substring with a $ expansion length", 'echo "${s:1:$n}"'),
+        ("arithmetic expansion in an operand", 'echo "${x:-$((a))}"'),
+        ("@P in an operand", 'echo "${y:-${z@P}}"'),
+        ("arithmetic expansion in a here-string", ': <<< "$((a))"'),
+        ("expansion inside a brace command substitution", 'echo "${ echo $((a)); }"'),
+    )
+
+    # The positions the task plan names; {c} is the construct. The heredoc
+    # position is checked apart (the body leaves the chunk text).
+    POSITIONS = (
+        ("function body", "f() { echo {c}; }"),
+        ("{ } group", "{ echo {c}; }"),
+        ("if body", "if true; then echo {c}; fi"),
+        ("while body", "while false; do echo {c}; done"),
+        ("for body", "for x in a; do echo {c}; done"),
+        ("case item", "case x in a) echo {c};; esac"),
+        ("conditional", "[[ x == {c} ]]"),
+        ("double quotes", 'echo "{c}"'),
+        ("here-string word", ': <<< "{c}"'),
+        ("here-string word without quotes", ": <<< {c}"),
+        ("subshell group", "( echo {c} )"),
+    )
+    CONSTRUCTS = (("arithmetic expansion", "$((a))"), ("@P transformation", "${x@P}"))
+
+    def plain(self, text):
+        return GUARD._MarkedText.plain(text)
+
+    def defers(self, text):
+        """The expansion-level reading of the chunk TEXT (no heredoc)."""
+        return GUARD._args_json_has_deferred_evaluation(self.plain(text))
+
+    def stripped(self, command):
+        stripped, _records, _omap = GUARD._strip_heredocs_mapped(command)
+        return stripped
+
+    def marks(self, command):
+        """Whether the heredoc removal of COMMAND carries the mark."""
+        return isinstance(self.stripped(command), GUARD._StrippedWithShellSubstitution)
+
+    def scans(self, command):
+        """([(chunk source, result), ...] of the per-chunk scans a
+        statements() run of COMMAND asked for, the kinds of its `mcp-bridge`
+        statements). The first scan is the one of the chunk that holds the
+        notion call."""
+        original = GUARD._args_json_nameref_scan
+        calls = []
+
+        def spy(marked):
+            result = original(marked)
+            calls.append((str(marked.source), result))
+            return result
+
+        with mock.patch.object(GUARD, "_args_json_nameref_scan", spy):
+            kinds = Spy(command).kinds()
+        return calls, kinds
+
+    def assert_uncertain(self, form):
+        """The notion call after FORM is inspected; the chunk's scan, the
+        first one asked for, reads true."""
+        calls, kinds = self.scans(self.ARRAY + form + "; " + self.NOTION)
+        self.assertEqual([KIND_INSPECTED], kinds)
+        self.assertTrue(calls and calls[0][1], calls)
+
+    def assert_certain(self, form):
+        """The notion call (with `--session "$SID"`) after FORM keeps the
+        exclusion; the chunk's scan, the first one asked for, reads false."""
+        calls, kinds = self.scans(self.ARRAY + form + "; " + self.NOTION_SID)
+        self.assertEqual([KIND_NOTHING], kinds)
+        self.assertTrue(calls and not calls[0][1], calls)
+
+    # --- AC-1: every counted construct ---------------------------------
+
+    def test_the_ts_1_attack_form_reads_the_chunk_as_uncertain(self):
+        """AC-1 (TS-1): a value that hides the opener with an ANSI-C quote is
+        evaluated by `${p@P}` in double quotes."""
+        form = "p=$'$\\x7b declare -gn r=A[@]; }'; : \"${p@P}\""
+        with self.subTest("expansion level"):
+            self.assertTrue(self.defers(form))
+        with self.subTest("notion call"):
+            self.assert_uncertain(form)
+
+    def test_every_counted_construct_reads_the_chunk_as_uncertain(self):
+        """AC-1 (TS-4): the expansion level reads each construct of the table
+        as uncertain, and the notion call after it is inspected."""
+        for label, form in self.COUNTED:
+            with self.subTest(label + ": expansion level"):
+                self.assertTrue(self.defers(form))
+            with self.subTest(label + ": notion call"):
+                self.assert_uncertain(form)
+
+    # --- AC-2: positions ------------------------------------------------
+
+    def test_an_arithmetic_expansion_and_at_p_are_read_at_every_position(self):
+        """AC-2 (TS-4): a function body, a group, a conditional, a loop, double
+        quotes and a here-string word."""
+        for name, construct in self.CONSTRUCTS:
+            for place, template in self.POSITIONS:
+                form = template.replace("{c}", construct)
+                with self.subTest(name + " in " + place + ": expansion level"):
+                    self.assertTrue(self.defers(form))
+                with self.subTest(name + " in " + place + ": notion call"):
+                    self.assert_uncertain(form)
+
+    def test_the_body_of_an_unquoted_delimiter_heredoc_is_read(self):
+        """AC-2 (TS-4): an arithmetic expansion and a `${x@P}` in the body of a
+        heredoc whose delimiter is not quoted mark the removed body, and the
+        notion call after the heredoc is inspected."""
+        for name, construct in self.CONSTRUCTS:
+            command = ": <<EOF\n" + construct + "\nEOF\n"
+            with self.subTest(name + ": mark"):
+                self.assertTrue(self.marks(command))
+            with self.subTest(name + ": notion call"):
+                calls, kinds = self.scans(self.ARRAY + command + self.NOTION)
+                self.assertEqual([KIND_INSPECTED], kinds)
+
+    def test_every_counted_construct_marks_an_unquoted_heredoc_body(self):
+        """AC-2: the constructs of the table that the shell expands in a
+        heredoc body, read the way the shell expands it (a quote character
+        there is literal)."""
+        in_a_body = (
+            "$((a))", "$[a]", "${p@P}", "${a[$i]}", "${a[i]}", "${#a[i]}", "${!x}",
+            "${!a[@]}", "${x=y}", "${x:=y}", "${s:p}", "${s:0:n}", "${y:-$((a))}",
+            "${y:-${z@P}}", "'${p@P}'", '"$((a))"', "text $((a)) text",
+        )
+        for body in in_a_body:
+            with self.subTest(body):
+                self.assertTrue(self.marks(": <<EOF\n" + body + "\nEOF\n"))
+
+    def test_a_continuation_inside_the_opener_of_a_body_is_read(self):
+        """AC-2 / AC-5: a backslash-newline between `$` and `((` in an unquoted
+        body is removed by the shell before it expands the body."""
+        self.assertTrue(self.marks(": <<EOF\n$\\\n((a))\nEOF\n"))
+        self.assertTrue(self.marks(": <<EOF\n${p@\\\nP}\nEOF\n"))
+
+    def test_an_escaped_backslash_before_a_newline_does_not_hide_a_construct(self):
+        """AC-5: two backslashes and a newline are not a continuation; the
+        construct on the next line still counts, however the removal of
+        continuations reads the text."""
+        self.assertTrue(self.marks(": <<EOF\n\\\\\n$((a))\nEOF\n"))
+
+    # --- AC-3: what is not counted --------------------------------------
+
+    def test_a_construct_in_a_subshell_body_keeps_the_exclusion(self):
+        """AC-3 (TS-9): an arithmetic command, an arithmetic expansion and
+        `${p@P}` that stand only inside a command substitution, a backtick
+        substitution or a process substitution change the subshell, not the
+        caller."""
+        body = '(( a )); echo $((a)); echo "${p@P}"'
+        for label, form in (
+            ("command substitution", "echo $( " + body + " )"),
+            ("backtick substitution", "echo `" + body + "`"),
+            ("process substitution", "echo <( " + body + " )"),
+        ):
+            with self.subTest(label + ": expansion level"):
+                self.assertFalse(self.defers(form))
+            with self.subTest(label + ": notion call"):
+                self.assert_certain(form)
+
+    def test_a_construct_nested_in_substitutions_keeps_the_exclusion(self):
+        """AC-3 (D2): the substitution need not be the nearest region."""
+        for form in (
+            "echo $(echo $(echo $((a))))",
+            'echo "$(echo ${p@P})"',
+            "echo ${x:-$(echo $((a)))}",
+            "echo ${x:-`echo ${y@P}`}",
+            "cat <(echo ${z:=1})",
+        ):
+            with self.subTest(form):
+                self.assertFalse(self.defers(form))
+
+    def test_a_data_position_keeps_the_exclusion(self):
+        """AC-3 (TS-11, A3): single quotes, ANSI-C quotes and comments hold
+        data."""
+        for label, form in (
+            ("single quotes", "echo '(( a )) $((a)) ${p@P} ${!x}'"),
+            ("ANSI-C quotes", "echo $'$((a)) ${p@P} ${!x}'"),
+            ("a comment", "echo hello # $((a)) ${p@P} ${!x}\n:"),
+        ):
+            with self.subTest(label + ": expansion level"):
+                self.assertFalse(self.defers(form))
+            with self.subTest(label + ": notion call"):
+                self.assert_certain(form)
+
+    def test_the_body_of_a_quoted_delimiter_heredoc_keeps_the_exclusion(self):
+        """AC-3 (TS-11, A3): a quoted delimiter makes the body inert."""
+        body = "$(( a ))\n${p@P}\n${!x}\n"
+        for delimiter in ("'EOF'", '"EOF"', "\\EOF"):
+            command = "echo <<" + delimiter + "\n" + body + "EOF\n"
+            with self.subTest(delimiter + ": mark"):
+                self.assertFalse(self.marks(command))
+            with self.subTest(delimiter + ": notion call"):
+                calls, kinds = self.scans(self.ARRAY + command + self.NOTION_SID)
+                self.assertEqual([KIND_NOTHING], kinds)
+                self.assertTrue(calls and not calls[0][1], calls)
+
+    def test_a_body_with_nothing_to_evaluate_keeps_the_exclusion(self):
+        """AC-3 (TS-11): an unquoted body whose expansions evaluate nothing, a
+        bare `((` (literal in a body), and a body with no `$` do not mark."""
+        for body in (
+            "hello",
+            "((a))",
+            "${A[0]} ${A[@]} ${A[*]}",
+            "${s:1:2} ${x:-y} ${x#p}",
+            "$(echo $((a)))",
+            "`echo $((a))`",
+            "\\$((a)) \\${p@P}",
+            "$HOME $1 $@",
+        ):
+            with self.subTest(body):
+                self.assertFalse(self.marks(": <<EOF\n" + body + "\nEOF\n"))
+        for command in ("cat <<EOF\nhello\nEOF\n", "cat <<EOF\n$HOME\nEOF\n"):
+            with self.subTest(command):
+                self.assertIs(str, type(self.stripped(command)))
+
+    def test_a_harmless_subscript_keeps_the_exclusion(self):
+        """AC-3 (TS-11, A4): digit-only, `@` and `*` subscripts and compound
+        assignments without subscripts evaluate nothing."""
+        for form in (
+            'echo "${A[0]}" "${A[@]}" "${A[*]}"',
+            'echo "${#A[@]}" "${#A[0]}"',
+            'echo "${A[@]:1:2}" "${A[0]:-x}" "${A[12]}"',
+            "B=(x y z)",
+            "B+=(x y)",
+            "c[2]=1",
+            "d=([2]=v [10]=w)",
+        ):
+            with self.subTest(form + ": expansion level"):
+                self.assertFalse(self.defers(form))
+        with self.subTest("notion call"):
+            self.assert_certain('echo "${A[0]}" "${A[@]}" "${A[*]}"')
+        with self.subTest("notion call, compound assignment"):
+            self.assert_certain("B=(x y z)")
+
+    def test_a_parameter_expansion_that_evaluates_nothing_keeps_the_exclusion(self):
+        """AC-3: the other forms of a parameter expansion are not counted: a
+        default or alternative word, a pattern removal or replacement, a
+        case change, the other transformations and the length."""
+        for form in (
+            'echo "${x}"', 'echo "${x:-y}"', 'echo "${x-y}"', 'echo "${x:+y}"',
+            'echo "${x+y}"', 'echo "${x:?y}"', 'echo "${x?y}"', 'echo "${x#p}"',
+            'echo "${x##p}"', 'echo "${x%p}"', 'echo "${x%%p}"', 'echo "${x/a/b}"',
+            'echo "${x//a/b}"', 'echo "${x^^}"', 'echo "${x,,}"', 'echo "${x@Q}"',
+            'echo "${x@U}"', 'echo "${x@a}"', 'echo "${#x}"', 'echo "${#}"',
+            'echo "${@}"', 'echo "${*}"', 'echo "${x:-@P}"', 'echo "${x:-=}"',
+            'echo "${x:-:=}"', 'echo "${a[0]@Q}"', 'echo "${@:2}"', 'echo "${*:1:2}"',
+            'echo "${x/=/y}"', 'echo "${x%:=}"',
+        ):
+            with self.subTest(form):
+                self.assertFalse(self.defers(form))
+
+    # --- AC-3 (TS-12): substrings --------------------------------------
+
+    def test_a_substring_whose_offset_or_length_is_not_digits_is_uncertain(self):
+        """AC-3 (TS-12): the notion call after `${s:p}` and `${s:0:n}` is
+        inspected."""
+        for form in ('echo "${s:p}"', 'echo "${s:0:n}"'):
+            with self.subTest(form):
+                self.assert_uncertain(form)
+
+    def test_a_substring_made_of_digits_keeps_the_exclusion(self):
+        """AC-3 (TS-12): digit offsets and lengths, with an optional sign and
+        blanks, evaluate nothing; `:-`, `:+` and `:?` are not substrings."""
+        for form in (
+            'echo "${s:1:2}"', 'echo "${s:1}"', 'echo "${s: -1}"', 'echo "${s: 1 : 2 }"',
+            'echo "${s:+1}"', 'echo "${s::2}"', 'echo "${s:-1}"', 'echo "${s:+p}"',
+            'echo "${s:?p}"', 'echo "${@:1:2}"',
+        ):
+            with self.subTest(form + ": expansion level"):
+                self.assertFalse(self.defers(form))
+        with self.subTest("notion call"):
+            self.assert_certain('echo "${s:1:2}"')
+
+    # --- AC-4 -------------------------------------------------------------
+
+    def test_the_literal_check_is_still_consulted_by_the_scan(self):
+        """AC-4 (FR4): a chunk whose other sources are quiet reads as
+        uncertain when `_args_json_has_brace_substitution()` holds."""
+        chunk = self.plain("echo hello")
+        self.assertFalse(GUARD._args_json_nameref_scan(chunk))
+        with mock.patch.object(GUARD, "_args_json_has_brace_substitution", return_value=True):
+            self.assertTrue(GUARD._args_json_nameref_scan(chunk))
+
+    def test_the_literal_check_still_reads_a_quoted_opener(self):
+        """AC-4 (FR4): a quoted `${ ` is still read by the literal check, not
+        by the expansion level, which sees nothing in single quotes."""
+        chunk = self.plain("p='${ declare -gn r=A[@]; }'")
+        self.assertFalse(GUARD._args_json_has_deferred_evaluation(chunk))
+        self.assertTrue(GUARD._args_json_has_brace_substitution(chunk))
+        self.assertTrue(GUARD._args_json_nameref_scan(chunk))
+
+    # --- AC-5: failures, once per chunk, no recursion --------------------
+
+    def test_a_chunk_the_lexer_cannot_settle_reads_as_uncertain(self):
+        """AC-5 (NFR1, TM-4; TS-13): the expansion level reads true, and
+        nothing is raised, when the lexer fails for the chunk's text with its
+        work bound or with any other exception."""
+        for exc in (
+            GUARD.LexBudgetExceeded("work bound"),
+            GUARD.LexUnmatchedSubscript("subscript"),
+            RuntimeError("anything"),
+            RecursionError("deep"),
+        ):
+            chunk = self.plain("echo hello")
+
+            def failing(*_args, **_kwargs):
+                raise exc
+
+            with self.subTest(type(exc).__name__):
+                with mock.patch.object(GUARD, "lex_shell", failing):
+                    self.assertTrue(GUARD._args_json_has_deferred_evaluation(chunk))
+                    self.assertTrue(GUARD._args_json_nameref_scan(chunk))
+
+    def test_a_heredoc_body_the_lexer_cannot_settle_marks_the_removal(self):
+        """AC-5 (NFR1, TM-4; TS-14): the removal step returns a marked text and
+        raises nothing when the lexer fails for an unquoted body, and does not
+        read a quoted body at all."""
+        original = GUARD.lex_shell
+        modes = []
+
+        def failing_for_bodies(text, mode="shell", *args, **kwargs):
+            modes.append(mode)
+            if mode == "heredoc-body":
+                raise exc
+            return original(text, mode, *args, **kwargs)
+
+        for exc in (GUARD.LexBudgetExceeded("work bound"), RuntimeError("anything")):
+            with self.subTest(type(exc).__name__ + ", unquoted"):
+                del modes[:]
+                with mock.patch.object(GUARD, "lex_shell", failing_for_bodies):
+                    stripped, records, _omap = GUARD._strip_heredocs_mapped(
+                        ": <<EOF\nhello $HOME\nEOF\n"
+                    )
+                self.assertIsInstance(stripped, GUARD._StrippedWithShellSubstitution)
+                self.assertEqual(1, len(records))
+                self.assertIn("heredoc-body", modes)
+            with self.subTest(type(exc).__name__ + ", quoted"):
+                with mock.patch.object(GUARD, "lex_shell", failing_for_bodies):
+                    stripped, _records, _omap = GUARD._strip_heredocs_mapped(
+                        ": <<'EOF'\nhello $HOME\nEOF\n"
+                    )
+                self.assertIs(str, type(stripped))
+
+    def test_a_body_with_no_dollar_is_not_lexed(self):
+        """AC-5 (NFR2): no construct of the expansion level lacks a `$` in a
+        body, so such a body costs no lexing."""
+        original = GUARD.lex_shell
+        modes = []
+
+        def counting(text, mode="shell", *args, **kwargs):
+            modes.append(mode)
+            return original(text, mode, *args, **kwargs)
+
+        with mock.patch.object(GUARD, "lex_shell", counting):
+            GUARD._strip_heredocs_mapped(": <<EOF\nhello\nEOF\n")
+        self.assertNotIn("heredoc-body", modes)
+
+    def test_the_expansion_level_reading_runs_once_per_chunk(self):
+        """AC-5 (NFR2): the per-chunk answer of the same chunk, asked for
+        twice, runs the expansion-level reading once."""
+        chunk = self.plain("echo hello")
+        original = GUARD._args_json_has_deferred_evaluation
+        calls = []
+
+        def spy(marked):
+            calls.append(marked)
+            return original(marked)
+
+        with mock.patch.object(GUARD, "_args_json_has_deferred_evaluation", spy):
+            first = GUARD._args_json_nameref_declared(chunk)
+            second = GUARD._args_json_nameref_declared(chunk)
+        self.assertEqual((False, False), (first, second))
+        self.assertEqual(1, len(calls))
+
+    def test_a_derived_chunk_reads_its_own_text_and_the_ones_around_it(self):
+        """AC-5 (NFR2): a chunk with an expansion of its own is uncertain, and
+        so is a chunk derived from it."""
+        quiet = self.plain("echo hello")
+        loud = self.plain("echo $((a))")
+        loud._is_derived = True
+        loud._outer_marked = quiet
+        self.assertTrue(GUARD._args_json_nameref_declared(loud))
+        inner = self.plain("echo x")
+        inner._is_derived = True
+        inner._outer_marked = loud
+        self.assertTrue(GUARD._args_json_nameref_declared(inner))
+
+    def test_the_expansion_level_reading_is_called_only_from_the_scan(self):
+        """AC-5 (NFR2): its result is cached with the per-chunk answer because
+        nothing else calls it."""
+        with open(HOOK, encoding="utf-8") as handle:
+            sites = _CallSites()
+            sites.visit(ast.parse(handle.read()))
+        places = {
+            where for name, where in sites.references
+            if name == "_args_json_has_deferred_evaluation"
+        }
+        self.assertEqual({"_args_json_nameref_scan"}, places)
+
+    def test_a_long_parameter_expansion_is_read_by_its_head(self):
+        """AC-5: a long text costs a constant per region. A substring too long
+        for the head reads as evaluating; other long expansions read by their
+        head."""
+        self.assertTrue(self.defers("echo ${s:1:2" + " " * 400 + "+n}"))
+        self.assertFalse(self.defers("echo ${a[0]:-" + "x" * 400 + "}"))
+        self.assertTrue(self.defers("echo ${a[i]:-" + "x" * 400 + "}"))
+
+    def test_a_deep_nest_of_expansions_is_read(self):
+        """AC-5: depth is read without recursion in the reading itself."""
+        depth = 300
+        text = "echo " + "${a:-" * depth + "x" + "}" * depth
+        self.assertFalse(self.defers(text))
+        text = "echo " + "${a:-" * depth + "${p@P}" + "}" * depth
+        self.assertTrue(self.defers(text))
+
+    # --- AC-6 -------------------------------------------------------------
+
+    def test_the_docstring_of_the_scan_names_its_sources_and_no_command(self):
+        """AC-6 / Conventions: the docstring of `_args_json_nameref_scan()`
+        states its sources and refers to `_args_json_declares_nameref()` for
+        the command-name rules; it names no command."""
+        doc = " ".join(inspect.getdoc(GUARD._args_json_nameref_scan).split())
+        for phrase in (
+            "_args_json_has_brace_substitution()",
+            "_args_json_has_deferred_evaluation()",
+            "_args_json_declares_nameref()",
+            "lex_segments()",
+        ):
+            with self.subTest(phrase):
+                self.assertIn(phrase, doc)
+        for command in (
+            "declare", "local", "typeset", "eval", "source", "trap", "alias",
+            "mapfile", "readarray", "echo", "mcp-bridge", "printf",
+        ):
+            with self.subTest("no " + command):
+                self.assertIsNone(re.search(r"\b" + re.escape(command) + r"\b", doc))
+
+    def test_the_marker_and_its_predicate_state_the_widened_meaning(self):
+        """Conventions: the docstrings of the stripped-text marker type, its
+        predicate, the removal step and `_ChunkLinks.register()` say that a
+        removed body marks the chunk for an expansion that re-evaluates a
+        value, not only for a current-shell substitution."""
+        for obj in (
+            GUARD._StrippedWithShellSubstitution,
+            GUARD._bodies_hold_current_shell_substitution,
+            GUARD._strip_heredocs_mapped,
+            GUARD._ChunkLinks.register,
+        ):
+            doc = " ".join(inspect.getdoc(obj).split())
+            with self.subTest(getattr(obj, "__qualname__", obj)):
+                self.assertIn("re-evaluate", doc)
+
+    def test_every_added_case_follows_the_label_and_rule_conventions(self):
+        """AC-6 (FR5, FR8; TS-10): each case of this feature starts its label
+        with `args-json-deferred-eval-bypass`; each deny case carries the
+        existing reason ID of the decoded command."""
+        with open(CASES_PATH, encoding="utf-8") as handle:
+            cases = [
+                case for case in json.load(handle)
+                if case[1].startswith("args-json-deferred-eval-bypass")
+            ]
+        self.assertGreater(len(cases), 20)
+        for case in cases:
+            with self.subTest(case[1][:80]):
+                if case[0] == "deny":
+                    self.assertEqual(
+                        {"rule": "git-branch-force-delete"},
+                        case[3] if len(case) == 4 else None,
+                    )
+                else:
+                    self.assertEqual("allow", case[0])
 
 
 if __name__ == "__main__":
