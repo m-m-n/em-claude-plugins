@@ -1,16 +1,16 @@
 schema_version: 1
 feature: args-json-deferred-eval-bypass
 phase: create-plan
-status: in_progress
+status: applying_patch
 generation: 1
 base_revision: 1186fb31eb4ff9d8af64bf6c2ce73fda027a4cc0
 last_input_digest: sha256:0217115af5888611ab399e9cf02741486bda0672126f8bb5f8f301c6ae374d8e
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:0217115af5888611ab399e9cf02741486bda0672126f8bb5f8f301c6ae374d8e
   dispatch_digest_inputs:
     em-workflow/references/contracts/planner-contract.md: sha256:df2bf3f0321c2627a31b878a14adb176ee7c2131638245112e5d3bb27f7a3682
@@ -24,9 +24,35 @@ worker_runs:
     feature-docs/args-json-deferred-eval-bypass/REQUIREMENTS.md: sha256:b1bf0e2f656cd44cd414728149719ebc4815f4e2b7d3402b79740821bc8b476b
     feature-docs/args-json-deferred-eval-bypass/SPEC.md: sha256:c40e90f087fa2c80cc199e82af2d539beeed173b9370d96df4fd2ce8b0311910
     feature-docs/args-json-deferred-eval-bypass/workflow.yaml: sha256:19ab3b523e69a18481ffb838b31a390cf0b1e9ed416fa8babe2c47ba2f3b37d2
-artifacts: []
+  output_digest: sha256:01d29015377112bb0528cc8ea19ccd83f899488487405e538753c75dbc5b382a
+  self_write_set:
+  - feature-docs/args-json-deferred-eval-bypass/IMPLEMENTATION.md
+  - feature-docs/args-json-deferred-eval-bypass/THREAT-MODEL.md
+  - feature-docs/args-json-deferred-eval-bypass/VERIFICATION.md
+  - feature-docs/args-json-deferred-eval-bypass/tasks/task0001.md
+  - feature-docs/args-json-deferred-eval-bypass/tasks/task0002.md
+artifacts:
+- path: feature-docs/args-json-deferred-eval-bypass/IMPLEMENTATION.md
+  sha256: sha256:994310c709642a374b0a121a25e796624a5b954f33501d94fc4b312a9c345b05
+  produced_by: create-plan-run-0001
+- path: feature-docs/args-json-deferred-eval-bypass/VERIFICATION.md
+  sha256: sha256:5ec7832bacd0ba3930217293353c9c142b21d1f6d802b07970e6ac6a18b98a88
+  produced_by: create-plan-run-0001
+- path: feature-docs/args-json-deferred-eval-bypass/THREAT-MODEL.md
+  sha256: sha256:0906ff10d9da96f77a5582f643c6004d39d715457e3c5474cf768d30998fb3b1
+  produced_by: create-plan-run-0001
+- path: feature-docs/args-json-deferred-eval-bypass/tasks/task0001.md
+  sha256: sha256:96fad9f186f035f15f0c59bbf71a717e32954a5e27587f3ec37de0dd6981e2f3
+  produced_by: create-plan-run-0001
+- path: feature-docs/args-json-deferred-eval-bypass/tasks/task0002.md
+  sha256: sha256:5108ec2697a0921c3c4ab3d50aad35459f23d9138ec22d259865a259050a4cb4
+  produced_by: create-plan-run-0001
 other_feature_doc_fixes: []
-patches: []
+patches:
+- patch_id: create-plan-p0001
+  status: pending
+  base_input_digest: sha256:0217115af5888611ab399e9cf02741486bda0672126f8bb5f8f301c6ae374d8e
+  base_workflow_blob: fda84036c2d7c78a8f8ceae674e6de92a8623de7
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
