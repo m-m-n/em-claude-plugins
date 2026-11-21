@@ -1,0 +1,136 @@
+task_id: task0003
+# 4a, before any edit: python3 em-workflow/hooks/tests/run-destructive-guard.py -> 1564/1564 passed;
+# python3 -m unittest discover -s tests -> Ran 16983 tests, FAILED (failures=5, skipped=1). Four failures are the
+# plugin-version tests (they read the plugin manifests, not the hook); the fifth is the compound-assignment subtest of
+# the command-name allowlist class, which was already red on the parent branch (a digit-only subscript in an assignment
+# word, an out-of-scope item of this task).
+baseline_failures:
+  - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_the_words_of_a_compound_assignment_are_no_command
+  - tests.test_review_perspective_model_effort_version_bump.TestEmReviewManifest.test_version_is_a_minor_bump_over_baseline
+  - tests.test_review_perspective_model_effort_version_bump.TestEmWorkflowManifest.test_version_is_a_minor_bump_over_baseline
+  - tests.test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_review_entry_version_is_a_minor_bump_over_baseline
+  - tests.test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_workflow_entry_version_is_a_minor_bump_over_baseline
+# Re-executed after the implementation and after this record: the runner passes every case (1594/1594) and the
+# unittest run (Ran 17002 tests) shows the same five failures and no other. A later rename of one new test method and
+# wording edits of this record were followed by a re-run of the four test modules that read the hook, the case table
+# or the records (the args-json module, the record ID resolution, the record contract, the runner wrapper): 1114
+# tests, the one compound-assignment failure above and no other.
+final_failures:
+  - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_the_words_of_a_compound_assignment_are_no_command
+  - tests.test_review_perspective_model_effort_version_bump.TestEmReviewManifest.test_version_is_a_minor_bump_over_baseline
+  - tests.test_review_perspective_model_effort_version_bump.TestEmWorkflowManifest.test_version_is_a_minor_bump_over_baseline
+  - tests.test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_review_entry_version_is_a_minor_bump_over_baseline
+  - tests.test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_workflow_entry_version_is_a_minor_bump_over_baseline
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_args_json.TestSourceTextReadings.test_every_subscripted_redirection_variable_reads_the_chunk_as_uncertain
+      - tests.test_destructive_guard_args_json.TestSourceTextReadings.test_an_allowlisted_command_name_does_not_hide_the_variable
+      - tests.test_destructive_guard_args_json.TestSourceTextReadings.test_a_heredoc_operator_after_a_subscripted_variable_is_read
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >-
+      The 30 case-table entries and the unit class were written before the hook
+      was changed and run against the unchanged hook. The real runner gave
+      1576/1594 passed with 18 FAIL lines, each a deny entry answered "got=allow
+      rule=None": the ANSI-C finding form, the forms with >, >>, <, <>, >&- and
+      <<<, the $ expansion, expression and quoted subscripts and the closing
+      `done`. The command-name-less form `{a[x]}>/dev/null` was already deny on
+      the unchanged hook (the unread word is itself a command name outside the
+      allowlist). In the unit class every form of the table failed with "False
+      is not true" (the per-chunk scan) and "Lists differ: ['inspected'] !=
+      ['nothing']" (the notion call stayed excluded).
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_args_json.TestSourceTextReadings.test_a_form_that_evaluates_nothing_keeps_the_exclusion
+      - tests.test_destructive_guard_args_json.TestSourceTextReadings.test_a_quoted_delimiter_heredoc_body_is_data
+      - tests.test_destructive_guard_args_json.TestSourceTextReadings.test_a_word_inside_a_substitution_body_belongs_to_that_chunk
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing
+      tests.test_destructive_guard_args_json.TestCommandNameAllowlist detects
+      that a chunk of allowlisted names only keeps the notion-pair exclusion;
+      no red state occurred for this change. The allow forms of TS-16 (no
+      subscript, digits, @, *, a blank before the operator, single quotes, a
+      comment, a quoted-delimiter heredoc body, a substitution body) were
+      already allow on the unchanged hook, so no executable check could fail
+      before the implementation. The new tests guard the new reading against
+      reading too much.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_args_json.TestSourceTextReadings.test_every_misread_closer_leaves_the_conditional_open
+      - tests.test_destructive_guard_args_json.TestSourceTextReadings.test_every_conditional_deny_form_reads_the_chunk_as_uncertain
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged hook: the runner printed FAIL lines (got=allow)
+      for the && form with \]\] and the || forms with \]\], \]] and ]\].
+      The "]"] and $']]' forms were already deny (the unchanged hook read a
+      quoted token as quoted). In the unit class the escaped-closer subtests
+      failed with "False is not true" and "Lists differ: ['inspected'] !=
+      ['nothing']" (12 of the 20 subtests of the misread-closer test).
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_args_json.TestSourceTextReadings.test_every_conditional_deny_form_reads_the_chunk_as_uncertain
+      - tests.test_destructive_guard_args_json.TestSourceTextReadings.test_a_statement_after_an_open_conditional_is_not_swallowed
+      - tests.test_destructive_guard_args_json.TestSourceTextReadings.test_the_command_name_word_is_found_past_redirections_prefixes_and_assignments
+      - tests.test_destructive_guard_args_json.TestSourceTextReadings.test_only_a_semicolon_or_a_lone_ampersand_breaks_an_open_conditional
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged hook: the runner printed FAIL lines (got=allow)
+      for the escaped opener, the double-quoted opener and the unclosed
+      conditional met by a semicolon; the final unit class, run against a copy
+      of the unchanged hook, failed for those forms and for the
+      open-conditional statements ("False is not true") and raised
+      AttributeError in the helper tests (module has no attribute
+      '_args_json_separator_breaks_conditional'). The line-continuation form with
+      `read x` was already deny on the unchanged hook, because `read` is outside
+      the allowlist and decides it, not the conditional reading.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_args_json.TestSourceTextReadings.test_every_conditional_allow_form_keeps_the_exclusion
+      - tests.test_destructive_guard_args_json.TestSourceTextReadings.test_a_real_closer_in_a_later_statement_closes_the_conditional
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing
+      tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_double_bracket_is_uncertain_only_for_an_arithmetic_operator_or_v
+      detects that a plain closed conditional is certain; no red state occurred
+      for this change. The correctly closed conditionals of TS-17 and their
+      escaped or quoted operands were already allow on the unchanged hook, so no
+      executable check could fail before the implementation. The new tests
+      guard the new reading against reading too much.
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_args_json.TestSourceTextReadings.test_the_docstring_of_the_scan_names_the_two_readings_and_no_command
+      - tests.test_destructive_guard_args_json.TestSourceTextReadings.test_the_readings_are_called_only_from_the_scan
+      - tests.test_destructive_guard_args_json.TestSourceTextReadings.test_the_readings_make_no_decision_and_name_no_reason
+      - tests.test_destructive_guard_args_json.TestSourceTextReadings.test_every_case_of_this_task_is_in_the_table_with_its_decision
+      - tests.test_destructive_guard_args_json.TestExpansionLevelDeferredEvaluation.test_every_added_case_follows_the_label_and_rule_conventions
+    red_confirmed: true
+    red_reason: >-
+      Run against a copy of the unchanged hook: the docstring test failed on
+      the two missing helper names ("'_args_json_fd_variable_deferred()' not
+      found in" the docstring of the scan), the call-site test failed ("Items
+      in the first set but not the second": the helpers did not exist), and
+      the no-decision test raised AttributeError (the module has no helper to
+      read). The
+      label and rule conventions of the case table hold from the moment the
+      entries were written; the generic convention test and the table check
+      read only the table, so they were green before the change.
+  AC-7:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_args_json
+    red_confirmed: true
+    red_reason: >-
+      The runner wrapper test run against the unchanged hook with the new
+      entries failed ("AssertionError: 1 != 0", with the 18 FAIL lines of AC-1,
+      AC-3 and AC-4 in its output), and the new unit class, run against a copy of the unchanged hook, failed
+      (86 failures and 10 errors). That no existing case or test was changed was checked
+      from the diff (the case table only gains entries at its end plus the
+      comma of the old last entry; the test module only gains a class before
+      its main guard), and the new class imports nothing beyond the modules the
+      test module already imports (standard library only).

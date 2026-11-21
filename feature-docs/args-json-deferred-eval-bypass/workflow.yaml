@@ -1,0 +1,508 @@
+schema_version: 1
+feature: args-json-deferred-eval-bypass
+created: '2026-11-21'
+base_branch: main
+goal: '# destructive-guard: 後から評価される値（算術式・${var@P}・read）経由で notion ペアの除外を回避できる
+
+
+  ## 脆弱性の概要 (必須)
+
+
+  `em-workflow/hooks/destructive-guard.py` の notion ペアの除外（`_args_json_notion_pair()`）は、先行するコマンドが名前参照を作り得るかを
+  `_args_json_nameref_scan()` で判定する。値を後から現在のシェルで評価し直す構文（算術式、`${var@P}` など）を経由すると、この判定をすり抜けて
+  `--args-json` の検査を省かせられる。
+
+
+  ## 参照 (必須)
+
+
+  - CVE / GHSA ID: 該当なし
+
+  - アドバイザリ URL: 該当なし
+
+  - severity: high
+
+  - 該当パッケージ: 該当なし
+
+  - 現在のバージョン: integration ブランチ em-workflow/args-json-quoting-bypass/integration の時点（review
+  round 3 完了後）
+
+  - 修正済みバージョン: 無し
+
+
+  ## 攻撃シナリオ (必須)
+
+
+  シェルを実行する MCP ツールが mcp-bridge に登録された環境で、次のどれかの形で名前参照 `r` を配列に向け、`mcp-bridge run --mcp
+  notion --tool notion-create-comment --format "$r" --args-json ''{"command":"<破壊的なコマンド>"}''`
+  を実行する。フックは notion 宛てと判定して JSON を検査せず allow にするが、Bash では `"$r"` が `json --mcp desktop-commander
+  --tool start_process` に展開され、別のツールに送られる。
+
+
+  - ANSI-C で開始記号を隠した値を `${p@P}` で評価する（`p=$''$\x7b declare -gn r=A[@]; }''`）
+
+  - `$''''{` で分割した値や ANSI-C の値を、算術式 `(( a ))` の配列添字で評価する
+
+  - 区切り語を引用したヒアドキュメントやファイルから `read` した値を同じように評価する
+
+
+  round 3 の auto-fix では、字面の `${ ` / `${|` をチャンク全体から探す判定（引用の内外を問わない）で塞いだが、値を実行時に組み立てる形は防げない。
+
+
+  ## 影響範囲 (必須)
+
+
+  無人実行で、破壊的なコマンドが destructive-guard の deny を通らずに MCP 経由のシェルで実行される。
+
+
+  ## 完了の定義 (必須)
+
+
+  - [ ] 攻撃シナリオが成立しない
+
+  - [ ] 修正版に追随している（修正版が無い場合は暫定緩和策の欄に対応を記載）
+
+  - [ ] 上の各形を `em-workflow/hooks/tests/destructive-guard-cases.json` の deny ケースとして固定する
+
+
+  ## 該当箇所 (任意)
+
+
+  - `em-workflow/hooks/destructive-guard.py` の `_args_json_has_brace_substitution()`、`_args_json_nameref_scan()`、`_args_json_declares_nameref()`（算術コマンドを「何も宣言しない」と扱う箇所）
+
+  - 方向性: 値をコードとして評価し直す構文（`((...))`、`let`、`$((...))`、`[[ ]]` の算術比較、変数を使う配列添字、`declare
+  -i` 付きの代入、`${x@P}`）をチャンクが持つときは、シェル状態を不明として除外を外す。字面検索は補助にする
+
+  - 同時に扱うとよい残件: 文字列を評価する組み込みの拒否リストが不完全（`fc`、`history`、`enable`、`compgen`、`complete`、`bind`）。許可リスト方式も検討する
+
+  - 詳細は integration ブランチの `feature-docs/args-json-quoting-bypass/reviews/round3.yaml`（findings
+  の `50060ea113b79522`）
+
+
+  ## 暫定緩和策 (任意)
+
+
+  無し
+
+
+  '
+parent_branch: em-workflow/args-json-deferred-eval-bypass/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.54
+      '2': 0.46
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.58
+      '2': 0.42
+      '3': 0.0
+  at: '2026-11-21T10:12:00+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3
+        -m unittest discover -s tests
+      format_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: aaaecbb04a05cc8930c0d0170b97dd57808fd12c
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'UI を持たないフックの静的解析の修正で、design-system 候補 0 件（create-spec.design-step:
+    decide_autonomously → skip）'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: completed
+  completed_at_commit: e3da86233593a337e0923cde4bbbd095ce260e3c
+- id: implement
+  status: completed
+  base_commit: 33b987897f0a15fda44678f97e11936ea6f98108
+  completed_at_commit: 6a2a23975b9bda88642a39b25cebb663a71bacde
+- id: review
+  status: completed
+  completed_at_commit: 659d039f7de144c92d9c4312ce39202f40afa028
+- id: verify
+  status: failed
+  result: fail
+  round: 2
+  passed_ids:
+  - TS-1
+  - TS-2
+  - TS-3
+  - TS-4
+  - TS-5
+  - TS-6
+  - TS-7
+  - TS-8
+  - TS-9
+  - TS-10
+  - TS-11
+  - TS-12
+  - TS-13
+  - TS-14
+  - TS-15
+  - TS-16
+  - TS-17
+  - TS-18
+  - SC-1
+  - SC-2
+  - SC-3
+  - SC-4
+  - SC-6
+  - TM-1
+  - TM-2
+  - TM-3
+  - TM-4
+  failed_items:
+  - id: SC-5
+    category: comprehensive
+    note: 'python3 em-workflow/hooks/tests/run-destructive-guard.py passes (1598/1598)
+      and every feature test passes (tests.test_destructive_guard_args_json: 226 OK),
+      but python3 -m unittest discover -s tests exits 1 with 4 failures, all in
+      tests/test_review_perspective_model_effort_version_bump.py (plugin version patch
+      is not 0). They fail identically on the base commit; the feature changes no
+      version (NFR4), so they cannot be fixed within this feature''s scope'
+- id: retrospect
+  status: completed
+  completed_at_commit: 512d5dffba891ebded2ebf7f207627a97f15c5aa
+tasks:
+  task0001:
+    title: Expansion-level deferred-evaluation detection
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_args_json.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR4
+    - FR5
+    - FR6
+    - FR8
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    status: merged
+    branch: em-workflow/args-json-deferred-eval-bypass/task0001
+    notes: null
+  task0002:
+    title: Command-name allowlist and command-level evaluation triggers
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_args_json.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR5
+    - FR6
+    - FR7
+    - FR8
+    - NFR1
+    - NFR3
+    - NFR4
+    - NFR5
+    status: merged
+    branch: em-workflow/args-json-deferred-eval-bypass/task0002
+    notes: null
+  task0003:
+    title: 'Source-text syntax reading: subscripted fd-variable redirections and escaped
+      conditional brackets'
+    plan: tasks/task0003.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_args_json.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR5
+    - FR6
+    - FR8
+    - NFR1
+    - NFR3
+    - NFR5
+    status: merged
+    branch: em-workflow/args-json-deferred-eval-bypass/task0003
+    notes: null
+    provenance:
+      source: review
+      source_ids:
+      - 9a42fe083737c591
+      - 8016dc2435c250f7
+      review_round: 1
+  task0004:
+    title: One classification for compound-assignment element subscripts
+    plan: tasks/task0004.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_args_json.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR3
+    - FR5
+    - FR6
+    - FR8
+    - NFR1
+    - NFR3
+    - NFR5
+    status: merged
+    branch: em-workflow/args-json-deferred-eval-bypass/task0004
+    notes: null
+    provenance:
+      source: verify
+      source_ids:
+      - TS-8
+      - SC-1
+      - SC-2
+      - SC-5
+review:
+  status: completed
+  rounds_completed: 2
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  - performance
+  residual_critical_high: 2
+  needs_rework: false
+  deferred_reason: 'batch mode: rework cap reached'
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary:
+    - perspective: performance
+      reason: destructive-guard は毎回の Bash 呼び出しで走るフックで、差分がその判定経路に走査処理を足しているため
+    cross_validation: true
+requirements:
+  FR1:
+    title: 後から評価される構文を持つチャンクはシェル状態を不明とする
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-9
+    - TS-11
+    - TS-12
+    - TS-16
+    - TS-17
+    - TS-18
+  FR2:
+    title: 算術コマンドを「何も宣言しない」とする扱いをやめる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0002
+    tests:
+    - TS-2
+    - TS-4
+  FR3:
+    title: コマンド名を許可リストで判定する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0002
+    - task0004
+    tests:
+    - TS-3
+    - TS-5
+    - TS-6
+    - TS-8
+  FR4:
+    title: 字面検索を補助として残す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-7
+  FR5:
+    title: 攻撃形の deny ケースを固定する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
+    - TS-6
+    - TS-10
+    - TS-16
+    - TS-17
+    - TS-18
+  FR6:
+    title: 既存の除外が保たれる形を維持する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS-7
+    - TS-8
+    - TS-9
+    - TS-11
+    - TS-16
+    - TS-17
+    - TS-18
+  FR7:
+    title: 算術コマンドを固定していた単体テストを改める
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0002
+    tests:
+    - TS-8
+  FR8:
+    title: 新しい規則や理由 ID を足さない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS-10
+  NFR1:
+    title: 静的解析だけで判定する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS-14
+  NFR2:
+    title: チャンクごとのキャッシュと再帰を使わない遡り
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-13
+  NFR3:
+    title: テストは標準ライブラリだけで書く
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS-15
+  NFR4:
+    title: em-workflow の version を変更しない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-15
+  NFR5:
+    title: 同じ変更の中で run-destructive-guard.py を走らせる
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    - task0004
+    tests:
+    - TS-7
+batch:
+  review_rework_count: 1
+  verify_rework:
+    rounds: 2
+    failed_id_counts:
+      TS-8: 1
+      SC-1: 1
+      SC-2: 1
+      SC-5: 2
+  infra_resume:
+    rounds: 0
+    cap: 2

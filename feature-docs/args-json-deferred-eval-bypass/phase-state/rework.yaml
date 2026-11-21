@@ -1,0 +1,77 @@
+schema_version: 1
+feature: args-json-deferred-eval-bypass
+phase: rework
+status: completed
+generation: 2
+base_revision: 33357606a6a522f75e960607e27a112c09eeb3a3
+last_input_digest: sha256:461662ebca699a478b77e2e44d274985129fe58a20c1710e4bf2d72c908677a5
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs:
+- request_id: rework-run-0001
+  status: completed
+  input_digest: sha256:fd28ba8626c57fad66bbe7e3cb5e6af0a3da12dbd1504e3041fb60944416aaae
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/rework-planner-contract.md: sha256:0c9f82099c3546b6b675856539d8244628b7170ce7a4442ec951e13e16577ec3
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/args-json-deferred-eval-bypass/IMPLEMENTATION.md: sha256:994310c709642a374b0a121a25e796624a5b954f33501d94fc4b312a9c345b05
+    feature-docs/args-json-deferred-eval-bypass/SPEC.md: sha256:c40e90f087fa2c80cc199e82af2d539beeed173b9370d96df4fd2ce8b0311910
+    feature-docs/args-json-deferred-eval-bypass/VERIFICATION.md: sha256:5ec7832bacd0ba3930217293353c9c142b21d1f6d802b07970e6ac6a18b98a88
+    feature-docs/args-json-deferred-eval-bypass/tasks/task0001.md: sha256:96fad9f186f035f15f0c59bbf71a717e32954a5e27587f3ec37de0dd6981e2f3
+    feature-docs/args-json-deferred-eval-bypass/tasks/task0002.md: sha256:5108ec2697a0921c3c4ab3d50aad35459f23d9138ec22d259865a259050a4cb4
+    feature-docs/args-json-deferred-eval-bypass/workflow.yaml: sha256:782caf0c7417306a6a40fdf5569a55042005187987fb9495e915c5d72b51dfc5
+  self_write_set:
+  - feature-docs/args-json-deferred-eval-bypass/IMPLEMENTATION.md
+  - feature-docs/args-json-deferred-eval-bypass/VERIFICATION.md
+  - feature-docs/args-json-deferred-eval-bypass/tasks/task0003.md
+- request_id: rework-run-0002
+  status: completed
+  input_digest: sha256:461662ebca699a478b77e2e44d274985129fe58a20c1710e4bf2d72c908677a5
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/rework-planner-contract.md: sha256:0c9f82099c3546b6b675856539d8244628b7170ce7a4442ec951e13e16577ec3
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/args-json-deferred-eval-bypass/IMPLEMENTATION.md: sha256:42cfca09a1c5ddd4d5797bc0c66dc5f699885e3afb1b7cbe7aac874c9ec33a5c
+    feature-docs/args-json-deferred-eval-bypass/SPEC.md: sha256:c40e90f087fa2c80cc199e82af2d539beeed173b9370d96df4fd2ce8b0311910
+    feature-docs/args-json-deferred-eval-bypass/VERIFICATION.md: sha256:6acd2b676a5dc5a479bd340b3b782b661baf6d70999d7f6a8120bc301c9af41e
+    feature-docs/args-json-deferred-eval-bypass/tasks/task0001.md: sha256:96fad9f186f035f15f0c59bbf71a717e32954a5e27587f3ec37de0dd6981e2f3
+    feature-docs/args-json-deferred-eval-bypass/tasks/task0002.md: sha256:5108ec2697a0921c3c4ab3d50aad35459f23d9138ec22d259865a259050a4cb4
+    feature-docs/args-json-deferred-eval-bypass/tasks/task0003.md: sha256:901065683003bfbc9468ad0a41401d8aa00c6b2d17cfc9323823ff6c3ea2976c
+    feature-docs/args-json-deferred-eval-bypass/workflow.yaml: sha256:23356e73c2d6221ffa79ac89208ddd64bef8702afe16a51ec1c639b06422093c
+  self_write_set:
+  - feature-docs/args-json-deferred-eval-bypass/VERIFICATION.md
+  - feature-docs/args-json-deferred-eval-bypass/tasks/task0004.md
+artifacts:
+- path: feature-docs/args-json-deferred-eval-bypass/IMPLEMENTATION.md
+  sha256: sha256:42cfca09a1c5ddd4d5797bc0c66dc5f699885e3afb1b7cbe7aac874c9ec33a5c
+  produced_by: rework-run-0001
+- path: feature-docs/args-json-deferred-eval-bypass/tasks/task0003.md
+  sha256: sha256:901065683003bfbc9468ad0a41401d8aa00c6b2d17cfc9323823ff6c3ea2976c
+  produced_by: rework-run-0001
+- path: feature-docs/args-json-deferred-eval-bypass/tasks/task0004.md
+  sha256: sha256:f3813c844a00c76e203666bbad573aebced6fce629152f10390495a0d77853ad
+  produced_by: rework-run-0002
+- path: feature-docs/args-json-deferred-eval-bypass/VERIFICATION.md
+  sha256: sha256:5fb958822ac3faa748dfdb483f9c749ec491864ca55456fdaf89893e18661ee8
+  produced_by: rework-run-0002
+patches:
+- patch_id: args-json-deferred-eval-bypass-rework-r1-p0001
+  status: applied
+  base_input_digest: sha256:fd28ba8626c57fad66bbe7e3cb5e6af0a3da12dbd1504e3041fb60944416aaae
+  base_workflow_blob: 9333106b46000fe1bec548f967131210dccf6def
+- patch_id: args-json-deferred-eval-bypass-rework-p0002
+  status: applied
+  base_input_digest: sha256:461662ebca699a478b77e2e44d274985129fe58a20c1710e4bf2d72c908677a5
+  base_workflow_blob: 017d989f72e47f3a98346a6356c0b56b8b1d90ce
+classification: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+last_error: null

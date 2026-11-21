@@ -1,0 +1,1215 @@
+round: 1
+executed_at: '2026-11-21T12:37:27+09:00'
+scope:
+  review_mode: diff
+  base_commit: 33b987897f0a15fda44678f97e11936ea6f98108
+  head_commit: 7e9f28c5bfd8c3afd6737d053c0ed03fea188c11
+  changed_files:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/args-json-deferred-eval-bypass/task0001.tests.yaml
+  - test-docs/args-json-deferred-eval-bypass/task0002.tests.yaml
+  - tests/test_destructive_guard_args_json.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary:
+  - perspective: performance
+    reason: destructive-guard は毎回の Bash 呼び出しで走るフックで、差分がその判定経路に走査処理を足しているため
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+- run_id: comprehensive#loop1.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#loop1.0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: skipped
+  skip_reason: harness_unavailable
+- run_id: security#loop1.1
+  perspective: security
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: architecture#loop1.0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#loop1.0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: performance#loop1.0
+  perspective: performance
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: comprehensive#loop2.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#loop2.0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: architecture#loop2.0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#loop2.0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: performance#loop2.0
+  perspective: performance
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: comprehensive#loop3.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#loop3.0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: skipped
+  skip_reason: harness_unavailable
+- run_id: security#loop3.1
+  perspective: security
+  role: primary
+  source: litellm
+  model: muse-spark-contributor
+  status: completed
+- run_id: architecture#loop3.0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#loop3.0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: performance#loop3.0
+  perspective: performance
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+findings:
+- severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8513
+  title: 長い変数名で演算子が読み取り範囲の外に出ると、再評価を見落とす
+  description: '`_args_json_regions_defer_evaluation()` は、パラメータ展開の `${` の後ろ256文字だけを `_args_json_parameter_defers()`
+    に渡す。変数名がその範囲を使い切ると（または `@P` の途中で切れると）、`rest` が空か `@` だけになる。このとき `whole` が False でも False を返す。そのため
+    `p` の代わりに256文字の変数名を使えば、TS-1 と同じ攻撃（`${名前@P}` で ANSI-C 引用の値を評価して nameref を作る）が、notion ペアの除外を維持したまま通る。直前の代入語も
+    `:` も確定扱いで、他の検査も掛からないことを読解で確かめた。security・comprehensive・architecture・spec の4つの実行が、同じ箇所を独立に指摘している。'
+  suggestion: '`whole` が False のときは、演算子を読み切って評価しないものと確定できた場合だけ False にする。変数名や演算子の途中で範囲が尽きた場合は True（未確定）にする。変数名255〜257文字に
+    `@P` を付けた形と、変数名が範囲を使い切る形を、deny ケースと単体テストに足す。'
+  sources:
+  - codex:security
+  confidence: 95
+  reproduction: '`: "${p@P}"` を `statements()` に渡し、その直後に `--session "$SID"` と無害な `--args-json` を持つ標準形の
+    Notion 呼び出しを置く。変数名が `p` なら JSON は検査対象になる。変数名だけを `a` 256文字に置き換えると、`_mcp_bridge_args_json_chunks()`
+    の検査対象が空になる'
+  stable_id: 0690d8db82fc3ee1
+  resolution: fixed
+  resolution_reason: auto-applied loop 1
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8457
+  title: '`$` と `{` の間の行継続で、パラメータ展開の再評価を見落とす'
+  description: '`_args_json_parameter_defers()` は、`head[2:]` で先頭2文字を捨ててから行継続を除く。`$`、バックスラッシュ、改行、`{p@P}`
+    の順に並ぶ展開では、捨てるのが `$` とバックスラッシュになる。残りが改行から始まるため変数名の照合に失敗し、False を返す。字句解析器がこれを領域として読まなくても結果は同じになる。`:`
+    の引数は読まれず、リテラル検査も `${` の後ろが空白や `|` ではないので掛からない。Bash は二重引用符の中でも行継続を除くので、`${p@P}` として展開する。
+
+
+    また、通常のチャンクを読む `_args_json_has_deferred_evaluation()` は、書かれたままの本文を1回読むだけで、ヒアドキュメント本文のように行継続を除いた本文を読み直さない。そのため、他の構文の開始記号（`$((`
+    など）をまたぐ行継続も同じ穴になり得る。security と spec が指摘している。'
+  suggestion: 先に行継続を除いてから `${` を外す。加えて、チャンクの本文に行継続がある場合は、`_bodies_hold_current_shell_substitution()` と同じく、行継続を除いた本文も字句解析して数える。`$`
+    と `{` の間、`$(` と `(` の間に行継続を入れた形を deny ケースに足す。
+  sources:
+  - codex:security
+  confidence: 85
+  reproduction: '`: "${p@P}"` の `$` と `{` の間にバックスラッシュと実際の改行を1組挿入する。Bash 5.3.9 は変数 `p` の値を展開する。一方、同じ入力で
+    `_args_json_has_deferred_evaluation()` は `False` を返し、`statements()` では後続の `--session "$SID"` 付き Notion
+    呼び出しの JSON が検査対象から外れる'
+  stable_id: 38fdc4ff88dbf0c5
+  resolution: fixed
+  resolution_reason: auto-applied loop 1
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8789
+  title: '`[[ ]]` の `&&`・`||` より後ろにある算術比較を見落とす'
+  description: '`_lex_layout()` は、SEGMENT_CHARS だけからなる演算子トークンをすべて文の区切りにする。字句解析器の `cond` 状態もこれを止めない。そのため
+    `[[ yes && true -eq x ]]` は、`[[ yes` と `true -eq x ]]` の2文に分かれる。後者の名前は `true` で、`_ARGS_JSON_CERTAIN_NAMES`
+    により語を読まずに確定になる。一方 Bash は、右辺の `-eq` を現在のシェルで算術評価する。そのとき、オペランドの変数の値（ANSI-C 引用で `{` を隠した `b[${ declare
+    -gn r=A[@]; }]` など）の添字が展開され得る。今回足した TS-4 の `[[` ケースは、どれも論理演算子を含まない。security と spec が指摘している。'
+  suggestion: '`[[` から対応する `]]` までを1つの条件式として扱い、`&&`・`||` で分かれた後ろの断片も `[[` の語として判定する（例: 閉じていない `[[` で始まる文の後は、`]]`
+    を含む文まで条件式として読む）。演算子の位置にある語だけを判定するようにすれば、文字列比較の値として引用した `''-eq''` や `-v` を数える誤判定も同時に直る。`&&` と `||`
+    の両方の形を deny ケースに足す。'
+  sources:
+  - codex:security
+  - codex:spec
+  confidence: 100
+  reproduction: '`[[ echo -eq 1 ]]` の後に `--session "$SID"` 付きの標準形の Notion 呼び出しを置くと、`statements()` は JSON
+    を検査する。条件を `[[ yes && echo -eq 1 ]]` に変えると検査対象が空になる。Bash 5.3.9 では `[[ yes && true -eq ''flag=1'' ]]`
+    の評価後に `flag` が `1` になり、右辺が現在のシェルで評価されたことを確認できる'
+  stable_id: 73ea2b1bdc1a19f3
+  resolution: fixed
+  resolution_reason: auto-applied loop 1
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8848
+  title: 引用した配列の複合代入を宣言組み込みが展開し直す経路を見落とす
+  description: '`declare -a ''items=(...)''` や `declare -a items=''(...)''` のように、引用を外した引数が `名前=(...)`
+    の形になる宣言では、Bash が中身を配列の複合代入として改めて展開する（警告「quoted compound array assignment deprecated」を出しつつ代入する）。フックは単一引用符の中に領域を作らないので、展開レベルの読み取りに掛からない。`_args_json_declaration_uncertain()`
+    もオプション・代入先・角括弧しか見ない。そのため、中に `${p@P}` や `$((...))` を含む値でも確定になる。フック側の判定は読解で確かめた。Bash 側で実際に展開されることは、comprehensive
+    と security の両方が報告している。'
+  suggestion: declare・local・typeset の引数で、復元した値が `(` で始まり `)` で終わる代入（`名前=(...)`・`名前+=(...)`。引用の位置は問わない）は、`-a`
+    の有無にかかわらず未確定にする。既に配列になっている変数なら、`-a` が無くても複合代入になる。宣言値の角括弧を添字と取り違える誤判定を直すときに、この判定を弱めない。deny ケースを足す。
+  sources:
+  - codex:security
+  confidence: 85
+  reproduction: '`declare -a ''items=($probe)''` の後に `--session "$SID"` 付きの標準形の Notion 呼び出しを置くと、`statements()`
+    は JSON を検査対象に含めない。Bash 5.3.9 で `flag=0` の後に `declare -a ''items=($((flag=1)))''` を評価すると、宣言後の `flag`
+    は `1` になる'
+  stable_id: 08c4983eb1c84ee0
+  resolution: fixed
+  resolution_reason: auto-applied loop 1
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8888
+  title: '`{名前[添字]}` 形式のリダイレクトが添字を算術評価する経路を見落とす'
+  description: '評価者の読解による指摘。Bash の `{varname}` リダイレクトは配列要素の形も受け付ける。割り当てたファイル記述子の番号を代入するとき、添字を算術式として現在のシェルで評価する（Bash
+    の実装では `valid_array_reference` で受け付け、`bind_int_variable` から `assign_array_element` に渡る）。
+
+
+    フック側の流れは次のとおり。`_args_json_strip_redirections()` の `{名前}` 判定は添字付きの形に一致しないので、語は `:` や `echo` の引数として残る。これらの名前は語を読まずに確定になる。添字
+    `[x]` は代入語でも複合代入でもないので array-subscript 領域にならず、`$` も含まないので展開レベルの読み取りにも掛からない。そのため、`x` に ANSI-C 引用で `{`
+    を隠した `b[${ declare -gn r=A[@]; }]` を入れておけば、算術評価が値の添字を展開して nameref を作り得る。Bash 側の挙動は実行では確かめていない。'
+  suggestion: '`<`・`>` に接する `{...}` の語で、中身が `名前[...]` の形なら、添字が数字だけ・`@`・`*` のいずれでもない限り未確定にする。deny ケースを足し、Bash
+    で添字が評価されることを無害な値で確かめる。'
+  sources:
+  - claude:evaluator
+  - codex:comprehensive
+  - codex:spec
+  confidence: 70
+  reproduction: '`A=(json --mcp desktop-commander --tool start_process); x=$''b[$\x7b declare -gn r=A[@];
+    }]''; : {a[x]}>/dev/null;` の後に `--format "$r"` と `--session "$SID"` を持つ標準形の Notion 呼び出しを置く。フック側では
+    `:` が確定になり、`{a[x]}` には数える領域が無いので、除外が維持されると読める（読解のみ。Bash 側は未確認）'
+  stable_id: 9a42fe083737c591
+  resolution: unresolved
+  resolution_reason: 'batch mode: evaluator-only finding, not auto-applied'
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8779
+  title: 許可名 `mcp-bridge` と同名の関数定義で、検査除外が維持される
+  description: '`mcp-bridge() { ...; }` を Notion 呼び出しの前に置いても、関数名は許可名なので確定になる。本体も許可名だけなら除外が維持される。Bash は後続の呼び出しをこの関数に渡すので、関数が引数を別の
+    MCP ツールに転送できる。再現は読解で確かめた。ただし THREAT-MODEL.md の Rationale は、この形を本機能の対象外で、以前からある穴として扱い、IMPLEMENTATION.md
+    の Open Questions に送っている。SPEC の Edge Case Notes も、許可名と同名の関数は本体を同じチャンクとして読むと定めている。対象外であることを踏まえ、重大度を下げた。'
+  suggestion: 'この機能の中では変えない。IMPLEMENTATION.md の Open Questions に残っていることを確かめ、別の機能として扱う（例: 許可名と同名の関数定義を含むチャンクの後の呼び出しを未確定にする）。'
+  sources:
+  - codex:security
+  confidence: 90
+  reproduction: 無害な関数定義 `mcp-bridge() { :; }` を標準形の Notion 呼び出しの前に置いて `statements()` に渡す。`_args_json_nameref_declared()`
+    は `False` を返し、`_mcp_bridge_args_json_chunks()` の検査対象は空になる。Bash の呼び出し先は定義した関数になる
+  stable_id: 4a4542dc55b04a23
+  resolution: unresolved
+  resolution_reason: out of scope per THREAT-MODEL; filed as a separate task
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8873
+  title: 宣言組み込みが安全な代入データまで不確定にする
+  description: '`declare -a ''B=(x y)''` は復元後に `=(` があるだけで不確定になる。また、`declare note=''[abc]''` では代入値の角括弧を添字として扱う。'
+  suggestion: 復元した宣言引数の代入先と値を区別し、複合代入は中身を静的に判定する。
+  sources:
+  - codex:performance
+  - codex:spec
+  confidence: 100
+  reproduction: '`declare -a ''B=(x y)''` と `declare note=''[abc]''` をそれぞれ静的に走査すると True が返る'
+  stable_id: 8c1570f6269b5929
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8760
+  title: 複数行の配列の複合代入で、2行目以降の要素をコマンド名として扱う
+  description: '`_args_json_in_array_literal()` は、各文の最初の語の直前に `=(` があるかだけで配列の中かどうかを決める。そのため改行の後の要素はコマンド名として許可リストに照合され、未確定になる。添字も遅延評価も無い
+    `A=(first`、改行、`second)` の後の Notion 呼び出しが inspected になり、AC5・A4 に反する。関数の説明文はこれを安全側の割り切りとしているが、SPEC は除外の維持を求めている。spec・comprehensive・architecture
+    が指摘している。'
+  suggestion: 字句解析器が読んだ複合代入の範囲（開き括弧から対応する閉じ括弧まで）を引き継ぎ、改行をまたぐ要素にも同じ判定をする。複数行の配列の形を、KIND_NOTHING を期待する単体テストに足す。
+  sources:
+  - codex:spec
+  confidence: 85
+  reproduction: null
+  stable_id: 706265d1ceaf38ce
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8852
+  title: 宣言や配列要素の値に含まれる角括弧を、添字として扱う
+  description: '`_args_json_declaration_uncertain()` は `_args_json_variable_subscript(text, False)` に引数全体を渡すので、`declare
+    a=''[example]''` の値の角括弧も添字と見なす。複合代入の要素でも、引用を外した後の先頭の角括弧を読むため、`A=(''[draft]'')` が未確定になる。どちらも添字の無い代入なのに、後続の
+    Notion 呼び出しが inspected になり、FR3・AC5 に反する。spec・comprehensive・architecture が指摘している。'
+  suggestion: 宣言の引数は代入先と値に分け、代入先の添字だけを判定する。配列要素では、引用の外にある先頭の `[` だけを添字として読む。引用した配列の複合代入を未確定にする判定（別の指摘）は弱めない。
+  sources:
+  - codex:spec
+  confidence: 90
+  reproduction: null
+  stable_id: 8ee359118b15c745
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8792
+  title: '`[[ ]]` の文字列比較の値として引用した `''-eq''` を、算術比較として数える'
+  description: '`_args_json_name_uncertain()` は、`[[` のすべての語について、復元後の文字列を演算子の集合と照合する。そのため `[[ $mode ==
+    ''-eq'' ]]` のような文字列比較の値も算術比較と見なし、後続の Notion 呼び出しが inspected になる。spec も `-v` について同じ過剰な判定を指摘している。安全側の誤判定だが、Notion
+    コメントの本文に破壊的なコマンドの文字列があると、誤って deny される。'
+  suggestion: 演算子の位置にある、引用されていない語だけを判定する。`&&`・`||` をまたぐ見落としの修正と合わせて直せる。引用した `'-eq'` と `'-v'` を値に持つ比較を、KIND_NOTHING
+    を期待する単体テストに足す。
+  sources:
+  - codex:comprehensive
+  confidence: 80
+  reproduction: null
+  stable_id: e502b43ef25f6a6e
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8669
+  title: 数字だけの添字を使う代入語 `x[2]=1` で除外が外れる
+  description: '`_args_json_declaration_word()` は array-subscript 領域を引用の種類として扱わないので、`x[2]=1` は復元できない語になる。そのため代入語として読み飛ばされる前にループを抜け、コマンド名を復元できないとして未確定になる。展開レベルの読み取りは数字だけの添字を数えないが、文の判定で除外が外れる。A4
+    は、数字だけの添字なら除外を維持すると定めている。単体テストの `test_a_harmless_subscript_keeps_the_exclusion` は `c[2]=1` を展開レベルでしか確かめておらず、Notion
+    呼び出しでの判定は固定していない。以前から同じ動作だった可能性がある。'
+  suggestion: 代入語の位置で、字句解析器が読んだ添字が数字だけ・`@`・`*` のいずれかなら、代入先の判定（整数属性・PS4）まで進めてから読み飛ばす。`x[2]=1` の後の Notion
+    呼び出しを、KIND_NOTHING を期待する単体テストに足す。
+  sources:
+  - codex:spec
+  confidence: 80
+  reproduction: null
+  stable_id: a580eae83c478a47
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 4569
+  title: コマンド置換内のヒアドキュメントが外側の除外を解除する
+  description: TS-9。
+  suggestion: ヒアドキュメントが属するシェルの範囲を保持する。
+  sources:
+  - codex:spec
+  confidence: 65
+  reproduction: null
+  stable_id: f108c75a324bae0f
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: spec
+  file: test-docs/args-json-deferred-eval-bypass/task0002.tests.yaml
+  line: 7
+  title: AC7 の `unittest discover` が成功していない（変更前からの4件の失敗）
+  description: AC7 は `python3 -m unittest discover -s tests` の成功を求めている。しかし task0001・task0002 の記録では、変更前からある
+    `test_review_perspective_model_effort_version_bump` の4件の失敗が残っている。本機能で増えた失敗は無い。失敗の原因はバージョン番号の検査で、NFR4
+    によりこの機能ではバージョンを変えられない。
+  suggestion: バージョンは変えない。4件が変更前からの失敗で本機能と無関係であることを VERIFICATION.md に記録し、AC7 の扱いは人が決める。
+  sources:
+  - codex:spec
+  confidence: 90
+  reproduction: null
+  stable_id: 8804234f17f7a5f6
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8474
+  title: 読み取り境界で行継続が分断されると、遅延評価を見落とす
+  description: パラメーター展開は先頭256文字を切り出してから行継続を除去する。境界がバックスラッシュと改行の間に来ると、変数名や演算子の末尾にバックスラッシュが残る。この状態は読み取り途中として扱われず、後続に
+    `@P` があっても False に到達するため、呼び出し元が検査対象外の判定を維持し得る。
+  suggestion: 読み取り範囲の末尾に未完の行継続がある場合は判定不能として扱う。行継続の直前、途中、直後に境界が来る場合をテストに加える。
+  reproduction: null
+  stable_id: 8bd8e986a76e621b
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8611
+  title: バックスラッシュで引用した `]]` が条件式を閉じてしまう
+  description: '`tok.quoted` は一重引用符と二重引用符を認識する一方、バックスラッシュで引用した文字では false になる。オペランドとして書いた `\]\]` でも条件式が終了し、後続の断片にある算術比較を見落とし得る。'
+  suggestion: 開始・終了の判定には元のトークン範囲を使い、各括弧が引用もエスケープもされていないことを確認する。
+  reproduction: '`lex_segments()` に `echo \]\]` を渡すと、2 語目の値は `]]`、`quoted` は false になる。'
+  stable_id: 8016dc2435c250f7
+  sources:
+  - codex:comprehensive
+  - codex:spec
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: raised in loop 3 re-review; loop cap reached
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8883
+  title: 開き括弧で始まる文字列まで配列代入と判定する
+  description: '`declare label=''(draft''` は文字列を代入するが、正規表現は `=(` まで一致した時点で True を返す。Bash 5.3.9 では代入先をあらかじめ配列として宣言しても、この値は要素0の文字列として保存される。現状ではこの宣言だけで後続のNotionコメントが検査対象になる。'
+  suggestion: 引用を取り除いた値が複合代入として解釈され得る形か、終端も含めて確認する。閉じ括弧がない値と、閉じ括弧の後に通常の文字が続く値を回帰テストに加える。
+  reproduction: '`TestCommandNameAllowlist.uncertain("declare label=''(draft''")` は True を返した。Bash の `declare
+    -p` では値 `(draft` がそのまま保存されていた。'
+  stable_id: cba6f2bdeb325044
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8896
+  title: 文字列に含まれる角括弧を配列の添字として扱う
+  description: 宣言では代入値まで含めて角括弧を検索し、配列要素では先頭の角括弧だけで添字と判定する。このため `declare label="[draft]"` と `A=('[draft]')`
+    はどちらも不確実と判定される。
+  suggestion: 宣言では代入先の添字だけを調べる。配列要素では元の引用位置と代入演算子を確認し、`[添字]=値` または `[添字]+=値` を構成する場合だけ添字を判定する。
+  reproduction: 両方の入力で `TestCommandNameAllowlist.uncertain()` が True を返した。
+  stable_id: 5353ba5a2b8a2c16
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8783
+  title: 配列要素を複数行に分けると2行目からコマンド名として判定する
+  description: 配列の内側かどうかを各断片の最初の語の直前だけで判定するため、2行目の要素からは開始位置の `=(` を見つけられない。
+  suggestion: 複合代入の開始から対応する閉じ括弧まで配列内であることを保持し、改行をまたいでも同じ添字判定を適用する。
+  reproduction: '`TestCommandNameAllowlist.uncertain()` に `A=(first\nsecond)` を実際の改行入りで渡すと True を返した。'
+  stable_id: 200239c4e9845dcd
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: high
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8603
+  title: グループ内の `[[ ]]` で算術比較を見落とす
+  description: SPEC FR1 は、グループや関数本体を含む構文上の全位置で、`[[ ]]` の算術比較を未確定と判定するよう求めている。`[[` の開始判定は文の先頭付近だけを見るため、先行する
+    `{` があると `&&` の後まで条件式の状態を引き継がない。また、引用された `"]]"` も終端として扱う。
+  suggestion: 単純コマンドの境界で `[[` を認識し、引用されていない構文上の `]]` まで条件式として扱う。
+  reproduction: '`{ [[ x = x && echo -eq 0 ]]; }` または `[[ "]]" = "]]" && echo -eq 0 ]]` で False。'
+  stable_id: bfed9739094acc29
+  sources:
+  - codex:architecture
+  - codex:spec
+  confidence: 75
+  resolution: fixed
+  resolution_reason: auto-applied loop 3
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8777
+  title: 配列要素かどうかを先頭語の直前から推定するため、改行で判定が変わる
+  description: 字句解析器は複合代入の閉じ括弧まで配列内であることを追跡している。一方、`_args_json_in_array_literal()` は断片の先頭から逆にたどって `=(`
+    を探すため、2行目の配列要素をコマンド名として扱う。その結果、同じ配列でも改行位置や要素名によって後続の `--args-json` の検査要否が変わる
+  suggestion: 字句解析器が認識した配列の範囲をトークンまたは位置情報として渡し、その範囲に含まれる要素を改行にかかわらず配列要素として判定する
+  reproduction: "`_args_json_nameref_scan()` で `A=(alpha beta)` は `False`、`A=(alpha\n beta)` は `True`、`A=(alpha\n\
+    \ echo)` は `False` になることを確認した"
+  stable_id: ea1bfdc61f810e3e
+  sources:
+  - codex:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 4569
+  title: 共通のヒアドキュメント除去処理が `--args-json` 固有の判定に依存する
+  description: '`_strip_heredocs_mapped()` から `_args_json_regions_defer_evaluation()` が直接呼ばれる。'
+  suggestion: '`HeredocRecord` から情報を引き継ぎ、`--args-json` 側で遅延判定する。'
+  reproduction: null
+  stable_id: 0a420d6271e40e47
+  sources:
+  - codex:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: high
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8596
+  title: 複合条件内の算術比較を見落とし、Notion の除外を維持する
+  description: SPEC FR1（45–49行）は、グループや条件式を含むすべての構文位置で `[[ ]]` 内の算術比較を検出するよう求めている。`[[ ( echo -eq 0 ) &&
+    true ]]` では、最初の断片が括弧で分割され、比較部分の先頭にある `echo` が許可済みコマンドとして扱われる。後続の断片も検査を通るため、チャンクは確定扱いになり、後続の Notion
+    呼び出しは `KIND_NOTHING` になる。比較文字列に引用された `]]` がある場合も、条件式が閉じたと誤認する
+  suggestion: 条件式の開始から実際の閉じ記号まで構文状態を保持し、最初の断片を含む各断片の比較演算子を検査する。条件式の内部には、単純コマンド名の許可リストを適用しない
+  reproduction: '`_args_json_nameref_scan(_MarkedText.plain(''[[ ( echo -eq 0 ) && true ]]''))` を呼ぶと、期待する
+    `True` に対して `False` が返る'
+  stable_id: 2c5b925b8e6daed0
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 3 (re-raised as bfed9739094acc29 in loop 2)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8692
+  title: 代入に見えるコマンド名が許可リストの判定を通らない
+  description: SPEC FR3 は、許可リスト外の単純コマンド名を不確定とし、`command` などの接頭辞の後にも同じ判定を適用するよう求めている。`command -- 'x=y'`
+    の `x=y` は実行対象の名前だが、引用除去後の文字列が代入の正規表現に一致して読み飛ばされる。
+  suggestion: 代入の判定には引用除去前の構文を使い、接頭辞の引数として指定された実行対象を許可リストに照合する
+  reproduction: '`command -- ''x=y''` を静的に走査すると `False` が返る。FR3 に従った期待値は `True`'
+  stable_id: 21d5b6eda5f3960f
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8463
+  title: 特殊パラメーターの変換と間接展開を誤判定する
+  description: '`${#@P}` では正規表現が `#` を長さ演算子、`@` をパラメーター名として消費し、実際の `@P` 変換を見落とす。一方、`${!}` は特殊パラメーター `!`
+    の参照だが、先頭が `!` という理由だけで間接展開に分類され、AC5 が求める除外が外れる'
+  suggestion: 特殊パラメーターと演算子を構文上の位置で区別し、`${#@P}` と `${!}` の両方を確認する
+  reproduction: '`echo "${#@P}"` の静的な走査は `False`、`echo "${!}"` の走査は `True` になる。'
+  stable_id: 743c2432f68476ba
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8707
+  title: 数字だけの配列添字で Notion の除外が外れる
+  description: '`a[0]=1` は単語の復元処理が `array-subscript` を復元不能とするため不確定になる。パラメーター展開でも、数字だけの添字が256文字の読み取り範囲をまたぐと不確定になる。'
+  suggestion: 数字だけの添字を持つ代入語を認識し、パラメーター展開では読み取り範囲をまたぐ添字も数字だけかどうか判定する
+  reproduction: '`a[0]=1` を無害な Notion 呼び出しの前に置くと `KIND_INSPECTED` になる'
+  stable_id: ba5d3e1eefafad61
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8767
+  title: 複数行の複合代入で配列要素をコマンド名として扱う
+  description: '`_args_json_in_array_literal()` は、最初のトークンの直前に代入の開き括弧がある場合だけ配列要素と判断する。'
+  suggestion: 対応する閉じ括弧まで複合代入の範囲を追跡し、改行をまたぐ要素も代入データとして扱う
+  reproduction: '`B=(x\ny)` を無害な Notion 呼び出しの前に置くと `KIND_INSPECTED` になる'
+  stable_id: 1859de80d39c2434
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: spec
+  file: em-workflow/hooks/tests/destructive-guard-cases.json
+  line: 1479
+  title: TS-3 の拒否ケースが読み込んだ値による名前参照の生成を再現していない
+  description: TS-3 は、引用付きヒアドキュメントとファイルから読み込んだ値を評価して名前参照を作る形を、それぞれ拒否ケースとして固定するよう求めている。ヒアドキュメントに渡す値は `z[0]`
+    だけで名前参照を作らず、ファイルのケースは `value.txt` の内容をテストデータに指定していない。
+  suggestion: 両方の入力元について、FR5 が指定する名前参照の生成を表現するテストデータを明示する
+  reproduction: null
+  stable_id: a278c0c1c513abe4
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: spec
+  file: tests/test_destructive_guard_args_json.py
+  line: 1904
+  title: 追加した複合代入の単体テストが失敗する
+  description: 追加された `A=([@]=1 [12]=2)` のサブテストは除外の維持を期待するが、実装は不確定と判定する。このモジュールを実行すると205件中1件が失敗した。
+  suggestion: 除外を維持するテストには有効な数字添字を使い、`[@]` の展開はパラメーター展開のケースで検証する
+  reproduction: '`PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest discover -s tests -p test_destructive_guard_args_json.py`'
+  stable_id: 9c97a9d5acb8dc81
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8875
+  title: 宣言オプションの照合が `i` の連続で二次時間になる
+  description: 末尾に英字以外の文字があると、正規表現は中央の `[ni]` に一致する位置を変えるたびに残りの英字列を走査する。自動修正で `i` が候補に加わり、約32 KiBの引数1個でフックの静的解析が約1.7秒止まった。
+  suggestion: 先頭が `-` で残りがASCII英字だけかを確認し、その後に `n` または `i` の有無を調べる。照合を分ければ、現在の判定条件を保ったまま線形時間にできる。
+  reproduction: '`declare --` に続けて、`-`、連続する `i`、末尾の数字からなる引用済み引数を渡し、`_args_json_nameref_scan()` を直接計測した。`i`
+    が8,192個で約112ミリ秒、32,768個で約1,703ミリ秒かかった。'
+  stable_id: c51380a3329791d9
+  sources:
+  - codex:performance
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8904
+  title: 宣言の代入値に含まれる角括弧を配列添字と判定する
+  description: '`declare ''message=hello[world]''` で解除。'
+  suggestion: 添字の検査を変数名の位置に限定する。
+  reproduction: 上記で解除。
+  stable_id: 0fa0275eeaaddf3b
+  sources:
+  - codex:performance
+  - codex:spec
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8619
+  title: 引用した `]]` を条件式の終端と誤認し、後続の算術比較を見落とす
+  description: '`texts` は引用符を除いた文字列なので、`[[ a == '']]'' || true -eq b ]]` では、比較対象の `'']]''` が最初の断片を閉じた扱いになる。次の断片は
+    `true` コマンドとして分類され、`-eq` を検査しない。Bash はここで算術比較を行うため、ガードはシェル状態を誤って確定し、後続の Notion 呼び出しを検査対象から除外し得る'
+  suggestion: '`[[` の開始と `]]` の終了を、引用の有無と条件式内の位置を保持したトークンで判定する。引用した `]]` の後に算術比較が続くケースを回帰テストに加える'
+  reproduction: null
+  stable_id: 59ee406bbb437801
+  sources:
+  - codex:comprehensive
+  - codex:performance
+  confidence: 75
+  resolution: fixed
+  resolution_reason: auto-applied loop 3
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8608
+  title: '`[[ ... ]]` の条件式が通常のコマンドとしても判定される'
+  description: '`_args_json_nameref_scan()` は `&&` で分割された条件式の続きを識別するが、同じトークンを `_args_json_declares_nameref()`
+    にも渡す。そのため、後半の `-n` がコマンド名として扱われる。'
+  suggestion: '`[[` から対応する `]]` までを一つの条件式として識別し、その範囲の判定を一か所に集約する。'
+  reproduction: '`[[ -n a ]]` は `False`、`[[ -n a && -n b ]]` は `True`'
+  stable_id: 6fa42681c2f8d02a
+  sources:
+  - codex:comprehensive
+  - codex:architecture
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8788
+  title: 配列リテラルを複数行にすると、2行目の要素をコマンド名として扱う
+  description: '`_args_json_in_array_literal()` は直前に `=(` があるかだけを調べる。'
+  suggestion: 配列代入の開始から対応する閉じ括弧まで要素として扱う。
+  reproduction: '`A=(first\nsecond)` で `True`'
+  stable_id: 1fdf5442d58800cd
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: comprehensive
+  file: tests/test_destructive_guard_args_json.py
+  line: 1907
+  title: 配列添字 `[@]` に対するテストの期待値と展開判定が一致しない
+  description: テストは `A=([@]=1 [12]=2)` を状態が確定する例に含めているが、`_args_json_nameref_scan()` は `True` を返した。Bash
+    5.3.9 はこの代入をエラーにする。
+  suggestion: 正常系には Bash が受理する数字の添字を使う。
+  reproduction: Bash 5.3.9 で `A=([@]=1 [12]=2)` は `cannot assign to non-numeric index`
+  stable_id: dd2ee542a44f7e1b
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: comprehensive
+  file: tests/test_destructive_guard_args_json.py
+  line: 3039
+  title: 256文字の境界で名前や演算子が途切れる修正に回帰テストがない
+  description: 読み取り範囲が変数名の途中、`@` の直後、または行継続の途中で終わる分岐を削除しても、既存テストは成功する。
+  suggestion: 256文字目が変数名の末尾、`@`、行継続のバックスラッシュ、CRLF の CR になる入力を追加する。
+  reproduction: null
+  stable_id: 51165cc1bbf361f9
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8608
+  title: TM-3：引用した `]]` やグループ内の `[[` により算術比較を見落とす
+  description: 73ea2b1bdc1a19f3 の修正は、引用を取り除いた語から条件式の開始と終了を判定している。引用した `]]` をオペランドに使う場合や、`{` の直後に `[[`
+    がある場合は、`&&` の後も条件式が続くことを認識できない。後半の算術比較が保存済みの値を再評価しても、後続の Notion 呼び出しは `--args-json` の検査から除外される。これは
+    THREAT-MODEL.md の TB-1 における TM-3 の検出漏れに当たる
+  suggestion: Bash の構文上の位置と引用情報から `[[` と `]]` を識別し、条件式全体を読み終えるまで算術演算子と `-v` を検査する
+  reproduction: 無害な `[[ -n ']]' && true -eq 0 ]]` と `{ [[ -n ok && true -eq 0 ]]; }` を個別に `_MarkedText.plain()`
+    から `_args_json_nameref_scan()` に渡すと、どちらも False を返した。各入力に `--session "$SID"` と `--args-json '{}'` を持つ通常の
+    Notion コメント呼び出しを続けて `statements()` に渡すと、どちらも `_args_json_notion_pair()` が True を返した。対照の `[[ -n ok
+    && true -eq 0 ]]` では同じ呼び出しが検査対象になった
+  stable_id: d86916ae221553ee
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 3
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8640
+  title: 宣言の引数にある `}` で検査が途切れ、後続の配列代入を見落とす
+  description: 08c4983eb1c84ee0 の修正は、引用された配列代入が `_args_json_declaration_uncertain()` に届けば検出できる。しかし、引用されていない
+    `}` を引数位置でもコマンドの境界として扱うため、後続の代入が宣言から切り離される。Bash の `declare` は不正な引数の後も残りの代入を処理する。
+  suggestion: '`{` と `}` は予約語として有効な位置でだけ境界として扱い、宣言の引数は Bash が同じコマンドに渡す末尾まで検査する'
+  reproduction: '`declare -a } ''labels=(red blue)''` を Bash で実行すると、配列には2要素が入る。`_args_json_nameref_scan()`
+    に `declare } ''labels=(red blue)''` を渡すと False、`}` を除くと True になることを確認した'
+  stable_id: de5f0adc26d94f60
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 3
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8905
+  title: 宣言値の角括弧の検査に二次時間がかかる
+  description: '`_args_json_declaration_uncertain()` は、変数名に加えて代入値も `_args_json_variable_subscript()` に渡す。値に閉じ角括弧がない場合、`re.findall()`
+    は開き角括弧を見つけるたびに文字列の末尾まで走査し直す。開き角括弧の密度が高い64 KiBの入力では、フックの判定時間がベースの約128 msから約3.09秒に増えた。'
+  suggestion: 開き角括弧と閉じ角括弧を左から順に探し、見つけた組をその場で判定してから閉じ角括弧の直後へ進める。
+  reproduction: 文字列 `\[` を繰り返して作った32 KiBと64 KiBの値を引用符で囲み、`declare PATTERN=...` で代入し、Notionコメント作成呼び出しを続ける。約0.80秒と約3.09秒。
+  stable_id: 9d710d0406365ade
+  sources:
+  - codex:security
+  - codex:performance
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8772
+  title: 配列要素の識別が各行の先頭位置に依存している
+  description: '`_args_json_in_array_literal()` は、各断片の先頭から逆向きに `=(` を探して配列要素かどうかを判定する。2 行目の要素はコマンド名として扱われる。'
+  suggestion: 字句解析器が識別した配列代入の範囲をトークンの位置から参照できるようにする
+  reproduction: '`A=(x y)` で `False`、`A=(x\ny)` で `True`'
+  stable_id: fe85755e032bcb7a
+  sources:
+  - codex:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8712
+  title: 代入に似たコマンド名が許可リストの判定を通らない
+  description: '`command -- name=value` や `''name=value''` を前置代入として読み飛ばす。'
+  suggestion: 前置代入は元のトークンが代入語である場合に限る。
+  reproduction: どちらも False。
+  stable_id: 08c4f3596a7ec7d8
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8468
+  title: 特殊パラメータの展開を誤分類する
+  description: '`${#@P}` の `@P` を見落とし、`${!}` を間接展開と判定する。'
+  suggestion: 接頭辞と特殊パラメータを区別する。
+  reproduction: '`echo "${#@P}"` で除外が残り、`echo "${!}"` で解除。'
+  stable_id: 9cfd5ecac3369cc8
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8986
+  title: 数字だけの添字を持つ代入でも除外が解除される
+  description: A4。`A[0]=x` が inspected。
+  suggestion: 数字だけの添字を代入語の一部として扱う。
+  reproduction: '`A[0]=x` で `[''inspected'']`。'
+  stable_id: 2b71f8c3743efac4
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8813
+  title: '`test -n` のオペランドが展開されるだけで除外が解除される'
+  description: Edge Case Notes は `-v` がある場合に限って未確定とする。
+  suggestion: 引数の個数と演算子の位置を判定する。
+  reproduction: '`test -n "$SID"` で `[''inspected'']`。'
+  stable_id: 0a620397fa7ef356
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: spec
+  file: test-docs/args-json-deferred-eval-bypass/task0002.tests.yaml
+  line: 7
+  title: 全単体テストの成功条件を満たしていない
+  description: AC7。バージョン関連4件が実装前から失敗。
+  suggestion: 既存のバージョン検査が通る状態を確認する。
+  reproduction: null
+  stable_id: 8c62295bfaa19f05
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8622
+  title: 波括弧を含む文で引数や予約語をコマンド名として扱う
+  description: FR3/AC5。`echo { word`、`if { echo hello; }; then :; fi` で解除。
+  suggestion: 波括弧がグループを開閉できる位置を識別する。
+  reproduction: 上記で解除。
+  stable_id: 41776d43e6fa704b
+  sources:
+  - codex:comprehensive
+  - codex:spec
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8634
+  title: 波括弧の再検査でリダイレクト先をコマンド名として読んでいる
+  description: '`whole` からリダイレクト演算子だけが取り除かれ、対象の単語が残る。'
+  suggestion: '`_args_json_strip_redirections()` に対象と組にして除去させる。'
+  reproduction: '`> /dev/null echo {;` で deny、`echo {;` で allow。'
+  stable_id: 0a447bae27b2e8c4
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8517
+  title: 配列添字の判定が食い違い、追加された単体テストが失敗する
+  description: '`A=([@]=1 [12]=2)` でテストの期待値に到達できない。'
+  suggestion: 二つの判定とテストの期待値を揃える。
+  reproduction: 205 件中 1 件失敗。
+  stable_id: 5f4c687fd3e84a0d
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8802
+  title: 複数行の配列代入では2行目以降の要素がコマンド名になる
+  description: 改行で断片が分かれると、次の行の要素は未知のコマンド名として扱われる。
+  suggestion: 配列代入の範囲を追跡する。
+  reproduction: 改行で deny。
+  stable_id: 3ebce7933bf8a0d7
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8915
+  title: '`declare` に渡した文字列の値まで配列添字として検査している'
+  description: '`declare ''title=release[beta]''` を評価される添字と判定する。'
+  suggestion: 代入先に付いた添字だけを検査する。
+  reproduction: deny。
+  stable_id: 473a5a5bad6e562e
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8613
+  title: Brace-expanded [[ operator bypasses deferred-eval detection
+  description: The `[[` operator check compares the quote-removed spelling (`-e{q}`) against the literal
+    set instead of the brace-expanded spelling. Claims Bash performs brace expansion inside `[[ ]]`.
+  suggestion: Treat operand words with unquoted `{`/`}` as uncertain in the `[[` branch.
+  reproduction: '[[ a -e{q} b ]]; then notion call'
+  stable_id: 55ad9b01507622d8
+  sources:
+  - litellm:muse-spark:security
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8597
+  title: コマンド境界の解釈が分かれ、通常の引数までシェル構文として扱われる
+  description: この走査は、同じ単語列を `[[` の継続判定、波括弧で分割したコマンド、分割前のコマンドという3通りに解釈する。`[[` はコマンド位置を確認せずに状態を切り替える。許可リストにある
+    `echo` の引数だけで後続の `--args-json` の検査範囲が変わる。
+  suggestion: 文を構成する段階で、コマンド位置と `[[ ... ]]` の範囲を一度だけ確定させ、共通の結果を渡す。
+  reproduction: '`echo -eq` は False、`echo [[; echo -eq` は True。`echo value` は False、`echo { value` は True。'
+  stable_id: ab4c06e6c266d2a8
+  sources:
+  - codex:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 9000
+  title: 数字だけの添字を持つ代入で除外が解除される
+  description: A4。`A[12]=1` で解除。
+  suggestion: 数字だけの添字は通常の代入語として分類する。
+  reproduction: '`A[12]=1` で解除。'
+  stable_id: 71edf17f8fd7e150
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8894
+  title: 宣言オプションの正規表現が同じ接尾部を繰り返し照合する
+  description: 英字列の末尾に英字以外があり、途中に `n` や `i` が多数あると、正規表現はその各位置から残りの英字列を照合し直す。判定に二次時間がかかる。
+  suggestion: '`-[A-Za-z]+` でオプションの形を一度確認し、`n` または `i` を含むかは文字列検索で判定する。'
+  reproduction: 8,192 個または 32,768 個の `n` で約 100 ms と 1.65 秒。
+  stable_id: 3b914cc6a4409ac9
+  sources:
+  - codex:performance
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+- severity: medium
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8919
+  title: 閉じ括弧のない宣言値を開き括弧ごとに再走査する
+  description: '`re.findall()` は `[` を見つけるたびに次の `]` を探す。`]` が存在しないと二次時間がかかる。'
+  suggestion: 次の `[` と `]` を順に探し、対応する `]` がなければ走査を終える。
+  reproduction: 8,192 文字で約 98 ms、32,768 文字で約 1.51 秒。
+  stable_id: 416f89af30fbeec7
+  sources:
+  - codex:performance
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: not an auto-fix candidate (medium)
+  reproduction_alternates: []
+  reproduction_overflow: false
+evaluation:
+  round_summary: '第1ラウンド。5観点すべての実行が完了した。security が報告した高4件（長い変数名、`$` と `{` の間の行継続、`[[ ]]` の `&&`・`||` の後ろ、引用した配列の複合代入の宣言）は、どれもフック側の判定を読解で再現できた。同じ箇所を他の観点も独立に指摘している。再現手順の
+    Bash 側の挙動は、評価者は実行していない。評価者の読解で、`{名前[添字]}` のリダイレクトによる同じ種類の見落としを1件追加した（Bash 側は実行していない推定）。`mcp-bridge`
+    と同名の関数定義は再現したが、THREAT-MODEL で本機能の対象外とされているので medium に下げた。medium は、二乗時間の走査が1件、除外を外しすぎる誤判定が5件、AC7 の変更前からの失敗が1件。architecture
+    が指摘したヒアドキュメント除去と検査規則の結び付きは、欠陥ではなく設計上の注記なので下げた。レビュー結果に指示の注入の試みは見当たらなかった。読んだファイルは8件（上限10）。観点ごとの確認状況:
+    comprehensive — corroborated、security — findings、architecture — corroborated、spec — corroborated、performance
+    — corroborated。'
+  recommended_action: auto_fix
+  action_rationale: 高の見落とし5件は、どれも destructive-guard.py の局所的な修正と deny ケースの追加で閉じられ、作り直しは要らない。修正後に同じ形の見落としが残っていないかは、もう1ラウンドで確かめる必要がある。`mcp-bridge`
+    と同名の関数（対象外）と AC7 の変更前からの失敗（バージョンを変えられない）は自動修正の対象にせず、人の判断に回す。
+dismissed_sites:
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8513
+  run_id: comprehensive#0
+  reason: duplicate of another finding
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8512
+  run_id: architecture#0
+  reason: duplicate of another finding
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8457
+  run_id: spec#0
+  reason: duplicate of another finding
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8848
+  run_id: comprehensive#0
+  reason: duplicate of another finding
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8789
+  run_id: spec#0
+  reason: duplicate of another finding
+- file: em-workflow/hooks/destructive-guard.py
+  line: 4569
+  run_id: architecture#0
+  reason: demoted
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8870
+  run_id: comprehensive#0
+  reason: duplicate of another finding
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8850
+  run_id: security#0
+  reason: duplicate of another finding
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8760
+  run_id: comprehensive#0
+  reason: duplicate of another finding
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8758
+  run_id: architecture#0
+  reason: duplicate of another finding
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8866
+  run_id: comprehensive#0
+  reason: duplicate of another finding
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8852
+  run_id: architecture#0
+  reason: duplicate of another finding
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 3
+  applied_total: 7
+  termination: loop-cap
+residual_critical_high: 2
+rework_required: true
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-args-json-deferred-eval-bypass-20261121T033621Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
