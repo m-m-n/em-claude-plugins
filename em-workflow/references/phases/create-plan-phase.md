@@ -531,7 +531,10 @@ above. An approved `amend_other_feature` target stays fixed as approved.
 script's violations: `targets`, each a `task_id` and an `old_path`), the target
 paths of the `write_policy` of `references/contracts/planner-contract.md`, each
 carrying the action chosen in **Pre-dispatch.**, and `tasks/` in
-`allowed_write_roots`.
+`allowed_write_roots`. The dispatch passes the complete `write_policy.targets`:
+each target's chosen action together with its `expect_digest`. Immediately before
+the Task call the orchestrator applies `references/artifact-digest.md`'s
+`Pre-dispatch verification`, the same check section 4 applies.
 
 **Record.** The run and the patch are recorded in
 `phase-state/create-plan.yaml` under a new `request_id` and the next unused
@@ -578,6 +581,10 @@ The dispatch is `Task(subagent_type="em-workflow:implementation-planner")` with
 `references/contracts/planner-contract.md`'s
 `### feature_docs_correction (dispatch-resolved value)`, each target carrying the
 action chosen above. No root is added to `allowed_write_roots`.
+The dispatch passes the complete `write_policy.targets`: each target's chosen
+action together with its `expect_digest`. Immediately before the Task call the
+orchestrator applies `references/artifact-digest.md`'s `Pre-dispatch
+verification`, the same check section 4 applies.
 
 A stage-1 request result is handled by the grant rule of section 4
 (`## 4. Planner dispatch`), followed by one re-dispatch.
