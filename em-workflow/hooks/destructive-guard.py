@@ -9246,6 +9246,11 @@ def _args_json_declaration_word(marked, word):
             continue
         if ch in "$`*?":
             restorable = False
+        elif ch == "~" and (pos == lo or source[pos - 1] in "=:"):
+            # Tilde expansion: a word-initial unquoted `~`, or one right
+            # after `=` or `:`, expands to a value (OLDPWD, PWD, a home
+            # directory) that is not settled statically.
+            restorable = False
         elif ch in "{}[]":
             unquoted_marks.add(ch)
         out.append(ch)
