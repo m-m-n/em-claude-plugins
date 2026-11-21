@@ -8454,21 +8454,25 @@ def _args_json_parameter_defers(head, whole):
       the window reads as evaluating.
 
     A line continuation is removed first. Reads nothing but HEAD."""
+    head = head.replace("\\\r\n", "").replace("\\\n", "")
+    if not head.startswith("${"):
+        return True  # not settled: the opener itself is not readable
     body = head[2:]
     if whole and body.endswith("}"):
         body = body[:-1]
-    body = body.replace("\\\r\n", "").replace("\\\n", "")
     if body.startswith("!"):
         return True
     parameter = _ARGS_JSON_PARAMETER_HEAD.match(body)
     if parameter is None:
-        return False
+        return not whole  # the window may have ended before the name
     rest = body[parameter.end():]
     if rest.startswith("["):
         subscript = _ARGS_JSON_QUIET_SUBSCRIPT.match(rest)
         if subscript is None:
             return True
         rest = rest[subscript.end():]
+    if not whole and rest in ("", "@"):
+        return True  # the window ended inside the name or the operator
     if rest.startswith(("@P", "=", ":=")):
         return True
     if rest.startswith(":") and rest[1:2] not in ("-", "=", "?", "+"):
@@ -8585,9 +8589,30 @@ def _args_json_nameref_scan(marked):
         return True
     if _args_json_has_deferred_evaluation(marked):
         return True
+    in_dbracket = False
     for words, lexed, _sep in lex_segments(marked):
         if not lexed:
             return True
+        # A `[[ ]]` that `&&` or `||` split into several statements: every
+        # fragment up to the one holding `]]` is read as `[[` words.
+        texts = [
+            _args_json_declaration_word(marked, tok)[0]
+            for tok in words
+            if not getattr(tok, "is_operator", False)
+        ]
+        if in_dbracket:
+            if any(text in _ARGS_JSON_DOUBLE_BRACKET_WORDS for text in texts):
+                return True
+            if "]]" in texts:
+                in_dbracket = False
+        else:
+            first = 0
+            while first < len(texts) and texts[first] in (
+                "!", "if", "elif", "then", "else", "while", "until", "do",
+            ):
+                first += 1
+            if first < len(texts) and texts[first] == "[[" and "]]" not in texts[first + 1:]:
+                in_dbracket = True
         commands = [[]]
         for tok in _split_fused_closer_redirects(words):
             if _args_json_command_boundary(tok):
@@ -8851,6 +8876,11 @@ def _args_json_declaration_uncertain(marked, args):
             return True
         target = _args_json_assignment_target(text)
         if target is not None and _args_json_evaluated_target(target):
+            return True
+        # The restored text of a quoted `NAME=(...)` / `NAME+=(...)` (the quotes
+        # removed, so the builtin reads it as a compound assignment and expands
+        # its content again), whether or not `-a` is given.
+        if re.match(r"[A-Za-z_][A-Za-z0-9_]*(?:\[[^\]]*\])?\+?=\(", text):
             return True
         if _args_json_variable_subscript(text, False):
             return True
