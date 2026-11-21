@@ -1,5 +1,5 @@
 feature: args-json-deferred-eval-bypass
-collected_at: "2026-11-21T15:45:00+09:00"
+collected_at: "2026-11-21T15:36:00+09:00"
 session_ids: [01a1fcc4-ee03-763f-91e3-ccdea7aee785.jsonl]
 signals:
   review_critical_high:

@@ -187,6 +187,7 @@ workflow:
       version (NFR4), so they cannot be fixed within this feature''s scope'
 - id: retrospect
   status: completed
+  completed_at_commit: 512d5dffba891ebded2ebf7f207627a97f15c5aa
 tasks:
   task0001:
     title: Expansion-level deferred-evaluation detection
