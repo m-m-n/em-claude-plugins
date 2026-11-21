@@ -1,7 +1,7 @@
 schema_version: 1
 feature: mcp-bridge-function-shadow
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: d42e00bb0d6379f40470c88cc8877934d7191608
 last_input_digest: sha256:cfa4a3e833926a95f6c742757328f55f7e41de47b9a0eb967debe18604ca9277
