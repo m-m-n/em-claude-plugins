@@ -120,40 +120,33 @@ workflow:
   status: completed
   completed_at_commit: d62f797c97213468e4b2b2a0a2f3912f021aa61f
 - id: verify
-  status: in_progress
-  result: fail
-  round: 1
+  status: completed
+  completed_at_commit: b12bb0811aca02f814a40f85014979e542a9b91a
+  result: pass
+  round: 2
   passed_ids:
   - TS-1
   - TS-2
   - TS-3
   - TS-4
   - TS-5
+  - TS-6
   - TS-7
   - TS-8
   - TS-9
   - TS-10
+  - TS-11
   - SC-1
   - SC-2
   - SC-3
   - SC-4
   - SC-5
+  - SC-6
   - SC-7
+  - SC-8
   - SC-9
   - SC-10
-  failed_items:
-  - id: TS-6
-    note: 'full test command exited 1 (16988 tests, failures=5): test_report_name_planner_docs.TestAC3MediumFixesPlannerRules.test_the_d8_condition_ties_the_replacement_to_write_policy_targets
-      fails on em-workflow/agents/implementation-planner.md (the first sentence holding `write_policy.targets` in the Final-path
-      correction section no longer carries "only when that plan is listed in `write_policy.targets`"); 4 tests in test_review_perspective_model_effort_version_bump
-      fail on patch versions em-workflow 0.5.2 / em-review 0.6.1 (the same test file differs on main, which tolerates a patch)'
-    category: comprehensive
-  - id: SC-6
-    note: SPEC AC-6 requires the full test command to pass; it exits 1 (see TS-6)
-    category: comprehensive
-  - id: SC-8
-    note: TS-6 of TS-1 to TS-10 does not pass
-    category: comprehensive
+  failed_items: []
 - id: retrospect
   status: pending
 tasks:
