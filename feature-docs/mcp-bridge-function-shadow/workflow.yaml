@@ -171,7 +171,7 @@ tasks:
     - FR7
     - FR8
     - NFR1
-    status: in_progress
+    status: merged
     branch: em-workflow/mcp-bridge-function-shadow/task0002
     notes: null
     provenance:
