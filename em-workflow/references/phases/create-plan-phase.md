@@ -562,13 +562,19 @@ precondition and the scope verification (`references/phases/create-spec-phase.md
 
 The orchestrator chooses the action of each `write_policy.targets` entry by the
 rule of `references/contracts/spec-writer-contract.md`, "How the orchestrator
-chooses each target's action before dispatch".
+chooses each target's action before dispatch". From
+`references/contracts/planner-contract.md` this correction takes only the target
+paths; the actions that document fixes for the plan documents (including
+`replace_own`) do not apply here, and the ordinary plan-document action decision
+is left to that spec-writer-contract rule. An approved `amend_other_feature`
+target stays fixed as approved.
 
 The dispatch is `Task(subagent_type="em-workflow:implementation-planner")` with
 `planning_inputs.feature_docs_correction` copied from the entry script's `targets`
-(each a `task_id` and a `path`), and with the `write_policy` of
+(each a `task_id` and a `path`), and with the target paths of the `write_policy` of
 `references/contracts/planner-contract.md`'s
-`### feature_docs_correction (dispatch-resolved value)`.
+`### feature_docs_correction (dispatch-resolved value)`, each carrying the action
+chosen above.
 
 A stage-1 request result is handled by the grant rule of section 4
 (`## 4. Planner dispatch`), followed by one re-dispatch.

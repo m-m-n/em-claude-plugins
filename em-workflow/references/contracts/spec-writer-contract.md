@@ -156,7 +156,11 @@ recorded digest written by the earlier git-blob method is compared as its
 For an implementation-planner dispatch of create-plan, the orchestrator tells
 the second bullet's case from the third bullet's case by the planning-lineage
 rule below. For create-spec and the design step the three bullets apply as
-written. The rule applies to the action decision of every
+written to every existing target whose action is not fixed individually. The
+design step's `design-system/tokens.yaml` (`extend_only`) and
+`design-system/tokens.html` (`regenerate`) keep the actions fixed by this
+contract's table and by `designer-contract.md`'s table; they do not enter the
+three bullets, so a matching digest never turns them into `replace_own`. The rule applies to the action decision of every
 implementation-planner dispatch of create-plan: the planner dispatch of
 `references/phases/create-plan-phase.md` section 4 (the first pass, every
 re-dispatch, and re-planning after a spec-change transition or a tier
