@@ -9244,9 +9244,19 @@ def _args_json_declaration_word(marked, word):
                 out.append(source[pos + 1])
             pos += 2
             continue
+        prev_idx = pos - 1
+        if ch == "~":
+            # Bash removes backslash-newline pairs, so skip them when
+            # looking for the character before the `~`.
+            while (
+                prev_idx - 1 >= lo
+                and source[prev_idx] == "\n"
+                and source[prev_idx - 1] == "\\"
+            ):
+                prev_idx -= 2
         if ch in "$`*?":
             restorable = False
-        elif ch == "~" and (pos == lo or source[pos - 1] in "=:"):
+        elif ch == "~" and (prev_idx < lo or source[prev_idx] in "=:"):
             # Tilde expansion: a word-initial unquoted `~`, or one right
             # after `=` or `:`, expands to a value (OLDPWD, PWD, a home
             # directory) that is not settled statically.
