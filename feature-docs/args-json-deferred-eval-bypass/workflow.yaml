@@ -145,9 +145,9 @@ workflow:
   status: completed
   completed_at_commit: 659d039f7de144c92d9c4312ce39202f40afa028
 - id: verify
-  status: in_progress
+  status: failed
   result: fail
-  round: 1
+  round: 2
   passed_ids:
   - TS-1
   - TS-2
@@ -156,6 +156,7 @@ workflow:
   - TS-5
   - TS-6
   - TS-7
+  - TS-8
   - TS-9
   - TS-10
   - TS-11
@@ -165,6 +166,9 @@ workflow:
   - TS-15
   - TS-16
   - TS-17
+  - TS-18
+  - SC-1
+  - SC-2
   - SC-3
   - SC-4
   - SC-6
@@ -173,23 +177,14 @@ workflow:
   - TM-3
   - TM-4
   failed_items:
-  - id: TS-8
-    category: comprehensive
-    note: 'unit test test_the_words_of_a_compound_assignment_are_no_command fails
-      on subTest A=([@]=1 [12]=2): the chunk reads as uncertain while the test expects
-      KIND_NOTHING (Bash itself rejects [@]= as an indexed-array element subscript)'
-  - id: SC-1
-    category: comprehensive
-    note: FR6 is not fully verified because TS-8 fails
-  - id: SC-2
-    category: comprehensive
-    note: TS-8 fails
   - id: SC-5
     category: comprehensive
-    note: python3 -m unittest discover -s tests exits 1 (TS-8 subTest). The 4 failures
-      in tests/test_review_perspective_model_effort_version_bump.py also fail on the
-      base commit (Actions patch bump) and are excluded from this feature as pre-existing
-      and out of scope
+    note: 'python3 em-workflow/hooks/tests/run-destructive-guard.py passes (1598/1598)
+      and every feature test passes (tests.test_destructive_guard_args_json: 226 OK),
+      but python3 -m unittest discover -s tests exits 1 with 4 failures, all in
+      tests/test_review_perspective_model_effort_version_bump.py (plugin version patch
+      is not 0). They fail identically on the base commit; the feature changes no
+      version (NFR4), so they cannot be fixed within this feature''s scope'
 - id: retrospect
   status: pending
 tasks:
@@ -501,12 +496,12 @@ requirements:
 batch:
   review_rework_count: 1
   verify_rework:
-    rounds: 1
+    rounds: 2
     failed_id_counts:
       TS-8: 1
       SC-1: 1
       SC-2: 1
-      SC-5: 1
+      SC-5: 2
   infra_resume:
     rounds: 0
     cap: 2
