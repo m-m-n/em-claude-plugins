@@ -1,13 +1,26 @@
 schema_version: 1
 feature: mcp-bridge-function-shadow
 phase: create-plan
-status: completed
-generation: 1
-base_revision: 7937443fe3a9555be05172096b55e89ab2bb729c
-last_input_digest: sha256:c9a847e3a641690baaf8361ad8d7528c73152f0f53995cfc2da4629eebde3ba4
-active_request_id: null
+status: dispatching
+generation: 2
+base_revision: 3b2337aee482a16972c7abbdc3f134d93e3d9961
+last_input_digest: sha256:885bdd1592f40a7e5d64fe68c11f5a0f3dd33dbfab7fef2e52660451dcedb159
+active_request_id: create-plan-run-0002
 packets: {}
-answers: {}
+answers:
+  create-plan.artifact-overwrite:
+    packet_id: null
+    answered_at: '2026-11-21T20:00:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - preserve_and_reuse
+    freeform: null
+    normalized_answer: preserve_and_reuse
+    resolution_note: VERIFICATION.md の現在の digest が create-plan.yaml に記録された直前の create-plan 出力と一致しない（rework-run-0001
+      が書き換え済み）。digest-mismatch 分岐として batch-policies.yaml の create-plan.artifact-overwrite（preserve_and_reuse）を適用し、VERIFICATION.md
+      を preserve にした。replace_own（planning lineage 読み）とどちらを取るかを Codex に相談し、create-plan 側の same-phase は
+      create-plan の出力を指すという判断を採用した
 worker_runs:
 - request_id: create-plan-run-0001
   status: completed
@@ -27,6 +40,24 @@ worker_runs:
   - feature-docs/mcp-bridge-function-shadow/THREAT-MODEL.md
   - feature-docs/mcp-bridge-function-shadow/VERIFICATION.md
   - feature-docs/mcp-bridge-function-shadow/tasks/task0001.md
+- request_id: create-plan-run-0002
+  status: dispatched
+  input_digest: sha256:885bdd1592f40a7e5d64fe68c11f5a0f3dd33dbfab7fef2e52660451dcedb159
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/planner-contract.md: sha256:df2bf3f0321c2627a31b878a14adb176ee7c2131638245112e5d3bb27f7a3682
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
+    em-workflow/references/workflow-schema.md: sha256:5bd8500c203c4f17cde4193ee43d561073fe7f47099d61a55eb593e098881d87
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/mcp-bridge-function-shadow/SPEC.md: sha256:97c7ac87fabbcd1ab37d140358d377bf688eebeb7bea46c0f8eec12472ce6c62
+    feature-docs/mcp-bridge-function-shadow/THREAT-MODEL.md: sha256:8847757894ddbe4d7200bdd40e428dcaab0c6c1f0a02a4cc8d55f89fa335e2f7
+    feature-docs/mcp-bridge-function-shadow/VERIFICATION.md: sha256:fce2e547ed784efd77e5f66710699cbdd01c06bd3955e3bb24310dad72886496
+    feature-docs/mcp-bridge-function-shadow/tasks/task0001.md: sha256:83b26493ec9d6a9064ad26ed139f52bc15a405116a0524eb1a3ed9c7ef7f9a2c
+    feature-docs/mcp-bridge-function-shadow/tasks/task0002.md: sha256:9ab2b8acea9d424718ad25cf3a876dea1aa91b3bc6a3a1e774344672119f8c45
+    feature-docs/mcp-bridge-function-shadow/workflow.yaml: sha256:fe8e433bb5b42e7a7d570cb7263accd9fa6c083e25220d5967a6cb8c6b24729d
 artifacts:
 - path: feature-docs/mcp-bridge-function-shadow/THREAT-MODEL.md
   sha256: sha256:8847757894ddbe4d7200bdd40e428dcaab0c6c1f0a02a4cc8d55f89fa335e2f7
