@@ -43,17 +43,21 @@ defined by `references/contracts/spec-writer-contract.md` (the write-policy
 model's owning document — the actions, the `targets` /
 `allowed_write_roots` split, `expect_digest` requirements). This contract
 does not restate that model. The planner's `write_policy.targets` cover
-`IMPLEMENTATION.md` and `VERIFICATION.md` (action `create` on a first pass,
-`replace_own` on a same-phase rewrite); `THREAT-MODEL.md` is a target on the
-same terms (action `create` on a first pass, `replace_own` on a same-phase
-rewrite — the existing re-plan authorization path applies unchanged). At the
-`minimal` tier, `TASK.md` is additionally a write_policy target with action
-`extend_only` and `expect_digest` set to its digest at dispatch time (see
-the minimal-tier `TASK.md` append rule below). Task plan files are new per
-task and so are governed by `allowed_write_roots` (`tasks/`) with
-`written_artifacts` reporting each path created. `amend_other_feature` targets
-appear in `write_policy.targets` only after a request, as
-`## Other-feature documents` below states.
+`IMPLEMENTATION.md` and `VERIFICATION.md`; `THREAT-MODEL.md` is a target on the
+same terms (the existing re-plan authorization path applies unchanged). Each
+existing task plan under `tasks/` at dispatch time is also listed in
+`write_policy.targets`. A task plan that does not yet exist stays under
+`allowed_write_roots` (`tasks/`), with `written_artifacts` reporting each path
+created. This contract fixes the paths of these targets only: the orchestrator
+chooses their actions by `references/contracts/spec-writer-contract.md`, "How
+the orchestrator chooses each target's action before dispatch" (`create` for a
+path that does not exist, otherwise `replace_own` or the outcome of the
+digest-mismatch branch). At the `minimal` tier, `TASK.md` is additionally a
+write_policy target with action `extend_only` and `expect_digest` set to its
+digest at dispatch time (see the minimal-tier `TASK.md` append rule below).
+That action, and the action of each `amend_other_feature` target, which appears
+in `write_policy.targets` only after a request, as `## Other-feature documents`
+below states, are fixed and are not chosen by that rule.
 
 ### Minimal-tier `TASK.md` append (SC-3)
 
@@ -139,9 +143,12 @@ path_correction:                   # null on every other dispatch
   task ids and project-relative paths.
 - **Digest**: when present it is a `value_inputs` member of this worker's
   `input_digest`, as stated under `## digest_inputs` below.
-- **write_policy**: on this dispatch `write_policy.targets` has action
-  `replace_own` for IMPLEMENTATION.md, VERIFICATION.md and each target's task
-  plan.
+- **write_policy**: on this dispatch `write_policy.targets` lists
+  IMPLEMENTATION.md, VERIFICATION.md and each target's task plan. This
+  contract fixes their paths only. The orchestrator chooses their actions
+  (`replace_own`, or the outcome of the digest-mismatch branch) by
+  `references/contracts/spec-writer-contract.md`, "How the orchestrator
+  chooses each target's action before dispatch".
 - **Output**: the `workflow_patch` is `replace_planning` carrying
   `tasks_patch.path_corrections`, whose shape and permission conditions are
   owned by `references/workflow-patch.md`, section
@@ -178,10 +185,15 @@ feature_docs_correction:           # null on every other dispatch
 - **Digest**: the orchestrator includes it, when present, as a
   `value_inputs` member of this worker's `input_digest`, as stated under
   `## digest_inputs` below.
-- **write_policy**: on this dispatch `write_policy.targets` has action
-  `replace_own` for IMPLEMENTATION.md, VERIFICATION.md and each target's task
-  plan, plus the `amend_other_feature` targets after a request
-  (`## Other-feature documents` below). `allowed_write_roots` is empty.
+- **write_policy**: on this dispatch `write_policy.targets` lists
+  IMPLEMENTATION.md, VERIFICATION.md and each target's task plan, plus the
+  `amend_other_feature` targets after a request
+  (`## Other-feature documents` below). The orchestrator chooses the actions
+  of the plan documents (`replace_own`, or the outcome of the digest-mismatch
+  branch) by `references/contracts/spec-writer-contract.md`, "How the
+  orchestrator chooses each target's action before dispatch"; an
+  `amend_other_feature` target keeps its own action. `allowed_write_roots` is
+  empty.
 - **Output**: the `workflow_patch` is `replace_planning` carrying
   `tasks_patch.feature_docs_removals`, whose shape and permission conditions
   are owned by `references/workflow-patch.md`, section

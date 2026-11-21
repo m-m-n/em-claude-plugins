@@ -471,7 +471,9 @@ patch field by `${CLAUDE_PLUGIN_ROOT}/references/workflow-patch.md`, section
     stages stated in the paragraph on other-feature documents in step 4,
     which apply on this dispatch.
   - The own feature's IMPLEMENTATION.md or VERIFICATION.md is edited
-    directly, under its `replace_own` target.
+    directly when its `write_policy.targets` entry permits writing
+    (`replace_own` or `replace_authorized`). Under a `preserve` target it is
+    not written, and the planner returns `status: blocked` naming the path.
   - A document the target plan asked no change of is only removed: nothing in
     the document changes.
   - Any other path that needs a change is never written: return
