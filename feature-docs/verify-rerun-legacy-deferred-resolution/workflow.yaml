@@ -147,7 +147,7 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/verify-rerun-legacy-deferred-resolution/task0001
   task0002:
@@ -165,7 +165,7 @@ tasks:
     - FR6
     - NFR1
     - NFR4
-    status: in_progress
+    status: merged
     notes: null
     branch: em-workflow/verify-rerun-legacy-deferred-resolution/task0002
 review:
