@@ -4,8 +4,8 @@ phase: create-spec
 status: dispatching
 generation: 1
 base_revision: d42e00bb0d6379f40470c88cc8877934d7191608
-last_input_digest: sha256:3e91cbcd46c20e1ee87a390e0e42f2f4dde06cba1492ae78589c8d911dbb8ea7
-active_request_id: create-spec-run-0002
+last_input_digest: sha256:242fdc75e2c9e82bc69dab38c2f6448d5e095e9a076460b17cd6d1bf40757f49
+active_request_id: create-spec-run-0003
 packets:
   create-spec-q0001:
     status: answered
@@ -18,6 +18,12 @@ packets:
     - question_id: req.shadow-verdict
       status: answered
     - question_id: design-step.recommendation
+      status: answered
+  create-spec-q0002:
+    status: answered
+    issued_at: '2026-11-21T14:20:04+09:00'
+    questions:
+    - question_id: req.shadow-env-import
       status: answered
 answers:
   req.shadow-constructs:
@@ -73,13 +79,31 @@ answers:
     normalized_answer: デザインのステップを省く
     resolution_note: 'gate: create-spec.design-step; policy decide_autonomously →
       analyst recommendation skip（UI の無いフックの静的解析の修正）'
+  req.shadow-env-import:
+    packet_id: create-spec-q0002
+    answered_at: '2026-11-21T14:20:04+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - notion-check-only
+    freeform: null
+    normalized_answer: どの語でも BASH_FUNC_ か BASH_ALIASES を含めば（BASH_CMDS と同じ部分一致）、notion
+      ペアの除外を外す。FR7 の共有語彙（ヒアドキュメントのデータ判定と override_seen）は変えない
+    resolution_note: 'gate: create-spec.requirement-clarification; policy codex_consultation;
+      Codex consulted (codex entry, 1 turn); chosen notion-check-only; not chosen
+      shared-fr7-vocabulary, answered-set-only; key points: FR7 に加えると override_seen
+      を通じてヒアドキュメントのデータ判定が未確定になり保留済みの本文も再検査に回る。notion の --args-json 除外の判定に限って足すのが修正範囲に合う;
+      Opus escalation not run'
 worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
   input_digest: sha256:fc98c645e3a938e8f38c67e871dd9d167f84acb9bfc6cd879bcce874a3f479ea
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:3e91cbcd46c20e1ee87a390e0e42f2f4dde06cba1492ae78589c8d911dbb8ea7
+- request_id: create-spec-run-0003
+  status: dispatched
+  input_digest: sha256:242fdc75e2c9e82bc69dab38c2f6448d5e095e9a076460b17cd6d1bf40757f49
 artifacts: []
 patches: []
 progress_fingerprint: null
