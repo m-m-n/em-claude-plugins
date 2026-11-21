@@ -4,7 +4,7 @@ baseline_failures:             # 4a: python3 -m unittest discover -s tests -> Ra
   - tests.test_review_perspective_model_effort_version_bump.TestEmReviewManifest.test_version_is_a_minor_bump_over_baseline
   - tests.test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_workflow_entry_version_is_a_minor_bump_over_baseline
   - tests.test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_review_entry_version_is_a_minor_bump_over_baseline
-final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests (result noted in the task report)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 16932 tests, OK (skipped=1)
 acceptance_tests:
   AC-1:
     tests:
