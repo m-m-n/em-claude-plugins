@@ -1338,5 +1338,455 @@ class TestLayer5ZeroArtifacts(unittest.TestCase):
         self.assertRegex(self.section, r"an exit code of `2`")
 
 
+
+# ---------------------------------------------------------------------------
+# rework-replan-artifact-digest task0001 (FR1 to FR7, NFR3, NFR4; TS-1 to TS-4)
+#
+# create-plan's per-target action decision also accepts a match against the
+# last `artifacts` entry for the path in `phase-state/rework.yaml`. The rule
+# is owned by spec-writer-contract.md, "How the orchestrator chooses each
+# target's action before dispatch". create-plan-phase.md section 4, the part
+# of section 13 before its subsection, and the subsection "Feature-docs
+# correction dispatch" cite that section by path and section name and state
+# none of the rule.
+#
+# Each document is cut out by its heading and whitespace-normalized; the tests
+# check key tokens and phrases, never a whole sentence or a line position.
+# Every presence matcher has a forged copy on which it fails, and every
+# absence matcher has a forged copy on which it fires. Existing test methods
+# above stay unchanged.
+# ---------------------------------------------------------------------------
+
+SPEC_WRITER_CONTRACT_PATH = (
+    PLUGIN_ROOT / "references" / "contracts" / "spec-writer-contract.md"
+)
+ACTION_CHOICE_PATH_CITATION = "references/contracts/spec-writer-contract.md"
+ACTION_CHOICE_TITLE = (
+    "How the orchestrator chooses each target's action before dispatch"
+)
+SECTION_4_TITLE = "4. Planner dispatch"
+SECTION_13_TITLE = "13. Final-path correction dispatch"
+FEATURE_DOCS_CORRECTION_TITLE = "Feature-docs correction dispatch"
+REWORK_YAML = "phase-state/rework.yaml"
+
+# How far after the owner path the section name may appear in a citation.
+_CITATION_WINDOW = 200
+
+# The statements the owner section makes about create-plan's planning-lineage
+# rule: (test scenario, label, pattern, token). `pattern` is matched against
+# the whitespace-normalized section, case-insensitively. `token` is a text
+# whose removal from the section must make the pattern fail (the forged copy).
+OWNER_STATEMENTS = (
+    (
+        "TS-1",
+        "last entry for the path in phase-state/create-plan.yaml",
+        r"last `artifacts` entry for that path in `phase-state/create-plan\.yaml`",
+        "phase-state/create-plan.yaml",
+    ),
+    (
+        "TS-1",
+        "last entry for the path in phase-state/rework.yaml",
+        r"last `artifacts` entry for that path in `phase-state/rework\.yaml`",
+        REWORK_YAML,
+    ),
+    (
+        "TS-1",
+        "replace_own for a match",
+        r"`replace_own`.{0,300}last `artifacts` entry for that path in "
+        r"`phase-state/create-plan\.yaml`",
+        "`replace_own`",
+    ),
+    (
+        "TS-1",
+        "earlier entries and other paths do not count",
+        r"earlier entries for the same path",
+        "earlier entries for the same path",
+    ),
+    (
+        "TS-1",
+        "other phase-state files do not count",
+        r"other phase-state files do not count",
+        "other phase-state files do not count",
+    ),
+    (
+        "TS-1",
+        "scope: re-planning after a spec-change transition or a tier upgrade",
+        r"re-planning after a spec-change transition or a tier upgrade",
+        "re-planning after a spec-change transition or a tier upgrade",
+    ),
+    (
+        "TS-1",
+        "scope: the section 4 planner dispatch",
+        r"`references/phases/create-plan-phase\.md` section 4",
+        "`references/phases/create-plan-phase.md` section 4",
+    ),
+    (
+        "TS-1",
+        "scope: the section 13 final-path correction dispatch",
+        r"final-path correction dispatch",
+        "final-path correction dispatch",
+    ),
+    (
+        "TS-1",
+        "scope: the section 13 feature-docs correction dispatch",
+        r"feature-docs correction dispatch",
+        "feature-docs correction dispatch",
+    ),
+    (
+        "TS-2",
+        "no match: the create-plan.artifact-overwrite gate",
+        r"\bneither\b.{0,200}`create-plan\.artifact-overwrite`",
+        "`create-plan.artifact-overwrite`",
+    ),
+    (
+        "TS-2",
+        "no match: the batch-policies.yaml decision",
+        r"`create-plan\.artifact-overwrite`.{0,200}"
+        r"`references/batch-policies\.yaml`",
+        "`references/batch-policies.yaml`",
+    ),
+    (
+        "TS-2",
+        "no other condition gives replace_own",
+        r"no other condition gives `replace_own`",
+        "other condition gives `replace_own`",
+    ),
+    (
+        "TS-3",
+        "rework.yaml counts only for phase rework and a matching feature",
+        r"phase `rework`.{0,60}feature equal to the workflow's feature",
+        "feature equal to the workflow's feature",
+    ),
+    (
+        "TS-3",
+        "no record: an absent file",
+        r"\babsent file\b",
+        "absent file",
+    ),
+    (
+        "TS-3",
+        "no record: an unreadable or malformed file",
+        r"unreadable or malformed file",
+        "unreadable or malformed file",
+    ),
+    (
+        "TS-3",
+        "no record: a mismatched phase or feature",
+        r"mismatched phase or feature",
+        "mismatched phase or feature",
+    ),
+    (
+        "TS-3",
+        "no record: no artifacts entry for the path",
+        r"no `artifacts` entry for the path",
+        "no `artifacts` entry for the path",
+    ),
+    (
+        "TS-3",
+        "no record is counted as no record from rework.yaml",
+        r"\bno record from `phase-state/rework\.yaml`",
+        "no record from `phase-state/rework.yaml`",
+    ),
+    (
+        "TS-3",
+        "the decision then rests on create-plan.yaml alone",
+        r"rests on the `phase-state/create-plan\.yaml` comparison alone",
+        "comparison alone",
+    ),
+    (
+        "TS-3",
+        "rework.yaml recorded values follow Legacy records",
+        r"`phase-state/rework\.yaml`.{0,250}"
+        r"`references/artifact-digest\.md` \"Legacy records\"",
+        "\"Legacy records\"",
+    ),
+)
+
+
+def _owner_section_of(contract_text):
+    return _norm(_section(contract_text, ACTION_CHOICE_TITLE, level=2))
+
+
+def _statements_of(scenario):
+    return [entry for entry in OWNER_STATEMENTS if entry[0] == scenario]
+
+
+def _statement_gaps(flat, statements=OWNER_STATEMENTS):
+    """Labels of the statements whose pattern does not match `flat`."""
+    return [
+        label
+        for _scenario, label, pattern, _token in statements
+        if not re.search(pattern, flat, re.IGNORECASE)
+    ]
+
+
+def _section_head(text, title, level):
+    """The body of the one heading `title`, up to the next heading of any
+    level: for a level-2 section, the part before its first subsection."""
+    _section(text, title, level=level)  # exactly one such heading
+    lines = text.splitlines()
+    heads = _headings(text)
+    for pos, (start, lvl, head_title) in enumerate(heads):
+        if head_title == title and lvl == level:
+            end = heads[pos + 1][0] if pos + 1 < len(heads) else len(lines)
+            return "\n".join(lines[start + 1:end])
+    raise AssertionError(f"no heading {title!r}")
+
+
+def _cites_action_choice_owner(text):
+    """True when the (whitespace-normalized) text names the contract path and,
+    within a citation's reach after it, the owner section's name."""
+    flat = _norm(text)
+    start = flat.find(ACTION_CHOICE_PATH_CITATION)
+    while start != -1:
+        reach = flat[start:start + len(ACTION_CHOICE_PATH_CITATION) + _CITATION_WINDOW]
+        if ACTION_CHOICE_TITLE in reach:
+            return True
+        start = flat.find(ACTION_CHOICE_PATH_CITATION, start + 1)
+    return False
+
+
+def _names_rework_yaml(text):
+    return REWORK_YAML in text
+
+
+def _site_slices(create_plan_text):
+    """The three create-plan citation sites, by label."""
+    return {
+        "section 4": _section(create_plan_text, SECTION_4_TITLE, level=2),
+        "section 13 before its subsection": _section_head(
+            create_plan_text, SECTION_13_TITLE, level=2
+        ),
+        "Feature-docs correction dispatch": _section(
+            create_plan_text, FEATURE_DOCS_CORRECTION_TITLE, level=3
+        ),
+    }
+
+
+_FORGED_CITATION = (
+    "The orchestrator chooses the action of each `write_policy.targets` entry by "
+    "`references/contracts/spec-writer-contract.md`, \"How the orchestrator "
+    "chooses each target's action before dispatch\"."
+)
+
+
+class TestPlanningLineageMatchersFireOnForgedText(unittest.TestCase):
+    """TS-1 to TS-4 non-vacuity: each presence matcher fails on a forged copy
+    that lacks its statement, and each absence matcher fires on a forged copy
+    that carries the token."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.contract = _read(SPEC_WRITER_CONTRACT_PATH)
+        cls.owner = _owner_section_of(cls.contract)
+
+    def test_each_owner_statement_fails_on_the_section_without_its_token(self):
+        for _scenario, label, pattern, token in OWNER_STATEMENTS:
+            with self.subTest(statement=label):
+                self.assertIn(
+                    token, self.owner,
+                    "the forged copy would equal the section; the token "
+                    "must be in the owner section for this check to mean "
+                    "anything",
+                )
+                forged = _norm(self.owner.replace(token, ""))
+                self.assertIsNone(
+                    re.search(pattern, forged, re.IGNORECASE),
+                    f"statement still matches without {token!r}",
+                )
+                self.assertIn(label, _statement_gaps(forged))
+
+    def test_the_rework_yaml_statement_is_the_one_that_fails_without_rework_yaml(self):
+        forged = _norm(self.owner.replace(REWORK_YAML, ""))
+        gaps = _statement_gaps(forged)
+        self.assertIn("last entry for the path in phase-state/rework.yaml", gaps)
+        self.assertNotIn(
+            "last entry for the path in phase-state/create-plan.yaml", gaps
+        )
+
+    def test_the_owner_statements_do_not_count_as_satisfied_outside_the_section(self):
+        # The rule sits in the next section instead of the owner section: the
+        # slice by heading must not find it.
+        forged = (
+            f"## {ACTION_CHOICE_TITLE}\n\nthe introductory paragraph only.\n\n"
+            "## `completed` payload\n\n" + self.owner + "\n"
+        )
+        sliced = _owner_section_of(forged)
+        self.assertEqual(
+            len(_statement_gaps(sliced)), len(OWNER_STATEMENTS)
+        )
+
+    def test_the_owner_section_slice_matches_exactly_one_heading(self):
+        with self.assertRaises(AssertionError):
+            _owner_section_of("## Something else\n\ntext\n")
+        with self.assertRaises(AssertionError):
+            _owner_section_of(
+                f"## {ACTION_CHOICE_TITLE}\n\na\n\n## {ACTION_CHOICE_TITLE}\n\nb\n"
+            )
+
+    def test_git_hash_object_fires_on_a_forged_owner_section(self):
+        forged = self.owner + " compare it with `git hash-object --` first."
+        self.assertTrue(_names_git_hash_object(forged))
+        self.assertFalse(_names_git_hash_object(self.owner))
+
+    def test_citation_matcher_accepts_the_citation_and_rejects_forged_copies(self):
+        self.assertTrue(_cites_action_choice_owner(_FORGED_CITATION))
+        self.assertTrue(
+            _cites_action_choice_owner(
+                "see `references/contracts/spec-writer-contract.md`,\n"
+                "\"How the orchestrator chooses each\ntarget's action before "
+                "dispatch\""
+            )
+        )
+        without_path = _FORGED_CITATION.replace(ACTION_CHOICE_PATH_CITATION, "")
+        without_title = _FORGED_CITATION.replace(ACTION_CHOICE_TITLE, "")
+        self.assertFalse(_cites_action_choice_owner(without_path))
+        self.assertFalse(_cites_action_choice_owner(without_title))
+        self.assertFalse(_cites_action_choice_owner(""))
+        far_title = (
+            "`references/contracts/spec-writer-contract.md` "
+            + "x " * (_CITATION_WINDOW // 2 + 50)
+            + ACTION_CHOICE_TITLE
+        )
+        self.assertFalse(_cites_action_choice_owner(far_title))
+
+    def test_absence_matchers_fire_on_a_forged_site_slice(self):
+        site = _FORGED_CITATION
+        self.assertFalse(_names_git_hash_object(site))
+        self.assertEqual(_restatement_markers_in(site), [])
+        self.assertFalse(_names_rework_yaml(site))
+        self.assertTrue(
+            _names_git_hash_object(site + " hash it with `git hash-object --`.")
+        )
+        self.assertTrue(
+            _restatement_markers_in(site + " It hashes the file's raw bytes.")
+        )
+        self.assertTrue(
+            _names_rework_yaml(site + " It reads `phase-state/rework.yaml`.")
+        )
+
+    def test_rework_yaml_probe_is_not_part_of_the_restatement_marker_list(self):
+        # The marker list is also applied to references/rework-task-synthesis.md
+        # section 10, which names `phase-state/rework.yaml` by design.
+        self.assertEqual(
+            _restatement_markers_in("it writes `phase-state/rework.yaml`"), []
+        )
+        self.assertTrue(_names_rework_yaml("it writes `phase-state/rework.yaml`"))
+
+    def test_section_13_head_slice_stops_before_the_subsection(self):
+        forged = (
+            f"## {SECTION_13_TITLE}\n\n**Pre-dispatch.** no citation here.\n\n"
+            f"### {FEATURE_DOCS_CORRECTION_TITLE}\n\n{_FORGED_CITATION}\n\n"
+            "## 14. Next\n\ntext\n"
+        )
+        slices = _site_slices(
+            "## 4. Planner dispatch\n\ntext\n\n## 5. Question loop\n\nx\n\n"
+            + forged
+        )
+        self.assertFalse(
+            _cites_action_choice_owner(slices["section 13 before its subsection"])
+        )
+        self.assertTrue(
+            _cites_action_choice_owner(slices["Feature-docs correction dispatch"])
+        )
+
+    def test_section_13_head_slice_keeps_the_text_before_the_first_subsection(self):
+        forged = (
+            f"## {SECTION_13_TITLE}\n\n{_FORGED_CITATION}\n\n"
+            f"### {FEATURE_DOCS_CORRECTION_TITLE}\n\nno citation here.\n"
+        )
+        head = _section_head(forged, SECTION_13_TITLE, level=2)
+        self.assertTrue(_cites_action_choice_owner(head))
+        sub = _section(forged, FEATURE_DOCS_CORRECTION_TITLE, level=3)
+        self.assertFalse(_cites_action_choice_owner(sub))
+
+    def test_section_slices_reject_a_missing_site(self):
+        with self.assertRaises(AssertionError):
+            _site_slices("## 4. Planner dispatch\n\ntext\n")
+
+
+class TestActionChoiceOwnerStatesPlanningLineageRule(unittest.TestCase):
+    """TS-1, TS-2, TS-3 (AC-1, AC-2, AC-3): the owner section of
+    spec-writer-contract.md states create-plan's planning-lineage rule."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.contract = _read(SPEC_WRITER_CONTRACT_PATH)
+        cls.owner = _owner_section_of(cls.contract)
+
+    def _assert_scenario_statements(self, scenario):
+        statements = _statements_of(scenario)
+        self.assertTrue(statements, scenario)
+        for _scenario, label, pattern, _token in statements:
+            with self.subTest(statement=label):
+                self.assertRegex(self.owner, f"(?i){pattern}")
+
+    def test_ts1_names_both_phase_state_files_with_the_last_entry_rule_and_the_scope(self):
+        self._assert_scenario_statements("TS-1")
+
+    def test_ts2_routes_a_create_plan_target_with_no_match_to_the_gate_and_batch_policy(self):
+        self._assert_scenario_statements("TS-2")
+
+    def test_ts3_states_the_rework_yaml_read_conditions_and_legacy_records(self):
+        self._assert_scenario_statements("TS-3")
+
+    def test_ts3_owner_section_does_not_name_git_hash_object(self):
+        self.assertFalse(_names_git_hash_object(self.owner))
+
+    def test_no_owner_statement_is_left_unchecked(self):
+        self.assertEqual(_statement_gaps(self.owner), [])
+
+
+class TestCreatePlanSitesCiteActionChoiceOwner(unittest.TestCase):
+    """TS-4 (AC-4): create-plan-phase.md section 4, the part of section 13
+    before its subsection, and the subsection each cite the owner by path and
+    section name, and restate none of it."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read(CREATE_PLAN_PATH)
+        cls.slices = _site_slices(cls.text)
+
+    def test_there_are_exactly_three_sites(self):
+        self.assertEqual(len(self.slices), 3)
+
+    def test_ts4_each_site_cites_the_owner_path_and_section_name(self):
+        for label, body in self.slices.items():
+            with self.subTest(site=label):
+                self.assertTrue(
+                    _cites_action_choice_owner(body),
+                    f"{label} lacks a citation of "
+                    f"{ACTION_CHOICE_PATH_CITATION} / {ACTION_CHOICE_TITLE}",
+                )
+
+    def test_ts4_no_site_names_git_hash_object(self):
+        for label, body in self.slices.items():
+            with self.subTest(site=label):
+                self.assertFalse(_names_git_hash_object(body))
+
+    def test_ts4_no_site_carries_a_restatement_marker(self):
+        for label, body in self.slices.items():
+            with self.subTest(site=label):
+                self.assertEqual(_restatement_markers_in(body), [])
+
+    def test_ts4_no_site_names_phase_state_rework_yaml(self):
+        for label, body in self.slices.items():
+            with self.subTest(site=label):
+                self.assertFalse(_names_rework_yaml(body))
+
+    def test_ts4_the_document_as_a_whole_still_never_names_git_hash_object(self):
+        self.assertFalse(_names_git_hash_object(self.text))
+
+    def test_the_site_slices_fail_the_citation_when_the_citation_is_taken_out(self):
+        for label, body in self.slices.items():
+            with self.subTest(site=label):
+                flat = _norm(body)
+                self.assertIn(ACTION_CHOICE_PATH_CITATION, flat)
+                forged = flat.replace(ACTION_CHOICE_PATH_CITATION, "")
+                self.assertFalse(_cites_action_choice_owner(forged))
+                forged = flat.replace(ACTION_CHOICE_TITLE, "")
+                self.assertFalse(_cites_action_choice_owner(forged))
+
+
 if __name__ == "__main__":
     unittest.main()

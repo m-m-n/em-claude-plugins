@@ -222,6 +222,10 @@ Before the `Task` dispatch, the orchestrator verifies the planner's
 `write_policy.targets` per `references/artifact-digest.md`
 (`Pre-dispatch verification`).
 
+The orchestrator chooses the action of each `write_policy.targets` entry by
+the rule of `references/contracts/spec-writer-contract.md`, "How the
+orchestrator chooses each target's action before dispatch".
+
 The planner run's `worker_runs` entry in `phase-state/create-plan.yaml`
 carries `dispatch_digest_inputs`, the per-path `digest_inputs` map of the
 dispatch's digest_source, written with the entry when it is created
@@ -509,7 +513,10 @@ restated.
 
 **Pre-dispatch.** The clean-worktree precondition and the scope verification are
 those of section 2 (`references/phases/create-spec-phase.md`, "Scope
-verification"), unchanged.
+verification"), unchanged. The orchestrator chooses the action of each
+`write_policy.targets` entry by the rule of
+`references/contracts/spec-writer-contract.md`, "How the orchestrator chooses
+each target's action before dispatch".
 
 **Dispatch.** `Task(subagent_type="em-workflow:implementation-planner")` with
 `planning_inputs.path_correction` (resolved by the orchestrator from the entry
@@ -547,6 +554,10 @@ not restated.
 The checks before the dispatch are those of section 2: the clean-worktree
 precondition and the scope verification (`references/phases/create-spec-phase.md`,
 "Scope verification"), unchanged.
+
+The orchestrator chooses the action of each `write_policy.targets` entry by the
+rule of `references/contracts/spec-writer-contract.md`, "How the orchestrator
+chooses each target's action before dispatch".
 
 The dispatch is `Task(subagent_type="em-workflow:implementation-planner")` with
 `planning_inputs.feature_docs_correction` copied from the entry script's `targets`
