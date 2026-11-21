@@ -1,7 +1,7 @@
 schema_version: 1
 feature: args-json-deferred-eval-bypass
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 9d768daa4d35e4a2d39d43bc1f3dc97a823bc602
 last_input_digest: sha256:47127e043413b4d2a1b3773f3757b635a7b3fd7be440827b6d1c50b0a0d94012
