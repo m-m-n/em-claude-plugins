@@ -8642,6 +8642,8 @@ def _args_json_shadow_scan(marked):
                 word in restored for word in _ARGS_JSON_SHADOW_ENVIRONMENT_WORDS
             ):
                 return True
+            if restored_ok and "BASH_CMDS" in restored:
+                return True
         fused = _split_fused_closer_redirects(toks)
         words_only, _redirects = split_redirects(fused, lexed)
         lead = _shape_leading(words_only, case_stack, in_tail[index])
@@ -10375,7 +10377,7 @@ def _skip_assignments_and_wrappers(toks, start=0, end=None, skipped=None):
         if re.match(r"^[A-Za-z_]\w*=", t) or (
             after_env
             and not getattr(t, "is_operator", False)
-            and t.find("=") > 0
+            and t.find("=") >= 0
         ):  # VAR=value prefix (env's option scan has already ended here, so a
             # leading `-` word, e.g. after `--`, is still an assignment)
             if skipped is not None:
