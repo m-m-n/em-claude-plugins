@@ -41,7 +41,7 @@ worker_runs:
   - feature-docs/mcp-bridge-function-shadow/VERIFICATION.md
   - feature-docs/mcp-bridge-function-shadow/tasks/task0001.md
 - request_id: create-plan-run-0002
-  status: dispatched
+  status: blocked
   input_digest: sha256:885bdd1592f40a7e5d64fe68c11f5a0f3dd33dbfab7fef2e52660451dcedb159
   dispatch_digest_inputs:
     em-workflow/references/contracts/planner-contract.md: sha256:df2bf3f0321c2627a31b878a14adb176ee7c2131638245112e5d3bb27f7a3682
@@ -58,6 +58,7 @@ worker_runs:
     feature-docs/mcp-bridge-function-shadow/tasks/task0001.md: sha256:83b26493ec9d6a9064ad26ed139f52bc15a405116a0524eb1a3ed9c7ef7f9a2c
     feature-docs/mcp-bridge-function-shadow/tasks/task0002.md: sha256:9ab2b8acea9d424718ad25cf3a876dea1aa91b3bc6a3a1e774344672119f8c45
     feature-docs/mcp-bridge-function-shadow/workflow.yaml: sha256:fe8e433bb5b42e7a7d570cb7263accd9fa6c083e25220d5967a6cb8c6b24729d
+  self_write_set: []
 artifacts:
 - path: feature-docs/mcp-bridge-function-shadow/THREAT-MODEL.md
   sha256: sha256:8847757894ddbe4d7200bdd40e428dcaab0c6c1f0a02a4cc8d55f89fa335e2f7
@@ -77,4 +78,6 @@ patches:
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
-last_error: null
+last_error: 'create-plan-run-0002 blocked: preserve 指定の VERIFICATION.md が改訂後の SPEC.md（NFR1 / AC9 / TS-16）と食い違い
+  planner の事後条件を満たさない（TS-16 行・AC9 行・Test Verification の Expected）。create-plan.artifact-overwrite の preserve_and_reuse
+  によりフェーズを中断'
