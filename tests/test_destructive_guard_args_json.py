@@ -1580,6 +1580,248 @@ class TestNamerefDeclarations(unittest.TestCase):
         self.assertTrue(GUARD._args_json_nameref_declared(orphan))
 
 
+class TestNotionLiftChain(unittest.TestCase):
+    """mcp-bridge-function-shadow TS-18 and TS-19 (FR4, FR5, FR7, NFR2; TM-3,
+    TM-4, TM-5): the notion pair of an `mcp-bridge run` statement is excluded
+    from the decoded-value inspection only while no override or shell-state
+    construct stands in its chunk or in a chunk that encloses it
+    (_args_json_notion_lifted()). The notion call of each command below has a
+    harmless decoded value (a `body` of plain text), so KIND_INSPECTED against
+    KIND_NOTHING alone shows whether the exclusion was lifted."""
+
+    NOTION = (
+        "mcp-bridge run --mcp notion --tool notion-create-comment "
+        "--args-json '{\"body\":\"plain text\"}'"
+    )
+    DESKTOP = (
+        "mcp-bridge run --mcp desktop-commander --tool start_process "
+        "--args-json '{\"body\":\"plain text\"}'"
+    )
+
+    def kinds(self, command):
+        return Spy(command).kinds()
+
+    def chain(self, top_text, depth):
+        """The innermost of DEPTH derived chunks of plain text, each linked to
+        the one before it, the first to a top chunk of TOP_TEXT."""
+        node = GUARD._MarkedText.plain(top_text)
+        for _ in range(depth):
+            inner = GUARD._MarkedText.plain("echo x")
+            inner._is_derived = True
+            inner._outer_marked = node
+            node = inner
+        return node
+
+    def test_the_chain_is_walked_without_recursion(self):
+        """TS-18 (TM-5): a chain three times the interpreter's recursion limit
+        deep reads as lifted at its innermost chunk when only its top chunk
+        holds an override construct, and as not lifted when none does, with no
+        recursion error."""
+        depth = 3 * sys.getrecursionlimit()
+        self.assertTrue(GUARD._args_json_notion_lifted(self.chain("f() { :; }", depth)))
+        self.assertFalse(GUARD._args_json_notion_lifted(self.chain("echo x", depth)))
+
+    def test_a_derived_chunk_without_a_link_reads_as_lifted(self):
+        """TS-18 (fail safe): a derived chunk that carries no link to the chunk
+        it came from reads as lifted, and so does no chunk at all."""
+        orphan = GUARD._MarkedText.plain("echo x")
+        orphan._is_derived = True
+        self.assertTrue(GUARD._args_json_notion_lifted(orphan))
+        self.assertTrue(GUARD._args_json_notion_lifted(None))
+
+    def test_the_answer_is_kept_on_every_chunk_the_walk_visited(self):
+        """TS-18 (NFR2): after one walk the answer stands on each chunk the
+        walk visited, so a second question about any of them scans nothing."""
+        top = GUARD._MarkedText.plain("echo x")
+        middle = GUARD._MarkedText.plain("echo x")
+        middle._is_derived = True
+        middle._outer_marked = top
+        inner = GUARD._MarkedText.plain("echo x")
+        inner._is_derived = True
+        inner._outer_marked = middle
+        self.assertFalse(GUARD._args_json_notion_lifted(inner))
+        scans = []
+        original = GUARD._args_json_shadow_scan
+
+        def spy(marked):
+            scans.append(marked)
+            return original(marked)
+
+        with mock.patch.object(GUARD, "_args_json_shadow_scan", spy):
+            for chunk in (inner, middle, top):
+                self.assertFalse(GUARD._args_json_notion_lifted(chunk))
+        self.assertEqual([], scans)
+
+    def test_the_scan_runs_at_most_once_for_each_chunk(self):
+        """TS-18 (NFR2): in one statements() run of a command with two notion
+        calls in one chunk and a third in a command substitution of that
+        chunk, the per-chunk scan runs at most once for each chunk."""
+        command = (
+            self.NOTION + "; " + self.NOTION + "; echo $(" + self.NOTION + ")"
+        )
+        scanned = []
+        original = GUARD._args_json_shadow_scan
+
+        def spy(marked):
+            scanned.append(marked)
+            return original(marked)
+
+        with mock.patch.object(GUARD, "_args_json_shadow_scan", spy):
+            kinds = self.kinds(command)
+        self.assertEqual([KIND_NOTHING] * 3, kinds)
+        self.assertGreaterEqual(len(scanned), 2, "the chain was not walked")
+        for chunk in scanned:
+            self.assertEqual(
+                1, sum(1 for seen in scanned if seen is chunk), "a chunk was scanned twice"
+            )
+
+    def test_a_definition_in_a_sibling_substitution_does_not_lift_the_call(self):
+        """TS-18 (FR4): a function definition in one command substitution
+        leaves a notion call in another command substitution excluded, while
+        the same definition in the command's own chunk lifts it."""
+        sibling = "echo $(f() { :; }); echo $(" + self.NOTION + ")"
+        own = "f() { :; }; echo $(" + self.NOTION + ")"
+        self.assertEqual([KIND_NOTHING], self.kinds(sibling))
+        self.assertEqual([KIND_INSPECTED], self.kinds(own))
+
+    def test_a_construct_after_the_call_and_in_an_enclosing_chunk_lifts_it(self):
+        """TS-18 (FR4): the construct may stand after the call in its chunk,
+        and in an enclosing chunk of any depth above it."""
+        for label, command in (
+            ("after the call", self.NOTION + "; f() { :; }"),
+            ("one level above", "f() { :; }; echo $(" + self.NOTION + ")"),
+            ("two levels above", "f() { :; }; echo $(echo $(" + self.NOTION + "))"),
+            (
+                "the middle chunk of three",
+                "echo $(f() { :; }; echo $(" + self.NOTION + "))",
+            ),
+        ):
+            with self.subTest(label):
+                self.assertEqual([KIND_INSPECTED], self.kinds(command))
+
+    def test_the_two_override_vocabularies_and_the_stop_words_keep_their_values(self):
+        """TS-19 (TM-3, FR3, FR7): `BASH_FUNC_` and `BASH_ALIASES` are named
+        only by the scan of the notion-pair decision; the shared override
+        vocabulary, the masking-stop vocabularies and the override variable
+        hold their base values."""
+        self.assertEqual(frozenset({"alias", "hash", "enable"}), GUARD.OVERRIDE_BUILTINS)
+        self.assertEqual("BASH_CMDS", GUARD.OVERRIDE_VARIABLE_NAME)
+        self.assertEqual(
+            GUARD.OVERRIDE_BUILTINS
+            | frozenset(
+                {
+                    "declare", "typeset", "local", "export", "readonly", "let",
+                    "shopt", "set", "unset", "source", ".", "eval", "trap", "read",
+                    "mapfile", "readarray", "getopts",
+                }
+            ),
+            GUARD.STOP_COMMAND_WORDS,
+        )
+        self.assertEqual(("BASH_CMDS", "BASH_ALIASES"), GUARD.STOP_VARIABLE_NAMES)
+
+    def test_the_pair_predicate_is_still_asked_for_a_lifted_statement(self):
+        """TS-19 (FR5, FR7): for a command that defines a function named
+        `mcp-bridge`, the pair predicate is asked once for the notion
+        statement and answers true, and the statement gives KIND_INSPECTED."""
+        answers = []
+        original = GUARD._args_json_notion_pair
+
+        def spy(marked, words):
+            answer = original(marked, words)
+            answers.append(answer)
+            return answer
+
+        with mock.patch.object(GUARD, "_args_json_notion_pair", spy):
+            kinds = self.kinds("mcp-bridge() { :; }; " + self.NOTION)
+        self.assertEqual([True], answers)
+        self.assertEqual(KIND_INSPECTED, kinds[-1], "the notion statement is its last")
+
+    def test_the_chain_is_not_walked_for_a_statement_that_is_not_the_notion_pair(self):
+        """TS-19 (FR5): the chain decision is asked only when the pair
+        predicate answers true."""
+        walked = []
+        original = GUARD._args_json_notion_lifted
+
+        def spy(marked):
+            walked.append(marked)
+            return original(marked)
+
+        with mock.patch.object(GUARD, "_args_json_notion_lifted", spy):
+            kinds = self.kinds("f() { :; }; " + self.DESKTOP)
+        self.assertEqual([KIND_INSPECTED], kinds)
+        self.assertEqual([], walked)
+
+    def test_a_construct_in_quotes_a_comment_or_a_data_heredoc_does_not_lift_it(self):
+        """TS-19 (FR6, TM-4): a function definition written as quoted text, in
+        a comment or in a data heredoc body is not a construct."""
+        for label, command in (
+            ("quoted", "echo 'mcp-bridge() { :; }'; " + self.NOTION),
+            ("comment", self.NOTION + " # mcp-bridge() { :; }"),
+            ("data heredoc", "cat <<'EOF'\nmcp-bridge() { :; }\nEOF\n" + self.NOTION),
+        ):
+            with self.subTest(label):
+                self.assertEqual([KIND_NOTHING], self.kinds(command))
+
+    def test_the_two_environment_words_lift_the_call_wherever_a_word_holds_them(self):
+        """TS-19 (FR3): `BASH_FUNC_` and `BASH_ALIASES` match as substrings of
+        any word, a redirection target and a quoted word included."""
+        for label, command in (
+            ("BASH_FUNC_ argument", "echo BASH_FUNC_x; " + self.NOTION),
+            ("BASH_ALIASES element", "BASH_ALIASES[mcp-bridge]=:; " + self.NOTION),
+            ("redirection target", "echo x > BASH_FUNC_y; " + self.NOTION),
+            ("quoted word", "echo 'x BASH_ALIASES y'; " + self.NOTION),
+        ):
+            with self.subTest(label):
+                self.assertEqual([KIND_INSPECTED], self.kinds(command))
+
+    def test_the_words_that_run_a_string_as_code_lift_the_call(self):
+        """TS-19 (FR2, TM-2): `eval`, `source`, `.`, `trap`, `mapfile`,
+        `readarray`, a current-shell substitution and a command name that
+        cannot be read statically lift the exclusion."""
+        for label, prefix in (
+            ("eval", "eval :"),
+            ("source", "source ./env.sh"),
+            ("dot", ". ./env.sh"),
+            ("trap", "trap ':' DEBUG"),
+            ("mapfile", "mapfile -t X <<< x"),
+            ("readarray", "readarray -t X <<< x"),
+            ("brace substitution", "${ :; }"),
+            ("variable command name", '"$cmd"'),
+            ("behind command", "command eval :"),
+            ("behind a group", "{ eval :; }"),
+        ):
+            with self.subTest(label):
+                self.assertEqual(
+                    [KIND_INSPECTED], self.kinds(prefix + "; " + self.NOTION)
+                )
+
+    def test_an_assignment_alone_is_not_a_command_name_that_cannot_be_read(self):
+        """TS-19 (FR2, TM-4): a statement that only assigns, its value holding a
+        substitution or an expansion, has no command name, so it does not lift
+        the exclusion; a command name after such an assignment still does."""
+        for label, prefix in (
+            ("substitution", "VAR=$(date)"),
+            ("expansion", 'VAR="$HOME"'),
+            ("arithmetic", "VAR=$((1 + 2))"),
+            ("array element", 'a[$i]=x'),
+            ("append", "VAR+=$(date)"),
+        ):
+            with self.subTest(label + ": excluded"):
+                self.assertEqual([KIND_NOTHING], self.kinds(prefix + "; " + self.NOTION))
+        for label, prefix in (
+            ("unreadable name after an assignment", 'VAR=$(date) "$cmd"'),
+            ("eval after an assignment", "VAR=$(date) eval :"),
+        ):
+            with self.subTest(label + ": lifted"):
+                self.assertEqual([KIND_INSPECTED], self.kinds(prefix + "; " + self.NOTION))
+
+    def test_a_chunk_that_does_not_lex_reads_as_lifted(self):
+        """TS-18 (fail safe): a chunk whose statements come from the
+        parse-failure fallback reads as holding a construct."""
+        self.assertTrue(GUARD._args_json_shadow_scan(GUARD._MarkedText.plain("echo 'a")))
+        self.assertFalse(GUARD._args_json_shadow_scan(GUARD._MarkedText.plain("echo a")))
+
+
 class TestDeferral(unittest.TestCase):
     """AC-7 (FR7, D3, D6, TM-3, TM-4): on Overrun and on a charge that does
     not fit, the scanned total is unchanged, nothing of the statement is
@@ -2202,6 +2444,65 @@ class TestDocstring(unittest.TestCase):
         with self.subTest("the TS-12 runner label names O2 (8)"):
             (label,) = [l for l in labels if l.startswith("args-json-quoting-bypass TS-12:")]
             self.assertIn("O2 (8)", label)
+
+    def test_the_notion_exclusion_text_names_the_lift(self):
+        """mcp-bridge-function-shadow TS-20 (FR8): the descriptive text that
+        called the notion pair the one pair whose decoded value is not
+        inspected states instead that the exclusion holds only while
+        _args_json_notion_lifted() answers false."""
+        statements_doc = " ".join(inspect.getdoc(GUARD.statements).split())
+        skip_doc = " ".join(inspect.getdoc(GUARD._single_quote_skip_spans).split())
+        flow = self.doc[: self.doc.index("Out of scope")]
+        step_2 = flow[flow.index("2. Notion pair"): flow.index("3. Flag reading")]
+        before_per_statement = flow[: flow.index("Per statement")]
+        for label, text, gone in (
+            (
+                "statements()",
+                statements_doc,
+                (
+                    "the notion pair is the only pair whose decoded value is not inspected",
+                    "whose options do not determine the notion pair",
+                ),
+            ),
+            (
+                "_single_quote_skip_spans()",
+                skip_doc,
+                ("the notion pair is the one pair the decoded-value inspection leaves out",),
+            ),
+            (
+                "the decision, before the per-statement steps",
+                before_per_statement,
+                ("its options determine the notion pair, or it is one of the forms",),
+            ),
+        ):
+            for phrase in gone:
+                with self.subTest(label + ": gone: " + phrase):
+                    self.assertNotIn(phrase, text)
+        for label, text in (
+            ("statements()", statements_doc),
+            ("_single_quote_skip_spans()", skip_doc),
+            ("step 2 of the decision", step_2),
+            ("the decision, before the per-statement steps", before_per_statement),
+        ):
+            with self.subTest(label + ": names the lift"):
+                self.assertIn("_args_json_notion_lifted()", text)
+        with self.subTest("step 2 keeps its phrases"):
+            for phrase in (
+                "single-word-certain",
+                "`--format`, `--session` and `--args-json` value words",
+            ):
+                self.assertIn(phrase, step_2)
+        lifted_doc = " ".join(inspect.getdoc(GUARD._args_json_notion_lifted).split())
+        scan_doc = " ".join(inspect.getdoc(GUARD._args_json_shadow_scan).split())
+        for label, text, phrase in (
+            ("chain decision", lifted_doc, "Computed once per chunk and kept"),
+            ("chain decision", lifted_doc, "walked without recursion"),
+            ("chain decision", lifted_doc, "A derived chunk with no link reads as lifted"),
+            ("per-chunk scan", scan_doc, "Fail safe"),
+            ("per-chunk scan", scan_doc, "Only the chunk's own text is read"),
+        ):
+            with self.subTest(label + ": " + phrase):
+                self.assertIn(phrase, text)
 
 
 if __name__ == "__main__":

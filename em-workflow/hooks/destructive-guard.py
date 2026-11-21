@@ -3720,6 +3720,7 @@ class _MarkedText:
         "subscript_ranges", "tail_start", "pairs", "_mask_starts",
         "_quote_starts", "_quote_ends", "top_regions", "top_starts",
         "_outer_marked", "_is_derived", "_nameref_declared_cache",
+        "_notion_lifted_cache",
     )
 
     def __init__(self, source, text, posmap):
@@ -3805,6 +3806,11 @@ class _MarkedText:
         self._outer_marked = None
         self._is_derived = False
         self._nameref_declared_cache = None
+        # The answer of _args_json_notion_lifted() for this chunk, kept on
+        # every chunk its walk visits (mcp-bridge-function-shadow NFR2): None
+        # until it is computed. It is a slot of its own; the nameref cache
+        # above is neither read nor written by that decision.
+        self._notion_lifted_cache = None
 
     @classmethod
     def plain(cls, text):
@@ -7669,8 +7675,10 @@ def _single_quote_skip_spans(chunk, lexmap, real_spans, lexed):
     candidates nor the decoded value is scanned where this function names its
     candidates; where it names none (a chain, a wrapper, a substitution
     body), its raw candidates are re-scanned as before, and its decoded value
-    is still not inspected, since the notion pair is the one pair the
-    decoded-value inspection leaves out.
+    is still not inspected while `_args_json_notion_lifted()` answers false.
+    When an override or shell-state construct stands in its chunk or an
+    enclosing chunk that answer is true, and the decoded value is inspected
+    like every other pair's (mcp-bridge-function-shadow FR1 to FR5).
     """
     skip = set()
     real = set(real_spans)
@@ -8430,22 +8438,32 @@ def _args_json_command_boundary(tok):
     return tok in ("{", "}") and not getattr(tok, "quoted", False)
 
 
-def _args_json_declares_nameref(marked, toks):
-    """Whether the simple command whose tokens are TOKS (a statement's tokens
-    between two boundaries) may declare a nameref or leave the shell state
-    unknown (_args_json_nameref_scan()).
+# An assignment word as the command-start reading sees it: `VAR=`, `VAR[i]=`
+# and `VAR+=` at the beginning of the word.
+_ARGS_JSON_ASSIGNMENT_WORD = re.compile(
+    r"[A-Za-z_][A-Za-z0-9_]*(?:\[[^\]]*\])?\+?="
+)
 
-    The redirections go first. Then the words in front of the command name
-    are skipped: `VAR=value` assignments, the prefixes `builtin`, `command`,
-    `exec`, `time`, `!` and the reserved words that introduce a command
-    (`if`, `elif`, `then`, `else`, `while`, `until`, `do`), each with its own
-    `--` terminator when one follows; `command` and `time` also with their own
-    options (`-p`, `-v`, `-V`, ...), so `command -p -- declare -n r` is read as
-    `declare -n r`. A `-v` or `-V` option is read as if `command` ran the word
-    (the safe side). The word after them is the command name: a name that
-    cannot be restored statically, or `eval`, `source`, `.`, `trap`, `alias`,
-    `mapfile` or `readarray`, leaves the shell state unknown; for `declare`, `local` and `typeset` an option word that
-    holds `n`, or any word that cannot be restored, does."""
+
+def _args_json_command_start(marked, toks, unrestorable_assignments=False):
+    """(WORDS, K) of the simple command whose tokens are TOKS (a statement's
+    tokens between two boundaries): WORDS are TOKS without its redirections
+    (_args_json_strip_redirections()), and K is the index in WORDS of its
+    command name, or len(WORDS) when it has none.
+
+    The words in front of the command name are skipped: `VAR=value`
+    assignments, the prefixes `builtin`, `command`, `exec`, `time`, `!` and
+    the reserved words that introduce a command (`if`, `elif`, `then`, `else`,
+    `while`, `until`, `do`), each with its own `--` terminator when one
+    follows; `command` and `time` also with their own options (`-p`, `-v`,
+    `-V`, ...), so `command -p -- declare -n r` is read as `declare -n r`. A
+    `-v` or `-V` option is read as if `command` ran the word (the safe side).
+    A word that cannot be restored statically ends the skipping: it is the
+    command name. UNRESTORABLE_ASSIGNMENTS makes one exception: a word that
+    cannot be restored but begins, as written, with an assignment (`VAR=` and
+    its `VAR[i]=` and `VAR+=` forms, the value holding a substitution or an
+    expansion) is skipped as an assignment too, so `VAR=$(cmd)` is not a
+    command name that cannot be read (_args_json_runs_string_as_code())."""
     words = _args_json_strip_redirections(marked, toks)
     prefixes = (
         "builtin", "command", "exec", "time", "!",
@@ -8456,6 +8474,13 @@ def _args_json_declares_nameref(marked, toks):
     while k < size:
         text, ok = _args_json_declaration_word(marked, words[k])
         if not ok:
+            if (
+                unrestorable_assignments
+                and not getattr(words[k], "is_operator", False)
+                and _ARGS_JSON_ASSIGNMENT_WORD.match(str(words[k]))
+            ):
+                k += 1
+                continue
             break
         if text in prefixes:
             k += 1
@@ -8468,10 +8493,26 @@ def _args_json_declares_nameref(marked, toks):
             if k < size and _args_json_declaration_word(marked, words[k]) == ("--", True):
                 k += 1
             continue
-        if re.match(r"[A-Za-z_][A-Za-z0-9_]*(?:\[[^\]]*\])?\+?=", text):
+        if _ARGS_JSON_ASSIGNMENT_WORD.match(text):
             k += 1
             continue
         break
+    return words, k
+
+
+def _args_json_declares_nameref(marked, toks):
+    """Whether the simple command whose tokens are TOKS (a statement's tokens
+    between two boundaries) may declare a nameref or leave the shell state
+    unknown (_args_json_nameref_scan()).
+
+    The redirections go first, and the words in front of the command name are
+    skipped (_args_json_command_start()). The word after them is the command
+    name: a name that cannot be restored statically, or `eval`, `source`, `.`,
+    `trap`, `alias`, `mapfile` or `readarray`, leaves the shell state unknown;
+    for `declare`, `local` and `typeset` an option word that holds `n`, or any
+    word that cannot be restored, does."""
+    words, k = _args_json_command_start(marked, toks)
+    size = len(words)
     if k >= size:
         return False
     name, ok = _args_json_declaration_word(marked, words[k])
@@ -8485,6 +8526,176 @@ def _args_json_declares_nameref(marked, toks):
             if not option_ok or re.fullmatch(r"-[A-Za-z]*n[A-Za-z]*", option):
                 return True
     return False
+
+
+# The words whose appearance in any word of a chunk lifts the notion-pair
+# exclusion of the `--args-json` decision (mcp-bridge-function-shadow FR3): the
+# prefix of the variable name through which Bash imports a function from the
+# environment, and the variable that holds the aliases. A substring match on
+# the word's value, quoted or not. They are named here only, and only
+# _args_json_shadow_scan() reads them: they are not part of OVERRIDE_BUILTINS,
+# OVERRIDE_VARIABLE_NAME, STOP_COMMAND_WORDS or STOP_VARIABLE_NAMES, so the
+# override reading, the heredoc data decision and the masking stop do not see
+# them.
+_ARGS_JSON_SHADOW_ENVIRONMENT_WORDS = ("BASH_FUNC_", "BASH_ALIASES")
+
+# The command names that run a string as code in the current shell, which can
+# define a function or an alias of the name `mcp-bridge` out of the hook's
+# sight (mcp-bridge-function-shadow FR2, TM-2): the three words of FR2 and the
+# three that the nameref reading already counts as leaving the shell state
+# unknown (`trap` runs its action string later, `mapfile` and `readarray` run
+# the `-C` callback).
+_ARGS_JSON_STRING_AS_CODE_WORDS = (
+    "eval", "source", ".", "trap", "mapfile", "readarray",
+)
+
+
+def _args_json_runs_string_as_code(marked, toks):
+    """Whether the simple command whose tokens are TOKS (a statement's tokens
+    between two boundaries, as _args_json_nameref_scan() splits them) has a
+    command name that cannot be restored statically
+    (_args_json_declaration_word()), or whose restored text is one of
+    _ARGS_JSON_STRING_AS_CODE_WORDS. The redirections and the words in front of
+    the command name are skipped the way the nameref reading skips them
+    (_args_json_command_start()), except that an assignment whose value cannot
+    be restored (`VAR=$(cmd)`) is skipped too; a command with no name is not
+    one. The `declare -n` rule of the nameref reading is not part of this
+    reading."""
+    words, k = _args_json_command_start(marked, toks, True)
+    if k >= len(words):
+        return False
+    name, ok = _args_json_declaration_word(marked, words[k])
+    return not ok or name in _ARGS_JSON_STRING_AS_CODE_WORDS
+
+
+def _args_json_shadow_scan(marked):
+    """Whether the text of one chunk, MARKED (its _MarkedText), holds a
+    construct that may change what the name `mcp-bridge` runs or leaves the
+    shell state unknown (mcp-bridge-function-shadow FR1 to FR3, FR6). Only the
+    chunk's own text is read: its enclosing chunks are not
+    (_args_json_notion_lifted()), and neither are the bodies of its
+    substitutions, which are chunks of their own and stand in this text as
+    marker residue. True when any of these holds:
+
+    1. Some statement of the chunk is flagged by _overrides_command_name(): a
+       function definition of any name or form, `alias` / `hash` / `enable` as
+       the command word, a PATH assignment, a word that holds `BASH_CMDS`. The
+       statements are read the way statements() reads them (the same lexing of
+       the marked text, the same token preparation, fused closers split,
+       redirections taken out, the command position found by _shape_leading()
+       with the chunk's own case-pattern state and its tail statements), so a
+       construct is at command position here exactly when statements() reads
+       it there.
+    2. The chunk holds a current-shell substitution, as
+       _args_json_has_brace_substitution() reads it (quoted or not, also across
+       a line continuation), or its source is a _StrippedWithShellSubstitution
+       (a heredoc body of an unquoted delimiter that holds one).
+    3. Some simple command of the chunk, split at the same boundaries as
+       _args_json_nameref_scan() splits it, has a command name that runs a
+       string as code or cannot be read statically
+       (_args_json_runs_string_as_code()).
+    4. Some word of some statement, a redirection target included, holds one of
+       _ARGS_JSON_SHADOW_ENVIRONMENT_WORDS as a substring of its value.
+    5. Fail safe: a chunk without lexer regions, or one any of whose statements
+       comes from the parse-failure fallback, reads as true. That covers every
+       construct _overrides_command_name_unlexed() reads.
+
+    A function definition, `alias` or `eval` written inside quotes or a
+    comment, and one in the body of a data heredoc (which is taken out of the
+    chunk's text and never queued), is not at command position of any
+    statement, so it matches none of 1 to 3. Items 1 (the `BASH_CMDS` part) and
+    4 are substring matches, so they match a quoted word too."""
+    if marked is None or getattr(marked, "top_regions", None) is None:
+        return True
+    if isinstance(marked.source, _StrippedWithShellSubstitution):
+        return True
+    if _args_json_has_brace_substitution(marked):
+        return True
+    segments, starts, _operators = _lex_layout(marked, True)
+    in_tail = _statements_in_tail(marked, starts, len(segments))
+    case_stack = []
+    for index, (seg_toks, lexed, sep) in enumerate(segments):
+        if not lexed:
+            return True
+        toks = _strip_unresolved_marks(seg_toks)
+        if any(
+            word in tok
+            for tok in toks
+            for word in _ARGS_JSON_SHADOW_ENVIRONMENT_WORDS
+        ):
+            return True
+        fused = _split_fused_closer_redirects(toks)
+        words_only, _redirects = split_redirects(fused, lexed)
+        lead = _shape_leading(words_only, case_stack, in_tail[index])
+        shaped_words = _shaped_remainder(words_only, lead)
+        if _overrides_command_name(words_only, lead, shaped_words):
+            return True
+        commands = [[]]
+        for tok in _split_fused_closer_redirects(seg_toks):
+            if _args_json_command_boundary(tok):
+                commands.append([])
+            else:
+                commands[-1].append(tok)
+        for command in commands:
+            if _args_json_runs_string_as_code(marked, command):
+                return True
+        # The case state that the next statement starts in, as statements()
+        # advances it: a statement that ends a case item (`;;`, `;&`, `;|`)
+        # turns a "body" frame back to "pattern_first".
+        if sep and any(term in sep for term in (";;", ";&", ";|")):
+            if case_stack and case_stack[-1] == "body":
+                case_stack[-1] = "pattern_first"
+    return False
+
+
+def _args_json_notion_lifted(marked):
+    """Whether the notion-pair exclusion of the `--args-json` decision is
+    lifted for a statement lexed from MARKED (the _MarkedText of its chunk;
+    mcp-bridge-function-shadow FR4, NFR2): the chunk, or a chunk of its
+    enclosing chain up to the command's own chunk, holds a construct that may
+    change what the name `mcp-bridge` runs or leaves the shell state unknown
+    (_args_json_shadow_scan()), wherever it stands in that chunk, before or
+    after the statement. None reads as lifted (the safe side).
+
+    A derived chunk (a command substitution body, a `bash -c` payload, a
+    decoded `--args-json` value, ...) records the chunk it was derived from
+    (MARKED._outer_marked, set when _queue_args_json_chunks() registers the
+    chunk, _ChunkLinks.register()). The chain is walked without recursion, in
+    a loop that follows that link, so a deep nest of substitutions never meets
+    the recursion limit. The walk stops at the first chunk that has a kept
+    answer, at the first chunk whose scan is true, and at the command's own
+    chunk (the one that is not derived). A derived chunk with no link reads as
+    lifted. A construct in a sibling chunk, which is on no chunk's chain, is
+    not counted.
+
+    Computed once per chunk and kept: every chunk the walk visited keeps the
+    answer in MARKED._notion_lifted_cache, so the scan runs at most once for
+    each chunk of a statements() run. The nameref answer
+    (_args_json_nameref_declared()) and its cache are neither read nor
+    written."""
+    if marked is None:
+        return True
+    walked = []
+    result = False
+    node = marked
+    while True:
+        cached = node._notion_lifted_cache
+        if cached is not None:
+            result = cached
+            break
+        walked.append(node)
+        if _args_json_shadow_scan(node):
+            result = True
+            break
+        if not node._is_derived:
+            break
+        node = node._outer_marked
+        if node is None:
+            result = True
+            break
+    for visited in walked:
+        visited._notion_lifted_cache = result
+    return result
 
 
 def _args_json_strip_redirections(marked, toks):
@@ -8825,8 +9036,9 @@ def _mcp_bridge_args_json_chunks(shaped_words, marked):
       restored (FR11, D5).
 
     No values, no charge and no flag is "nothing to do": the statement is not a
-    target, its options determine the notion pair, or it is one of the forms of
-    O2 below.
+    target, its options determine the notion pair and
+    `_args_json_notion_lifted()` answers false, or it is one of the forms of O2
+    below.
 
     Per statement, in order:
 
@@ -8836,13 +9048,20 @@ def _mcp_bridge_args_json_chunks(shaped_words, marked):
        only text inside another command's argument has another command word.
     2. Notion pair (FR2): the canonical reading (_args_json_notion_pair()) that
        determines the `--mcp notion` / `--tool notion-create-comment` pair
-       makes the statement nothing to do, and sets no Unrestorable flag. The
+       makes the statement nothing to do, and sets no Unrestorable flag,
+       unless _args_json_notion_lifted() answers true: the lift, which holds
+       when the statement's chunk, or a chunk that encloses it, has a
+       construct that may change what the name `mcp-bridge` runs or leaves the
+       shell state unknown (a function definition, `alias`, `PATH`,
+       `BASH_FUNC_`, `eval` and the like; mcp-bridge-function-shadow FR1 to
+       FR5). A lifted statement goes on to step 3 like every other pair. The
        reading takes the next word of a flag as its value whatever it holds,
        but it determines the pair only when the `--format`, `--session` and
        `--args-json` value words are single-word-certain
        (_args_json_single_word_certain(): Bash always passes the word as
        exactly one argument); a statement for which it does not goes on to
-       step 3. Only this reading excludes a statement; it is not widened.
+       step 3. Only this reading excludes a statement, and only while the lift
+       answers false; it is not widened.
     3. Flag reading (FR3, FR6, FR11): every other statement is read left to
        right the way mcp-bridge reads its options; the first word after `run`
        is in flag position. A word in flag position is read by
@@ -8938,7 +9157,7 @@ def _mcp_bridge_args_json_chunks(shaped_words, marked):
     if str(run_word) != "run":
         return _ARGS_JSON_NOTHING
     words = args[1:]
-    if _args_json_notion_pair(marked, words):
+    if _args_json_notion_pair(marked, words) and not _args_json_notion_lifted(marked):
         return _ARGS_JSON_NOTHING
     # The flag reading (FR3, D2): the first stop decides.
     value_words = []  # (anchor word, inline value text or None) per `--args-json`
@@ -9374,11 +9593,14 @@ def statements(command, unsettled=None, early_stop=None):
     record is not settled.
 
     The statement loop below also inspects the decoded `--args-json` value of
-    every `mcp-bridge run` statement whose options do not determine the
-    notion pair, in every chunk (mcp-bridge-args-json-exec-guard FR1 to FR7).
-    This is separate from the skip above, which concerns raw-string
-    candidates only: whatever the skip names, the notion pair is the only pair
-    whose decoded value is not inspected. The loop calls
+    every `mcp-bridge run` statement other than the notion pair, in every
+    chunk (mcp-bridge-args-json-exec-guard FR1 to FR7). This is separate from
+    the skip above, which concerns raw-string candidates only: whatever the
+    skip names, the decoded value of the notion pair is left uninspected only
+    while `_args_json_notion_lifted()` answers false, and is inspected like
+    every other pair's when an override or shell-state construct stands in its
+    chunk or an enclosing chunk (mcp-bridge-function-shadow FR1 to FR5). The
+    loop calls
     _queue_args_json_chunks() once per statement it yields from a lexed
     segment, next to the `-c` / `eval` / here-string payload extraction; that
     collaborator asks _mcp_bridge_args_json_chunks() for the decision and
@@ -10120,14 +10342,25 @@ def _skip_assignments_and_wrappers(toks, start=0, end=None, skipped=None):
     """
     i = start
     n = len(toks) if end is None else min(end, len(toks))
+    # Whether the wrapper just passed is `env`: its operands are `NAME=value`
+    # words whatever NAME holds (`env 'BASH_FUNC_f%%=() { :; }' bash -c ...`
+    # imports a function), not only the identifier names a shell reads as an
+    # assignment (mcp-bridge-function-shadow TS-6).
+    after_env = False
     while i < n:
         t = toks[i]
-        if re.match(r"^[A-Za-z_]\w*=", t):  # VAR=value prefix
+        if re.match(r"^[A-Za-z_]\w*=", t) or (
+            after_env
+            and not getattr(t, "is_operator", False)
+            and t.find("=") > 0
+            and not t.startswith("-")
+        ):  # VAR=value prefix
             if skipped is not None:
                 skipped.words.append(t)
             i += 1
             continue
         if t in WRAPPERS:
+            after_env = t == "env"
             if skipped is not None:
                 skipped.words.append(t)
             i += 1
