@@ -1904,7 +1904,7 @@ class TestCommandNameAllowlist(unittest.TestCase):
         for text in (
             "A=(x y z)", "A+=(b)", "declare -a A=(x y)", "A=()", "A=( x )",
             "A=(json --mcp desktop-commander --tool start_process)",
-            "A=(eval x)", "A=($x)", "A=([0]=1)", "A=([@]=1 [12]=2)",
+            "A=(eval x)", "A=($x)", "A=([0]=1)", "A=([0]=1 [12]=2)",
         ):
             with self.subTest(text):
                 self.assertFalse(self.uncertain(text), text)
@@ -1913,16 +1913,89 @@ class TestCommandNameAllowlist(unittest.TestCase):
                 self.assertTrue(self.uncertain(text), text)
 
     def test_a_subscript_element_of_a_compound_assignment_is_uncertain(self):
-        """FR1: an element `[sub]=value` whose subscript is not digits only,
-        `@` or `*` (Bash evaluates it as an arithmetic expression for an
-        indexed array) reads as uncertain, wherever the element stands in the
-        list."""
+        """FR1: an element `[sub]=value` whose subscript is not digits only
+        (Bash evaluates it as an arithmetic expression for an indexed array)
+        reads as uncertain, wherever the element stands in the list."""
         for text in (
             "A=([i]=1)", "A=([$i]=1)", "A=(x [i]=1)", "A+=([i]+=1)",
             "declare -A m=([k]=v)", "declare -a m=([$i]=v)",
+            "A=([@]=1)", "A=([*]=1)", "A=(x [@]=1)",
         ):
             with self.subTest(text):
                 self.assertTrue(self.uncertain(text), text)
+
+    def test_the_variable_subscript_helper_reads_a_leading_element_by_digits_only(self):
+        """FR1 and FR3 (TS-18): the leading case of
+        `_args_json_variable_subscript()` (an element `[sub]=value` of a
+        compound assignment) reports a subscript as variable unless it is
+        digits only, so `@` and `*` are variable; its non-leading case (any
+        subscript in the restored text of a declaration-builtin argument)
+        keeps digits only, `@` and `*` harmless."""
+        variable = GUARD._args_json_variable_subscript
+        for text in ("[@]=1", "[*]=1", "[i]=1", "[$i]=1", "[]=1"):
+            with self.subTest("leading " + text):
+                self.assertTrue(variable(text, True), text)
+        for text in ("[12]=2", "[0]=1"):
+            with self.subTest("leading " + text):
+                self.assertFalse(variable(text, True), text)
+        for text in ("a[@]", "a[*]", "a[3]"):
+            with self.subTest("non-leading " + text):
+                self.assertFalse(variable(text, False), text)
+        for text in ("a[i]", "a[$i]"):
+            with self.subTest("non-leading " + text):
+                self.assertTrue(variable(text, False), text)
+        with self.subTest("no reason ID and no decision (FR8)"):
+            source = inspect.getsource(variable)
+            self.assertNotIn("destructive-guard/", source)
+            self.assertNotIn("permissionDecision", source)
+
+    def test_an_at_or_star_element_subscript_drops_the_notion_exclusion(self):
+        """TS-18 (FR1, FR6): after a compound assignment whose element
+        subscript is `@` or `*`, the notion call with `--format "$r"` is
+        inspected (KIND_INSPECTED); after one whose element subscripts are all
+        digits only, the notion call with `--session "$SID"` keeps
+        KIND_NOTHING."""
+        for text in ("A=([@]=1)", "A=([*]=1)", "A=(x [@]=1)"):
+            with self.subTest(text):
+                self.assertEqual(
+                    [KIND_INSPECTED], self.kinds(text + "; " + self.NOTION), text
+                )
+        for text in ("A=([0]=1 [12]=2)",):
+            with self.subTest(text):
+                self.assertEqual(
+                    [KIND_NOTHING], self.kinds(text + "; " + self.call_sid()), text
+                )
+
+    def test_the_ts_18_forms_stand_in_the_case_table_with_their_decision(self):
+        """TS-18 (FR5, FR6, FR8; TS-10): each form of the tests above stands in
+        the case table before the notion call, under a label that starts with
+        `args-json-deferred-eval-bypass TS-18`; each deny entry carries the
+        reason ID of the decoded command, the allow entry the
+        `--session "$SID"` call. The command is the JSON-decoded text."""
+        with open(CASES_PATH, encoding="utf-8") as handle:
+            table = {case[2]: case for case in json.load(handle)}
+        wanted = [
+            ("deny", self.NOTION, form)
+            for form in ("A=([@]=1)", "A=([*]=1)", "A=(x [@]=1)")
+        ]
+        wanted.append(("allow", self.call_sid(), "A=([0]=1 [12]=2)"))
+        for decision, notion, form in wanted:
+            command = self.ARRAY + form + "; " + notion
+            with self.subTest(form):
+                case = table.get(command)
+                self.assertIsNotNone(case, "no case-table entry for " + command)
+                self.assertEqual(decision, case[0])
+                self.assertTrue(
+                    case[1].startswith("args-json-deferred-eval-bypass TS-18"),
+                    case[1][:60],
+                )
+                if decision == "deny":
+                    self.assertEqual(
+                        {"rule": "git-branch-force-delete"},
+                        case[3] if len(case) == 4 else None,
+                    )
+                else:
+                    self.assertEqual(3, len(case))
 
     def test_a_function_definition_is_classified_by_its_name(self):
         """FR3: the name word of a definition is a simple command of its own,

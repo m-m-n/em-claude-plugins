@@ -1,0 +1,93 @@
+task_id: task0004
+# 4a, before any edit: python3 em-workflow/hooks/tests/run-destructive-guard.py -> 1594/1594 passed;
+# python3 -m unittest discover -s tests -> Ran 17002 tests, FAILED (failures=5, skipped=1). Four failures are the
+# plugin-version tests (they read the plugin manifests, not the hook); the fifth is the compound-assignment subtest
+# `A=([@]=1 [12]=2)` of the command-name allowlist class, red because the chunk reads as uncertain while the test
+# expected it not to be; this task replaces that subtest (AC-2).
+baseline_failures:
+  - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_the_words_of_a_compound_assignment_are_no_command
+  - tests.test_review_perspective_model_effort_version_bump.TestEmReviewManifest.test_version_is_a_minor_bump_over_baseline
+  - tests.test_review_perspective_model_effort_version_bump.TestEmWorkflowManifest.test_version_is_a_minor_bump_over_baseline
+  - tests.test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_review_entry_version_is_a_minor_bump_over_baseline
+  - tests.test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_workflow_entry_version_is_a_minor_bump_over_baseline
+# Re-executed after the implementation and after this record: the four plugin-version failures remain (they read the
+# plugin manifests, outside this task); the compound-assignment test is green.
+final_failures:
+  - tests.test_review_perspective_model_effort_version_bump.TestEmReviewManifest.test_version_is_a_minor_bump_over_baseline
+  - tests.test_review_perspective_model_effort_version_bump.TestEmWorkflowManifest.test_version_is_a_minor_bump_over_baseline
+  - tests.test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_review_entry_version_is_a_minor_bump_over_baseline
+  - tests.test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_workflow_entry_version_is_a_minor_bump_over_baseline
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_a_subscript_element_of_a_compound_assignment_is_uncertain
+      - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_an_at_or_star_element_subscript_drops_the_notion_exclusion
+      - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_the_ts_18_forms_stand_in_the_case_table_with_their_decision
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing
+      tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_a_subscript_element_of_a_compound_assignment_is_uncertain
+      detects that an element subscript reads the chunk as uncertain; no red
+      state occurred for this change. The expansion-level reading already
+      marked A=([@]=1), A=([*]=1) and A=(x [@]=1), so the new subtests of that
+      test and the notion-call kind test were green before the hook change
+      (the chunk was already uncertain and the call already inspected). The
+      case-table pin test failed ("no case-table entry for ...") only until
+      the entries were added; that shows the entries are pinned, not that the
+      reading was ever red.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_the_words_of_a_compound_assignment_are_no_command
+      - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_an_at_or_star_element_subscript_drops_the_notion_exclusion
+      - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_the_ts_18_forms_stand_in_the_case_table_with_their_decision
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >-
+      Step 4a, before any edit: test_the_words_of_a_compound_assignment_are_no_command
+      failed on its subtest [A=([@]=1 [12]=2)] ("True is not false": the chunk
+      reads as uncertain, the test expected it not to). The replacement subtest
+      A=([0]=1 [12]=2) and the notion-call kind of that form were already
+      KIND_NOTHING before the hook change. The case-table pin test failed
+      ("no case-table entry for A=(...); A=([0]=1 [12]=2); ...") before the
+      allow entry was added.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_the_variable_subscript_helper_reads_a_leading_element_by_digits_only
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged hook: subtests [leading [@]=1] and
+      [leading [*]=1] failed with "AssertionError: False is not true" (the
+      leading case treated @ and * as harmless). The [12]=2 and non-leading
+      subtests already held.
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_args_json.TestExpansionLevelDeferredEvaluation.test_every_added_case_follows_the_label_and_rule_conventions
+      - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_the_ts_18_forms_stand_in_the_case_table_with_their_decision
+      - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_the_variable_subscript_helper_reads_a_leading_element_by_digits_only
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing
+      tests.test_destructive_guard_args_json.TestExpansionLevelDeferredEvaluation.test_every_added_case_follows_the_label_and_rule_conventions
+      detects a label that does not start with args-json-deferred-eval-bypass
+      and a deny entry without the git-branch-force-delete rule; no red state
+      occurred for this change, because the convention holds vacuously until
+      the entries exist and they were written to follow it. The case-table pin
+      test failed only for the missing entries (it stops at the missing
+      entry, before its label and rule assertions). The check that the helper
+      names no reason ID and builds no decision was green before the change.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_args_json
+    red_confirmed: true
+    red_reason: >-
+      The unit module did not pass before the change: at step 4a it held the
+      one failing compound-assignment test above, and with the new tests
+      written against the unchanged hook it ran 24 tests of the allowlist class
+      with 6 failures (2 helper subtests, 4 case-table pin subtests). The
+      runner wrapper passed before and after; that no existing case or subtest
+      changed was checked from the diff (the case table only gains four entries
+      at its end plus the comma of the old last entry; the only changed
+      existing subtest is the one AC-2 names), and the test module imports only
+      standard-library modules, the same as before.

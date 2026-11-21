@@ -8870,8 +8870,8 @@ def _args_json_declares_nameref(marked, toks):
     The words inside the parentheses of a compound assignment (`A=(x y)`) are
     data and name no command (_args_json_in_array_literal()); such a command is
     certain, unless an element carries a `[...]` subscript that is not digits
-    only, `@` or `*` (`A=([i]=1)`: Bash evaluates the subscript as an
-    arithmetic expression).
+    only (`A=([i]=1)`: Bash evaluates the subscript as an arithmetic
+    expression; `A=([@]=1)` and `A=([*]=1)` are uncertain too).
 
     For any other command the redirections go first. Then the words in front
     of the command name are skipped: `VAR=value` assignments, the prefixes
@@ -9115,17 +9115,26 @@ def _args_json_declaration_uncertain(marked, args):
 
 
 def _args_json_variable_subscript(text, leading):
-    """Whether the restored text TEXT holds a `[...]` subscript that is not
-    digits only, `@` or `*`: one Bash may evaluate as an arithmetic expression
-    (or, for `@` and `*`, expand to several words). Only a subscript that
-    starts TEXT counts when LEADING is true (an element `[sub]=value` of a
-    compound assignment); otherwise any subscript in TEXT does."""
+    """Whether the restored text TEXT holds a `[...]` subscript that Bash may
+    evaluate as an arithmetic expression. The two cases differ in which
+    subscripts are harmless.
+
+    LEADING true: TEXT is the word of an element `[sub]=value` of a compound
+    assignment, and only a subscript that starts TEXT counts. It is variable
+    unless it is digits only; an `@` or `*` subscript is variable too (Bash
+    rejects it as an indexed-array element subscript, so it is the uncertain
+    side, as in the expansion-level reading of the same element).
+
+    LEADING false: TEXT is the restored text of a declaration-builtin
+    argument, and any subscript in TEXT counts. It is variable unless it is
+    digits only, `@` or `*`."""
     if leading:
         match = re.match(r"\[([^\]]*)\]", text)
-        subscripts = [match.group(1)] if match else []
-    else:
-        subscripts = re.findall(r"\[([^\]]*)\]", text)
-    return any(not re.fullmatch(r"[0-9]+|@|\*", sub) for sub in subscripts)
+        return match is not None and not re.fullmatch(r"[0-9]+", match.group(1))
+    return any(
+        not re.fullmatch(r"[0-9]+|@|\*", sub)
+        for sub in re.findall(r"\[([^\]]*)\]", text)
+    )
 
 
 def _args_json_strip_redirections(marked, toks):
