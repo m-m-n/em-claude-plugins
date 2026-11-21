@@ -1,0 +1,64 @@
+schema_version: 2
+feature: args-json-deferred-eval-bypass
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.47
+    confidence: 0.54
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.54
+      '2': 0.46
+      '3': 0.0
+  observed_at: '2026-11-21T10:09:30+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.42
+    confidence: 0.58
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.58
+      '2': 0.42
+      '3': 0.0
+  observed_at: '2026-11-21T10:11:50+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  changed_lines_approx: 0
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  work_still_required_evidence: main 33b987897 の静的確認では、8347行の検出はソース上の開始記号と字句領域に限られ、8569行は算術コマンドを名前参照の宣言なしとして扱う。${var@P}
+    や read を経由する値の再評価を追跡せず、8478行の一覧には指摘の6組み込みがない。テスト表1487〜1488行は開始記号がソースに直接現れる形を検査しており、指定の5形に対応する
+    deny ケースは見当たらない。実行による再現は未確認。変更行数の0は未見積もりを表す。依存数は指定4関数の直接の呼び出し元2件と、同モジュール内の直接の依存先8件を数えた。
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 5
+  body_change_kind: new_logic
+  change_containment: single_module
+  caller_and_dependency_count: 10
+  changes_external_contract: false
+  changes_behavior: true
+decided_at: '2026-11-21T10:12:00+09:00'
