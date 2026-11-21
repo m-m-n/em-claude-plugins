@@ -4523,12 +4523,16 @@ class HeredocRecord:
 
 class _StrippedWithShellSubstitution(str):
     """A chunk with its heredoc bodies removed (_strip_heredocs_mapped()), one
-    of which has an unquoted delimiter and holds a Bash 5.3 current-shell
-    substitution (args-json-quoting-bypass TM-1): the shell expands such a
-    body, so `${ cmd; }` / `${| cmd; }` in it runs in the current shell and
-    its state change (a nameref included) outlasts the heredoc. The text is
-    equal to, and hashed like, the plain stripped text; the type alone carries
-    the fact, to the _MarkedText built from it (MARKED.source), where
+    of which has an unquoted delimiter and holds something that may change the
+    shell state of the caller: a Bash 5.3 current-shell substitution
+    (args-json-quoting-bypass TM-1) or an expansion that re-evaluates a value
+    as code in the current shell (args-json-deferred-eval-bypass FR1; see
+    _bodies_hold_current_shell_substitution()). The shell expands such a body,
+    so `${ cmd; }` / `${| cmd; }` in it runs in the current shell and its state
+    change (a nameref included) outlasts the heredoc, and an arithmetic
+    expansion or a `${var@P}` in it evaluates a value there. The text is equal
+    to, and hashed like, the plain stripped text; the type alone carries the
+    fact, to the _MarkedText built from it (MARKED.source), where
     _ChunkLinks.register() reads it. Nothing is kept outside the value, so the
     answer for a chunk never depends on what was judged before it."""
 
@@ -4537,15 +4541,38 @@ class _StrippedWithShellSubstitution(str):
 
 def _bodies_hold_current_shell_substitution(records):
     """Whether one of the HeredocRecord RECORDS has an unquoted delimiter and a
-    body that holds a current-shell substitution opener: `${` followed by
-    whitespace or `|`, line continuations removed. The body of a quoted
-    delimiter is not expanded and is left out."""
+    body that may change the shell state of the caller, which the shell
+    expands before the destination command reads the body: it holds a
+    current-shell substitution opener (`${` followed by whitespace or `|`,
+    line continuations removed), or an expansion that re-evaluates a value as
+    code in the current shell. The second reading is the lexer's own, in its
+    `heredoc-body` mode (quote characters and a bare `((` are literal, the `$`
+    expansions are recognised), counted by the rules of the expansion level
+    (_args_json_regions_defer_evaluation()): subshell bodies are left out. The
+    body is read as written and, when it holds a line continuation, with the
+    continuations removed as well. A body the lexer cannot settle (its work
+    bound exceeded, or any other failure) reads as holding one, the safe
+    side; nothing is raised, since the removal step serves every command the
+    hook judges. The body of a quoted delimiter is not expanded and is left
+    out."""
     for record in records:
         if record.quoted:
             continue
         body = record.body.replace("\\\r\n", "").replace("\\\n", "")
         if re.search(r"\$\{[\s|]", body):
             return True
+        if "$" not in record.body:
+            continue
+        texts = [record.body]
+        if body != record.body:
+            texts.append(body)
+        for text in texts:
+            try:
+                regions = lex_shell(text, "heredoc-body", False).regions
+                if _args_json_regions_defer_evaluation(text, regions):
+                    return True
+            except Exception:
+                return True
     return False
 
 
@@ -4562,9 +4589,11 @@ def _strip_heredocs_mapped(chunk, lexmap=None):
     copied verbatim. Construction is linear in the chunk.
 
     The stripped text is a plain str, except when a removed body with an
-    unquoted delimiter holds a current-shell substitution: it is then a
-    _StrippedWithShellSubstitution, so that the fact outlives the removal of
-    the body (_bodies_hold_current_shell_substitution())."""
+    unquoted delimiter holds a current-shell substitution or an expansion that
+    re-evaluates a value in the current shell, or a body the lexer cannot
+    settle: it is then a _StrippedWithShellSubstitution, so that the fact
+    outlives the removal of the body
+    (_bodies_hold_current_shell_substitution(), which raises nothing)."""
     if lexmap is None:
         lexmap = lex_shell(chunk, "shell")
     ops = [op for op in lexmap.heredocs if op.body_start is not None]
@@ -8314,7 +8343,8 @@ def _args_json_nameref_declared(marked):
     process runs (`bash -c`) is treated the same way, which is the safe side
     as well. A derived chunk that carries no link reads as "declared". So does
     a chunk with a heredoc body of an unquoted delimiter that holds a
-    current-shell substitution: its cache is set at registration too.
+    current-shell substitution or an expansion that re-evaluates a value in
+    the current shell: its cache is set at registration too.
 
     Computed once per chunk and kept on it. The chain is walked without
     recursion, so a deep nest of substitutions never meets the recursion
@@ -8372,38 +8402,188 @@ def _args_json_has_brace_substitution(marked):
     return False
 
 
+# --- The expansion-level reading (args-json-deferred-eval-bypass FR1) -----
+#
+# Expansions that re-evaluate a value as code in the current shell, so that a
+# value assigned earlier (in single quotes, ANSI-C quotes, from `read`) runs
+# later, where the literal check of _args_json_has_brace_substitution() cannot
+# see it. The three helpers below read the lexer's map of the text and the
+# text of its parameter-expansion regions; nothing is executed or evaluated.
+
+# A region inside one of these is a subshell's own: the construct changes the
+# subshell, not the caller (IMPLEMENTATION.md D2). A brace-command-substitution
+# runs in the current shell and is not listed.
+_ARGS_JSON_SUBSHELL_KINDS = frozenset(
+    {"command-substitution", "backtick-substitution", "process-substitution"}
+)
+# How much of the text of a parameter-expansion region is read: the head (the
+# parameter, its subscript, the operator) is all the reading needs, so a deep
+# nest of expansions costs a constant per region, not its own length.
+_ARGS_JSON_PARAMETER_WINDOW = 256
+# The parameter a `${...}` names, after the `!` form has been ruled out: an
+# optional `#` (the length), then a name, a positional number or a special
+# parameter.
+_ARGS_JSON_PARAMETER_HEAD = re.compile(r"#?([A-Za-z_][A-Za-z0-9_]*|[0-9]+|[@*#?$!-])")
+# The subscripts that evaluate nothing: digits only, `@` and `*`.
+_ARGS_JSON_QUIET_SUBSCRIPT = re.compile(r"\[(?:[0-9]+|[@*])\]")
+_ARGS_JSON_DIGITS = re.compile(r"[0-9]+")
+# What follows `${name:` of a substring expansion when nothing is evaluated:
+# an offset and a length that are digit strings (an optional sign and blanks
+# allowed), either of them left out.
+_ARGS_JSON_QUIET_SUBSTRING = re.compile(
+    r"(?:\s*(?:[+-]\s*)?[0-9]+)?\s*(?::(?:\s*(?:[+-]\s*)?[0-9]+)?\s*)?"
+)
+
+
+def _args_json_parameter_defers(head, whole):
+    """Whether HEAD, the text of a parameter-expansion region from its `${` (at
+    most _ARGS_JSON_PARAMETER_WINDOW characters after it; WHOLE says it is the
+    whole region), is an expansion that re-evaluates a value as code in the
+    current shell or assigns one:
+
+    - an indirect expansion (`${!x}`, `${!a[@]}`, `${!prefix*}`: the text
+      starts with the `!` form);
+    - a subscript after the parameter name that is not digits only, `@` or `*`
+      (`${a[$i]}`, `${#a[i]}`, `${a[i]:-x}`): Bash evaluates it as arithmetic;
+    - the `@P` transformation (`${x@P}`, `${a[0]@P}`);
+    - an assigning expansion (`${x=...}`, `${x:=...}`), whatever the name: it
+      may name an integer-attribute variable or `PS4`;
+    - a substring expansion (`${x:offset}`, `${x:offset:length}`) whose offset
+      or length is not a digit string (_ARGS_JSON_QUIET_SUBSTRING). `:-`, `:=`,
+      `:?` and `:+` are not substrings. A substring whose text is longer than
+      the window reads as evaluating.
+
+    A line continuation is removed first. Reads nothing but HEAD."""
+    body = head[2:]
+    if whole and body.endswith("}"):
+        body = body[:-1]
+    body = body.replace("\\\r\n", "").replace("\\\n", "")
+    if body.startswith("!"):
+        return True
+    parameter = _ARGS_JSON_PARAMETER_HEAD.match(body)
+    if parameter is None:
+        return False
+    rest = body[parameter.end():]
+    if rest.startswith("["):
+        subscript = _ARGS_JSON_QUIET_SUBSCRIPT.match(rest)
+        if subscript is None:
+            return True
+        rest = rest[subscript.end():]
+    if rest.startswith(("@P", "=", ":=")):
+        return True
+    if rest.startswith(":") and rest[1:2] not in ("-", "=", "?", "+"):
+        return not whole or _ARGS_JSON_QUIET_SUBSTRING.fullmatch(rest, 1) is None
+    return False
+
+
+def _args_json_regions_defer_evaluation(text, regions):
+    """Whether TEXT, whose lexer regions are REGIONS (a LexMap's), holds an
+    expansion that re-evaluates a value as code in the current shell, at a
+    position the lexer reads as syntax:
+
+    - an arithmetic expansion `$((...))` or a bracket arithmetic `$[...]`;
+    - an array subscript the lexer read (an assignment word's `a[...]=` or a
+      compound assignment's `([...]=v)`) that is not digits only;
+    - a parameter expansion _args_json_parameter_defers() counts.
+
+    Regions nested in others are read as well (a parameter expansion in an
+    operand, an expansion in double quotes, ...), except a region inside a
+    command substitution, a backtick substitution or a process substitution
+    (_ARGS_JSON_SUBSHELL_KINDS): that is the subshell's own, and its text is a
+    chunk of its own. A region inside a brace-command-substitution is read.
+    Single quotes, ANSI-C quotes and comments have no region inside them, so
+    nothing there is counted. Linear in the number of REGIONS."""
+    window = _ARGS_JSON_PARAMETER_WINDOW
+    quiet = [False] * len(regions)
+    for index, region in enumerate(regions):
+        parent = region.parent
+        if parent is not None and (
+            quiet[parent] or regions[parent].kind in _ARGS_JSON_SUBSHELL_KINDS
+        ):
+            quiet[index] = True
+            continue
+        kind = region.kind
+        if kind in ("arithmetic-expansion", "bracket-arithmetic"):
+            return True
+        if kind == "array-subscript":
+            last = region.end - 1 if region.closed else region.end
+            if _ARGS_JSON_DIGITS.fullmatch(text, region.start + 1, last) is None:
+                return True
+        elif kind == "parameter-expansion":
+            limit = region.start + 2 + window
+            if _args_json_parameter_defers(
+                text[region.start:min(region.end, limit)], region.end <= limit
+            ):
+                return True
+    return False
+
+
+def _args_json_has_deferred_evaluation(marked):
+    """Whether the chunk MARKED (the _MarkedText of one chunk) holds an
+    expansion that re-evaluates a value as code in the current shell
+    (args-json-deferred-eval-bypass FR1; the constructs and the positions that
+    count are those of _args_json_regions_defer_evaluation() and
+    _args_json_parameter_defers()). Such a chunk leaves the shell state
+    uncertain: a value assigned earlier, quoted so that the literal check of
+    _args_json_has_brace_substitution() does not see it, is evaluated here.
+
+    It reads the lexer's map of the chunk's source, the one the literal check
+    and the _MarkedText itself already ask for (lex_shell() caches it), and
+    nothing else: nothing is executed or evaluated. A text the lexer cannot
+    settle (its work bound exceeded, or any other failure) reads as holding
+    one (the safe side); nothing is raised. Called only from
+    _args_json_nameref_scan(), so its result is kept with the chunk's
+    answer."""
+    source = getattr(marked, "source", "") or ""
+    try:
+        regions = lex_shell(source, "shell", False).regions
+        return _args_json_regions_defer_evaluation(source, regions)
+    except Exception:
+        return True
+
+
 def _args_json_nameref_scan(marked):
-    """Whether the text of one chunk, MARKED, may declare a nameref or leave
-    the shell state unknown: some simple command of it is `declare`, `local`
-    or `typeset` with a `-n` option (any option word that holds `n`), or is
-    `eval`, `source` or `.`, or has a command name or a declaration word that
-    cannot be restored statically. The chunk's own enclosing chunks are not
-    read here (_args_json_nameref_declared()).
+    """Whether the text of one chunk, MARKED, may bring a nameref into being or
+    leave the shell state unknown. The chunk's own enclosing chunks are not read
+    here (_args_json_nameref_declared()). It reads, in this order, and is true
+    at the first that holds:
 
-    Decided from the words as Bash reads them after quote removal, at command
-    position only, so quoted data is not a declaration while `declare "-n"`,
-    `decla''re -n` and `declare -\\<newline>n` are.
+    1. Nothing to read: no chunk, or a chunk with no top regions.
+    2. A substitution that runs in the current shell (Bash 5.3
+       `${ command; }` and `${| command; }`, a `${` followed by whitespace or
+       `|`). Its side effects are not tracked: the chunk reads as uncertain
+       when the lexer reads one (a LEX_BRACE_COMMAND_SUBSTITUTION region, also
+       across a line continuation), or when the opener stands anywhere in the
+       text, quoted or not, since a quoted value can be evaluated later
+       (_args_json_has_brace_substitution()).
+    3. An expansion that re-evaluates a value as code in the current shell,
+       at a position the lexer reads as syntax: an arithmetic expansion, a
+       bracket arithmetic, an array subscript that is not digits only, and the
+       parameter expansions that evaluate an index, a transformation, an
+       indirection or an offset, or that assign
+       (_args_json_has_deferred_evaluation()). A construct that only stands
+       in a single-quoted, ANSI-C-quoted or commented text, or inside a
+       command substitution, a backtick substitution or a process
+       substitution, does not count here.
+    4. The lexed statements of the chunk (lex_segments(): the boundaries the
+       rest of the hook works from). A statement the lexer could not read is
+       uncertain, and so is a simple command that
+       _args_json_declares_nameref() reads as uncertain. A redirection (an
+       operator and its target, a file-descriptor number or `{name}` in front
+       of the operator) is taken out of a simple command before the command
+       is read, whether it stands before the name, touches it or comes after
+       it, so a glued form and its spaced form read the same. A `(`, `)`, `{`
+       or `}` word begins a new simple command. That function holds the rules
+       for command names, options and words, decided from the words as Bash
+       reads them after quote removal, at command position only.
 
-    The simple commands and their words come from the lexer's own statements
-    (lex_segments()): the boundaries the rest of the hook works from. A
-    redirection (an operator and its target, a file-descriptor number or
-    `{name}` in front of the operator) is taken out of a simple command before
-    its command name and its options are read, whether it stands before the
-    name, touches it or comes after it, so a glued form and its spaced form
-    read the same. A `(`, `)`, `{` or `}` word begins a new simple command.
-    Fail safe: True for a chunk the lexer could not read as statements.
-
-    A substitution that runs in the current shell (Bash 5.3 `${ command; }`
-    and `${| command; }`, a `${` followed by whitespace or `|`) may change the
-    shell state, a nameref included, and the change stays after it. Its side
-    effects are not tracked: a chunk holding one, as the lexer reads it
-    (a LEX_BRACE_COMMAND_SUBSTITUTION region, also across a line
-    continuation, or the opener anywhere in the text, quoted or not, since a
-    quoted value can be evaluated later), reads as "may declare" (the safe
-    side)."""
+    False otherwise. Only the chunk's own text is read; nothing is executed
+    and no lexer exception escapes."""
     if marked is None or getattr(marked, "top_regions", None) is None:
         return True
     if _args_json_has_brace_substitution(marked):
+        return True
+    if _args_json_has_deferred_evaluation(marked):
         return True
     for words, lexed, _sep in lex_segments(marked):
         if not lexed:
@@ -9140,7 +9320,10 @@ class _ChunkLinks:
           chain, which is the safe side. A derived chunk with no registered
           prefix keeps no link, which the chain walk reads as "declared".
         - the heredoc result. A chunk whose source is a
-          _StrippedWithShellSubstitution reads as "may hold a nameref"."""
+          _StrippedWithShellSubstitution (a removed unquoted-delimiter heredoc
+          body held a current-shell substitution or an expansion that
+          re-evaluates a value in the current shell) reads as "may hold a
+          nameref"."""
         if marked_chunk is None or marked_chunk is self.last:
             return
         self.last = marked_chunk

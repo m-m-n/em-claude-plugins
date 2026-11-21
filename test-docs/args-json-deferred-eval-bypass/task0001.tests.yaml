@@ -1,0 +1,149 @@
+task_id: task0001
+# 4a, before any edit: python3 em-workflow/hooks/tests/run-destructive-guard.py -> 1467/1467 passed;
+# python3 -m unittest discover -s tests -> Ran 16931 tests, FAILED (failures=4, skipped=1). The four failures are the
+# plugin-version tests below (they read the plugin manifests, not the hook or its tests); the hook, its case table and
+# the args-json tests were all green.
+baseline_failures:
+  - tests.test_review_perspective_model_effort_version_bump.TestEmReviewManifest.test_version_is_a_minor_bump_over_baseline
+  - tests.test_review_perspective_model_effort_version_bump.TestEmWorkflowManifest.test_version_is_a_minor_bump_over_baseline
+  - tests.test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_review_entry_version_is_a_minor_bump_over_baseline
+  - tests.test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_workflow_entry_version_is_a_minor_bump_over_baseline
+# Re-executed after the implementation and after this record (see the report): the runner passes every case
+# (1509/1509) and the unittest run shows the same four failures and no other.
+final_failures:
+  - tests.test_review_perspective_model_effort_version_bump.TestEmReviewManifest.test_version_is_a_minor_bump_over_baseline
+  - tests.test_review_perspective_model_effort_version_bump.TestEmWorkflowManifest.test_version_is_a_minor_bump_over_baseline
+  - tests.test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_review_entry_version_is_a_minor_bump_over_baseline
+  - tests.test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_workflow_entry_version_is_a_minor_bump_over_baseline
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_args_json.TestExpansionLevelDeferredEvaluation.test_the_ts_1_attack_form_reads_the_chunk_as_uncertain
+      - tests.test_destructive_guard_args_json.TestExpansionLevelDeferredEvaluation.test_every_counted_construct_reads_the_chunk_as_uncertain
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >-
+      The case entries and the unit tests were written before the hook was
+      changed and run against the unchanged hook (a copy of the base commit).
+      The real runner, run as run-destructive-guard.py with the copy as its
+      argument, gave 1479/1509 passed and 30 FAIL lines, each a new deny entry
+      (the TS-1 attack form, the arithmetic and bracket-arithmetic expansions,
+      the parameter-expansion subscripts, @P, the indirect forms, the assigning
+      forms, the substrings) answered allow where deny with rule
+      git-branch-force-delete is required. In the unit class every check of the
+      construct table raised AttributeError (no _args_json_has_deferred_evaluation)
+      and the notion-call check failed with "Lists differ: ['inspected'] !=
+      ['nothing']" (29 constructs). The four forms that name an array subscript in an
+      assignment word or in a compound-assignment element (a[$i]=1, a[i]=1,
+      b=([$i]=v), b=([i]=v)) were already deny on the unchanged hook through the
+      command-level reading of a word that cannot be restored; only their
+      expansion-level check failed (AttributeError).
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_args_json.TestExpansionLevelDeferredEvaluation.test_an_arithmetic_expansion_and_at_p_are_read_at_every_position
+      - tests.test_destructive_guard_args_json.TestExpansionLevelDeferredEvaluation.test_the_body_of_an_unquoted_delimiter_heredoc_is_read
+      - tests.test_destructive_guard_args_json.TestExpansionLevelDeferredEvaluation.test_every_counted_construct_marks_an_unquoted_heredoc_body
+      - tests.test_destructive_guard_args_json.TestExpansionLevelDeferredEvaluation.test_a_continuation_inside_the_opener_of_a_body_is_read
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged hook: the 14 position entries of the case table
+      (an arithmetic expansion and a ${x@P}, each in a function body, a group,
+      an if body, a while body, double quotes, an unquoted-delimiter heredoc
+      body and a here-string word) were among the 30 runner FAIL lines (got
+      allow, deny required). In the unit tests the position check failed with
+      "Lists differ: ['inspected'] != ['nothing']" (22 subtests) and the heredoc
+      checks with "': <<EOF\n' is not an instance of _StrippedWithShellSubstitution"
+      / "False is not true" (17 bodies): the unchanged removal step marks a body
+      only for a ${ followed by whitespace or |.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_args_json.TestExpansionLevelDeferredEvaluation.test_a_construct_in_a_subshell_body_keeps_the_exclusion
+      - tests.test_destructive_guard_args_json.TestExpansionLevelDeferredEvaluation.test_a_construct_nested_in_substitutions_keeps_the_exclusion
+      - tests.test_destructive_guard_args_json.TestExpansionLevelDeferredEvaluation.test_a_data_position_keeps_the_exclusion
+      - tests.test_destructive_guard_args_json.TestExpansionLevelDeferredEvaluation.test_the_body_of_a_quoted_delimiter_heredoc_keeps_the_exclusion
+      - tests.test_destructive_guard_args_json.TestExpansionLevelDeferredEvaluation.test_a_body_with_nothing_to_evaluate_keeps_the_exclusion
+      - tests.test_destructive_guard_args_json.TestExpansionLevelDeferredEvaluation.test_a_harmless_subscript_keeps_the_exclusion
+      - tests.test_destructive_guard_args_json.TestExpansionLevelDeferredEvaluation.test_a_parameter_expansion_that_evaluates_nothing_keeps_the_exclusion
+      - tests.test_destructive_guard_args_json.TestExpansionLevelDeferredEvaluation.test_a_substring_made_of_digits_keeps_the_exclusion
+      - tests.test_destructive_guard_args_json.TestExpansionLevelDeferredEvaluation.test_a_substring_whose_offset_or_length_is_not_digits_is_uncertain
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >-
+      Only the deny half of this criterion went red through its behavior: on
+      the unchanged hook the substring-with-a-name checks (${s:p}, ${s:0:n})
+      failed with "Lists differ: ['inspected'] != ['nothing']" and their two
+      runner entries were FAIL lines. The allow half (TS-9, TS-11 and the
+      digit-offset TS-12 form) is behavior that pre-existed: the eight allow
+      entries of the case table passed on the unchanged hook, and the end-to-end
+      notion-call assertions of these unit tests held there. These unit tests
+      failed on the unchanged hook all the same, with AttributeError for the
+      missing _args_json_has_deferred_evaluation, which they call to read the
+      expansion level directly (the part of the allow half that no
+      end-to-end assertion could see).
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_args_json.TestExpansionLevelDeferredEvaluation.test_the_literal_check_is_still_consulted_by_the_scan
+      - tests.test_destructive_guard_args_json.TestExpansionLevelDeferredEvaluation.test_the_literal_check_still_reads_a_quoted_opener
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing runner cases
+      (the args-json-quoting-bypass review round 3 denies included) detect a
+      changed decision of any existing case, and the new
+      test_the_literal_check_is_still_consulted_by_the_scan detects a scan that
+      stops consulting _args_json_has_brace_substitution(); no red state occurred
+      for this change: _args_json_has_brace_substitution() is not edited, the
+      unchanged hook passed every one of the 1466 existing cases (the runner
+      failed only the 30 new deny entries) and that test passed on it. The second
+      test errored there only because it also calls the new predicate.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_args_json.TestExpansionLevelDeferredEvaluation.test_a_chunk_the_lexer_cannot_settle_reads_as_uncertain
+      - tests.test_destructive_guard_args_json.TestExpansionLevelDeferredEvaluation.test_a_heredoc_body_the_lexer_cannot_settle_marks_the_removal
+      - tests.test_destructive_guard_args_json.TestExpansionLevelDeferredEvaluation.test_the_expansion_level_reading_runs_once_per_chunk
+      - tests.test_destructive_guard_args_json.TestExpansionLevelDeferredEvaluation.test_the_expansion_level_reading_is_called_only_from_the_scan
+      - tests.test_destructive_guard_args_json.TestNamerefDeclarations.test_the_chain_is_walked_without_recursion
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged hook: the chunk-failure test raised
+      AttributeError (no expansion-level predicate) for each of its four
+      exceptions; the heredoc-failure test failed with "': <<EOF\n' is not an
+      instance of _StrippedWithShellSubstitution" for both exceptions (the
+      unchanged removal step never lexes a body, so it returns the plain text);
+      the once-per-chunk test raised AttributeError; the call-site test failed
+      with a set difference (no function named _args_json_has_deferred_evaluation
+      is referenced from _args_json_nameref_scan). The last listed test,
+      test_the_chain_is_walked_without_recursion, is an existing test that the
+      criterion says must pass unchanged; it passed before and after, no red
+      state occurred for it.
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_args_json.TestExpansionLevelDeferredEvaluation.test_every_added_case_follows_the_label_and_rule_conventions
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >-
+      The convention test was run against the case table of the base commit,
+      which holds no entry whose label starts with
+      args-json-deferred-eval-bypass: it failed with "0 not greater than 20".
+      That the label prefix and the rule git-branch-force-delete hold for every
+      added deny entry is what the same test and the runner then check. That
+      destructive-guard.py gains no reason ID and no decision rule has no
+      executable check that could be made to fail: it was settled by reading
+      the diff of the hook, which adds helper functions and a call in
+      _args_json_nameref_scan() and no decide() call or reason constant.
+  AC-7:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: false
+    red_reason: >-
+      The outcome is that the two suites succeed, which is not a check that can
+      be made to fail first: the runner passed 1467/1467 and the unittest run
+      showed only the four unrelated plugin-version failures of the baseline
+      before any edit. The existing test of the runner over the whole table
+      (listed) detects a failing case; no red state occurred for this change.
+      That no existing case or test was changed (only new entries and a new test
+      class were added, and one import line), that the new tests import
+      the standard library only (ast, collections, importlib.util, inspect,
+      json, os, re, subprocess, sys, unittest, unittest.mock) and that the change
+      holds no .claude-plugin/ path were settled by reading the diff.
