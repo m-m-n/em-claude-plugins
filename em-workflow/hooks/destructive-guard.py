@@ -8565,7 +8565,15 @@ def _args_json_runs_string_as_code(marked, toks):
     if k >= len(words):
         return False
     name, ok = _args_json_declaration_word(marked, words[k])
-    return not ok or name in _ARGS_JSON_STRING_AS_CODE_WORDS
+    if not ok or name in _ARGS_JSON_STRING_AS_CODE_WORDS:
+        return True
+    # An unquoted leading `~` at the command name expands to HOME in Bash, so
+    # the name cannot be read statically.
+    if not getattr(words[k], "quoted", False) and str(words[k]).startswith("~"):
+        return True
+    # `alias` / `hash` / `enable` reached through `builtin [--]` (the prefix
+    # skipping of _args_json_command_start() restores the name).
+    return name in OVERRIDE_BUILTINS
 
 
 def _args_json_shadow_scan(marked):
