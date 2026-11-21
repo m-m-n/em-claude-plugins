@@ -50,8 +50,8 @@ goal: '# destructive-guard: 同名のシェル関数で mcp-bridge を上書き�
   ## 該当箇所 (任意)
 
 
-  <code>em-workflow/hooks/destructive-guard.py</code> の notion ペア除外判定。args-json-deferred-eval-bypass
-  のレビュー round 1（stable\_id 4a4542dc55b04a23）で指摘され、その脅威モデルではスコープ外と判断した。
+  <code>em-workflow/hooks/destructive-guard.py</code> の notion ペア除外判定。args-json-deferred-eval-bypass のレビュー
+  round 1（stable\_id 4a4542dc55b04a23）で指摘され、その脅威モデルではスコープ外と判断した。
 
 
   ## 暫定緩和策 (任意)
@@ -88,8 +88,8 @@ project:
     main:
       language: python
       build_command: ''
-      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3
-        -m unittest discover -s tests
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover
+        -s tests
       format_command: ''
 workflow:
 - id: create-spec
@@ -102,8 +102,8 @@ workflow:
   - DESIGN.md
   - design/
   status: skipped
-  skipped_reason: 'tier reduced により design step を削減（UI を持たないフックの静的解析の修正、design-system
-    候補 0 件。create-spec.design-step: decide_autonomously → skip）'
+  skipped_reason: 'tier reduced により design step を削減（UI を持たないフックの静的解析の修正、design-system 候補 0 件。create-spec.design-step:
+    decide_autonomously → skip）'
 - id: create-plan
   artifacts:
   - IMPLEMENTATION.md
@@ -117,7 +117,7 @@ workflow:
   base_commit: 93a21ad299242542960f5c4a497f255626ef9707
   completed_at_commit: c35856f35f939cad2d724f60b47752b9cf90b90d
 - id: review
-  status: in_progress
+  status: pending
 - id: verify
   status: pending
   result: null
@@ -128,8 +128,7 @@ workflow:
   status: pending
 tasks:
   task0001:
-    title: Lift the notion-pair exclusion on override and shell-state constructs in
-      the chunk chain
+    title: Lift the notion-pair exclusion on override and shell-state constructs in the chunk chain
     plan: tasks/task0001.md
     files:
     - em-workflow/hooks/destructive-guard.py
@@ -155,7 +154,7 @@ tasks:
     notes: null
 review:
   status: pending
-  rounds_completed: 0
+  rounds_completed: 1
   plan:
     floor:
     - comprehensive
@@ -166,9 +165,29 @@ review:
     - perspective: performance
       reason: NFR2（走査コスト）が追加走査の計算量を要件にしているため
     cross_validation: true
-  perspectives: {}
-  residual_critical_high: 0
-  needs_rework: false
+  perspectives:
+    comprehensive:
+      status: completed
+      rounds:
+      - 1
+    security:
+      status: completed
+      rounds:
+      - 1
+    architecture:
+      status: completed
+      rounds:
+      - 1
+    spec:
+      status: completed
+      rounds:
+      - 1
+    performance:
+      status: completed
+      rounds:
+      - 1
+  residual_critical_high: 4
+  needs_rework: true
 requirements:
   FR1:
     title: 上書き構文があれば notion ペアの除外を外す
