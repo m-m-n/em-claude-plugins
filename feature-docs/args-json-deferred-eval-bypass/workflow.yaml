@@ -226,7 +226,7 @@ tasks:
     - NFR1
     - NFR3
     - NFR5
-    status: in_progress
+    status: merged
     branch: em-workflow/args-json-deferred-eval-bypass/task0003
     notes: null
     provenance:
