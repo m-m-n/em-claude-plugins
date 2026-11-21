@@ -19,7 +19,7 @@
 - [ ] AC6 (FR5): A notion call whose exclusion has been lifted stays allowed when its decoded value is harmless.
 - [ ] AC7 (FR6): A function-definition string inside quotes, a comment, or a data heredoc body does not lift the exclusion, and the call stays allowed.
 - [ ] AC8 (FR3, FR7): A word containing `BASH_FUNC_` does not change the data-heredoc decision.
-- [ ] AC9 (NFR1): All existing test suites pass.
+- [ ] AC9 (NFR1): The destructive-guard runner passes all cases, and no test of `python3 -m unittest discover -s tests` that passes on base_branch at the integration base fails or errors on the integration branch. Failures that reproduce identically on base_branch at the integration base, in test files this feature's diff does not touch, are not counted.
 
 ## Technical Requirements
 
@@ -49,7 +49,7 @@
 
 ### Non-Functional Requirements
 
-- **NFR1 - Preservation of existing cases:** `python3 em-workflow/hooks/tests/run-destructive-guard.py` and `python3 -m unittest discover -s tests` all pass. Existing deny / ask cases are not removed, and the decisions of existing allow cases do not change, including the existing notion-pair allow cases in `destructive-guard-cases.json` (case labels `TS-3`, `TS-4`, `TS-5`, `TS-22`; `mcp-bridge-exec-tool-rescan` `TS-2`; `mcp-bridge-args-json-exec-guard` `TS-9`; `args-json-quoting-bypass` `TS-5` / `TS-31`).
+- **NFR1 - Preservation of existing cases:** The feature introduces no new test failure. `python3 em-workflow/hooks/tests/run-destructive-guard.py` passes. Every test of `python3 -m unittest discover -s tests` that passes on base_branch at the integration base also passes on the integration branch. A test that fails or errors identically on base_branch at the integration base, and whose test file is not touched by this feature's diff, does not count against NFR1. Existing deny / ask cases are not removed, and the decisions of existing allow cases do not change, including the existing notion-pair allow cases in `destructive-guard-cases.json` (case labels `TS-3`, `TS-4`, `TS-5`, `TS-22`; `mcp-bridge-exec-tool-rescan` `TS-2`; `mcp-bridge-args-json-exec-guard` `TS-9`; `args-json-quoting-bypass` `TS-5` / `TS-31`).
 - **NFR2 - Scan cost:** The FR4 chain decision is computed once per chunk and kept, and the chain is walked without recursion. Deep nesting does not hit the recursion limit.
 
 ## Assumptions
@@ -60,6 +60,7 @@
 - False positives where the exclusion is lifted by a function definition of any name or by a `BASH_FUNC_` / `BASH_ALIASES` substring match are accepted, because the call stays allowed when the decoded value is harmless.
 - Constructs in sibling chunks that are not on the enclosing-chunk chain (such as the body of a different command substitution) are not included in the FR4 scope.
 - Additional instructions in the task description (pushing the integration branch and creating a PR, consulting Codex on unclear points) are treated as process instructions and are not included in the functional requirements.
+- Baseline for NFR1 / AC9 / TS-16: base_branch at the integration base is the reference. A unittest failure or error counts against NFR1 only when the same test passes on that baseline, or when its test file is touched by this feature's diff. This feature changes no test or version outside its own scope to make a test that already fails on the baseline pass.
 
 ## Implementation Approach
 
@@ -198,8 +199,9 @@ When written into `destructive-guard-cases.json`, each form listed under a scena
 
 - [ ] TS-15 (NFR1, FR7): The existing notion-pair allow cases (case labels `TS-3`, `TS-4`, `TS-5`, `TS-22` in `destructive-guard-cases.json`; `mcp-bridge-exec-tool-rescan` `TS-2`; `mcp-bridge-args-json-exec-guard` `TS-9`; `args-json-quoting-bypass` `TS-5` / `TS-31`) stay `allow`.
   - `python3 em-workflow/hooks/tests/run-destructive-guard.py`
-- [ ] TS-16 (NFR1): All suites - expected to pass.
-  - `python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests`
+- [ ] TS-16 (NFR1): The destructive-guard runner on the integration branch, and `python3 -m unittest discover -s tests` on both the integration branch and base_branch at the integration base. Compare the failing / erroring unittest test ids of the two runs. Expected: the runner passes all cases. Every unittest test id that fails or errors on the integration branch also fails or errors identically on base_branch at the integration base, and its test file is not in this feature's diff.
+  - `python3 em-workflow/hooks/tests/run-destructive-guard.py`
+  - `python3 -m unittest discover -s tests`
 
 ### E2E Tests
 

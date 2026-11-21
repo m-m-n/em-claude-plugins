@@ -2,7 +2,7 @@ schema_version: 1
 feature: mcp-bridge-function-shadow
 phase: create-spec
 status: completed
-generation: 1
+generation: 2
 base_revision: d42e00bb0d6379f40470c88cc8877934d7191608
 last_input_digest: sha256:cfa4a3e833926a95f6c742757328f55f7e41de47b9a0eb967debe18604ca9277
 active_request_id: null
@@ -109,10 +109,17 @@ worker_runs:
   status: completed
   input_digest: sha256:cfa4a3e833926a95f6c742757328f55f7e41de47b9a0eb967debe18604ca9277
   self_write_set: []
+- request_id: create-spec-run-0005
+  status: completed
+  note: spec-change re-entry analysis (verify TS-16 / NFR1 / AC9)
+- request_id: create-spec-run-0006
+  status: completed
+  self_write_set:
+  - feature-docs/mcp-bridge-function-shadow/SPEC.md
 artifacts:
 - path: feature-docs/mcp-bridge-function-shadow/SPEC.md
-  sha256: sha256:d68fee00679eb87e4aa8dad9a150fb86346c95f273ead8084efa81d9448f7aad
-  produced_by: create-spec-run-0004
+  sha256: sha256:97c7ac87fabbcd1ab37d140358d377bf688eebeb7bea46c0f8eec12472ce6c62
+  produced_by: create-spec-run-0006
 patches: []
 progress_fingerprint: sha256:9be403fe4010b8866902532713044bf84d1b4a69ca30893d062401d694a4c078
 stale_redispatch_count: 0
@@ -124,3 +131,7 @@ resolved_input_cache:
     digests: {}
     truncated: false
 last_error: null
+assumptions_added_generation_2:
+- 'Baseline for NFR1 / AC9 / TS-16: base_branch at the integration base is the reference;
+  a unittest failure counts against NFR1 only when the same test passes on that baseline
+  or its test file is touched by this feature diff (reversible)'
