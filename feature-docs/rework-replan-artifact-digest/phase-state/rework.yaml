@@ -28,7 +28,7 @@ worker_runs:
   - feature-docs/rework-replan-artifact-digest/VERIFICATION.md
   - feature-docs/rework-replan-artifact-digest/tasks/task0002.md
 - request_id: rework-run-0002
-  status: dispatched
+  status: failed
   input_digest: sha256:e5a8e1d2c5e1bd724c1f778b03edd5a221496b7cdad2d1377bf43bcb529af4ff
   dispatch_digest_inputs:
     em-workflow/references/contracts/rework-planner-contract.md: sha256:0c9f82099c3546b6b675856539d8244628b7170ce7a4442ec951e13e16577ec3
@@ -54,7 +54,12 @@ patches:
   status: applied
   base_input_digest: sha256:cd3a4d6bf45b71e5b7d952bd8a3ead48fbf0d1a2b0183081a28916b505ddb2c0
   base_workflow_blob: cc16ffb793ba8ffa541d84ba615eb88aad69b992
+- patch_id: rework-replan-artifact-digest-verify1-p0001
+  status: rejected
+  base_input_digest: sha256:e5a8e1d2c5e1bd724c1f778b03edd5a221496b7cdad2d1377bf43bcb529af4ff
+  base_workflow_blob: 4437c7ce46b786b7e8dee3803f8d3a13ab5d6474
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
-last_error: null
+last_error: 'rework-run-0002 rejected by validate-worker-output.py: task-plan-files (multiple backtick paths per Files bullet), task-plan-files-mismatch, rework-index (verification_index not at envelope
+  top level; no --baseline-dir)'
