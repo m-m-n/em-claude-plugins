@@ -95,8 +95,8 @@ workflow:
 - id: create-spec
   artifacts:
   - SPEC.md
-  status: in_progress
-  completed_at_commit: 44d0dc15db7438e5ff6757343c77c5a439dc8815
+  status: completed
+  completed_at_commit: 90e9625d1dad60b09de6144a98318e9284208dbb
 - id: design
   artifacts:
   - DESIGN.md
