@@ -8600,24 +8600,25 @@ def _args_json_nameref_scan(marked):
             return True
         # A `[[ ]]` that `&&` or `||` split into several statements: every
         # fragment up to the one holding `]]` is read as `[[` words.
-        texts = [
-            _args_json_declaration_word(marked, tok)[0]
-            for tok in words
-            if not getattr(tok, "is_operator", False)
-        ]
+        # `[[` and `]]` count only when unquoted (a quoted one is an operand).
+        texts = []
+        unquoted = []
+        for tok in words:
+            if getattr(tok, "is_operator", False):
+                continue
+            text = _args_json_declaration_word(marked, tok)[0]
+            texts.append(text)
+            unquoted.append(None if getattr(tok, "quoted", False) else text)
         if in_dbracket:
             if any(text in _ARGS_JSON_DOUBLE_BRACKET_WORDS for text in texts):
                 return True
-            if "]]" in texts:
+            if "]]" in unquoted:
                 in_dbracket = False
         else:
-            first = 0
-            while first < len(texts) and texts[first] in (
-                "!", "if", "elif", "then", "else", "while", "until", "do",
-            ):
-                first += 1
-            if first < len(texts) and texts[first] == "[[" and "]]" not in texts[first + 1:]:
-                in_dbracket = True
+            for idx, text in enumerate(unquoted):
+                if text == "[[" and "]]" not in unquoted[idx + 1:]:
+                    in_dbracket = True
+                    break
         commands = [[]]
         for tok in _split_fused_closer_redirects(words):
             if _args_json_command_boundary(tok):
@@ -8626,6 +8627,19 @@ def _args_json_nameref_scan(marked):
                 commands[-1].append(tok)
         for command in commands:
             if _args_json_declares_nameref(marked, command):
+                return True
+        # A `{` or `}` word after the first word of a simple command is an
+        # argument, not a reserved word, so Bash keeps reading the same
+        # command past it. Read the whole statement as one command as well.
+        whole = [
+            tok for tok in _split_fused_closer_redirects(words)
+            if not getattr(tok, "is_operator", False)
+        ]
+        if any(
+            idx > 0 and tok in ("{", "}") and not getattr(tok, "quoted", False)
+            for idx, tok in enumerate(whole)
+        ):
+            if _args_json_declares_nameref(marked, whole):
                 return True
     return False
 
