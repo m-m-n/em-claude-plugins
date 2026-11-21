@@ -1,11 +1,11 @@
 schema_version: 1
 feature: verify-rerun-legacy-deferred-resolution
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: 1a44fc527825bcba1ea69c4456d5ec3b208ea5be
-last_input_digest: sha256:f023b0283d3a6c99cc1754abe9d5befbdc7c030a63b5e74b8ae1a459d7eb7df4
-active_request_id: create-spec-run-0001
+last_input_digest: sha256:eb77a25f10d27b2e6d6afb6cf921933ab83fd78c891164b6155de23f1e62474e
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     status: answered
@@ -76,6 +76,9 @@ worker_runs:
   status: needs_user_input
   input_digest: sha256:f023b0283d3a6c99cc1754abe9d5befbdc7c030a63b5e74b8ae1a459d7eb7df4
   output_digest: sha256:74d1bc7a7982c88e93c7989beae998451d391cdbfe2fe87295c3d6f04ef0c840
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:eb77a25f10d27b2e6d6afb6cf921933ab83fd78c891164b6155de23f1e62474e
 artifacts: []
 patches: []
 progress_fingerprint: null
