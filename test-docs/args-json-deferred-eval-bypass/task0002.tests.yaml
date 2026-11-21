@@ -1,0 +1,126 @@
+task_id: task0002
+baseline_failures:             # full project test command run before any edit: runner 1467/1467 passed; unittest "Ran 16931 tests ... FAILED (failures=4, skipped=1)"
+  - test_review_perspective_model_effort_version_bump.TestEmReviewManifest.test_version_is_a_minor_bump_over_baseline
+  - test_review_perspective_model_effort_version_bump.TestEmWorkflowManifest.test_version_is_a_minor_bump_over_baseline
+  - test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_review_entry_version_is_a_minor_bump_over_baseline
+  - test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_workflow_entry_version_is_a_minor_bump_over_baseline
+final_failures:                # full project test command re-run after the implementation and this record: same four, none added
+  - test_review_perspective_model_effort_version_bump.TestEmReviewManifest.test_version_is_a_minor_bump_over_baseline
+  - test_review_perspective_model_effort_version_bump.TestEmWorkflowManifest.test_version_is_a_minor_bump_over_baseline
+  - test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_review_entry_version_is_a_minor_bump_over_baseline
+  - test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_workflow_entry_version_is_a_minor_bump_over_baseline
+acceptance_tests:
+  AC-1:
+    # The runner has no per-case selector; its check is the runner itself
+    # (python3 em-workflow/hooks/tests/run-destructive-guard.py), the
+    # args-json-deferred-eval-bypass TS-5 and TS-6 entries of
+    # em-workflow/hooks/tests/destructive-guard-cases.json.
+    tests:
+      - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_the_notion_call_after_each_uncertain_form_is_inspected
+      - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_each_uncertain_form_reads_as_an_uncertain_chunk
+      - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_a_name_outside_the_allowlist_is_uncertain_whatever_its_words
+      - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_the_name_after_a_prefix_is_classified_the_same_way
+      - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_printf_is_uncertain_only_for_an_option_or_a_percent_n_conversion
+      - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_test_and_bracket_are_uncertain_for_v_or_an_unrestorable_word
+      - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_a_function_definition_is_classified_by_its_name
+    red_confirmed: true
+    red_reason: >-
+      With the 55 new case-table entries added and the hook unchanged, the
+      runner printed "FAIL deny args-json-deferred-eval-bypass TS-5 ... got=allow
+      rule=None" for each of the TS-5 and TS-6 entries and ended "1467/1522
+      passed". The unit tests failed with "AssertionError: Lists differ:
+      ['inspected'] != ['nothing']" (the notion call stayed excluded) and
+      "False is not true" for the per-name checks.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_an_arithmetic_command_without_blanks_makes_the_call_uncertain
+      - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_an_arithmetic_command_reads_as_uncertain_wherever_a_command_stands
+      - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_a_word_holding_an_arithmetic_command_is_not_restorable
+      - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_the_moved_subtest_leaves_no_arithmetic_command_in_its_docstring
+      - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_the_notion_call_after_each_uncertain_form_is_inspected
+      - tests.test_destructive_guard_args_json.TestNamerefDeclarations.test_a_declaration_with_no_nameref_option_does_not_make_the_call_uncertain
+    red_confirmed: true
+    red_reason: >-
+      With the hook unchanged the moved check failed with "AssertionError:
+      Lists differ: ['inspected'] != ['nothing']" (the notion call after
+      ((x=1)); stayed excluded), the restorable check with "True is not
+      false", and the TS-2 case-table entries printed "FAIL deny ... TS-2 ...
+      got=allow". The docstring test was observed failing by running its
+      assertion against the pre-change test module: the old docstring holds
+      "arithmetic command". TestNamerefDeclarations's remaining subtests
+      already passed before the change and still pass; they are not themselves
+      a red.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_each_uncertain_form_reads_as_an_uncertain_chunk
+      - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_the_notion_call_after_each_uncertain_form_is_inspected
+      - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_the_integer_attribute_set_holds_optind_and_each_member_is_uncertain
+      - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_double_bracket_is_uncertain_only_for_an_arithmetic_operator_or_v
+      - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_a_declaration_builtin_is_uncertain_for_i_n_a_target_or_a_subscript
+      - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_a_subscript_element_of_a_compound_assignment_is_uncertain
+    red_confirmed: true
+    red_reason: >-
+      With the hook unchanged the runner printed "FAIL deny
+      args-json-deferred-eval-bypass TS-4 ... got=allow rule=None" for every
+      TS-4 entry; the unit tests failed with "AssertionError: Lists differ:
+      ['inspected'] != ['nothing']", "False is not true" and, for the
+      integer-attribute set, "AttributeError: module ... has no attribute
+      '_ARGS_JSON_INTEGER_VARIABLES'". The compound-assignment subscript test
+      failed one subtest on the old hook (`A=(x [i]=1)`, read as certain
+      because only the first element of a list was ever looked at); the other
+      forms it holds (`A=([i]=1)` and the like) were already uncertain by
+      accident of the old reading and are guards, not reds.
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_the_notion_call_after_each_uncertain_form_is_inspected
+      - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_each_uncertain_form_reads_as_an_uncertain_chunk
+    red_confirmed: true
+    red_reason: >-
+      With the hook unchanged the runner printed "FAIL deny
+      args-json-deferred-eval-bypass TS-3 ... got=allow rule=None" for the
+      heredoc form and for the file form, and the unit test failed with
+      "AssertionError: Lists differ: ['inspected'] != ['nothing']".
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_args_json.TestNamerefDeclarations.test_a_declaration_with_no_nameref_option_does_not_make_the_call_uncertain
+      - tests.test_destructive_guard_args_json.TestNamerefDeclarations.test_no_declaration_anywhere_keeps_the_nested_call_excluded
+      - tests.test_destructive_guard_args_json.TestNamerefDeclarations.test_the_chain_is_walked_without_recursion
+      - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_each_certain_form_keeps_the_exclusion
+      - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_the_allowlisted_names_are_certain_whatever_their_words
+      - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_the_words_of_a_compound_assignment_are_no_command
+    red_confirmed: false
+    red_reason: >-
+      The behaviour is a no-change guarantee: the existing TestNamerefDeclarations
+      tests and the certain-form tests passed on the unchanged hook and still
+      pass; no red state occurred for this change. The compound-assignment test
+      is the exception: it failed 6 subtests on the old hook (for example
+      "True is not false : A=(eval x)" and "False is not true : A=(x) let a"),
+      pinning that the elements of `NAME=(...)` are not read as commands while
+      the words after the closing parenthesis are.
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_a_command_name_that_cannot_be_restored_makes_the_chunk_uncertain
+      - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_test_and_bracket_are_uncertain_for_v_or_an_unrestorable_word
+      - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_printf_is_uncertain_only_for_an_option_or_a_percent_n_conversion
+    red_confirmed: true
+    red_reason: >-
+      With the hook unchanged the `test` / `[` test failed 9 subtests and the
+      `printf` test 13 subtests with "AssertionError: False is not true". The
+      command-name-that-cannot-be-restored test passed on the old hook (that
+      reading is unchanged by this task) and is not itself a red.
+  AC-7:
+    # The runner has no per-case selector; its check is the runner itself, plus
+    # `python3 -m unittest discover -s tests`. No reason ID or decision rule
+    # is added by this change (verified from the diff of
+    # em-workflow/hooks/destructive-guard.py), no new test imports a
+    # non-standard module and no path under .claude-plugin/ is touched.
+    tests:
+      - tests.test_destructive_guard_args_json.TestCommandNameAllowlist.test_every_deny_entry_of_the_feature_pins_the_existing_reason_id
+    red_confirmed: true
+    red_reason: >-
+      With the 55 new entries added and the hook unchanged the runner ended
+      "1467/1522 passed", every failing line "got=allow rule=None" against the
+      expected deny with rule git-branch-force-delete. The label test was
+      observed failing by running its checks against the pre-change case table,
+      which holds no entry whose label starts with
+      args-json-deferred-eval-bypass.

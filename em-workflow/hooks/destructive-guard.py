@@ -8613,19 +8613,50 @@ def _args_json_command_boundary(tok):
 def _args_json_declares_nameref(marked, toks):
     """Whether the simple command whose tokens are TOKS (a statement's tokens
     between two boundaries) may declare a nameref or leave the shell state
-    unknown (_args_json_nameref_scan()).
+    uncertain (_args_json_nameref_scan()).
 
-    The redirections go first. Then the words in front of the command name
-    are skipped: `VAR=value` assignments, the prefixes `builtin`, `command`,
-    `exec`, `time`, `!` and the reserved words that introduce a command
-    (`if`, `elif`, `then`, `else`, `while`, `until`, `do`), each with its own
-    `--` terminator when one follows; `command` and `time` also with their own
-    options (`-p`, `-v`, `-V`, ...), so `command -p -- declare -n r` is read as
-    `declare -n r`. A `-v` or `-V` option is read as if `command` ran the word
-    (the safe side). The word after them is the command name: a name that
-    cannot be restored statically, or `eval`, `source`, `.`, `trap`, `alias`,
-    `mapfile` or `readarray`, leaves the shell state unknown; for `declare`, `local` and `typeset` an option word that
-    holds `n`, or any word that cannot be restored, does."""
+    The words inside the parentheses of a compound assignment (`A=(x y)`) are
+    data and name no command (_args_json_in_array_literal()); such a command is
+    certain, unless an element carries a `[...]` subscript that is not digits
+    only, `@` or `*` (`A=([i]=1)`: Bash evaluates the subscript as an
+    arithmetic expression).
+
+    For any other command the redirections go first. Then the words in front
+    of the command name are skipped: `VAR=value` assignments, the prefixes
+    `builtin`, `command`, `exec`, `time`, `!` and the reserved words that
+    introduce a command (`if`, `elif`, `then`, `else`, `while`, `until`,
+    `do`), each with its own `--` terminator when one follows; `command` and
+    `time` also with their own options (`-p`, `-v`, `-V`, ...), so
+    `command -p -- declare -n r` is read as `declare -n r`. A `-v` or `-V`
+    option is read as if `command` ran the word (the safe side). A skipped
+    assignment whose target name (the part before `=` or `+=`, a
+    subscript left out) is in _ARGS_JSON_INTEGER_VARIABLES, which Bash
+    evaluates as an arithmetic expression on assignment, or is `PS4`, makes the
+    command uncertain. With no word left the command is certain.
+
+    The word after them is the command name, classified by an allowlist
+    (_args_json_name_uncertain()); any other name is uncertain, and so is a
+    name that cannot be restored statically: a word holding an expansion, a
+    substitution or an arithmetic command (`((...))`). Certain whatever their
+    words hold: `mcp-bridge`, `echo`, `:`, `true`, `false`, and `fi` and
+    `done`, which close a compound command. Certain unless their own condition
+    holds: `printf` (an option word in front of the format, which covers `-v`;
+    a `%n` conversion in the format; an option or format word that cannot be
+    restored), `test` and `[` (a word whose restored text is `-v`, or a word
+    that cannot be restored), `[[` (a word whose restored text is `-eq`,
+    `-ne`, `-lt`, `-le`, `-gt`, `-ge` or `-v`), and `declare`, `local` and
+    `typeset` (an option word holding `n` or `i`; a word that cannot be
+    restored; an assignment to an integer-attribute or `PS4` target; a `[...]`
+    subscript that is not digits only, `@` or `*`). The name after a skipped
+    prefix is classified the same way. The name word of a function definition
+    stands as a simple command of its own, so it is classified like a call."""
+    if _args_json_in_array_literal(marked, toks):
+        return any(
+            _args_json_variable_subscript(
+                _args_json_declaration_word(marked, tok)[0], True
+            )
+            for tok in toks
+        )
     words = _args_json_strip_redirections(marked, toks)
     prefixes = (
         "builtin", "command", "exec", "time", "!",
@@ -8648,23 +8679,196 @@ def _args_json_declares_nameref(marked, toks):
             if k < size and _args_json_declaration_word(marked, words[k]) == ("--", True):
                 k += 1
             continue
-        if re.match(r"[A-Za-z_][A-Za-z0-9_]*(?:\[[^\]]*\])?\+?=", text):
+        target = _args_json_assignment_target(text)
+        if target is not None:
+            if _args_json_evaluated_target(target):
+                return True
             k += 1
             continue
         break
     if k >= size:
         return False
     name, ok = _args_json_declaration_word(marked, words[k])
-    if not ok or name in (
-        "eval", "source", ".", "trap", "alias", "mapfile", "readarray",
-    ):
+    if not ok:
         return True
-    if name in ("declare", "local", "typeset"):
-        for word in words[k + 1:]:
-            option, option_ok = _args_json_declaration_word(marked, word)
-            if not option_ok or re.fullmatch(r"-[A-Za-z]*n[A-Za-z]*", option):
+    return _args_json_name_uncertain(marked, name, words[k + 1:])
+
+
+# The shell variables Bash gives the integer attribute without any
+# declaration: the names `declare -p NAME` shows with `-i` in a Bash 5.3 that
+# has run no script (MAILCHECK only in an interactive one). Assigning to an
+# integer-attribute variable evaluates the value as an arithmetic expression,
+# so a value kept for later can run code in the current shell; that was
+# confirmed for OPTIND, RANDOM, SRANDOM, HISTCMD and MAILCHECK, and the other
+# names are listed for the attribute alone (the safe side). Only names
+# confirmed against Bash itself are listed.
+_ARGS_JSON_INTEGER_VARIABLES = frozenset({
+    "BASHPID", "EUID", "HISTCMD", "MAILCHECK", "OPTIND", "PPID", "RANDOM",
+    "SECONDS", "SRANDOM", "UID",
+})
+
+# The command names that are certain whatever their words hold: builtins and
+# one external command that change no shell state, evaluate no string and take
+# no variable name as an argument, and the reserved words that close a
+# compound command. The list is closed; a name outside it and outside the
+# conditional names of _args_json_name_uncertain() is uncertain.
+_ARGS_JSON_CERTAIN_NAMES = frozenset({
+    "mcp-bridge", "echo", ":", "true", "false", "fi", "done",
+})
+
+# The words of a `[[ ]]` command that evaluate an operand as an arithmetic
+# expression (`-eq` and the other integer comparisons) or test a variable name
+# (`-v`).
+_ARGS_JSON_DOUBLE_BRACKET_WORDS = frozenset({
+    "-eq", "-ne", "-lt", "-le", "-gt", "-ge", "-v",
+})
+
+
+def _args_json_assignment_target(text):
+    """The variable name an assignment word of restored text TEXT assigns to
+    (`NAME=value`, `NAME+=value`, `NAME[subscript]=value`), or None when TEXT
+    is no assignment word."""
+    match = re.match(r"([A-Za-z_][A-Za-z0-9_]*)(?:\[[^\]]*\])?\+?=", text)
+    return match.group(1) if match else None
+
+
+def _args_json_evaluated_target(name):
+    """Whether assigning to the variable NAME evaluates the value as an
+    arithmetic expression (an integer-attribute variable), or sets the prompt
+    Bash expands for every traced command (`PS4`)."""
+    return name in _ARGS_JSON_INTEGER_VARIABLES or name == "PS4"
+
+
+def _args_json_in_array_literal(marked, toks):
+    """Whether TOKS, the words of one simple command between two boundaries,
+    are the elements written inside the parentheses of a compound assignment:
+    the text in front of the first word, blanks aside, is an opening
+    parenthesis that touches the `=` (or `+=`) of a variable name (`A=(`,
+    `A+=(`, `declare -a A=(`). The elements are data: no word of them is a
+    command name. Read from the first word only, so a body written over
+    several lines is recognised on its first line, and every other line reads
+    as a command (the safe side). A subscript element stays visible to the
+    caller, which reads it."""
+    span = None
+    for tok in toks:
+        span = getattr(tok, "span", None)
+        break
+    if span is None:
+        return False
+    text = marked.text
+    pos = span[0]
+    while pos > 0 and text[pos - 1] in " \t\n":
+        pos -= 1
+    if pos < 2 or text[pos - 1] != "(" or text[pos - 2] != "=":
+        return False
+    pos -= 2
+    if pos > 0 and text[pos - 1] == "+":
+        pos -= 1
+    end = pos
+    while pos > 0 and (
+        text[pos - 1] == "_" or (text[pos - 1].isascii() and text[pos - 1].isalnum())
+    ):
+        pos -= 1
+    return pos < end and not text[pos].isdigit()
+
+
+def _args_json_name_uncertain(marked, name, args):
+    """Whether the command named NAME (its restored text), whose words after
+    the name are ARGS, may leave the shell state uncertain: the allowlist of
+    _args_json_declares_nameref(). A name outside it is uncertain."""
+    if name in _ARGS_JSON_CERTAIN_NAMES:
+        return False
+    if name == "printf":
+        return _args_json_printf_uncertain(marked, args)
+    if name in ("test", "["):
+        for word in args:
+            text, ok = _args_json_declaration_word(marked, word)
+            if not ok or text == "-v":
                 return True
+        return False
+    if name == "[[":
+        # The operators of `[[ ]]` are never expanded, so the restored text of
+        # a word decides, whether or not the rest of the word is static.
+        return any(
+            _args_json_declaration_word(marked, word)[0] in _ARGS_JSON_DOUBLE_BRACKET_WORDS
+            for word in args
+        )
+    if name in ("declare", "local", "typeset"):
+        return _args_json_declaration_uncertain(marked, args)
+    return True
+
+
+def _args_json_printf_uncertain(marked, args):
+    """Whether `printf` with the words ARGS (after the name) may leave the
+    shell state uncertain: the first word is an option (`-v name` assigns to a
+    variable; a lone `--` ends the options and is skipped), the format word
+    holds a `%n` conversion, or the option-position word or the format word
+    cannot be restored. Words after the format are its arguments and are not
+    read."""
+    if not args:
+        return False
+    text, ok = _args_json_declaration_word(marked, args[0])
+    if ok and text == "--":
+        if len(args) < 2:
+            return False
+        text, ok = _args_json_declaration_word(marked, args[1])
+        if not ok:
+            return True
+    elif not ok or text.startswith("-"):
+        return True
+    return _args_json_format_has_n_conversion(text)
+
+
+def _args_json_format_has_n_conversion(text):
+    """Whether the printf format TEXT holds a conversion whose conversion
+    character is `n`: a `%`, then flags, a width, a precision and length
+    modifiers, then `n`. `%%` is a literal percent sign and starts none."""
+    pos = text.find("%")
+    while pos >= 0:
+        pos += 1
+        if text.startswith("%", pos):
+            pos += 1
+        else:
+            while pos < len(text) and text[pos] in "-+ #'0123456789.*hlLjzt":
+                pos += 1
+            if text.startswith("n", pos):
+                return True
+        pos = text.find("%", pos)
     return False
+
+
+def _args_json_declaration_uncertain(marked, args):
+    """Whether `declare`, `local` or `typeset` with the words ARGS (after the
+    name) may leave the shell state uncertain: a word that cannot be restored;
+    an option word holding `n` (a nameref) or `i` (the integer attribute); an
+    assignment to an integer-attribute variable or `PS4`; or a `[...]`
+    subscript in the restored text that is not digits only, `@` or `*` (the
+    lexer gives a declaration builtin's argument no subscript region, so the
+    subscript is read from the text)."""
+    for word in args:
+        text, ok = _args_json_declaration_word(marked, word)
+        if not ok or re.fullmatch(r"-[A-Za-z]*[ni][A-Za-z]*", text):
+            return True
+        target = _args_json_assignment_target(text)
+        if target is not None and _args_json_evaluated_target(target):
+            return True
+        if _args_json_variable_subscript(text, False):
+            return True
+    return False
+
+
+def _args_json_variable_subscript(text, leading):
+    """Whether the restored text TEXT holds a `[...]` subscript that is not
+    digits only, `@` or `*`: one Bash may evaluate as an arithmetic expression
+    (or, for `@` and `*`, expand to several words). Only a subscript that
+    starts TEXT counts when LEADING is true (an element `[sub]=value` of a
+    compound assignment); otherwise any subscript in TEXT does."""
+    if leading:
+        match = re.match(r"\[([^\]]*)\]", text)
+        subscripts = [match.group(1)] if match else []
+    else:
+        subscripts = re.findall(r"\[([^\]]*)\]", text)
+    return any(not re.fullmatch(r"[0-9]+|@|\*", sub) for sub in subscripts)
 
 
 def _args_json_strip_redirections(marked, toks):
@@ -8699,12 +8903,13 @@ def _args_json_declaration_word(marked, word):
     statically: it holds an expansion (an unquoted or double-quoted `$` or
     backtick, a substitution, a parameter or arithmetic expansion), an ANSI-C
     quote that does not decode, a region the word does not hold whole or that
-    is not closed, or it has no span. An arithmetic command (`((expr))`) is
-    kept as written and restorable: it is no command name and declares
-    nothing. A form Bash may rewrite (an unquoted brace pair, an unquoted
-    `*` or `?`, an unquoted bracket pair) is not restorable, since brace and
-    pathname expansion can change the word's spelling or count. A trailing
-    `\\r` that the lexing took off the word is not part of it."""
+    is not closed, or it has no span. A word holding an arithmetic command
+    (`((expr))`) is not restorable either, as for every other region that is
+    not a quote: the command evaluates an expression. A form Bash may rewrite
+    (an unquoted brace pair, an unquoted `*` or `?`, an unquoted bracket pair)
+    is not restorable, since brace and pathname expansion can change the
+    word's spelling or count. A trailing `\\r` that the lexing took off the
+    word is not part of it."""
     value = str(word)
     span = getattr(word, "span", None)
     if marked is None or span is None or getattr(word, "is_operator", False):
@@ -8746,12 +8951,6 @@ def _args_json_declaration_word(marked, word):
         region = by_start.get(pos)
         if region is not None:
             kind = region.kind
-            if kind == "arithmetic-command":
-                # `((expr))` at command position evaluates an expression: it
-                # is no command name and declares nothing.
-                out.append(source[pos:region.end])
-                pos = region.end
-                continue
             if kind not in quote_kinds:
                 return value, False
             skip = quote_kinds[kind]
