@@ -150,7 +150,14 @@ tasks:
     notes: null
 review:
   status: pending
-  rounds_completed: 0
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  residual_critical_high: 5
+  needs_rework: true
   plan:
     floor:
     - comprehensive
