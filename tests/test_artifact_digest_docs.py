@@ -1788,5 +1788,834 @@ class TestCreatePlanSitesCiteActionChoiceOwner(unittest.TestCase):
                 self.assertFalse(_cites_action_choice_owner(forged))
 
 
+# ---------------------------------------------------------------------------
+# rework-replan-artifact-digest task0002 (FR1, FR3, FR4, FR7, NFR1 to NFR4;
+# TS-9, TS-10)
+#
+# create-plan's per-target action decision is owned by spec-writer-contract.md,
+# "How the orchestrator chooses each target's action before dispatch". The
+# places below name target paths and dispatch-specific constraints and fix no
+# plan-document action of their own:
+#
+# - planner-contract.md: the `write_policy` paragraph of "Additional input:
+#   `planning_inputs`" and the write_policy bullet of each of the two
+#   correction subsections;
+# - create-plan-phase.md: the `write_policy` bullet of section 4, the
+#   Pre-dispatch and Dispatch paragraphs of section 13, and the two paragraphs
+#   of "Feature-docs correction dispatch" that choose and carry the actions;
+# - spec-writer-contract.md: the `replace_own` row of the action table;
+# - implementation-planner.md: the own-documents bullet of "Feature-docs
+#   correction".
+#
+# Each place is cut out by its heading and whitespace-normalized; the tests
+# check key tokens and phrases, never a whole sentence or a line position.
+# Every presence matcher has a forged copy on which it fails, and every
+# absence matcher has a forged copy on which it fires. Existing test methods
+# and the helpers above stay unchanged.
+# ---------------------------------------------------------------------------
+
+PLANNER_CONTRACT_PATH = (
+    PLUGIN_ROOT / "references" / "contracts" / "planner-contract.md"
+)
+PLANNER_AGENT_PATH = PLUGIN_ROOT / "agents" / "implementation-planner.md"
+PLANNING_INPUTS_TITLE = "Additional input: `planning_inputs`"
+PATH_CORRECTION_VALUE_TITLE = "path_correction (dispatch-resolved value)"
+FEATURE_DOCS_VALUE_TITLE = "feature_docs_correction (dispatch-resolved value)"
+WRITE_POLICY_ACTIONS_TITLE = "The `write_policy` actions"
+AGENT_FEATURE_DOCS_TITLE = "Feature-docs correction"
+
+S_PLANNING_INPUTS = "planner-contract planning_inputs write_policy paragraph"
+S_PATH_CORRECTION = "planner-contract path_correction write_policy bullet"
+S_FEATURE_DOCS = "planner-contract feature_docs_correction write_policy bullet"
+S_SECTION_4 = "create-plan section 4 write_policy bullet"
+S_PRE_DISPATCH = "create-plan section 13 Pre-dispatch paragraph"
+S_DISPATCH = "create-plan section 13 Dispatch paragraph"
+S_FD_CHOOSE = "create-plan feature-docs correction action paragraph"
+S_FD_DISPATCH = "create-plan feature-docs correction dispatch paragraph"
+S_ROW = "spec-writer-contract replace_own row"
+S_AGENT = "implementation-planner own-documents bullet"
+
+PLANNER_CONTRACT_SLICES = (S_PLANNING_INPUTS, S_PATH_CORRECTION, S_FEATURE_DOCS)
+OWNER_CITING_SLICES = PLANNER_CONTRACT_SLICES + (
+    S_PRE_DISPATCH, S_FD_CHOOSE,
+)
+CREATE_PLAN_SLICES = (
+    S_SECTION_4, S_PRE_DISPATCH, S_DISPATCH, S_FD_CHOOSE, S_FD_DISPATCH,
+)
+ALL_TASK0002_SLICES = (
+    PLANNER_CONTRACT_SLICES + CREATE_PLAN_SLICES + (S_ROW, S_AGENT)
+)
+
+_PLAN_DOCUMENT_ACTIONS = (
+    "create|replace_own|replace_authorized|preserve|extend_only|regenerate|"
+    "amend_other_feature"
+)
+_FIXED_ACTION_RE = re.compile(
+    r"\bhas action `(?:" + _PLAN_DOCUMENT_ACTIONS + r")`", re.IGNORECASE
+)
+_LAST_ENTRY_RE = re.compile(r"\blast `artifacts` entry\b", re.IGNORECASE)
+_NOT_APPLY_RE = re.compile(r"\bdo not apply here\b", re.IGNORECASE)
+_ACTION_ROW_RE = re.compile(r"^\| `[a-z_]+` \|", re.MULTILINE)
+
+
+def _nested_bullet(text, starts_with):
+    """A `- ` bullet at any indentation beginning with `starts_with`, through
+    its continuation lines (up to the next bullet or blank line)."""
+    lines = text.splitlines()
+    for i, line in enumerate(lines):
+        if line.lstrip().startswith("- " + starts_with):
+            collected = [line]
+            for follower in lines[i + 1:]:
+                if not follower.strip() or follower.lstrip().startswith("- "):
+                    break
+                collected.append(follower)
+            return "\n".join(collected)
+    raise AssertionError(f"no bullet starts with {starts_with!r}")
+
+
+def _task0002_slices(planner_contract, create_plan, spec_writer, agent):
+    """The ten places, by label, each cut out of its document."""
+    section_13_head = _section_head(create_plan, SECTION_13_TITLE, level=2)
+    feature_docs = _section(create_plan, FEATURE_DOCS_CORRECTION_TITLE, level=3)
+    return {
+        S_PLANNING_INPUTS: _paragraph(
+            _section_head(planner_contract, PLANNING_INPUTS_TITLE, level=2),
+            "`write_policy` is also part of the input",
+        ),
+        S_PATH_CORRECTION: _bullet(
+            _section(planner_contract, PATH_CORRECTION_VALUE_TITLE, level=3),
+            "**write_policy**",
+        ),
+        S_FEATURE_DOCS: _bullet(
+            _section(planner_contract, FEATURE_DOCS_VALUE_TITLE, level=3),
+            "**write_policy**",
+        ),
+        S_SECTION_4: _bullet(
+            _section(create_plan, SECTION_4_TITLE, level=2),
+            "`write_policy` for the artifacts it may write",
+        ),
+        S_PRE_DISPATCH: _paragraph(section_13_head, "**Pre-dispatch.**"),
+        S_DISPATCH: _paragraph(section_13_head, "**Dispatch.**"),
+        S_FD_CHOOSE: _paragraph(
+            feature_docs, "The orchestrator chooses the action of each"
+        ),
+        S_FD_DISPATCH: _paragraph(feature_docs, "The dispatch is `Task("),
+        S_ROW: _table_row(
+            _section(spec_writer, WRITE_POLICY_ACTIONS_TITLE, level=3),
+            "| `replace_own` |",
+        ),
+        S_AGENT: _nested_bullet(
+            _section(agent, AGENT_FEATURE_DOCS_TITLE, level=2),
+            "The own feature's",
+        ),
+    }
+
+
+def _load_task0002_slices():
+    return _task0002_slices(
+        _read(PLANNER_CONTRACT_PATH),
+        _read(CREATE_PLAN_PATH),
+        _read(SPEC_WRITER_CONTRACT_PATH),
+        _read(PLANNER_AGENT_PATH),
+    )
+
+
+def _fixes_a_plan_document_action(text):
+    return bool(_FIXED_ACTION_RE.search(_norm(text)))
+
+
+def _names_last_entry_rule(text):
+    return bool(_LAST_ENTRY_RE.search(_norm(text)))
+
+
+def _says_actions_do_not_apply(text):
+    return bool(_NOT_APPLY_RE.search(_norm(text)))
+
+
+def _names_restatement_marker(text):
+    return bool(_restatement_markers_in(text))
+
+
+# (label, matcher that is true on a violation, text that makes it fire)
+TASK0002_ABSENCE_MATCHERS = (
+    (
+        "git hash-object",
+        _names_git_hash_object,
+        " Compare it with `git hash-object --` first.",
+    ),
+    (
+        "a restatement marker",
+        _names_restatement_marker,
+        " It hashes the file's raw bytes.",
+    ),
+    (
+        "phase-state/rework.yaml",
+        _names_rework_yaml,
+        " It reads `phase-state/rework.yaml`.",
+    ),
+    (
+        "the last-entry rule",
+        _names_last_entry_rule,
+        " The last `artifacts` entry for that path counts.",
+    ),
+    (
+        "a fixed plan-document action",
+        _fixes_a_plan_document_action,
+        " On this dispatch the plan document has action `replace_own`.",
+    ),
+    (
+        "the old 'do not apply here' wording",
+        _says_actions_do_not_apply,
+        " The actions that document names do not apply here.",
+    ),
+)
+
+# The statements each place makes: (test scenario, slice, label, pattern,
+# token). `pattern` is matched against the whitespace-normalized slice,
+# case-insensitively. `token` is a text whose removal from the slice must make
+# the pattern fail (the forged copy).
+TASK0002_STATEMENTS = (
+    (
+        "TS-9", S_PLANNING_INPUTS,
+        "each existing task plan under tasks/ is a write_policy target",
+        r"each existing task plan under `tasks/`[^.]{0,120}"
+        r"`write_policy\.targets`",
+        "existing task plan",
+    ),
+    (
+        "TS-9", S_PLANNING_INPUTS,
+        "a task plan that does not yet exist stays under allowed_write_roots",
+        r"task plan that does not yet exist stays under "
+        r"`allowed_write_roots` \(`tasks/`\)",
+        "does not yet exist",
+    ),
+    (
+        "TS-9", S_PLANNING_INPUTS,
+        "written_artifacts reports each path created",
+        r"`written_artifacts` reporting each path created",
+        "`written_artifacts`",
+    ),
+    (
+        "TS-9", S_PLANNING_INPUTS,
+        "this contract fixes the paths only",
+        r"fixes the paths of these targets only",
+        "fixes the paths of these targets only",
+    ),
+    (
+        "TS-9", S_PLANNING_INPUTS,
+        "create is for a path that does not exist",
+        r"`create` for a path that does not exist",
+        "`create` for a path",
+    ),
+    (
+        "TS-9", S_PLANNING_INPUTS,
+        "the TASK.md extend_only and amend_other_feature actions stay fixed",
+        r"`extend_only`.{0,400}`amend_other_feature`.{0,400}\bfixed\b",
+        "fixed",
+    ),
+    (
+        "TS-9", S_PATH_CORRECTION,
+        "the targets are IMPLEMENTATION.md, VERIFICATION.md and each task plan",
+        r"`write_policy\.targets` lists IMPLEMENTATION\.md, "
+        r"VERIFICATION\.md and each target's task plan",
+        "lists",
+    ),
+    (
+        "TS-9", S_PATH_CORRECTION,
+        "this contract fixes the paths only",
+        r"this contract fixes their paths only",
+        "this contract fixes their paths only",
+    ),
+    (
+        "TS-9", S_FEATURE_DOCS,
+        "the targets are the plan documents and the amend_other_feature targets",
+        r"`write_policy\.targets` lists IMPLEMENTATION\.md, VERIFICATION\.md "
+        r"and each target's task plan, plus the `amend_other_feature` targets "
+        r"after a request",
+        "after a request",
+    ),
+    (
+        "TS-9", S_FEATURE_DOCS,
+        "an amend_other_feature target keeps its own action",
+        r"an `amend_other_feature` target keeps its own action",
+        "keeps its own action",
+    ),
+    (
+        "TS-9", S_FEATURE_DOCS,
+        "allowed_write_roots is empty",
+        r"`allowed_write_roots` is empty",
+        "`allowed_write_roots` is empty",
+    ),
+    (
+        "TS-9", S_AGENT,
+        "IMPLEMENTATION.md or VERIFICATION.md is edited directly",
+        r"IMPLEMENTATION\.md or VERIFICATION\.md is edited directly",
+        "edited directly",
+    ),
+    (
+        "TS-9", S_AGENT,
+        "only under a target whose entry permits writing",
+        r"`write_policy\.targets` entry permits writing "
+        r"\(`replace_own` or `replace_authorized`\)",
+        "permits writing",
+    ),
+    (
+        "TS-9", S_AGENT,
+        "under a preserve target it is not written",
+        r"under a `preserve` target it is not written",
+        "`preserve`",
+    ),
+    (
+        "TS-9", S_AGENT,
+        "the planner returns status: blocked naming the path",
+        r"the planner returns `status: blocked` naming the path",
+        "`status: blocked`",
+    ),
+    (
+        "TS-10", S_SECTION_4,
+        "the targets are those of planner-contract.md, planning_inputs",
+        r"`references/contracts/planner-contract\.md`, \"Additional input: "
+        r"`planning_inputs`\", lists",
+        "Additional input",
+    ),
+    (
+        "TS-10", S_SECTION_4,
+        "the targets include each existing task plan under tasks/",
+        r"IMPLEMENTATION\.md, VERIFICATION\.md and THREAT-MODEL\.md, each "
+        r"existing task plan under `tasks/`",
+        "existing task plan under",
+    ),
+    (
+        "TS-10", S_SECTION_4,
+        "tasks/ is in allowed_write_roots",
+        r"`tasks/` in `allowed_write_roots`",
+        "`tasks/` in `allowed_write_roots`",
+    ),
+    (
+        "TS-10", S_SECTION_4,
+        "the TASK.md extend_only target stays at the minimal tier",
+        r"at the `minimal` tier, the TASK\.md `extend_only` target",
+        "the TASK.md `extend_only` target",
+    ),
+    (
+        "TS-10", S_SECTION_4,
+        "re-planning after a spec-change transition or a tier upgrade",
+        r"re-planning after a spec-change transition or a tier upgrade",
+        "re-planning after a spec-change transition or a tier upgrade",
+    ),
+    (
+        "TS-10", S_SECTION_4,
+        "each existing task plan is therefore a target",
+        r"each existing task plan is therefore a target",
+        "therefore a target",
+    ),
+    (
+        "TS-10", S_PRE_DISPATCH,
+        "the correction takes the target paths from planner-contract.md",
+        r"`references/contracts/planner-contract\.md` this correction takes "
+        r"the target paths",
+        "this correction takes the target paths",
+    ),
+    (
+        "TS-10", S_PRE_DISPATCH,
+        "the action of each is the one chosen by the spec-writer-contract rule",
+        r"the action of each is the one chosen by the spec-writer-contract "
+        r"rule above",
+        "the one chosen by the spec-writer-contract rule above",
+    ),
+    (
+        "TS-10", S_PRE_DISPATCH,
+        "an approved amend_other_feature target stays fixed",
+        r"`amend_other_feature` target stays fixed as approved",
+        "stays fixed as approved",
+    ),
+    (
+        "TS-10", S_DISPATCH,
+        "the dispatch carries the target paths of planner-contract.md",
+        r"target paths of the `write_policy` of "
+        r"`references/contracts/planner-contract\.md`",
+        "target paths of",
+    ),
+    (
+        "TS-10", S_DISPATCH,
+        "each target carries the action chosen in Pre-dispatch",
+        r"each carrying the action chosen in \*\*Pre-dispatch\.\*\*",
+        "chosen in **Pre-dispatch.**",
+    ),
+    (
+        "TS-10", S_DISPATCH,
+        "tasks/ is in allowed_write_roots",
+        r"`tasks/` in `allowed_write_roots`",
+        "`tasks/` in `allowed_write_roots`",
+    ),
+    (
+        "TS-10", S_FD_CHOOSE,
+        "the correction takes the target paths from planner-contract.md",
+        r"`references/contracts/planner-contract\.md` this correction takes "
+        r"the target paths",
+        "this correction takes the target paths",
+    ),
+    (
+        "TS-10", S_FD_CHOOSE,
+        "the action of each is the one chosen by the spec-writer-contract rule",
+        r"the action of each is the one chosen by the spec-writer-contract "
+        r"rule above",
+        "the one chosen by the spec-writer-contract rule above",
+    ),
+    (
+        "TS-10", S_FD_CHOOSE,
+        "an approved amend_other_feature target stays fixed",
+        r"`amend_other_feature` target stays fixed as approved",
+        "stays fixed as approved",
+    ),
+    (
+        "TS-10", S_FD_DISPATCH,
+        "the dispatch carries the empty allowed_write_roots of the "
+        "feature_docs_correction write_policy",
+        r"the empty `allowed_write_roots` of the `write_policy` of "
+        r"`references/contracts/planner-contract\.md`'s "
+        r"`### feature_docs_correction \(dispatch-resolved value\)`",
+        "the empty `allowed_write_roots`",
+    ),
+    (
+        "TS-10", S_FD_DISPATCH,
+        "each target carries the action chosen above",
+        r"each target carrying the action chosen above",
+        "chosen above",
+    ),
+    (
+        "TS-10", S_FD_DISPATCH,
+        "no root is added to allowed_write_roots",
+        r"no root is added to `allowed_write_roots`",
+        "no root is added to `allowed_write_roots`",
+    ),
+    (
+        "TS-10", S_ROW,
+        "the row keeps its original sentence",
+        r"Overwrites the same-phase output the worker itself produced earlier\.",
+        "Overwrites the same-phase output the worker itself produced earlier.",
+    ),
+    (
+        "TS-10", S_ROW,
+        "the row covers an implementation-planner dispatch of create-plan and "
+        "cites the action rule",
+        r"implementation-planner dispatch of create-plan.{0,300}"
+        r"\"How the orchestrator chooses each target's action before "
+        r"dispatch\"",
+        "How the orchestrator chooses each target's action before dispatch",
+    ),
+    (
+        "TS-10", S_ROW,
+        "the orchestrator is the one that gave replace_own",
+        r"planning artifact to which the orchestrator gave `replace_own`",
+        "to which the orchestrator gave",
+    ),
+    (
+        "TS-10", S_ROW,
+        "rework-planner's recorded output is included",
+        r"rework-planner's recorded output included",
+        "rework-planner's recorded output included",
+    ),
+)
+
+
+def _statements_for(scenario=None, slice_label=None):
+    return [
+        entry for entry in TASK0002_STATEMENTS
+        if (scenario is None or entry[0] == scenario)
+        and (slice_label is None or entry[1] == slice_label)
+    ]
+
+
+def _task0002_gaps(slices, statements=TASK0002_STATEMENTS):
+    """(slice, label) of the statements whose pattern does not match."""
+    return [
+        (slice_label, label)
+        for _scenario, slice_label, label, pattern, _token in statements
+        if not re.search(pattern, _norm(slices[slice_label]), re.IGNORECASE)
+    ]
+
+
+def _action_table_rows(section_text):
+    return len(_ACTION_ROW_RE.findall(section_text))
+
+
+def _row_cells(row):
+    return [cell.strip() for cell in row.strip().strip("|").split("|")]
+
+
+_FORGED_PLANNER_CONTRACT = (
+    "# Planner contract\n\n"
+    "## Additional input: `planning_inputs`\n\n"
+    "```yaml\nplanning_inputs:\n  x: y\n```\n\n"
+    "`write_policy` is also part of the input, in the common form.\n\n"
+    "### Minimal-tier `TASK.md` append (SC-3)\n\n"
+    "`write_policy` is also part of the input, here instead.\n\n"
+    "### path_correction (dispatch-resolved value)\n\n"
+    "- **write_policy**: on this dispatch `write_policy.targets` lists a.\n\n"
+    "### feature_docs_correction (dispatch-resolved value)\n\n"
+    "- **write_policy**: on this dispatch `write_policy.targets` lists b.\n\n"
+    "## Question packet bundling rule\n\ntext\n"
+)
+_FORGED_CREATE_PLAN = (
+    "## 4. Planner dispatch\n\n"
+    "- `write_policy` for the artifacts it may write: a.\n\n"
+    "## 5. Question loop\n\nx\n\n"
+    f"## {SECTION_13_TITLE}\n\n"
+    "**Pre-dispatch.** one.\n\n**Dispatch.** two.\n\n"
+    f"### {FEATURE_DOCS_CORRECTION_TITLE}\n\n"
+    "The orchestrator chooses the action of each entry.\n\n"
+    "The dispatch is `Task(x)`.\n"
+)
+_FORGED_SPEC_WRITER = (
+    f"### {WRITE_POLICY_ACTIONS_TITLE}\n\n"
+    "| action | `expect_digest` | worker behaviour |\n|---|---|---|\n"
+    "| `replace_own` | required | text. |\n"
+)
+_FORGED_AGENT = (
+    f"## {AGENT_FEATURE_DOCS_TITLE}\n\n"
+    "- **Kinds of target path.** Each target path is handled by its kind:\n"
+    "  - The own feature's IMPLEMENTATION.md or VERIFICATION.md is edited\n"
+    "    directly.\n"
+    "  - Any other path is never written.\n"
+)
+
+
+class TestTask0002MatchersFireOnForgedText(unittest.TestCase):
+    """TS-9 and TS-10 non-vacuity: each presence matcher fails on a forged
+    copy that lacks its statement, and each absence matcher fires on a forged
+    copy that carries the token."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.slices = _load_task0002_slices()
+
+    def test_there_are_ten_slices_and_each_one_is_listed_once(self):
+        self.assertEqual(len(self.slices), 10)
+        self.assertEqual(
+            sorted(ALL_TASK0002_SLICES), sorted(self.slices),
+        )
+
+    def test_every_statement_names_a_known_slice(self):
+        for _scenario, slice_label, label, _pattern, _token in TASK0002_STATEMENTS:
+            with self.subTest(statement=label):
+                self.assertIn(slice_label, self.slices)
+
+    def test_each_statement_fails_on_its_slice_without_its_token(self):
+        for _scenario, slice_label, label, pattern, token in TASK0002_STATEMENTS:
+            with self.subTest(slice=slice_label, statement=label):
+                flat = _norm(self.slices[slice_label])
+                self.assertIn(
+                    token.lower(), flat.lower(),
+                    "the forged copy would equal the slice; the token must "
+                    "be in the slice for this check to mean anything",
+                )
+                forged = _norm(
+                    re.sub(re.escape(token), "", flat, flags=re.IGNORECASE)
+                )
+                self.assertNotEqual(forged, flat)
+                self.assertIsNone(
+                    re.search(pattern, forged, re.IGNORECASE),
+                    f"statement still matches without {token!r}",
+                )
+
+    def test_a_statement_matches_only_in_the_slice_that_states_it(self):
+        # The statement about the planning_inputs paragraph is not satisfied
+        # by the text of another place.
+        forged = dict(self.slices)
+        forged[S_PLANNING_INPUTS] = self.slices[S_PATH_CORRECTION]
+        gaps = _task0002_gaps(forged, _statements_for(slice_label=S_PLANNING_INPUTS))
+        self.assertEqual(
+            len(gaps), len(_statements_for(slice_label=S_PLANNING_INPUTS))
+        )
+
+    def test_each_absence_matcher_is_quiet_on_every_real_slice(self):
+        for label, matcher, _injection in TASK0002_ABSENCE_MATCHERS:
+            for slice_label, body in self.slices.items():
+                with self.subTest(matcher=label, slice=slice_label):
+                    self.assertFalse(matcher(body))
+
+    def test_each_absence_matcher_fires_on_a_forged_slice(self):
+        for label, matcher, injection in TASK0002_ABSENCE_MATCHERS:
+            for slice_label, body in self.slices.items():
+                with self.subTest(matcher=label, slice=slice_label):
+                    self.assertTrue(matcher(body + injection))
+
+    def test_the_fixed_action_matcher_fires_on_each_correction_bullet_form(self):
+        for form in (
+            "on this dispatch `write_policy.targets` has action `replace_own` "
+            "for IMPLEMENTATION.md, VERIFICATION.md and each target's task plan",
+            "the targets has\n  action `replace_own`",
+            "Each plan document HAS ACTION `create`",
+        ):
+            with self.subTest(form=form):
+                self.assertTrue(_fixes_a_plan_document_action(form))
+        for quiet in (
+            "the orchestrator chooses their actions (`replace_own`, or the "
+            "outcome of the digest-mismatch branch)",
+            "`TASK.md` is a write_policy target with action `extend_only`",
+            "a task plan that has an action it must not take",
+        ):
+            with self.subTest(quiet=quiet):
+                self.assertFalse(_fixes_a_plan_document_action(quiet))
+
+    def test_the_do_not_apply_matcher_ignores_other_uses_of_apply(self):
+        self.assertTrue(_says_actions_do_not_apply("these do not\napply here"))
+        self.assertFalse(_says_actions_do_not_apply("the rule applies here"))
+        self.assertFalse(_says_actions_do_not_apply("do not apply the rule"))
+
+    def test_citation_matcher_fails_on_each_citing_slice_without_its_citation(self):
+        for slice_label in OWNER_CITING_SLICES:
+            with self.subTest(slice=slice_label):
+                flat = _norm(self.slices[slice_label])
+                self.assertTrue(_cites_action_choice_owner(flat))
+                self.assertFalse(
+                    _cites_action_choice_owner(
+                        flat.replace(ACTION_CHOICE_PATH_CITATION, "")
+                    )
+                )
+                self.assertFalse(
+                    _cites_action_choice_owner(
+                        flat.replace(ACTION_CHOICE_TITLE, "")
+                    )
+                )
+
+    def test_the_planning_inputs_slice_ends_before_its_first_subsection(self):
+        # The paragraph moved into the minimal-tier subsection is not the
+        # planning_inputs paragraph any more.
+        forged = _FORGED_PLANNER_CONTRACT.replace(
+            "`write_policy` is also part of the input, in the common form.\n\n",
+            "",
+        )
+        with self.assertRaises(AssertionError):
+            _paragraph(
+                _section_head(forged, PLANNING_INPUTS_TITLE, level=2),
+                "`write_policy` is also part of the input",
+            )
+
+    def test_the_bullet_slices_stay_inside_their_own_subsection(self):
+        for title in (PATH_CORRECTION_VALUE_TITLE, FEATURE_DOCS_VALUE_TITLE):
+            with self.subTest(title=title):
+                forged = _FORGED_PLANNER_CONTRACT.replace(
+                    "- **write_policy**: on this dispatch `write_policy.targets` "
+                    "lists a.\n\n", "", 1
+                ).replace(
+                    "- **write_policy**: on this dispatch `write_policy.targets` "
+                    "lists b.\n\n", "", 1
+                )
+                with self.assertRaises(AssertionError):
+                    _bullet(
+                        _section(forged, title, level=3), "**write_policy**"
+                    )
+
+    def test_the_forged_documents_slice_when_each_place_is_present(self):
+        slices = _task0002_slices(
+            _FORGED_PLANNER_CONTRACT, _FORGED_CREATE_PLAN,
+            _FORGED_SPEC_WRITER, _FORGED_AGENT,
+        )
+        self.assertEqual(len(slices), 10)
+        self.assertIn("lists a.", slices[S_PATH_CORRECTION])
+        self.assertIn("lists b.", slices[S_FEATURE_DOCS])
+        self.assertIn("one.", slices[S_PRE_DISPATCH])
+        self.assertNotIn("two.", slices[S_PRE_DISPATCH])
+        self.assertIn("two.", slices[S_DISPATCH])
+        self.assertIn("directly.", slices[S_AGENT])
+        self.assertNotIn("Any other path", slices[S_AGENT])
+
+    def test_the_slicer_rejects_a_document_that_lacks_a_place(self):
+        for lacking in (
+            ("## Else\n\ntext\n", _FORGED_CREATE_PLAN, _FORGED_SPEC_WRITER,
+             _FORGED_AGENT),
+            (_FORGED_PLANNER_CONTRACT, "## 4. Planner dispatch\n\ntext\n",
+             _FORGED_SPEC_WRITER, _FORGED_AGENT),
+            (_FORGED_PLANNER_CONTRACT, _FORGED_CREATE_PLAN,
+             "### Else\n\ntext\n", _FORGED_AGENT),
+            (_FORGED_PLANNER_CONTRACT, _FORGED_CREATE_PLAN,
+             _FORGED_SPEC_WRITER, "## Else\n\ntext\n"),
+        ):
+            with self.subTest(lacking=lacking[0][:20] + lacking[1][:20]):
+                with self.assertRaises(AssertionError):
+                    _task0002_slices(*lacking)
+
+    def test_the_nested_bullet_helper_stops_at_the_next_bullet(self):
+        text = (
+            "- outer\n  - first line\n    second line\n  - next bullet\n"
+        )
+        self.assertEqual(
+            _nested_bullet(text, "first"), "  - first line\n    second line"
+        )
+        with self.assertRaises(AssertionError):
+            _nested_bullet(text, "absent")
+
+    def test_the_action_table_row_count_and_cells_detect_forged_tables(self):
+        section = _section(
+            _read(SPEC_WRITER_CONTRACT_PATH), WRITE_POLICY_ACTIONS_TITLE, level=3
+        )
+        self.assertEqual(_action_table_rows(section), 7)
+        self.assertEqual(
+            _action_table_rows(section + "| `extra_action` | required | x |\n"),
+            8,
+        )
+        self.assertEqual(
+            _action_table_rows(
+                "\n".join(
+                    line for line in section.splitlines()
+                    if not line.startswith("| `preserve` |")
+                )
+            ),
+            6,
+        )
+        row = self.slices[S_ROW]
+        self.assertEqual(len(_row_cells(row)), 3)
+        forged = row.replace("worker itself", "worker | itself")
+        self.assertNotEqual(forged, row)
+        self.assertEqual(len(_row_cells(forged)), 4)
+
+
+class TestPlannerContractNamesPathsNotPlanDocumentActions(unittest.TestCase):
+    """TS-9 (AC-1, AC-2, AC-5): the three places of planner-contract.md cite
+    the action-choice owner, name target paths, and fix no plan-document
+    action; the planner agent writes an own document only where the target
+    permits it."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.slices = _load_task0002_slices()
+
+    def test_ts9_each_planner_contract_place_cites_the_action_choice_owner(self):
+        for slice_label in PLANNER_CONTRACT_SLICES:
+            with self.subTest(slice=slice_label):
+                self.assertTrue(
+                    _cites_action_choice_owner(self.slices[slice_label]),
+                    f"{slice_label} lacks a citation of "
+                    f"{ACTION_CHOICE_PATH_CITATION} / {ACTION_CHOICE_TITLE}",
+                )
+
+    def test_ts9_no_planner_contract_place_says_a_plan_document_has_an_action(self):
+        for slice_label in PLANNER_CONTRACT_SLICES:
+            with self.subTest(slice=slice_label):
+                self.assertFalse(
+                    _fixes_a_plan_document_action(self.slices[slice_label])
+                )
+                self.assertNotIn(
+                    "has action `replace_own`", _norm(self.slices[slice_label])
+                )
+
+    def test_ts9_planning_inputs_lists_existing_task_plans_as_targets(self):
+        statements = _statements_for("TS-9", S_PLANNING_INPUTS)
+        self.assertTrue(statements)
+        flat = _norm(self.slices[S_PLANNING_INPUTS])
+        for _scenario, _slice, label, pattern, _token in statements:
+            with self.subTest(statement=label):
+                self.assertRegex(flat, f"(?i){pattern}")
+
+    def test_ts9_correction_bullets_keep_their_targets_and_the_empty_roots(self):
+        for slice_label in (S_PATH_CORRECTION, S_FEATURE_DOCS):
+            statements = _statements_for("TS-9", slice_label)
+            self.assertTrue(statements, slice_label)
+            flat = _norm(self.slices[slice_label])
+            for _scenario, _slice, label, pattern, _token in statements:
+                with self.subTest(slice=slice_label, statement=label):
+                    self.assertRegex(flat, f"(?i){pattern}")
+
+    def test_ts9_the_agent_bullet_names_preserve_and_status_blocked(self):
+        statements = _statements_for("TS-9", S_AGENT)
+        self.assertTrue(statements)
+        flat = _norm(self.slices[S_AGENT])
+        for _scenario, _slice, label, pattern, _token in statements:
+            with self.subTest(statement=label):
+                self.assertRegex(flat, f"(?i){pattern}")
+
+    def test_ts9_no_statement_is_left_unchecked(self):
+        self.assertEqual(
+            _task0002_gaps(self.slices, _statements_for("TS-9")), []
+        )
+
+
+class TestCreatePlanPassesTheChosenActions(unittest.TestCase):
+    """TS-10 (AC-3, AC-4): create-plan-phase.md names the planner's targets,
+    carries the actions chosen by the action-choice owner, and the replace_own
+    row of the action table points at that owner."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.slices = _load_task0002_slices()
+        cls.spec_writer = _read(SPEC_WRITER_CONTRACT_PATH)
+
+    def _assert_statements(self, slice_label):
+        statements = _statements_for("TS-10", slice_label)
+        self.assertTrue(statements, slice_label)
+        flat = _norm(self.slices[slice_label])
+        for _scenario, _slice, label, pattern, _token in statements:
+            with self.subTest(slice=slice_label, statement=label):
+                self.assertRegex(flat, f"(?i){pattern}")
+
+    def test_ts10_section_4_names_each_existing_task_plan_as_a_target(self):
+        self._assert_statements(S_SECTION_4)
+
+    def test_ts10_section_13_pre_dispatch_takes_the_paths_and_cites_the_owner(self):
+        self._assert_statements(S_PRE_DISPATCH)
+        self.assertTrue(_cites_action_choice_owner(self.slices[S_PRE_DISPATCH]))
+
+    def test_ts10_section_13_dispatch_carries_the_action_chosen_in_pre_dispatch(self):
+        self._assert_statements(S_DISPATCH)
+
+    def test_ts10_feature_docs_correction_chooses_by_the_owner(self):
+        self._assert_statements(S_FD_CHOOSE)
+        self.assertTrue(_cites_action_choice_owner(self.slices[S_FD_CHOOSE]))
+
+    def test_ts10_feature_docs_dispatch_carries_the_empty_allowed_write_roots(self):
+        self._assert_statements(S_FD_DISPATCH)
+
+    def test_ts10_no_create_plan_place_names_rework_yaml_or_git_hash_object(self):
+        for slice_label in CREATE_PLAN_SLICES:
+            with self.subTest(slice=slice_label):
+                body = self.slices[slice_label]
+                self.assertFalse(_names_rework_yaml(body))
+                self.assertFalse(_names_git_hash_object(body))
+                self.assertEqual(_restatement_markers_in(body), [])
+                self.assertFalse(_says_actions_do_not_apply(body))
+
+    def test_ts10_the_replace_own_row_keeps_its_sentence_and_cites_the_owner(self):
+        self._assert_statements(S_ROW)
+        self.assertIn(ACTION_CHOICE_TITLE, _norm(self.slices[S_ROW]))
+
+    def test_ts10_the_action_table_still_has_seven_rows_and_the_row_has_three_cells(self):
+        section = _section(
+            self.spec_writer, WRITE_POLICY_ACTIONS_TITLE, level=3
+        )
+        self.assertEqual(_action_table_rows(section), 7)
+        self.assertEqual(len(_row_cells(self.slices[S_ROW])), 3)
+
+    def test_ts10_no_statement_is_left_unchecked(self):
+        self.assertEqual(
+            _task0002_gaps(self.slices, _statements_for("TS-10")), []
+        )
+
+
+class TestNoTask0002PlaceRestatesTheOwner(unittest.TestCase):
+    """NFR3: none of the ten places names `git hash-object`, a restatement
+    marker, `phase-state/rework.yaml` or the last-entry rule, and none says a
+    plan document has a given action."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.slices = _load_task0002_slices()
+
+    def test_absence_of_every_restatement_token_in_every_place(self):
+        for label, matcher, _injection in TASK0002_ABSENCE_MATCHERS:
+            for slice_label, body in self.slices.items():
+                with self.subTest(matcher=label, slice=slice_label):
+                    self.assertFalse(matcher(body))
+
+    def test_the_four_documents_never_name_git_hash_object_as_a_whole(self):
+        for path in (
+            PLANNER_CONTRACT_PATH, CREATE_PLAN_PATH, SPEC_WRITER_CONTRACT_PATH,
+            PLANNER_AGENT_PATH,
+        ):
+            with self.subTest(path=path.name):
+                self.assertFalse(_names_git_hash_object(_read(path)))
+
+
 if __name__ == "__main__":
     unittest.main()

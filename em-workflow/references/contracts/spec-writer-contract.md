@@ -69,7 +69,7 @@ write_policy:
 | action | `expect_digest` | worker behaviour |
 |---|---|---|
 | `create` | always `null` | The file must not already exist. If it does, return `blocked` instead of writing. |
-| `replace_own` | required | Overwrites the same-phase output the worker itself produced earlier. |
+| `replace_own` | required | Overwrites the same-phase output the worker itself produced earlier. For an implementation-planner dispatch of create-plan, this output also covers a planning artifact to which the orchestrator gave `replace_own` by "How the orchestrator chooses each target's action before dispatch", rework-planner's recorded output included. |
 | `replace_authorized` | required (the digest as of approval time) | A user-approved overwrite (see below — the digest is re-verified even though the overwrite was approved). |
 | `preserve` | required | Read-only: the worker must not write this path, only use its content as input. |
 | `extend_only` | required | The worker may add new keys but must not modify or remove any existing key. |
