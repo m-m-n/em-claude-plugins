@@ -1,11 +1,11 @@
 schema_version: 1
 feature: version-bump-cache-verify
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: ab78650f47900ed1fd065e1a7bec63236b2c4c0a
 last_input_digest: sha256:9784f287f8a7dd362e31511c7a2e9141efc61cc86c5ed3b0b13d2c7638855661
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
