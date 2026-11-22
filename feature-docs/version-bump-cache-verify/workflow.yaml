@@ -62,7 +62,8 @@ workflow:
     skipped_reason: "minimal tier subtracts the design step; also the change is rule-text wording in one Markdown file with no UI and zero design-system candidates (gate create-spec.design-step = skip_design)"
   - id: create-plan
     artifacts: [TASK.md]
-    status: pending
+    status: completed
+    completed_at_commit: 315064a486937fbf3ecae5f23e183bead6adbe8b
   - id: implement
     status: pending
   - id: review
@@ -72,7 +73,19 @@ workflow:
   - id: retrospect
     status: pending
 
-tasks: {}
+tasks:
+  task0001:
+    title: core-plugin-version-bump ルールを push 後のキャッシュ反映を確かめる形に変える
+    plan: TASK.md
+    files:
+    - .claude/rules/core-plugin-version-bump.md
+    - test-docs/version-bump-cache-verify/task0001.tests.yaml
+    skills: []
+    domains:
+    - config-infra
+    complexity: low
+    requirements: []
+    status: pending
 
 review:
   status: pending
