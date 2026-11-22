@@ -2,37 +2,57 @@ schema_version: 1
 feature: resume-steps-actor-labels
 created: '2026-11-22'
 base_branch: main
-goal: |-
-  # em-workflow の停止時の再開手順で、AI がやれる手順と人の判断が要る手順を区別する
+goal: '# em-workflow の停止時の再開手順で、AI がやれる手順と人の判断が要る手順を区別する
+
 
   ## やりたいこと (必須)
 
+
   em-workflow の停止時の再開手順（`resume_conditions` と停止の報告）で、各手順が「AI がやれる」か「人の判断が要る」かを示し、AI がやれる手順を先に書くようにする。
+
 
   ## 背景・なぜ (必須)
 
+
   今の再開手順には誰がやる作業かが書かれていない。triage や後続の実行が、AI で続けられる手順まで人の作業として扱っている。
 
-  例: feature `mcp-bridge-function-shadow` の停止（2026-11-21 19:24 JST）の再開手順は「VERIFICATION.md を直してコミットする。または対話実行で上書きを許可する」だった。どちらも AI で続けられるか、人の判断が要るかが区別されていない。
+
+  例: feature `mcp-bridge-function-shadow` の停止（2026-11-21 19:24 JST）の再開手順は「VERIFICATION.md を直してコミットする。または対話実行で上書きを許可する」だった。どちらも
+  AI で続けられるか、人の判断が要るかが区別されていない。
+
 
   ## 受け入れ条件 / 完了の定義 (必須)
 
+
   - [ ] `resume_conditions` の各手順に、AI がやれるか、人の判断が要るかが付く
+
   - [ ] AI がやれる手順が、人の判断が要る手順より先に並ぶ
+
   - [ ] 人の判断が要る手順には、人の判断が要る理由（物理的に人しかできない・戻せない変更の承認・価値判断のどれか）が付く
+
   - [ ] 停止の報告（対話実行の報告を含む）も同じ形になる
+
   - [ ] 規定の文面を固定するテストがある
+
 
   ## 制約・前提 (任意)
 
-  - 該当箇所: `em-workflow/skills/develop/SKILL.md` の停止時の報告（`resume_conditions` にリカバリ手順を運ぶ規定）、`em-workflow/references/batch-terminal-line.md` の `resume_conditions`
+
+  - 該当箇所: `em-workflow/skills/develop/SKILL.md` の停止時の報告（`resume_conditions` にリカバリ手順を運ぶ規定）、`em-workflow/references/batch-terminal-line.md`
+  の `resume_conditions`
+
   - `resume_conditions` の値の形式（空でないこと、エスケープ）は変えない
+
 
   ## 追加指示
 
-  - 実装完了後、integration ブランチをリモートへ push し、gh pr create で base_branch への PR を作成する。integration ブランチはローカル・リモートとも残す（base_branch へ自動マージしない）
+
+  - 実装完了後、integration ブランチをリモートへ push し、gh pr create で base_branch への PR を作成する。integration ブランチはローカル・リモートとも残す（base_branch
+  へ自動マージしない）
+
   - 不明点は Codex に相談し、比較的良いと判断した案を採用する
-  - 相談の内容は Notion に記録する
+
+  - 相談の内容は Notion に記録する'
 parent_branch: em-workflow/resume-steps-actor-labels/integration
 tier: reduced
 tier_decision:
@@ -90,7 +110,7 @@ workflow:
   base_commit: 115be8e1cd7c5fdf6853e8a7458446a8716650de
   completed_at_commit: ccdc9e60e8a4df05490b401954ae1e9aff6ece7b
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
 - id: retrospect
@@ -124,7 +144,15 @@ tasks:
     branch: em-workflow/resume-steps-actor-labels/task0001
     notes: null
 review:
-  status: pending
+  status: in_progress
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
 requirements:
   FR1:
     title: Actor label at the start of each step
