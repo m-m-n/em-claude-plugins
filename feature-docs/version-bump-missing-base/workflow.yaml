@@ -140,7 +140,8 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
+    branch: em-workflow/version-bump-missing-base/task0001
     notes: null
   task0002:
     title: Non-fast-forward ruleset definition for main and its creation procedure
@@ -162,7 +163,8 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
+    branch: em-workflow/version-bump-missing-base/task0002
     notes: null
   task0003:
     title: README maintenance section and create.md behavior description
@@ -179,7 +181,8 @@ tasks:
     - FR9
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
+    branch: em-workflow/version-bump-missing-base/task0003
     notes: null
 review:
   status: pending
