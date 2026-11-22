@@ -1,7 +1,7 @@
 schema_version: 1
 feature: version-bump-missing-base
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 06ffd97b038f28a86f78f4dd797b87c07e83380f
 last_input_digest: sha256:5079b132a0f39418e552a45a1c745ca2e7a6244e76ac738eb3ee4c014e04c9a4

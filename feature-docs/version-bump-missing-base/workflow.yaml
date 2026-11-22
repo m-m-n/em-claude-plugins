@@ -1,0 +1,232 @@
+schema_version: 1
+feature: version-bump-missing-base
+created: '2026-11-22'
+base_branch: main
+goal: |
+  # plugin-version-bump.yml が base commit を取得できないと version を上げずに success で終わる
+
+  種別: バグ
+
+  ## 現象
+
+  `.github/workflows/plugin-version-bump.yml` が `skip: base commit <sha> is not available` を出して何も変更せず、実行結果は success になる。em-workflow の変更が main に入っても version が上がらず、インストール済みプラグインのキャッシュが古いままになる。
+
+  発生事例（2026-11-22、時刻は JST）:
+
+  - 13:44:46 `8d25180d5` を push
+  - 13:45:01 Actions が `f87807a8e`（chore: bump plugin versions (em-workflow@0.5.3)）を main に積む
+  - 13:45:31 ローカル main で `8d25180d5` の上に `em-workflow/rework-replan-artifact-digest/integration` をマージし `e4286e77b` を作成（`f87807a8e` を取り込んでいない）
+  - 13:45:36 `e4286e77b` を push。origin/main が `f87807a8e` を含まない `e4286e77b` に置き換わった
+  - 次の Actions（run 44986457565）は `github.event.before` = `f87807a8e` を取得できず skip。em-workflow は 0.5.2 のまま
+  - インストール済みキャッシュの em-workflow/0.5.2/ は main の `references/phases/create-plan-phase.md`・`references/contracts/planner-contract.md` と一致しない
+
+  ## 再現手順
+
+  1. main に push し、Actions の version 更新コミットが積まれる
+  2. その更新コミットを取り込まずにローカル main で別のブランチをマージし、push で origin/main を置き換える
+  3. 次の push で Actions が base commit を見つけられず skip する
+
+  ## 期待する挙動
+
+  - base commit が取得できないときも、変更のあったプラグインの version を上げる（skip で success にしない）
+  - Actions の更新コミットを含まない push で origin/main が置き換わらない
+
+  ## 完了の定義
+
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある
+  - [ ] main の em-workflow の version が インストール済みキャッシュ（em-claude-plugins/em-workflow/）にある最新の版より大きく、キャッシュに main の内容が届いている
+
+  ## 該当箇所
+
+  - `.github/workflows/plugin-version-bump.yml:67`（base commit が無いときの skip）
+  - 13:45:36 の push を行った処理（未特定。origin/main の reflog は `update by push`）
+
+  ## 実害・発生条件
+
+  rework-replan-artifact-digest の修正（PR #124）が main に入っているのにインストール済みプラグインに届かず、feature `mcp-bridge-function-shadow` のタスクが再開できない。
+
+  ## 追加の指示
+
+  - 不明点は Codex に相談し、比較的良いと判断した選択肢を採用する。
+parent_branch: em-workflow/version-bump-missing-base/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.73
+      '2': 0.26
+      '3': 0.01
+    description_plus_code:
+      '0': 0.0
+      '1': 0.02
+      '2': 0.91
+      '3': 0.07
+  at: '2026-11-22T18:58:50+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: 8ed70ac6f70a77ea243ea9a0b65d0cd4885556d2
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: UI を持たない変更（GitHub Actions のスクリプト、テスト、文書）
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+  base_commit: e4286e77b33e1d83d79e42c09795d0f71d7f3dc1
+- id: review
+  status: pending
+- id: verify
+  status: pending
+  result: null
+  round: 0
+  passed_ids: []
+  failed_items: []
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: push 時の基点の決定
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: 変更プラグインの検出
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: version の比較と上げ方
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: workflow_dispatch による手動の version 更新
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: 更新結果の出力と main への取り込み
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: workflow と template の一致
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: non-fast-forward を禁止するルールセットの定義
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR8:
+    title: マージ後に人が行う手順の文書
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR9:
+    title: plugin-dev の説明の更新
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR10:
+    title: 再発を検出するテスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: workflow 内のスクリプトは Python 標準ライブラリと git だけを使う
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: workflow の YAML に含まれる heredoc は 1 つだけ
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: テストはネットワークに出ず ~/.claude を読まず一時ディレクトリの中だけで git を操作する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: この feature の変更は plugin.json と marketplace.json の version を変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: SPEC・計画・受け入れ条件に具体的な version の値を書かない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
