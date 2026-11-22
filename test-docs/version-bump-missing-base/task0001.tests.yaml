@@ -1,6 +1,6 @@
 task_id: task0001
 baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 17053 tests, OK (skipped=1)
-final_failures: []             # re-executed after the implementation and after this record was written; see the run result noted in the task report
+final_failures: []             # re-executed after the implementation, with this record already present: python3 -m unittest discover -s tests -> Ran 17104 tests, OK (skipped=1)
 acceptance_tests:
   AC-1:
     tests:
