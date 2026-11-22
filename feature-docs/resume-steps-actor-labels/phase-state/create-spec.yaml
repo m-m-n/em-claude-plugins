@@ -1,16 +1,106 @@
 schema_version: 1
 feature: resume-steps-actor-labels
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: 600c1e66637d38c8001af4dc493c649bb32f6cb2
 last_input_digest: sha256:e5588bd188b121281571176317b41840a2cb269c9cab7736a8842d5e1fa7ca61
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-11-22T22:45:00+09:00'
+    questions:
+    - question_id: requirement.label-literal-form
+      status: answered
+    - question_id: requirement.rule-owner
+      status: answered
+    - question_id: requirement.interactive-bullets
+      status: answered
+    - question_id: requirement.result-format-example
+      status: answered
+    - question_id: requirement.dependent-ai-step
+      status: answered
+    - question_id: design-step.recommendation
+      status: answered
+answers:
+  requirement.label-literal-form:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-22T22:50:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - fixed-japanese
+    freeform: null
+    normalized_answer: '各手順の先頭に「AI がやれる」または「人の判断が要る（理由: 物理的に人しかできない | 戻せない変更の承認 | 価値判断）」を付ける。理由は 3 つの固定語のどれか
+      1 つ。テストはこの文言を固定する'
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted: true (harness codex,
+      1 turn, single batched consultation for the packet); opus_escalation: false; Codex: SKILL.md の停止報告は日本語で、エスケープ規則上も日本語ラベルをそのまま出せる。対話とバッチで同じ文言を使える
+      / not chosen: fixed-english (SKILL.md 側の日本語の報告と表記が揃わない), free-wording (triage が機械的に読めず、テストで文言を固定できない)'
+  requirement.rule-owner:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-22T22:50:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - terminal-line-owns
+    freeform: null
+    normalized_answer: '規定は batch-terminal-line.md の ## Field values にある既存の resume_conditions の項目の中に置く（新しい
+      ## 見出しも新しいトップレベルの項目も足さない）。SKILL.md の停止時の報告はそれを引用し、対話実行の報告も同じ形にすると書く'
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted: true (harness codex,
+      1 turn, single batched consultation for the packet); opus_escalation: false; Codex: batch-terminal-line.md
+      が resume_conditions の値の唯一の定義元で、SKILL.md もその役割を明記している / not chosen: skill-owns (値の定義元と規定の置き場が分かれる)'
+  requirement.interactive-bullets:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-22T22:50:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - append-paragraph
+    freeform: null
+    normalized_answer: 停止時の報告の 3 つの項目（スタック / 中断 / YAML エラー）の文面はそのまま残し、その後に、報告が運ぶ再開手順（この 3 つのひな型が案内するものを含む）は同じ形で示す、という段落を足す
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted: true (harness codex,
+      1 turn, single batched consultation for the packet); opus_escalation: false; Codex: 既存テストが 3 項目の原文と節の先頭を固定している。その後に段落を足せば両立する
+      / not chosen: rewrite-bullets (既存の固定を書き換えることになり、変更範囲が広がる)'
+  requirement.result-format-example:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-22T22:50:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - update-example
+    freeform: null
+    normalized_answer: '## Result format の resume_conditions の記載例を、ラベル付きの値に置き換え、tests/test_batch_stop_contract.py
+      の固定文字列も同じ変更で更新する。## Escaping は変えない'
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted: true (harness codex,
+      1 turn, single batched consultation for the packet); opus_escalation: false; Codex: 記載例は stopped
+      の出力全体を示すので、新しい規則に合わせる。値の形式の規定は保てる / not chosen: keep-example (定義元が自分の規定に反する例を示し続ける)'
+  requirement.dependent-ai-step:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-22T22:50:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - fold-into-human-step
+    freeform: null
+    normalized_answer: 人の判断の後でないと実行できない AI の作業は、その人の判断の手順の中に「判断の後、AI が ... を実行する」と書く。AI がやれる手順を先に並べる順序は例外なく保つ
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted: true (harness codex,
+      1 turn, single batched consultation for the packet); opus_escalation: false; Codex: 既存の記載例も解消とその後の再実行を
+      1 つの案内にまとめている。人の手順の中に後続の AI の作業を書けば、順序の規則と両立する / not chosen: allow-after (AI 先行の順序に例外ができ、受け入れ条件と食い違う)'
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-22T22:50:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - skip
+    freeform: null
+    normalized_answer: デザイン工程は飛ばす
+    resolution_note: 'gate: create-spec.design-step; policy decide_autonomously -> analyst recommendation
+      skip'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:e5588bd188b121281571176317b41840a2cb269c9cab7736a8842d5e1fa7ca61
   output_digest: null
 artifacts: []
