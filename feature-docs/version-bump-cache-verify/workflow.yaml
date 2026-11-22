@@ -69,7 +69,8 @@ workflow:
     base_commit: fccd841baf09842d7cc42d289b4a5c9738dd4abb
     completed_at_commit: 6c57b67f2d254fe95eb8a8ab386010213f179243
   - id: review
-    status: in_progress
+    status: completed
+    completed_at_commit: 9ee4e2b83e582f96a0d62bd5597243b3cc8301dd
   - id: verify
     status: pending
   - id: retrospect
@@ -91,9 +92,9 @@ tasks:
     branch: em-workflow/version-bump-cache-verify/task0001
 
 review:
-  status: in_progress
-  rounds_completed: 0
-  perspectives: []
+  status: completed
+  rounds_completed: 1
+  perspectives: [comprehensive, security]
   residual_critical_high: 0
   needs_rework: false
   plan:

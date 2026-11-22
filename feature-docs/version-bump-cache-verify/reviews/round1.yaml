@@ -1,0 +1,80 @@
+round: 1
+executed_at: "2026-11-22T22:13:22+09:00"
+scope:
+  review_mode: diff
+  base_commit: fccd841baf09842d7cc42d289b4a5c9738dd4abb
+  head_commit: 9ee4e2b83e582f96a0d62bd5597243b3cc8301dd
+  changed_files:
+    - .claude/rules/core-plugin-version-bump.md
+    - test-docs/version-bump-cache-verify/task0001.tests.yaml
+plan:
+  floor: [comprehensive, security]
+  discretionary: []
+  cross_validation: false
+  skipped:
+    - perspective: spec
+      reason: "SPEC.md absent (tier minimal; TASK.md only) — spec_available false"
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, model: gpt-6.2-astra, effort: high, status: completed}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6.2-astra, effort: xhigh, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+  - stable_id: 2bc7d8f516950658
+    severity: medium
+    category: comprehensive
+    file: .claude/rules/core-plugin-version-bump.md
+    line: 18
+    title: "Actions の更新 PR がマージされる前に git pull すると、旧版を基準に確かめてしまう"
+    description: "`.github/workflows/plugin-version-bump.yml`（272〜288 行）は、push の後に別ブランチで version を上げて PR を作り、`gh pr merge --squash` で main に入れる。この反映は push より遅れて起きる。18〜19 行は Actions の実行完了や更新 PR のマージを待つ手順を書いていない。push の直後に `git pull` すると何も取り込まれず、マニフェストは旧版のままになる。その結果、21〜24 行の分岐に入り、正常に進んでいる更新を「キャッシュが無い・一致しない」や「Actions が version を上げなかった」として調べて報告してしまう。"
+    suggestion: "18 行の手順に、その push に対応する Actions の実行が終わり、更新 PR が main にマージされたことを確かめてから `git pull` する、と足す（例: `gh run list` / `gh run watch` で確かめる）。そのうえで、取り込んだマニフェストの version を `<新しい version>` として使う。"
+    reproduction: null
+    reproduction_alternates: []
+    reproduction_overflow: false
+    sources: ["codex:comprehensive"]
+    confidence: 75
+    resolution: deferred
+    resolution_reason: "medium severity: outside the Phase R4 auto-fix candidate gate (critical/high only); left for a follow-up task"
+  - stable_id: a3227f17523154ca
+    severity: medium
+    category: security
+    file: .claude/rules/core-plugin-version-bump.md
+    line: 22
+    title: "更新コマンドに配布元を指定していないため、別の配布元にある同名プラグインを更新しうる"
+    description: "19 行のキャッシュパスは `<marketplace>` を含むが、22 行の `claude plugin update <plugin>` にはプラグイン名しか渡していない。このリポジトリのプラグインが入っておらず、同名のプラグインが別の配布元から入っている状態で 22 行に進むと、無関係な配布元のプラグインを更新しうる。名前だけを渡したときの CLI の選択挙動は読むだけでは確かめられないため、再現の判定は unverifiable。19 行と 22 行で配布元の指定が揃っていないことは読んで確かめた。"
+    suggestion: "22 行を `claude plugin update <plugin>@<marketplace>` にして、19 行で確かめた配布元と同じものを指定する。test-docs/version-bump-cache-verify/task0001.tests.yaml の AC-3 のコメントも同じ形に揃える。"
+    reproduction: "Claude Code v2.1.246以降で、`plugin-dev` のインストール済み項目が `plugin-dev@other-market` の旧版だけで、その配布元に新版がある状態を使う。このリポジトリの `plugin-dev` を変更した後、`em-claude-plugins` 側のキャッシュがないため、22行目どおり `claude plugin update plugin-dev` を実行すると、更新対象に `plugin-dev@other-market` が表示される。`claude plugin list --json` で別の配布元の版だけが上がったことを確かめられる"
+    reproduction_alternates: []
+    reproduction_overflow: false
+    sources: ["codex:security"]
+    confidence: 60
+    resolution: deferred
+    resolution_reason: "medium severity: outside the Phase R4 auto-fix candidate gate (critical/high only); left for a follow-up task"
+dropped_by_gates:
+  - {category: comprehensive, file: .claude/rules/core-plugin-version-bump.md, line: 24, severity: low, gate: "R3b step 2 (severity not in critical/high/medium)"}
+  - {category: comprehensive, file: .claude/rules/core-plugin-version-bump.md, line: 20, severity: low, gate: "R3b step 2 (severity not in critical/high/medium)"}
+evaluation:
+  round_summary: "Round 1（diff）。2 観点で 4 件、critical / high は無し。4 件ともルールファイルの書き方の抜け（medium 2 件、low 2 件）。comprehensive の指摘は .github/workflows/plugin-version-bump.yml を読んで裏付けた。security の 1 件は CLI の挙動に依存し読むだけでは追えないため unverifiable、medium のまま。ルールの文面は TASK.md の Change 節と一致し、tests.yaml の AC-1〜AC-6 は Expected Result と対応する。comprehensive / security ともに corroborated。指示の書き換えを狙う文は見当たらなかった。"
+  recommended_action: "auto_fix"
+  action_rationale: "critical / high は無い。残る 4 件は 1 つのルールファイルへの書き足しで直せる。security の修正は TASK.md Expected Result の `claude plugin update <plugin>` の形を変えるため、適用前に確かめること。"
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-version-bump-cache-verify-20261122T131331Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
