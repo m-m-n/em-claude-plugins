@@ -90,7 +90,8 @@ workflow:
   base_commit: 115be8e1cd7c5fdf6853e8a7458446a8716650de
   completed_at_commit: ccdc9e60e8a4df05490b401954ae1e9aff6ece7b
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: eb008172c5b71b8d75688234861a7cb09b3eb1de
 - id: verify
   status: pending
 - id: retrospect
@@ -124,7 +125,15 @@ tasks:
     branch: em-workflow/resume-steps-actor-labels/task0001
     notes: null
 review:
-  status: in_progress
+  status: completed
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  residual_critical_high: 0
+  needs_rework: false
   plan:
     floor:
     - comprehensive
