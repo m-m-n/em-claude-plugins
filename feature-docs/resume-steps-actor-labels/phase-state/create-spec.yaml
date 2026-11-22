@@ -1,7 +1,7 @@
 schema_version: 1
 feature: resume-steps-actor-labels
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 600c1e66637d38c8001af4dc493c649bb32f6cb2
 last_input_digest: sha256:cbe115cf7d84bb5accf1331cff8c64ee54187dfa6f6e3f435455df9cff41a6e1

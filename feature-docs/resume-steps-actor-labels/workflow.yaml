@@ -1,0 +1,195 @@
+schema_version: 1
+feature: resume-steps-actor-labels
+created: '2026-11-22'
+base_branch: main
+goal: |-
+  # em-workflow の停止時の再開手順で、AI がやれる手順と人の判断が要る手順を区別する
+
+  ## やりたいこと (必須)
+
+  em-workflow の停止時の再開手順（`resume_conditions` と停止の報告）で、各手順が「AI がやれる」か「人の判断が要る」かを示し、AI がやれる手順を先に書くようにする。
+
+  ## 背景・なぜ (必須)
+
+  今の再開手順には誰がやる作業かが書かれていない。triage や後続の実行が、AI で続けられる手順まで人の作業として扱っている。
+
+  例: feature `mcp-bridge-function-shadow` の停止（2026-11-21 19:24 JST）の再開手順は「VERIFICATION.md を直してコミットする。または対話実行で上書きを許可する」だった。どちらも AI で続けられるか、人の判断が要るかが区別されていない。
+
+  ## 受け入れ条件 / 完了の定義 (必須)
+
+  - [ ] `resume_conditions` の各手順に、AI がやれるか、人の判断が要るかが付く
+  - [ ] AI がやれる手順が、人の判断が要る手順より先に並ぶ
+  - [ ] 人の判断が要る手順には、人の判断が要る理由（物理的に人しかできない・戻せない変更の承認・価値判断のどれか）が付く
+  - [ ] 停止の報告（対話実行の報告を含む）も同じ形になる
+  - [ ] 規定の文面を固定するテストがある
+
+  ## 制約・前提 (任意)
+
+  - 該当箇所: `em-workflow/skills/develop/SKILL.md` の停止時の報告（`resume_conditions` にリカバリ手順を運ぶ規定）、`em-workflow/references/batch-terminal-line.md` の `resume_conditions`
+  - `resume_conditions` の値の形式（空でないこと、エスケープ）は変えない
+
+  ## 追加指示
+
+  - 実装完了後、integration ブランチをリモートへ push し、gh pr create で base_branch への PR を作成する。integration ブランチはローカル・リモートとも残す（base_branch へ自動マージしない）
+  - 不明点は Codex に相談し、比較的良いと判断した案を採用する
+  - 相談の内容は Notion に記録する
+parent_branch: em-workflow/resume-steps-actor-labels/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.99
+      '2': 0.01
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.86
+      '2': 0.14
+      '3': 0.0
+  at: '2026-11-22T22:34:00+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: Markdown / Python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: c863aa4555b266d73dc0593b86a385cf91bd8f96
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: reduced tier subtracts the design step; also the change is regulation text in two Markdown documents plus unittest modules with no UI and zero design-system candidates (gate create-spec.design-step
+    = skip)
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - tasks/
+  - VERIFICATION.md
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+requirements:
+  FR1:
+    title: Actor label at the start of each step
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+  FR2:
+    title: AI-first order without exception
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-2
+  FR3:
+    title: Reason for each human step
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+  FR4:
+    title: Rule owned by batch-terminal-line.md
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+  FR5:
+    title: Stop report cites the rule and uses the same form
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-3
+  FR6:
+    title: Result format example in labelled form
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-4
+  FR7:
+    title: Pinning test
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+  NFR1:
+    title: Value format unchanged
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+  NFR2:
+    title: Existing pins preserved
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+  NFR3:
+    title: SKILL.md literal guards
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+  NFR4:
+    title: Version
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
