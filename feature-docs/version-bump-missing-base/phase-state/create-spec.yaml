@@ -1,0 +1,20 @@
+schema_version: 1
+feature: version-bump-missing-base
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: 6b22650c95d1b7736db272b4226580aa3b225e4a
+last_input_digest: sha256:467295be6076612bbc8336453b5ac1945ccecf184d2bdd0ca058040592cc1b33
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: dispatched
+    input_digest: sha256:467295be6076612bbc8336453b5ac1945ccecf184d2bdd0ca058040592cc1b33
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
