@@ -4,12 +4,52 @@ phase: create-spec
 status: in_progress
 generation: 1
 base_revision: ab78650f47900ed1fd065e1a7bec63236b2c4c0a
-last_input_digest: sha256:0933920ae234168d9355c6efeaa0eb736e23c734a8a97ffb03e88a363fd77825
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+last_input_digest: sha256:9784f287f8a7dd362e31511c7a2e9141efc61cc86c5ed3b0b13d2c7638855661
+active_request_id: create-spec-run-0002
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-11-22T21:55:00+09:00'
+    questions:
+    - question_id: requirement.cache-mismatch-handling
+      status: answered
+    - question_id: design-step.recommendation
+      status: answered
+answers:
+  requirement.cache-mismatch-handling:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-22T22:00:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - investigate_and_report
+    freeform: null
+    normalized_answer: git pull の後、新しい version のキャッシュが無いか中身がリポジトリと一致しないときは、claude plugin update <plugin>
+      でキャッシュを更新して確かめ直す。それでも確かめられなければ、原因を調べて報告する。
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted: true (harness codex,
+      1 turn); orchestrator observed that the em-workflow 0.5.4 cache dir was created at session start
+      (21:47:16 JST), 41s after the Actions bump commit (21:46:35 JST), i.e. git pull alone does not create
+      it; `claude plugin update --help` says it updates to the latest version with restart required to
+      apply. Codex: investigate_and_report, refresh with claude plugin update and re-check before investigating
+      / options not chosen: write_check_only (leaves the realistic missing-cache case unhandled within
+      the current session)'
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-22T22:00:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - skip_design
+    freeform: null
+    normalized_answer: デザイン工程は飛ばす
+    resolution_note: 'gate: create-spec.design-step; policy decide_autonomously -> analyst recommendation
+      skip_design'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:0933920ae234168d9355c6efeaa0eb736e23c734a8a97ffb03e88a363fd77825
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:9784f287f8a7dd362e31511c7a2e9141efc61cc86c5ed3b0b13d2c7638855661
   output_digest: null
