@@ -50,6 +50,23 @@ worker_runs:
   input_digest: sha256:0933920ae234168d9355c6efeaa0eb736e23c734a8a97ffb03e88a363fd77825
   output_digest: null
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:9784f287f8a7dd362e31511c7a2e9141efc61cc86c5ed3b0b13d2c7638855661
   output_digest: null
+assumptions:
+- assumption_id: a-actions-no-bump-scope
+  statement: 「Actions が version を上げなかったとき」は、変更のあったプラグインの patch が上がるはずなのに上がらなかった場合を指す。minor / major を手で上げた
+    push とプラグイン配下に変更が無い push は対象外。
+  source: requirements-analyst create-spec-run-0002
+  reversible: true
+- assumption_id: a-keep-heading-and-name
+  statement: ファイル名 core-plugin-version-bump.md と level-1 見出しは変えない（tests/test_guardrail_hooks_migration.py
+    が固定）。
+  source: requirements-analyst create-spec-run-0002
+  reversible: true
+- assumption_id: a-verify-target-is-changed-plugins
+  statement: キャッシュを確かめる対象は、その push でファイルが変わったプラグインだけ。
+  source: requirements-analyst create-spec-run-0002
+  reversible: true
+artifacts:
+  feature-docs/version-bump-cache-verify/TASK.md: sha256:4b758867c2d4ca404f6b56ac32db6bc8fc1a6672e49815a24627104417de8ff3
