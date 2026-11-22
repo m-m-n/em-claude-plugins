@@ -1,0 +1,15 @@
+schema_version: 1
+feature: version-bump-cache-verify
+phase: create-spec
+status: in_progress
+generation: 1
+base_revision: ab78650f47900ed1fd065e1a7bec63236b2c4c0a
+last_input_digest: sha256:0933920ae234168d9355c6efeaa0eb736e23c734a8a97ffb03e88a363fd77825
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:0933920ae234168d9355c6efeaa0eb736e23c734a8a97ffb03e88a363fd77825
+  output_digest: null

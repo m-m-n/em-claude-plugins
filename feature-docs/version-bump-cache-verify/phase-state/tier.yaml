@@ -20,7 +20,7 @@ bases:
       '1': 0.0
       '2': 0.0
       '3': 0.0
-  observed_at: '2026-11-22T21:52:10+09:00'
+  observed_at: '2026-11-22T21:47:50+09:00'
 - basis: description_plus_code
   score:
     type: score
@@ -39,7 +39,7 @@ bases:
       '1': 0.0
       '2': 0.01
       '3': 0.0
-  observed_at: '2026-11-22T21:58:40+09:00'
+  observed_at: '2026-11-22T21:49:30+09:00'
 pre_survey_estimate:
   files_expected:
   - .claude/rules/core-plugin-version-bump.md
@@ -57,4 +57,4 @@ pre_survey_estimate:
   caller_and_dependency_count: 1
   changes_external_contract: false
   changes_behavior: true
-decided_at: '2026-11-22T21:58:45+09:00'
+decided_at: '2026-11-22T21:49:35+09:00'
