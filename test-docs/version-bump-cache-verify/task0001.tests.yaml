@@ -1,0 +1,38 @@
+# TASK.md carries no numbered acceptance criteria; AC-1..AC-6 are its six "Expected Result" bullets, in order.
+task_id: task0001
+baseline_failures: []          # 4a: python3 -m unittest tests.test_guardrail_hooks_migration -> Ran 31 tests, OK
+final_failures: []             # re-executed after the edit, with this record already present: python3 -m unittest tests.test_guardrail_hooks_migration -> Ran 31 tests, OK
+acceptance_tests:
+  AC-1:
+    # After a push to main: git pull the Actions commit, then confirm the change reached ~/.claude/plugins/cache/<marketplace>/<plugin>/<new version>/.
+    tests: []
+    red_confirmed: false
+    red_reason: "No executable check reads the wording of the rule file. Searched tests/ by repository-relative path and by basename: the only test that reads the real file is tests.test_guardrail_hooks_migration (TestRepositoryRulesAreInPlace), which checks that the file exists, is non-empty and opens on a level-1 heading, not its sentences; the other hits mention the file in docstrings or comments only. A document-contract test would need a file outside the planned scope (the plan limits the diff to the rule file and this record), so none was written. The wording was checked by reading the diff and counting phrase matches with grep, which is not an observed red; no red state occurred."
+  AC-2:
+    # When Actions did not raise the version, investigate the cause and report it.
+    tests: []
+    red_confirmed: false
+    red_reason: "Same as AC-1: no existing test reads this sentence of the rule file, and a new test module is outside the planned scope. Checked by reading the diff and a grep phrase match, which is not an observed red."
+  AC-3:
+    # New-version cache missing or content differs: run `claude plugin update <plugin>`, verify again; if still unverifiable, investigate and report.
+    tests: []
+    red_confirmed: false
+    red_reason: "Same as AC-1: no existing test reads this sentence of the rule file, and a new test module is outside the planned scope. Checked by reading the diff and a grep phrase match, which is not an observed red."
+  AC-4:
+    # A restart is needed only for the interactive session that is open now; newly started sessions need none; the old 'attach a restart note to the report' item is gone.
+    tests: []
+    red_confirmed: false
+    red_reason: "Same as AC-1: no existing test reads this sentence of the rule file, and a new test module is outside the planned scope. That the old item no longer appears was checked by a grep count of 0 for its phrase after the edit, which is not an observed red."
+  AC-5:
+    # The diff from base is only the rule file plus this feature's feature-docs and test-docs.
+    tests: []
+    red_confirmed: false
+    red_reason: "A property of the change set, not of the product: no test, build or lint check can fail for it (searched tests/ by path and basename; nothing inspects the branch diff). Checked with git diff --name-only against the parent branch, which is not an observed red."
+  AC-6:
+    # python3 -m unittest tests.test_guardrail_hooks_migration passes at the repository root (also keeps the file present, non-empty and opening on the level-1 heading).
+    tests:
+      - tests.test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_core_prefixed_rules_are_present
+      - tests.test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_file_is_non_empty
+      - tests.test_guardrail_hooks_migration.TestRepositoryRulesAreInPlace.test_every_repository_rule_file_names_what_it_governs
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing tests.test_guardrail_hooks_migration detects removal, emptying or loss of the level-1 heading of .claude/rules/core-plugin-version-bump.md; no red state occurred for this change. The suite was already green at baseline (Ran 31 tests, OK) and the behavior pre-existed."
