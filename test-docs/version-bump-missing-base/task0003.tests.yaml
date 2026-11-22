@@ -1,0 +1,28 @@
+task_id: task0003
+baseline_failures: []          # python3 -m unittest discover -s tests before any edit -> Ran 17053 tests, OK (skipped=1)
+final_failures: []             # same command re-executed after the edits and after this record was written (tests read the record and the repository)
+acceptance_tests:
+  AC-1:
+    tests: []
+    red_confirmed: false
+    red_reason: "Documentation-content criterion (VERIFICATION TS-21 is a manual item) with no executable check that can be made to fail: the task plan requires no automated test. Searched tests/ by path and basename (plugin-dev/skills/plugin-dev/references/create.md, create.md): the only hit is tests/test_self_write_digest.py, which uses a synthetic m/create.md fixture path and does not read the changed file, so no existing test covers it. Checked post-hoc by reading create.md against IMPLEMENTATION.md C1 item by item (triggers with the main-only restriction, base determination order with the single fetch and the ::warning:: line, non-zero exit without a first parent, changed-plugin detection, comparison rules, dispatch inputs and outcomes, bumped output and PR merge for both triggers)."
+  AC-2:
+    tests: []
+    red_confirmed: false
+    red_reason: "Documentation-content criterion (TS-21, manual) with no executable check that can be made to fail; the same path and basename search of tests/ found no test that reads create.md. The old create.md never stated a skip-with-success for an unavailable base commit, so no failing state existed before the edit. Checked post-hoc: a search of create.md for skip, the Japanese word for skipping and the base-unavailable wording finds no such statement; the only success outcome stated is the dispatch case where the current version exceeds min_version."
+  AC-3:
+    tests: []
+    red_confirmed: false
+    red_reason: "Documentation-content criterion (TS-20, manual) with no executable check that can be made to fail. Searched tests/ by path and basename for the repository-root README.md: the tests that read a README.md read em-workflow/README.md, em-review/README.md or test/README.md; tests/test_reference_sweep.py reads the root README.md but only for stale references to a removed agent name, not for this section. No existing test covers the maintenance section. Checked post-hoc by reading README.md: the section points to .github/rulesets/README.md before procedures (b) and (c)."
+  AC-4:
+    tests: []
+    red_confirmed: false
+    red_reason: "Documentation-content criterion (TS-20, manual) with no executable check that can be made to fail; the same search of tests/ found no test covering the root README.md maintenance section. Checked post-hoc by reading README.md procedure (b): ref main, plugin em-workflow, min_version taken from the lost update commit subject recorded in the feature goal, with that commit id on the same line, followed by the confirmation that plugin.json and the marketplace.json entry are equal and greater than min_version, and the statement that a current version above min_version changes nothing and succeeds."
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: "Documentation-content criterion (TS-20, manual) with no executable check that can be made to fail; the same search of tests/ found no test covering the root README.md maintenance section. Checked post-hoc by reading README.md procedure (c): marketplace update and Claude Code restart, then the installed cache directory for the version after procedure (b), with files matching main, naming references/phases/create-plan-phase.md and references/contracts/planner-contract.md."
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: "Constrains the shape of this task's own diff (TS-22 is a git-diff check run by the verify phase); nothing had changed before the edit, so no failing state could be observed. The existing tests/test_plugin_version_parity.py and tests/test_em_workflow_version.py read plugin.json and marketplace.json but do not compare this task's diff, so they are not listed as coverage. Checked post-hoc: git diff --name-only lists only README.md and plugin-dev/skills/plugin-dev/references/create.md (no plugin.json or marketplace.json), and a search of both documents for a MAJOR.MINOR.PATCH value finds the min_version value only in README.md procedure (b) plus the pre-existing template example in create.md outside this task's diff."

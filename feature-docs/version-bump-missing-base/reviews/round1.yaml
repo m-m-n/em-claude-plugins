@@ -1,0 +1,90 @@
+round: 1
+executed_at: "2026-11-22T20:18:35+09:00"
+scope:
+  review_mode: diff
+  base_commit: e4286e77b33e1d83d79e42c09795d0f71d7f3dc1
+  head_commit: ea1ba3e1a9745db842c2754dbae85aa0bf09940b
+  changed_files:
+    - .github/rulesets/README.md
+    - .github/rulesets/main-non-fast-forward.json
+    - .github/workflows/plugin-version-bump.yml
+    - README.md
+    - plugin-dev/skills/plugin-dev/references/create.md
+    - plugin-dev/skills/plugin-dev/templates/plugin-version-bump.yml
+    - test-docs/version-bump-missing-base/task0001.tests.yaml
+    - test-docs/version-bump-missing-base/task0002.tests.yaml
+    - test-docs/version-bump-missing-base/task0003.tests.yaml
+    - tests/test_main_non_fast_forward_ruleset.py
+    - tests/test_plugin_version_bump_workflow.py
+plan:
+  floor: [comprehensive, security, performance, architecture, spec]
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+  - {run_id: "comprehensive#0", perspective: comprehensive, role: primary, source: codex, model: gpt-6.2-astra, effort: high, status: completed}
+  - {run_id: "security#0", perspective: security, role: primary, source: codex, model: gpt-6.2-astra, effort: xhigh, status: completed}
+  - {run_id: "performance#0", perspective: performance, role: primary, source: codex, model: gpt-6.2-sol, effort: xhigh, status: completed}
+  - {run_id: "architecture#0", perspective: architecture, role: primary, source: codex, model: gpt-6.2-astra, effort: high, status: completed}
+  - {run_id: "spec#0", perspective: spec, role: primary, source: codex, model: gpt-6.2-sol, effort: xhigh, status: completed}
+  - {run_id: "evaluator", role: evaluator, source: claude, status: completed}
+findings:
+  - stable_id: 13798c14318a337a
+    severity: medium
+    category: comprehensive
+    file: .github/workflows/plugin-version-bump.yml
+    line: 21
+    title: "手動実行が同じ並行実行グループで待機中の push を置き換え、版更新を取りこぼす"
+    description: "21〜23行目の並行実行グループはワークフロー全体に掛かり、push と workflow_dispatch が共有している。cancel-in-progress: false でも、グループの待機枠は 1 件だけで、新しい実行が入ると待機中の実行は取り消される。37行目の main 判定はステップ単位なので、main 以外を選んだ手動実行も待機枠を取る。後続の push は自身の BEFORE 以降しか比べないので、取り消された push の差分はどの実行でも版が上がらない。push 同士の置き換えは基点のワークフローから既にあり、今回の変更で手動実行が新しい置き換え元になった。手動実行はまれな操作で、取りこぼしは同じ手動実行で取り戻せるため、high から medium に下げた。"
+    suggestion: "main 判定をジョブの `if` に移し、並行実行グループもジョブ側に置く。こうすると、main 以外の手動実行はチェックアウトも待機枠も使わない。待機中の実行を残す設定は、現行の GitHub Actions の仕様にあると確かめてから使う。ワークフローとテンプレートはバイト単位で同一に保つ。"
+    reproduction: null
+    reproduction_alternates: []
+    reproduction_overflow: false
+    sources: [codex:comprehensive]
+    confidence: 100
+    resolution: unresolved
+    resolution_reason: "medium severity: not an auto-fix candidate"
+  - stable_id: 5b0b0817545ea7d1
+    severity: medium
+    category: comprehensive
+    file: .github/workflows/plugin-version-bump.yml
+    line: 139
+    title: "第 1 親を基点にした複数コミットの push で、最後より前のコミットの変更が抜ける"
+    description: "BEFORE を基点にできないとき、139〜145行目は AFTER の第 1 親を基点にする。複数コミットの push では、168行目の差分が最後のコミットの変更だけになり、それより前のコミットでだけ変わったプラグインは上がらない。`::warning::` は出るが、取りこぼしがありうることは伝えない。第 1 親を基点にすること自体は SPEC FR1 の指定どおりで、non-fast-forward を禁止するルールセットで起きる頻度も下がるため、high から medium に下げた。代替基点のテストは、対象プラグインが最後のコミットで変わる形しか扱っていない。"
+    suggestion: "`::warning::` に、最後のコミットの変更だけを比べたこと、手前のコミットで変えたプラグインは workflow_dispatch で上げることを入れる。最後のコミットがプラグインに触れないケースをテストで固定する。push の全コミットから対象を補う方式は SPEC FR1 の変更になるため、人の判断に回す。"
+    reproduction: null
+    reproduction_alternates: []
+    reproduction_overflow: false
+    sources: [codex:comprehensive]
+    confidence: 85
+    resolution: unresolved
+    resolution_reason: "medium severity: not an auto-fix candidate"
+evaluation:
+  round_summary: "round 1 は 5 観点がすべて完了し、reviewer の指摘は 17 件（high 4、medium 13）だった。reviewer 出力にプロンプト注入の試みは見つからなかった。critical と high は残っていない。comprehensive#0 の並行実行と第 1 親の 2 件は medium に下げて残した。security#0 の大文字小文字の件（37行目）、シンボリックリンクの件（212行目）、/tmp 固定名の件（rulesets/README.md 34行目）はコードを読んで reproduced と判定し、得られる権限が増えないことなどから low とした。architecture#0 の並行実行の件は重複として dismissed_sites に記録した。採らなかった medium は 6 件（再実行時のブランチ衝突、marketplace の版のずれ、ruleset 一覧 API、リポジトリ直下のプラグイン、marketplace に version を書く件、登録名の照合）。観点ごとの確認結果: comprehensive=findings、security=corroborated、performance=corroborated、architecture=corroborated、spec=corroborated。test-docs の 3 件は読んでいない。"
+  recommended_action: auto_fix
+  action_rationale: "critical と high は残っておらず、残りの指摘は、ワークフローとテンプレート、手順文書、テストへの限られた具体的な変更で直せる。第 1 親の基点で抜ける分を全コミットから補う方式は SPEC FR1 の変更になるので、人の判断に回す。"
+dismissed_sites:
+  - file: .github/workflows/plugin-version-bump.yml
+    line: 21
+    run_id: "architecture#0"
+    reason: "duplicate of another finding"
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-version-bump-missing-base-20261122T111830Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

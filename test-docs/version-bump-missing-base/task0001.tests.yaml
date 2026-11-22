@@ -1,0 +1,86 @@
+task_id: task0001
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 17053 tests, OK (skipped=1)
+final_failures: []             # re-executed after the implementation, with this record already present: python3 -m unittest discover -s tests -> Ran 17104 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_plugin_version_bump_workflow.BaseDeterminationTests.test_ac1_before_present_in_clone_is_the_base
+      - tests.test_plugin_version_bump_workflow.BaseDeterminationTests.test_ac1_before_absent_from_clone_but_served_is_fetched_once_and_is_the_base
+    red_confirmed: true
+    red_reason: "Both failed against the previous workflow: as committed they raised IndexError (the previous script reads BEFORE and AFTER from argv, not from the step env); with the previous argv interface supplied by a throwaway probe, the served-fetch test failed with 'AssertionError: 0 != 1' (the previous script never fetches BEFORE) while the BEFORE-present test passed, since that behavior already existed."
+  AC-2:
+    tests:
+      - tests.test_plugin_version_bump_workflow.BaseDeterminationTests.test_ac2_before_absent_from_the_bare_repository_too_falls_back_to_the_first_parent
+      - tests.test_plugin_version_bump_workflow.BaseDeterminationTests.test_ac2_all_zero_before_falls_back_to_the_first_parent_without_fetching
+      - tests.test_plugin_version_bump_workflow.BaseDeterminationTests.test_ac2_before_that_is_not_40_hex_characters_falls_back_without_fetching
+    red_confirmed: true
+    red_reason: "Failed against the previous workflow: with the argv interface supplied by a throwaway probe, the all-zero case reported 'False is not true : skip: base commit 0000000000000000000000000000000000000000 is not available', the unknown-commit case 'AssertionError: 0 != 1 : exactly one failed fetch attempt is expected', and each malformed BEFORE '[] is not true : skip: base commit ... is not available' (no ::warning:: line, no bump)."
+  AC-3:
+    tests:
+      - tests.test_plugin_version_bump_workflow.BaseDeterminationTests.test_ac3_root_commit_with_unavailable_base_fails_and_changes_no_file
+      - tests.test_plugin_version_bump_workflow.WorkflowTextTests.test_ac3_no_branch_ends_with_exit_zero_when_the_base_commit_is_unavailable
+    red_confirmed: true
+    red_reason: "Failed against the previous workflow: the root-commit case reported 'AssertionError: 0 == 0 : exit=0 ... stdout=skip: base commit deadbeef... is not available' for the unknown, all-zero and malformed BEFORE values, and the text test reported 'Lists differ: [40] != []' (the previous heredoc calls sys.exit(0) on that line) for both the workflow and the template."
+  AC-4:
+    tests:
+      - tests.test_plugin_version_bump_workflow.VersionRuleTests.test_ac4_after_lower_than_base_writes_the_greater_version_with_patch_raised
+      - tests.test_plugin_version_bump_workflow.VersionRuleTests.test_ac4_after_lower_in_minor_than_base_writes_the_base_line_with_patch_raised
+      - tests.test_plugin_version_bump_workflow.VersionRuleTests.test_ac4_after_equal_to_base_raises_the_patch
+      - tests.test_plugin_version_bump_workflow.VersionRuleTests.test_ac4_after_higher_than_base_leaves_versions_and_bumped_empty
+      - tests.test_plugin_version_bump_workflow.VersionRuleTests.test_ac4_versions_are_compared_as_integers_not_as_text
+      - tests.test_plugin_version_bump_workflow.VersionRuleTests.test_ac4_a_new_plugin_is_not_bumped_while_a_changed_one_is
+      - tests.test_plugin_version_bump_workflow.VersionRuleTests.test_ac4_a_push_that_only_adds_a_plugin_bumps_nothing
+      - tests.test_plugin_version_bump_workflow.VersionRuleTests.test_ac4_versions_not_in_major_minor_patch_form_are_not_bumped
+      - tests.test_plugin_version_bump_workflow.VersionRuleTests.test_ac4_a_marketplace_entry_without_a_version_is_not_rewritten
+      - tests.test_plugin_version_bump_workflow.VersionRuleTests.test_ac4_when_no_marketplace_entry_carries_a_version_the_file_is_untouched
+      - tests.test_plugin_version_bump_workflow.VersionRuleTests.test_ac4_only_version_values_differ_after_a_bump
+      - tests.test_plugin_version_bump_workflow.VersionRuleTests.test_ac4_a_change_outside_every_plugin_bumps_nothing
+      - tests.test_plugin_version_bump_workflow.VersionRuleTests.test_ac4_a_change_in_a_nested_directory_is_attributed_to_its_plugin
+      - tests.test_plugin_version_bump_workflow.VersionRuleTests.test_ac4_a_change_inside_a_nested_plugin_is_attributed_to_the_nearest_plugin
+      - tests.test_plugin_version_bump_workflow.VersionRuleTests.test_ac4_a_plugin_removed_in_the_push_is_not_bumped
+      - tests.test_plugin_version_bump_workflow.VersionRuleTests.test_ac4_bumped_lists_every_bumped_plugin_as_name_at_version
+      - tests.test_plugin_version_bump_workflow.VersionRuleTests.test_ac4_bumped_is_written_and_empty_when_nothing_is_bumped
+    red_confirmed: true
+    red_reason: "The lower-than-base rule failed against the previous workflow: with the argv interface supplied by a throwaway probe, 'AssertionError: 1.2.3 != 1.2.5' (lower), '1.2.9 != 1.3.1' (lower in minor) and '1.2.9 != 1.2.11' (integer comparison), because the previous script skipped any plugin whose version differed from the base. As committed, every test here raised IndexError against the previous workflow (argv interface). The remaining tests in this list (equal, higher, new plugin, malformed version, marketplace entry without version, nesting, bumped format) pass against the previous script's behavior with the argv probe; they pin rules that already held."
+  AC-5:
+    tests:
+      - tests.test_plugin_version_bump_workflow.DroppedUpdateReproductionTests.test_ac5_reproduction_when_the_bare_repository_serves_the_dropped_commit
+      - tests.test_plugin_version_bump_workflow.DroppedUpdateReproductionTests.test_ac5_reproduction_when_the_bare_repository_does_not_serve_the_dropped_commit
+    red_confirmed: true
+    red_reason: "Both failed against the previous workflow with the argv interface supplied by a throwaway probe: 'AssertionError: (1, 2, 3) not greater than (1, 2, 3)' when the bare repository does not serve the dropped commit, and 'AssertionError: (1, 2, 3) not greater than (1, 2, 4)' when it serves it; the previous script skipped the push and left AFTER's version at the base's version or lower."
+  AC-6:
+    tests:
+      - tests.test_plugin_version_bump_workflow.DispatchTests.test_ac6_current_lower_than_min_version_with_equal_major_and_minor_writes_min_version_plus_one
+      - tests.test_plugin_version_bump_workflow.DispatchTests.test_ac6_current_equal_to_min_version_writes_min_version_plus_one
+      - tests.test_plugin_version_bump_workflow.DispatchTests.test_ac6_current_higher_than_min_version_changes_no_file_and_bumped_is_empty
+      - tests.test_plugin_version_bump_workflow.DispatchTests.test_ac6_versions_are_compared_as_integers_not_as_text
+      - tests.test_plugin_version_bump_workflow.DispatchTests.test_ac6_current_lower_than_min_version_with_a_different_minor_exits_non_zero
+      - tests.test_plugin_version_bump_workflow.DispatchTests.test_ac6_current_lower_than_min_version_with_a_different_major_exits_non_zero
+      - tests.test_plugin_version_bump_workflow.DispatchTests.test_ac6_an_unregistered_plugin_exits_non_zero
+      - tests.test_plugin_version_bump_workflow.DispatchTests.test_ac6_a_plugin_shaped_like_a_relative_path_exits_non_zero_without_touching_files
+      - tests.test_plugin_version_bump_workflow.DispatchTests.test_ac6_a_malformed_min_version_exits_non_zero_and_writes_no_bumped_value
+      - tests.test_plugin_version_bump_workflow.DispatchTests.test_ac6_a_current_version_not_in_major_minor_patch_form_exits_non_zero
+      - tests.test_plugin_version_bump_workflow.DispatchTests.test_ac6_the_plugin_json_is_located_from_the_registered_entry
+      - tests.test_plugin_version_bump_workflow.DispatchTests.test_ac6_a_marketplace_entry_without_a_version_is_not_rewritten
+    red_confirmed: true
+    red_reason: "The previous workflow has no workflow_dispatch path. As committed the tests raised IndexError (the previous script needs BEFORE and AFTER as argv); with the argv interface supplied by a throwaway probe they failed with 'AssertionError: 0 == 0 : exit=0 ... stdout=skip: base commit  is not available' for every unregistered plugin, relative-path-shaped plugin and malformed min_version, and with \"AssertionError: '1.2.3' != '1.2.4'\" for the valid dispatch cases."
+  AC-7:
+    tests:
+      - tests.test_plugin_version_bump_workflow.WorkflowTextTests.test_ac7_push_trigger_stays_limited_to_main
+      - tests.test_plugin_version_bump_workflow.WorkflowTextTests.test_ac7_workflow_dispatch_declares_required_string_inputs
+      - tests.test_plugin_version_bump_workflow.WorkflowTextTests.test_ac7_version_update_step_runs_under_dispatch_only_on_main
+      - tests.test_plugin_version_bump_workflow.WorkflowTextTests.test_ac7_pull_request_steps_depend_only_on_bumped_being_non_empty
+      - tests.test_plugin_version_bump_workflow.WorkflowTextTests.test_ac7_step_env_defines_every_value_the_heredoc_reads
+      - tests.test_plugin_version_bump_workflow.WorkflowTextTests.test_ac7_heredoc_body_contains_no_actions_expression
+      - tests.test_plugin_version_bump_workflow.WorkflowTextTests.test_ac7_version_update_step_script_contains_no_actions_expression
+    red_confirmed: true
+    red_reason: "Failed against the previous workflow: the dispatch declaration test reported 'workflow_dispatch is not declared', the ref guard test \"'if' not found\" in the version-update step, and the env test 'the step env does not carry: [event, min_version, plugin]'. The push trigger, pull request condition and no-expression tests passed against the previous workflow; they pin properties that already held and must survive the rewrite."
+  AC-8:
+    tests:
+      - tests.test_plugin_version_bump_workflow.WorkflowTextTests.test_ac8_workflow_has_exactly_one_heredoc
+      - tests.test_plugin_version_bump_workflow.WorkflowTextTests.test_ac8_heredoc_delimiter_is_quoted_so_the_shell_expands_nothing
+      - tests.test_plugin_version_bump_workflow.WorkflowTextTests.test_ac8_heredoc_is_valid_python
+      - tests.test_plugin_version_bump_workflow.WorkflowTextTests.test_ac8_workflow_and_template_are_byte_identical
+      - tests.test_plugin_version_bump_workflow.WorkflowTextTests.test_ac8_heredoc_imports_only_standard_library_modules
+    red_confirmed: false
+    red_reason: "These are regression guards for invariants the previous workflow already satisfied (one heredoc, byte-identical template, standard-library imports), so no red state occurred; they were shown to detect a second heredoc, a drifted template and a third-party import by temporarily mutating a scratch copy. The remaining parts have no test in this module: python3 -m unittest discover -s tests exiting 0 is the project test command itself, the no-version-change part (TS-22) is checked with git diff against the parent branch, and the C4 isolation rules (TS-19) are checked by review."
