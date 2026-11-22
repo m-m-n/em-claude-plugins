@@ -96,7 +96,8 @@ workflow:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: f16fd2a0743f6cecc1ca6bc01015c0488d9e889a
 - id: implement
   status: pending
   base_commit: e4286e77b33e1d83d79e42c09795d0f71d7f3dc1
@@ -110,7 +111,76 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Workflow base fallback, workflow_dispatch recovery and regression tests
+    plan: tasks/task0001.md
+    files:
+    - .github/workflows/plugin-version-bump.yml
+    - plugin-dev/skills/plugin-dev/templates/plugin-version-bump.yml
+    - tests/test_plugin_version_bump_workflow.py
+    skills:
+    - infra-impl
+    domains:
+    - config-infra
+    - input-handling
+    - external-io
+    - api-contract
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR10
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    status: pending
+    notes: null
+  task0002:
+    title: Non-fast-forward ruleset definition for main and its creation procedure
+    plan: tasks/task0002.md
+    files:
+    - .github/rulesets/main-non-fast-forward.json
+    - .github/rulesets/README.md
+    - tests/test_main_non_fast_forward_ruleset.py
+    skills:
+    - infra-impl
+    domains:
+    - config-infra
+    - auth
+    complexity: high
+    requirements:
+    - FR7
+    - FR8
+    - FR10
+    - NFR3
+    - NFR4
+    - NFR5
+    status: pending
+    notes: null
+  task0003:
+    title: README maintenance section and create.md behavior description
+    plan: tasks/task0003.md
+    files:
+    - README.md
+    - plugin-dev/skills/plugin-dev/references/create.md
+    skills: []
+    domains:
+    - config-infra
+    complexity: low
+    requirements:
+    - FR8
+    - FR9
+    - NFR4
+    - NFR5
+    status: pending
+    notes: null
 review:
   status: pending
   rounds_completed: 0
@@ -122,106 +192,157 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-4
+    - TS-5
+    - TS-6
+    - TS-7
+    - TS-8
+    - TS-9
   FR2:
     title: 変更プラグインの検出
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-4
+    - TS-9
+    - TS-14
   FR3:
     title: version の比較と上げ方
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-10
+    - TS-11
+    - TS-12
   FR4:
     title: workflow_dispatch による手動の version 更新
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-13
+    - TS-15
   FR5:
     title: 更新結果の出力と main への取り込み
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-14
+    - TS-16
   FR6:
     title: workflow と template の一致
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-2
   FR7:
     title: non-fast-forward を禁止するルールセットの定義
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS-3
   FR8:
     title: マージ後に人が行う手順の文書
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    - task0003
+    tests:
+    - TS-20
   FR9:
     title: plugin-dev の説明の更新
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0003
+    tests:
+    - TS-21
   FR10:
     title: 再発を検出するテスト
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-9
   NFR1:
     title: workflow 内のスクリプトは Python 標準ライブラリと git だけを使う
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-18
   NFR2:
     title: workflow の YAML に含まれる heredoc は 1 つだけ
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
   NFR3:
     title: テストはネットワークに出ず ~/.claude を読まず一時ディレクトリの中だけで git を操作する
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-19
   NFR4:
     title: この feature の変更は plugin.json と marketplace.json の version を変えない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    tests:
+    - TS-22
   NFR5:
     title: SPEC・計画・受け入れ条件に具体的な version の値を書かない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    - task0003
+    tests:
+    - TS-23
 batch:
   review_rework_count: 0
   verify_rework:
