@@ -1,0 +1,65 @@
+schema_version: 2
+feature: version-bump-missing-base
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.27
+    confidence: 0.72
+    legend:
+      '0': '0'
+      '1': '1'
+      '2': '2'
+      '3': '3'
+    probabilities:
+      '0': 0.0
+      '1': 0.73
+      '2': 0.26
+      '3': 0.01
+  observed_at: '2026-11-22T19:00:30+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 2.05
+    confidence: 0.91
+    legend:
+      '0': '0'
+      '1': '1'
+      '2': '2'
+      '3': '3'
+    probabilities:
+      '0': 0.0
+      '1': 0.02
+      '2': 0.91
+      '3': 0.07
+  observed_at: '2026-11-22T19:04:10+09:00'
+pre_survey_estimate:
+  files_expected:
+  - .github/workflows/plugin-version-bump.yml
+  - plugin-dev/skills/plugin-dev/templates/plugin-version-bump.yml
+  - tests/test_plugin_version_bump.py
+  - em-workflow/.claude-plugin/plugin.json
+  - .claude-plugin/marketplace.json
+  changed_lines_approx: 100
+  new_functions_needed: 0
+  new_files_needed:
+  - tests/test_plugin_version_bump.py
+  new_dependencies_needed: []
+  covering_tests_exist: false
+  spillover_modules:
+  - plugin-dev
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 3
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  caller_and_dependency_count: 5
+  changes_external_contract: true
+  changes_behavior: true
+  evidence: .github/workflows/plugin-version-bump.yml:67-72 は base 不在時に差分取得前に終了コード
+    0 で終わる。plugin-dev/skills/plugin-dev/templates/plugin-version-bump.yml:67-72 に同じ分岐がある。tests/test_plan_version_plan_writing.py:455-465
+    は文書の記述を、tests/test_plugin_version_parity.py:149-152 は版の一致を検証する。em-workflow/.claude-plugin/plugin.json:7
+    と .claude-plugin/marketplace.json:27 はともに 0.5.2 で、.claude/rules/core-plugin-version-bump.md:8-11
+    はこの2箇所を Actions で更新すると定めている。
+decided_at: '2026-11-22T19:04:20+09:00'
