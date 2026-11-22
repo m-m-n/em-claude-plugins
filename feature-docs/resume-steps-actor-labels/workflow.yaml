@@ -113,7 +113,8 @@ workflow:
   - TM-2
   failed_items: []
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: 37029ef5b35859488f5fbea22e57cc6cb803a7b4
 tasks:
   task0001:
     title: Actor labels for stop-recovery steps
