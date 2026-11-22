@@ -140,7 +140,7 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: in_progress
+    status: failed
     branch: em-workflow/version-bump-missing-base/task0001
     notes: null
   task0002:
@@ -181,7 +181,7 @@ tasks:
     - FR9
     - NFR4
     - NFR5
-    status: in_progress
+    status: merged
     branch: em-workflow/version-bump-missing-base/task0003
     notes: null
 review:
