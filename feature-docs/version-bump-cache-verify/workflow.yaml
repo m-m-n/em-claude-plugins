@@ -86,7 +86,8 @@ tasks:
     - config-infra
     complexity: low
     requirements: []
-    status: pending
+    status: in_progress
+    branch: em-workflow/version-bump-cache-verify/task0001
 
 review:
   status: pending
