@@ -195,10 +195,15 @@ applied).
   present — the task document (`feature-docs/{feature}/TASK.md`) in their
   place at the `minimal` tier (section 2a).
 - Prior answers already recorded in `phase-state/create-plan.yaml`.
-- `write_policy` for the artifacts it may write: the THREAT-MODEL.md target
-  and, at the `minimal` tier, the TASK.md `extend_only` target
-  (`references/contracts/planner-contract.md`'s minimal-tier `TASK.md`
-  append rule).
+- `write_policy` for the artifacts it may write: the targets that
+  `references/contracts/planner-contract.md`, "Additional input:
+  `planning_inputs`", lists — IMPLEMENTATION.md, VERIFICATION.md and
+  THREAT-MODEL.md, each existing task plan under `tasks/` — with `tasks/` in
+  `allowed_write_roots` and, at the `minimal` tier, the TASK.md `extend_only`
+  target (`references/contracts/planner-contract.md`'s minimal-tier `TASK.md`
+  append rule). On re-planning after a spec-change transition or a tier
+  upgrade, each existing task plan is therefore a target, so a task plan that
+  rework-planner rewrote is covered by the rule cited below.
 - The registry paths it must consult:
   `references/impl-skills.yaml`, `references/review-rules.yaml`,
   `references/license-compat.md`, `references/workflow-schema.md`,
@@ -221,6 +226,10 @@ applied).
 Before the `Task` dispatch, the orchestrator verifies the planner's
 `write_policy.targets` per `references/artifact-digest.md`
 (`Pre-dispatch verification`).
+
+The orchestrator chooses the action of each `write_policy.targets` entry by
+the rule of `references/contracts/spec-writer-contract.md`, "How the
+orchestrator chooses each target's action before dispatch".
 
 The planner run's `worker_runs` entry in `phase-state/create-plan.yaml`
 carries `dispatch_digest_inputs`, the per-path `digest_inputs` map of the
@@ -509,13 +518,23 @@ restated.
 
 **Pre-dispatch.** The clean-worktree precondition and the scope verification are
 those of section 2 (`references/phases/create-spec-phase.md`, "Scope
-verification"), unchanged.
+verification"), unchanged. The orchestrator chooses the action of each
+`write_policy.targets` entry by the rule of
+`references/contracts/spec-writer-contract.md`, "How the orchestrator chooses
+each target's action before dispatch". From
+`references/contracts/planner-contract.md` this correction takes the target
+paths; the action of each is the one chosen by the spec-writer-contract rule
+above. An approved `amend_other_feature` target stays fixed as approved.
 
 **Dispatch.** `Task(subagent_type="em-workflow:implementation-planner")` with
 `planning_inputs.path_correction` (resolved by the orchestrator from the entry
-script's violations: `targets`, each a `task_id` and an `old_path`), the
-`write_policy` of `references/contracts/planner-contract.md`, and `tasks/` in
-`allowed_write_roots`.
+script's violations: `targets`, each a `task_id` and an `old_path`), the target
+paths of the `write_policy` of `references/contracts/planner-contract.md`, each
+carrying the action chosen in **Pre-dispatch.**, and `tasks/` in
+`allowed_write_roots`. The dispatch passes the complete `write_policy.targets`:
+each target's chosen action together with its `expect_digest`. Immediately before
+the Task call the orchestrator applies `references/artifact-digest.md`'s
+`Pre-dispatch verification`, the same check section 4 applies.
 
 **Record.** The run and the patch are recorded in
 `phase-state/create-plan.yaml` under a new `request_id` and the next unused
@@ -548,11 +567,24 @@ The checks before the dispatch are those of section 2: the clean-worktree
 precondition and the scope verification (`references/phases/create-spec-phase.md`,
 "Scope verification"), unchanged.
 
+The orchestrator chooses the action of each `write_policy.targets` entry by the
+rule of `references/contracts/spec-writer-contract.md`, "How the orchestrator
+chooses each target's action before dispatch". From
+`references/contracts/planner-contract.md` this correction takes the target
+paths; the action of each is the one chosen by the spec-writer-contract rule
+above. An approved `amend_other_feature` target stays fixed as approved.
+
 The dispatch is `Task(subagent_type="em-workflow:implementation-planner")` with
 `planning_inputs.feature_docs_correction` copied from the entry script's `targets`
-(each a `task_id` and a `path`), and with the `write_policy` of
+(each a `task_id` and a `path`), and with the target paths and the empty
+`allowed_write_roots` of the `write_policy` of
 `references/contracts/planner-contract.md`'s
-`### feature_docs_correction (dispatch-resolved value)`.
+`### feature_docs_correction (dispatch-resolved value)`, each target carrying the
+action chosen above. No root is added to `allowed_write_roots`.
+The dispatch passes the complete `write_policy.targets`: each target's chosen
+action together with its `expect_digest`. Immediately before the Task call the
+orchestrator applies `references/artifact-digest.md`'s `Pre-dispatch
+verification`, the same check section 4 applies.
 
 A stage-1 request result is handled by the grant rule of section 4
 (`## 4. Planner dispatch`), followed by one re-dispatch.

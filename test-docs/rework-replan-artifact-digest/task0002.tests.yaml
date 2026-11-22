@@ -1,0 +1,81 @@
+task_id: task0002
+# Full suite (python3 em-workflow/hooks/tests/run-destructive-guard.py &&
+# python3 -m unittest discover -s tests) run before any edit: the destructive
+# guard run passed 1467/1467, and the unit run was 16955 tests with 4
+# failures and 1 skipped. The 4 failures are the version-bump tests of
+# tests/test_review_perspective_model_effort_version_bump.py, which compare
+# plugin versions with a baseline; this task changes no version.
+baseline_failures:
+  - test_review_perspective_model_effort_version_bump.TestEmReviewManifest.test_version_is_a_minor_bump_over_baseline
+  - test_review_perspective_model_effort_version_bump.TestEmWorkflowManifest.test_version_is_a_minor_bump_over_baseline
+  - test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_review_entry_version_is_a_minor_bump_over_baseline
+  - test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_workflow_entry_version_is_a_minor_bump_over_baseline
+# Full suite re-executed after the implementation and after this record was
+# written (the record is itself checked by tests.test_tests_yaml_id_resolution):
+# the destructive guard run passed 1467/1467 and the unit run was 16988 tests
+# (33 more than the baseline run: 32 in tests/test_artifact_digest_docs.py and
+# the record check of this file)
+# with the same 4 version-bump failures and 1 skipped, nothing new.
+final_failures:
+  - test_review_perspective_model_effort_version_bump.TestEmReviewManifest.test_version_is_a_minor_bump_over_baseline
+  - test_review_perspective_model_effort_version_bump.TestEmWorkflowManifest.test_version_is_a_minor_bump_over_baseline
+  - test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_review_entry_version_is_a_minor_bump_over_baseline
+  - test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_workflow_entry_version_is_a_minor_bump_over_baseline
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_artifact_digest_docs.TestPlannerContractNamesPathsNotPlanDocumentActions.test_ts9_each_planner_contract_place_cites_the_action_choice_owner
+      - tests.test_artifact_digest_docs.TestPlannerContractNamesPathsNotPlanDocumentActions.test_ts9_no_planner_contract_place_says_a_plan_document_has_an_action
+      - tests.test_artifact_digest_docs.TestPlannerContractNamesPathsNotPlanDocumentActions.test_ts9_correction_bullets_keep_their_targets_and_the_empty_roots
+      - tests.test_artifact_digest_docs.TestTask0002MatchersFireOnForgedText.test_citation_matcher_fails_on_each_citing_slice_without_its_citation
+      - tests.test_artifact_digest_docs.TestTask0002MatchersFireOnForgedText.test_the_fixed_action_matcher_fires_on_each_correction_bullet_form
+    red_confirmed: true
+    red_reason: "Against the unedited planner-contract.md none of the three places cited references/contracts/spec-writer-contract.md with the section name: test_ts9_each_planner_contract_place_cites_the_action_choice_owner failed for the planning_inputs paragraph, the path_correction bullet and the feature_docs_correction bullet, and test_citation_matcher_fails_on_each_citing_slice_without_its_citation failed on the same three slices at its precondition. test_ts9_no_planner_contract_place_says_a_plan_document_has_an_action failed for the two correction bullets (both said 'has action `replace_own`'). test_ts9_correction_bullets_keep_their_targets_and_the_empty_roots failed on the statements that the bullet lists the targets and that this contract fixes their paths only (the allowed_write_roots-is-empty statement already held)."
+  AC-2:
+    tests:
+      - tests.test_artifact_digest_docs.TestPlannerContractNamesPathsNotPlanDocumentActions.test_ts9_planning_inputs_lists_existing_task_plans_as_targets
+      - tests.test_artifact_digest_docs.TestTask0002MatchersFireOnForgedText.test_each_statement_fails_on_its_slice_without_its_token
+    red_confirmed: true
+    red_reason: "Against the unedited planning_inputs paragraph test_ts9_planning_inputs_lists_existing_task_plans_as_targets failed on 5 of its 6 statements: 'each existing task plan under tasks/ is a write_policy target', 'a task plan that does not yet exist stays under allowed_write_roots', 'create is for a path that does not exist', 'this contract fixes the paths only' and 'the TASK.md extend_only and amend_other_feature actions stay fixed' (the old paragraph said task plan files are new per task and never listed an existing one; only the written_artifacts statement already held)."
+  AC-3:
+    tests:
+      - tests.test_artifact_digest_docs.TestCreatePlanPassesTheChosenActions.test_ts10_section_4_names_each_existing_task_plan_as_a_target
+      - tests.test_artifact_digest_docs.TestCreatePlanPassesTheChosenActions.test_ts10_section_13_pre_dispatch_takes_the_paths_and_cites_the_owner
+      - tests.test_artifact_digest_docs.TestCreatePlanPassesTheChosenActions.test_ts10_section_13_dispatch_carries_the_action_chosen_in_pre_dispatch
+      - tests.test_artifact_digest_docs.TestCreatePlanPassesTheChosenActions.test_ts10_feature_docs_correction_chooses_by_the_owner
+      - tests.test_artifact_digest_docs.TestCreatePlanPassesTheChosenActions.test_ts10_feature_docs_dispatch_carries_the_empty_allowed_write_roots
+      - tests.test_artifact_digest_docs.TestCreatePlanPassesTheChosenActions.test_ts10_no_create_plan_place_names_rework_yaml_or_git_hash_object
+      - tests.test_artifact_digest_docs.TestNoTask0002PlaceRestatesTheOwner.test_absence_of_every_restatement_token_in_every_place
+    red_confirmed: true
+    red_reason: "Against the unedited create-plan-phase.md test_ts10_section_4_names_each_existing_task_plan_as_a_target failed on 5 statements (the planner-contract.md target set, each existing task plan under tasks/, tasks/ in allowed_write_roots, re-planning after a spec-change transition or a tier upgrade, each existing task plan is therefore a target); test_ts10_section_13_dispatch_carries_the_action_chosen_in_pre_dispatch failed on 'each target carries the action chosen in Pre-dispatch' and on the target-paths statement; test_ts10_feature_docs_dispatch_carries_the_empty_allowed_write_roots failed on the empty allowed_write_roots, 'chosen above' and 'no root is added' statements; the two Pre-dispatch-style paragraphs (section 13 Pre-dispatch and the feature-docs correction action paragraph) still said the actions planner-contract.md names 'do not apply here', which test_ts10_no_create_plan_place_names_rework_yaml_or_git_hash_object and test_absence_of_every_restatement_token_in_every_place caught. The absence checks for git hash-object, a restatement marker and phase-state/rework.yaml held on the unedited text."
+  AC-4:
+    tests:
+      - tests.test_artifact_digest_docs.TestCreatePlanPassesTheChosenActions.test_ts10_the_replace_own_row_keeps_its_sentence_and_cites_the_owner
+      - tests.test_artifact_digest_docs.TestCreatePlanPassesTheChosenActions.test_ts10_the_action_table_still_has_seven_rows_and_the_row_has_three_cells
+      - tests.test_threat_model_planner_contract.TestSpecWriterContractAC5
+    red_confirmed: true
+    red_reason: "Against the unedited replace_own row test_ts10_the_replace_own_row_keeps_its_sentence_and_cites_the_owner failed: the row held only 'Overwrites the same-phase output the worker itself produced earlier.' and neither named an implementation-planner dispatch of create-plan nor cited 'How the orchestrator chooses each target's action before dispatch' (3 statements failed, the original-sentence statement held). The seven-row and three-cell test passed before the change by design: it guards that the table keeps its seven rows; the existing tests.test_threat_model_planner_contract.TestSpecWriterContractAC5 counts the same rows."
+  AC-5:
+    tests:
+      - tests.test_artifact_digest_docs.TestPlannerContractNamesPathsNotPlanDocumentActions.test_ts9_the_agent_bullet_names_preserve_and_status_blocked
+      - tests.test_feature_docs_planner_rules_docs.TestAC5FeatureDocsCorrection.test_the_four_kinds_of_target_path_are_each_handled
+    red_confirmed: true
+    red_reason: "Against the unedited own-documents bullet test_ts9_the_agent_bullet_names_preserve_and_status_blocked failed on 3 of its 4 statements: 'only under a target whose entry permits writing', 'under a preserve target it is not written' and 'the planner returns status: blocked naming the path' (the old bullet said only 'edited directly, under its `replace_own` target'; the edited-directly statement already held). The existing test_the_four_kinds_of_target_path_are_each_handled keeps passing, so the phrases it pins stay in the bullet."
+  AC-6:
+    tests:
+      - tests.test_artifact_digest_docs.TestOwnerDocumentStructure
+      - tests.test_artifact_digest_docs.TestDispatchSitesRegistry
+      - tests.test_artifact_digest_docs.TestLegacyRecords
+      - tests.test_artifact_digest_docs.TestEverySiteCitesTheOwner.test_rework_dispatch_input_paragraph_records_into_rework_yaml
+      - tests.test_spec_change_replan_authorization
+      - tests.test_check_plugin_invariants.TestRepositoryLevelInvariant.test_checker_exits_cleanly_against_the_repository_root
+    red_confirmed: false
+    red_reason: "AC-6 is a no-edit constraint (artifact-digest.md, rework-task-synthesis.md, phase-state.md and batch-policies.yaml are not modified, and check-plugin-invariants.py passes every check), so nothing can fail before the change. A dedicated new module is out of scope, but the existing tests.test_artifact_digest_docs.TestOwnerDocumentStructure detects a change of the owner's level-2 heading set, TestDispatchSitesRegistry detects a change of the six registry rows, TestLegacyRecords detects a reworded Legacy records section, test_rework_dispatch_input_paragraph_records_into_rework_yaml detects a changed rework dispatch paragraph, tests.test_spec_change_replan_authorization detects a changed re-planning authorization, and tests.test_check_plugin_invariants.TestRepositoryLevelInvariant runs the checker against the repository root; no red state occurred for this change. git diff --stat reports no change to the four files."
+  AC-7:
+    tests:
+      - tests.test_artifact_digest_docs.TestTask0002MatchersFireOnForgedText
+      - tests.test_artifact_digest_docs.TestNoTask0002PlaceRestatesTheOwner
+      - tests.test_artifact_digest_docs.TestPlannerContractNamesPathsNotPlanDocumentActions
+      - tests.test_artifact_digest_docs.TestCreatePlanPassesTheChosenActions
+    red_confirmed: true
+    red_reason: "Against the unedited documents 77 subtests of the new classes failed: each presence statement that the unedited text lacked failed on the real slice, and the forged-copy cases failed at their precondition because the token to be removed was not in the slice (for example the citation of spec-writer-contract.md in each planner-contract.md place, or 'chosen above' in the feature-docs dispatch paragraph); the absence matcher for 'has action' fired on both planner-contract.md correction bullets and the 'do not apply here' matcher on the two create-plan-phase.md paragraphs. After the edits the same classes pass: every statement fails on its slice with the token removed and every absence matcher fires on its forged copy."

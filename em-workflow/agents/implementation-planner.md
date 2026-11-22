@@ -399,6 +399,10 @@ section. The input shape is owned by
   only when that plan is listed in `write_policy.targets`; otherwise the
   planner leaves that plan unedited, because the old reference may remain
   there. The plan of a merged task is not edited.
+- **Write check first.** Before writing anything, determine every file this
+  dispatch will actually edit and check each one's `write_policy.targets`
+  action; if any file it must edit carries `preserve`, write nothing and
+  return `status: blocked` naming that path.
 - **Shared bare name.** Several corrections can share one old file name. In a
   target task's plan a bare occurrence of it is replaced by the new file name
   of the correction of the target task that uses the plan; when a plan is used
@@ -465,15 +469,23 @@ patch field by `${CLAUDE_PLUGIN_ROOT}/references/workflow-patch.md`, section
 - **Reading the targets.** For each entry of `targets`, read the target
   task's plan and find what it asked of the document at the target path:
   which steps and criteria ask the implementer to change it.
+- **Write check first.** Before writing anything, determine every file this
+  dispatch will actually edit, including a task plan edited only to drop a
+  reference, and check each one's `write_policy.targets` action. If any file
+  it must edit carries `preserve`, write nothing and return
+  `status: blocked` naming that path.
 - **Kinds of target path.** Each target path is handled by its kind:
   - A path that is in scope under the scope rule of
     `## Other-feature documents` is amended by the planner through the two
     stages stated in the paragraph on other-feature documents in step 4,
     which apply on this dispatch.
-  - The own feature's IMPLEMENTATION.md or VERIFICATION.md is edited
-    directly, under its `replace_own` target.
-  - A document the target plan asked no change of is only removed: nothing in
-    the document changes.
+  - The own feature's IMPLEMENTATION.md or VERIFICATION.md is edited directly,
+    when the target plan asked a change of that document's body and its
+    `write_policy.targets` entry permits writing (`replace_own` or
+    `replace_authorized`). Under a `preserve` target it is not written, and
+    the planner returns `status: blocked` naming the path.
+  - A document the target plan asked no change of is only removed from the
+    plan: nothing in the document changes, even under `preserve`.
   - Any other path that needs a change is never written: return
     `status: blocked` naming the path.
 - **Editing target plans.** In each target task's plan the path leaves the

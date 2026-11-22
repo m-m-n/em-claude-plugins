@@ -1,0 +1,108 @@
+schema_version: 1
+feature: rework-replan-artifact-digest
+phase: create-spec
+status: completed
+generation: 1
+base_revision: 5718f4784244e7e10ca40ee6973bb40f01b53e83
+last_input_digest: sha256:fdaf785dcd1c51bbd3c5c02cb437995e061b7958ec0735fcadba344d54f813f4
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-11-21T20:18:10+09:00'
+    questions:
+    - question_id: requirement.fix-mechanism
+      status: answered
+    - question_id: requirement.match-scope
+      status: answered
+    - question_id: requirement.applicability
+      status: answered
+    - question_id: requirement.test-form
+      status: answered
+answers:
+  requirement.fix-mechanism:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-21T20:19:30+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - planning_lineage_records
+    freeform: null
+    normalized_answer: create-plan の対象アクション判定は、対象の現在のダイジェストが phase-state/create-plan.yaml
+      に加えて phase-state/rework.yaml の artifacts に記録された同じパスのダイジェストと一致するときも replace_own
+      とする。記録先とバッチ方針は変えない
+    resolution_note: 'gate: create-spec.requirement-clarification; options: planning_lineage_records
+      / replan_authorization_override / dual_recording / batch_policy_overwrite; choice:
+      planning_lineage_records; recorded as assumption; codex_consulted: true (entry
+      codex, 1 turn, converged); orchestrator judged mapping; opus_escalation: false;
+      key point: rework-planner-contract.md が既に両プランナーの出力を同じ計画系統として扱っており、外部編集へのダイジェスト保護を保てる'
+  requirement.match-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-21T20:19:30+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - last_entry_in_either_file
+    freeform: null
+    normalized_answer: 一致は、現在のダイジェストが create-plan.yaml の当該パスの最後の記録、または rework.yaml
+      の当該パスの最後の記録と等しいこと。どちらとも一致しなければ既存の不一致分岐
+    resolution_note: 'gate: create-spec.requirement-clarification; options: last_entry_in_either_file
+      / newest_across_files; choice: last_entry_in_either_file; recorded as assumption;
+      codex_consulted: true (entry codex, 1 turn, converged); orchestrator judged
+      mapping; opus_escalation: false; key point: phase-state の artifacts にファイル間の順序を示す項目が無く、現行形式のまま照合できる'
+  requirement.applicability:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-21T20:19:30+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - every_create_plan_action_decision
+    freeform: null
+    normalized_answer: すべての create-plan のアクション判定（初回、仕様変更・tier 昇格後の再計画、13 節の最終パス訂正と
+      feature-docs 訂正）に適用する
+    resolution_note: 'gate: create-spec.requirement-clarification; options: every_create_plan_action_decision
+      / replanning_only; choice: every_create_plan_action_decision; recorded as assumption;
+      codex_consulted: true (entry codex, 1 turn, converged); orchestrator judged
+      mapping; opus_escalation: false; key point: 13 節の訂正も VERIFICATION.md / IMPLEMENTATION.md
+      を replace_own で扱い、文書のみの rework の後に同じ誤判定が起きうる'
+  requirement.test-form:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-21T20:19:30+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - document_pin_tests
+    freeform: null
+    normalized_answer: 新しい規則の文面を tests/test_artifact_digest_docs.py で固定し、規則の無い偽の文面で検査が失敗することも確かめる
+    resolution_note: 'gate: create-spec.requirement-clarification; options: document_pin_tests
+      / helper_script_with_unit_tests; choice: document_pin_tests; recorded as assumption;
+      codex_consulted: true (entry codex, 1 turn, converged); orchestrator judged
+      mapping; opus_escalation: false; key point: 判定はオーケストレーターが文書を読んで行う手順であり、既存モジュールの方式に合わせる。規則は
+      spec-writer-contract.md の action 判定節に置き、create-plan-phase.md 4 節・13 節から参照する（Codex
+      提案）'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:d770e0a80b2b507ba0ccf93922f64056ef2ba1f66d3ce4121a15e0b3b8b12e4f
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:6d73ac09512b173402d5927dbe9dbcf0274e0cadf63c9ce6d62a524f0d121604
+  output_digest: sha256:5ed280fe1d62f3b2de2666b56d4e4ca59c6a97abf08b9001910e8d15ecc0bd04
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:fdaf785dcd1c51bbd3c5c02cb437995e061b7958ec0735fcadba344d54f813f4
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/spec-writer-contract.md: sha256:1e63f69687c6850e890f66b5ca92af7f3b0d02645cc464fca88455ad2269d671
+    em-workflow/references/templates/spec-document.md: sha256:a5d0106c39a5df7dc2365357a9546588275ed6c7a1651c866e75fa327a7fa592
+  output_digest: sha256:b8c7a7a70580d83eb1d2ba5bc4526f8ebf4c083e348cf4f7028db389d9bf77d4
+  self_write_set:
+  - feature-docs/rework-replan-artifact-digest/SPEC.md
+artifacts:
+- path: feature-docs/rework-replan-artifact-digest/SPEC.md
+  sha256: sha256:b8c7a7a70580d83eb1d2ba5bc4526f8ebf4c083e348cf4f7028db389d9bf77d4
+  produced_by: create-spec-run-0003
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

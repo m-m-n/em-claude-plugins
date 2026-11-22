@@ -1,0 +1,50 @@
+schema_version: 1
+feature: rework-replan-artifact-digest
+phase: create-plan
+status: completed
+generation: 1
+base_revision: 93983bf140ed46352ea87a8b9f3e9b8ed19ea1e9
+last_input_digest: sha256:9e85c0f0d6f1800f24f51bbae97e09cae1cad16173cdbb9ea5bf3e11f0b89412
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: completed
+  input_digest: sha256:9e85c0f0d6f1800f24f51bbae97e09cae1cad16173cdbb9ea5bf3e11f0b89412
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/planner-contract.md: sha256:df2bf3f0321c2627a31b878a14adb176ee7c2131638245112e5d3bb27f7a3682
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
+    em-workflow/references/workflow-schema.md: sha256:5bd8500c203c4f17cde4193ee43d561073fe7f47099d61a55eb593e098881d87
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/rework-replan-artifact-digest/SPEC.md: sha256:b8c7a7a70580d83eb1d2ba5bc4526f8ebf4c083e348cf4f7028db389d9bf77d4
+    feature-docs/rework-replan-artifact-digest/workflow.yaml: sha256:bbf3d982308ef2a73c3f5327a9deafd76249c3c651b4eb7bea292872a2463436
+  output_digest: sha256:9344c2c8502484f535835ed9f9c2db44c98b34d75af815e0565af2e3964b30fc
+  self_write_set:
+  - feature-docs/rework-replan-artifact-digest/THREAT-MODEL.md
+  - feature-docs/rework-replan-artifact-digest/VERIFICATION.md
+  - feature-docs/rework-replan-artifact-digest/tasks/task0001.md
+artifacts:
+- path: feature-docs/rework-replan-artifact-digest/THREAT-MODEL.md
+  sha256: sha256:c971bb1f9fa372b990bf253ea28367f0c91377f6eafc39348ea8e9b2aa315204
+  produced_by: create-plan-run-0001
+- path: feature-docs/rework-replan-artifact-digest/VERIFICATION.md
+  sha256: sha256:f3156b8ab6ca56483e81bf8cba3e3f1e603fa89c27f8fee55550a06e54a7d634
+  produced_by: create-plan-run-0001
+- path: feature-docs/rework-replan-artifact-digest/tasks/task0001.md
+  sha256: sha256:db35737ce81cee757b00be5252ce890884addb16cb3275609134815d9e8addc7
+  produced_by: create-plan-run-0001
+other_feature_doc_fixes: []
+patches:
+- patch_id: create-plan-p0001
+  status: applied
+  base_input_digest: sha256:9e85c0f0d6f1800f24f51bbae97e09cae1cad16173cdbb9ea5bf3e11f0b89412
+  base_workflow_blob: b0fc2e3983bbdc58354990e746d5e25a410cbc3a
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
