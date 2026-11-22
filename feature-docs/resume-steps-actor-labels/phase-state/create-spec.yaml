@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: 600c1e66637d38c8001af4dc493c649bb32f6cb2
 last_input_digest: sha256:cbe115cf7d84bb5accf1331cff8c64ee54187dfa6f6e3f435455df9cff41a6e1
-active_request_id: create-spec-run-0002
+active_request_id: create-spec-run-0003
 packets:
   create-spec-q0001:
     status: answered
@@ -104,11 +104,37 @@ worker_runs:
   input_digest: sha256:e5588bd188b121281571176317b41840a2cb269c9cab7736a8842d5e1fa7ca61
   output_digest: null
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:cbe115cf7d84bb5accf1331cff8c64ee54187dfa6f6e3f435455df9cff41a6e1
+  output_digest: null
+- request_id: create-spec-run-0003
+  status: dispatched
+  input_digest: null
   output_digest: null
 artifacts: []
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
 last_error: null
+assumptions:
+- assumption_id: a1
+  statement: ラベルの機械的な検証は足さない。規定は内容の規定で、値の形式の規定は変えない
+  source: requirements-analyst create-spec-run-0002
+- assumption_id: a2
+  statement: 「または」でつながる選択肢は、それぞれを 1 つの手順として別々にラベルを付ける
+  source: requirements-analyst create-spec-run-0002
+- assumption_id: a3
+  statement: 手順を持たない案内（no-work-required の「再開は不要」）にはラベルを付けず、SKILL.md の文面も変えない
+  source: requirements-analyst create-spec-run-0002
+- assumption_id: a4
+  statement: 停止点ごとの再開手順の段落（batch-terminal-line.md、implement-phase.md、review-phase.md）は文面を変えず、出力時に一般規定に従ってラベルを付ける
+  source: requirements-analyst create-spec-run-0002
+- assumption_id: a5
+  statement: 各手順は行を分ける。batch では改行が既存の \n エスケープとして残る
+  source: requirements-analyst create-spec-run-0002
+- assumption_id: a6
+  statement: ラベルは手順の本文の言語にかかわらず固定の日本語の文言を使う
+  source: requirements-analyst create-spec-run-0002
+- assumption_id: a7
+  statement: version は手で上げない
+  source: requirements-analyst create-spec-run-0002
