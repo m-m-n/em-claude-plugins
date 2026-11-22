@@ -86,7 +86,7 @@ tasks:
     - config-infra
     complexity: low
     requirements: []
-    status: in_progress
+    status: merged
     branch: em-workflow/version-bump-cache-verify/task0001
 
 review:
