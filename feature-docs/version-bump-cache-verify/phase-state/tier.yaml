@@ -1,0 +1,60 @@
+schema_version: 2
+feature: version-bump-cache-verify
+tier: minimal
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 0.0
+    confidence: 1.0
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 1.0
+      '1': 0.0
+      '2': 0.0
+      '3': 0.0
+  observed_at: '2026-11-22T21:52:10+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 0.03
+    confidence: 0.98
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.99
+      '1': 0.0
+      '2': 0.01
+      '3': 0.0
+  observed_at: '2026-11-22T21:58:40+09:00'
+pre_survey_estimate:
+  files_expected:
+  - .claude/rules/core-plugin-version-bump.md
+  changed_lines_approx: 8
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: none
+  added_test_cases_approx: 0
+  body_change_kind: wording_or_rule_addition
+  change_containment: single_module
+  caller_and_dependency_count: 1
+  changes_external_contract: false
+  changes_behavior: true
+decided_at: '2026-11-22T21:58:45+09:00'
