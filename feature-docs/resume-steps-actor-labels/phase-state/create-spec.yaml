@@ -1,11 +1,11 @@
 schema_version: 1
 feature: resume-steps-actor-labels
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: 600c1e66637d38c8001af4dc493c649bb32f6cb2
-last_input_digest: sha256:e5588bd188b121281571176317b41840a2cb269c9cab7736a8842d5e1fa7ca61
-active_request_id: null
+last_input_digest: sha256:cbe115cf7d84bb5accf1331cff8c64ee54187dfa6f6e3f435455df9cff41a6e1
+active_request_id: create-spec-run-0002
 packets:
   create-spec-q0001:
     status: answered
@@ -102,6 +102,10 @@ worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
   input_digest: sha256:e5588bd188b121281571176317b41840a2cb269c9cab7736a8842d5e1fa7ca61
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: dispatched
+  input_digest: sha256:cbe115cf7d84bb5accf1331cff8c64ee54187dfa6f6e3f435455df9cff41a6e1
   output_digest: null
 artifacts: []
 progress_fingerprint: null
