@@ -1,0 +1,111 @@
+task_id: task0001
+baseline_failures: []          # python3 -m unittest discover -s tests on the untouched worktree: 17165 tests, OK (skipped=1)
+final_failures: []             # re-executed after the implementation: no failure
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_resume_steps_actor_labels.TestAC1AC2RuleInBullet.test_ac1_bullet_states_labels_reasons_and_human_only_rule
+      - tests.test_resume_steps_actor_labels.TestAC1AC2RuleInBullet.test_ac1_top_level_key_bullets_still_name_the_eight_keys_in_order
+      - tests.test_resume_steps_actor_labels.TestAC1AC2RuleInBullet.test_ac1_heading_set_is_unchanged
+      - tests.test_resume_steps_actor_labels.TestAC1AC2NegativeProofs.test_pre_change_bullet_is_found_but_rejected_by_both_matchers
+    red_confirmed: true
+    red_reason: >-
+      Run against the unedited documents,
+      test_ac1_bullet_states_labels_reasons_and_human_only_rule failed with
+      "AssertionError: False is not true" (the pre-change resume_conditions
+      bullet holds none of the five fixed strings). The key-order and
+      heading-set tests are regression guards over retained wording and
+      were green before the edit.
+  AC-2:
+    tests:
+      - tests.test_resume_steps_actor_labels.TestAC1AC2RuleInBullet.test_ac2_bullet_states_order_and_fold_in
+      - tests.test_resume_steps_actor_labels.TestAC1AC2NegativeProofs.test_bullet_with_all_five_strings_but_no_order_or_fold_in_is_rejected
+    red_confirmed: true
+    red_reason: >-
+      Run against the unedited documents, test_ac2_bullet_states_order_and_fold_in
+      failed with "AssertionError: False is not true" (no ordering, no
+      no-AI-after-human and no fold-in statement in the pre-change bullet).
+  AC-3:
+    tests:
+      - tests.test_resume_steps_actor_labels.TestAC3ExampleInRealDocument.test_decoded_value_follows_the_label_rule
+      - tests.test_resume_steps_actor_labels.TestAC3ExampleInRealDocument.test_example_is_eight_lines_with_the_eight_keys_in_order
+      - tests.test_resume_steps_actor_labels.TestAC3ExampleInRealDocument.test_example_value_is_one_physical_line_with_the_line_feed_escaped
+      - tests.test_resume_steps_actor_labels.TestAC3ExampleInRealDocument.test_last_step_is_a_human_step_using_the_fold_in_phrase
+      - tests.test_resume_steps_actor_labels.TestAC3NegativeProofs.test_pre_change_example_is_rejected
+      - tests.test_resume_steps_actor_labels.TestAC3NegativeProofs.test_human_step_followed_by_ai_step_is_rejected
+      - tests.test_resume_steps_actor_labels.TestAC3NegativeProofs.test_human_label_with_no_reason_is_rejected
+      - tests.test_resume_steps_actor_labels.TestAC3NegativeProofs.test_human_label_with_two_reasons_is_rejected
+    red_confirmed: true
+    red_reason: >-
+      Run against the unedited documents, test_decoded_value_follows_the_label_rule
+      failed with "AssertionError: False is not true" (the pre-change example
+      value is one unlabelled step). The eight-lines-with-eight-keys test is a
+      regression guard and was green before the edit.
+  AC-4:
+    tests:
+      - tests.test_resume_steps_actor_labels.TestAC4ResultFormatSection.test_section_differs_from_pre_change_only_in_resume_line
+      - tests.test_resume_steps_actor_labels.TestAC4ResultFormatSection.test_result_format_text_constant_equals_the_section
+      - tests.test_resume_steps_actor_labels.TestAC4ResultFormatSection.test_escaping_text_constant_equals_the_escaping_section
+      - tests.test_batch_stop_contract.TestEscapingAndResultFormatByteIdentical.test_result_format_section_unchanged
+      - tests.test_batch_stop_contract.TestEscapingAndResultFormatByteIdentical.test_escaping_section_unchanged
+    red_confirmed: true
+    red_reason: >-
+      Run against the unedited documents,
+      test_section_differs_from_pre_change_only_in_resume_line failed with
+      "AssertionError: False is not true" (zero lines differ from the
+      pre-change section). After the document edit and before RESULT_FORMAT_TEXT
+      was updated, test_result_format_text_constant_equals_the_section and the
+      existing test_result_format_section_unchanged both failed with an
+      AssertionError comparing the old constant with the new section text.
+  AC-5:
+    tests:
+      - tests.test_resume_steps_actor_labels.TestAC5StopReportParagraph.test_new_plain_paragraph_cites_the_rule_and_states_the_same_form
+      - tests.test_resume_steps_actor_labels.TestAC5StopReportParagraph.test_new_paragraph_is_after_the_yaml_bullet
+      - tests.test_resume_steps_actor_labels.TestAC5StopReportParagraph.test_new_paragraph_carries_no_forbidden_item
+      - tests.test_resume_steps_actor_labels.TestAC5StopReportParagraph.test_section_is_found_and_keeps_the_pre_change_text
+      - tests.test_resume_steps_actor_labels.TestAC5StopReportParagraph.test_no_heading_is_added_before_the_structured_result_section
+      - tests.test_resume_steps_actor_labels.TestAC5StopReportParagraph.test_interactive_question_tool_count_is_unchanged
+      - tests.test_resume_steps_actor_labels.TestAC5NegativeProofs.test_pre_change_section_is_rejected
+    red_confirmed: true
+    red_reason: >-
+      Run against the unedited documents,
+      test_new_plain_paragraph_cites_the_rule_and_states_the_same_form and
+      test_new_paragraph_carries_no_forbidden_item failed with
+      "AssertionError: unexpectedly None" (no block after the YAML bullet
+      carries the path, resume_conditions, 対話実行 and 同じ形). The
+      prefix, heading and question-tool-count tests are regression guards and
+      were green before the edit.
+  AC-6:
+    tests:
+      - tests.test_resume_steps_actor_labels.TestAC6ModuleHygiene.test_module_imports_only_the_standard_library
+      - tests.test_resume_steps_actor_labels.TestAC6ModuleHygiene.test_third_party_import_is_flagged
+      - tests.test_resume_steps_actor_labels.TestAC6ModuleHygiene.test_another_test_module_import_is_flagged
+      - tests.test_resume_steps_actor_labels.TestAC1AC2NegativeProofs.test_good_bullet_is_accepted_by_both_matchers
+      - tests.test_resume_steps_actor_labels.TestAC3NegativeProofs.test_good_value_is_accepted
+      - tests.test_resume_steps_actor_labels.TestAC5NegativeProofs.test_good_section_is_accepted_and_found_by_the_locator
+    red_confirmed: false
+    red_reason: >-
+      The criterion constrains the new test module itself (imports, negative
+      proofs, non-vacuity guards), so its checks passed as soon as the module
+      was written; no document change could make them fail first. The
+      matchers' ability to fail is shown by the forged-wording tests in the
+      TestAC1AC2NegativeProofs, TestAC3NegativeProofs, TestAC4NegativeProofs
+      and TestAC5NegativeProofs classes, each preceded by a non-vacuity
+      assertion.
+  AC-7:
+    tests:
+      - tests.test_batch_stop_contract.TestFieldValuesBulletOrderAndDerivations.test_bullet_order_matches_sc1
+      - tests.test_batch_stop_contract.TestEscapingAndResultFormatByteIdentical.test_result_format_section_unchanged
+      - tests.test_batch_quiet_output_skill_wiring.TestStopAbortExceptionStatedOnce.test_section_restates_no_forbidden_literal
+      - tests.test_review_gate_abort_skill_wiring.TestStopReportSectionCitesLegacyRecovery.test_stop_report_section_is_non_vacuous
+    red_confirmed: false
+    red_reason: >-
+      The criterion is the whole-suite pass plus a four-file change set. A
+      dedicated new module is out of scope, but the existing tests listed
+      here (which read batch-terminal-line.md and develop/SKILL.md) detect
+      the bullet-order, Result-format, forbidden-literal and stop-report
+      pins the edit must respect; no red state occurred for this change
+      beyond the RESULT_FORMAT_TEXT mismatch recorded under AC-4. The
+      four-file change set (no plugin.json or marketplace.json version
+      field) was checked with git diff against the base commit, not by a
+      test.
