@@ -17,7 +17,7 @@ bases:
       '1': 0.73
       '2': 0.26
       '3': 0.01
-  observed_at: '2026-11-22T19:00:30+09:00'
+  observed_at: '2026-11-22T18:55:40+09:00'
 - basis: description_plus_code
   score:
     type: score
@@ -33,7 +33,7 @@ bases:
       '1': 0.02
       '2': 0.91
       '3': 0.07
-  observed_at: '2026-11-22T19:04:10+09:00'
+  observed_at: '2026-11-22T18:58:30+09:00'
 pre_survey_estimate:
   files_expected:
   - .github/workflows/plugin-version-bump.yml
@@ -62,4 +62,4 @@ pre_survey_estimate:
     は文書の記述を、tests/test_plugin_version_parity.py:149-152 は版の一致を検証する。em-workflow/.claude-plugin/plugin.json:7
     と .claude-plugin/marketplace.json:27 はともに 0.5.2 で、.claude/rules/core-plugin-version-bump.md:8-11
     はこの2箇所を Actions で更新すると定めている。
-decided_at: '2026-11-22T19:04:20+09:00'
+decided_at: '2026-11-22T18:58:50+09:00'
