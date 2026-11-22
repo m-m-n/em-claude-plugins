@@ -1,11 +1,11 @@
 schema_version: 1
 feature: resume-steps-actor-labels
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: d9d2cef9562120935402c3a27f66b0a9374aa21e
 last_input_digest: sha256:370c9f6c950cde0be0d791d53bed995cebbd82741b83b54c9cba5e37e1b238e0
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -45,7 +45,7 @@ artifacts:
 other_feature_doc_fixes: []
 patches:
 - patch_id: resume-steps-actor-labels-p0001
-  status: validated
+  status: applied
   base_input_digest: sha256:370c9f6c950cde0be0d791d53bed995cebbd82741b83b54c9cba5e37e1b238e0
   base_workflow_blob: 0b5c74a6b00f174e593cfcca94fe8ae2cd7288e8
 progress_fingerprint: null
