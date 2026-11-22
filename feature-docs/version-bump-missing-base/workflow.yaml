@@ -143,7 +143,7 @@ workflow:
   - SC-7
   failed_items: []
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: Workflow base fallback, workflow_dispatch recovery and regression tests
