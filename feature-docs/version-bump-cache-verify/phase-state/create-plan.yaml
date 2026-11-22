@@ -1,0 +1,32 @@
+schema_version: 1
+feature: version-bump-cache-verify
+phase: create-plan
+status: dispatched
+generation: 1
+base_revision: 1cf04e950484679ea665a0a1e651b87942a76c6a
+last_input_digest: sha256:c45d83031c8d6485d260f58a8b42907d14e4b1317562cd2c1b8f415754a63300
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:c45d83031c8d6485d260f58a8b42907d14e4b1317562cd2c1b8f415754a63300
+  dispatch_digest_inputs:
+    feature-docs/version-bump-cache-verify/TASK.md: sha256:4b758867c2d4ca404f6b56ac32db6bc8fc1a6672e49815a24627104417de8ff3
+    feature-docs/version-bump-cache-verify/workflow.yaml: sha256:78603ed89ed570e6e71d3b4b4573b676a5dfeea05fdc49a4d6363e2eee1543b4
+    plugin:references/contracts/planner-contract.md: sha256:18464486c0546613d92935cba80087c4980d3791d41838162d23840e431da515
+    plugin:references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    plugin:references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    plugin:references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    plugin:references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    plugin:references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
+    plugin:references/workflow-schema.md: sha256:5bd8500c203c4f17cde4193ee43d561073fe7f47099d61a55eb593e098881d87
+    plugin:skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+artifacts: []
+other_feature_doc_fixes: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
