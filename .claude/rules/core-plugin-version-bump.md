@@ -15,8 +15,15 @@
   上げる位置を書く。具体値は書かない。
     - 例: 「em-workflow の version の minor を上げる」
     - 悪い例: 「0.2.12 → 0.3.0 に上げる」
-- main に push した後は、Actions のコミットを `git pull` で取り込んでから次の作業に入る。
-- 変更をユーザーに報告するときは、反映に Claude Code の再起動が要ることを添える。
+- main に push した後、Actions のコミットを `git pull` で取り込み、
+  `~/.claude/plugins/cache/<marketplace>/<plugin>/<新しい version>/` に変更が入っていることを確かめる。
+    - 確かめる対象は、その push でファイルが変わったプラグイン。
+    - 新しい version のキャッシュが無いか、中身がリポジトリと一致しないときは、
+      `claude plugin update <plugin>` でキャッシュを更新して確かめ直す。
+      それでも確かめられなければ、原因を調べて報告する。
+    - Actions が version を上げなかったときは、その原因を調べて報告する。
+- 再起動が要るのは、今開いている対話セッションへの反映だけ。
+  新しく起動するセッション（無人実行を含む）には、再起動なしで反映される。
 - 詳細は `plugin-dev` プラグインの `plugin-dev` スキルを参照する。
 
 ## Rationale

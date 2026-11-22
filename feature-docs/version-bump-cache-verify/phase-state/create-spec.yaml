@@ -1,0 +1,72 @@
+schema_version: 1
+feature: version-bump-cache-verify
+phase: create-spec
+status: completed
+generation: 1
+base_revision: ab78650f47900ed1fd065e1a7bec63236b2c4c0a
+last_input_digest: sha256:9784f287f8a7dd362e31511c7a2e9141efc61cc86c5ed3b0b13d2c7638855661
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-11-22T21:55:00+09:00'
+    questions:
+    - question_id: requirement.cache-mismatch-handling
+      status: answered
+    - question_id: design-step.recommendation
+      status: answered
+answers:
+  requirement.cache-mismatch-handling:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-22T22:00:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - investigate_and_report
+    freeform: null
+    normalized_answer: git pull の後、新しい version のキャッシュが無いか中身がリポジトリと一致しないときは、claude plugin update <plugin>
+      でキャッシュを更新して確かめ直す。それでも確かめられなければ、原因を調べて報告する。
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted: true (harness codex,
+      1 turn); orchestrator observed that the em-workflow 0.5.4 cache dir was created at session start
+      (21:47:16 JST), 41s after the Actions bump commit (21:46:35 JST), i.e. git pull alone does not create
+      it; `claude plugin update --help` says it updates to the latest version with restart required to
+      apply. Codex: investigate_and_report, refresh with claude plugin update and re-check before investigating
+      / options not chosen: write_check_only (leaves the realistic missing-cache case unhandled within
+      the current session)'
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-22T22:00:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - skip_design
+    freeform: null
+    normalized_answer: デザイン工程は飛ばす
+    resolution_note: 'gate: create-spec.design-step; policy decide_autonomously -> analyst recommendation
+      skip_design'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:0933920ae234168d9355c6efeaa0eb736e23c734a8a97ffb03e88a363fd77825
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:9784f287f8a7dd362e31511c7a2e9141efc61cc86c5ed3b0b13d2c7638855661
+  output_digest: null
+assumptions:
+- assumption_id: a-actions-no-bump-scope
+  statement: 「Actions が version を上げなかったとき」は、変更のあったプラグインの patch が上がるはずなのに上がらなかった場合を指す。minor / major を手で上げた
+    push とプラグイン配下に変更が無い push は対象外。
+  source: requirements-analyst create-spec-run-0002
+  reversible: true
+- assumption_id: a-keep-heading-and-name
+  statement: ファイル名 core-plugin-version-bump.md と level-1 見出しは変えない（tests/test_guardrail_hooks_migration.py
+    が固定）。
+  source: requirements-analyst create-spec-run-0002
+  reversible: true
+- assumption_id: a-verify-target-is-changed-plugins
+  statement: キャッシュを確かめる対象は、その push でファイルが変わったプラグインだけ。
+  source: requirements-analyst create-spec-run-0002
+  reversible: true
+artifacts:
+  feature-docs/version-bump-cache-verify/TASK.md: sha256:4b758867c2d4ca404f6b56ac32db6bc8fc1a6672e49815a24627104417de8ff3
