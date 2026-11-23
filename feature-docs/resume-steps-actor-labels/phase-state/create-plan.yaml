@@ -1,0 +1,54 @@
+schema_version: 1
+feature: resume-steps-actor-labels
+phase: create-plan
+status: completed
+generation: 1
+base_revision: d9d2cef9562120935402c3a27f66b0a9374aa21e
+last_input_digest: sha256:370c9f6c950cde0be0d791d53bed995cebbd82741b83b54c9cba5e37e1b238e0
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: completed
+  input_digest: sha256:370c9f6c950cde0be0d791d53bed995cebbd82741b83b54c9cba5e37e1b238e0
+  output_digest: null
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/planner-contract.md: sha256:18464486c0546613d92935cba80087c4980d3791d41838162d23840e431da515
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
+    em-workflow/references/workflow-schema.md: sha256:5bd8500c203c4f17cde4193ee43d561073fe7f47099d61a55eb593e098881d87
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/resume-steps-actor-labels/SPEC.md: sha256:ca6caf1ca11e3fee1fc4ec00a3fb1d3e576a365b00683d5066555cc53d2b74a3
+    feature-docs/resume-steps-actor-labels/workflow.yaml: sha256:a0ad56ac1ad70f62c8e90a75a54de46656b0a467d3ad11c0764be176f8b291ac
+  self_write_set:
+  - feature-docs/resume-steps-actor-labels/IMPLEMENTATION.md
+  - feature-docs/resume-steps-actor-labels/THREAT-MODEL.md
+  - feature-docs/resume-steps-actor-labels/VERIFICATION.md
+  - feature-docs/resume-steps-actor-labels/tasks/task0001.md
+artifacts:
+- path: feature-docs/resume-steps-actor-labels/IMPLEMENTATION.md
+  sha256: sha256:af216c9c87821e81ee5620e58358d4c15c62f28278c2a35507c4e331ae10877f
+  produced_by: create-plan-run-0001
+- path: feature-docs/resume-steps-actor-labels/THREAT-MODEL.md
+  sha256: sha256:d0284f7928273a5e4a7403270cfa666ca69e383d9c47c3d3eb5910ee84771403
+  produced_by: create-plan-run-0001
+- path: feature-docs/resume-steps-actor-labels/VERIFICATION.md
+  sha256: sha256:9f9b4bd4130121e14a63c4006b33d78fa0c0ca14705674b813045dc0cf1ccb01
+  produced_by: create-plan-run-0001
+- path: feature-docs/resume-steps-actor-labels/tasks/task0001.md
+  sha256: sha256:2daee6c1c1d3e72d85b4387bea1683ab83d779f5fb83e38d570ca8f70f18431a
+  produced_by: create-plan-run-0001
+other_feature_doc_fixes: []
+patches:
+- patch_id: resume-steps-actor-labels-p0001
+  status: applied
+  base_input_digest: sha256:370c9f6c950cde0be0d791d53bed995cebbd82741b83b54c9cba5e37e1b238e0
+  base_workflow_blob: 0b5c74a6b00f174e593cfcca94fe8ae2cd7288e8
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

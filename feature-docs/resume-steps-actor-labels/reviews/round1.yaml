@@ -1,0 +1,173 @@
+round: 1
+executed_at: '2026-11-22T23:35:00+09:00'
+scope:
+  review_mode: diff
+  base_commit: 115be8e1cd7c5fdf6853e8a7458446a8716650de
+  head_commit: eb008172c5b71b8d75688234861a7cb09b3eb1de
+  changed_files:
+  - em-workflow/references/batch-terminal-line.md
+  - em-workflow/skills/develop/SKILL.md
+  - test-docs/resume-steps-actor-labels/task0001.tests.yaml
+  - tests/test_batch_stop_contract.py
+  - tests/test_resume_steps_actor_labels.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: b543e76043482206
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/batch-terminal-line.md
+  line: 35
+  title: 例の復旧手順から、競合を解消する作業が抜けている
+  description: 変更前の例は「競合を手で解消し、task0004 の implement を再実行する」だった。新しい例では、AI が競合したファイルを一覧にして比較し、人が残す変更を決め、判断の後に
+    AI が implement を実行する。人の決定を作業ツリーに反映して競合を解消する作業は、どの手順にも書かれていない。この作業は人の判断の後でしか実行できない AI の作業なので、新しい規則ではその人の手順の中に書き込むものにあたる。この例は新しい形式の唯一の例で、値を組み立てるときの手本になる。
+  suggestion: 人の手順の後半を「判断の後、AI が選んだ変更を反映して競合を解消し、task0004 の implement を実行する。」のように書き換える。同じ変更で tests/test_batch_stop_contract.py
+    の RESULT_FORMAT_TEXT も更新する。新しいテストの _example_last_step_folds_in は、文に「判断の後、AI が」が含まれていれば通る。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 65
+  resolution: deferred
+  resolution_reason: 'medium severity: outside the Phase R4 auto-fix candidate gate (critical/high only);
+    left for a follow-up task'
+- stable_id: ec2721eae44732c0
+  severity: medium
+  category: spec
+  file: tests/test_resume_steps_actor_labels.py
+  line: 349
+  title: 規則の箇条の照合が語句の断片しか見ておらず、規則の要の句を変えても通る
+  description: _states_labels_and_reasons と _states_order_and_fold_in は、固定文字列と短い句があるかどうかを 1 つずつ調べているだけ。次の句はどちらの照合も見ていないので、書き換えても両方の照合が通る。(a)
+    各手順が 2 つのラベルの「ちょうど 1 つで始まる」こと（FR1）。「may begin with」に変えても通る。(b) 人の手順に書き込む AI の作業が「人の判断の後でしか実行できない」ものであること（FR2）。「can
+    run before a human decision」に変えても通る。(c) 戻せない変更の承認に付ける理由が「戻せない変更の承認」であること。末尾の理由だけを「価値判断」に変えても通る。FR7(a)
+    は、この箇条の固定文字列と並び順の規則を固定するよう求めている。THREAT-MODEL の TM-1 と TM-2 の対策も、この規則をテストで固定することに頼っている。
+  suggestion: 空白をまとめた後の文で、次の句をそのまま照合する。「begins with exactly one of two fixed labels」「AI work that can
+    only run after a human decision is not a step of its own」「always a human step, with the reason 「戻せない変更の承認」」。それぞれの句を反転または差し替えた偽の箇条を否定例に加える。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 70
+  resolution: deferred
+  resolution_reason: 'medium severity: outside the Phase R4 auto-fix candidate gate (critical/high only);
+    left for a follow-up task'
+- stable_id: ffcd361f2fa4fbd2
+  severity: medium
+  category: spec
+  file: tests/test_resume_steps_actor_labels.py
+  line: 562
+  title: 停止時の報告の段落の照合が、規則を否定や逆順にした文を通す
+  description: _carries_paragraph_anchors は、参照先、`resume_conditions`、「3件」「対話実行」「同じ形」が含まれていれば段落として採用する。その後に調べるのは禁止語と見出しだけ。(1)「同じ形では出さない」と否定にする。(2)「人が判断する手順を
+    AI で実行できる手順より先に並べ」と順序を逆にする。(3) 適用先から batch を外す。いずれに書き換えても照合は通る。FR7(b) と TS-3 は、対話実行の報告も同じ形を取ると段落が述べていることを確かめるよう求めている。comprehensive
+    / architecture / spec の 3 観点が独立に同じ箇所を指摘した。
+  suggestion: 段落を見つける処理と、中身を確かめる処理を分ける。中身は空白を除いた文で「batch実行の値でも、対話実行の報告でも同じ形で出す」「AIで実行できる手順を人が判断する手順より先に並べ」「人が判断する手順にはその理由を付ける」を照合する。否定にした段落と、順序を逆にした段落を否定例に加える。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  - codex:comprehensive
+  - codex:architecture
+  confidence: 100
+  resolution: deferred
+  resolution_reason: 'medium severity: outside the Phase R4 auto-fix candidate gate (critical/high only);
+    left for a follow-up task'
+evaluation:
+  round_summary: '第 1 ラウンド（cross_validation: true）。採用した指摘は重要度「中」の 3 件で、「重大」「高」は 0 件。(1) Result format
+    の例から競合を解消する作業が抜けている。(2) resume_conditions の箇条を照合するテストが、規則の要の句を見ていない。(3) 停止時の報告の段落を照合するテストが、否定や逆順の文を通す。(3)
+    は 3 観点が独立に指摘し spec の指摘に統合した。architecture の 241 行（REASON_CODES の二重管理）・1004 行（ast による定数読み取り）と spec の
+    469 行（1 つの手順に 2 つのラベル）は格下げ、comprehensive の task0001.tests.yaml 109 行は誤検知と判断した。報告者の出力に指示を差し込もうとする文は無かった。全観点
+    corroborated。'
+  recommended_action: auto_fix
+  action_rationale: 残った 3 件はどれも「中」で範囲に閉じている。「重大」「高」は残っていないので完了ゲートには影響しない。
+dismissed_sites:
+- file: tests/test_resume_steps_actor_labels.py
+  line: 349
+  run_id: comprehensive#0
+  reason: duplicate of another finding
+- file: tests/test_resume_steps_actor_labels.py
+  line: 562
+  run_id: comprehensive#0
+  reason: duplicate of another finding
+- file: tests/test_resume_steps_actor_labels.py
+  line: 562
+  run_id: architecture#0
+  reason: duplicate of another finding
+- file: tests/test_resume_steps_actor_labels.py
+  line: 241
+  run_id: architecture#0
+  reason: demoted
+- file: tests/test_resume_steps_actor_labels.py
+  line: 1004
+  run_id: architecture#0
+  reason: demoted
+- file: tests/test_resume_steps_actor_labels.py
+  line: 469
+  run_id: spec#0
+  reason: demoted
+- file: test-docs/resume-steps-actor-labels/task0001.tests.yaml
+  line: 109
+  run_id: comprehensive#0
+  reason: false positive
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-resume-steps-actor-labels-20261122T143450Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
