@@ -1,7 +1,7 @@
 # Verification Document: mcp-bridge-function-shadow
 
 ## Overview
-**Feature**: mcp-bridge-function-shadow / **SPEC.md**: `feature-docs/mcp-bridge-function-shadow/SPEC.md` / **IMPLEMENTATION.md**: not produced (tier `reduced`) / **THREAT-MODEL.md**: `feature-docs/mcp-bridge-function-shadow/THREAT-MODEL.md`
+**Feature**: mcp-bridge-function-shadow / **SPEC.md**: `feature-docs/mcp-bridge-function-shadow/SPEC.md` / **IMPLEMENTATION.md**: `feature-docs/mcp-bridge-function-shadow/IMPLEMENTATION.md` / **THREAT-MODEL.md**: `feature-docs/mcp-bridge-function-shadow/THREAT-MODEL.md`
 
 ## Build Verification
 - Command: none (`project.components.main.build_command` is empty; the hook is a Python script with no build step)
@@ -9,7 +9,8 @@
 
 ## Test Verification
 - Command: `python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests`
-- Expected: exit code 0, every case and every test passes
+- Baseline: base_branch at the integration base, the commit recorded as the `base_commit` of the `implement` step in `workflow.yaml`. `python3 -m unittest discover -s tests` is also run on a checkout of that commit (TS-16).
+- Expected (NFR1, AC9): the destructive-guard runner passes every case. Every unittest test that passes on the baseline also passes on the integration branch. A test that fails or errors identically on the baseline, and whose test file is not in this feature's diff, is not counted. The exit code of the combined command alone does not decide the result; the failing / erroring test ids of the two unittest runs are compared as TS-16 states.
 - Coverage target: not set (the project has no coverage tooling)
 
 ### Test Scenarios from SPEC.md
@@ -43,7 +44,7 @@ argument, as in TS-6.
 | TS-13 | A function definition in a data heredoc body, then the notion call | allow | Unit (runner case) |
 | TS-14 | `echo BASH_FUNC_x` beside a data heredoc whose body is `git branch -D example` | allow | Unit (runner case) |
 | TS-15 | The existing notion-pair allow cases (destructive-guard-false-deny `TS-3`, `TS-4`, `TS-5`, `TS-22`; mcp-bridge-exec-tool-rescan `TS-2`; mcp-bridge-args-json-exec-guard `TS-9`; args-json-quoting-bypass `TS-5` / `TS-31`) | allow, lines unchanged | Regression (runner) |
-| TS-16 | All suites | pass | Regression |
+| TS-16 | `python3 em-workflow/hooks/tests/run-destructive-guard.py` on the integration branch; `python3 -m unittest discover -s tests` on the integration branch and on base_branch at the integration base (the `implement` step's `base_commit`); the failing / erroring unittest test ids of the two runs are compared | The runner passes every case. Every unittest test id that fails or errors on the integration branch also fails or errors identically on the baseline, and its test file is not in this feature's diff (the diff from the integration base to the integration branch) | Regression |
 | TS-17 | `trap`, `mapfile -C` and `readarray -C` running a definition of `mcp-bridge`, then the notion call (one case per form) | deny | Unit (runner case) |
 | TS-18 | The chain decision: a chain three times the recursion limit deep is walked without a recursion error; a derived chunk with no link reads as lifted; the per-chunk scan runs at most once per chunk in a run; a definition in a sibling command substitution does not lift | as stated | Unit (`tests/test_destructive_guard_args_json.py`) |
 | TS-19 | `OVERRIDE_BUILTINS`, `OVERRIDE_VARIABLE_NAME`, `STOP_COMMAND_WORDS` and `STOP_VARIABLE_NAMES` keep their base values; the notion-pair predicate is still asked first | as stated | Unit (`tests/test_destructive_guard_args_json.py`) |
@@ -71,7 +72,7 @@ argument, as in TS-6.
 | AC6 | A lifted notion call with a harmless decoded value stays allowed | TS-11 |
 | AC7 | A definition string in quotes, a comment or a data heredoc body does not lift the exclusion | TS-12, TS-13 |
 | AC8 | A `BASH_FUNC_` word does not change the data-heredoc decision | TS-14, TS-19 |
-| AC9 | All existing test suites pass | TS-15, TS-16, TS-25, TS-27 |
+| AC9 | The destructive-guard runner passes every case, and no unittest test that passes on base_branch at the integration base fails or errors on the integration branch; a failure that reproduces identically on the baseline, in a test file this feature's diff does not touch, is not counted | TS-15, TS-16, TS-25, TS-27 |
 
 ### Functional Requirements Coverage
 | Requirement | Tasks | Verification |
@@ -84,7 +85,7 @@ argument, as in TS-6.
 | FR6 | task0001 | TS-7, TS-12, TS-13 |
 | FR7 | task0001, task0002 | TS-14, TS-15, TS-19, TS-25, TS-27 |
 | FR8 | task0001, task0002 | TS-1 to TS-14, TS-17, TS-20, TS-21, TS-23, TS-24, TS-26 |
-| NFR1 | task0001, task0002 | TS-15, TS-16, TS-25, TS-27 |
+| NFR1 | task0001, task0002 | TS-15, TS-16 (baseline comparison against base_branch at the integration base), TS-25, TS-27 |
 | NFR2 | task0001 | TS-18 |
 
 ## Manual Testing (E2E Not Possible)
@@ -103,7 +104,7 @@ argument, as in TS-6.
 |----------|-------|-----------|-----|--------|
 | Build | 0 | 0 | 0 | 0 |
 | Runner case scenarios (TS-1 to TS-14, TS-17, TS-21, TS-23 to TS-25, TS-27) | 20 | 20 | 0 | 0 |
-| Regression (TS-15, TS-16) | 2 | 2 | 0 | 0 |
+| Regression (TS-15, TS-16 with the baseline comparison) | 2 | 2 | 0 | 0 |
 | Unit tests (TS-18 to TS-20, TS-26) | 4 | 4 | 0 | 0 |
 | SPEC.md success criteria (AC1 to AC9) | 9 | 9 | 0 | 0 |
 | Requirements coverage (FR1 to FR8, NFR1, NFR2) | 10 | 10 | 0 | 0 |
