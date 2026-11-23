@@ -145,7 +145,7 @@ workflow:
   status: completed
   completed_at_commit: 659d039f7de144c92d9c4312ce39202f40afa028
 - id: verify
-  status: pending
+  status: in_progress
   result: fail
   round: 2
   passed_ids:
