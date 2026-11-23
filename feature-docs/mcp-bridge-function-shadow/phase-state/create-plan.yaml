@@ -108,7 +108,7 @@ patches:
   base_input_digest: sha256:c9a847e3a641690baaf8361ad8d7528c73152f0f53995cfc2da4629eebde3ba4
   base_workflow_blob: c1b4fd2018db7db5b6ed02f371cb3b47eb5c5454
 - patch_id: mcp-bridge-function-shadow-p0002
-  status: proposed
+  status: applied
   base_input_digest: sha256:fc272acaff4b58482f16d9d2263abb0809f80d1344e5fe571a660a4cab26045f
   base_workflow_blob: d8492dc07e563d8ac785880956542eeaa67c9e5c
 progress_fingerprint: null

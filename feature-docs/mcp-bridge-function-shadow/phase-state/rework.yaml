@@ -22,8 +22,7 @@ answers:
     - spec-change
     freeform: null
     normalized_answer: spec-change
-    resolution_note: 'classification gate pass 1: verdict spec_gap (NFR1, AC9), decision
-      proceed — classification[0]'
+    resolution_note: 'classification gate pass 1: verdict spec_gap (NFR1, AC9), decision proceed — classification[0]'
 worker_runs:
 - request_id: rework-run-0001
   status: completed
@@ -75,13 +74,12 @@ origin_ids:
 - TS-16
 last_error: null
 spec_change:
-  reason: verify TS-16 (NFR1 / AC9) が base_branch でも再現する既存テスト 4 件の失敗で満たせない。分類ゲートが
-    spec_gap と判定し、仕様変更の遷移を取った
+  reason: verify TS-16 (NFR1 / AC9) が base_branch でも再現する既存テスト 4 件の失敗で満たせない。分類ゲートが spec_gap と判定し、仕様変更の遷移を取った
   origin_kind: verify
   origin_id: TS-16
   recorded_at_commit: ff729cfa0727254d62bec543f9cd04e39572b764
   consumed: true
-  replan_authorized: true
+  replan_authorized: false
 classification:
 - classifier: codex
   verdict: spec_gap
@@ -89,5 +87,5 @@ classification:
   - NFR1
   - AC9
   decision: proceed
-  reason: ゴール（同名シェル関数による notion 除外のすり抜け防止）は AC1 とランナー 1525/1525 で満たされ、NFR1 / AC9 の「既存の全テストが
-    pass」だけが base_branch でも失敗する無関係なテスト 4 件のため満たせない
+  reason: ゴール（同名シェル関数による notion 除外のすり抜け防止）は AC1 とランナー 1525/1525 で満たされ、NFR1 / AC9 の「既存の全テストが pass」だけが base_branch
+    でも失敗する無関係なテスト 4 件のため満たせない
