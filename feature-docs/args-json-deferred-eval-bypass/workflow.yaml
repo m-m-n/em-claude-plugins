@@ -145,9 +145,10 @@ workflow:
   status: completed
   completed_at_commit: 659d039f7de144c92d9c4312ce39202f40afa028
 - id: verify
-  status: in_progress
-  result: fail
-  round: 2
+  status: completed
+  completed_at_commit: ef2ab281f25c59cd956a35a06218a5dfa0b696b9
+  result: pass
+  round: 3
   passed_ids:
   - TS-1
   - TS-2
@@ -171,20 +172,13 @@ workflow:
   - SC-2
   - SC-3
   - SC-4
+  - SC-5
   - SC-6
   - TM-1
   - TM-2
   - TM-3
   - TM-4
-  failed_items:
-  - id: SC-5
-    category: comprehensive
-    note: 'python3 em-workflow/hooks/tests/run-destructive-guard.py passes (1598/1598)
-      and every feature test passes (tests.test_destructive_guard_args_json: 226 OK),
-      but python3 -m unittest discover -s tests exits 1 with 4 failures, all in
-      tests/test_review_perspective_model_effort_version_bump.py (plugin version patch
-      is not 0). They fail identically on the base commit; the feature changes no
-      version (NFR4), so they cannot be fixed within this feature''s scope'
+  failed_items: []
 - id: retrospect
   status: completed
   completed_at_commit: 512d5dffba891ebded2ebf7f207627a97f15c5aa
