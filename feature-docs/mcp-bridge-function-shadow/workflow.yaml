@@ -162,7 +162,7 @@ workflow:
   - AC9
   failed_items: []
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: Lift the notion-pair exclusion on override and shell-state constructs in the chunk chain
