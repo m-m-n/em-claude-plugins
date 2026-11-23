@@ -1,11 +1,11 @@
 schema_version: 1
 feature: mcp-bridge-function-shadow
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 3
 base_revision: bf82e71da842f3426c87e8e5a0f06bd3e3602026
 last_input_digest: sha256:fc272acaff4b58482f16d9d2263abb0809f80d1344e5fe571a660a4cab26045f
-active_request_id: create-plan-run-0003
+active_request_id: null
 packets: {}
 answers:
   create-plan.artifact-overwrite:

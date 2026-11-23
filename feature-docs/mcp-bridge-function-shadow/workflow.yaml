@@ -110,8 +110,8 @@ workflow:
   - VERIFICATION.md
   - THREAT-MODEL.md
   - tasks/
-  status: pending
-  completed_at_commit: e90a83f3ff12b9a049b3989162a3efa2839dbc9b
+  status: completed
+  completed_at_commit: 8ef38178cbd2e3d58bda6ae5a1e344c7c4b5a39c
 - id: implement
   status: pending
   base_commit: 93a21ad299242542960f5c4a497f255626ef9707
@@ -159,7 +159,9 @@ workflow:
   - AC8
   failed_items:
   - id: TS-16
-    note: 'unittest discover が 16973 件中 4 件失敗（tests/test_review_perspective_model_effort_version_bump.py の patch==0 検査。em-workflow 0.5.2 / em-review 0.6.1 で patch が 0 でない）。base_branch でも同じ 4 件が再現し、この feature の差分は当該テストにも version にも触れていない。destructive-guard ランナーは 1525/1525 pass'
+    note: unittest discover が 16973 件中 4 件失敗（tests/test_review_perspective_model_effort_version_bump.py
+      の patch==0 検査。em-workflow 0.5.2 / em-review 0.6.1 で patch が 0 でない）。base_branch でも同じ 4 件が再現し、この feature
+      の差分は当該テストにも version にも触れていない。destructive-guard ランナーは 1525/1525 pass
     category: comprehensive
 - id: retrospect
   status: pending
