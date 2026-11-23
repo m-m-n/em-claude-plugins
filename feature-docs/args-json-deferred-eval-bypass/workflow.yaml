@@ -145,7 +145,7 @@ workflow:
   status: completed
   completed_at_commit: 659d039f7de144c92d9c4312ce39202f40afa028
 - id: verify
-  status: failed
+  status: pending
   result: fail
   round: 2
   passed_ids:
@@ -497,12 +497,8 @@ requirements:
 batch:
   review_rework_count: 1
   verify_rework:
-    rounds: 2
-    failed_id_counts:
-      TS-8: 1
-      SC-1: 1
-      SC-2: 1
-      SC-5: 2
+    rounds: 0
+    failed_id_counts: {}
   infra_resume:
     rounds: 0
     cap: 2
