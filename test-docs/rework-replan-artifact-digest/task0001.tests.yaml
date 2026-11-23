@@ -1,0 +1,66 @@
+task_id: task0001
+# Full suite (python3 em-workflow/hooks/tests/run-destructive-guard.py &&
+# python3 -m unittest discover -s tests) run before any edit: the destructive
+# guard run passed 1467/1467, and the unit run was 16931 tests with 4
+# failures and 1 skipped. The 4 failures are the version-bump tests of
+# tests/test_review_perspective_model_effort_version_bump.py, which compare
+# plugin versions with a baseline; this task changes no version.
+baseline_failures:
+  - test_review_perspective_model_effort_version_bump.TestEmReviewManifest.test_version_is_a_minor_bump_over_baseline
+  - test_review_perspective_model_effort_version_bump.TestEmWorkflowManifest.test_version_is_a_minor_bump_over_baseline
+  - test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_review_entry_version_is_a_minor_bump_over_baseline
+  - test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_workflow_entry_version_is_a_minor_bump_over_baseline
+# Full suite re-executed after the implementation and after this record was
+# written (the record is itself checked by tests.test_tests_yaml_id_resolution):
+# the same 4 version-bump failures, nothing new.
+final_failures:
+  - test_review_perspective_model_effort_version_bump.TestEmReviewManifest.test_version_is_a_minor_bump_over_baseline
+  - test_review_perspective_model_effort_version_bump.TestEmWorkflowManifest.test_version_is_a_minor_bump_over_baseline
+  - test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_review_entry_version_is_a_minor_bump_over_baseline
+  - test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_workflow_entry_version_is_a_minor_bump_over_baseline
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_artifact_digest_docs.TestActionChoiceOwnerStatesPlanningLineageRule.test_ts1_names_both_phase_state_files_with_the_last_entry_rule_and_the_scope
+      - tests.test_artifact_digest_docs.TestActionChoiceOwnerStatesPlanningLineageRule.test_no_owner_statement_is_left_unchecked
+      - tests.test_artifact_digest_docs.TestPlanningLineageMatchersFireOnForgedText.test_the_rework_yaml_statement_is_the_one_that_fails_without_rework_yaml
+      - tests.test_artifact_digest_docs.TestPlanningLineageMatchersFireOnForgedText.test_the_owner_statements_do_not_count_as_satisfied_outside_the_section
+    red_confirmed: true
+    red_reason: "Against the unedited spec-writer-contract.md the action-decision section held only its introductory paragraph and three bullets, with no mention of phase-state/rework.yaml: all 9 TS-1 statements of test_ts1_names_both_phase_state_files_with_the_last_entry_rule_and_the_scope failed (the last-entry statements for phase-state/create-plan.yaml and phase-state/rework.yaml, replace_own for a match, the earlier-entries and other-files statements, and the four scope statements), test_no_owner_statement_is_left_unchecked failed, and test_the_rework_yaml_statement_is_the_one_that_fails_without_rework_yaml failed with the create-plan.yaml statement already reported as missing. test_the_owner_statements_do_not_count_as_satisfied_outside_the_section was already green before the change (it pins the heading slice, not the rule) and is a guard."
+  AC-2:
+    tests:
+      - tests.test_artifact_digest_docs.TestActionChoiceOwnerStatesPlanningLineageRule.test_ts2_routes_a_create_plan_target_with_no_match_to_the_gate_and_batch_policy
+    red_confirmed: true
+    red_reason: "Against the unedited section the 3 TS-2 statements (no match goes to the create-plan.artifact-overwrite gate, the references/batch-policies.yaml decision, and no other condition gives replace_own) all failed in test_ts2_routes_a_create_plan_target_with_no_match_to_the_gate_and_batch_policy. The introductory paragraph, the three bullets, the action table and the gate option vocabulary table are kept by the edit; test_amend_other_feature_action, test_threat_model_planner_contract, test_digest_contract_alignment, test_scenario_id_spec_writer_docs and test_gate_option_vocabulary read them and stayed green."
+  AC-3:
+    tests:
+      - tests.test_artifact_digest_docs.TestActionChoiceOwnerStatesPlanningLineageRule.test_ts3_states_the_rework_yaml_read_conditions_and_legacy_records
+      - tests.test_artifact_digest_docs.TestActionChoiceOwnerStatesPlanningLineageRule.test_ts3_owner_section_does_not_name_git_hash_object
+      - tests.test_artifact_digest_docs.TestPlanningLineageMatchersFireOnForgedText.test_each_owner_statement_fails_on_the_section_without_its_token
+      - tests.test_artifact_digest_docs.TestPlanningLineageMatchersFireOnForgedText.test_git_hash_object_fires_on_a_forged_owner_section
+    red_confirmed: true
+    red_reason: "Against the unedited section the 8 TS-3 statements (phase rework and a matching feature, the four no-record cases, no record from phase-state/rework.yaml, the create-plan.yaml-alone fallback, and the Legacy records citation for rework.yaml values) all failed in test_ts3_states_the_rework_yaml_read_conditions_and_legacy_records, and test_each_owner_statement_fails_on_the_section_without_its_token failed 18 times with \"AssertionError: ... not found in 'Before dispatching spec-writer, ...'\" because the forged copy would equal the section (the tokens were not yet in it). test_ts3_owner_section_does_not_name_git_hash_object and test_git_hash_object_fires_on_a_forged_owner_section are absence checks that were already green before the change (the section did not name git hash-object, and the matcher fires on the forged copy) and are guards."
+  AC-4:
+    tests:
+      - tests.test_artifact_digest_docs.TestCreatePlanSitesCiteActionChoiceOwner.test_ts4_each_site_cites_the_owner_path_and_section_name
+      - tests.test_artifact_digest_docs.TestCreatePlanSitesCiteActionChoiceOwner.test_the_site_slices_fail_the_citation_when_the_citation_is_taken_out
+      - tests.test_artifact_digest_docs.TestCreatePlanSitesCiteActionChoiceOwner.test_ts4_no_site_names_git_hash_object
+      - tests.test_artifact_digest_docs.TestCreatePlanSitesCiteActionChoiceOwner.test_ts4_no_site_carries_a_restatement_marker
+      - tests.test_artifact_digest_docs.TestCreatePlanSitesCiteActionChoiceOwner.test_ts4_no_site_names_phase_state_rework_yaml
+      - tests.test_artifact_digest_docs.TestCreatePlanSitesCiteActionChoiceOwner.test_ts4_the_document_as_a_whole_still_never_names_git_hash_object
+    red_confirmed: true
+    red_reason: "Against the unedited create-plan-phase.md none of section 4, the part of section 13 before its subsection, or the subsection Feature-docs correction dispatch named references/contracts/spec-writer-contract.md: test_ts4_each_site_cites_the_owner_path_and_section_name failed for all three sites, and test_the_site_slices_fail_the_citation_when_the_citation_is_taken_out failed for all three because the citation to take out was not there. The four absence tests (no git hash-object, no restatement marker, no phase-state/rework.yaml in a site, no git hash-object in the whole document) were already green before the change and are guards; their forged-text cases are in tests.test_artifact_digest_docs.TestPlanningLineageMatchersFireOnForgedText.test_absence_matchers_fire_on_a_forged_site_slice."
+  AC-5:
+    tests:
+      - tests.test_artifact_digest_docs.TestOwnerDocumentStructure
+      - tests.test_artifact_digest_docs.TestDispatchSitesRegistry
+      - tests.test_artifact_digest_docs.TestLegacyRecords
+      - tests.test_artifact_digest_docs.TestEverySiteCitesTheOwner.test_rework_dispatch_input_paragraph_records_into_rework_yaml
+      - tests.test_spec_change_replan_authorization
+    red_confirmed: false
+    red_reason: "AC-5 is a no-edit constraint (artifact-digest.md, rework-task-synthesis.md, phase-state.md and batch-policies.yaml are not modified, and the existing tests pass unchanged), so nothing can fail before the change. A dedicated new module is out of scope, but the existing tests.test_artifact_digest_docs.TestOwnerDocumentStructure detects a change of the owner's level-2 heading set, TestDispatchSitesRegistry detects a change of the six registry rows, TestLegacyRecords detects a reworded Legacy records section, test_rework_dispatch_input_paragraph_records_into_rework_yaml detects a changed rework dispatch paragraph, and tests.test_spec_change_replan_authorization detects a changed re-planning authorization; no red state occurred for this change. git diff --stat over the four files reports no change."
+  AC-6:
+    tests:
+      - tests.test_artifact_digest_docs.TestPlanningLineageMatchersFireOnForgedText
+    red_confirmed: true
+    red_reason: "Against the unedited documents the forged-text class failed: test_each_owner_statement_fails_on_the_section_without_its_token failed for 18 of its 20 subtests (the tokens of the other two, replace_own and the quoted Legacy records, were already in the unedited section) and test_the_rework_yaml_statement_is_the_one_that_fails_without_rework_yaml failed, because the owner section did not yet hold the tokens to take out. The class holds one forged-text case per presence statement of the owner section, forged slices for the section 13 boundary, the citation matcher and the three absence matchers; the whole new block (3 classes, 46 failures before the edit, 0 after) runs inside the full command, which stays at its 4 inherited failures."

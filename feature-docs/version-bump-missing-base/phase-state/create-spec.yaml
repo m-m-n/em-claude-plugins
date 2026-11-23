@@ -1,0 +1,116 @@
+schema_version: 1
+feature: version-bump-missing-base
+phase: create-spec
+status: completed
+generation: 1
+base_revision: 06ffd97b038f28a86f78f4dd797b87c07e83380f
+last_input_digest: sha256:5079b132a0f39418e552a45a1c745ca2e7a6244e76ac738eb3ee4c014e04c9a4
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-11-22T19:07:42+09:00'
+    questions:
+    - question_id: requirement.base-fallback
+      status: answered
+    - question_id: requirement.version-regression
+      status: answered
+    - question_id: requirement.force-push-prevention
+      status: answered
+    - question_id: requirement.remediation-bump
+      status: answered
+    - question_id: requirement.test-approach
+      status: answered
+    - question_id: design-step
+      status: answered
+answers:
+  requirement.base-fallback:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-22T19:07:42+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - fetch_then_first_parent
+    freeform: null
+    normalized_answer: 'before が 40 桁 hex かつ全ゼロでなく clone に無ければ git fetch origin <before> を 1 回試す。取れたら before..AFTER を比較する。取れない・全ゼロのときは AFTER の第 1 親を基点にし、その旨を ::warning:: で出して続行する。第 1 親も無ければファイルを変えずに非 0 で終了する。skip で exit 0 にする分岐は残さない'
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted: true (1 turn); Codex suggested fail_only (fetch by SHA, else non-zero exit). Orchestrator chose fetch_then_first_parent and adopted Codex''s fetch-by-SHA refinement, because the task''s expected behavior requires bumping even when the base cannot be obtained, which fail_only does not satisfy. Not chosen: first_parent_only, last_bump_commit, fail_only. opus_escalation: not run'
+  requirement.version-regression:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-22T19:07:42+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - bump_from_max
+    freeform: null
+    normalized_answer: 基点と AFTER の version を整数 3 要素で比べる。AFTER が基点と同じか低いときは大きい方の patch を 1 上げ、plugin.json と marketplace.json に同じ値を書く。AFTER が高いとき（手で上げた）は上げない
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted: true; Codex suggested bump_from_max with integer-triple comparison; mapped. Not chosen: keep_skip, fail_job. opus_escalation: not run'
+  requirement.force-push-prevention:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-22T19:07:42+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - github_ruleset
+    freeform: null
+    normalized_answer: main への non-fast-forward 更新を、bypass を持たない別のルールセットで禁止する。ルールセットの定義はリポジトリ内のファイルとして置き、テストで中身を確かめる。GitHub への適用（gh api での作成）と適用後の確認は PR マージ後に人が行う手順として文書に書く。既存の main ルールセットは変えない
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted: true; Codex suggested a separate ruleset with only non_fast_forward and no bypass actors, leaving the existing ruleset untouched; mapped. Orchestrator limited the run to committing the definition and the apply procedure, because changing GitHub repository settings is an outward-facing action not authorized for this unattended run. Fact: the existing ruleset already has non_fast_forward but grants admin bypass ''always'', and git confirms the 13:45:36 push was non-fast-forward. Not chosen: github_ruleset_and_tool_fix, fix_pushing_tool, local_pre_push_hook. opus_escalation: not run'
+  requirement.remediation-bump:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-22T19:07:42+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - workflow_dispatch_input
+    freeform: null
+    normalized_answer: workflow に workflow_dispatch を足す。入力は plugin（登録済みプラグイン名、必須）と min_version（MAJOR.MINOR.PATCH、必須）。main でだけ動く。対象の現在の version が min_version 以下で major・minor が同じなら min_version の次の patch に上げ、既存の PR 経由で main に入れる。現在の version が min_version を超えていれば何もせず成功で終わる。マージ後に plugin=em-workflow, min_version=0.5.3 で 1 回実行するのは人の手順
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted: true; Codex suggested workflow_dispatch with plugin name and baseline version inputs, idempotent; mapped. Not chosen: rely_on_next_push, manual_minor_bump. opus_escalation: not run'
+  requirement.test-approach:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-22T19:07:42+09:00'
+    source: batch-codex-consultation
+    answer_mode: select_or_freeform
+    selected_option_ids:
+    - extract_heredoc
+    freeform: null
+    normalized_answer: tests/ の unittest（標準ライブラリだけ）が YAML から heredoc を 1 つだけ抜き出し、一時ディレクトリの bare リポジトリと git clone --no-local の clone 上で実行する。終了コード、GITHUB_OUTPUT、両 JSON、workflow と template のバイト一致を確かめる
+    resolution_note: 'gate: create-spec.requirement-clarification; codex_consulted: true; Codex suggested extract_heredoc with --no-local clone; mapped. Not chosen: move_to_script_file. opus_escalation: not run'
+  design-step:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-22T19:07:42+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - skip_design
+    freeform: null
+    normalized_answer: 省く
+    resolution_note: 'gate: create-spec.design-step; batch-policies.yaml decide_autonomously -> analyst recommendation skip'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:467295be6076612bbc8336453b5ac1945ccecf184d2bdd0ca058040592cc1b33
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:5079b132a0f39418e552a45a1c745ca2e7a6244e76ac738eb3ee4c014e04c9a4
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:9c521318b214ce861819d827408f3910004262fa217795dc8349b319e0160bee
+  self_write_set:
+  - feature-docs/version-bump-missing-base/REQUIREMENTS.md
+  - feature-docs/version-bump-missing-base/SPEC.md
+artifacts:
+- path: feature-docs/version-bump-missing-base/REQUIREMENTS.md
+  sha256: sha256:052152d4b42d340fd904a9c1c37080aaddb87b3c4930e0355c2f53869aea7756
+  produced_by: create-spec-run-0003
+- path: feature-docs/version-bump-missing-base/SPEC.md
+  sha256: sha256:376e0caf9d33dfe7d9179e27191ad6a86561fa791e91e04ea09f8458f3212776
+  produced_by: create-spec-run-0003
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache:
+  design_system_candidates:
+    resolved_at_generation: 1
+    paths: []
+    digests: {}
+    truncated: false
+last_error: null

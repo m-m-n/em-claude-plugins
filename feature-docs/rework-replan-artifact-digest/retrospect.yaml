@@ -1,0 +1,52 @@
+feature: rework-replan-artifact-digest
+collected_at: "2026-11-22T01:54:00+09:00"
+session_ids: [01a1ff06-1d79-7348-b4f1-47ee48d653dd]
+signals:
+  review_critical_high:
+    - {stable_id: 7be2862351c52397, category: architecture, file: em-workflow/references/contracts/spec-writer-contract.md, title: "計画系譜の一致規則が、対象ごとに固定された action（extend_only / amend_other_feature）まで上書きする", resolution: fixed}
+    - {stable_id: 4c04f947de7129cb, category: architecture, file: em-workflow/references/contracts/spec-writer-contract.md, title: "補正時の `replace_own` 固定指定が、不一致時の上書き承認と競合する", resolution: fixed}
+    - {stable_id: 9f6c8b94138cab1f, category: comprehensive, file: em-workflow/references/phases/create-plan-phase.md, title: "第13節の修正処理で、記録と一致しない計画書に二つの上書き規則が適用される", resolution: fixed}
+    - {stable_id: c14639496ebc5234, category: architecture, file: em-workflow/references/contracts/spec-writer-contract.md, title: "設計ステップの派生ファイルに通常の上書き規則が適用される", resolution: fixed}
+    - {stable_id: 5ae0a792ef093b44, category: comprehensive, file: em-workflow/references/phases/create-plan-phase.md, title: "2種類の修正ディスパッチで、呼び出し側とプランナーの上書き条件が食い違う", resolution: fixed}
+    - {stable_id: 89a24f20d04ea1b1, category: architecture, file: em-workflow/references/phases/create-plan-phase.md, title: "訂正時の書き込み権限が、呼び出し側とプランナー側の契約で食い違う", resolution: unresolved}
+    - {stable_id: 3658d5fd449df140, category: architecture, file: em-workflow/references/contracts/spec-writer-contract.md, title: "rework の記録による上書き許可が replace_own の公開定義と両立しない", resolution: unresolved}
+    - {stable_id: 31a6c75ef74f5367, category: comprehensive, file: em-workflow/references/phases/create-plan-phase.md, title: "feature-docs 修正時にファイルの新規作成を禁じる制約が抜けている", resolution: unresolved}
+    - {stable_id: 7d0f272f339693a6, category: comprehensive, file: em-workflow/references/phases/create-plan-phase.md, title: "最終パス修正のディスパッチで上書き判定が覆る", resolution: unresolved}
+    - {stable_id: 758346fc350b8d91, category: spec, file: em-workflow/references/phases/create-plan-phase.md, title: "通常の再計画で既存のタスク計画が書き込み対象に入らない", resolution: unresolved}
+    - {stable_id: e4452bb530e077fc, category: comprehensive, file: em-workflow/references/contracts/planner-contract.md, title: "補正対象の計画文書に `preserve` が渡っても、プランナーの手順は無条件に編集を指示する", resolution: fixed}
+    - {stable_id: fea4d5284e094271, category: architecture, file: em-workflow/references/phases/create-plan-phase.md, title: "補正ディスパッチの手順から承認時のダイジェストと直前照合が抜けている", resolution: fixed}
+    - {stable_id: c249400a1ef223f4, category: comprehensive, file: em-workflow/references/contracts/planner-contract.md, title: "最小階層の TASK.md を補正すると、追記限定の権限と本文の置換が衝突する", resolution: fixed}
+    - {stable_id: 0d687f58efbca331, category: architecture, file: em-workflow/references/phases/create-plan-phase.md, title: "再計画で上書きを許可しても、担当エージェントは既存タスクの計画を更新できない", resolution: deferred}
+    - {stable_id: 9e4f09bd10fd0a30, category: architecture, file: em-workflow/agents/implementation-planner.md, title: "両方の修正手順が `extend_only` の既存本文を書き換えられる", resolution: deferred}
+    - {stable_id: c7ba58b564d80ef4, category: spec, file: em-workflow/agents/implementation-planner.md, title: "通常の計画経路で preserve 対象の書き込みを指示している", resolution: deferred}
+    - {stable_id: 5ecafb62af6aaa17, category: architecture, file: em-workflow/agents/implementation-planner.md, title: "補正時の書き込み前チェックが `extend_only` の置換を止めない", resolution: deferred}
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings:
+    - {stable_id: 9eef5879d6d991da, category: spec, resolution_reason: "pre-existing plugin version-bump test failures recorded as baseline_failures; unrelated to this change"}
+  tier_decision:
+    tier: reduced
+    rationale: "description_plus_code の最終読みがバケット 1（規則追加とテスト追加）を確率 0.86 で選び、reduced を採用した"
+    bases:
+      - basis: description_only
+        score: {type: score, score: 1.33, confidence: 0.65, probabilities: {'0': 0.01, '1': 0.65, '2': 0.34, '3': 0.0}}
+        observed_at: "2026-11-21T20:05:10+09:00"
+      - basis: description_plus_code
+        score: {type: score, score: 1.14, confidence: 0.86, probabilities: {'0': 0.0, '1': 0.86, '2': 0.14, '3': 0.0}}
+        observed_at: "2026-11-21T20:11:40+09:00"
+    pre_survey_estimate:
+      files_expected_count: 4
+      changed_lines_approx: 30
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: false
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "事前調査は 4 ファイル・約 30 行と見積もったが、実際は implementation-planner.md とバージョン上げのテストにも及び、review rework 1 回と verify rework 1 回を経た"
+  - "review の critical/high は 3 ラウンドで延べ 17 件。上書き判定（replace_own / extend_only / preserve）の契約が呼び出し側・planner 契約・agent 定義の 3 箇所に分かれていて、片側を直すと別側との食い違いが出る形が続いた"
+  - "deferred 4 件（0d687f58efbca331, 9e4f09bd10fd0a30, c7ba58b564d80ef4, 5ecafb62af6aaa17）は implementation-planner.md の extend_only / preserve の扱いに集中している"
+  - "implement の journal は launched / merged の event のみで、implementer 報告の conflict_retries / deviations は残っていない。conflict_reworks / file_prediction_misses は空にした"

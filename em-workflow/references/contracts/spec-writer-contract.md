@@ -69,7 +69,7 @@ write_policy:
 | action | `expect_digest` | worker behaviour |
 |---|---|---|
 | `create` | always `null` | The file must not already exist. If it does, return `blocked` instead of writing. |
-| `replace_own` | required | Overwrites the same-phase output the worker itself produced earlier. |
+| `replace_own` | required | Overwrites the same-phase output the worker itself produced earlier. For an implementation-planner dispatch of create-plan, this output also covers a planning artifact to which the orchestrator gave `replace_own` by "How the orchestrator chooses each target's action before dispatch", rework-planner's recorded output included. |
 | `replace_authorized` | required (the digest as of approval time) | A user-approved overwrite (see below — the digest is re-verified even though the overwrite was approved). |
 | `preserve` | required | Read-only: the worker must not write this path, only use its content as input. |
 | `extend_only` | required | The worker may add new keys but must not modify or remove any existing key. |
@@ -152,6 +152,60 @@ recorded digest written by the earlier git-blob method is compared as its
   `replace_authorized`, `preserve`, or aborts the phase. In batch mode the
   orchestrator instead follows the `batch-policies.yaml` decision recorded
   for that gate.
+
+For an implementation-planner dispatch of create-plan, the orchestrator tells
+the second bullet's case from the third bullet's case by the planning-lineage
+rule below. For create-spec and the design step the three bullets apply as
+written to every existing target whose action is not fixed individually. The
+design step's existing `design-system/tokens.yaml` (`extend_only`) and existing
+`design-system/tokens.html` (`regenerate`) keep the actions fixed by this
+contract's table and by `designer-contract.md`'s table; they do not enter the
+three bullets, so a matching digest never turns them into `replace_own`. A
+tokens file that does not exist takes the action `designer-contract.md`'s
+existence table gives (`create`). The rule applies to the action decision of every
+implementation-planner dispatch of create-plan: the planner dispatch of
+`references/phases/create-plan-phase.md` section 4 (the first pass, every
+re-dispatch, and re-planning after a spec-change transition or a tier
+upgrade), and the final-path correction dispatch and the feature-docs
+correction dispatch of its section 13.
+
+The rule applies only to ordinary planning artifacts, where the choice is
+between `replace_own` and the digest-mismatch branch. Another contract
+(for example `planner-contract.md` for the two correction dispatches) may
+specify only the target paths of such artifacts; the action of those paths
+is then chosen by this rule, not fixed by that contract. The rule does not
+re-decide a target whose action another contract explicitly fixes as an
+exception: the minimal-tier `TASK.md` and the design step's
+`design-system/tokens.yaml` stay `extend_only`, and a target given
+`amend_other_feature` stays `amend_other_feature`. Such a target keeps its
+fixed action whether or not its digest matches a recorded entry, and the
+`create-plan.artifact-overwrite` gate and the `batch-policies.yaml` decision
+are not used for it.
+
+- Match. The orchestrator gives an existing target path the action
+  `replace_own` when the path's current digest equals the last `artifacts`
+  entry for that path in `phase-state/create-plan.yaml`, or the last
+  `artifacts` entry for that path in `phase-state/rework.yaml`. The last
+  entry for a path is the entry for that path that comes last in that file's
+  `artifacts` list. The orchestrator counts only those two files and only
+  that last entry: earlier entries for the same path, entries for other
+  paths, and other phase-state files do not count.
+- No match. The orchestrator takes the digest-mismatch branch above for an
+  existing create-plan target whose current digest equals neither of those
+  two entries: the `create-plan.artifact-overwrite` gate in interactive mode,
+  and the `references/batch-policies.yaml` decision in batch mode. No other
+  condition gives `replace_own`; a spec-change record or a re-planning
+  authorization does not.
+- Reading `phase-state/rework.yaml`. The orchestrator counts a record from
+  that file only when the file's mapping has phase `rework` and a feature
+  equal to the workflow's feature. An absent file, an unreadable or malformed
+  file, a mismatched phase or feature, or no `artifacts` entry for the path
+  each count as no record from `phase-state/rework.yaml`. The decision then
+  rests on the `phase-state/create-plan.yaml` comparison alone.
+- Recorded values. The orchestrator compares a `phase-state/rework.yaml`
+  recorded value that differs from the file's current digest as
+  `references/artifact-digest.md` "Legacy records" states, the same way as a
+  `phase-state/create-plan.yaml` recorded value.
 
 ## `completed` payload
 

@@ -3,6 +3,16 @@ name: Bump plugin versions
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      plugin:
+        description: Name of a plugin registered in .claude-plugin/marketplace.json
+        required: true
+        type: string
+      min_version:
+        description: Lower bound for the new version, as MAJOR.MINOR.PATCH
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -20,42 +30,65 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Bump patch version of changed plugins
+      # Event values and dispatch inputs reach the script only through env, so
+      # their text is never expanded into the script itself.
+      - name: Bump plugin versions
         id: bump
+        if: github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/main'
         env:
+          EVENT_NAME: ${{ github.event_name }}
           BEFORE: ${{ github.event.before }}
           AFTER: ${{ github.sha }}
+          DISPATCH_PLUGIN: ${{ github.event.inputs.plugin }}
+          DISPATCH_MIN_VERSION: ${{ github.event.inputs.min_version }}
         run: |
-          python3 - "$BEFORE" "$AFTER" <<'EOF'
+          python3 - <<'EOF'
           import json
           import os
           import re
           import subprocess
           import sys
 
-          before, after = sys.argv[1], sys.argv[2]
           MARKET = ".claude-plugin/marketplace.json"
+          PLUGIN_JSON = os.path.join(".claude-plugin", "plugin.json")
+          HEX40 = re.compile(r"[0-9a-fA-F]{40}")
+          VERSION = re.compile(r"([0-9]+)\.([0-9]+)\.([0-9]+)")
+          FETCH_TIMEOUT = 300
 
 
-          def git(*args):
-              r = subprocess.run(["git", *args], capture_output=True, text=True)
+          def fail(code, message):
+              print(f"::error::{code}: {message}")
+              sys.exit(1)
+
+
+          def shown(value):
+              return repr(value[:80])
+
+
+          def git(*args, timeout=None):
+              try:
+                  r = subprocess.run(["git", *args], capture_output=True, text=True,
+                                     errors="replace", timeout=timeout)
+              except subprocess.TimeoutExpired:
+                  return None
               return r.stdout if r.returncode == 0 else None
 
 
-          def version_of(text):
+          def parse_version(value):
+              m = VERSION.fullmatch(value) if isinstance(value, str) else None
               try:
-                  return json.loads(text).get("version")
-              except (TypeError, ValueError, AttributeError):
+                  return tuple(int(g) for g in m.groups()) if m else None
+              except ValueError:
                   return None
 
 
-          def plugin_dir(path):
-              d = os.path.dirname(path)
-              while d:
-                  if os.path.isfile(os.path.join(d, ".claude-plugin", "plugin.json")):
-                      return d
-                  d = os.path.dirname(d)
-              return None
+          def format_version(v):
+              return ".".join(str(n) for n in v)
+
+
+          def load_json(path):
+              with open(path, encoding="utf-8") as f:
+                  return json.load(f)
 
 
           def write_json(path, data):
@@ -64,50 +97,176 @@ jobs:
                   f.write("\n")
 
 
-          if set(before) == {"0"} or git("cat-file", "-e", before + "^{commit}") is None:
-              print(f"skip: base commit {before} is not available")
-              sys.exit(0)
+          def load_market():
+              if not os.path.isfile(MARKET):
+                  return None
+              try:
+                  return load_json(MARKET)
+              except ValueError as e:
+                  fail("ERROR", f"{MARKET} is not valid JSON: {e}")
 
-          plugins = sorted({d for f in git("diff", "--name-only", before, after).splitlines()
-                            if (d := plugin_dir(f))})
 
-          market = None
-          if os.path.isfile(MARKET):
-              with open(MARKET, encoding="utf-8") as f:
-                  market = json.load(f)
+          def market_entries(market):
+              plugins = market.get("plugins") if isinstance(market, dict) else None
+              return [p for p in plugins if isinstance(p, dict)] if isinstance(plugins, list) else []
 
-          bumped = []
-          for d in plugins:
-              pj = os.path.join(d, ".claude-plugin", "plugin.json")
-              old_v = version_of(git("show", f"{before}:{pj}"))
-              if old_v is None:
-                  print(f"skip: {d} is new in this push")
-                  continue
-              with open(pj, encoding="utf-8") as f:
-                  plugin = json.load(f)
-              cur_v = plugin.get("version")
-              if cur_v != old_v:
-                  print(f"skip: {d} version was changed by hand ({old_v} -> {cur_v})")
-                  continue
-              m = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", cur_v or "")
-              if not m:
-                  print(f"skip: {d} version {cur_v!r} is not MAJOR.MINOR.PATCH")
-                  continue
-              new_v = f"{m[1]}.{m[2]}.{int(m[3]) + 1}"
-              plugin["version"] = new_v
-              write_json(pj, plugin)
-              if market:
-                  for p in market.get("plugins", []):
-                      if p.get("name") == plugin.get("name") and "version" in p:
-                          p["version"] = new_v
-              bumped.append(f"{plugin.get('name')}@{new_v}")
-              print(f"bump: {d} {cur_v} -> {new_v}")
 
-          if bumped and market:
-              write_json(MARKET, market)
+          def plugin_dir(path):
+              d = os.path.dirname(path)
+              while d:
+                  if os.path.isfile(os.path.join(d, PLUGIN_JSON)):
+                      return d
+                  d = os.path.dirname(d)
+              return None
 
-          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
-              f.write(f"bumped={', '.join(bumped)}\n")
+
+          def commit_exists(sha):
+              return git("cat-file", "-e", sha + "^{commit}") is not None
+
+
+          def decide_base(before, after):
+              if not HEX40.fullmatch(before):
+                  reason = f"BEFORE {shown(before)} is not 40 hexadecimal characters"
+              elif set(before) == {"0"}:
+                  reason = "BEFORE is all zeros"
+              elif commit_exists(before):
+                  return before
+              else:
+                  fetched = git("fetch", "--no-tags", "origin", before, timeout=FETCH_TIMEOUT)
+                  if fetched is not None and commit_exists(before):
+                      return before
+                  reason = f"BEFORE {before} is not in the clone and could not be fetched from origin"
+              parent = git("rev-parse", "--verify", "--quiet", after + "^1^{commit}")
+              if parent is None:
+                  fail("ERR_001", f"{reason}, and {after} has no first parent, "
+                                  "so the base commit cannot be determined")
+              parent = parent.strip()
+              print(f"::warning::{reason}; using the first parent {parent} of {after} as the base")
+              return parent
+
+
+          def apply_versions(items, market):
+              # items: (plugin.json path, parsed plugin.json, name, new version)
+              entries = market_entries(market)
+              market_changed = False
+              for pj, plugin, name, new_v in items:
+                  plugin["version"] = new_v
+                  write_json(pj, plugin)
+                  for entry in entries:
+                      if entry.get("name") == name and "version" in entry:
+                          entry["version"] = new_v
+                          market_changed = True
+              if market_changed:
+                  write_json(MARKET, market)
+              return [f"{name}@{new_v}" for _, _, name, new_v in items]
+
+
+          def run_push(before, after):
+              if not HEX40.fullmatch(after):
+                  fail("ERROR", f"AFTER {shown(after)} is not 40 hexadecimal characters")
+              base = decide_base(before, after)
+              changed = git("diff", "--name-only", "--no-renames", "-z", base, after)
+              if changed is None:
+                  fail("ERROR", f"git diff {base} {after} failed")
+              dirs = sorted({d for f in changed.split("\0") if f and (d := plugin_dir(f))})
+              market = load_market()
+              items = []
+              for d in dirs:
+                  pj = os.path.join(d, PLUGIN_JSON)
+                  base_text = git("show", f"{base}:{pj}")
+                  if base_text is None:
+                      print(f"skip: {d} has no plugin.json at the base commit (new plugin)")
+                      continue
+                  try:
+                      base_v = parse_version(json.loads(base_text).get("version"))
+                  except (ValueError, AttributeError):
+                      base_v = None
+                  try:
+                      plugin = load_json(pj)
+                      after_v = parse_version(plugin.get("version"))
+                  except (OSError, ValueError, AttributeError):
+                      plugin, after_v = None, None
+                  if base_v is None or after_v is None:
+                      print(f"skip: {d} version is not MAJOR.MINOR.PATCH "
+                            "at the base commit or at the pushed commit")
+                      continue
+                  if after_v > base_v:
+                      print(f"keep: {d} {format_version(after_v)} is higher than "
+                            f"{format_version(base_v)} at the base commit")
+                      continue
+                  name = plugin.get("name")
+                  if not isinstance(name, str) or not name or re.search(r"[\x00-\x1f\x7f]", name):
+                      print(f"::warning::skip: {d} has no usable plugin name")
+                      continue
+                  top = max(base_v, after_v)
+                  new_v = format_version((top[0], top[1], top[2] + 1))
+                  print(f"bump: {d} {format_version(after_v)} -> {new_v}")
+                  items.append((pj, plugin, name, new_v))
+              return apply_versions(items, market)
+
+
+          def plugin_json_of(entry):
+              source = entry.get("source")
+              if not isinstance(source, str):
+                  return None
+              rel = os.path.normpath(source)
+              if os.path.isabs(rel) or rel == ".." or rel.startswith(".." + os.sep):
+                  return None
+              pj = os.path.join(rel, PLUGIN_JSON)
+              return pj if os.path.isfile(pj) else None
+
+
+          def run_dispatch(plugin_name, min_version):
+              minimum = parse_version(min_version)
+              if minimum is None:
+                  fail("ERR_003", f"min_version {shown(min_version)} is not MAJOR.MINOR.PATCH")
+              market = load_market()
+              entry = next((e for e in market_entries(market)
+                            if e.get("name") == plugin_name), None)
+              if entry is None:
+                  fail("ERR_002", f"plugin {shown(plugin_name)} is not registered in {MARKET}")
+              pj = plugin_json_of(entry)
+              if pj is None:
+                  fail("ERROR", f"plugin.json of {plugin_name} cannot be located from its "
+                                f"entry in {MARKET}")
+              try:
+                  plugin = load_json(pj)
+                  current = parse_version(plugin.get("version"))
+              except (OSError, ValueError, AttributeError):
+                  current = None
+              if current is None:
+                  fail("ERROR", f"current version of {plugin_name} in {pj} is not MAJOR.MINOR.PATCH")
+              if current > minimum:
+                  print(f"keep: {plugin_name} {format_version(current)} is higher than "
+                        f"min_version {format_version(minimum)}")
+                  return []
+              if current[:2] != minimum[:2]:
+                  fail("ERR_004", f"{plugin_name} is at {format_version(current)}, which differs "
+                                  f"from min_version {format_version(minimum)} in major or minor")
+              new_v = format_version((minimum[0], minimum[1], minimum[2] + 1))
+              print(f"bump: {plugin_name} {format_version(current)} -> {new_v}")
+              return apply_versions([(pj, plugin, plugin_name, new_v)], market)
+
+
+          def main():
+              path = os.environ.get("GITHUB_OUTPUT")
+              if not path:
+                  fail("ERROR", "GITHUB_OUTPUT is not set")
+              # Opened before any other work so that a failure to write the output
+              # shows up before plugin.json or marketplace.json is touched.
+              with open(path, "a", encoding="utf-8") as output:
+                  event = os.environ.get("EVENT_NAME", "")
+                  if event == "push":
+                      bumped = run_push(os.environ.get("BEFORE", ""), os.environ.get("AFTER", ""))
+                  elif event == "workflow_dispatch":
+                      bumped = run_dispatch(os.environ.get("DISPATCH_PLUGIN", ""),
+                                            os.environ.get("DISPATCH_MIN_VERSION", ""))
+                  else:
+                      fail("ERROR", f"unsupported event {shown(event)}")
+                  output.write(f"bumped={', '.join(bumped)}\n")
+
+
+          main()
           EOF
 
       - name: Merge bump through a pull request

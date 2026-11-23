@@ -1,0 +1,67 @@
+schema_version: 2
+feature: version-baseline-patch-tolerance
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.01
+    confidence: 0.97
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.01
+      '1': 0.97
+      '2': 0.02
+      '3': 0.0
+  observed_at: '2026-11-21T20:14:59+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.06
+    confidence: 0.94
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.94
+      '2': 0.06
+      '3': 0.0
+  observed_at: '2026-11-21T20:18:38+09:00'
+pre_survey_estimate:
+  files_expected:
+  - tests/test_review_perspective_model_effort_version_bump.py
+  changed_lines_approx: 35
+  new_functions_needed: 1
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 2
+  body_change_kind: new_logic
+  change_containment: single_module
+  caller_and_dependency_count: 7
+  changes_external_contract: false
+  changes_behavior: false
+  notes: main（33b987897）と integration の先端（828e3736f）で同じバージョン検査4件が失敗した。各プラグインのマニフェストと
+    marketplace の登録値に対し、基準値 em-workflow 0.4.28、em-review 0.5.54 から、メジャーは同じ、マイナーはちょうど1増、パッチは0と検査している。Actions
+    による更新後の値はそれぞれ 0.5.2 と 0.6.1 で、パッチの検査だけが各2件失敗する。マニフェストと登録値の一致検査は成功した。現行値の4検査に数値の下限比較を使い、後続のパッチ更新を受け入れる例と、マイナー未更新を拒む例を既存テストに加えるのが修正案。件数7は現行値の4検査と入力3ファイルを数えた。複合代入の旧サブテスト
+    A=([@]=1 [12]=2) は main に存在せず、854fbb33b の親で失敗を再現した。Bash もこの代入を拒否した。854fbb33b で
+    A=([0]=1 [12]=2) に置換され、integration の先端から読み込んだ関連5テストはすべて成功した。test_codex_wrapper_fallback_removal_integrated_checks.py
+    は main と integration のツリーを使った確認で各19件成功した。git ls-files に依存するため .git の欠如は報告されたエラーの説明になり得るが、そのスナップショットでの原因は未確認。integration
+    の workflow.yaml にはガードの実行結果1598件成功、unittest はバージョン検査4件で失敗と記録されている。今回の読み取り専用の実行は対象テストに限った。
+decided_at: '2026-11-21T20:18:45+09:00'

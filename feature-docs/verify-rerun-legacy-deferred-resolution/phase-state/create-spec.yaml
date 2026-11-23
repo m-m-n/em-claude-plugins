@@ -1,0 +1,105 @@
+schema_version: 1
+feature: verify-rerun-legacy-deferred-resolution
+phase: create-spec
+status: completed
+generation: 1
+base_revision: 1a44fc527825bcba1ea69c4456d5ec3b208ea5be
+last_input_digest: sha256:82e303adc09c476d449b05f3a3304aeb7892062fb5403d0a1453d2b51404643d
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-11-21T22:20:39+09:00'
+    questions:
+    - question_id: requirement.ac1.rerun-approach
+      status: answered
+    - question_id: requirement.ac2.mapping-boundary
+      status: answered
+    - question_id: requirement.scope.prior-feature-no-backfill
+      status: answered
+    - question_id: design.step.recommendation
+      status: answered
+answers:
+  requirement.ac1.rerun-approach:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-21T22:20:39+09:00'
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids:
+    - doc_and_test
+    freeform: null
+    normalized_answer: スクリプトは変えない。SKILL.md の「verify pass による deferred 指摘の解決」に、verify
+      step に round / passed_ids が無い workflow.yaml で verify をやり直したときも同じ手順を行い、round
+      は 1 になり passed_ids を書き、pass なら対応づけとスクリプトの実行を行うことを明記し、テストで固定する。resolve-verified-findings.py
+      の round >= 1 の条件と既存テストは変えない。
+    resolution_note: gate create-spec.requirement-clarification; Codex consulted (1
+      turn, codex entry), Codex choice adopted; Opus escalation not run; recorded
+      as assumption
+  requirement.ac2.mapping-boundary:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-21T22:20:39+09:00'
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids:
+    - attached_text_allowed
+    freeform: null
+    normalized_answer: 指摘の主張がその基準 ID の未達であれば、原因の分析・修正案・範囲の判断が書き添えてあっても対応づける。対応が曖昧な指摘、pass
+      済みでない別の基準の未達や別の欠陥も主張している指摘、本文に ID が現れるだけの指摘は引き続き除外する。
+    resolution_note: gate create-spec.requirement-clarification; Codex consulted (1
+      turn, codex entry), Codex choice adopted; Opus escalation not run; recorded
+      as assumption
+  requirement.scope.prior-feature-no-backfill:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-21T22:20:39+09:00'
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids:
+    - leave_unchanged
+    freeform: null
+    normalized_answer: 先行 feature verify-pass-resolves-deferred-findings の REQUIREMENTS.md
+      / SPEC.md は変えない。verify のやり直しの扱いはこの feature の文書に書く。
+    resolution_note: gate create-spec.requirement-clarification; Codex consulted (1
+      turn, codex entry), Codex choice adopted; Opus escalation not run; recorded
+      as assumption
+  design.step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-21T22:20:39+09:00'
+    source: batch-decision-table
+    answer_mode: select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design step はスキップする（UI を持たない。変更は SKILL.md の手順の文とテストだけ）。
+    resolution_note: gate create-spec.design-step; batch-policies.yaml option decide_autonomously
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:f023b0283d3a6c99cc1754abe9d5befbdc7c030a63b5e74b8ae1a459d7eb7df4
+  output_digest: sha256:74d1bc7a7982c88e93c7989beae998451d391cdbfe2fe87295c3d6f04ef0c840
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:eb77a25f10d27b2e6d6afb6cf921933ab83fd78c891164b6155de23f1e62474e
+  output_digest: sha256:0957ef904e4412a919e9f99c6d1c5cbc12cb84ec180d093211c9f0cb52e64b2a
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:82e303adc09c476d449b05f3a3304aeb7892062fb5403d0a1453d2b51404643d
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/spec-writer-contract.md: sha256:1e63f69687c6850e890f66b5ca92af7f3b0d02645cc464fca88455ad2269d671
+    em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
+    em-workflow/references/templates/spec-document.md: sha256:a5d0106c39a5df7dc2365357a9546588275ed6c7a1651c866e75fa327a7fa592
+  output_digest: sha256:db51c47be5ffdd9636742eb7b42ca47407a1b6f6b5e8cbb94d1ffd7ded51f88a
+  self_write_set:
+  - feature-docs/verify-rerun-legacy-deferred-resolution/REQUIREMENTS.md
+  - feature-docs/verify-rerun-legacy-deferred-resolution/SPEC.md
+artifacts:
+- path: feature-docs/verify-rerun-legacy-deferred-resolution/REQUIREMENTS.md
+  sha256: sha256:4e1ce6a66764d7d74f5afc0f4ccb5b2f81582ae6661c7101143368e243196fc9
+  produced_by: create-spec-run-0003
+- path: feature-docs/verify-rerun-legacy-deferred-resolution/SPEC.md
+  sha256: sha256:3ef63bcae683270f14c5d5ac9d858ce694657531a83a8083fbd97b12c4cc006e
+  produced_by: create-spec-run-0003
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

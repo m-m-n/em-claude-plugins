@@ -1,0 +1,88 @@
+schema_version: 2
+feature: rework-replan-artifact-digest
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.33
+    confidence: 0.65
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.01
+      '1': 0.65
+      '2': 0.34
+      '3': 0.0
+  observed_at: '2026-11-21T20:05:10+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.14
+    confidence: 0.86
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.86
+      '2': 0.14
+      '3': 0.0
+  observed_at: '2026-11-21T20:11:40+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/references/contracts/spec-writer-contract.md
+  - em-workflow/references/contracts/planner-contract.md
+  - em-workflow/references/phases/create-plan-phase.md
+  - tests/test_artifact_digest_docs.py
+  changed_lines_approx: 30
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 2
+  body_change_kind: wording_or_rule_addition
+  change_containment: multiple_modules
+  caller_and_dependency_count: 5
+  changes_external_contract: false
+  changes_behavior: true
+  evidence:
+  - 'em-workflow/references/rework-task-synthesis.md:319-333 仕様変更時に create-spec を
+    needs_update、create-plan から verify までを pending にし、replan_authorized: true を記録する'
+  - em-workflow/references/contracts/rework-planner-contract.md:140-175 rework-planner
+    は VERIFICATION.md と IMPLEMENTATION.md を更新でき、この経路では両プランナーの出力を同じ系統として扱う
+  - em-workflow/references/artifact-digest.md:137-142 ダイジェストは実行元フェーズごとに記録する。create-plan
+    の記録先は create-plan-phase.md:290-292、rework の記録先は rework-task-synthesis.md:289-293
+    にある
+  - feature-docs/unattended-merge/phase-state/create-plan.yaml:45-47 と feature-docs/unattended-merge/phase-state/rework.yaml:46-48
+    に同じ VERIFICATION.md の異なる SHA-256 があり、現行ファイルの実測値は rework の記録と一致した
+  - em-workflow/references/contracts/spec-writer-contract.md:137-154 と em-workflow/references/contracts/planner-contract.md:41-54
+    は replace_own の判断を同一フェーズ出力に結び付けており、create-plan-phase.md:185-228 には rework の記録を参照する規則が見当たらない
+  - em-workflow/references/artifact-digest.md:90-114 最終確認は action 決定時に設定済みの expect_digest
+    と現行ファイルを照合し、不一致なら action の決定に戻る
+  - em-workflow/references/batch-policies.yaml:34-44,82-85 create-plan の不一致時は preserve_and_reuse
+    が対象を読み取り専用にし、事後条件を満たせなければ blocked で中断する
+  - em-workflow/references/batch-terminal-line.md:154-157,190-193 停止条件3は step_needs_intervention
+    に対応する。今回の経路でその停止コードに達した実行は検証していない
+  - em-workflow/scripts/artifact-digest.py:288-325 は指定パスをハッシュ化する。em-workflow/scripts/self-write-digest.py:5-11,72-74
+    は単一実行の入力ダイジェストを置換する。em-workflow/references/phase-state.md:140 に対象パス、ダイジェスト、実行IDが揃っている
+  - tests/test_artifact_digest_docs.py:390-430,671-685 は照合手順と記録先を検査する。tests/test_spec_change_replan_authorization.py:453-517
+    は再計画パッチの許可を検査する。rework が更新した成果物を仕様変更後のバッチ再計画で書き換えられることを検査するテストは確認できなかった
+  - 変更行と追加テスト数は、上記の規則追記と既存テストへの追加を前提にした概算。呼び出し元は develop の1件（em-workflow/skills/develop/SKILL.md:838）、判断に使う参照先は
+    artifact-digest、phase-state、workflow-patch（em-workflow/references/workflow-patch.md:106-123）、batch-policies
+    の4件と数えた
+decided_at: '2026-11-21T20:11:50+09:00'

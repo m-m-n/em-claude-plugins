@@ -1,0 +1,59 @@
+task_id: task0003
+# Full suite (python3 em-workflow/hooks/tests/run-destructive-guard.py &&
+# python3 -m unittest discover -s tests) run before any edit: the destructive
+# guard run passed, and the unit run was 16988 tests with 5 failures and 1
+# skipped; the command exited 1. One failure is the planner-docs test that
+# reads the Final-path correction section of the agent file; the other 4 are
+# the version-bump tests of
+# tests/test_review_perspective_model_effort_version_bump.py, which compare
+# plugin versions with a baseline.
+baseline_failures:
+  - test_report_name_planner_docs.TestAC3MediumFixesPlannerRules.test_the_d8_condition_ties_the_replacement_to_write_policy_targets
+  - test_review_perspective_model_effort_version_bump.TestEmReviewManifest.test_version_is_a_minor_bump_over_baseline
+  - test_review_perspective_model_effort_version_bump.TestEmWorkflowManifest.test_version_is_a_minor_bump_over_baseline
+  - test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_review_entry_version_is_a_minor_bump_over_baseline
+  - test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_workflow_entry_version_is_a_minor_bump_over_baseline
+# Full suite re-executed after the implementation and after this record was
+# written (the record is itself checked by tests.test_tests_yaml_id_resolution):
+# the destructive guard run passed and the unit run had no failure; the command
+# exited 0.
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_artifact_digest_docs.TestFinalPathCorrectionPlacesTheWriteCheckAfterOtherPlans.test_ac1_the_section_has_a_write_check_first_bullet
+      - tests.test_artifact_digest_docs.TestFinalPathCorrectionPlacesTheWriteCheckAfterOtherPlans.test_ac1_the_write_check_text_is_the_sentence_word_for_word
+      - tests.test_artifact_digest_docs.TestFinalPathCorrectionPlacesTheWriteCheckAfterOtherPlans.test_ac1_the_write_check_bullet_follows_other_plans_and_precedes_shared_bare_name
+    red_confirmed: true
+    red_reason: "Against the unedited agent file the Final-path correction section had no bullet labelled Write check first. (the write check stood at the end of the Path strings only. bullet), so all three tests failed: the presence matcher and the order matcher returned False, and the text comparison found no bullet to compare."
+  AC-2:
+    tests:
+      - tests.test_artifact_digest_docs.TestFinalPathCorrectionPlacesTheWriteCheckAfterOtherPlans.test_ac2_the_path_strings_bullet_is_the_two_sentences_only
+      - tests.test_artifact_digest_docs.TestFinalPathCorrectionPlacesTheWriteCheckAfterOtherPlans.test_ac2_the_path_strings_bullet_names_neither_targets_nor_preserve
+      - tests.test_artifact_digest_docs.TestFinalPathCorrectionPlacesTheWriteCheckAfterOtherPlans.test_ac2_no_text_before_other_plans_names_write_policy_targets
+      - tests.test_artifact_digest_docs.TestFinalPathCorrectionPlacesTheWriteCheckAfterOtherPlans.test_ac2_the_bullets_keep_their_labels_and_order
+      - tests.test_artifact_digest_docs.TestFinalPathCorrectionPlacesTheWriteCheckAfterOtherPlans.test_ac2_the_write_check_is_stated_once_in_the_section
+    red_confirmed: true
+    red_reason: "Against the unedited agent file the first four tests failed: the Path strings only. bullet held the write check (so it was longer than the two sentences and held write_policy.targets and preserve), that bullet is before Other plans, and the labels did not include Write check first. test_ac2_the_write_check_is_stated_once_in_the_section was already green before the change (the one statement stood under Path strings only.) and is a guard. That the intro paragraph, every other bullet and every other section of the file are unchanged is not readable from the final file; it is checked with git diff against the integration branch, which shows one hunk in the section."
+  AC-3:
+    tests:
+      - tests.test_report_name_planner_docs.TestAC3MediumFixesPlannerRules.test_the_d8_condition_ties_the_replacement_to_write_policy_targets
+    red_confirmed: true
+    red_reason: "Failed in the baseline run before any edit: the first sentence and the first bullet of the section that hold write_policy.targets were the write-check ones, so the expected phrases of the Other plans bullet were not found. The test file is not modified."
+  AC-4:
+    tests:
+      - tests.test_artifact_digest_docs.TestFinalPathCorrectionMatchersFireOnForgedText
+    red_confirmed: true
+    red_reason: "Against the unedited agent file the forged-text class failed: its forged copies are built from the real section, which had no Write check first. bullet, so the presence matcher already failed on the real section, the order matcher could not be shown to hold on it, and the absence matchers already fired on it (the Path strings only. bullet held write_policy.targets). 6 token subtests errored and 6 other tests failed. test_order_matcher_fails_when_the_bullet_stands_after_shared_bare_name, test_order_matcher_fails_without_the_write_check_bullet and test_presence_matcher_fails_when_the_text_stands_under_another_label were already green before the change and are guards."
+  AC-5:
+    tests:
+      - tests.test_review_perspective_model_effort_version_bump.TestEmReviewManifest.test_version_is_a_minor_bump_over_baseline
+      - tests.test_review_perspective_model_effort_version_bump.TestEmWorkflowManifest.test_version_is_a_minor_bump_over_baseline
+      - tests.test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_review_entry_version_is_a_minor_bump_over_baseline
+      - tests.test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_workflow_entry_version_is_a_minor_bump_over_baseline
+    red_confirmed: true
+    red_reason: "The four tests failed in the baseline run before any edit (the unreplaced file compared plugin versions without tolerating the patch component the main-branch Actions add). The byte identity of the file with the same path on the main branch has no test of its own; it is checked with git show main:tests/test_review_perspective_model_effort_version_bump.py compared against the file."
+  AC-6:
+    tests: []
+    red_confirmed: true
+    red_reason: "The verifiable outcome is the exit code of the full test command, not a single test. It exited 1 in the baseline run before any edit (5 failing tests) and exits 0 after the change. The search of the tests directory by repository-relative path and by file name found the existing tests that read the edited agent file (among them tests.test_report_name_planner_docs, tests.test_final_path_correction_docs, tests.test_feature_docs_planner_rules_docs and tests.test_feature_docs_correction_patch_docs); they stay green unchanged and are part of the full command."

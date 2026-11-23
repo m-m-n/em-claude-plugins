@@ -46,3 +46,31 @@ Then install a specific plugin:
 ```
 
 The marketplace is named `em-claude-plugins`; each plugin's name becomes its slash-command namespace (`/em-workflow:...`, `/em-review:...`, `/plugin-dev:...`).
+
+## Maintenance
+
+Plugin versions are bumped by `.github/workflows/plugin-version-bump.yml`. The procedures below are run by hand.
+
+### Recovering a lost version update
+
+When the version-update commit of the Actions workflow is lost from main, run the workflow once with `workflow_dispatch` on `main`, giving the plugin name and a `min_version`. When the plugin's current version is lower than or equal to `min_version` and has the same major and minor, the run writes `min_version` with its patch raised by 1 to the plugin's `plugin.json` and to its entry in `.claude-plugin/marketplace.json`, and a pull request carrying the change is created and merged.
+
+To recover the lost em-workflow update, run it with:
+
+- ref: `main`
+- plugin: `em-workflow`
+- min_version: `0.5.3` (the version recorded by the lost update commit `f87807a8e`, "chore: bump plugin versions (em-workflow@0.5.3)")
+
+Then confirm:
+
+- The pull request created by the run is merged into main.
+- After pulling main, em-workflow's version in `em-workflow/.claude-plugin/plugin.json` and in its entry in `.claude-plugin/marketplace.json` are equal, and greater than `min_version`.
+
+When the current version already exceeds `min_version`, the run changes nothing and succeeds.
+
+### Confirming the installed cache
+
+After the run above, update the marketplace in Claude Code and restart Claude Code. Then confirm in the installed cache:
+
+- `~/.claude/plugins/cache/<marketplace>/em-workflow/` has a directory for em-workflow's version after the run above.
+- Files in that directory match main, for example `references/phases/create-plan-phase.md` and `references/contracts/planner-contract.md` under em-workflow.

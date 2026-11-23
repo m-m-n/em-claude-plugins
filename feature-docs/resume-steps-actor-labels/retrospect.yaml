@@ -1,0 +1,79 @@
+feature: resume-steps-actor-labels
+collected_at: '2026-11-22T23:49:00+09:00'
+session_ids:
+- 01a203b9-ea31-72f1-b0d2-69ff11b3dd0d
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: description_plus_code の最終読みがバケット 1 に 0.86 で寄り、reduced の閾値行で決まった
+    bases:
+    - basis: description_only
+      score:
+        type: score
+        score: 1.01
+        confidence: 0.99
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread
+            across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to
+            an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+            or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.99
+          '2': 0.01
+          '3': 0.0
+      observed_at: '2026-11-22T22:31:40+09:00'
+    - basis: description_plus_code
+      score:
+        type: score
+        score: 1.14
+        confidence: 0.86
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread
+            across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to
+            an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+            or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.86
+          '2': 0.14
+          '3': 0.0
+      observed_at: '2026-11-22T22:33:50+09:00'
+    pre_survey_estimate:
+      files_expected:
+      - em-workflow/skills/develop/SKILL.md
+      - em-workflow/references/batch-terminal-line.md
+      - tests/test_batch_quiet_output_skill_wiring.py
+      - tests/test_batch_stop_contract.py
+      changed_lines_approx: 28
+      new_functions_needed: 0
+      new_files_needed: []
+      new_dependencies_needed: []
+      covering_tests_exist: true
+      spillover_modules: []
+      work_still_required: true
+      test_change_kind: extend_existing_one_to_one
+      added_test_cases_approx: 2
+      body_change_kind: wording_or_rule_addition
+      change_containment: single_module
+      caller_and_dependency_count: 3
+      changes_external_contract: true
+      changes_behavior: true
+      evidence: em-workflow/skills/develop/SKILL.md:1294 の停止報告と em-workflow/references/batch-terminal-line.md:133
+        の値規定には、手順ごとの担当、AI優先順、人の判断が要る理由の規定がない。関連する参照先は em-workflow/references/batch-mode.md:152、em-workflow/references/implement-phase.md:104、em-workflow/references/review-phase.md:1458。既存テストは
+        tests/test_batch_quiet_output_skill_wiring.py:663 で停止報告、tests/test_batch_stop_contract.py:1113
+        と :1141 で出力例と値の規定を固定している。外部出力の値に内容上の要件が加わり、YAMLの形式、空値の条件、エスケープは維持される。
+follow_up_drafts: []
+lessons_candidates: []

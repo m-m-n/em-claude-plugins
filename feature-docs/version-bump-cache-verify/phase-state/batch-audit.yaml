@@ -1,0 +1,17 @@
+schema_version: 1
+feature: version-bump-cache-verify
+records:
+  - question_id: create-spec.command-approval
+    packet_id: null
+    answered_at: "2026-11-22T22:05:00+09:00"
+    source: batch-decision-table
+    answer_mode: freeform
+    selected_option_ids: []
+    freeform: "auto_record"
+    normalized_answer: "auto_record"
+    resolution_note: >-
+      gate: create-spec.command-approval (batch policy action auto_record).
+      workflow.yaml project.components のコマンドは
+      'python3 -m unittest tests.test_guardrail_hooks_migration' の 1 本。
+      bash_guard.py --list で未承認だったため --record で自動承認した。
+      refusal パターンの検出なし。

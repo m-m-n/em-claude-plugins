@@ -1,0 +1,351 @@
+round: 3
+executed_at: '2026-11-22T01:09:15+09:00'
+scope:
+  review_mode: diff
+  base_commit: 33b987897f0a15fda44678f97e11936ea6f98108
+  head_commit: d62f797c97213468e4b2b2a0a2f3912f021aa61f
+  changed_files:
+  - em-workflow/agents/implementation-planner.md
+  - em-workflow/references/contracts/planner-contract.md
+  - em-workflow/references/contracts/spec-writer-contract.md
+  - em-workflow/references/phases/create-plan-phase.md
+  - test-docs/rework-replan-artifact-digest/task0001.tests.yaml
+  - test-docs/rework-replan-artifact-digest/task0002.tests.yaml
+  - test-docs/rework-replan-artifact-digest/task0003.tests.yaml
+  - tests/test_artifact_digest_docs.py
+  - tests/test_review_perspective_model_effort_version_bump.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 5ecafb62af6aaa17
+  severity: high
+  category: architecture
+  file: em-workflow/agents/implementation-planner.md
+  line: 402
+  title: 補正時の書き込み前チェックが `extend_only` の置換を止めない
+  description: '最終パス補正の **Write check first.**（402–405行）と機能文書補正の同じ箇条（472–476行）は、書き込みを止める条件に `preserve` しか挙げていない。planner-contract.md の補正ディスパッチの write_policy 箇条は、最小ティアの `TASK.md` が `extend_only` のまま渡り、既存本文の置換や削除が要る場合はどのファイルにも書かず
+    `status: blocked` を返すと定めている。エージェントの手順どおりに進むと、このチェックを通って `TASK.md` 本文の置換に進む。round 2 で deferred になった 9e4f09bd10fd0a30 と同じ欠陥で、verify の手戻り（task0003）は箇条を分けただけでまだ直っていない。tests/test_artifact_digest_docs.py
+    の `FPC_WRITE_CHECK_TEXT`（2648–2653行）が、preserve だけの現在の文言を完全一致で固定している。'
+  suggestion: 両方の補正手順の書き込み前チェックに「`extend_only` のファイルで既存本文の置換・削除が要る」場合も加え、最初の書き込み前に `blocked` を返すようにする（または planner-contract.md の該当判定を参照する）。`FPC_WRITE_CHECK_TEXT` とトークン一覧を新しい文言に合わせ、機能文書補正側のチェックにも同じテストを足す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 100
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: 5ecafb62af6aaa17
+  severity: high
+  category: comprehensive
+  file: em-workflow/agents/implementation-planner.md
+  line: 402
+  title: 補正前の書き込み判定に extend_only の拒否条件がない
+  description: 最小ティアでは対象のタスク計画が `TASK.md`（`extend_only`）になる。最終パス補正の手順は旧パスの置換を指示する一方、書き込み前の停止条件は `preserve` だけで、機能文書補正（472–476行）も同じ。planner-contract.md が求める「何も書かず blocked」を満たさない。round 2 の deferred 9e4f09bd10fd0a30
+    が未解決のまま残っている。reviewer は medium とした。ただし architecture#0 と同じ欠陥で、round 2 でも high として扱ったため high にそろえた。
+  suggestion: 両方の補正手順から planner-contract.md の事前判定を参照し、必要な編集が `extend_only` の既存本文を変える場合も、最初の書き込み前に `blocked` を返すようにする。文言を固定しているテストも合わせて直す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 100
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: b81f6f8255fc0113
+  severity: medium
+  category: architecture
+  file: em-workflow/references/contracts/spec-writer-contract.md
+  line: 165
+  title: 旧形式の再開時に上書き確認を省けるかどうかが文書間で食い違う
+  description: create-plan-phase.md の169–174行は、旧形式の `in_progress` から再開して `phase-state/create-plan.yaml` が無い場合、phase-state.md の Legacy feature compatibility（対話は上書き確認、batch は `preserve_and_reuse`）を適用するとしている。一方、165–170行は照合規則を
+    section 4 のすべての再ディスパッチに適用し、185–192行は `rework.yaml` だけの一致でも `replace_own` を与える。同じ状態で二つの手順が異なる action を指示する。旧形式の workflow.yaml の再開に限られるので high から medium に下げた。round 2 の 491ba2b4cbd13e4d / 95e6f5a0678f4638
+    と同じで、未解決のまま残っている。
+  suggestion: 旧形式の再開規則とダイジェスト照合のどちらを優先するかを action 選択の契約に書き、create-plan-phase.md の再開手順からその規定を参照する。create-plan.yaml が無く rework.yaml だけが一致する再開ケースをテストに入れる。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: open after auto-fix loop 1 (medium; not an auto-fix candidate)
+- stable_id: d18fe4a76c3438c6
+  severity: medium
+  category: architecture
+  file: em-workflow/references/phases/create-plan-phase.md
+  line: 198
+  title: 再計画で変更できないタスク計画にも上書き確認が発生する
+  description: section 4 は既存のタスク計画をすべて `write_policy.targets` に入れ（198–206行）、記録と一致しない計画には上書き判定が走る。implementation-planner.md の188–200行は、再計画で登録済みタスクを `carried_task_ids` に引き継ぎ、その計画を書かないと定めている。書かない計画を手で直しただけで、対話実行が不要な上書き確認で止まる。round
+    2 の d18fe4a76c3438c6 と同じで、未解決のまま残っている。
+  suggestion: 引き継ぐだけの計画は `digest_inputs` に残し、書き込み対象はその呼び出しで実際に編集できる計画に絞る。あるいは `preserve` に固定する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 70
+  resolution: unresolved
+  resolution_reason: open after auto-fix loop 1 (medium; not an auto-fix candidate)
+- stable_id: bda81d038c11b5de
+  severity: medium
+  category: spec
+  file: em-workflow/agents/implementation-planner.md
+  line: 188
+  title: 仕様変更後も登録済みタスクの計画本文を更新できない
+  description: SPEC の Objectives（15–18行）と US1（24–27行）は、rework-planner が書き換えたタスク計画も planner が改訂後の SPEC に合わせて更新できることを求めている。section 4 は既存のタスク計画を照合の対象に加えたが、エージェントは再計画で登録済みのタスクの計画を書かず、本文も渡さない（193–194行）。`replace_own`
+    を得たタスク計画も更新されない。round 2 で high として deferred になった 0d687f58efbca331 と同じ欠陥で、まだ直っていない。AC-1〜AC-6 は文書の記述を求めるだけで満たされているので、reviewer の medium のままにした。直すには、再計画のタスク引き継ぎを変えるか、SPEC の目的からタスク計画を外すかの判断が要る。
+  suggestion: 既存タスクの ID とメタデータを引き継ぎつつ、書き込みを許す action が付いた未マージの計画本文は更新できるようにするか、SPEC の Objectives・US1 からタスク計画の更新を外すかを決め、エージェントの手順・契約・SPEC をそろえる。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 70
+  resolution: unresolved
+  resolution_reason: open after auto-fix loop 1 (medium; not an auto-fix candidate)
+- stable_id: 9b7d7ad183c8249d
+  severity: medium
+  category: spec
+  file: em-workflow/references/contracts/planner-contract.md
+  line: 151
+  title: 最小構成のタスク計画が補正時にダイジェスト照合の対象から外れる
+  description: SPEC FR3 は、section 13 の二つの補正ディスパッチにも FR1 の判断を適用するよう求めている。変更前の契約は補正時の対象タスク計画に `replace_own` を与えていた。今は最小ティアの `TASK.md` が `extend_only` に固定されるので、`TASK.md` に旧パスがある最終パス補正は必ず `blocked` になる。round
+    2 の c249400a1ef223f4 の修正で生じた振る舞いで、黙って上書きはしないが、最小ティアでは補正を進められない。
+  suggestion: 通常計画での `TASK.md` への追記と、補正でタスク計画として編集する場合を分け、補正時の扱い（照合で決めるのか、blocked で利用者に返すのか）を SPEC と契約で一致させる。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 65
+  resolution: unresolved
+  resolution_reason: open after auto-fix loop 1 (medium; not an auto-fix candidate)
+- stable_id: fc20c947d1404f22
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/contracts/planner-contract.md
+  line: 47
+  title: 全タスク計画を列挙する規則が補正時の対象限定と競合する
+  description: 共通入力の段落（47–49行）は、ディスパッチ時の既存タスク計画をすべて `write_policy.targets` に入れるとしている。最終パス補正の write_policy は対象タスクの計画だけを挙げる。エージェントの **Other plans.**（397–401行）は、対象外の未マージ計画を `targets` に入っているときだけ編集するので、どちらの列挙を使うかで変更範囲が変わる。section
+    13 の Pre-dispatch も「この契約から対象パスを取る」とだけ書いていて、どちらとも決められない。
+  suggestion: 全件列挙を section 4 の通常起動と再計画に限ると明記し、section 13 の各補正では補正ごとの対象一覧を使うと書く。対象外の計画にも旧名がある場合の編集範囲をテストで固定する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 65
+  resolution: unresolved
+  resolution_reason: open after auto-fix loop 1 (medium; not an auto-fix candidate)
+- stable_id: 9a4ebd44587a2fba
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/contracts/spec-writer-contract.md
+  line: 160
+  title: トークンファイルの有無だけでは設計時の書き込み権限を決められない
+  description: 163–165行は、存在しないトークンファイルに designer-contract.md の存在表の action を与えるとし、括弧で `create` と要約している。reviewer によると、designer-contract.md の表では `project_native` の場合は対象外で、`em_workflow` で HTML だけが残る場合は起動前に中止する。この要約は表と一致しない。round
+    2 の 9a4ebd44587a2fba と同じで、未解決のまま残っている。今回の読み取り予算では designer-contract.md を読んでいない。
+  suggestion: 括弧の `create` を消して designer-contract.md の `kind` と存在状態の表に委ねるか、表が対象とする場合に限ると書く。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 70
+  resolution: unresolved
+  resolution_reason: open after auto-fix loop 1 (medium; not an auto-fix candidate)
+- stable_id: a7dfcc05093e01bc
+  severity: medium
+  category: comprehensive
+  file: tests/test_artifact_digest_docs.py
+  line: 1382
+  title: 片方の記録だけで一致するという中心条件をテストできていない
+  description: '`OWNER_STATEMENTS` の TS-1 は、二つの記録名と `replace_own` の近さを別々の正規表現で調べる（1379–1397行）。契約の `or` を `and` に変えても、どの照合も失敗しない。round 2 の a7dfcc05093e01bc と同じで、未解決のまま残っている。'
+  suggestion: create-plan 側だけの一致と rework 側だけの一致をそれぞれ保証する検査を足し、両方の一致を要求する文に置き換えた偽の写しで失敗させる。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: open after auto-fix loop 1 (medium; not an auto-fix candidate)
+- stable_id: 24036c315c87be1f
+  severity: medium
+  category: comprehensive
+  file: tests/test_artifact_digest_docs.py
+  line: 2560
+  title: 補正起動直前のダイジェスト検証を削除してもテストが通る
+  description: TS-10 の section 13 の二つの起動段落のテスト（2558–2568行）は `_assert_statements` と引用だけを確かめていて、`expect_digest` の受け渡しと `Pre-dispatch verification` を判定項目に含まない。round 2 の 8bd2ef61010d683f / 636e7dfe39b956bd
+    と同じで、未解決のまま残っている。
+  suggestion: 各補正の起動段落について、`expect_digest` を渡すことと `Task` の直前に `Pre-dispatch verification` を適用することを個別に検査する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 70
+  resolution: unresolved
+  resolution_reason: open after auto-fix loop 1 (medium; not an auto-fix candidate)
+- stable_id: 7e0ee33dee3b0814
+  severity: medium
+  category: comprehensive
+  file: tests/test_artifact_digest_docs.py
+  line: 1907
+  title: 機能文書補正の書き込み前チェックに回帰検査がない
+  description: 機能文書補正のエージェント側のテストは、「The own feature's」で始まる入れ子の箇条しか取り出さない（1907–1910行）。task0003 の TS-11 も最終パス補正の **Write check first.** だけを扱う。機能文書補正の **Write check first.**（implementation-planner.md 472–476行）を消しても、検出されない。round
+    2 の 7e0ee33dee3b0814 と同じで、未解決のまま残っている。
+  suggestion: 機能文書補正の書き込み前チェックも検査対象に含め、`preserve` と `extend_only` の両方の停止条件を固定する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 65
+  resolution: unresolved
+  resolution_reason: open after auto-fix loop 1 (medium; not an auto-fix candidate)
+- stable_id: a7dfcc05093e01bc
+  severity: medium
+  category: spec
+  file: tests/test_artifact_digest_docs.py
+  line: 1380
+  title: 両方の記録との一致を要求しても回帰テストが通る
+  description: SPEC AC-1・FR1・FR7 が固定を求める「どちらか一方の最終記録との一致で `replace_own`」という関係を、TS-1 の照合は確かめていない。ファイル名と action の近さを別々に見るだけなので、`or` を `and` に変えても通る。comprehensive#0 の同じ箇所の指摘と同じ欠陥。
+  suggestion: どちらか一方の一致で `replace_own` になる関係を一つの条件として検査し、両方の一致を要求する文を拒否するケースを足す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: open after auto-fix loop 1 (medium; not an auto-fix candidate)
+- stable_id: 81e9ac232633ed18
+  severity: medium
+  category: spec
+  file: tests/test_artifact_digest_docs.py
+  line: 1435
+  title: 不一致時に対話モードと一括モードの処理を逆にしても検出できない
+  description: TS-2 の照合は「`neither` … `create-plan.artifact-overwrite`」と「`create-plan.artifact-overwrite` … `references/batch-policies.yaml`」の近さだけを見る（1432–1446行）。interactive と batch を入れ替えた文でも一致する。SPEC FR2
+    のモードと分岐先の対応を固定できていない。
+  suggestion: 各分岐先を対応する実行モードの語と結び付けて検査し、モードを入れ替えた偽の写しで失敗させる。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 70
+  resolution: unresolved
+  resolution_reason: open after auto-fix loop 1 (medium; not an auto-fix candidate)
+- stable_id: 47834010b6350be2
+  severity: medium
+  category: spec
+  file: tests/test_artifact_digest_docs.py
+  line: 1454
+  title: 手戻り記録の条件と旧方式の照合を変えても検出できない
+  description: TS-3 の照合は語句の存在だけを見るので、phase と feature の「両方」が一致する条件を「どちらか一方」に変えた文や、rework.yaml に Legacy records を適用しない文を見逃すと reviewer は報告している。SPEC FR5・FR6 の関係は固定されていない。
+  suggestion: 両方の条件を満たすときだけ記録を採用する関係と、値が異なるときに Legacy records で照合する関係を検査し、それぞれを崩した文を拒否するケースを足す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: open after auto-fix loop 1 (medium; not an auto-fix candidate)
+- stable_id: e829a11e713882f2
+  severity: medium
+  category: spec
+  file: em-workflow/agents/implementation-planner.md
+  line: 143
+  title: 通常の計画経路が write_policy の action を見ずに計画文書の書き込みを指示している
+  description: 評価者自身の読解による指摘。round 2 で deferred になった c7ba58b564d80ef4 が、今回は誰からも再報告されなかったが、まだ残っている。step 2a（143行）、step 3（154行）、step 5（274行）は THREAT-MODEL.md / IMPLEMENTATION.md / VERIFICATION.md を無条件に書くよう指示している。batch
+    で不一致になると `preserve_and_reuse`（SPEC NFR2）により `preserve` が渡り得るが、通常経路にはその action を確かめる手順がない。書き込み指示は変更前からあり、worker-envelope 側の一般規則で抑えられている可能性もある（今回は読んでいない）ので medium とした。
+  suggestion: 通常の計画経路でも書き込み前に各対象の action を確かめ、`preserve` のファイルは既存内容を入力として再利用する手順を足す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - claude:evaluator
+  confidence: 55
+  resolution: unresolved
+  resolution_reason: open after auto-fix loop 1 (medium; not an auto-fix candidate)
+evaluation:
+  round_summary: 'high は1件（同じ欠陥を2観点が報告）。implementation-planner.md の補正手順の書き込み前チェック（402行、472行）は `preserve` しか止めず、planner-contract.md が定める最小ティアの `TASK.md`（`extend_only`）の既存本文の置換・削除を止めない。architecture#0 は high、comprehensive#0
+    は medium で報告し、round 2 で deferred になった 9e4f09bd10fd0a30 が残っているので両方 high にした。task0003 は箇条を分けただけで、テストが preserve だけの文言を完全一致で固定している。重大度を下げた high は2件（spec-writer-contract.md:199 は low、spec-writer-contract.md:185
+    は medium で165行に置いた）。security#0 の再現手順は読解でたどって reproduced と判定したが、create-plan.yaml と同じ信頼境界なので low にした。spec#0 の implementation-planner.md:188 は round 2 の 0d687f58efbca331 と同じで、SPEC 側で扱いを決める必要がある。round 2
+    で deferred になった c7ba58b564d80ef4 は読解で残っていることを確かめ、評価者の指摘として medium で記録した。テストの検知力に関する medium は round 2 から未解決のまま。reviewer の出力にインジェクションの試みは見当たらなかった。観点ごとの確認状況: comprehensive: corroborated / security: corroborated
+    / architecture: corroborated / spec: findings'
+  recommended_action: auto_fix
+  action_rationale: 残る high は1件の欠陥で、implementation-planner.md の2つの Write check first 箇条に extend_only の停止条件を足し、tests/test_artifact_digest_docs.py の FPC_WRITE_CHECK_TEXT とトークンを合わせれば直る局所的な修正なので、限定的な auto-fix
+    で扱える。medium のうち、登録済みタスク計画の更新可否（0d687f58efbca331 系）と最小ティア TASK.md の補正時の扱いは SPEC 側の判断が要るので auto-fix の対象にしない。
+dismissed_sites:
+- file: em-workflow/references/contracts/spec-writer-contract.md
+  line: 199
+  run_id: comprehensive#0
+  reason: demoted
+- file: em-workflow/references/contracts/spec-writer-contract.md
+  line: 185
+  run_id: architecture#0
+  reason: demoted
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 1
+  applied_total: 0
+  termination: no-progress
+residual_critical_high: 2
+rework_required: false
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-rework-replan-artifact-digest-20261121T160810Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

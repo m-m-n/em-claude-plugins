@@ -1,0 +1,479 @@
+round: 1
+executed_at: '2026-11-21T22:37:49+09:00'
+scope:
+  review_mode: diff
+  base_commit: 33b987897f0a15fda44678f97e11936ea6f98108
+  head_commit: 35a762d3fb462d5740a7d00ad104e291c5baf3e7
+  changed_files:
+  - em-workflow/references/contracts/spec-writer-contract.md
+  - em-workflow/references/phases/create-plan-phase.md
+  - test-docs/rework-replan-artifact-digest/task0001.tests.yaml
+  - tests/test_artifact_digest_docs.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+- run_id: comprehensive#loop1.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#loop1.0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: architecture#loop1.0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#loop1.0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: comprehensive#loop2.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#loop2.0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: architecture#loop2.0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#loop2.0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: comprehensive#loop3.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#loop3.0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: architecture#loop3.0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#loop3.0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+findings:
+- stable_id: 7be2862351c52397
+  severity: high
+  category: architecture
+  file: em-workflow/references/contracts/spec-writer-contract.md
+  line: 166
+  title: 計画系譜の一致規則が、対象ごとに固定された action（extend_only / amend_other_feature）まで上書きする
+  description: (see the auto-fix commit for the applied change)
+  suggestion: ''
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 100
+  resolution: fixed
+  resolution_reason: auto-applied loop 1
+- stable_id: 4c04f947de7129cb
+  severity: high
+  category: architecture
+  file: em-workflow/references/contracts/spec-writer-contract.md
+  line: 166
+  title: 補正時の `replace_own` 固定指定が、不一致時の上書き承認と競合する
+  description: (see the auto-fix commit for the applied change)
+  suggestion: ''
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 75
+  resolution: fixed
+  resolution_reason: 'auto-applied loop 2 (partial: planner-contract.md side remains, see 89a24f20d04ea1b1)'
+- stable_id: 9f6c8b94138cab1f
+  severity: high
+  category: comprehensive
+  file: em-workflow/references/phases/create-plan-phase.md
+  line: 516
+  title: 第13節の修正処理で、記録と一致しない計画書に二つの上書き規則が適用される
+  description: (see the auto-fix commit for the applied change)
+  suggestion: ''
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+- stable_id: c14639496ebc5234
+  severity: high
+  category: architecture
+  file: em-workflow/references/contracts/spec-writer-contract.md
+  line: 156
+  title: 設計ステップの派生ファイルに通常の上書き規則が適用される
+  description: (see the auto-fix commit for the applied change)
+  suggestion: ''
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 75
+  resolution: fixed
+  resolution_reason: auto-applied loop 3
+- stable_id: 5ae0a792ef093b44
+  severity: high
+  category: comprehensive
+  file: em-workflow/references/phases/create-plan-phase.md
+  line: 563
+  title: 2種類の修正ディスパッチで、呼び出し側とプランナーの上書き条件が食い違う
+  description: (see the auto-fix commit for the applied change)
+  suggestion: ''
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 3
+- stable_id: 89a24f20d04ea1b1
+  severity: high
+  category: architecture
+  file: em-workflow/references/phases/create-plan-phase.md
+  line: 519
+  title: 訂正時の書き込み権限が、呼び出し側とプランナー側の契約で食い違う
+  description: 第13節は通常の計画文書のアクションを照合結果から決める一方、直後のディスパッチ手順は planner-contract.md の write_policy を渡すよう指定している。その契約の142–144行と181–184行は、どちらの訂正でも対象の計画文書に replace_own を固定している。たとえば手動編集されたタスク計画について利用者が preserve を選ぶと、両方の契約を満たす入力を作れない。
+  suggestion: planner-contract.md の両訂正手順には対象パスと固有の制約を残し、通常の計画文書のアクション選択は spec-writer-contract.md に委ねる。第13節の実際のディスパッチにも、そこで決定したアクションを渡すと明記する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: residual after auto-fix loop cap; routed to batch auto-rework
+- stable_id: 3658d5fd449df140
+  severity: high
+  category: architecture
+  file: em-workflow/references/contracts/spec-writer-contract.md
+  line: 183
+  title: rework の記録による上書き許可が replace_own の公開定義と両立しない
+  description: 追加規則は rework.yaml の記録だけに一致した場合も replace_own を渡す。一方、同じ契約の72行は、このアクションで上書きできるのをワーカー自身が同じフェーズで生成した成果物に限定している。
+  suggestion: 72行のアクション定義から選択規則を参照し、create-plan では有効な rework 記録との一致も replace_own の対象になることを、送信側と受信側で共有する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: residual after auto-fix loop cap; routed to batch auto-rework
+- stable_id: 9a4ebd44587a2fba
+  severity: medium
+  category: architecture
+  file: em-workflow/references/contracts/spec-writer-contract.md
+  line: 163
+  title: 旧形式のワークフローを再開するときの上書き判断に優先順位がない
+  description: 新規則は create-plan のすべてのディスパッチに適用される。一方、create-plan-phase.md の169–174行は、旧形式の in_progress 状態で create-plan.yaml がない場合、対話実行では上書きを確認し、バッチ実行では preserve_and_reuse を適用すると定めている。
+  suggestion: 旧形式の再開規則と rework 記録の照合のどちらが優先するかをアクション選択の契約で定め、再開手順からその規定を参照する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: medium; not an auto-fix candidate
+- stable_id: a7dfcc05093e01bc
+  severity: medium
+  category: architecture
+  file: tests/test_artifact_digest_docs.py
+  line: 1382
+  title: 契約テストが「どちらか一方の記録に一致すればよい」という条件を検証していない
+  description: 契約本文の2つの記録を結ぶ or を and に変えても、追加された20個の照合条件すべてが通る。
+  suggestion: いずれか一方の最新記録に一致すれば replace_own になるという関係を検証し、or を and に置き換えた契約文でその検証が失敗することも確認する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: medium; not an auto-fix candidate
+- stable_id: 31a6c75ef74f5367
+  severity: high
+  category: comprehensive
+  file: em-workflow/references/phases/create-plan-phase.md
+  line: 574
+  title: feature-docs 修正時にファイルの新規作成を禁じる制約が抜けている
+  description: '修正前は planner-contract.md の書き込み方針全体を渡していた。修正後は対象パスとアクションだけを渡すため、同契約184行目が指定する `allowed_write_roots: []` が引き継がれない。通常の計画作成で使う `tasks/` を引き継ぐと、修正対象にないタスク計画の新規作成まで許可される。'
+  suggestion: '対象パスと `allowed_write_roots: []` は planner-contract.md から引き継ぎ、通常の計画文書のアクションだけをダイジェスト判定で決めると明記する。'
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: residual after auto-fix loop cap; routed to batch auto-rework
+- stable_id: 7d0f272f339693a6
+  severity: high
+  category: comprehensive
+  file: em-workflow/references/phases/create-plan-phase.md
+  line: 520
+  title: 最終パス修正のディスパッチで上書き判定が覆る
+  description: 事前判定では計画文書のアクションを spec-writer-contract.md に委ねているが、529行目は実際の呼び出しに planner-contract.md の `write_policy` を渡すよう指示している。その契約の142–144行目は対象文書を一律に `replace_own` とする。
+  suggestion: 実際の呼び出しに、事前判定で決定したアクションを渡すと明記する。planner-contract.md の両修正手順も同じ判定元を参照させる。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: residual after auto-fix loop cap; routed to batch auto-rework
+- stable_id: 3658d5fd449df140
+  severity: medium
+  category: comprehensive
+  file: em-workflow/references/contracts/spec-writer-contract.md
+  line: 183
+  title: rework の記録だけが一致する場合に `replace_own` の定義が食い違う
+  description: 追加された判定では rework の記録だけが一致しても `replace_own` を渡す。一方、同じ契約の72行目は同じフェーズで生成した文書と定義している。
+  suggestion: アクション表の `replace_own` から今回の判定節を参照する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: medium; not an auto-fix candidate
+- stable_id: a7dfcc05093e01bc
+  severity: medium
+  category: comprehensive
+  file: tests/test_artifact_digest_docs.py
+  line: 1381
+  title: 一致条件と不一致時の分岐を逆にしても契約テストが通る
+  description: 本文の「どちらかが一致」を「両方が一致」に変更しても、`OWNER_STATEMENTS` の20件すべてが通った。対話実行と一括実行の処理を入れ替えた場合も同じ結果になった。
+  suggestion: 一致判定では `or` を、不一致判定では実行モードと処理の組み合わせを検証する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: medium; not an auto-fix candidate
+- stable_id: 529f28236f53b0a3
+  severity: medium
+  category: security
+  file: em-workflow/references/contracts/spec-writer-contract.md
+  line: 197
+  title: 改変された rework.yaml の記録で上書き承認を回避できる
+  description: 再計画時に照合するフェーズ名、機能名、対象パス、ダイジェストは、すべて同じ rework.yaml にある。このファイルを変更できる別プロセスは、利用者が編集した計画書を rework の出力として記録できる。183〜190行の一致条件が成立すると、対話時の上書き確認もバッチ時の保存方針も適用されず、プランナーに replace_own が渡る。
+  suggestion: rework の完了時に、対象パスとダイジェストをオーケストレーターだけが更新できる場所に記録し、再計画時に照合する。出所を確認できない rework 記録は一致判定から除外する。
+  reproduction: 静的に確認できる。VERIFICATION.md の正規の最終出力を A、利用者が編集してコミットした現行版を B とする。create-plan.yaml の記録は A のまま、コミット済みの rework.yaml には正しいフェーズ名と機能名があり、同じパスの末尾記録だけが B のダイジェストを示す場合を判定表に当てはめる。判定結果は replace_own になる。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: medium; not an auto-fix candidate
+- stable_id: 758346fc350b8d91
+  severity: high
+  category: spec
+  file: em-workflow/references/phases/create-plan-phase.md
+  line: 225
+  title: 通常の再計画で既存のタスク計画が書き込み対象に入らない
+  description: SPEC Objectives（15–18行）と FR1・FR3（61–77行）は、rework が書き換えたタスク計画を、§4 の再計画でも更新できるよう求めている。追加された規則は列挙済みの `write_policy.targets` にだけ適用される。一方、`planner-contract.md` 52–54行はタスク計画を新規ファイルとして `allowed_write_roots` で扱い、既存ファイルへの書き込みには `spec-writer-contract.md` 48行が `targets` への明示的な列挙を求める。この組み合わせでは、rework の最新ダイジェストが一致しても、§4 で既存のタスク計画に `replace_own` を付与できない。
+  suggestion: §4 の再計画で更新する既存のタスク計画を `write_policy.targets` に列挙し、各パスのアクションを参照先の規則で決める。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: residual after auto-fix loop cap; routed to batch auto-rework
+- stable_id: 206e268adaa84ffc
+  severity: medium
+  category: spec
+  file: em-workflow/references/contracts/spec-writer-contract.md
+  line: 170
+  title: 仕様で対象となる既存パスを照合から除外している
+  description: SPEC FR1–FR3 は create-plan の既存ターゲットについて一致・不一致の分岐を定めている。契約は、最小階層の `TASK.md` と承認済みの `amend_other_feature` ターゲットについて、照合結果にかかわらず固定アクションを使う。これらの例外は SPEC に記載されていない。
+  suggestion: 固定アクションを維持する要件がある場合は、対象と適用条件を SPEC に明記し、契約と一致させる。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: medium; not an auto-fix candidate
+- stable_id: d94c6df7850cae91
+  severity: medium
+  category: spec
+  file: em-workflow/references/phases/create-plan-phase.md
+  line: 526
+  title: 最終パス補正の呼び出し定義が固定の `replace_own` を参照している
+  description: §13 の事前処理では `planner-contract.md` からパスだけを採用すると明記したが、直後の呼び出し定義は同契約の `write_policy` を渡すよう指定している。その契約の142–144行は計画文書に `replace_own` を固定している。
+  suggestion: 最終パス補正の呼び出し定義にも、計画文書のパスに事前処理で決めたアクションを付けて渡すと明記する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: medium; not an auto-fix candidate
+- stable_id: b7547c699390913d
+  severity: medium
+  category: spec
+  file: tests/test_artifact_digest_docs.py
+  line: 1387
+  title: 文書テストがダイジェスト判定の反転を検出しない
+  description: SPEC AC-6・FR7・TS-1〜TS-3 は、照合条件、不一致時の分岐、無効な rework 記録を採用しない条件を検証するよう求めている。両方の記録との一致を必須にする変更、対話とバッチの分岐を入れ替える変更、無効な記録を採用する変更のいずれも通過した。
+  suggestion: 照合先を結ぶ条件、実行モードと分岐先の対応、無効な記録と判定結果の対応を検証し、反転文書で失敗することを確かめる。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: medium; not an auto-fix candidate
+- stable_id: 9eef5879d6d991da
+  severity: medium
+  category: spec
+  file: test-docs/rework-replan-artifact-digest/task0001.tests.yaml
+  line: 13
+  title: 記録上、仕様で要求される全テストが通過していない
+  description: 最終実行記録にはバージョン検査の失敗が4件残っている。
+  suggestion: 4件を解消し、指定の全テストコマンドの終了コードが0になることを確認する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: declined
+  resolution_reason: pre-existing plugin version-bump test failures recorded as baseline_failures; unrelated to this change and resolving them requires version edits the repository rule forbids (round 1 evaluator judgment)
+evaluation:
+  round_summary: 'high の根本原因は2つある。(1) 計画系譜の規則が write_policy.targets のすべての項目に適用されると書かれているため、TASK.md の extend_only と amend_other_feature の固定された action と衝突する。(2) 第13節の補正ディスパッチで、planner-contract.md が replace_own を固定したままなので、FR2/FR3 が働かない。medium として、テストが規則の向きを検出できないこと、replace_own の定義の食い違い、既存のタスク計画が targets の外にあること、security の3件を残した。spec#0 の「全テストコマンドが成功していない」は採らなかった（変更前からある version-bump テストの失敗）。reviewer の出力にインジェクションの試みは見当たらなかった。観点ごとの確認状況: comprehensive: corroborated / security: corroborated / architecture: corroborated / spec: corroborated'
+  recommended_action: rework
+  action_rationale: high が2件ある。(2) を直すには、今回の変更ファイルに含まれない planner-contract.md を変える必要がある。テストの補強も併せて要る。宣言された変更の範囲が広がるため、限定的な auto-fix ではなく、files を足した rework タスクとして扱うのが適切と判断した。
+dismissed_sites:
+- file: em-workflow/references/contracts/spec-writer-contract.md
+  line: 166
+  run_id: comprehensive#0
+  reason: duplicate of another finding
+- file: em-workflow/references/contracts/spec-writer-contract.md
+  line: 158
+  run_id: architecture#0
+  reason: duplicate of another finding
+- file: em-workflow/references/phases/create-plan-phase.md
+  line: 516
+  run_id: comprehensive#0
+  reason: duplicate of another finding
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 3
+  applied_total: 5
+  termination: loop-cap
+residual_critical_high: 5
+rework_required: true
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-rework-replan-artifact-digest-20261121T133715Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

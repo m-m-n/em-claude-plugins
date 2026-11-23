@@ -32,7 +32,7 @@ detail: "implementer task0004 stuck after 3 conflict cycles"
 feature: "batch-structured-result-output"
 branch: "em-workflow/batch-structured-result-output/integration"
 pr_url: ""
-resume_conditions: "Resolve the conflict manually and re-run implement for task0004."
+resume_conditions: "AI がやれる: task0004 の worktree でコンフリクトしたファイルを一覧にし、両側の変更を比較する。\n人の判断が要る（理由: 価値判断）: どちらの変更を残すかを決める。判断の後、AI が task0004 の implement を実行する。"
 ```
 
 Every value is a double-quoted scalar; an empty value is written as an
@@ -135,6 +135,21 @@ character, including non-BMP characters, is emitted unchanged.
   empty for every other `state`. Its value is NOT put through `detail`'s
   normalization: any Markdown newlines, indentation and trailing spaces it
   carries survive as `## Escaping`'s escapes rather than being collapsed.
+  Every recovery step the value carries begins with exactly one of two
+  fixed labels, whatever the language of the step text: 「AI がやれる」, or
+  「人の判断が要る（理由: X）」 where X is exactly one of
+  「物理的に人しかできない」, 「戻せない変更の承認」 and 「価値判断」. A step
+  is a human step only when one of those three reasons applies; every
+  other step is an AI step. Approval of a change that cannot be undone is
+  always a human step, with the reason 「戻せない変更の承認」.
+  Every AI step comes before every human step, without exception: no
+  human step is followed by an AI step. AI work that can only run after a
+  human decision is not a step of its own; it is written inside that
+  human step as 「判断の後、AI が ... を実行する」. Each step starts on its
+  own line (in a batch result the line break survives as the `\n` escape
+  of `## Escaping`). Alternatives that a guidance joins with "or" are
+  separate steps, each with its own label. A guidance that names no step
+  carries no label.
 - Every audit item `batch-mode.md`'s `## Reporting` enumerates is carried
   in full inside `detail`; the stop-recovery guidance above is carried in
   full inside `resume_conditions`. A count alone, or a pointer alone,

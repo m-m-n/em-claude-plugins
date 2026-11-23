@@ -1,0 +1,120 @@
+schema_version: 1
+feature: version-bump-cache-verify
+created: 2026-11-22
+base_branch: main
+goal: |-
+  # core-plugin-version-bump ルールを、push 後のキャッシュ反映を Claude が確かめる形に変える
+  
+  Notion タスク: <notion-url>
+  
+  ## やりたいこと
+  .claude/rules/core-plugin-version-bump.md を、push 後にプラグインのキャッシュへの反映を Claude 自身が確かめる形に変える。
+  
+  ## 背景・なぜ
+  今のルールは「変更をユーザーに報告するときは、反映に Claude Code の再起動が要ることを添える」で、反映の確認が人の作業として報告される。キャッシュの中身は Claude がファイルを比べて確かめられる。新しく起動するセッション（無人実行を含む）には再起動なしで反映される。
+  
+  ## 受け入れ条件 / 完了の定義
+  - main に push した後、Actions のコミットを git pull で取り込み、~/.claude/plugins/cache/<marketplace>/<plugin>/<新しい version>/ に変更が入っていることを確かめる、と書かれている
+  - Actions が version を上げなかったときは、その原因を調べて報告する、と書かれている
+  - 再起動が要るのは今開いている対話セッションへの反映だけで、新しく起動するセッションには再起動なしで反映される、と書かれている
+  
+  ## スコープ外
+  .github/workflows/plugin-version-bump.yml の修正（別タスク）。
+  
+  ## 制約・前提
+  変更するのは .claude/rules/core-plugin-version-bump.md だけ。
+  
+  ## 追加指示（起動時）
+  - 実装完了後、integration ブランチを remote に push し、gh pr create で base_branch への PR を作成する。integration ブランチはローカル・リモートとも残す（base_branch へ自動マージしない）。
+  - 不明点は Codex に相談し、比較的良いと判断した選択肢を採用する。
+  - その議論内容を Notion に記録する。
+parent_branch: em-workflow/version-bump-cache-verify/integration
+tier: minimal
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only: {"0": 1.0, "1": 0.0, "2": 0.0, "3": 0.0}
+    description_plus_code: {"0": 0.99, "1": 0.0, "2": 0.01, "3": 0.0}
+  at: "2026-11-22T21:49:35+09:00"
+  reductions: [REQUIREMENTS.md, IMPLEMENTATION.md, design step, SPEC.md (replaced by TASK.md), task split, VERIFICATION.md, task-level parallelism]
+
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: "Markdown / Python"
+      build_command: ""
+      test_command: "python3 -m unittest tests.test_guardrail_hooks_migration"
+      format_command: ""
+      e2e_test_command: ""
+
+workflow:
+  - id: create-spec
+    artifacts: [TASK.md]
+    status: completed
+    completed_at_commit: b53615fe6bd9a5c8b2bf11eb49d59573191dd6c5
+  - id: design
+    artifacts: [DESIGN.md, design/]
+    status: skipped
+    skipped_reason: "minimal tier subtracts the design step; also the change is rule-text wording in one Markdown file with no UI and zero design-system candidates (gate create-spec.design-step = skip_design)"
+  - id: create-plan
+    artifacts: [TASK.md]
+    status: completed
+    completed_at_commit: 315064a486937fbf3ecae5f23e183bead6adbe8b
+  - id: implement
+    status: completed
+    base_commit: fccd841baf09842d7cc42d289b4a5c9738dd4abb
+    completed_at_commit: 6c57b67f2d254fe95eb8a8ab386010213f179243
+  - id: review
+    status: completed
+    completed_at_commit: 9ee4e2b83e582f96a0d62bd5597243b3cc8301dd
+  - id: verify
+    status: completed
+    completed_at_commit: 7ea35fd110859f2f89e8789dc4861777a4d1f5bd
+    result: pass
+    round: 1
+    passed_ids: []
+    failed_items: []
+  - id: retrospect
+    status: completed
+    completed_at_commit: 681477e8be171e1c865adea1c211672d23c73fdd
+
+tasks:
+  task0001:
+    title: core-plugin-version-bump ルールを push 後のキャッシュ反映を確かめる形に変える
+    plan: TASK.md
+    files:
+    - .claude/rules/core-plugin-version-bump.md
+    - test-docs/version-bump-cache-verify/task0001.tests.yaml
+    skills: []
+    domains:
+    - config-infra
+    complexity: low
+    requirements: []
+    status: merged
+    branch: em-workflow/version-bump-cache-verify/task0001
+
+review:
+  status: completed
+  rounds_completed: 1
+  perspectives: [comprehensive, security]
+  residual_critical_high: 0
+  needs_rework: false
+  plan:
+    floor: [comprehensive, security]
+    discretionary: []
+    cross_validation: false
+
+requirements: {}
+
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
