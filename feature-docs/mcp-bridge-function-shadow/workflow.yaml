@@ -120,9 +120,10 @@ workflow:
   status: completed
   completed_at_commit: 40ee81697555e6c9cdc3479cf71f818578ba6cb3
 - id: verify
-  status: in_progress
-  result: fail
-  round: 1
+  status: completed
+  completed_at_commit: a15702b88f5006b34223f50c94a0ec3a4bc0fbd1
+  result: pass
+  round: 2
   passed_ids:
   - TS-1
   - TS-2
@@ -139,6 +140,7 @@ workflow:
   - TS-13
   - TS-14
   - TS-15
+  - TS-16
   - TS-17
   - TS-18
   - TS-19
@@ -157,12 +159,8 @@ workflow:
   - AC6
   - AC7
   - AC8
-  failed_items:
-  - id: TS-16
-    note: unittest discover が 16973 件中 4 件失敗（tests/test_review_perspective_model_effort_version_bump.py
-      の patch==0 検査。em-workflow 0.5.2 / em-review 0.6.1 で patch が 0 でない）。base_branch でも同じ 4 件が再現し、この feature
-      の差分は当該テストにも version にも触れていない。destructive-guard ランナーは 1525/1525 pass
-    category: comprehensive
+  - AC9
+  failed_items: []
 - id: retrospect
   status: pending
 tasks:
