@@ -51,10 +51,6 @@ The marketplace is named `em-claude-plugins`; each plugin's name becomes its sla
 
 Plugin versions are bumped by `.github/workflows/plugin-version-bump.yml`. The procedures below are run by hand.
 
-### Ruleset for main
-
-Creating the ruleset `main-non-fast-forward` and confirming it are described in [.github/rulesets/README.md](.github/rulesets/README.md).
-
 ### Recovering a lost version update
 
 When the version-update commit of the Actions workflow is lost from main, run the workflow once with `workflow_dispatch` on `main`, giving the plugin name and a `min_version`. When the plugin's current version is lower than or equal to `min_version` and has the same major and minor, the run writes `min_version` with its patch raised by 1 to the plugin's `plugin.json` and to its entry in `.claude-plugin/marketplace.json`, and a pull request carrying the change is created and merged.
