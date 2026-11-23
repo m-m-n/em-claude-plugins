@@ -2,10 +2,10 @@ schema_version: 1
 feature: mcp-bridge-function-shadow
 phase: create-plan
 status: dispatching
-generation: 2
-base_revision: 3b2337aee482a16972c7abbdc3f134d93e3d9961
-last_input_digest: sha256:885bdd1592f40a7e5d64fe68c11f5a0f3dd33dbfab7fef2e52660451dcedb159
-active_request_id: create-plan-run-0002
+generation: 3
+base_revision: bf82e71da842f3426c87e8e5a0f06bd3e3602026
+last_input_digest: sha256:fc272acaff4b58482f16d9d2263abb0809f80d1344e5fe571a660a4cab26045f
+active_request_id: create-plan-run-0003
 packets: {}
 answers:
   create-plan.artifact-overwrite:
@@ -20,7 +20,8 @@ answers:
     resolution_note: VERIFICATION.md の現在の digest が create-plan.yaml に記録された直前の create-plan 出力と一致しない（rework-run-0001
       が書き換え済み）。digest-mismatch 分岐として batch-policies.yaml の create-plan.artifact-overwrite（preserve_and_reuse）を適用し、VERIFICATION.md
       を preserve にした。replace_own（planning lineage 読み）とどちらを取るかを Codex に相談し、create-plan 側の same-phase は
-      create-plan の出力を指すという判断を採用した
+      create-plan の出力を指すという判断を採用した。2026-11-23 の再開では、修正後の planning-lineage 規則（rework.yaml の最後の artifacts
+      記録との一致）で VERIFICATION.md / tasks/task0002.md が一致したため、この preserve_and_reuse は使われず replace_own になった
 worker_runs:
 - request_id: create-plan-run-0001
   status: completed
@@ -59,6 +60,24 @@ worker_runs:
     feature-docs/mcp-bridge-function-shadow/tasks/task0002.md: sha256:9ab2b8acea9d424718ad25cf3a876dea1aa91b3bc6a3a1e774344672119f8c45
     feature-docs/mcp-bridge-function-shadow/workflow.yaml: sha256:fe8e433bb5b42e7a7d570cb7263accd9fa6c083e25220d5967a6cb8c6b24729d
   self_write_set: []
+- request_id: create-plan-run-0003
+  status: dispatched
+  input_digest: sha256:fc272acaff4b58482f16d9d2263abb0809f80d1344e5fe571a660a4cab26045f
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/planner-contract.md: sha256:18464486c0546613d92935cba80087c4980d3791d41838162d23840e431da515
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
+    em-workflow/references/workflow-schema.md: sha256:5bd8500c203c4f17cde4193ee43d561073fe7f47099d61a55eb593e098881d87
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/mcp-bridge-function-shadow/SPEC.md: sha256:97c7ac87fabbcd1ab37d140358d377bf688eebeb7bea46c0f8eec12472ce6c62
+    feature-docs/mcp-bridge-function-shadow/THREAT-MODEL.md: sha256:8847757894ddbe4d7200bdd40e428dcaab0c6c1f0a02a4cc8d55f89fa335e2f7
+    feature-docs/mcp-bridge-function-shadow/VERIFICATION.md: sha256:fce2e547ed784efd77e5f66710699cbdd01c06bd3955e3bb24310dad72886496
+    feature-docs/mcp-bridge-function-shadow/tasks/task0001.md: sha256:83b26493ec9d6a9064ad26ed139f52bc15a405116a0524eb1a3ed9c7ef7f9a2c
+    feature-docs/mcp-bridge-function-shadow/tasks/task0002.md: sha256:9ab2b8acea9d424718ad25cf3a876dea1aa91b3bc6a3a1e774344672119f8c45
+    feature-docs/mcp-bridge-function-shadow/workflow.yaml: sha256:fe8e433bb5b42e7a7d570cb7263accd9fa6c083e25220d5967a6cb8c6b24729d
 artifacts:
 - path: feature-docs/mcp-bridge-function-shadow/THREAT-MODEL.md
   sha256: sha256:8847757894ddbe4d7200bdd40e428dcaab0c6c1f0a02a4cc8d55f89fa335e2f7
@@ -78,6 +97,4 @@ patches:
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
-last_error: 'create-plan-run-0002 blocked: preserve 指定の VERIFICATION.md が改訂後の SPEC.md（NFR1 / AC9 / TS-16）と食い違い
-  planner の事後条件を満たさない（TS-16 行・AC9 行・Test Verification の Expected）。create-plan.artifact-overwrite の preserve_and_reuse
-  によりフェーズを中断'
+last_error: null
