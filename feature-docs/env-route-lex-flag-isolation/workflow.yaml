@@ -116,7 +116,8 @@ workflow:
   - TM-4
   failed_items: []
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: b2df75d77998540b2081f289ba6067843c0926e3
 tasks:
   task0001:
     title: Confine env-route lexer flags and read the body under both extglob settings
