@@ -7862,10 +7862,17 @@ ArgsJsonValue = collections.namedtuple("ArgsJsonValue", ["word", "bodies", "comm
 # one per JSON value visited and the length of each string searched). OVERRUN:
 # some value nests deeper than MAX_ARGS_JSON_DEPTH or fails the decoder for a
 # reason other than a JSON syntax error (D3). UNRESTORABLE: a word the step
-# read is static but its quoting cannot be restored (FR11, D5). The result with
-# no values, no charge and no flag is "nothing to do".
+# read is static but its quoting cannot be restored (FR11, D5). IN_LIMIT: set
+# only by the env route (_args_json_env_combine()) when exactly one of its two
+# readings overran: VALUES and CHARGE are then those of the in-limit reading
+# alone, and _queue_args_json_chunks() queues them although OVERRUN is raised
+# (env-route-partial-overrun-check D3). Every other result leaves it false, and
+# its VALUES and CHARGE are queued only when OVERRUN is not raised. The result
+# with no values, no charge and no flag is "nothing to do".
 ArgsJsonResult = collections.namedtuple(
-    "ArgsJsonResult", ["values", "charge", "overrun", "unrestorable"]
+    "ArgsJsonResult",
+    ["values", "charge", "overrun", "unrestorable", "in_limit"],
+    defaults=(False,),
 )
 _ARGS_JSON_NOTHING = ArgsJsonResult((), 0, False, False)
 _ARGS_JSON_UNRESTORABLE = ArgsJsonResult((), 0, False, True)
@@ -10407,26 +10414,42 @@ def _args_json_env_combine(payload_word, readings):
     """The ArgsJsonResult of the READINGS (_args_json_env_body_readings()) of
     one payload, whose word is PAYLOAD_WORD: one ArgsJsonValue anchored at the
     payload word holding the candidate bodies and decoded `command` strings of
-    all of them, with the scan charge and the Overrun and Unrestorable flags.
+    the readings that count, with the scan charge and the Overrun and
+    Unrestorable flags.
 
-    The union of the readings is returned, each value once (FR4). A string a
-    reading returned that an earlier reading already returned is left out of
-    the value; duplicates inside one reading stay, as in a single reading. A
-    notion statement's entry that equals one an earlier reading found (the same
-    statement read under both settings), or all of whose strings an earlier
-    reading returned, is charged once, not again. Overrun and Unrestorable are
-    set when either reading set them (TM-4), whatever became of its values."""
+    Overrun and Unrestorable are set when either reading set them (TM-4),
+    whatever became of its values; Overrun keeps its meaning when only one
+    reading raised it (env-route-partial-overrun-check D3). Which readings
+    count depends on how many overran:
+
+    - none: the union of the readings is returned, each value once (FR4). A
+      string a reading returned that an earlier reading already returned is
+      left out of the value; duplicates inside one reading stay, as in a
+      single reading. A notion statement's entry that equals one an earlier
+      reading found (the same statement read under both settings), or all of
+      whose strings an earlier reading returned, is charged once, not again.
+    - every returned reading (two of two, or the single one): none counts, and
+      the result carries no value and no charge, as nothing is queued.
+    - exactly one of two (the one-sided overrun): the in-limit reading alone
+      counts, with every item of the overrun reading dropped, those that fit
+      the limit individually included (D1). Its items and its charge are
+      computed by the rule above over that reading alone, so the overrun
+      reading takes no part in the comparison and the order of the two
+      readings changes nothing. The result sets IN_LIMIT, which lets
+      _queue_args_json_chunks() queue those items although Overrun is raised.
+    """
+    overrun = any(reading.overrun for reading in readings)
+    unrestorable = any(reading.unrestorable for reading in readings)
+    counted = readings
+    if overrun:
+        counted = [reading for reading in readings if not reading.overrun]
     bodies = []
     commands = []
     charge = 0
-    overrun = False
-    unrestorable = False
     earlier = []
     earlier_bodies = set()
     earlier_commands = set()
-    for reading in readings:
-        overrun = overrun or reading.overrun
-        unrestorable = unrestorable or reading.unrestorable
+    for reading in counted:
         unmatched = list(earlier)
         for entry in reading.entries:
             if entry in unmatched:
@@ -10450,7 +10473,9 @@ def _args_json_env_combine(payload_word, readings):
     values = ()
     if bodies or commands:
         values = (ArgsJsonValue(payload_word, tuple(bodies), tuple(commands)),)
-    return ArgsJsonResult(values, charge, overrun, unrestorable)
+    return ArgsJsonResult(
+        values, charge, overrun, unrestorable, overrun and bool(counted)
+    )
 
 
 def _args_json_env_payload_values(shaped_words, marked, args):
@@ -10490,9 +10515,12 @@ def _args_json_env_payload_values(shaped_words, marked, args):
     `_lex_unreadable_met`, `_lex_extglob_met` and `_lex_extglob` as it found
     them, on every exit, and a payload that holds an extended-pattern
     parenthesis is read under both extglob settings, the notion pairs of
-    either reading being checked (_args_json_env_combine()). What the route
-    reads records no extglob unit: statements() stays the only caller of
-    _note_extglob_units()."""
+    either reading being checked (_args_json_env_combine()). When exactly one
+    of the two readings overruns, the result carries the in-limit reading's
+    items beside the reported overrun, and _queue_args_json_chunks() queues
+    them (env-route-partial-overrun-check); an overrun of every returned
+    reading carries none. What the route reads records no extglob unit:
+    statements() stays the only caller of _note_extglob_units()."""
     if not _args_json_has_dash_c(marked, shaped_words):
         return _ARGS_JSON_NOTHING
     head_word = shaped_words[len(shaped_words) - len(args) - 1]
@@ -10791,7 +10819,16 @@ def _queue_args_json_chunks(
        budget, the scanned total is left unchanged, nothing of the statement is
        queued, and the scan-budget ask is held (D3). The queue already filled
        is processed within the bounds as they stand; the ask is settled after
-       it is drained (D6).
+       it is drained (D6). One result goes on to step 3 although Overrun is
+       raised: the env route's one-sided overrun (IN_LIMIT, set by
+       _args_json_env_combine() when exactly one of its two readings
+       overran), whose VALUES and CHARGE are those of the in-limit reading
+       alone, when that charge fits the budget. Its scan-budget ask is still
+       held and the `--args-json` step still stops for the rest of the run, as
+       for any Overrun, and a `deny` the queued items earn wins over the held
+       ask when it is settled (env-route-partial-overrun-check D2). Any other
+       overrun, the env route's included when every returned reading overran,
+       queues nothing.
     3. Otherwise the charge is added to the scanned total, and every candidate
        body is queued like a substitution body and every `command` string like
        a `-c` payload. Neither takes a count from MAX_SHELL_PAYLOAD_EXPANSIONS
@@ -10816,9 +10853,14 @@ def _queue_args_json_chunks(
     result = _mcp_bridge_args_json_chunks(shaped_words, marked_chunk)
     if result.unrestorable:
         asks.hold_unrestorable()
-    if result.overrun or scan.scanned + result.charge > scan.budget:
+    fits = scan.scanned + result.charge <= scan.budget
+    if result.overrun or not fits:
         asks.stop_args_json()
-        return
+        # Only the env route's one-sided overrun (IN_LIMIT) goes on, and only
+        # when the in-limit charge fits the budget (env-route-partial-overrun-
+        # check D2, D3).
+        if not (result.in_limit and fits):
+            return
     scan.scanned += result.charge
     span_index = None
     for value in result.values:
@@ -10928,8 +10970,12 @@ def statements(command, unsettled=None, early_stop=None):
     syntax error (an Overrun), and a charge that does not fit leave the
     scanned total unchanged and queue nothing of the statement (FR7, D3); the
     scan-budget `ask` is held instead (settled as the paragraph above says).
-    A JSON syntax error is no overrun, and the statement keeps the
-    raw-string verdict.
+    The one exception is the env route's one-sided overrun, where exactly one
+    of the two extglob readings of a `bash -c` payload overran: the
+    in-limit reading's bodies and `command` strings are queued as well, when
+    their charge fits, and the held `ask` still waits behind any `deny` they
+    earn (env-route-partial-overrun-check). A JSON syntax error is no
+    overrun, and the statement keeps the raw-string verdict.
 
     The text is the tokens rejoined, so quoting is already resolved by the
     time the regex-based checks see it. LEXED is lex_segments()'s per-segment

@@ -18,6 +18,10 @@ here, in-process:
   and charged once; the union of the readings is returned; an overrun or an
   unrestorable raised by only one reading is reported.
 - TestExtglobUnitRecord (AC-6, TS-10): the route records no extglob unit.
+- TestOneSidedOverrun (env-route-partial-overrun-check task0001; TS-1 to TS-5):
+  when exactly one of the two readings overruns, the items of the in-limit
+  reading alone are carried beside the reported overrun and the queue step
+  queues them; every other overrun queues nothing.
 
 The hook has no package, so every test class loads the module from its file
 path, with bytecode writing off for the load (no `__pycache__` is written next
@@ -59,6 +63,30 @@ EXT_LINE = "a=(@(x))"
 COMMAND_FOUND = "git branch -D example"
 
 ALL_ENTRY_STATES = list(itertools.product((False, True), repeat=3))
+
+# The one-sided overrun of env-route-partial-overrun-check: the call whose
+# `--args-json` nests deeper than MAX_ARGS_JSON_DEPTH (100) sits on the line the
+# extglob-off reading discards, its quote closing on the next line, so only the
+# extglob-on reading reads it (and overruns). The `# '` line gives the
+# extglob-off reading the quote its discarded line did not open. The separate
+# notion call on the last line is read by both readings.
+NOTION_HEAD = "mcp-bridge run --mcp notion --tool notion-create-comment --args-json "
+DEEP_JSON = '{\n"k":' + "[" * 101 + "]" * 101 + "}"
+HARMLESS_COMMAND = "echo hi"
+CASES_JSON = os.path.join(
+    ROOT, "em-workflow", "hooks", "tests", "destructive-guard-cases.json"
+)
+
+
+def one_sided_body(command):
+    """The body of the whole-hook cases TS-1 and TS-2 of cases.json: exactly
+    one reading overruns, the other decodes the notion call carrying COMMAND."""
+    return (
+        EXT_LINE + "; " + NOTION_HEAD + "'" + DEEP_JSON + "'\n"
+        "# '\n"
+        + NOTION_HEAD
+        + "'" + json.dumps({"command": command}, separators=(",", ":")) + "'"
+    )
 
 
 def load_hook():
@@ -493,6 +521,357 @@ class TestBothReadings(HookTestCase):
             result = self.read(statement)
         self.assertTrue(result.overrun)
         self.assertEqual(result.values, ())
+
+
+class TestOneSidedOverrun(HookTestCase):
+    """env-route-partial-overrun-check task0001 (TS-1 to TS-5): when exactly
+    one of the two readings overruns, the items of the in-limit reading alone
+    reach the queue step beside the reported overrun, and the queue step
+    queues them; every other overrun queues nothing."""
+
+    fake_read_values = TestBothReadings.fake_read_values
+    commands_of = TestBothReadings.commands_of
+    bodies_of = TestBothReadings.bodies_of
+
+    BUDGET = 1000
+    IN_LIMIT = (30, ("b1", "b1", "b2"), ("c1", "shared", "c1"), False, False)
+    OVERRAN = (100, ("o1", "b1"), ("o_cmd", "shared"), True, False)
+
+    def new_run(self, budget=BUDGET, scanned=0):
+        """The run-local records the queue step works on: its queue, its
+        _ScanState and its _DeferredAsks."""
+        scan = self.hook._ScanState(budget)
+        scan.scanned = scanned
+        return [], scan, self.hook._DeferredAsks()
+
+    def queue_step(self, statement, run):
+        pending, scan, asks = run
+        self.hook._queue_args_json_chunks(
+            statement.shaped, statement.marked, statement.shaped, True,
+            (), 0, None, pending, scan, asks,
+        )
+
+    def queued_texts(self, run):
+        return [item[0] for item in run[0]]
+
+    def assert_ask_held_and_args_json_stopped(self, run):
+        _pending, _scan, asks = run
+        self.assertTrue(asks.scan_budget)
+        self.assertTrue(asks.args_json_stopped)
+        self.assertEqual(asks.strongest(), self.hook.SCAN_BUDGET_ASK)
+
+    def case_of(self, label_start):
+        with open(CASES_JSON, encoding="utf-8") as cases_file:
+            cases = json.load(cases_file)
+        found = [case for case in cases if case[1].startswith(label_start)]
+        self.assertEqual(len(found), 1, label_start)
+        return found[0]
+
+    # TS-1 / AC-1: the body of the whole-hook case.
+
+    def test_the_case_body_makes_exactly_one_reading_overrun(self):
+        body = one_sided_body(COMMAND_FOUND)
+        statement = self.statement(body)
+        for entry_extglob in (False, True):
+            with self.subTest(entry_extglob=entry_extglob):
+                self.set_states(False, False, entry_extglob)
+                readings = self.hook._args_json_env_body_readings(
+                    body, statement.marked
+                )
+                self.assertEqual(len(readings), 2)
+                overran = [r for r in readings if r.overrun]
+                in_limit = [r for r in readings if not r.overrun]
+                self.assertEqual(len(overran), 1)
+                self.assertEqual(len(in_limit), 1)
+                found = [c for e in in_limit[0].entries for c in e.commands]
+                self.assertIn(COMMAND_FOUND, found)
+                # The extglob-on reading is the one that reads the deep call.
+                on_reading = readings[0] if entry_extglob else readings[1]
+                self.assertIs(on_reading, overran[0])
+
+    def test_the_whole_hook_cases_hold_the_body_checked_here(self):
+        for label_start, command, decision, rule in (
+            ("env-route-partial-overrun-check TS-1:", COMMAND_FOUND, "deny",
+             "git-branch-force-delete"),
+            ("env-route-partial-overrun-check TS-2:", HARMLESS_COMMAND, "ask",
+             "scan-budget-exceeded"),
+        ):
+            with self.subTest(case=label_start):
+                case = self.case_of(label_start)
+                self.assertEqual(case[0], decision)
+                self.assertEqual(case[2], env_command(one_sided_body(command)))
+                # `rule` set, `batch` not set.
+                self.assertEqual(case[3], {"rule": rule})
+
+    # TS-2 / AC-2: within budget, the items are queued, the ask is held and
+    # the `--args-json` steps stop for the rest of the run.
+
+    def test_within_budget_the_in_limit_command_is_queued_and_the_ask_is_held(self):
+        for command in (COMMAND_FOUND, HARMLESS_COMMAND):
+            statement = self.statement(one_sided_body(command))
+            for entry_extglob in (False, True):
+                with self.subTest(command=command, entry_extglob=entry_extglob):
+                    self.set_states(False, False, entry_extglob)
+                    run = self.new_run()
+                    self.queue_step(statement, run)
+                    self.assertEqual(self.queued_texts(run), [command])
+                    self.assert_ask_held_and_args_json_stopped(run)
+                    self.assertGreater(run[1].scanned, 0)
+
+    def test_the_args_json_steps_stay_stopped_for_the_rest_of_the_run(self):
+        statement = self.statement(one_sided_body(COMMAND_FOUND))
+        run = self.new_run()
+        self.queue_step(statement, run)
+        queued = list(run[0])
+        scanned = run[1].scanned
+        self.assertEqual(self.queued_texts(run), [COMMAND_FOUND])
+        # The same statement again, as a later statement of the run: nothing.
+        self.queue_step(statement, run)
+        self.assertEqual(run[0], queued)
+        self.assertEqual(run[1].scanned, scanned)
+        self.assertTrue(run[2].args_json_stopped)
+
+    def test_queued_items_are_bound_to_the_payload_word_like_ordinary_values(self):
+        hook = self.hook
+        statement = self.statement(EXT_LINE + "; " + NOTION)
+        in_limit = (30, ("b1", "b2"), ("c1", "c2"), False, False)
+        overran = (100, ("o1",), ("o_cmd",), True, False)
+        for flagged_setting in (False, True):
+            with self.subTest(flagged_setting=flagged_setting):
+                by_setting = {flagged_setting: overran, not flagged_setting: in_limit}
+                self.set_states(False, False, False)
+                run = self.new_run()
+                with self.fake_read_values(by_setting):
+                    payload_word = self.read(statement).values[0].word
+                    self.queue_step(statement, run)
+                # What the queue step queues for the same values when nothing
+                # overran: the ordinary binding to the value's word.
+                ordinary_result = hook.ArgsJsonResult(
+                    (hook.ArgsJsonValue(payload_word, ("b1", "b2"), ("c1", "c2")),),
+                    30, False, False,
+                )
+                ordinary = self.new_run()
+                with mock.patch.object(
+                    hook, "_mcp_bridge_args_json_chunks",
+                    lambda shaped, marked: ordinary_result,
+                ):
+                    self.queue_step(statement, ordinary)
+                self.assertEqual(self.queued_texts(run), ["b1", "b2", "c1", "c2"])
+                self.assertEqual(run[0], ordinary[0])
+
+    # TS-3 / AC-3: the result of a one-sided overrun, per combination.
+
+    def test_the_result_holds_only_the_in_limit_readings_items(self):
+        hook = self.hook
+        statement = self.statement(EXT_LINE + "; " + NOTION)
+        for entry in ALL_ENTRY_STATES:
+            for flagged_setting in (False, True):
+                with self.subTest(entry=entry, flagged_setting=flagged_setting):
+                    by_setting = {
+                        flagged_setting: self.OVERRAN,
+                        not flagged_setting: self.IN_LIMIT,
+                    }
+                    self.set_states(*entry)
+                    seen_before = set(hook._lex_ext_seen)
+                    units_before = hook._count_extglob_units()
+                    with self.fake_read_values(by_setting):
+                        result = self.read(statement)
+                    self.assertEqual(self.bodies_of(result), ["b1", "b1", "b2"])
+                    self.assertEqual(self.commands_of(result), ["c1", "shared", "c1"])
+                    self.assertEqual(result.charge, 30)
+                    self.assertTrue(result.overrun)
+                    self.assertFalse(result.unrestorable)
+                    self.assertEqual(self.states(), entry)
+                    self.assertEqual(set(hook._lex_ext_seen), seen_before)
+                    self.assertEqual(hook._count_extglob_units(), units_before)
+
+    def test_a_string_both_readings_return_is_held_once_and_charged_once(self):
+        statement = self.statement(EXT_LINE + "; " + NOTION)
+        in_limit = (10, ("b1",), ("c1",), False, False)
+        for overran_items in (
+            (10, ("b1",), ("c1",), True, False),
+            (25, ("b0", "b1"), ("c0", "c1"), True, False),
+        ):
+            for entry_extglob in (False, True):
+                for flagged_setting in (False, True):
+                    with self.subTest(
+                        overran=overran_items,
+                        entry_extglob=entry_extglob,
+                        flagged_setting=flagged_setting,
+                    ):
+                        by_setting = {
+                            flagged_setting: overran_items,
+                            not flagged_setting: in_limit,
+                        }
+                        self.set_states(False, False, entry_extglob)
+                        with self.fake_read_values(by_setting):
+                            result = self.read(statement)
+                        self.assertEqual(self.bodies_of(result), ["b1"])
+                        self.assertEqual(self.commands_of(result), ["c1"])
+                        self.assertEqual(result.charge, 10)
+                        self.assertTrue(result.overrun)
+
+    def test_the_overrun_readings_charge_takes_no_part_in_the_budget(self):
+        statement = self.statement(EXT_LINE + "; " + NOTION)
+        in_limit = (30, (), ("c1",), False, False)
+        overran = (10 * self.BUDGET, (), ("c9",), True, False)
+        for flagged_setting in (False, True):
+            with self.subTest(flagged_setting=flagged_setting):
+                self.set_states(False, False, False)
+                run = self.new_run()
+                with self.fake_read_values(
+                    {flagged_setting: overran, not flagged_setting: in_limit}
+                ):
+                    self.queue_step(statement, run)
+                self.assertEqual(self.queued_texts(run), ["c1"])
+                self.assertEqual(run[1].scanned, 30)
+
+    # TS-4 / AC-4: no one-sided overrun, nothing is queued.
+
+    def test_when_both_readings_overrun_nothing_is_queued_and_the_ask_is_held(self):
+        statement = self.statement(EXT_LINE + "; " + NOTION)
+        overran = (10, ("b1",), ("c1",), True, False)
+        for entry_extglob in (False, True):
+            with self.subTest(entry_extglob=entry_extglob):
+                by_setting = {False: overran, True: overran}
+                self.set_states(False, False, entry_extglob)
+                with self.fake_read_values(by_setting):
+                    result = self.read(statement)
+                self.assertTrue(result.overrun)
+                self.assertEqual(result.values, ())
+                self.assertEqual(result.charge, 0)
+                run = self.new_run()
+                self.set_states(False, False, entry_extglob)
+                with self.fake_read_values(by_setting):
+                    self.queue_step(statement, run)
+                self.assertEqual(run[0], [])
+                self.assertEqual(run[1].scanned, 0)
+                self.assert_ask_held_and_args_json_stopped(run)
+
+    def test_when_a_single_reading_overruns_nothing_is_queued_and_the_ask_is_held(self):
+        statement = self.statement("echo hi; " + NOTION)
+        overran = (10, ("b1",), ("c1",), True, False)
+        for entry_extglob in (False, True):
+            with self.subTest(entry_extglob=entry_extglob):
+                by_setting = {False: overran, True: overran}
+                self.set_states(False, False, entry_extglob)
+                with self.fake_read_values(by_setting):
+                    result = self.read(statement)
+                self.assertTrue(result.overrun)
+                self.assertEqual(result.values, ())
+                self.assertEqual(result.charge, 0)
+                run = self.new_run()
+                self.set_states(False, False, entry_extglob)
+                with self.fake_read_values(by_setting):
+                    self.queue_step(statement, run)
+                self.assertEqual(run[0], [])
+                self.assertEqual(run[1].scanned, 0)
+                self.assert_ask_held_and_args_json_stopped(run)
+
+    # TS-5 / AC-5: the in-limit charge over the budget.
+
+    def test_an_in_limit_charge_over_the_budget_queues_nothing(self):
+        statement = self.statement(EXT_LINE + "; " + NOTION)
+        for flagged_setting in (False, True):
+            for in_limit_charge, queued in (
+                (self.BUDGET, True),
+                (self.BUDGET + 1, False),
+            ):
+                with self.subTest(
+                    flagged_setting=flagged_setting, in_limit_charge=in_limit_charge
+                ):
+                    in_limit = (in_limit_charge, ("b1",), ("c1",), False, False)
+                    overran = (5, ("o1",), ("o_cmd",), True, False)
+                    self.set_states(False, False, False)
+                    run = self.new_run()
+                    with self.fake_read_values(
+                        {flagged_setting: overran, not flagged_setting: in_limit}
+                    ):
+                        self.queue_step(statement, run)
+                    self.assert_ask_held_and_args_json_stopped(run)
+                    if queued:
+                        self.assertEqual(self.queued_texts(run), ["b1", "c1"])
+                        self.assertEqual(run[1].scanned, in_limit_charge)
+                    else:
+                        self.assertEqual(run[0], [])
+                        self.assertEqual(run[1].scanned, 0)
+
+    def test_the_charge_is_added_to_what_the_run_has_already_scanned(self):
+        statement = self.statement(EXT_LINE + "; " + NOTION)
+        for in_limit_charge, queued in ((600, True), (601, False)):
+            with self.subTest(in_limit_charge=in_limit_charge):
+                in_limit = (in_limit_charge, (), ("c1",), False, False)
+                overran = (1, (), ("c9",), True, False)
+                self.set_states(False, False, False)
+                run = self.new_run(scanned=400)
+                with self.fake_read_values({False: in_limit, True: overran}):
+                    self.queue_step(statement, run)
+                self.assert_ask_held_and_args_json_stopped(run)
+                self.assertEqual(self.queued_texts(run), ["c1"] if queued else [])
+                self.assertEqual(run[1].scanned, 400 + (in_limit_charge if queued else 0))
+
+    # Unrestorable stays held as before and does not decide what is queued.
+
+    def test_unrestorable_is_held_in_every_branch_and_decides_nothing(self):
+        statement = self.statement(EXT_LINE + "; " + NOTION)
+        for flagged_setting in (False, True):
+            for in_limit_flag, overran_flag in (
+                (True, False), (False, True), (True, True), (False, False)
+            ):
+                with self.subTest(
+                    flagged_setting=flagged_setting,
+                    in_limit_flag=in_limit_flag,
+                    overran_flag=overran_flag,
+                ):
+                    in_limit = (10, (), ("c1",), False, in_limit_flag)
+                    overran = (10, (), ("c9",), True, overran_flag)
+                    self.set_states(False, False, False)
+                    run = self.new_run()
+                    with self.fake_read_values(
+                        {flagged_setting: overran, not flagged_setting: in_limit}
+                    ):
+                        self.queue_step(statement, run)
+                    self.assertEqual(self.queued_texts(run), ["c1"])
+                    self.assert_ask_held_and_args_json_stopped(run)
+                    self.assertEqual(
+                        run[2].unrestorable, in_limit_flag or overran_flag
+                    )
+
+    # Routes other than env keep queuing nothing on overrun.
+
+    def test_a_plain_mcp_bridge_run_statement_queues_nothing_on_overrun(self):
+        hook = self.hook
+        deep = '{"command":"echo hi","k":' + "[" * 101 + "]" * 101 + "}"
+        command = (
+            "mcp-bridge run --mcp desktop-commander --tool start_process "
+            "--args-json '%s' --args-json '{\"command\":\"%s\"}'"
+            % (deep, COMMAND_FOUND)
+        )
+        self.reset_states()
+        statement = env_statement(hook, command)
+        self.reset_states()
+        result = hook._mcp_bridge_args_json_chunks(statement.shaped, statement.marked)
+        self.assertTrue(result.overrun)
+        self.assertEqual(self.commands_of(result), [COMMAND_FOUND])
+        run = self.new_run()
+        self.queue_step(statement, run)
+        self.assertEqual(run[0], [])
+        self.assertEqual(run[1].scanned, 0)
+        self.assert_ask_held_and_args_json_stopped(run)
+
+    def test_any_other_overrun_result_that_carries_values_queues_nothing(self):
+        hook = self.hook
+        statement = self.statement("echo hi")
+        value = hook.ArgsJsonValue("word", ("b1",), ("c1",))
+        result = hook.ArgsJsonResult((value,), 10, True, False)
+        run = self.new_run()
+        with mock.patch.object(
+            hook, "_mcp_bridge_args_json_chunks", lambda shaped, marked: result
+        ):
+            self.queue_step(statement, run)
+        self.assertEqual(run[0], [])
+        self.assertEqual(run[1].scanned, 0)
+        self.assert_ask_held_and_args_json_stopped(run)
 
 
 class TestExtglobUnitRecord(HookTestCase):

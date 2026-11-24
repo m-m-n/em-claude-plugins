@@ -1,0 +1,138 @@
+task_id: task0001
+# 4a, before any edit: python3 em-workflow/hooks/tests/run-destructive-guard.py -> 1662/1662 passed;
+# python3 -m unittest discover -s tests -> Ran 17329 tests, OK (skipped=1). Nothing was red.
+baseline_failures: []
+# Re-executed after the implementation and after this record was written (see the
+# final run noted in the task report): the runner passes every case (1664/1664) and
+# unittest discover runs green with the new tests included.
+final_failures: []
+acceptance_tests:
+  AC-1:
+    # The runner has no per-case selector; the third test below runs the whole
+    # runner (python3 em-workflow/hooks/tests/run-destructive-guard.py) and
+    # asserts exit 0 with no FAIL line, so it covers env-route-partial-overrun-check
+    # TS-1 of em-workflow/hooks/tests/destructive-guard-cases.json.
+    tests:
+      - tests.test_destructive_guard_env_route.TestOneSidedOverrun.test_the_case_body_makes_exactly_one_reading_overrun
+      - tests.test_destructive_guard_env_route.TestOneSidedOverrun.test_the_whole_hook_cases_hold_the_body_checked_here
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >-
+      The unit test that runs the real readings on the body (exactly one
+      reading overruns, the other decodes git branch -D example, for both entry
+      extglob settings) was written first and passed on the unchanged hook, as
+      it must: it reads the existing route, and it settled that the body works
+      through the whole hook before the case was pinned (the first body tried,
+      with the deep call on a single line, overran under both readings and was
+      replaced). The test that ties the cases file to that body FAILed
+      (0 != 1: no TS-1 case) until the case was appended. With the case
+      appended and the hook unchanged, the real runner was run directly: 1663/1664
+      passed and TS-1 FAILed with got=ask rule=scan-budget-exceeded where deny
+      with rule git-branch-force-delete is required. After the change TS-1
+      gives deny, git-branch-force-delete.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_env_route.TestOneSidedOverrun.test_within_budget_the_in_limit_command_is_queued_and_the_ask_is_held
+      - tests.test_destructive_guard_env_route.TestOneSidedOverrun.test_the_args_json_steps_stay_stopped_for_the_rest_of_the_run
+      - tests.test_destructive_guard_env_route.TestOneSidedOverrun.test_the_whole_hook_cases_hold_the_body_checked_here
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >-
+      Against the unchanged hook the within-budget test FAILed for all four
+      subtests (both commands, both entry settings) with Lists differ:
+      [] != ['echo hi'] and [] != ['git branch -D example'], and the
+      stays-stopped test FAILed with [] != ['git branch -D example']: nothing
+      was queued for the one-sided overrun. The TS-2 case itself (ask,
+      scan-budget-exceeded) passed on the unchanged hook, since the held
+      scan-budget ask is the existing result of an overrun; it pins what the
+      change has to keep, and the unit tests above carry the red.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_env_route.TestOneSidedOverrun.test_the_result_holds_only_the_in_limit_readings_items
+      - tests.test_destructive_guard_env_route.TestOneSidedOverrun.test_a_string_both_readings_return_is_held_once_and_charged_once
+      - tests.test_destructive_guard_env_route.TestOneSidedOverrun.test_queued_items_are_bound_to_the_payload_word_like_ordinary_values
+      - tests.test_destructive_guard_env_route.TestOneSidedOverrun.test_the_overrun_readings_charge_takes_no_part_in_the_budget
+    red_confirmed: true
+    red_reason: >-
+      Against the unchanged hook the result test FAILed for all 16 subtests
+      (eight entry states, either reading the flagged one) because the result
+      held the union, ['b1', 'b1', 'b2', 'o1'] or ['o1', 'b1', 'b2'] where
+      ['b1', 'b1', 'b2'] is required; the shared-string test FAILed for 4
+      subtests (['b0', 'b1'] != ['b1']); the binding test FAILed for both
+      flagged settings ([] != ['b1', 'b2', 'c1', 'c2']: nothing queued); the
+      charge test FAILed for both ([] != ['c1']).
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_env_route.TestOneSidedOverrun.test_when_both_readings_overrun_nothing_is_queued_and_the_ask_is_held
+      - tests.test_destructive_guard_env_route.TestOneSidedOverrun.test_when_a_single_reading_overruns_nothing_is_queued_and_the_ask_is_held
+    red_confirmed: true
+    red_reason: >-
+      Both tests FAILed on the unchanged hook (2 subtests each), at the
+      assertion that the combine carries no value when every returned reading
+      overran (the result held the readings' items: a value with bodies b1 and
+      commands c1, where () is required). The outcome the criterion states
+      (nothing queued, the scan-budget ask held, the --args-json steps
+      stopped) already held on the unchanged hook, since an overrun queued
+      nothing; those assertions in the same tests passed there and are kept
+      as the guard that the new branch does not queue under an overrun of
+      every reading.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_env_route.TestOneSidedOverrun.test_an_in_limit_charge_over_the_budget_queues_nothing
+      - tests.test_destructive_guard_env_route.TestOneSidedOverrun.test_the_charge_is_added_to_what_the_run_has_already_scanned
+    red_confirmed: true
+    red_reason: >-
+      Both tests FAILed on the unchanged hook, at their within-budget halves
+      (a charge equal to the budget, and 600 on top of 400 scanned against a
+      budget of 1000, must be queued: [] != ['b1', 'c1'] and [] != ['c1']).
+      Their over-budget halves (budget + 1, and 601 on top of 400) -- the
+      criterion's own outcome: nothing queued, ask held -- passed on the
+      unchanged hook, as the existing over-budget behaviour. They were observed
+      failing against a temporary variant of the queue step, not committed,
+      that ignores whether the charge fits (3 failures, the over-budget half
+      of both tests among them).
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_env_route.TestBothReadings.test_overrun_raised_by_only_one_reading_is_reported
+      - tests.test_destructive_guard_env_route.TestBothReadings.test_flags_of_a_statement_that_has_no_value_are_reported
+      - tests.test_destructive_guard_env_route.TestOneSidedOverrun.test_a_plain_mcp_bridge_run_statement_queues_nothing_on_overrun
+      - tests.test_destructive_guard_env_route.TestOneSidedOverrun.test_any_other_overrun_result_that_carries_values_queues_nothing
+    red_confirmed: false
+    red_reason: >-
+      The criterion is the regression gate: the runner and the env-route
+      module exit 0, no existing case or test is removed, and the cases for
+      overrun on other routes, for unrestorable and for the lexer-state
+      restore pass unchanged. All of it was green on the unchanged hook (see
+      baseline_failures), so no red state occurred for it; the existing tests
+      above detect the behaviour this change must keep. The two existing tests
+      that pin the combine's result shape still assert that overrun is
+      reported and needed no change of expected value: with both readings
+      returning the same items, the in-limit reading alone gives the values
+      and the charge the union gave. The two tests that keep the other routes
+      queuing nothing on overrun (a plain mcp-bridge run statement with one
+      overrunning value, and an overrun result with values that is not the
+      env route's) also passed on the unchanged hook; they were observed
+      failing against a temporary variant of the queue step, not committed,
+      that queues under any overrun that fits the budget (2 failures).
+  AC-7:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      The criterion is a diff check and an import check: the added tests import
+      only the standard library (collections, contextlib, importlib.util, io,
+      itertools, json, os, sys, unittest, unittest.mock) and the hook loaded
+      from its file, and the diff changes neither
+      em-workflow/.claude-plugin/plugin.json nor .claude-plugin/marketplace.json
+      (git diff --name-only against the parent branch lists the hook, the case
+      file, the env-route test module and this record only). No executable check
+      can be made to fail for it: searched tests/ by the changed paths and by
+      the basenames destructive-guard.py, destructive-guard-cases.json and
+      test_destructive_guard_env_route.py. The tests that read those files
+      check decisions and case results, and none checks a module's imports.
+      The tests that read plugin.json and marketplace.json (the *_version_bump
+      modules, test_em_workflow_version) belong to other features: they check
+      version floors and parity between the two registries, none checks that
+      this task's diff leaves them unchanged, and they keep passing because
+      the diff does not touch either file. A human or the review reads the
+      diff for this criterion.
