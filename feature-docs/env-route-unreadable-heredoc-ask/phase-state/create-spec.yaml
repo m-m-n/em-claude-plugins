@@ -1,11 +1,11 @@
 schema_version: 1
 feature: env-route-unreadable-heredoc-ask
 phase: create-spec
-status: initialized
+status: dispatching
 generation: 2
-base_revision: ddf7870e25755d350fd989ea9a240f2dbd1aa218
-last_input_digest: sha256:3ef42c84e31d36f67b573715a4f76818e44357aa1ae5352c83d9bee89182094c
-active_request_id: null
+base_revision: 38ccff6a72c3b8e2b7f8c4a04aa3fb3b57bcc74b
+last_input_digest: sha256:0842857f2f5a9fafabd2caf33d054a3729f73f06673edc537f22a91e6639acf3
+active_request_id: create-spec-run-0004
 packets:
   create-spec-q0001:
     status: answered
@@ -46,6 +46,17 @@ worker_runs:
 - request_id: create-spec-run-0003
   status: completed
   input_digest: sha256:3ef42c84e31d36f67b573715a4f76818e44357aa1ae5352c83d9bee89182094c
+- request_id: create-spec-run-0004
+  status: dispatched
+  input_digest: sha256:0842857f2f5a9fafabd2caf33d054a3729f73f06673edc537f22a91e6639acf3
+  dispatch_digest_inputs:
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    em-workflow/hooks/destructive-guard.py: sha256:ede4b29f8a07355e97fadd9083d042306ce0df36aee256f8fcd5855d5ce79da0
+    em-workflow/hooks/tests/destructive-guard-cases.json: sha256:09afc92bac57041bdc397350d8488e09349cc88bb64f1703beef9ef21b35acb3
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
+    feature-docs/env-route-unreadable-heredoc-ask/SPEC.md: sha256:047779b8d1db6722524e8b5f363b67fcd362b6e68d7a9e991d11609f718894d4
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+    tests/test_destructive_guard_env_route_tail.py: sha256:321438b48fc03e0958ae2e3bf5ecd92ca87a48a33320da55f0c29d76ad7e3d4c
 artifacts:
 - path: feature-docs/env-route-unreadable-heredoc-ask/SPEC.md
   sha256: sha256:047779b8d1db6722524e8b5f363b67fcd362b6e68d7a9e991d11609f718894d4
