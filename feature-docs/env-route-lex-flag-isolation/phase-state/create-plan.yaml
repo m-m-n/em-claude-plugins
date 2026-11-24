@@ -1,0 +1,32 @@
+schema_version: 1
+feature: env-route-lex-flag-isolation
+phase: create-plan
+status: dispatching
+generation: 1
+base_revision: 69895b805187b354fbbc6743dda16880a9057502
+last_input_digest: sha256:d88028ed173f46b71b4756bbdaf78403b50b54a1d69315b2f250650d6a1ad040
+active_request_id: create-plan-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: dispatched
+  input_digest: sha256:d88028ed173f46b71b4756bbdaf78403b50b54a1d69315b2f250650d6a1ad040
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/planner-contract.md: sha256:18464486c0546613d92935cba80087c4980d3791d41838162d23840e431da515
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
+    em-workflow/references/workflow-schema.md: sha256:5bd8500c203c4f17cde4193ee43d561073fe7f47099d61a55eb593e098881d87
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/env-route-lex-flag-isolation/SPEC.md: sha256:b1cc0f61b76ae1f733c06e85f686bd536b347e65ce888b20e89dc2e2bbaddfb3
+    feature-docs/env-route-lex-flag-isolation/workflow.yaml: sha256:d8c771d38410865d771e1cdf927bdcaa9498d6d1f92c315e0823261004f68309
+artifacts: []
+other_feature_doc_fixes: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
