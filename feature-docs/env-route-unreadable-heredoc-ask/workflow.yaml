@@ -79,8 +79,8 @@ workflow:
 - id: create-spec
   artifacts:
   - SPEC.md
-  status: in_progress
-  completed_at_commit: 43fbc0d8579bb8414f20b02983c602bea8c07aca
+  status: completed
+  completed_at_commit: 4488e9ddb13c7e4d2b00d22f8472672413a87e8e
 - id: design
   artifacts:
   - DESIGN.md
@@ -151,7 +151,7 @@ review:
   needs_rework: true
 requirements:
   FR1:
-    title: 読めない末尾に mcp-bridge の語があるとき unrestorable を立てる
+    title: mcp-bridge の語を含む読めない末尾を unrestorable にする
     status: ok
     tbd_reason: null
     excluded_reason: null
@@ -168,7 +168,7 @@ requirements:
     - TS-10
     - TS-15
   FR2:
-    title: extglob の両方の読み方の結合
+    title: 2 つの extglob の読み方の結合
     status: ok
     tbd_reason: null
     excluded_reason: null
@@ -177,7 +177,7 @@ requirements:
     tests:
     - TS-11
   FR3:
-    title: フラグの退避・復元は変えない
+    title: フラグの退避と復元は変えない
     status: ok
     tbd_reason: null
     excluded_reason: null
@@ -188,7 +188,7 @@ requirements:
     - TS-6
     - TS-12
   FR4:
-    title: 再発を検出するケース
+    title: 退行を捕まえるケース
     status: ok
     tbd_reason: null
     excluded_reason: null
