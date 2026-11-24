@@ -1,0 +1,139 @@
+round: 1
+executed_at: '2026-11-24T21:37:07+09:00'
+scope:
+  review_mode: diff
+  base_commit: 71060095ea3b6da2cc3f1fab92799c551b37c67e
+  head_commit: a2e89c5d74f6927a074f76447e129789e60a668c
+  changed_files:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/env-route-lex-flag-isolation/task0001.tests.yaml
+  - tests/test_destructive_guard_env_route.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: c7173bc1fe3d8438
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 10402
+  title: env 経路で区切り語を読めないヒアドキュメントの後ろに置いた notion ペアが検出されなくなる
+  description: 'security#0 の再現手順（TS-1 の本文の区切り行の後ろに printf を足すと、batch で変更前 deny、変更後 allow）は読解で確認した（reproduced）。ただし printf の allow は SPEC の AC-1 と THREAT-MODEL が目的とする結果で、env 経路の本文の notion 以外の文は変更前から通常の検査に渡らない（cases.json
+    1593 行の `/usr/bin/env bash -c` に git branch -D を渡すケースは allow で固定されている）。そのため指摘の一般形（区切り行の後のコマンド全般が未検査）はこの差分が持ち込んだものではない。残る問題は notion ペアの検出範囲の縮小に限られる: 読めない `<<` は tail source になり、その後ろの引用符は開かれず literal
+    のまま残る（LexMap.unopened、3766 行付近のマスク）。このため区切り行の後ろに置いた lifted な notion ペアの `--args-json ''...''` は JSON として復号できず、env 経路は何も返さない（_args_json_read_values() は JSONDecodeError を黙って飛ばす）。変更前は本文の読み取りが立てた `_lex_unreadable_met`
+    が run() の P16 の ask（batch では deny）として残り、この形も止めていたが、10402 行の復元でその安全網が消えて allow になる。THREAT-MODEL の TM-2 と同じ型の縮小を P16 について起こしており、脅威モデルにもテストにも無い。env 経路の本文の通常のコマンドは元から検査されないので攻撃者の上積みは小さく、high から medium に下げた。'
+  suggestion: FR1 のフラグ復元は保ったまま、env 経路の読み取りが LexMap.unreadable（tail source）に出会い、かつ tail の開始位置以降に mcp-bridge を呼びうる文があるときは、その読み取りの結果に unrestorable を立てて args-json-unrestorable の ask を残す。tail の中では `--mcp 'notion'`
+    のような引用も literal になるので、notion の判定ではなく mcp-bridge の語の有無で判断する。区切り行の後ろに lifted な notion ペアを置いた env 経路のケースを cases.json に足す。TS-1 / TS-2 は mcp-bridge を含まないので allow のまま。
+  reproduction: 追加された TS-1 の区切り行の直後に、無害な `printf REVIEW_MARKER` を本文の最終行として加えた。CLAUDE_BATCH=1 で同じ入力を run() に渡すと、比較元は deny、変更後は allow を返した。変更後に statements() が通常の検査に渡したコマンド名は env だけで、printf は含まれなかった。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 70
+  resolution: deferred
+  resolution_reason: 'medium severity: outside the Phase R4 auto-fix candidate gate (critical/high only); left for a follow-up task'
+- stable_id: bf55aa65b635241a
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 10428
+  title: 片方の読み方だけの overrun で、もう片方が復号した notion ペアの command が検査されない
+  description: 読解で再現を確認した（reproduced）。10428 行はどちらかの読み取りの overrun を結果全体に立て、10819 行の呼び出し元は overrun のときその文の値を何も queue せず scan-budget の ask を保持して戻る。変更前は env 経路の読み取りが 1 回で、その読み方で見えた notion ペアの command は queue
+    され deny になった。変更後は、もう片方の読み方だけで見える文の `--args-json` が入れ子の上限を超えると、先の読み方で復号済みの git branch -D が検査されず、対話実行で deny が利用者の承認できる ask に弱まる（batch では deny のまま）。1 回の読み取りの中で複数の notion 文の overrun を合成する既存の挙動の延長でもある。FR4
+    が overrun の合成を求めているので、直すには呼び出し元の D3 との整理が要る。
+  suggestion: 上限を超えた読み取りの ask は保持したまま、もう片方の読み取りが上限内で得た command と本文を検査に回し、deny が出ればそちらを優先する。FR4 と D3 の文言との整合は人の判断で決める。
+  reproduction: 追加テストの `EXT_LINE` と `NOTION` を使い、extglob 有効時だけ `_args_json_read_values()` が overrun を返すようにして、同じ入力を対話設定の run() に渡した。比較元は `git-branch-force-delete` で deny、変更後は `scan-budget-exceeded` で ask
+    を返した。片方だけの overrun が実入力でも発生することは、TS-6 の複数行形式と既存の TS-15 nesting の無害な JSON 値で確認した。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 85
+  resolution: deferred
+  resolution_reason: 'medium severity: outside the Phase R4 auto-fix candidate gate (critical/high only); left for a follow-up task'
+- stable_id: a241742c875b6315
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 10432
+  title: 2 つの読み取りの重複除去が値の文字列で行われ、charge が読み取りの順に依存する
+  description: _args_json_env_combine() を読んで確認した。先の読み取りが [A]、後の読み取りが [A, B]（B は A と別の文だが同じ command 文字列）のとき、A は unmatched で消え、B は文字列がすべて既出なので charge されず、結果は command 1 件と A の charge になる。順序が逆だと A と B の両方が
+    charge され、command は 2 件残る。run() は外側に拡張パターンの括弧があると両方の読み方で判定するので、1 回の判定の中でも 2 つの順序が起こりうる。同じ文字列は少なくとも 1 回 queue されるので検査漏れにはならず、影響は scan-budget の境界付近の判定に限られる。architecture#0 も同じ箇所を同じ理由で指摘している（各文の本文中の位置を
+    _EnvBodyEntry に持たないため、同じ文の再読と別の文の同じ値を区別できない）。
+  suggestion: _EnvBodyEntry に notion 文（または `--args-json` の値）の本文中の位置を持たせ、両方の読み取りで同じ位置から得た値だけを 1 回にまとめて charge する。返す文字列の重複除去と charge の集計を分ける。どちらの extglob 設定から読み始めても件数と charge が一致するテストを足す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 100
+  resolution: deferred
+  resolution_reason: 'medium severity: outside the Phase R4 auto-fix candidate gate (critical/high only); left for a follow-up task'
+evaluation:
+  round_summary: 'round 1（diff、cross_validation あり）。4 観点の指摘 8 件を読解で照合し、7 件にまとめた。critical / high は security#0 の 1 件だけで、再現手順は読解で確認した（reproduced）。ただし printf の allow は SPEC の AC-1 どおりで、env 経路の本文の notion 以外の文は変更前から未検査（cases.json
+    1593 行）なので、残る notion ペアの検出範囲の縮小として medium で残した。comprehensive#0 と architecture#0 の順序依存の指摘は同じ箇所なので 1 件にまとめた。reviewer 出力に注入の試みは無かった。観点ごとの確認状況: comprehensive は corroborated、security は findings（P16 の安全網が
+    notion ペアにも効いていた点と、外側のキャッシュの点を自分の読解で足した）、architecture は corroborated、spec は corroborated（指摘の重大度は low に下げた。TS-1〜TS-6 が FR5 の形で cases.json にあることも確認した）。読んだのは project_root 配下の 6 ファイル。'
+  recommended_action: auto_fix
+  action_rationale: critical / high は残らない。修正はすべて destructive-guard.py の env 経路の中で閉じる。_args_json_env_combine() の重複除去を本文中の位置で行う修正は、comprehensive / architecture / spec の 3 件と二次の照合をまとめて直せる。区切り語を読めない本文の後ろの mcp-bridge
+    に ask を残す修正は、FR1 の復元を保ったまま unrestorable の経路で足せる。overrun の件は FR4 と呼び出し元の D3 に関わるので、自動修正で整合が取れなければ人の判断に回す。
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-env-route-lex-flag-isolation-20261124T123551Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

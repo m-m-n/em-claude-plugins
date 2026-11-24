@@ -87,7 +87,8 @@ workflow:
   base_commit: 71060095ea3b6da2cc3f1fab92799c551b37c67e
   completed_at_commit: 479d355f202138e4053a6eb5e9de169bdfc581f3
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: a2e89c5d74f6927a074f76447e129789e60a668c
 - id: verify
   status: pending
 - id: retrospect
@@ -119,8 +120,13 @@ tasks:
     branch: em-workflow/env-route-lex-flag-isolation/task0001
     notes: null
 review:
-  status: pending
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
   plan:
     floor:
     - comprehensive
