@@ -1,0 +1,67 @@
+schema_version: 2
+feature: env-route-lex-flag-isolation
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.04
+    confidence: 0.96
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.96
+      '2': 0.04
+      '3': 0.0
+  observed_at: '2026-11-24T20:15:59+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.06
+    confidence: 0.94
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.94
+      '2': 0.06
+      '3': 0.0
+  observed_at: '2026-11-24T20:18:41+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  changed_lines_approx: 58
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  work_still_required_evidence: 現行ツリーで、区切り語が ${tag} の cat ヒアドキュメントだけを /usr/bin/env
+    bash -c に渡す入力を確認した。Notion 検査の結果は空で、最初の判定は allow だった。本文を読む _args_json_payload_chunk()
+    が _lex_unreadable_met を立て、run() の最終判定は通常時に ask、CLAUDE_BATCH=1 で deny になった。理由は
+    unreadable-heredoc-delimiter だった。拡張パターンを含む別の入力では _lex_extglob_met による再判定も確認した。既存の
+    TS-25 と区切り語のテストは通ったが、この再現入力を判定するケースはなかった。行数は _args_json_env_payload_values() の本文検査を囲んで両フラグを復元し、既存
+    JSON に1件加える場合の差分の概算。呼び出しと依存先は同関数の直接の呼び出し元1件と、同じモジュール内で直接呼ぶ関数・型11件を数えた。
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 1
+  body_change_kind: new_logic
+  change_containment: single_function
+  caller_and_dependency_count: 12
+  changes_external_contract: false
+  changes_behavior: true
+decided_at: '2026-11-24T20:18:52+09:00'
