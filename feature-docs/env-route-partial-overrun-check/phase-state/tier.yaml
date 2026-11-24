@@ -1,0 +1,72 @@
+schema_version: 2
+feature: env-route-partial-overrun-check
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.15
+    confidence: 0.85
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.85
+      '2': 0.15
+      '3': 0.0
+  observed_at: '2026-11-24T22:29:28+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.24
+    confidence: 0.76
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.76
+      '2': 0.24
+      '3': 0.0
+  observed_at: '2026-11-24T22:31:33+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  changed_lines_approx: 0
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  work_still_required_evidence: 現行ツリーに欠陥が残っている。em-workflow/hooks/destructive-guard.py
+    の `_args_json_env_body_readings()` は10394〜10398行で拡張パターンの括弧を検出した本文を逆の extglob 設定でも読む。`_args_json_env_combine()`
+    は10427〜10453行で両方の `overrun` と `unrestorable` をそれぞれ論理和で集約し、復号済みの値も返す。`_queue_args_json_chunks()`
+    は10817〜10821行で `unrestorable` の確認を保留し、`overrun` が立っていれば走査上限の確認を保留して、10824〜10846行の検査待ちへの追加に進まず戻る。コード上で再現をたどると、片方の読み取りが値なしで
+    `overrun=True` を返し、もう片方が走査予算内で `git-branch-force-delete` の拒否対象となる `command` を返す場合、集約結果には超過フラグと
+    `command` がそろう。そこで早期に戻るため `command` は検査されず、他の判定要因がない対話実行では14138〜14139行で `scan-budget-exceeded`
+    の `ask` になる。無人実行では422〜428行で同じ理由の `deny` になる。実行による再現は行っていない。既存の JSON ケース集は1433行で入れ子超過時の
+    `ask`、1683行で片方だけが復号した値の `deny` を個別に検証する。`tests/test_destructive_guard_env_route.py`
+    の447〜461行は片側超過時の集約結果までを検証し、片側超過と復号済みの拒否対象が同時にある場合の最終判定は未検証だった。既存ランナーは273〜275行で判定と理由IDを照合できる。変更行数は未確定のため0とし、追加テスト数は未検証の組み合わせ1件を数えた。呼び出し・依存の件数は、集約と検査待ちへの追加に接続する
+    `_args_json_env_body_readings()`、`_args_json_env_payload_values()`、`_mcp_bridge_args_json_chunks()`、`statements()`
+    の4関数を数えた。
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 1
+  body_change_kind: new_logic
+  change_containment: single_module
+  caller_and_dependency_count: 4
+  changes_external_contract: false
+  changes_behavior: true
+decided_at: '2026-11-24T22:31:46+09:00'
