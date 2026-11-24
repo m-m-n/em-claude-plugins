@@ -1,0 +1,25 @@
+schema_version: 1
+feature: env-route-unreadable-heredoc-ask
+phase: create-spec
+status: in_progress
+generation: 1
+base_revision: c1395206a063872c6f455a7cc310c382118261f0
+last_input_digest: sha256:28ab21061cfcf39172e03a1703a63a749e9c3a8d6042b9139095aae442449537
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:28ab21061cfcf39172e03a1703a63a749e9c3a8d6042b9139095aae442449537
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache:
+  design_system_candidates:
+    resolved_at_generation: 1
+    paths: []
+    digests: {}
+    truncated: false
+last_error: null
