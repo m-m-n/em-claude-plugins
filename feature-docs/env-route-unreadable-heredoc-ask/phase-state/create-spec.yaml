@@ -5,7 +5,7 @@ status: in_progress
 generation: 1
 base_revision: c1395206a063872c6f455a7cc310c382118261f0
 last_input_digest: sha256:3ef42c84e31d36f67b573715a4f76818e44357aa1ae5352c83d9bee89182094c
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -47,9 +47,12 @@ worker_runs:
   status: completed
   input_digest: sha256:1445a699ed090191867baaf841c9f54bdfc53b1648f8e1e1775f4c654ae7fce7
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:3ef42c84e31d36f67b573715a4f76818e44357aa1ae5352c83d9bee89182094c
-artifacts: []
+artifacts:
+- path: feature-docs/env-route-unreadable-heredoc-ask/SPEC.md
+  sha256: sha256:047779b8d1db6722524e8b5f363b67fcd362b6e68d7a9e991d11609f718894d4
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
