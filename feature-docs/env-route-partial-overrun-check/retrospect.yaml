@@ -1,0 +1,48 @@
+feature: env-route-partial-overrun-check
+collected_at: "2026-11-24T23:48:39+09:00"
+session_ids: [01a20e06-f3ac-71e0-bc83-2410f1080e5e]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "最終読み（description_plus_code）はバケット 1 が最有力（確率 0.76、score 1.24）で、評価器は full を返した"
+    bases:
+      - basis: description_only
+        score:
+          type: score
+          score: 1.15
+          confidence: 0.85
+          probabilities: {'0': 0.0, '1': 0.85, '2': 0.15, '3': 0.0}
+        observed_at: "2026-11-24T22:29:28+09:00"
+      - basis: description_plus_code
+        score:
+          type: score
+          score: 1.24
+          confidence: 0.76
+          probabilities: {'0': 0.0, '1': 0.76, '2': 0.24, '3': 0.0}
+        observed_at: "2026-11-24T22:31:33+09:00"
+    pre_survey_estimate:
+      files_expected:
+        - em-workflow/hooks/destructive-guard.py
+        - em-workflow/hooks/tests/destructive-guard-cases.json
+      changed_lines_approx: 0
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: false
+      spillover_modules: []
+      work_still_required: true
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 1
+      body_change_kind: new_logic
+      change_containment: single_module
+      caller_and_dependency_count: 4
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates: []
