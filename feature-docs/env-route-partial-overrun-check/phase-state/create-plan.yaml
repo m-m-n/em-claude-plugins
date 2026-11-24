@@ -1,7 +1,7 @@
 schema_version: 1
 feature: env-route-partial-overrun-check
 phase: create-plan
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: 332c95871d7cada5f946da514a43050ee3c162b7
 last_input_digest: sha256:c895671bf5037535458e676909a915ff7a2e743f11ce01db6e228b629415d125
@@ -10,7 +10,7 @@ packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:c895671bf5037535458e676909a915ff7a2e743f11ce01db6e228b629415d125
   dispatch_digest_inputs:
     em-workflow/references/contracts/planner-contract.md: sha256:18464486c0546613d92935cba80087c4980d3791d41838162d23840e431da515
@@ -24,9 +24,31 @@ worker_runs:
     feature-docs/env-route-partial-overrun-check/REQUIREMENTS.md: sha256:729d13a39a57cf80e460b0cbdf4540aa51ce1a90645e1953b80f817f94f336b4
     feature-docs/env-route-partial-overrun-check/SPEC.md: sha256:6dcca8480230ffdd020f02e1622352e84d492091bab5a36e5900e5289db2e76f
     feature-docs/env-route-partial-overrun-check/workflow.yaml: sha256:f44721da7f1e31fd07c0008c9e48863dcac47944213cc182fc73d2ea93103071
-artifacts: []
+  output_digest: sha256:799942387ea00910e7087c51b6caf6f510a7daef9cb0d532c0ad4749c267c2d0
+  self_write_set:
+  - feature-docs/env-route-partial-overrun-check/IMPLEMENTATION.md
+  - feature-docs/env-route-partial-overrun-check/THREAT-MODEL.md
+  - feature-docs/env-route-partial-overrun-check/VERIFICATION.md
+  - feature-docs/env-route-partial-overrun-check/tasks/task0001.md
+artifacts:
+- path: feature-docs/env-route-partial-overrun-check/IMPLEMENTATION.md
+  sha256: sha256:028438c067bd0cb8dcb22033a4bb762e6f8eca321fb63e9adcbeea2fdbca1c26
+  produced_by: create-plan-run-0001
+- path: feature-docs/env-route-partial-overrun-check/THREAT-MODEL.md
+  sha256: sha256:beda66ceb8837acf2eb6a1380061f1099ea94984d38a275abb0c4f94e941a95f
+  produced_by: create-plan-run-0001
+- path: feature-docs/env-route-partial-overrun-check/VERIFICATION.md
+  sha256: sha256:c45f4e84c4d53008d28f1b1d84e56a3ed0e888ac0c1ff86436efc0055ff1b064
+  produced_by: create-plan-run-0001
+- path: feature-docs/env-route-partial-overrun-check/tasks/task0001.md
+  sha256: sha256:2de067dbe54e47197796a886d2bcbb6f57fb0380e8f5204d08ce1bdc916b681a
+  produced_by: create-plan-run-0001
 other_feature_doc_fixes: []
-patches: []
+patches:
+- patch_id: create-plan-p0001
+  status: validated
+  base_input_digest: sha256:c895671bf5037535458e676909a915ff7a2e743f11ce01db6e228b629415d125
+  base_workflow_blob: 77a08f9f4df809c6fa1075202932df1843671d13
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
