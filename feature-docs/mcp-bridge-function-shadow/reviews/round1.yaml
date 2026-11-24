@@ -1,0 +1,554 @@
+round: 1
+executed_at: '2026-11-21T18:05:00+09:00'
+scope:
+  review_mode: diff
+  base_commit: 93a21ad299242542960f5c4a497f255626ef9707
+  head_commit: f48c625fbe19925d0f4ebb4d4a312c2783f89ccb
+  changed_files:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/mcp-bridge-function-shadow/task0001.tests.yaml
+  - tests/test_destructive_guard_args_json.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary:
+  - perspective: performance
+    reason: NFR2（走査コスト）が追加走査の計算量を要件にしているため
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+- run_id: comprehensive#loop1.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#loop1.0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: architecture#loop1.0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#loop1.0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: performance#loop1.0
+  perspective: performance
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: comprehensive#loop2.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#loop2.0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: architecture#loop2.0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#loop2.0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: performance#loop2.0
+  perspective: performance
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: comprehensive#loop3.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#loop3.0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: architecture#loop3.0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#loop3.0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: performance#loop3.0
+  perspective: performance
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+findings:
+- stable_id: d6cec4d1dd574a96
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8567
+  title: notion 除外の解除判定が `builtin --` 経由の alias / hash / enable と、先頭が `~` のコマンド名を見落とす
+  description: builtin -- 経由の override builtin と、未引用の先頭 ~ のコマンド名で除外が外れない
+  suggestion: 復元したコマンド名を OVERRIDE_BUILTINS とも照合し、未引用の ~ を静的に読めない名前として扱う
+  reproduction: '`builtin -- hash` で _args_json_shadow_scan() が False'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 85
+  resolution: fixed
+  resolution_reason: auto-applied loop 1
+- stable_id: 1f2075b8b504b2d5
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 10360
+  title: env の有効な代入引数で後続のシェルが検査対象から外れる
+  description: env -- の後の - で始まる代入をコマンド名と誤認する
+  suggestion: env のオプション終了後は先頭の - にかかわらず代入として消費する
+  reproduction: '`env -- ''-tag=1'' bash -c ''echo marker''` で内側の文が出ない'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  - codex:comprehensive
+  confidence: 75
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+- stable_id: 478d30e960961aa1
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 9165
+  title: 'TM-1: Bash が同じ意味に読む run の表記で関数差し替え後の検査が抜ける'
+  description: $'run' を run と比較できず検査が抜ける
+  suggestion: run を _read_static_word() で復元して比較する
+  reproduction: 関数定義の後の `mcp-bridge $'run' ...` が nothing
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+- stable_id: 90981dca2843a9f7
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8628
+  title: 環境変数名の引用を復元せず、Bash の関数インポートを見落とす
+  description: ANSI-C 引用の BASH_FUNC_ / BASH_ALIASES を検出できない
+  suggestion: 復元後の値でも部分一致を照合する
+  reproduction: '`env $''BASH\x5fFUNC_demo%%=marker'' bash -c ...` が nothing'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  - codex:comprehensive
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+- stable_id: a1ccad8b64c1df6c
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8641
+  title: 'TM-1: 復元した変数名の判定から `BASH_CMDS` が漏れる'
+  description: 復元後の語との照合に BASH_CMDS が含まれない
+  suggestion: 復元後の語にも BASH_CMDS を照合する
+  reproduction: '`printf %s $''BASH\x5fCMDS''` が False'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 3
+- stable_id: 3d3e6afd38e8c4b3
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 9169
+  title: TM-1 の検査に入る前に、同じ実行名の呼び出しを取りこぼす
+  description: mcp-bridge は head() の表記で照合するため、ANSI-C 引用の実行名で --args-json 全体が検査されない。loop 3 の自動修正は、復元できないコマンド語（`$"x" args` など）すべてに確認を出す誤爆を生んだため取り消した
+  suggestion: 実行名も _read_static_word() で復元してから basename を照合する。mcp-bridge 以外のコマンドに新たな確認を出さないこと
+  reproduction: '`mcp-bridge() { :; }; $''mcp-bridge'' run --mcp notion ...` が検査されない'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'batch mode: residual critical/high → rework'
+- stable_id: 444c158592ba641c
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8640
+  title: TM-1・TM-3 の環境変数名は、同じ語に展開があると検出されない
+  description: 語全体の restored_ok が真の場合だけ照合するため、`$'BASH\x5fFUNC_x'"$USER"` のように一部に展開があると照合から落ちる
+  suggestion: 静的に確定する連続部分を個別に復元して照合する
+  reproduction: '`: $''BASH\x5fFUNC_example''"$USER"` の後の Notion 呼び出しが nothing'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'batch mode: residual critical/high → rework'
+- stable_id: 8ec945002f0cf118
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 10377
+  title: TM-3 の対象となる env 呼び出しで子シェルの検査が途切れる
+  description: '`/usr/bin/env`、単独の `-`、ANSI-C 引用で表した `=` の代入で子のコマンド位置を誤り、bash -c の本文が検査されない'
+  suggestion: env の実行名と引数を静的に復元し、単独の - を含むオプション処理と代入処理を経て子のコマンド位置を決める
+  reproduction: '`env - CHECK=1 printf` で head() が `-` を返す'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'batch mode: residual critical/high → rework'
+- stable_id: c0598deb75b9d2c7
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 10398
+  title: env の単独の `-` を実行コマンド名として扱う
+  description: env は単独の - を環境を空にする指定として消費するが、head() は - を返す
+  suggestion: env の先頭オプションを読む段階で単独の - を消費する
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'batch mode: residual critical/high → rework'
+- stable_id: 1d283b0a24152ef8
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8620
+  title: コメントや兄弟のコマンド置換にある `${ ` が notion ペアの除外を外す
+  description: _args_json_has_brace_substitution() が marked.source 全体を検索する（4 観点が独立に指摘）
+  suggestion: コメントと子の置換本文を除いて検索する
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  - codex:comprehensive
+  - codex:security
+  - codex:architecture
+  confidence: 80
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外。後続タスクとして起票'
+- stable_id: 99996ddf73fca708
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8653
+  title: case のパターンや配列要素をコマンドとして扱う
+  description: FR2 の判定で元のトークン列を括弧で再分割するため、case パターンや配列要素の eval / hash / * で除外が外れる（loop 1 の修正で case の hash も対象になった）
+  suggestion: _shape_leading() のコマンド位置を共有する
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  - codex:comprehensive
+  - codex:architecture
+  - codex:security
+  confidence: 80
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外。後続タスクとして起票'
+- stable_id: d11ed2bab0ce8dc7
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8570
+  title: チルダ展開の有無を語全体の引用状態で判定する
+  description: '`~/"x"` は展開されるのに静的扱い、`\~` はリテラルなのに解除'
+  suggestion: 元の語でチルダ接頭部の引用を判定する
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  - codex:comprehensive
+  - codex:architecture
+  confidence: 80
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外。後続タスクとして起票'
+- stable_id: c5db2225b8cdfdb9
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 9177
+  title: run の復元処理と env の代入語の扱いが Notion 以外の判定を変える
+  description: SPEC FR7 は Notion 以外の判定の維持を求めるが、`$"run"` で新たな ask、env の非識別子名代入でヒアドキュメント再検査と他ペアの復号が変わる
+  suggestion: Notion 判定の経路に限定する、または SPEC に安全側の変更として記録する
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  - codex:comprehensive
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外。後続タスクとして起票'
+- stable_id: 57329316813eaa64
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8548
+  title: FR2 にないコマンド（trap / mapfile / readarray）や照会（command -v）で除外が外れる
+  description: SPEC FR2 は eval / source / . に限る
+  suggestion: FR2 の列挙に合わせる
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 70
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外。後続タスクとして起票'
+- stable_id: ef3bf3d8bbef2d62
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 10352
+  title: env のオペランドの読み方が failed-run-cleanup-guard.py の head() と食い違う
+  description: 同期を保つと定めた 2 つの head() が env の非識別子名代入で食い違う
+  suggestion: 同じ規則にそろえ契約テストを足す
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外。後続タスクとして起票'
+- stable_id: 6a8333405c3dc290
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 10374
+  title: env の代入規則が mise・asdf の実行対象にまで及ぶ
+  description: after_env が mise exec / asdf exec の分岐で解除されない
+  suggestion: env の引数解析の中で完結させる
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  - codex:comprehensive
+  confidence: 70
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外。後続タスクとして起票'
+- stable_id: 6e578b828d8b8d07
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8627
+  title: コマンド位置の読み取りと case の状態遷移を、statements() と二重に実装している
+  description: 同じ解析規則を 2 か所で保守している
+  suggestion: 共通化する
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 65
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外。後続タスクとして起票'
+- stable_id: ae32730787ed203e
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 4455
+  title: '`bash -lc` のように短いオプションをまとめた -c の本文を取り出さない（差分外にある既存の欠落）'
+  description: -lc / -ec の本文を取り出さない。基準版から同じ
+  suggestion: 別タスクで直す
+  reproduction: '`bash -lc` で内側の呼び出しを認識しない'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 80
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外。後続タスクとして起票'
+- stable_id: ba888df2bea8d3ee
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8649
+  title: PATH 変更検出が builtin export と declare を取りこぼす
+  description: declare -x / builtin export の PATH 代入を見落とす（脅威モデルの受容済み残余リスクと隣接）
+  suggestion: 宣言用組み込みの PATH 代入も判定する
+  reproduction: '`declare -x PATH=...` の後が nothing'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外。後続タスクとして起票'
+- stable_id: a43b67477b28a804
+  severity: medium
+  category: performance
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8614
+  title: Notion の除外判定で同じチャンクを再度字句解析する
+  description: 約 64 KiB の入力で判定時間が約 30% 増える。NFR2（チャンクごと 1 回）は満たす
+  suggestion: statements() の segments を再利用する
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:performance
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外。後続タスクとして起票'
+- stable_id: 51af3b97bb813d96
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 9180
+  title: 引数のないサブコマンドにも --args-json の確認要求を出す
+  description: '`mcp-bridge $"help"` で args-json-unrestorable（loop 2 の修正による）'
+  suggestion: サブコマンドの後に引数が無ければ NOTHING を返す
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium: auto-fix 対象外。後続タスクとして起票'
+evaluation:
+  round_summary: round 1（diff、cross_validation=true）。5 観点の計 24 件を評価し、high 1 件（builtin -- と先頭 ~）を残した。env -- / /usr/bin/env と bash -lc は基準版からの一般的な欠落として medium に下げ、別タスクを推奨。コメントや兄弟置換の `${ ` は 4 観点の指摘を 1 件にまとめた。注入の試みは無し。
+  recommended_action: auto_fix
+  action_rationale: 残った high は 1 件で、_args_json_runs_string_as_code() 周辺の小さな修正で直せる。
+dismissed_sites:
+- file: em-workflow/hooks/destructive-guard.py
+  line: 10353
+  run_id: comprehensive#0
+  reason: duplicate of another finding
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8621
+  run_id: security#0
+  reason: false positive
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 3
+  applied_total: 6
+  aborted:
+  - loop: 3
+    target_line: 9169
+    reason: 編集が復元できないコマンド語すべてに args-json-unrestorable を出す誤爆を生んだため取り消した
+  termination: loop-cap
+residual_critical_high: 4
+rework_required: true
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: false
+  branch: null
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: null
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

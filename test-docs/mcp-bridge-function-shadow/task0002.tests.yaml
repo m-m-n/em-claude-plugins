@@ -1,0 +1,147 @@
+task_id: task0002
+baseline_failures:             # 4a, before any edit: run-destructive-guard.py -> 1500/1500 passed; python3 -m unittest discover -s tests -> Ran 16947 tests, FAILED (failures=4, skipped=1); the four below, all version-bump baseline checks that the plugin-version Action's patch bumps broke before this task started
+  - tests.test_review_perspective_model_effort_version_bump.TestEmReviewManifest.test_version_is_a_minor_bump_over_baseline
+  - tests.test_review_perspective_model_effort_version_bump.TestEmWorkflowManifest.test_version_is_a_minor_bump_over_baseline
+  - tests.test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_review_entry_version_is_a_minor_bump_over_baseline
+  - tests.test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_workflow_entry_version_is_a_minor_bump_over_baseline
+final_failures:                # re-executed after implementation and after this record: the runner passes every case (1525/1525) and unittest discover (Ran 16973 tests, FAILED failures=4, skipped=1) fails only the same four baseline tests; nothing new failing
+  - tests.test_review_perspective_model_effort_version_bump.TestEmReviewManifest.test_version_is_a_minor_bump_over_baseline
+  - tests.test_review_perspective_model_effort_version_bump.TestEmWorkflowManifest.test_version_is_a_minor_bump_over_baseline
+  - tests.test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_review_entry_version_is_a_minor_bump_over_baseline
+  - tests.test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_workflow_entry_version_is_a_minor_bump_over_baseline
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_args_json.TestNotionPathCommandWord.test_a_lifted_notion_pair_with_an_ansi_c_command_word_is_inspected
+      - tests.test_destructive_guard_args_json.TestNotionPathCommandWord.test_a_notion_pair_that_is_not_lifted_stays_excluded
+    red_confirmed: true
+    red_reason: >
+      The four TS-21 runner cases were added to the case file before any hook
+      change and run-destructive-guard.py (the runner that the first test
+      executes over the whole table and asserts exits 0 with no FAIL line) was
+      run directly against the unchanged hook: each of the three deny forms
+      (`$'mcp-bridge'` after `f() { :; }`, `$'\x6dcp-bridge'` after
+      `mcp-bridge() { :; }`, `$'/usr/local/bin/mcp-bridge'` after
+      `f() { :; }`) FAILed with got=allow rule=None where deny is required; the
+      fourth form, the pin `$'mcp-bridge' <notion tail>` with no construct,
+      gave allow before and gives allow after, so it is a pin and not a red.
+      The unit test of the lifted ANSI-C command word, run against the
+      unchanged hook, FAILed for all three subtests (plain spelling, hex
+      escape, path) with AssertionError: 'inspected' != 'nothing'. After the
+      change the three forms give deny and the unit tests pass.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_args_json.TestNotionPathCommandWord.test_an_ansi_c_command_word_of_another_pair_is_nothing
+      - tests.test_destructive_guard_args_json.TestNotionPathCommandWord.test_a_locale_quoted_command_word_is_nothing_and_not_unrestorable
+      - tests.test_destructive_guard_args_json.TestNotionPathCommandWord.test_a_command_word_of_another_basename_or_not_static_is_nothing
+      - tests.test_destructive_guard_args_json.TestNotionPathCommandWord.test_the_lift_is_asked_only_after_the_pair_predicate
+    red_confirmed: false
+    red_reason: >
+      The criterion is a non-regression pin. The seven TS-27 runner cases
+      (`$'mcp-bridge'` and `f() { :; }; $'mcp-bridge'` and `$'\x6dcp-bridge'`
+      with the desktop-commander tail, `$"x" args`, `$"x" run --args-json ...`,
+      `$'echo' run --args-json ...`, `"$cmd" run --args-json ...`) were run on
+      the unchanged hook before any change and each gave allow with no reason
+      id, so none pins a rule; they give allow after the change, and none gives
+      args-json-unrestorable. The unit tests of the criterion (the three
+      desktop-commander forms and the locale-quote and `$cmd` forms give
+      KIND_NOTHING with the Unrestorable flag unset; the lift is not walked for
+      another pair) passed on the unchanged hook, so no red state occurred for
+      this criterion. The third unit form of the plan (the notion call after a
+      function definition gives KIND_INSPECTED) is the one that was red on the
+      unchanged hook; it is recorded under AC-1.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_args_json.TestStaticRuns.test_the_three_words_lift_the_call_in_a_partly_static_word
+      - tests.test_destructive_guard_args_json.TestStaticRuns.test_an_expansion_ends_a_run
+      - tests.test_destructive_guard_args_json.TestStaticRuns.test_a_word_that_is_one_static_run
+      - tests.test_destructive_guard_args_json.TestStaticRuns.test_a_part_that_cannot_be_restored_ends_a_run
+      - tests.test_destructive_guard_args_json.TestStaticRuns.test_a_partly_static_word_that_holds_none_of_them_does_not_lift_the_call
+    red_confirmed: true
+    red_reason: >
+      The three TS-23 runner cases (`echo $'BASH\x5fFUNC_x'"$USER"; <notion
+      call>` and the BASH_ALIASES and BASH_CMDS forms) were added before any
+      hook change and the runner, run directly against the unchanged hook,
+      FAILed each with got=allow rule=None where deny is required. The unit
+      test of the three words FAILed for all three subtests with
+      AssertionError: ['inspected'] != ['nothing'], and the run-reading tests
+      ERRORed with AttributeError (no _args_json_payload_chunk and no
+      _args_json_static_runs on the module).
+      The same-shape pin without one of the words (BASH\x5fOTHER) gave
+      ['nothing'] before and after and is not a red. After the change the three
+      forms give deny.
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_args_json.TestNotionPathEnvReading.test_the_three_forms_head_misreads_are_inspected
+      - tests.test_destructive_guard_args_json.TestNotionPathEnvReading.test_a_payload_in_a_construct_of_its_own_lifts_the_call
+      - tests.test_destructive_guard_args_json.TestNotionPathEnvReading.test_the_env_reader_names_the_child_command
+      - tests.test_destructive_guard_args_json.TestNotionPathEnvReading.test_head_and_the_skip_loop_do_not_use_the_env_reader
+    red_confirmed: true
+    red_reason: >
+      The three TS-24 runner cases (`/usr/bin/env <import> bash -c "<inner
+      notion>"`, `env - <import> bash -c "<inner notion>"`, `env
+      $'BASH_FUNC_mcp-bridge%%\x3d() { :; }' bash -c "<inner notion>"`) were
+      added before any hook change and the runner, run directly against the
+      unchanged hook, FAILed each with got=allow rule=None where deny is
+      required. The unit test of the three forms FAILed for all three subtests
+      (path, lone dash, ANSI-C equals) with AssertionError: 'inspected' !=
+      'nothing', the payload-with-its-own-construct test FAILed the same way,
+      the child-reader test ERRORed with AttributeError (no
+      _args_json_env_child_index on the module), and the structure test that
+      names the only two callers of the new reader FAILed (the reader did not
+      exist). After the change the three forms give deny.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_args_json.TestNotionPathEnvReading.test_a_payload_that_is_not_a_lifted_notion_call_queues_nothing
+      - tests.test_destructive_guard_args_json.TestNotionPathEnvReading.test_a_statement_head_reads_right_is_left_to_the_payload_extraction
+      - tests.test_destructive_guard_args_json.TestNotionPathEnvReading.test_a_payload_that_is_not_a_single_static_word_queues_nothing
+    red_confirmed: false
+    red_reason: >
+      The criterion is a non-regression pin. The eight TS-25 runner cases
+      (`/usr/bin/env bash -c "git branch -D example"`, `env - bash -c ...`,
+      `env $'A\x3d1' bash -c ...`, `env - git branch -D example`,
+      `/usr/bin/env <import> bash -c "<dc call>"`, `/usr/bin/env ls`,
+      `env - ls`, `env $'A\x3d1' ls`) were run on the unchanged hook before any
+      change and each gave allow with no reason id; they give allow after the
+      change. The unit tests of nothing being queued for another pair, an
+      unlifted notion call, a payload that is not a single static word, a
+      statement that head() reads right, and a non-shell child passed on the
+      unchanged hook, so no red state occurred for this criterion.
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDocstring.test_step_1_names_the_statically_restored_command_word
+      - tests.test_destructive_guard_args_json.TestDocstring.test_the_env_reader_says_who_uses_it_and_that_head_does_not
+      - tests.test_destructive_guard_args_json.TestDocstring.test_the_shadow_scan_names_the_static_run_match
+      - tests.test_destructive_guard_args_json.TestDocstring.test_head_keeps_the_sentence_that_it_is_mirrored_and_kept_in_sync
+    red_confirmed: true
+    red_reason: >
+      Run against the unchanged hook, the step 1 test FAILed for all three of
+      its phrases (the statically restored command word, applies only to a
+      lifted notion pair, _args_json_notion_lifted() inside step 1), the
+      shadow-scan test FAILed for both phrases (the static-run match,
+      _args_json_static_runs()), and the env-reader test ERRORed with
+      AttributeError (no _args_json_env_child_index to read a docstring from).
+      The head() sentence test passed before and after (head()'s docstring was
+      not touched), so it is a pin and not a red.
+  AC-7:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_every_pre_task_command_preserved_with_only_named_changes
+      - tests.test_destructive_guard_args_json
+    red_confirmed: false
+    red_reason: >
+      The criterion states that the three commands pass, that the case file's
+      diff adds lines only, and that every existing test method of
+      tests/test_destructive_guard_args_json.py passes unchanged. The suites
+      passed on the unchanged hook before any change (baseline), so no red
+      state occurred for it; the new cases and tests are the reds of AC-1 to
+      AC-6. The existing test_every_pre_task_command_preserved_with_only_named_changes
+      detects a changed expectation of any pre-task command; no red state
+      occurred for this change. That the case file's diff adds lines only was
+      checked with git diff --numstat (25 added, 0 deleted) and has no
+      executable form; the existing unit tests were not edited.

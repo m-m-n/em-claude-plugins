@@ -1,0 +1,142 @@
+task_id: task0001
+baseline_failures:             # 4a, before any edit: run-destructive-guard.py -> 1467/1467 passed; python3 -m unittest discover -s tests -> Ran 16931 tests, FAILED (failures=4, skipped=1); the four below, all version-bump baseline checks that the plugin-version Action's patch bumps broke before this task started
+  - tests.test_review_perspective_model_effort_version_bump.TestEmReviewManifest.test_version_is_a_minor_bump_over_baseline
+  - tests.test_review_perspective_model_effort_version_bump.TestEmWorkflowManifest.test_version_is_a_minor_bump_over_baseline
+  - tests.test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_review_entry_version_is_a_minor_bump_over_baseline
+  - tests.test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_workflow_entry_version_is_a_minor_bump_over_baseline
+final_failures:                # re-executed after implementation and after this record: the runner passes every case (1500/1500) and unittest discover fails only the same four baseline tests; nothing new failing
+  - tests.test_review_perspective_model_effort_version_bump.TestEmReviewManifest.test_version_is_a_minor_bump_over_baseline
+  - tests.test_review_perspective_model_effort_version_bump.TestEmWorkflowManifest.test_version_is_a_minor_bump_over_baseline
+  - tests.test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_review_entry_version_is_a_minor_bump_over_baseline
+  - tests.test_review_perspective_model_effort_version_bump.TestMarketplaceEntries.test_em_workflow_entry_version_is_a_minor_bump_over_baseline
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_args_json.TestNotionLiftChain.test_the_two_environment_words_lift_the_call_wherever_a_word_holds_them
+      - tests.test_destructive_guard_args_json.TestNotionLiftChain.test_the_pair_predicate_is_still_asked_for_a_lifted_statement
+    red_confirmed: true
+    red_reason: >
+      The thirty runner cases were added to the case file before any hook
+      change, and run-destructive-guard.py (the runner that the first test
+      executes over the whole table and asserts exits 0 with no FAIL line) was
+      run directly against the unchanged hook: 1473/1497 passed, and each of
+      TS-1, TS-2, TS-3, the six TS-4 forms, both TS-6 forms and TS-7 FAILed
+      with got=allow where deny is required. After the change each gives deny.
+      TS-6 form 1 (env 'BASH_FUNC_...' bash -c) still gave allow after the
+      lift alone, because _skip_assignments_and_wrappers() read the
+      non-identifier name `BASH_FUNC_mcp-bridge%%` as the command word and the
+      bash -c payload was never extracted; it gives deny only with the env
+      operand reading added in this task (two extra cases pin it:
+      `env 'A%%=1' bash -c "git branch -D example"` deny and the harmless
+      `echo ok` payload allow). The two unit tests, run against the base
+      commit's hook (a copy of the test module over `git archive` of the
+      base hooks), FAILed with AssertionError: the four BASH_FUNC_ /
+      BASH_ALIASES / redirection-target / quoted-word subtests and the
+      pair-predicate test gave 'nothing' where 'inspected' is required.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_args_json.TestNotionLiftChain.test_the_words_that_run_a_string_as_code_lift_the_call
+    red_confirmed: true
+    red_reason: >
+      The same direct run of the runner against the unchanged hook: the five
+      TS-5 forms (eval, source, dot, `${ :; }`, `"$cmd"`) and the three TS-17
+      forms (trap, mapfile, readarray) each FAILed with got=allow where deny is
+      required. After the change all eight give deny. The unit test, run
+      against the base commit's hook, FAILed for all ten of its subtests (eval,
+      source, dot, trap, mapfile, readarray, brace substitution, variable
+      command name, behind command, behind a group) with 'nothing' where
+      'inspected' is required.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_args_json.TestNotionLiftChain.test_a_construct_after_the_call_and_in_an_enclosing_chunk_lifts_it
+      - tests.test_destructive_guard_args_json.TestNotionLiftChain.test_a_definition_in_a_sibling_substitution_does_not_lift_the_call
+    red_confirmed: true
+    red_reason: >
+      The direct run of the runner against the unchanged hook: TS-8, both TS-9
+      forms and the escaped TS-10 form FAILed with got=allow where deny is
+      required. The first TS-10 form gave deny already (the raw single-quote
+      candidate is re-scanned because the chunk is not one simple command, as
+      the plan states) and TS-11 gave allow both before and after, so those two
+      are pins and not reds. After the change TS-8, TS-9, both TS-10 forms give
+      deny and TS-11 gives allow. The unit tests, run against the base
+      commit's hook, FAILed for the call after the construct, one level above,
+      two levels above, the middle chunk of three, and the own-chunk half of
+      the sibling test (['nothing'] != ['inspected']).
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_every_pre_task_command_preserved_with_only_named_changes
+      - tests.test_destructive_guard_args_json.TestNotionLiftChain.test_a_construct_in_quotes_a_comment_or_a_data_heredoc_does_not_lift_it
+    red_confirmed: false
+    red_reason: >
+      The criterion is an allow-side pin: the two TS-12 forms, TS-13, TS-14 and
+      every existing notion-pair allow case gave allow on the unchanged hook
+      and give allow after the change (the runner passes every one of the 1467
+      existing cases before and after), so no red state occurred for it. The
+      existing test_every_pre_task_command_preserved_with_only_named_changes
+      detects a changed expectation of any pre-task command; no red state
+      occurred for this change. That the case file's diff adds lines only was
+      checked with git diff --numstat (33 added, 0 deleted); no executable
+      check of that exists to make fail.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_args_json.TestNotionLiftChain.test_the_chain_is_walked_without_recursion
+      - tests.test_destructive_guard_args_json.TestNotionLiftChain.test_a_derived_chunk_without_a_link_reads_as_lifted
+      - tests.test_destructive_guard_args_json.TestNotionLiftChain.test_the_answer_is_kept_on_every_chunk_the_walk_visited
+      - tests.test_destructive_guard_args_json.TestNotionLiftChain.test_the_scan_runs_at_most_once_for_each_chunk
+      - tests.test_destructive_guard_args_json.TestNotionLiftChain.test_a_definition_in_a_sibling_substitution_does_not_lift_the_call
+      - tests.test_destructive_guard_args_json.TestNotionLiftChain.test_a_chunk_that_does_not_lex_reads_as_lifted
+    red_confirmed: true
+    red_reason: >
+      Run against the base commit's hook (a copy of the test module over `git
+      archive` of the base hooks): the chain, no-link, kept-answer, scan-count
+      and non-lexing tests ERRORed with AttributeError (no
+      _args_json_notion_lifted / _args_json_shadow_scan on the module), and the
+      sibling test FAILed on its own-chunk half with ['nothing'] !=
+      ['inspected']. After the change they pass; the chain test walks 3 x the
+      recursion limit without a RecursionError.
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_args_json.TestNotionLiftChain.test_the_two_override_vocabularies_and_the_stop_words_keep_their_values
+      - tests.test_destructive_guard_args_json.TestNotionLiftChain.test_the_pair_predicate_is_still_asked_for_a_lifted_statement
+      - tests.test_destructive_guard_args_json.TestNotionLiftChain.test_the_chain_is_not_walked_for_a_statement_that_is_not_the_notion_pair
+      - tests.test_destructive_guard_args_json.TestFlagReading
+      - tests.test_destructive_guard_args_json.TestNamerefDeclarations
+      - tests.test_destructive_guard_args_json.TestStructure
+    red_confirmed: true
+    red_reason: >
+      Run against the base commit's hook, the pair-predicate test FAILed (the
+      TS-1 command's notion statement gave 'nothing' where 'inspected' is
+      required) and the chain-not-walked test ERRORed (no
+      _args_json_notion_lifted to wrap). The vocabulary-value test, and the
+      existing TestFlagReading, TestNamerefDeclarations and TestStructure
+      classes, pass before and after unchanged (the vocabularies and the
+      nameref answer were not changed), so no red state occurred for those
+      parts of the criterion.
+  AC-7:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDocstring.test_the_notion_exclusion_text_names_the_lift
+    red_confirmed: true
+    red_reason: >
+      Run against the base commit's hook the test FAILed for every subtest: the
+      statements() docstring still said the notion pair is the only pair whose
+      decoded value is not inspected, the _single_quote_skip_spans() docstring
+      still said it is the one pair the decoded-value inspection leaves out,
+      and none of the three named _args_json_notion_lifted(); it ERRORed at the
+      end on the missing function's docstring.
+  AC-8:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_args_json
+    red_confirmed: false
+    red_reason: >
+      The criterion states that the three commands pass and that the case
+      file's diff adds lines only. The suites passed on the unchanged hook
+      before any change (baseline), so no red state occurred for it; the
+      new cases and tests are the reds of AC-1 to AC-7. The runner passes
+      1500/1500 and the args-json module passes after the change; unittest
+      discover fails only the four baseline tests. The diff check was done with
+      git diff --numstat (33 added, 0 deleted) and has no executable form.

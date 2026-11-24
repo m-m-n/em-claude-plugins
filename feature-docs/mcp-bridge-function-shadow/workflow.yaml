@@ -1,0 +1,421 @@
+schema_version: 1
+feature: mcp-bridge-function-shadow
+created: '2026-11-21'
+base_branch: main
+goal: '# destructive-guard: 同名のシェル関数で mcp-bridge を上書きした場合の notion 除外判定
+
+
+  ## 脆弱性の概要 (必須)
+
+
+  destructive-guard の notion ペア除外判定が、同じチャンク内で mcp-bridge という名前のシェル関数を定義して呼び出す形を見分けられない。除外が維持されたまま関数本体が実行され得る。
+
+
+  ## 参照 (必須)
+
+
+  - CVE / GHSA ID: 該当なし
+
+  - アドバイザリ URL: 該当なし
+
+  - severity: medium
+
+  - 該当パッケージ: 該当なし
+
+  - 現在のバージョン: 該当なし
+
+  - 修正済みバージョン: 無し
+
+
+  ## 攻撃シナリオ (必須)
+
+
+  Bash コマンドの中で mcp-bridge と同名の関数を定義し、続けて notion 呼び出しの形をとる。ガードは notion ペアとして検査対象から外すが、実際には関数本体が実行される。
+
+
+  ## 影響範囲 (必須)
+
+
+  destructive-guard が拒否すべき破壊的コマンドが、notion 呼び出しの除外を経由して素通りし得る。
+
+
+  ## 完了の定義 (必須)
+
+
+  - [ ] 攻撃シナリオが成立しない
+
+  - [ ] 修正版に追随している（修正版が無い場合は暫定緩和策の欄に対応を記載）
+
+
+  ## 該当箇所 (任意)
+
+
+  <code>em-workflow/hooks/destructive-guard.py</code> の notion ペア除外判定。args-json-deferred-eval-bypass のレビュー
+  round 1（stable\_id 4a4542dc55b04a23）で指摘され、その脅威モデルではスコープ外と判断した。
+
+
+  ## 暫定緩和策 (任意)
+
+
+  \<修正までの回避手段。あれば>
+
+  '
+parent_branch: em-workflow/mcp-bridge-function-shadow/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.01
+      '1': 0.8
+      '2': 0.19
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.86
+      '2': 0.14
+      '3': 0.0
+  at: '2026-11-21T14:08:04+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover
+        -s tests
+      format_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: 90e9625d1dad60b09de6144a98318e9284208dbb
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'tier reduced により design step を削減（UI を持たないフックの静的解析の修正、design-system 候補 0 件。create-spec.design-step:
+    decide_autonomously → skip）'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: completed
+  completed_at_commit: 8ef38178cbd2e3d58bda6ae5a1e344c7c4b5a39c
+- id: implement
+  status: completed
+  base_commit: 93a21ad299242542960f5c4a497f255626ef9707
+  completed_at_commit: 2348fe74726d935df4796b1292d934fe25fc01c3
+- id: review
+  status: completed
+  completed_at_commit: 40ee81697555e6c9cdc3479cf71f818578ba6cb3
+- id: verify
+  status: completed
+  completed_at_commit: a15702b88f5006b34223f50c94a0ec3a4bc0fbd1
+  result: pass
+  round: 2
+  passed_ids:
+  - TS-1
+  - TS-2
+  - TS-3
+  - TS-4
+  - TS-5
+  - TS-6
+  - TS-7
+  - TS-8
+  - TS-9
+  - TS-10
+  - TS-11
+  - TS-12
+  - TS-13
+  - TS-14
+  - TS-15
+  - TS-16
+  - TS-17
+  - TS-18
+  - TS-19
+  - TS-20
+  - TS-21
+  - TS-23
+  - TS-24
+  - TS-25
+  - TS-26
+  - TS-27
+  - AC1
+  - AC2
+  - AC3
+  - AC4
+  - AC5
+  - AC6
+  - AC7
+  - AC8
+  - AC9
+  failed_items: []
+- id: retrospect
+  status: completed
+  completed_at_commit: aba461695c4decffa715af0b38f5e985eff0e47c
+tasks:
+  task0001:
+    title: Lift the notion-pair exclusion on override and shell-state constructs in the chunk chain
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_args_json.py
+    skills: []
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - FR8
+    - NFR1
+    - NFR2
+    status: merged
+    branch: em-workflow/mcp-bridge-function-shadow/task0001
+    notes: null
+  task0002:
+    title: Read the command word, env's child position and partly static words statically
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_args_json.py
+    skills: []
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR3
+    - FR4
+    - FR5
+    - FR7
+    - FR8
+    - NFR1
+    status: merged
+    branch: em-workflow/mcp-bridge-function-shadow/task0002
+    notes: null
+    provenance:
+      origin_kind: review
+      origin_ids:
+      - 3d3e6afd38e8c4b3
+      - 444c158592ba641c
+      - 8ec945002f0cf118
+      - c0598deb75b9d2c7
+      review_round: 1
+review:
+  status: completed
+  rounds_completed: 3
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary:
+    - perspective: performance
+      reason: NFR2（走査コスト）が追加走査の計算量を要件にしているため
+    cross_validation: true
+  perspectives:
+    comprehensive:
+      status: completed
+      rounds:
+      - 1
+      - 2
+      - 3
+    security:
+      status: completed
+      rounds:
+      - 1
+      - 2
+      - 3
+    architecture:
+      status: completed
+      rounds:
+      - 1
+      - 2
+      - 3
+    spec:
+      status: completed
+      rounds:
+      - 1
+      - 2
+      - 3
+    performance:
+      status: completed
+      rounds:
+      - 1
+      - 2
+      - 3
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: 上書き構文があれば notion ペアの除外を外す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-21
+    - TS-23
+  FR2:
+    title: シェル状態が不明になる文があれば notion ペアの除外を外す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-5
+    - TS-17
+  FR3:
+    title: 環境変数経由の関数・alias の取り込み
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-6
+    - TS-7
+    - TS-14
+    - TS-19
+    - TS-23
+    - TS-24
+  FR4:
+    title: 構文を探す範囲
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-1
+    - TS-8
+    - TS-9
+    - TS-18
+    - TS-24
+  FR5:
+    title: 除外を外した文の判定
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-1
+    - TS-10
+    - TS-11
+    - TS-21
+  FR6:
+    title: 構文に当たらない書き方
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-7
+    - TS-12
+    - TS-13
+  FR7:
+    title: 変えない判定
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-14
+    - TS-15
+    - TS-19
+    - TS-25
+    - TS-27
+  FR8:
+    title: テストケースと説明文
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
+    - TS-6
+    - TS-7
+    - TS-8
+    - TS-9
+    - TS-10
+    - TS-11
+    - TS-12
+    - TS-13
+    - TS-14
+    - TS-17
+    - TS-20
+    - TS-21
+    - TS-23
+    - TS-24
+    - TS-26
+  NFR1:
+    title: 既存ケースの維持
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-15
+    - TS-16
+    - TS-25
+    - TS-27
+  NFR2:
+    title: 走査コスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-18
+batch:
+  review_rework_count: 1
+  verify_rework:
+    rounds: 1
+    failed_id_counts:
+      TS-16: 1
+  infra_resume:
+    rounds: 0
+    cap: 2

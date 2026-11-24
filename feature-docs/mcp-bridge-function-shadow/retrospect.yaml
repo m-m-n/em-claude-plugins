@@ -1,0 +1,117 @@
+feature: mcp-bridge-function-shadow
+collected_at: '2026-11-23T22:50:42+09:00'
+session_ids:
+- 01a208ab-5438-7522-9040-db8503e8d52b
+signals:
+  review_critical_high:
+  - stable_id: d6cec4d1dd574a96
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: notion 除外の解除判定が `builtin --` 経由の alias / hash / enable と、先頭が `~` のコマンド名を見落とす
+    resolution: fixed
+  - stable_id: 1f2075b8b504b2d5
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: env の有効な代入引数で後続のシェルが検査対象から外れる
+    resolution: fixed
+  - stable_id: 478d30e960961aa1
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 'TM-1: Bash が同じ意味に読む run の表記で関数差し替え後の検査が抜ける'
+    resolution: fixed
+  - stable_id: 90981dca2843a9f7
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 環境変数名の引用を復元せず、Bash の関数インポートを見落とす
+    resolution: fixed
+  - stable_id: a1ccad8b64c1df6c
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 'TM-1: 復元した変数名の判定から `BASH_CMDS` が漏れる'
+    resolution: fixed
+  - stable_id: 3d3e6afd38e8c4b3
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: TM-1 の検査に入る前に、同じ実行名の呼び出しを取りこぼす
+    resolution: unresolved
+  - stable_id: 444c158592ba641c
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: TM-1・TM-3 の環境変数名は、同じ語に展開があると検出されない
+    resolution: unresolved
+  - stable_id: 8ec945002f0cf118
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: TM-3 の対象となる env 呼び出しで子シェルの検査が途切れる
+    resolution: unresolved
+  - stable_id: c0598deb75b9d2c7
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: env の単独の `-` を実行コマンド名として扱う
+    resolution: unresolved
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives:
+  - perspective: performance
+    reason: NFR2（走査コスト）が追加走査の計算量を要件にしているため
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: description_plus_code の最終読みがスコア 1.14（バケット 1 の確率 0.86）で reduced の閾値に入った
+    bases:
+    - basis: description_only
+      score:
+        type: score
+        score: 1.19
+        confidence: 0.8
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+        probabilities:
+          '0': 0.01
+          '1': 0.8
+          '2': 0.19
+          '3': 0.0
+      observed_at: '2026-11-21T14:08:04+09:00'
+    - basis: description_plus_code
+      score:
+        type: score
+        score: 1.14
+        confidence: 0.86
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.86
+          '2': 0.14
+          '3': 0.0
+      observed_at: '2026-11-21T14:08:04+09:00'
+    pre_survey_estimate:
+      files_expected:
+      - em-workflow/hooks/destructive-guard.py
+      - em-workflow/hooks/tests/destructive-guard-cases.json
+      changed_lines_approx: 40
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: false
+      spillover_modules: []
+      work_still_required: true
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 3
+      body_change_kind: new_logic
+      change_containment: single_module
+      caller_and_dependency_count: 7
+      changes_external_contract: false
+      changes_behavior: true
+      evidence: em-workflow/hooks/destructive-guard.py:8255 の _args_json_notion_pair() がフラグと引数を判定し、8941行で一致した呼び出しの JSON 検査を省略する。6852行の _defines_function() は関数定義を検出するが、除外判定は同じチャンクでの mcp-bridge の定義を参照しない。7599行の生文字列向け除外は単一コマンドに限られる。概算は既存の関数判定を拡張し、同名関数の定義形式2件と別名関数1件を既存のテストケースファイルに追加する前提で、コードの静的確認に基づく。
+follow_up_drafts: []
+lessons_candidates:
+- verify round 1 で TS-16（全テスト成功）が変更前からの失敗 4 件で fail し、rework 1 回で解消した
+- review で deferred の medium 指摘が 3 ラウンド計 35 件残った。env 経由・短いオプションの -c など同根の指摘がラウンドをまたいで再出している

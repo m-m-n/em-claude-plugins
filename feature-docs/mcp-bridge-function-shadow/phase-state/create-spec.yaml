@@ -1,0 +1,137 @@
+schema_version: 1
+feature: mcp-bridge-function-shadow
+phase: create-spec
+status: completed
+generation: 2
+base_revision: d42e00bb0d6379f40470c88cc8877934d7191608
+last_input_digest: sha256:cfa4a3e833926a95f6c742757328f55f7e41de47b9a0eb967debe18604ca9277
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-11-21T14:14:31+09:00'
+    questions:
+    - question_id: req.shadow-constructs
+      status: answered
+    - question_id: req.shadow-reach
+      status: answered
+    - question_id: req.shadow-verdict
+      status: answered
+    - question_id: design-step.recommendation
+      status: answered
+  create-spec-q0002:
+    status: answered
+    issued_at: '2026-11-21T14:20:04+09:00'
+    questions:
+    - question_id: req.shadow-env-import
+      status: answered
+answers:
+  req.shadow-constructs:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-21T14:14:31+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - fr7-and-state-unknown
+    freeform: null
+    normalized_answer: FR7 の上書き構文（名前を問わない関数定義、alias / hash / enable、PATH への代入、BASH_CMDS）と、シェル状態が不明になる文（eval
+      / source / . / 現在のシェルで実行される置換 / 静的に読めないコマンド名）があれば notion ペアの除外を外す
+    resolution_note: 'gate: create-spec.requirement-clarification; policy codex_consultation;
+      Codex consulted (codex entry, 1 turn); chosen fr7-and-state-unknown; not chosen
+      mcp-bridge-function-only, fr7-only; key points: alias / PATH / eval / source
+      でも mcp-bridge の解決先は変わり得る。名前を問わない関数定義で除外が外れる誤検知の余地はあるが、既存 allow ケースの function
+      f() は引用内かコメント内で関数定義の構文に当たらない; Opus escalation not run'
+  req.shadow-reach:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-21T14:14:31+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - chain-position-independent
+    freeform: null
+    normalized_answer: 文のチャンクと最上位までの囲むチャンクの連鎖のどこかに構文があれば、呼び出しの前後を問わず除外を外す
+    resolution_note: 'gate: create-spec.requirement-clarification; policy codex_consultation;
+      Codex consulted (codex entry, 1 turn); chosen chain-position-independent; not
+      chosen same-chunk-preceding; key points: _args_json_nameref_declared は _outer_marked
+      をたどり最上位まで全文を調べる先例。override_seen は走査順に立つため、前後を問わず調べるのが妥当; Opus escalation not
+      run'
+  req.shadow-verdict:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-21T14:14:31+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - inspect-like-other-pairs
+    freeform: null
+    normalized_answer: 除外を外した notion 呼び出しは、ほかの組と同じく --args-json を復号して検査する
+    resolution_note: 'gate: create-spec.requirement-clarification; policy codex_consultation;
+      Codex consulted (codex entry, 1 turn); chosen inspect-like-other-pairs; not
+      chosen ask-always; key points: 復号後が無害なら allow を維持できる。decide() は無人実行で ask を deny
+      に変えるため、常に ask だと無害なコメント投稿も止まる; Opus escalation not run'
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-21T14:14:31+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - skip
+    freeform: null
+    normalized_answer: デザインのステップを省く
+    resolution_note: 'gate: create-spec.design-step; policy decide_autonomously →
+      analyst recommendation skip（UI の無いフックの静的解析の修正）'
+  req.shadow-env-import:
+    packet_id: create-spec-q0002
+    answered_at: '2026-11-21T14:20:04+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - notion-check-only
+    freeform: null
+    normalized_answer: どの語でも BASH_FUNC_ か BASH_ALIASES を含めば（BASH_CMDS と同じ部分一致）、notion
+      ペアの除外を外す。FR7 の共有語彙（ヒアドキュメントのデータ判定と override_seen）は変えない
+    resolution_note: 'gate: create-spec.requirement-clarification; policy codex_consultation;
+      Codex consulted (codex entry, 1 turn); chosen notion-check-only; not chosen
+      shared-fr7-vocabulary, answered-set-only; key points: FR7 に加えると override_seen
+      を通じてヒアドキュメントのデータ判定が未確定になり保留済みの本文も再検査に回る。notion の --args-json 除外の判定に限って足すのが修正範囲に合う;
+      Opus escalation not run'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:fc98c645e3a938e8f38c67e871dd9d167f84acb9bfc6cd879bcce874a3f479ea
+- request_id: create-spec-run-0002
+  status: needs_user_input
+  input_digest: sha256:3e91cbcd46c20e1ee87a390e0e42f2f4dde06cba1492ae78589c8d911dbb8ea7
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:242fdc75e2c9e82bc69dab38c2f6448d5e095e9a076460b17cd6d1bf40757f49
+  output_digest: sha256:27f4d0702c7c005d2f2eadf17bd16a516cc4d7f7e68ddf1829e6110ea4ac9a41
+- request_id: create-spec-run-0004
+  status: completed
+  input_digest: sha256:cfa4a3e833926a95f6c742757328f55f7e41de47b9a0eb967debe18604ca9277
+  self_write_set: []
+- request_id: create-spec-run-0005
+  status: completed
+  note: spec-change re-entry analysis (verify TS-16 / NFR1 / AC9)
+- request_id: create-spec-run-0006
+  status: completed
+  self_write_set:
+  - feature-docs/mcp-bridge-function-shadow/SPEC.md
+artifacts:
+- path: feature-docs/mcp-bridge-function-shadow/SPEC.md
+  sha256: sha256:97c7ac87fabbcd1ab37d140358d377bf688eebeb7bea46c0f8eec12472ce6c62
+  produced_by: create-spec-run-0006
+patches: []
+progress_fingerprint: sha256:9be403fe4010b8866902532713044bf84d1b4a69ca30893d062401d694a4c078
+stale_redispatch_count: 0
+resolved_input_cache:
+  design_system_candidates:
+    generation_digest: sha256:4ce95370e221ea0a3ef42ee0992d28ac44cbae9b311b7e310061d35b819bb093
+    resolved_at_generation: 1
+    paths: []
+    digests: {}
+    truncated: false
+last_error: null
+assumptions_added_generation_2:
+- 'Baseline for NFR1 / AC9 / TS-16: base_branch at the integration base is the reference;
+  a unittest failure counts against NFR1 only when the same test passes on that baseline
+  or its test file is touched by this feature diff (reversible)'
