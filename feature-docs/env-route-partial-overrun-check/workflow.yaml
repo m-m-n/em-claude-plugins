@@ -1,0 +1,189 @@
+schema_version: 1
+feature: env-route-partial-overrun-check
+created: '2026-11-24'
+base_branch: main
+goal: |
+  # destructive-guard: env 経路で片方の読み方だけが overrun したとき、もう片方が復号した notion ペアの command が検査されない
+
+  種別: セキュリティ / severity: medium
+
+  ## 脆弱性の概要
+  destructive-guard の env 経路は extglob の両方の読み方で本文を読むが、片方の読み方だけが上限を超えた（overrun）とき、上限内に収まったもう片方の読み方が復号した notion ペアの command を検査に回さない。
+
+  ## 参照
+  - CVE / GHSA ID: 該当なし
+  - アドバイザリ URL: 該当なし
+  - severity: medium
+  - 該当パッケージ: 該当なし
+  - 修正済みバージョン: 無し
+
+  ## 攻撃シナリオ
+  片方の読み方（extglob あり／なし）でだけ上限を超える本文を作り、もう片方の読み方で復号される notion ペアの command に破壊的なコマンドを置く。overrun の ask は出るが、復号済みの command の deny が判定に反映されない。
+
+  ## 影響範囲
+  本来 deny になるべきコマンドが ask にとどまる。対話実行では確認で通り得る。
+
+  ## 完了の定義
+  - 攻撃シナリオが成立しない
+  - 修正版に追随している（修正版が無い場合は暫定緩和策の欄に対応を記載）
+
+  ## 該当箇所
+  em-workflow/hooks/destructive-guard.py の env 経路で、読み取りごとの overrun / unrestorable をまとめる箇所（`for reading in readings:`）。env-route-lex-flag-isolation のレビュー round 1、stable_id bf55aa65b635241a（deferred）。
+
+  修正案: overrun の ask は残しつつ、上限内に収まった読み取りが復号した本文・command も検査に回し、そこで出た deny を優先する。または overrun を、それを起こした読み取りの項目にだけ効かせる。
+parent_branch: em-workflow/env-route-partial-overrun-check/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.85
+      '2': 0.15
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.76
+      '2': 0.24
+      '3': 0.0
+  at: '2026-11-24T22:31:46+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
+      format_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: f7892a92e475ada9cec97707d2e5186d945be760
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'フック内部の判定ロジックの修正で、画面や見た目の変更が無い（create-spec.design-step: decide_autonomously → analyst の推奨どおり skip、design-system 候補 0 件）'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+  perspectives: {}
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: 上限内の読み方の項目を検査に回す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR2:
+    title: overrun の ask は残す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR3:
+    title: deny を ask より優先する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR4:
+    title: overrun を立てた読み方の項目は積まない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR5:
+    title: 重複排除と charge は上限内の読み方だけで行う
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR6:
+    title: 予算の判定
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR7:
+    title: 変えない場合
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: テスト
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR2:
+    title: 既存ケースの保持
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR3:
+    title: テストの実行
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR4:
+    title: version
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR5:
+    title: 既存の性質の保持
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
