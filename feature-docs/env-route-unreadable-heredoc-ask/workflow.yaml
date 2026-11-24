@@ -2,28 +2,48 @@ schema_version: 1
 feature: env-route-unreadable-heredoc-ask
 created: '2026-11-24'
 base_branch: main
-goal: |
-  # destructive-guard: env 経路で区切り語を読めないヒアドキュメントの後ろに置いた notion ペアが検出されなくなる
+goal: '# destructive-guard: env 経路で区切り語を読めないヒアドキュメントの後ろに置いた notion ペアが検出されなくなる
+
 
   種別: セキュリティ（severity: medium）
 
+
   ## 脆弱性の概要
-  destructive-guard の env 経路で、区切り語を読めないヒアドキュメントの後ろに置いた mcp-bridge の notion ペアが検査されない。env-route-lex-flag-isolation で大域フラグ `_lex_unreadable_met` を退避・復元するようにした結果、その本文に対する `args-json-unrestorable` の ask も残らない。
+
+  destructive-guard の env 経路で、区切り語を読めないヒアドキュメントの後ろに置いた mcp-bridge の notion ペアが検査されない。env-route-lex-flag-isolation
+  で大域フラグ `_lex_unreadable_met` を退避・復元するようにした結果、その本文に対する `args-json-unrestorable` の
+  ask も残らない。
+
 
   ## 攻撃シナリオ
-  `/usr/bin/env bash -c '...'` の本文で、先に区切り語を読めないヒアドキュメント（例: 区切り語が `${tag}`）を置き、その後ろに notion ペアの形をとった `mcp-bridge run --args-json` を置く。env 経路の読み取りはヒアドキュメント以降を読めず、notion ペアの command を検査しない。フラグは復元されるので、全体の ask にも上がらない。
+
+  `/usr/bin/env bash -c ''...''` の本文で、先に区切り語を読めないヒアドキュメント（例: 区切り語が `${tag}`）を置き、その後ろに
+  notion ペアの形をとった `mcp-bridge run --args-json` を置く。env 経路の読み取りはヒアドキュメント以降を読めず、notion
+  ペアの command を検査しない。フラグは復元されるので、全体の ask にも上がらない。
+
 
   ## 影響範囲
+
   destructive-guard が拒否・確認すべき `--args-json` 内のコマンドが、env 経路を経由して検査を抜け得る。
 
+
   ## 完了の定義
+
   - 攻撃シナリオが成立しない
+
   - 修正版に追随している（修正版が無い場合は暫定緩和策の欄に対応を記載）
 
-  ## 該当箇所
-  `em-workflow/hooks/destructive-guard.py` の `_args_json_payload_chunk()` の env 経路（フラグの退避・復元の `finally`）。env-route-lex-flag-isolation（PR #135）のレビュー round 1、stable_id c7173bc1fe3d8438（deferred）。
 
-  修正案: env 経路の読み取りが `LexMap.unreadable` に当たり、その後ろの生テキストに mcp-bridge の語があるときは、その読み取りに `unrestorable` を立てて `args-json-unrestorable` の ask を残す。再発検出のケースを足す。
+  ## 該当箇所
+
+  `em-workflow/hooks/destructive-guard.py` の `_args_json_payload_chunk()` の env 経路（フラグの退避・復元の
+  `finally`）。env-route-lex-flag-isolation（PR #135）のレビュー round 1、stable_id c7173bc1fe3d8438（deferred）。
+
+
+  修正案: env 経路の読み取りが `LexMap.unreadable` に当たり、その後ろの生テキストに mcp-bridge の語があるときは、その読み取りに
+  `unrestorable` を立てて `args-json-unrestorable` の ask を残す。再発検出のケースを足す。
+
+  '
 parent_branch: em-workflow/env-route-unreadable-heredoc-ask/integration
 tier: reduced
 tier_decision:
@@ -52,7 +72,8 @@ project:
     main:
       language: python
       build_command: ''
-      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3
+        -m unittest discover -s tests
       format_command: ''
 workflow:
 - id: create-spec
@@ -65,14 +86,16 @@ workflow:
   - DESIGN.md
   - design/
   status: skipped
-  skipped_reason: 'フックの判定ロジックとテストケースだけの変更で、画面や見た目の変更が無い（create-spec.design-step: decide_autonomously → analyst の推奨どおり skip、design-system 候補 0 件）'
+  skipped_reason: 'フックの判定ロジックとテストケースだけの変更で、画面や見た目の変更が無い（create-spec.design-step: decide_autonomously
+    → analyst の推奨どおり skip、design-system 候補 0 件）'
 - id: create-plan
   artifacts:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - THREAT-MODEL.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: e5a4f1988e2718c38e9782af0e498ce7ec66235b
 - id: implement
   status: pending
 - id: review
@@ -81,7 +104,30 @@ workflow:
   status: pending
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Env-route tail rule for unreadable heredoc delimiters
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_env_route_tail.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: pending
+    notes: null
 review:
   status: pending
   rounds_completed: 0
@@ -94,57 +140,93 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-6
+    - TS-7
+    - TS-9
+    - TS-10
+    - TS-15
   FR2:
     title: extglob の両方の読み方の結合
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-11
   FR3:
     title: フラグの退避・復元は変えない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-5
+    - TS-6
+    - TS-12
   FR4:
     title: 再発を検出するケース
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-6
+    - TS-7
+    - TS-8
+    - TS-13
+    - TS-14
+    - TS-15
   NFR1:
     title: env 経路の外の判定は変えない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-5
+    - TS-14
   NFR2:
     title: 優先順位は変えない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-13
   NFR3:
     title: 既存の deny / ask ケースを消さず、全て通す
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-8
   NFR4:
     title: plugin.json と marketplace.json の version を変えない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-16
 batch:
   review_rework_count: 0
   verify_rework:
