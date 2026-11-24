@@ -1,7 +1,7 @@
 schema_version: 1
 feature: env-route-unreadable-heredoc-ask
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: c1395206a063872c6f455a7cc310c382118261f0
 last_input_digest: sha256:3ef42c84e31d36f67b573715a4f76818e44357aa1ae5352c83d9bee89182094c
