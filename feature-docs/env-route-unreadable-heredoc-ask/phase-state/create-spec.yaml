@@ -3,9 +3,9 @@ feature: env-route-unreadable-heredoc-ask
 phase: create-spec
 status: dispatching
 generation: 2
-base_revision: 1a44d050af48d1f8f81d892eb915004cc257b9b4
+base_revision: d286d504b3ba09f81df52735353064068d263477
 last_input_digest: sha256:1e6f9c179b6564ef416e367cec02760f2e671f9bb22857357e9dad6fc4d7ce0c
-active_request_id: create-spec-run-0006
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -89,16 +89,22 @@ worker_runs:
   output_digest: sha256:5760644d9ea0c4ded0d0389c9d11e174d0f4d87a29a3685791008b65c0773f15
   self_write_set: []
 - request_id: create-spec-run-0006
-  status: dispatched
+  status: completed
   input_digest: sha256:1e6f9c179b6564ef416e367cec02760f2e671f9bb22857357e9dad6fc4d7ce0c
   dispatch_digest_inputs:
     em-workflow/references/contracts/spec-writer-contract.md: sha256:825a7e5784539f66522028859f05eb00d761729dafe911b728394d4f3d440867
     em-workflow/references/templates/spec-document.md: sha256:a5d0106c39a5df7dc2365357a9546588275ed6c7a1651c866e75fa327a7fa592
     feature-docs/env-route-unreadable-heredoc-ask/SPEC.md: sha256:047779b8d1db6722524e8b5f363b67fcd362b6e68d7a9e991d11609f718894d4
+  output_digest: sha256:1aa20e98fb3f3aae6e843366459ad1987339d0f158481055c07b22d33f087322
+  self_write_set:
+  - feature-docs/env-route-unreadable-heredoc-ask/SPEC.md
 artifacts:
 - path: feature-docs/env-route-unreadable-heredoc-ask/SPEC.md
   sha256: sha256:047779b8d1db6722524e8b5f363b67fcd362b6e68d7a9e991d11609f718894d4
   produced_by: create-spec-run-0003
+- path: feature-docs/env-route-unreadable-heredoc-ask/SPEC.md
+  sha256: sha256:8266121e3cbfde98f172cd8fa11ddcac8b0f1b010661402fc037b4ad9fb10390
+  produced_by: create-spec-run-0006
 patches: []
 progress_fingerprint: sha256:45e70fd23f57bd9eb10b38f44b9d26460b43051457ed4602a4f56e72c8957303
 stale_redispatch_count: 0

@@ -3,7 +3,7 @@
 ## Overview
 
 destructive-guard の env 経路で、区切り語を読めないヒアドキュメントより後ろに置かれた mcp-bridge の notion ペアが検査を逃れる穴を塞ぐ。
-読めない末尾（TAIL）に `mcp-bridge` の語か `$'` があるとき、その読み取りを `unrestorable` にし、`args-json-unrestorable` の ask にする。
+読めない末尾（TAIL）に `mcp-bridge` の語か `$'` か `$"` があるとき、その読み取りを `unrestorable` にし、`args-json-unrestorable` の ask にする。
 env-route-lex-flag-isolation で決めた挙動は保つ。
 
 ## Objectives
@@ -15,8 +15,8 @@ env-route-lex-flag-isolation で決めた挙動は保つ。
 
 - [ ] AC-1: `/usr/bin/env 'BASH_FUNC_mcp-bridge%%=() { :; }' bash -c '<body>'` の形のコマンドを取る。静的な本文には、区切り語が `${tag}` の cat ヒアドキュメントがあり、その後ろに `mcp-bridge run --mcp notion --tool notion-create-comment --args-json ...` の呼び出しがある。その command は `git branch -D example`。このコマンドは rule `args-json-unrestorable` の ask になる。batch では同じ rule の deny になる。(TS-1, TS-2)
 - [ ] AC-2: 同じ本文を `env - ... bash -c` の形で渡しても同じ判定になる。(TS-3)
-- [ ] AC-3: TAIL の中の回避形も rule `args-json-unrestorable` の ask になる。引用符で分けた mcp-bridge、行継続で分けた mcp-bridge、`$'` を含む TAIL の 3 つ。(TS-4)
-- [ ] AC-4: env-route-lex-flag-isolation の TS-1/TS-2 は batch で allow のまま。その本文は `${tag}` のヒアドキュメントだけで、mcp-bridge の語も `$'` も含まない。(TS-5)
+- [ ] AC-3: TAIL の中の回避形も rule `args-json-unrestorable` の ask になる。引用符で分けた mcp-bridge、行継続で分けた mcp-bridge、`$'` を含む TAIL、`$"` を含む TAIL、`$` と `"` の間に行継続を挟んだ TAIL、`$` と `'` の間に行継続を挟んだ TAIL の 6 つ。(TS-4)
+- [ ] AC-4: env-route-lex-flag-isolation の TS-1/TS-2 は batch で allow のまま。その本文は `${tag}` のヒアドキュメントだけで、行継続を除いても mcp-bridge の語も `$'` も `$"` も含まない。(TS-5)
 - [ ] AC-5: mcp-bridge の語が読めない `<<` より前の読める範囲にだけあるとき、修正前の判定が変わらず、新しい `args-json-unrestorable` の ask は出ない。(TS-6)
 - [ ] AC-6: `python3 em-workflow/hooks/tests/run-destructive-guard.py` と `python3 -m unittest discover -s tests` の両方が通る。(TS-8)
 
@@ -29,7 +29,7 @@ env-route-lex-flag-isolation で決めた挙動は保つ。
     - その `unreadable` が立っているとき、map の `tail_start` からペイロード末尾までの生テキストを TAIL とする。
     - 次のどちらかを満たすとき、その読み取りの `unrestorable`（`_EnvBodyReading.unrestorable`）を立てる。
         - (a) TAIL からバックスラッシュと改行の組（行継続）をすべて除き、残りから `'`、`"`、`\` の文字をすべて除いた結果が、部分文字列 `mcp-bridge` を含む。
-        - (b) TAIL が `$'` を含む。
+        - (b) TAIL からバックスラッシュと改行の組（行継続）をすべて除いた文字列が `$'` または `$"` を含む。
     - 除く順序は固定する。先に行継続を除き、次に引用符とバックスラッシュを除く。
     - `unrestorable` が立つと、既存の経路で `args-json-unrestorable` の ask（`ARGS_JSON_UNRESTORABLE_ASK`）になる。
     - TAIL がどちらの条件も満たさない本文には、新しい ask を出さない。
@@ -64,8 +64,9 @@ bash -c のペイロード
   → unreadable が立っている？
       いいえ → 既存の判定のまま
       はい   → TAIL = payload[tail_start:]
-               → 行継続を除く → ' " \ を除く → "mcp-bridge" を含む？
-               → TAIL が "$'" を含む？
+               → JOINED = TAIL から行継続を除いた文字列
+               → (a) JOINED から ' " \ を除く → "mcp-bridge" を含む？
+               → (b) JOINED が $' または $" を含む？
                → どちらかを満たす → _EnvBodyReading.unrestorable = True
   → _args_json_env_combine() で 2 つの extglob の読み方を OR で結合
   → unrestorable → ARGS_JSON_UNRESTORABLE_ASK（rule: args-json-unrestorable）
@@ -142,6 +143,9 @@ path that never materializes is not a violation.
     - (a) コマンド語を引用符で分ける。例: `"mcp-"bridge`
     - (b) コマンド語を行継続で分ける。例: `mcp-br\<改行>idge`
     - (c) コマンド語を ANSI-C クォートで書き、ペイロードのテキストに `$'` を含める。例: `$'\x6dcp-bridge'`（外側の引用に収まるように書く）
+    - (d) コマンド語をロケール引用で分け、ペイロードのテキストに `$"` を含める。例: `mcp-$"bridge"`
+    - (e) (d) の `$` と `"` の間に行継続を挟む。例: `mcp-$\<改行>"bridge"`
+    - (f) (c) の `$` と `'` の間に行継続を挟む。例: `$\<改行>'\x6dcp-bridge'`（外側の引用に収まるように書く）
 - [ ] TS-5: 既存の env-route-lex-flag-isolation の TS-1/TS-2 のケース（ケースファイルの 1678〜1679 行）を編集しない。 - batch で allow のまま
 - [ ] TS-6: 対照ケース。本文が `mcp-bridge` に触れるのは読めないヒアドキュメントより前だけ。例: `echo mcp-bridge; cat <<${tag}` の後に無害な行と `${tag}` の行。 - batch で修正前と同じ判定のまま（allow の見込み。修正前に確かめる）。`args-json-unrestorable` は出ない
 - [ ] TS-7: `mcp-bridge` の語が TAIL の中でヒアドキュメント本文としてだけ現れる。例: `cat <<${tag}`、`mcp-bridge` の行、`${tag}` の行。 - batch で rule `args-json-unrestorable` の deny。A1 の安全側の広さを固定する
