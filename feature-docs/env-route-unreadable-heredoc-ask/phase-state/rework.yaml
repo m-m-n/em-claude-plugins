@@ -68,4 +68,4 @@ spec_change:
   origin_id: 51fac43edc6fc707
   recorded_at_commit: 3503cf0a7d65084482b4ee9b6fabaf3d1de4208b
   consumed: true
-  replan_authorized: true
+  replan_authorized: false

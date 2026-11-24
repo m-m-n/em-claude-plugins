@@ -10,16 +10,12 @@ goal: '# destructive-guard: env 経路で区切り語を読めないヒアドキ
 
   ## 脆弱性の概要
 
-  destructive-guard の env 経路で、区切り語を読めないヒアドキュメントの後ろに置いた mcp-bridge の notion ペアが検査されない。env-route-lex-flag-isolation
-  で大域フラグ `_lex_unreadable_met` を退避・復元するようにした結果、その本文に対する `args-json-unrestorable` の
-  ask も残らない。
+  destructive-guard の env 経路で、区切り語を読めないヒアドキュメントの後ろに置いた mcp-bridge の notion ペアが検査されない。env-route-lex-flag-isolation で大域フラグ `_lex_unreadable_met` を退避・復元するようにした結果、その本文に対する `args-json-unrestorable` の ask も残らない。
 
 
   ## 攻撃シナリオ
 
-  `/usr/bin/env bash -c ''...''` の本文で、先に区切り語を読めないヒアドキュメント（例: 区切り語が `${tag}`）を置き、その後ろに
-  notion ペアの形をとった `mcp-bridge run --args-json` を置く。env 経路の読み取りはヒアドキュメント以降を読めず、notion
-  ペアの command を検査しない。フラグは復元されるので、全体の ask にも上がらない。
+  `/usr/bin/env bash -c ''...''` の本文で、先に区切り語を読めないヒアドキュメント（例: 区切り語が `${tag}`）を置き、その後ろに notion ペアの形をとった `mcp-bridge run --args-json` を置く。env 経路の読み取りはヒアドキュメント以降を読めず、notion ペアの command を検査しない。フラグは復元されるので、全体の ask にも上がらない。
 
 
   ## 影響範囲
@@ -36,12 +32,10 @@ goal: '# destructive-guard: env 経路で区切り語を読めないヒアドキ
 
   ## 該当箇所
 
-  `em-workflow/hooks/destructive-guard.py` の `_args_json_payload_chunk()` の env 経路（フラグの退避・復元の
-  `finally`）。env-route-lex-flag-isolation（PR #135）のレビュー round 1、stable_id c7173bc1fe3d8438（deferred）。
+  `em-workflow/hooks/destructive-guard.py` の `_args_json_payload_chunk()` の env 経路（フラグの退避・復元の `finally`）。env-route-lex-flag-isolation（PR #135）のレビュー round 1、stable_id c7173bc1fe3d8438（deferred）。
 
 
-  修正案: env 経路の読み取りが `LexMap.unreadable` に当たり、その後ろの生テキストに mcp-bridge の語があるときは、その読み取りに
-  `unrestorable` を立てて `args-json-unrestorable` の ask を残す。再発検出のケースを足す。
+  修正案: env 経路の読み取りが `LexMap.unreadable` に当たり、その後ろの生テキストに mcp-bridge の語があるときは、その読み取りに `unrestorable` を立てて `args-json-unrestorable` の ask を残す。再発検出のケースを足す。
 
   '
 parent_branch: em-workflow/env-route-unreadable-heredoc-ask/integration
@@ -72,8 +66,7 @@ project:
     main:
       language: python
       build_command: ''
-      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3
-        -m unittest discover -s tests
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
       format_command: ''
 workflow:
 - id: create-spec
@@ -86,16 +79,15 @@ workflow:
   - DESIGN.md
   - design/
   status: skipped
-  skipped_reason: 'フックの判定ロジックとテストケースだけの変更で、画面や見た目の変更が無い（create-spec.design-step: decide_autonomously
-    → analyst の推奨どおり skip、design-system 候補 0 件）'
+  skipped_reason: 'フックの判定ロジックとテストケースだけの変更で、画面や見た目の変更が無い（create-spec.design-step: decide_autonomously → analyst の推奨どおり skip、design-system 候補 0 件）'
 - id: create-plan
   artifacts:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - THREAT-MODEL.md
   - tasks/
-  status: pending
-  completed_at_commit: e5a4f1988e2718c38e9782af0e498ce7ec66235b
+  status: completed
+  completed_at_commit: c01ad5e7935fcc6ba2d9589cac6b78e69e78231d
 - id: implement
   status: pending
   base_commit: 90dae4a27f6850aaef7a57750887aaaa498b5a07
@@ -131,6 +123,29 @@ tasks:
     status: merged
     branch: em-workflow/env-route-unreadable-heredoc-ask/task0001
     notes: null
+  task0002:
+    title: 'Env-route tail rule: locale quotes, split openers, answer kept when the chunk build fails'
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_env_route_tail.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - NFR1
+    - NFR3
+    - NFR4
+    status: pending
+    branch: null
+    notes: null
 review:
   status: pending
   rounds_completed: 1
@@ -157,6 +172,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-1
     - TS-2
@@ -167,6 +183,11 @@ requirements:
     - TS-9
     - TS-10
     - TS-15
+    - TS-17
+    - TS-18
+    - TS-19
+    - TS-20
+    - TS-21
   FR2:
     title: 2 つの extglob の読み方の結合
     status: ok
@@ -174,8 +195,10 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-11
+    - TS-19
   FR3:
     title: フラグの退避と復元は変えない
     status: ok
@@ -183,10 +206,14 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-5
     - TS-6
     - TS-12
+    - TS-17
+    - TS-19
+    - TS-20
   FR4:
     title: 退行を捕まえるケース
     status: ok
@@ -194,6 +221,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-1
     - TS-2
@@ -205,6 +233,7 @@ requirements:
     - TS-13
     - TS-14
     - TS-15
+    - TS-21
   NFR1:
     title: env 経路の外の判定は変えない
     status: ok
@@ -212,6 +241,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-5
     - TS-14
@@ -231,6 +261,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-8
   NFR4:
@@ -240,6 +271,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-16
 batch:
