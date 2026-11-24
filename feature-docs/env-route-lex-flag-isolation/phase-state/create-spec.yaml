@@ -1,0 +1,26 @@
+schema_version: 1
+feature: env-route-lex-flag-isolation
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: ac730836b112698127f4d5b17874e77b18299121
+last_input_digest: sha256:304c890b7b0d63d8aded497469268f251853308679855ad1eef8d87a6fd723a5
+active_request_id: create-spec-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:304c890b7b0d63d8aded497469268f251853308679855ad1eef8d87a6fd723a5
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache:
+  design_system_candidates:
+    generation_digest: sha256:c3b67ce5de7fa768ea18c3d783cb1563039b93f47ac4ffc3b01e3a4d2efdff7d
+    resolved_at_generation: 1
+    paths: []
+    digests: {}
+    truncated: false
+last_error: null
