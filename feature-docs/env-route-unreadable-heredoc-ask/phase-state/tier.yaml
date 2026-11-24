@@ -20,7 +20,7 @@ bases:
       '1': 0.87
       '2': 0.13
       '3': 0.0
-  observed_at: '2026-11-24T22:31:00+09:00'
+  observed_at: '2026-11-24T22:27:00+09:00'
 - basis: description_plus_code
   score:
     type: score
@@ -39,7 +39,7 @@ bases:
       '1': 0.93
       '2': 0.07
       '3': 0.0
-  observed_at: '2026-11-24T22:38:00+09:00'
+  observed_at: '2026-11-24T22:30:00+09:00'
 pre_survey_estimate:
   files_expected:
   - em-workflow/hooks/destructive-guard.py
@@ -62,4 +62,4 @@ pre_survey_estimate:
     の unrestorable は読み取れた文の結果だけで決まる。10402 で大域フラグが復元されるため、この経路では args-json-unrestorable
     の ask が残らない。destructive-guard-cases.json:1678–1683 に該当する組み合わせはなく、run-destructive-guard.py:269–275
     で既存の形式のまま判定と理由 ID を検証できる
-decided_at: '2026-11-24T22:39:00+09:00'
+decided_at: '2026-11-24T22:31:00+09:00'
