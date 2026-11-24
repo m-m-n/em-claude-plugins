@@ -2,36 +2,59 @@ schema_version: 1
 feature: env-route-lex-flag-isolation
 created: '2026-11-24'
 base_branch: main
-goal: |
-  # destructive-guard: env 経路の本文の字句解析が大域フラグを立て notion 以外の判定を変える
+goal: '# destructive-guard: env 経路の本文の字句解析が大域フラグを立て notion 以外の判定を変える
+
 
   ## 現象 (必須)
 
-  destructive-guard の env 経路（head() が env を読み違える形の `bash -c` 本文を notion ペアの検査のために読む経路）が、本文に notion 呼び出しがあるかを確かめる前に本文を `lex_shell()` で字句解析する。`lex_shell()` はモジュールの大域フラグ `_lex_unreadable_met`（同じ形の `_lex_extglob_met` も）を立てるため、notion と無関係な本文でも、`run()` が ask 未満の判定を ask に上げる。無人実行ではそれが deny に降格する。
+
+  destructive-guard の env 経路（head() が env を読み違える形の `bash -c` 本文を notion ペアの検査のために読む経路）が、本文に
+  notion 呼び出しがあるかを確かめる前に本文を `lex_shell()` で字句解析する。`lex_shell()` はモジュールの大域フラグ `_lex_unreadable_met`（同じ形の
+  `_lex_extglob_met` も）を立てるため、notion と無関係な本文でも、`run()` が ask 未満の判定を ask に上げる。無人実行ではそれが
+  deny に降格する。
+
 
   ## 再現手順 (必須)
 
-  1. `/usr/bin/env bash -c '<区切り語が ${tag} の cat のヒアドキュメントだけを持つ本文>'` を destructive-guard に渡す（CLAUDE\_BATCH あり）
+
+  1. `/usr/bin/env bash -c ''<区切り語が ${tag} の cat のヒアドキュメントだけを持つ本文>''` を destructive-guard
+  に渡す（CLAUDE\_BATCH あり）
+
   2. 判定が unreadable-heredoc-delimiter による deny になる（env 経路の読み取りを外すと allow）
+
 
   ## 期待する挙動 (必須)
 
+
   env 経路で足した本文の読み取りは notion ペアの検査だけに効き、notion 以外の判定を変えない。上の例は allow のまま。
+
 
   ## 完了の定義 (必須)
 
+
   - [ ] 再現手順で現象が起きない
+
   - [ ] 再発を検出するテストがある
+
 
   ## 該当箇所 (任意)
 
-  `em-workflow/hooks/destructive-guard.py` の `_args_json_payload_chunk()`（integration ブランチ `em-workflow/mcp-bridge-function-shadow/integration` の 9573 行付近）。mcp-bridge-function-shadow のレビュー round 3 の stable\_id 3cd1a62c2e606dc2（deferred）。
+
+  `em-workflow/hooks/destructive-guard.py` の `_args_json_payload_chunk()`（integration
+  ブランチ `em-workflow/mcp-bridge-function-shadow/integration` の 9573 行付近）。mcp-bridge-function-shadow
+  のレビュー round 3 の stable\_id 3cd1a62c2e606dc2（deferred）。
+
 
   修正案: 呼び出しの前後で大域フラグを保存して戻す、または本文が mcp-bridge を含むときだけ字句解析する。
 
+
   ## 実害・発生条件 (任意)
 
-  無人実行で、`/usr/bin/env` 経由の `bash -c` 本文に読めないヒアドキュメント区切り語があるときだけ、止まる回数が 1 つ増える。判定は通常の `bash -c` の形が既に受けるものと同じ。
+
+  無人実行で、`/usr/bin/env` 経由の `bash -c` 本文に読めないヒアドキュメント区切り語があるときだけ、止まる回数が 1 つ増える。判定は通常の
+  `bash -c` の形が既に受けるものと同じ。
+
+  '
 parent_branch: em-workflow/env-route-lex-flag-isolation/integration
 tier: reduced
 tier_decision:
@@ -60,7 +83,8 @@ project:
     main:
       language: python
       build_command: ''
-      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3
+        -m unittest discover -s tests
       format_command: ''
 workflow:
 - id: create-spec
@@ -73,14 +97,16 @@ workflow:
   - DESIGN.md
   - design/
   status: skipped
-  skipped_reason: 'tier reduced により design step を削減（UI を持たないフックの判定ロジックの修正、design-system 候補 0 件。create-spec.design-step: decide_autonomously → skip）'
+  skipped_reason: 'tier reduced により design step を削減（UI を持たないフックの判定ロジックの修正、design-system
+    候補 0 件。create-spec.design-step: decide_autonomously → skip）'
 - id: create-plan
   artifacts:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - THREAT-MODEL.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: 9114667b0d03cda45deffc080a92d8e11fe8d67d
 - id: implement
   status: pending
 - id: review
@@ -89,7 +115,31 @@ workflow:
   status: pending
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Confine env-route lexer flags and read the body under both extglob settings
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_env_route.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: pending
+    notes: null
 review:
   status: pending
   rounds_completed: 0
@@ -101,41 +151,50 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-2
     - TS-4
     - TS-5
+    - TS-8
   FR2:
     title: 例外を含むすべての出口で復元
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-8
   FR3:
     title: extglob の両方の読み方での notion 検査
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-5
     - TS-6
+    - TS-8
   FR4:
     title: 両方の読み方で同じ notion 文が見つかったときの扱い
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-9
   FR5:
     title: 再発を検出するケース
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-2
@@ -149,7 +208,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-3
     - TS-4
@@ -159,14 +219,17 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-10
   NFR3:
     title: 既存ケースの維持
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-7
   NFR4:
@@ -174,8 +237,10 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-11
 batch:
   review_rework_count: 0
   verify_rework:
