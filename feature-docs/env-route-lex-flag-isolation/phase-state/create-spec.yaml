@@ -1,11 +1,11 @@
 schema_version: 1
 feature: env-route-lex-flag-isolation
 phase: create-spec
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: ac730836b112698127f4d5b17874e77b18299121
 last_input_digest: sha256:8d2ad7ebb016cf5346a3cedee7cb268c2cacc42fc0ca465cb0b326422098d729
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -55,12 +55,17 @@ worker_runs:
   output_digest: sha256:09c24f95048e3f04aca953f88cb7047319cf58fe7b4c7394e229c525a8d5c168
   self_write_set: []
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:8d2ad7ebb016cf5346a3cedee7cb268c2cacc42fc0ca465cb0b326422098d729
   dispatch_digest_inputs:
     em-workflow/references/contracts/spec-writer-contract.md: sha256:825a7e5784539f66522028859f05eb00d761729dafe911b728394d4f3d440867
     em-workflow/references/templates/spec-document.md: sha256:a5d0106c39a5df7dc2365357a9546588275ed6c7a1651c866e75fa327a7fa592
-artifacts: []
+  self_write_set:
+  - feature-docs/env-route-lex-flag-isolation/SPEC.md
+artifacts:
+- path: feature-docs/env-route-lex-flag-isolation/SPEC.md
+  sha256: sha256:b1cc0f61b76ae1f733c06e85f686bd536b347e65ce888b20e89dc2e2bbaddfb3
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
