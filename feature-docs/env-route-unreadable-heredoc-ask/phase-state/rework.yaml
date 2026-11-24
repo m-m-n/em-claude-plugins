@@ -17,6 +17,7 @@ packets:
       status: answered
 answers:
   rework.spec-change.locale-quote:
+    question_id: rework.spec-change.locale-quote
     packet_id: rework-q0001
     answered_at: '2026-11-25T00:20:15+09:00'
     source: batch-codex-consultation
@@ -27,6 +28,7 @@ answers:
     normalized_answer: 'SPEC を変える: FR1 (b) に $" を足し、AC-3 と TS-4 にケースを足す'
     resolution_note: 'gate: rework.spec-change; chosen: change_spec; not chosen: keep_spec; relaxed route (bound-set category security); Codex consulted: true (codex entry, 1 turn); Opus escalation ran: false; Codex chose change_spec (it labelled the case goal_not_met, evidence FR1, FR3, AC-1, AC-3, AC-4). Key points: the attack stays in the goal scope, only the quoting differs; new ask is limited to unreadable tails holding $". Orchestrator probe of the hook: the mcp-$"bridge" form gives allow in batch, and bash resolves the word to mcp-bridge.'
   rework.spec-change.payload-lex-failure:
+    question_id: rework.spec-change.payload-lex-failure
     packet_id: rework-q0001
     answered_at: '2026-11-25T00:20:15+09:00'
     source: batch-codex-consultation
