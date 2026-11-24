@@ -3,9 +3,9 @@ feature: env-route-unreadable-heredoc-ask
 phase: create-plan
 status: dispatching
 generation: 2
-base_revision: c0d95c584d5c764511cbc7759e5445238fdecd8f
+base_revision: d3618794e81d005b1fbcc5d38567edcdef53b137
 last_input_digest: sha256:981f11d19f00ef8c8cba8a96775b56489f416f74474c4d751392dc259e60e4ea
-active_request_id: create-plan-run-0003
+active_request_id: create-plan-run-0004
 packets: {}
 answers: {}
 worker_runs:
@@ -46,6 +46,26 @@ worker_runs:
   - feature-docs/env-route-unreadable-heredoc-ask/VERIFICATION.md
   - feature-docs/env-route-unreadable-heredoc-ask/tasks/task0001.md
 - request_id: create-plan-run-0003
+  status: failed
+  input_digest: sha256:981f11d19f00ef8c8cba8a96775b56489f416f74474c4d751392dc259e60e4ea
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/planner-contract.md: sha256:18464486c0546613d92935cba80087c4980d3791d41838162d23840e431da515
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
+    em-workflow/references/workflow-schema.md: sha256:5bd8500c203c4f17cde4193ee43d561073fe7f47099d61a55eb593e098881d87
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/env-route-unreadable-heredoc-ask/IMPLEMENTATION.md: sha256:6aca17bcfa0fcae5de4621bddb1d3ac781748643bdd07198eb49b15a586b074f
+    feature-docs/env-route-unreadable-heredoc-ask/SPEC.md: sha256:8266121e3cbfde98f172cd8fa11ddcac8b0f1b010661402fc037b4ad9fb10390
+    feature-docs/env-route-unreadable-heredoc-ask/THREAT-MODEL.md: sha256:d301b9fe8aab2ca4c7ee085996cc18e2b22e863cca45c99dffd6b636eb3f7018
+    feature-docs/env-route-unreadable-heredoc-ask/VERIFICATION.md: sha256:3c054320dcf8c7d71bbb011ff7582d1ee04e3d97842dc38f227af71ea9e1d524
+    feature-docs/env-route-unreadable-heredoc-ask/tasks/task0001.md: sha256:e50e120974e0d2862cf6954fc6223484a0da2dc7196657920c218780d146fd74
+    feature-docs/env-route-unreadable-heredoc-ask/workflow.yaml: sha256:e39e358c554d59d2ff459f8c99ca14756cdfcc41ed1f35eec32f241041326b66
+  output_digest: null
+  self_write_set: []
+- request_id: create-plan-run-0004
   status: dispatched
   input_digest: sha256:981f11d19f00ef8c8cba8a96775b56489f416f74474c4d751392dc259e60e4ea
   dispatch_digest_inputs:
@@ -86,4 +106,4 @@ patches:
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
-last_error: null
+last_error: 'create-plan-run-0003: rejected by the orchestrator: the plan omitted the recorded answer rework.spec-change.payload-lex-failure (keep_spec scope); worker writes discarded'
