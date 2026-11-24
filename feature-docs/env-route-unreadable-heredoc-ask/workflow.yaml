@@ -143,8 +143,8 @@ tasks:
     - NFR1
     - NFR3
     - NFR4
-    status: pending
-    branch: null
+    status: in_progress
+    branch: em-workflow/env-route-unreadable-heredoc-ask/task0002
     notes: null
 review:
   status: pending
