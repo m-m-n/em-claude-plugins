@@ -3,9 +3,9 @@ feature: env-route-unreadable-heredoc-ask
 phase: create-spec
 status: dispatching
 generation: 2
-base_revision: efd2781c402d2040c3034a8962f17f5f35c738ed
-last_input_digest: sha256:3db58a4d5c16a7249b129e9ee926922a20ebb45bf8236ea5cdd72911fe939d1f
-active_request_id: create-spec-run-0005
+base_revision: 1a44d050af48d1f8f81d892eb915004cc257b9b4
+last_input_digest: sha256:1e6f9c179b6564ef416e367cec02760f2e671f9bb22857357e9dad6fc4d7ce0c
+active_request_id: create-spec-run-0006
 packets:
   create-spec-q0001:
     status: answered
@@ -76,7 +76,7 @@ worker_runs:
   output_digest: sha256:0cc97407114e4dbdbc20b95e4342c5d4b82717df7165ade4983033fbc9af6abd
   self_write_set: []
 - request_id: create-spec-run-0005
-  status: dispatched
+  status: completed
   input_digest: sha256:3db58a4d5c16a7249b129e9ee926922a20ebb45bf8236ea5cdd72911fe939d1f
   dispatch_digest_inputs:
     CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
@@ -86,12 +86,27 @@ worker_runs:
     feature-docs/env-route-unreadable-heredoc-ask/SPEC.md: sha256:047779b8d1db6722524e8b5f363b67fcd362b6e68d7a9e991d11609f718894d4
     test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
     tests/test_destructive_guard_env_route_tail.py: sha256:321438b48fc03e0958ae2e3bf5ecd92ca87a48a33320da55f0c29d76ad7e3d4c
+  output_digest: sha256:5760644d9ea0c4ded0d0389c9d11e174d0f4d87a29a3685791008b65c0773f15
+  self_write_set: []
+- request_id: create-spec-run-0006
+  status: dispatched
+  input_digest: sha256:1e6f9c179b6564ef416e367cec02760f2e671f9bb22857357e9dad6fc4d7ce0c
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/spec-writer-contract.md: sha256:825a7e5784539f66522028859f05eb00d761729dafe911b728394d4f3d440867
+    em-workflow/references/templates/spec-document.md: sha256:a5d0106c39a5df7dc2365357a9546588275ed6c7a1651c866e75fa327a7fa592
+    feature-docs/env-route-unreadable-heredoc-ask/SPEC.md: sha256:047779b8d1db6722524e8b5f363b67fcd362b6e68d7a9e991d11609f718894d4
 artifacts:
 - path: feature-docs/env-route-unreadable-heredoc-ask/SPEC.md
   sha256: sha256:047779b8d1db6722524e8b5f363b67fcd362b6e68d7a9e991d11609f718894d4
   produced_by: create-spec-run-0003
 patches: []
-progress_fingerprint: null
+progress_fingerprint: sha256:45e70fd23f57bd9eb10b38f44b9d26460b43051457ed4602a4f56e72c8957303
 stale_redispatch_count: 0
-resolved_input_cache: {}
+resolved_input_cache:
+  design_system_candidates:
+    generation_digest: sha256:549cc09a68bbf8d8c433c1c74704a68ce7dbbb4799a0847bc88f825b613d91f7
+    resolved_at_generation: 2
+    paths: []
+    digests: {}
+    truncated: false
 last_error: null
