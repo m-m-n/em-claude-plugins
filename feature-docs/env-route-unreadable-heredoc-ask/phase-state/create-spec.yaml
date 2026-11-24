@@ -3,9 +3,9 @@ feature: env-route-unreadable-heredoc-ask
 phase: create-spec
 status: dispatching
 generation: 2
-base_revision: 38ccff6a72c3b8e2b7f8c4a04aa3fb3b57bcc74b
-last_input_digest: sha256:0842857f2f5a9fafabd2caf33d054a3729f73f06673edc537f22a91e6639acf3
-active_request_id: create-spec-run-0004
+base_revision: efd2781c402d2040c3034a8962f17f5f35c738ed
+last_input_digest: sha256:3db58a4d5c16a7249b129e9ee926922a20ebb45bf8236ea5cdd72911fe939d1f
+active_request_id: create-spec-run-0005
 packets:
   create-spec-q0001:
     status: answered
@@ -14,6 +14,12 @@ packets:
     - question_id: requirement.mcp-bridge-word-match
       status: answered
     - question_id: design-step.recommendation
+      status: answered
+  create-spec-q0002:
+    status: answered
+    issued_at: '2026-11-25T00:24:59+09:00'
+    questions:
+    - question_id: requirement.dollar-quote-line-continuation
       status: answered
 answers:
   requirement.mcp-bridge-word-match:
@@ -36,6 +42,16 @@ answers:
     freeform: null
     normalized_answer: analyst の推奨どおり設計ステップを省く
     resolution_note: 'gate: create-spec.design-step; policy decide_autonomously → analyst recommendation skip（UI の無いフックの判定ロジックの修正）'
+  requirement.dollar-quote-line-continuation:
+    packet_id: create-spec-q0002
+    answered_at: '2026-11-25T00:24:59+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - joined_only
+    freeform: null
+    normalized_answer: FR1 (b) は、TAIL から行継続（バックスラッシュと改行の組）をすべて除いた文字列が $' または $" を含むとき、とする。TS-4 に、$ と引用符の間に行継続を挟む 2 つの形（mcp-$\<改行>"bridge"、$\<改行>'\x6dcp-bridge'）を足す
+    resolution_note: 'gate: create-spec.requirement-clarification (raised by the orchestrator from an analyst warning); policy codex_consultation; chosen: joined_only; not chosen: raw_only, raw_or_joined; Codex consulted: true (codex entry, 1 turn, converged); Opus escalation ran: false; key points: raw_only は $ と引用符の間に行継続を挟む 2 形を見逃す。行継続を除いても隣接した $'' と $" は残るので joined_only と raw_or_joined の検出結果は同じで、joined_only のほうが簡単。Orchestrator probe: both forms give allow in batch and bash resolves them to mcp-bridge.'
 worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
@@ -47,8 +63,21 @@ worker_runs:
   status: completed
   input_digest: sha256:3ef42c84e31d36f67b573715a4f76818e44357aa1ae5352c83d9bee89182094c
 - request_id: create-spec-run-0004
-  status: dispatched
+  status: completed
   input_digest: sha256:0842857f2f5a9fafabd2caf33d054a3729f73f06673edc537f22a91e6639acf3
+  dispatch_digest_inputs:
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    em-workflow/hooks/destructive-guard.py: sha256:ede4b29f8a07355e97fadd9083d042306ce0df36aee256f8fcd5855d5ce79da0
+    em-workflow/hooks/tests/destructive-guard-cases.json: sha256:09afc92bac57041bdc397350d8488e09349cc88bb64f1703beef9ef21b35acb3
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
+    feature-docs/env-route-unreadable-heredoc-ask/SPEC.md: sha256:047779b8d1db6722524e8b5f363b67fcd362b6e68d7a9e991d11609f718894d4
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+    tests/test_destructive_guard_env_route_tail.py: sha256:321438b48fc03e0958ae2e3bf5ecd92ca87a48a33320da55f0c29d76ad7e3d4c
+  output_digest: sha256:0cc97407114e4dbdbc20b95e4342c5d4b82717df7165ade4983033fbc9af6abd
+  self_write_set: []
+- request_id: create-spec-run-0005
+  status: dispatched
+  input_digest: sha256:3db58a4d5c16a7249b129e9ee926922a20ebb45bf8236ea5cdd72911fe939d1f
   dispatch_digest_inputs:
     CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
     em-workflow/hooks/destructive-guard.py: sha256:ede4b29f8a07355e97fadd9083d042306ce0df36aee256f8fcd5855d5ce79da0
