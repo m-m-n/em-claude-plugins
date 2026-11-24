@@ -1,7 +1,7 @@
 schema_version: 1
 feature: env-route-lex-flag-isolation
 phase: create-spec
-status: applying_patch
+status: completed
 generation: 1
 base_revision: ac730836b112698127f4d5b17874e77b18299121
 last_input_digest: sha256:8d2ad7ebb016cf5346a3cedee7cb268c2cacc42fc0ca465cb0b326422098d729
