@@ -3355,6 +3355,12 @@ def _lex_pass(
 # by run() at the start of a judgment; it is read by run() only.
 # _lex_unreadable_met is the same for LexMap.unreadable (P16).
 #
+# One reading puts the three states back as it found them: the env route's
+# reading of a `bash -c` payload (_args_json_env_body_readings()), which only
+# the notion-pair check uses, so what it lexes raises no flag for run() and
+# the reading it switches for its second pass does not stay switched
+# (env-route-lex-flag-isolation FR1 to FR3).
+#
 # The parse units of the reading under judgment that hold such a parenthesis,
 # each an (origin, position) pair, are the one record of them: they are
 # recorded at one point, where statements() lexes a chunk and knows its origin
@@ -10315,6 +10321,138 @@ def _args_json_has_dash_c(marked, words):
     return False
 
 
+# What one reading of the payload of the env route finds of one lifted notion
+# statement: the scan charge of its `--args-json` values and the candidate
+# bodies and decoded `command` strings of all of them, in order.
+_EnvBodyEntry = collections.namedtuple("_EnvBodyEntry", ["charge", "bodies", "commands"])
+# One reading of the payload under one extglob setting: its _EnvBodyEntry per
+# lifted notion statement, and whether it raised Overrun / Unrestorable.
+_EnvBodyReading = collections.namedtuple(
+    "_EnvBodyReading", ["entries", "overrun", "unrestorable"]
+)
+
+
+def _args_json_env_body_reading(payload, marked):
+    """One reading of PAYLOAD, the text of the `bash -c` payload
+    _args_json_env_payload_values() found, as an _EnvBodyReading, under the
+    extglob setting in force (_lex_extglob). MARKED is the _MarkedText of the
+    chunk the statement that runs the payload sits in. A payload that cannot
+    be lexed within the lexer's bounds (_args_json_payload_chunk() answers
+    None) gives a reading with nothing in it. For each statement of the
+    payload that _args_json_lifted_notion_words() takes, the options are read
+    as for any lifted notion statement (_args_json_read_values()). A
+    LexBudgetExceeded raised by _args_json_chunk_statements() propagates."""
+    chunk = _args_json_payload_chunk(payload, marked)
+    if chunk is None:
+        return _EnvBodyReading((), False, False)
+    entries = []
+    overrun = False
+    unrestorable = False
+    for inner in _args_json_chunk_statements(chunk):
+        inner_name, inner_args = head(inner)
+        if inner_name is None:
+            continue
+        inner_words = _args_json_lifted_notion_words(inner, chunk, inner_name, inner_args)
+        if inner_words is None:
+            continue
+        result = _args_json_read_values(chunk, inner_words)
+        overrun = overrun or result.overrun
+        unrestorable = unrestorable or result.unrestorable
+        bodies = []
+        commands = []
+        for value in result.values:
+            bodies.extend(value.bodies)
+            commands.extend(value.commands)
+        if result.charge or bodies or commands:
+            entries.append(_EnvBodyEntry(result.charge, tuple(bodies), tuple(commands)))
+    return _EnvBodyReading(tuple(entries), overrun, unrestorable)
+
+
+def _args_json_env_body_readings(payload, marked):
+    """The readings (_args_json_env_body_reading()) the env route makes of
+    PAYLOAD, as a list: the first under the extglob setting in force, and, when
+    some lexer result returned during it reported an extended-pattern
+    parenthesis (LexMap.ext_met, seen as the module flag _lex_extglob_met),
+    a second under the opposite setting, so a notion pair that only one of the
+    two settings shows is not missed (env-route-lex-flag-isolation FR3).
+
+    Whatever the readings do to `_lex_unreadable_met`, `_lex_extglob_met` and
+    `_lex_extglob` is undone before this returns: the three are put back to
+    the values they had at entry, never to a fixed value, on a normal return
+    and when an exception (LexBudgetExceeded) propagates, which it does
+    unchanged (FR1, FR2). The flags the lexing of the rest of the command
+    raised stay raised for run(); those the payload's own lexing raises do not
+    reach it."""
+    global _lex_unreadable_met, _lex_extglob_met, _lex_extglob
+    entry_unreadable = _lex_unreadable_met
+    entry_met = _lex_extglob_met
+    entry_extglob = _lex_extglob
+    readings = []
+    try:
+        # The flag is clear while the first reading runs, so that what is left
+        # of it afterwards says whether that reading met a parenthesis.
+        _lex_extglob_met = False
+        readings.append(_args_json_env_body_reading(payload, marked))
+        if _lex_extglob_met:
+            _lex_extglob = not entry_extglob
+            readings.append(_args_json_env_body_reading(payload, marked))
+    finally:
+        _lex_extglob = entry_extglob
+        _lex_extglob_met = entry_met
+        _lex_unreadable_met = entry_unreadable
+    return readings
+
+
+def _args_json_env_combine(payload_word, readings):
+    """The ArgsJsonResult of the READINGS (_args_json_env_body_readings()) of
+    one payload, whose word is PAYLOAD_WORD: one ArgsJsonValue anchored at the
+    payload word holding the candidate bodies and decoded `command` strings of
+    all of them, with the scan charge and the Overrun and Unrestorable flags.
+
+    The union of the readings is returned, each value once (FR4). A string a
+    reading returned that an earlier reading already returned is left out of
+    the value; duplicates inside one reading stay, as in a single reading. A
+    notion statement's entry that equals one an earlier reading found (the same
+    statement read under both settings), or all of whose strings an earlier
+    reading returned, is charged once, not again. Overrun and Unrestorable are
+    set when either reading set them (TM-4), whatever became of its values."""
+    bodies = []
+    commands = []
+    charge = 0
+    overrun = False
+    unrestorable = False
+    earlier = []
+    earlier_bodies = set()
+    earlier_commands = set()
+    for reading in readings:
+        overrun = overrun or reading.overrun
+        unrestorable = unrestorable or reading.unrestorable
+        unmatched = list(earlier)
+        for entry in reading.entries:
+            if entry in unmatched:
+                unmatched.remove(entry)
+                continue
+            if (
+                (entry.bodies or entry.commands)
+                and all(body in earlier_bodies for body in entry.bodies)
+                and all(command in earlier_commands for command in entry.commands)
+            ):
+                continue
+            charge += entry.charge
+            bodies.extend(body for body in entry.bodies if body not in earlier_bodies)
+            commands.extend(
+                command for command in entry.commands if command not in earlier_commands
+            )
+        for entry in reading.entries:
+            earlier.append(entry)
+            earlier_bodies.update(entry.bodies)
+            earlier_commands.update(entry.commands)
+    values = ()
+    if bodies or commands:
+        values = (ArgsJsonValue(payload_word, tuple(bodies), tuple(commands)),)
+    return ArgsJsonResult(values, charge, overrun, unrestorable)
+
+
 def _args_json_env_payload_values(shaped_words, marked, args):
     """The notion-path env reading of the `--args-json` decision
     (mcp-bridge-function-shadow FR3, FR4, FR5, FR7), for a statement whose
@@ -10345,7 +10483,16 @@ def _args_json_env_payload_values(shaped_words, marked, args):
     Nothing is queued for any other statement of the payload, for a notion
     statement that is not lifted, or for a payload that is not a single static
     word: they keep the verdict they had before this reading. The payload
-    itself is not queued, so no check but the notion-pair path sees it."""
+    itself is not queued, so no check but the notion-pair path sees it.
+
+    The reading of the payload (_args_json_env_body_readings()) is confined to
+    this route (env-route-lex-flag-isolation): it leaves
+    `_lex_unreadable_met`, `_lex_extglob_met` and `_lex_extglob` as it found
+    them, on every exit, and a payload that holds an extended-pattern
+    parenthesis is read under both extglob settings, the notion pairs of
+    either reading being checked (_args_json_env_combine()). What the route
+    reads records no extglob unit: statements() stays the only caller of
+    _note_extglob_units()."""
     if not _args_json_has_dash_c(marked, shaped_words):
         return _ARGS_JSON_NOTHING
     head_word = shaped_words[len(shaped_words) - len(args) - 1]
@@ -10379,32 +10526,9 @@ def _args_json_env_payload_values(shaped_words, marked, args):
     outcome, payload = _read_static_word(marked, payload_word)
     if outcome != WORD_STATIC or not payload.strip():
         return _ARGS_JSON_NOTHING
-    chunk = _args_json_payload_chunk(payload, marked)
-    if chunk is None:
-        return _ARGS_JSON_NOTHING
-    bodies = []
-    commands = []
-    charge = 0
-    overrun = False
-    unrestorable = False
-    for inner in _args_json_chunk_statements(chunk):
-        inner_name, inner_args = head(inner)
-        if inner_name is None:
-            continue
-        inner_words = _args_json_lifted_notion_words(inner, chunk, inner_name, inner_args)
-        if inner_words is None:
-            continue
-        result = _args_json_read_values(chunk, inner_words)
-        charge += result.charge
-        overrun = overrun or result.overrun
-        unrestorable = unrestorable or result.unrestorable
-        for value in result.values:
-            bodies.extend(value.bodies)
-            commands.extend(value.commands)
-    values = ()
-    if bodies or commands:
-        values = (ArgsJsonValue(payload_word, tuple(bodies), tuple(commands)),)
-    return ArgsJsonResult(values, charge, overrun, unrestorable)
+    return _args_json_env_combine(
+        payload_word, _args_json_env_body_readings(payload, marked)
+    )
 
 
 # The scan-budget `ask` (reason id, reason text): the static analysis would

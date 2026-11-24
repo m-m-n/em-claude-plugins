@@ -1,0 +1,143 @@
+task_id: task0001
+# 4a, before any edit: python3 em-workflow/hooks/tests/run-destructive-guard.py -> 1656/1656 passed;
+# python3 -m unittest discover -s tests -> Ran 17300 tests, OK (skipped=1). Nothing was red.
+baseline_failures: []
+# Re-executed after the implementation and after this record: the runner passes every case
+# (1662/1662) and unittest discover runs green with the new module included.
+final_failures: []
+acceptance_tests:
+  AC-1:
+    # The runner has no per-case selector; the first test below runs the whole
+    # runner (python3 em-workflow/hooks/tests/run-destructive-guard.py) and
+    # asserts exit 0 with no FAIL line, so it covers env-route-lex-flag-isolation
+    # TS-1 and TS-2 of em-workflow/hooks/tests/destructive-guard-cases.json.
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_env_route.TestJudgmentThroughRun.test_a_body_with_only_an_unreadable_delimiter_leaves_the_flag_down
+      - tests.test_destructive_guard_env_route.TestStateRestored.test_flags_the_body_raises_do_not_stay_raised
+    red_confirmed: true
+    red_reason: >-
+      The six cases (TS-1 to TS-6) were appended to the case file before any
+      hook change and the real runner was run directly against the unchanged
+      hook: 1660/1662 passed, and TS-1 and TS-2 FAILed with got=deny
+      rule=unreadable-heredoc-delimiter where allow is required (the env route's
+      lexing raised _lex_unreadable_met for the whole decision). The unit tests
+      were run against the unchanged hook as well: the judgment-through-run test
+      and the flags-the-body-raises test FAILed. After the change TS-1 and TS-2
+      give allow and both unit tests pass.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_env_route.TestStateRestored.test_flags_raised_before_the_reading_stay_raised
+      - tests.test_destructive_guard_env_route.TestStateRestored.test_normal_return_one_reading
+      - tests.test_destructive_guard_env_route.TestStateRestored.test_normal_return_without_a_lifted_notion_statement
+    red_confirmed: false
+    red_reason: >-
+      TS-3 (plain bash -c, deny, unreadable-heredoc-delimiter) and TS-4 (a flag
+      raised by a top-level heredoc outside the env route survives, deny) pin
+      decisions the unchanged hook already gives, and the three unit tests
+      (flags raised before the reading stay raised, whatever the entry values)
+      also passed against the unchanged hook, so no red state occurred for this
+      change. The checks were observed failing only against temporary variants
+      of the implementation, none committed: a variant that restores the two
+      flags to a fixed False instead of their entry values failed TS-4 in the
+      runner (got=allow rule=None, 1661/1662) and 38 subtests of the unit
+      module, among them these three tests.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_env_route.TestBothReadings.test_the_value_only_one_reading_shows_is_returned
+      - tests.test_destructive_guard_env_route.TestBothReadings.test_the_two_line_notion_pair_is_visible_only_under_extglob_on
+      - tests.test_destructive_guard_env_route.TestBothReadings.test_the_one_line_notion_pair_is_visible_under_both_settings
+      - tests.test_destructive_guard_env_route.TestStateRestored.test_second_reading_runs_under_the_opposite_setting_only_when_a_paren_was_met
+    red_confirmed: true
+    red_reason: >-
+      TS-5 (a body with only an extended-pattern parenthesis, allow) and TS-6
+      (the notion-pair call after the parenthesis on the same line, deny,
+      rule git-branch-force-delete) passed against the unchanged hook, because
+      the flag the env route leaked made run() re-read the whole command with
+      extglob on; they are the decisions the change has to keep. The lexer
+      fact TS-6 rests on was read directly: under the extglob-off reading the
+      env route finds no notion value, under the extglob-on reading it finds
+      the `git branch -D example` command (the two-line fact test). Against
+      the unchanged hook the unit test of the second reading (the value only
+      one reading shows is returned, entry setting off) and the test that the
+      second reading runs under the opposite setting both FAILed, because
+      the route made one reading only. A variant with the flag restoration but
+      no second reading, not committed, failed TS-6 in the runner (got=allow
+      rule=None, 1661/1662) and 19 subtests of the unit module.
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_env_route.TestStateRestored.test_normal_return_one_reading
+      - tests.test_destructive_guard_env_route.TestStateRestored.test_normal_return_two_readings
+      - tests.test_destructive_guard_env_route.TestStateRestored.test_normal_return_without_a_lifted_notion_statement
+      - tests.test_destructive_guard_env_route.TestStateRestored.test_early_return_when_the_payload_chunk_cannot_be_built
+      - tests.test_destructive_guard_env_route.TestStateRestored.test_early_return_with_a_chunk_that_cannot_be_lexed_in_the_second_reading
+      - tests.test_destructive_guard_env_route.TestStateRestored.test_exception_in_the_first_reading_propagates_unchanged_and_restores
+      - tests.test_destructive_guard_env_route.TestStateRestored.test_exception_in_the_second_reading_restores_the_extglob_setting
+      - tests.test_destructive_guard_env_route.TestStateRestored.test_extglob_flag_the_body_raises_does_not_stay_raised
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged hook, the unit module failed 40 subtests, among
+      them these: the early return when the payload chunk cannot be built (6 of
+      the 8 entry states: a flag the lexing raised stayed raised), the exception
+      raised in the first reading (6 of 8: the same), the normal return of a two
+      reading body (4 of 8), the extended-pattern flag the body raises (stays
+      raised), and the exception raised in the second reading (all 8: no second
+      reading existed, so nothing was raised and assertRaises failed). After the
+      change all 8 entry states of each test end with the three states equal to
+      their entry values and the exception object is the one raised.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_env_route.TestBothReadings.test_a_value_both_readings_return_is_returned_once_and_charged_once
+      - tests.test_destructive_guard_env_route.TestBothReadings.test_identical_results_of_the_two_readings_count_once
+      - tests.test_destructive_guard_env_route.TestBothReadings.test_overlapping_results_return_each_string_once
+      - tests.test_destructive_guard_env_route.TestBothReadings.test_a_result_whose_strings_the_first_reading_already_returned_is_not_charged
+      - tests.test_destructive_guard_env_route.TestBothReadings.test_duplicates_inside_one_reading_are_kept
+      - tests.test_destructive_guard_env_route.TestBothReadings.test_overrun_raised_by_only_one_reading_is_reported
+      - tests.test_destructive_guard_env_route.TestBothReadings.test_unrestorable_raised_by_only_one_reading_is_reported
+      - tests.test_destructive_guard_env_route.TestBothReadings.test_flags_of_a_statement_that_has_no_value_are_reported
+    red_confirmed: true
+    red_reason: >-
+      Against the unchanged hook (one reading only) the overrun test and the
+      unrestorable test FAILed for the two subtests in which the second reading
+      is the flagged one, the overlapping-results test FAILed for both entry
+      settings, and the flags-of-a-statement-that-has-no-value test FAILed.
+      The once-and-charged-once tests passed there only because one reading
+      cannot return a value twice; they were observed failing against a
+      temporary variant, not committed, that concatenates the readings without
+      de-duplication (15 failures, the five de-duplication tests among them),
+      and the one-sided overrun / unrestorable tests against a variant that
+      takes the flags from the first reading only (4 failures).
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_env_route.TestExtglobUnitRecord.test_reading_a_body_with_an_extended_pattern_paren_records_no_unit
+      - tests.test_destructive_guard_env_route.TestExtglobUnitRecord.test_reading_with_an_empty_record_leaves_it_empty
+      - tests.test_destructive_guard_env_route.TestJudgmentThroughRun.test_a_body_with_only_a_paren_does_not_start_the_second_whole_command_reading
+    red_confirmed: true
+    red_reason: >-
+      Against the unchanged hook the first test FAILed at its precondition (the
+      route made one reading, not the two the test asserts) and the run()-level
+      test FAILed (the extglob-met flag the route leaked stayed raised after
+      run(); the hook had judged that command under both readings, unit counts
+      [0, 0], where the test requires one judgment, [0]). The unit-count assertion
+      itself holds on the unchanged hook, since no code records a unit from the
+      route; it was observed failing against a temporary variant, not
+      committed, that records a unit from the route (_note_extglob_units()
+      called in the body reading): the record test, the empty-record test and
+      the run()-level test all FAILed.
+  AC-7:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: false
+    red_reason: >-
+      The criterion is the regression gate: the runner and unittest discovery
+      exit 0 with no existing case removed or edited, and the diff touches
+      neither em-workflow/.claude-plugin/plugin.json nor
+      .claude-plugin/marketplace.json. Both commands were green before any
+      edit (see baseline_failures), so no red state occurred for it. The
+      existing cases parse to the same list as before the append (only the
+      trailing comma of the former last line changed), and `git diff
+      --name-only` against the parent branch lists the hook, the case file,
+      the new unit module and this record only. The runner test above executes
+      the runner over the whole table.
