@@ -1,18 +1,46 @@
 schema_version: 1
 feature: env-route-unreadable-heredoc-ask
 phase: rework
-status: dispatching
+status: completed
 generation: 1
-base_revision: 635e3f3f4145aa5fa162bf839d65f3e8a345d8cd
+base_revision: 3503cf0a7d65084482b4ee9b6fabaf3d1de4208b
 last_input_digest: sha256:db54f8ea4e599308977ef0ddf3c6a235003c10c7d036fb3946efd4a03c766fa9
-active_request_id: rework-run-0001
-packets: {}
-answers: {}
+active_request_id: null
+packets:
+  rework-q0001:
+    status: answered
+    issued_at: '2026-11-25T00:20:15+09:00'
+    questions:
+    - question_id: rework.spec-change.locale-quote
+      status: answered
+    - question_id: rework.spec-change.payload-lex-failure
+      status: answered
+answers:
+  rework.spec-change.locale-quote:
+    packet_id: rework-q0001
+    answered_at: '2026-11-25T00:20:15+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - change_spec
+    freeform: null
+    normalized_answer: 'SPEC を変える: FR1 (b) に $" を足し、AC-3 と TS-4 にケースを足す'
+    resolution_note: 'gate: rework.spec-change; chosen: change_spec; not chosen: keep_spec; relaxed route (bound-set category security); Codex consulted: true (codex entry, 1 turn); Opus escalation ran: false; Codex chose change_spec (it labelled the case goal_not_met, evidence FR1, FR3, AC-1, AC-3, AC-4). Key points: the attack stays in the goal scope, only the quoting differs; new ask is limited to unreadable tails holding $". Orchestrator probe of the hook: the mcp-$"bridge" form gives allow in batch, and bash resolves the word to mcp-bridge.'
+  rework.spec-change.payload-lex-failure:
+    packet_id: rework-q0001
+    answered_at: '2026-11-25T00:20:15+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - keep_spec
+    freeform: null
+    normalized_answer: 'SPEC を変えない: マップを取れた後の失敗では末尾規則の結果を残す。それ以外は別タスク'
+    resolution_note: 'gate: rework.spec-change; chosen: keep_spec; not chosen: change_spec; relaxed route (bound-set category security); Codex consulted: true (codex entry, 1 turn); Opus escalation ran: false; Codex chose keep_spec (labelled spec_gap, evidence FR1, FR2, FR3, AC-1, AC-4). Key points: asking on every lex failure would stop unattended runs on harmless bodies with no unreadable heredoc or notion pair. Orchestrator probe of the hook in batch: unreadable heredoc + notion pair + unclosed subscript gives deny; notion pair + unclosed subscript without a heredoc gives allow, which is outside this goal and goes to a separate task.'
 worker_runs:
 - request_id: rework-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:db54f8ea4e599308977ef0ddf3c6a235003c10c7d036fb3946efd4a03c766fa9
-  output_digest: null
+  output_digest: sha256:8aca5eb063b4fd786f75562db192d49982cc2437be6703eae6f684cdad324b80
   dispatch_digest_inputs:
     em-workflow/references/contracts/rework-planner-contract.md: sha256:0c9f82099c3546b6b675856539d8244628b7170ce7a4442ec951e13e16577ec3
     em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
@@ -25,9 +53,17 @@ worker_runs:
     feature-docs/env-route-unreadable-heredoc-ask/VERIFICATION.md: sha256:3c054320dcf8c7d71bbb011ff7582d1ee04e3d97842dc38f227af71ea9e1d524
     feature-docs/env-route-unreadable-heredoc-ask/tasks/task0001.md: sha256:e50e120974e0d2862cf6954fc6223484a0da2dc7196657920c218780d146fd74
     feature-docs/env-route-unreadable-heredoc-ask/workflow.yaml: sha256:9a7bfa30dd3a53f14a15f06412f3d00b89fc6c31700ceb4b181b88daab7723f3
+  self_write_set: []
 artifacts: []
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
 last_error: null
+spec_change:
+  reason: 'review round 1: ロケール引用 $" で語を割ると末尾規則をすり抜けるため、SPEC FR1 (b) を変える'
+  origin_kind: review
+  origin_id: 51fac43edc6fc707
+  recorded_at_commit: 3503cf0a7d65084482b4ee9b6fabaf3d1de4208b
+  consumed: false
+  replan_authorized: true

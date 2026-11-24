@@ -1,0 +1,23 @@
+schema_version: 1
+feature: env-route-unreadable-heredoc-ask
+records:
+- question_id: rework.spec-change.locale-quote
+  packet_id: rework-q0001
+  answered_at: '2026-11-25T00:20:15+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - change_spec
+  freeform: null
+  normalized_answer: 'SPEC を変える: FR1 (b) に $" を足し、AC-3 と TS-4 にケースを足す'
+  resolution_note: 'gate: rework.spec-change; chosen: change_spec; not chosen: keep_spec; relaxed route (bound-set category security); Codex consulted: true (codex entry, 1 turn); Opus escalation ran: false; Codex chose change_spec (it labelled the case goal_not_met, evidence FR1, FR3, AC-1, AC-3, AC-4). Key points: the attack stays in the goal scope, only the quoting differs; new ask is limited to unreadable tails holding $". Orchestrator probe of the hook: the mcp-$"bridge" form gives allow in batch, and bash resolves the word to mcp-bridge.'
+- question_id: rework.spec-change.payload-lex-failure
+  packet_id: rework-q0001
+  answered_at: '2026-11-25T00:20:15+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - keep_spec
+  freeform: null
+  normalized_answer: 'SPEC を変えない: マップを取れた後の失敗では末尾規則の結果を残す。それ以外は別タスク'
+  resolution_note: 'gate: rework.spec-change; chosen: keep_spec; not chosen: change_spec; relaxed route (bound-set category security); Codex consulted: true (codex entry, 1 turn); Opus escalation ran: false; Codex chose keep_spec (labelled spec_gap, evidence FR1, FR2, FR3, AC-1, AC-4). Key points: asking on every lex failure would stop unattended runs on harmless bodies with no unreadable heredoc or notion pair. Orchestrator probe of the hook in batch: unreadable heredoc + notion pair + unclosed subscript gives deny; notion pair + unclosed subscript without a heredoc gives allow, which is outside this goal and goes to a separate task.'
