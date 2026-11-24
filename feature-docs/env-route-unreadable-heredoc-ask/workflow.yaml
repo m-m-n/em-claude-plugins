@@ -93,7 +93,8 @@ workflow:
   base_commit: 90dae4a27f6850aaef7a57750887aaaa498b5a07
   completed_at_commit: a8753cba557ce796099491e49cd1b7ccdcc3034b
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 7d666afdd5a4c9e8fa12d315f65fd89d3a77bf58
 - id: verify
   status: pending
 - id: retrospect
@@ -147,8 +148,8 @@ tasks:
     branch: em-workflow/env-route-unreadable-heredoc-ask/task0002
     notes: null
 review:
-  status: pending
-  rounds_completed: 1
+  status: completed
+  rounds_completed: 2
   plan:
     floor:
     - comprehensive
@@ -162,8 +163,8 @@ review:
     security: completed
     architecture: completed
     spec: completed
-  residual_critical_high: 2
-  needs_rework: true
+  residual_critical_high: 0
+  needs_rework: false
 requirements:
   FR1:
     title: mcp-bridge の語を含む読めない末尾を unrestorable にする
