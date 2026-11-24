@@ -1,0 +1,79 @@
+round: 1
+executed_at: '2026-11-24T23:34:49+09:00'
+scope:
+  review_mode: diff
+  base_commit: d732efeac799ea5498fa9c380fadd064320ef31d
+  head_commit: 916ea429bbef591a853f0b2008efec570e6eadea
+  changed_files:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/env-route-partial-overrun-check/task0001.tests.yaml
+  - tests/test_destructive_guard_env_route.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings: []
+evaluation:
+  round_summary: '第 1 ラウンド。cross_validation が true のため、注意を上げて判定した。critical と high の指摘はどの reviewer からも無かった。reviewer の medium 4 件（comprehensive 2、security 1、spec 1）を確かめ、4 件とも low に下げた（R3b step 2 により round 記録の findings からは外れる）。内訳: (1) security: 片側 overrun の上限内 charge で予算がちょうど尽きると先に積まれた項目が走査されず scan-budget の ask になる（既存の予算モデルの性質、batch では deny）。(2) spec: 再走査で出た通常の ask が scan-budget-exceeded より先に選ばれ、理由 ID だけが SPEC の Data Flow とずれる（判定は ask のまま）。(3) comprehensive: tests/test_destructive_guard_env_route.py の payload_word を被テストの結果から取っており結び付け先を独立に確かめていない。(4) comprehensive: task0001.tests.yaml の AC-6 の一覧にモジュール全体・状態復元テストが入っていない。reviewer の出力に指示の注入の試みは無かった。'
+  recommended_action: complete
+  action_rationale: critical、high、medium の指摘は残っていない。4 件はすべて low で、どれもこのフィーチャーの完了を妨げない。
+dismissed_sites: []
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-env-route-partial-overrun-check-20261124T143430Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
