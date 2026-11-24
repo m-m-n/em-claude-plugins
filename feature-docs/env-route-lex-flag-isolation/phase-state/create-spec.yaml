@@ -1,16 +1,53 @@
 schema_version: 1
 feature: env-route-lex-flag-isolation
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: ac730836b112698127f4d5b17874e77b18299121
 last_input_digest: sha256:304c890b7b0d63d8aded497469268f251853308679855ad1eef8d87a6fd723a5
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-11-24T20:26:16+09:00'
+    questions:
+    - question_id: requirement.notion-present-flags
+      status: answered
+    - question_id: design-step.decision
+      status: answered
+answers:
+  requirement.notion-present-flags:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-24T20:26:16+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - always-restore
+    freeform: null
+    normalized_answer: env 経路の本文の読み取りの前後で _lex_unreadable_met と _lex_extglob_met を退避し、本文に持ち上げられた
+      notion 文があってもなくても読み取り前の値に戻す。notion の検出範囲を狭めないため、本文の読み取りで extglob を検出したときは、env
+      経路の中で extglob の有効時と無効時の両方で本文を読み、どちらかで見つかった notion ペアを検査する。両方の読み取りの後にフラグを戻す
+    resolution_note: 'gate: create-spec.requirement-clarification; policy codex_consultation;
+      Codex consulted (codex entry, 3 turns); chosen always-restore（turn 2 の緩和策を含む）;
+      not chosen propagate-when-notion, substring-gate; key points: turn1 always-restore
+      — run() はフラグを入力全体に適用するため、同じ本文の別の文の区切り語で全体が ask/deny になる。turn2 propagate-when-notion
+      — extglob の有無でヒアドキュメントの範囲が変わり（2714 行）、env 経路の notion 検査は本文を 1 回しか読まない（10382
+      行）ため検出が狭まる。緩和策として env 経路内で両方の読み方を試す案を提示。turn3 always-restore に収束し、緩和策は always-restore
+      と両立する。substring-gate は $''\x6dcp-bridge'' を取りこぼす; Opus escalation not run'
+  design-step.decision:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-24T20:26:16+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: analyst の推奨どおり設計ステップを省く
+    resolution_note: 'gate: create-spec.design-step; policy decide_autonomously →
+      analyst recommendation skip（UI の無いフックの判定ロジックの修正）'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:304c890b7b0d63d8aded497469268f251853308679855ad1eef8d87a6fd723a5
 artifacts: []
 patches: []
