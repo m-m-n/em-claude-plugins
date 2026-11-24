@@ -1,9 +1,9 @@
 schema_version: 1
 feature: env-route-unreadable-heredoc-ask
 phase: create-spec
-status: completed
-generation: 1
-base_revision: c1395206a063872c6f455a7cc310c382118261f0
+status: initialized
+generation: 2
+base_revision: ddf7870e25755d350fd989ea9a240f2dbd1aa218
 last_input_digest: sha256:3ef42c84e31d36f67b573715a4f76818e44357aa1ae5352c83d9bee89182094c
 active_request_id: null
 packets:
@@ -24,11 +24,8 @@ answers:
     selected_option_ids:
     - normalized
     freeform: null
-    normalized_answer: env 経路の本文の読み取りで LexMap.unreadable が立ち、tail_start 以降の生テキストから ' " \ を除き、さらにバックスラッシュと改行の組（行継続）を除いたうえで mcp-bridge を含むとき、または生テキストに $' を含むときに、その読み取りの unrestorable を立てる。どちらも含まない本文では新しい ask
-      を出さない（env-route-lex-flag-isolation TS-1/TS-2 は batch で allow のまま）。展開結果で名前が完成する形（${a}cp-bridge、$(printf ...)）は読める範囲の経路でも対象外のため、末尾の照合でも対象にしない
-    resolution_note: 'gate: create-spec.requirement-clarification; policy codex_consultation; Codex consulted (codex entry, 1 turn, converged); chosen normalized（行継続の組も照合前に除く補足を含む）; not chosen literal_only,
-      any_unreadable; key points: literal_only は読める範囲の経路が拾う $''\x6dcp-bridge'' や引用で分割した名前を取りこぼす（destructive-guard.py:10159-10174, cases 1576-1578）。any_unreadable は TS-1/TS-2 を ask（batch で deny）に変え、無人実行を止める。normalized
-      は TS-1/TS-2 を allow のまま保つ。caveat: 部分文字列照合なのでヒアドキュメント本文の名前や無関係な $'' でも ask になりうる（安全側）。展開で名前が完成する形は読める範囲の経路でも対象外; Opus escalation not run'
+    normalized_answer: env 経路の本文の読み取りで LexMap.unreadable が立ち、tail_start 以降の生テキストから ' " \ を除き、さらにバックスラッシュと改行の組（行継続）を除いたうえで mcp-bridge を含むとき、または生テキストに $' を含むときに、その読み取りの unrestorable を立てる。どちらも含まない本文では新しい ask を出さない（env-route-lex-flag-isolation TS-1/TS-2 は batch で allow のまま）。展開結果で名前が完成する形（${a}cp-bridge、$(printf ...)）は読める範囲の経路でも対象外のため、末尾の照合でも対象にしない
+    resolution_note: 'gate: create-spec.requirement-clarification; policy codex_consultation; Codex consulted (codex entry, 1 turn, converged); chosen normalized（行継続の組も照合前に除く補足を含む）; not chosen literal_only, any_unreadable; key points: literal_only は読める範囲の経路が拾う $''\x6dcp-bridge'' や引用で分割した名前を取りこぼす（destructive-guard.py:10159-10174, cases 1576-1578）。any_unreadable は TS-1/TS-2 を ask（batch で deny）に変え、無人実行を止める。normalized は TS-1/TS-2 を allow のまま保つ。caveat: 部分文字列照合なのでヒアドキュメント本文の名前や無関係な $'' でも ask になりうる（安全側）。展開で名前が完成する形は読める範囲の経路でも対象外; Opus escalation not run'
   design-step.recommendation:
     packet_id: create-spec-q0001
     answered_at: '2026-11-24T22:52:00+09:00'
@@ -56,10 +53,5 @@ artifacts:
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
-resolved_input_cache:
-  design_system_candidates:
-    resolved_at_generation: 1
-    paths: []
-    digests: {}
-    truncated: false
+resolved_input_cache: {}
 last_error: null

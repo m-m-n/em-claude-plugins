@@ -79,7 +79,7 @@ workflow:
 - id: create-spec
   artifacts:
   - SPEC.md
-  status: needs_update
+  status: in_progress
   completed_at_commit: 43fbc0d8579bb8414f20b02983c602bea8c07aca
 - id: design
   artifacts:
