@@ -1,0 +1,132 @@
+task_id: task0002
+# 4a, before any edit of the hook or the tests: python3 em-workflow/hooks/tests/run-destructive-guard.py
+# -> 1674/1674 passed; python3 -m unittest discover -s tests -> Ran 17368 tests. That run overlapped
+# with my appending of the four new case lines (the three red ones among them) to the case file; its
+# only failure was tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing,
+# whose output lists exactly the FAIL lines of the three new TS-4 cases (1675/1678) and nothing inherited.
+# The suite as inherited had no red test.
+baseline_failures: []
+# Re-executed after the implementation and after this record: both halves of the project test command.
+final_failures: []
+acceptance_tests:
+  AC-1:
+    # The runner has no per-case selector; the first test runs the whole runner and asserts exit 0
+    # with no FAIL line, so it covers the three TS-4 (d), (e), (f) cases of
+    # em-workflow/hooks/tests/destructive-guard-cases.json.
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_env_route_tail.TestEnvBodyReading.test_the_reading_reports_unrestorable_for_each_unreadable_body
+    red_confirmed: true
+    red_reason: >-
+      The four new cases were appended to the case file before any hook change and the real runner
+      was run against the unchanged hook: 1675/1678 passed, and the three TS-4 cases FAILed with
+      got=allow rule=None where deny with the rule args-json-unrestorable is required: (d) the
+      command word mcp-$"bridge", (e) mcp-$ + backslash + newline + "bridge", (f) $ + backslash +
+      newline + '\x6dcp-bridge'. TS-21 passed there. The first listed test, which runs the whole
+      runner, failed on the same three lines (assertion 1 != 0 on the runner's exit code) in the
+      baseline run that overlapped with the appending. After the change the runner passes 1678/1678.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_env_route_tail.TestTailRule.test_the_word_split_by_a_locale_quote_is_unrestorable
+      - tests.test_destructive_guard_env_route_tail.TestTailRule.test_a_locale_quote_without_the_word_is_unrestorable
+      - tests.test_destructive_guard_env_route_tail.TestTailRule.test_a_dollar_and_a_double_quote_with_one_line_continuation_between_are_unrestorable
+      - tests.test_destructive_guard_env_route_tail.TestTailRule.test_a_dollar_and_a_single_quote_with_one_line_continuation_between_are_unrestorable
+      - tests.test_destructive_guard_env_route_tail.TestTailRule.test_a_dollar_and_a_quote_with_two_line_continuations_between_are_unrestorable
+      - tests.test_destructive_guard_env_route_tail.TestTailRule.test_a_locale_quote_only_before_the_tail_start_is_not_unrestorable
+      - tests.test_destructive_guard_env_route_tail.TestTailRule.test_a_dollar_and_a_quote_that_stay_apart_are_not_unrestorable
+      - tests.test_destructive_guard_env_route_tail.TestTailRule.test_a_parameter_in_double_quotes_is_not_unrestorable
+      - tests.test_destructive_guard_env_route_tail.TestTailRule.test_a_locale_quote_in_a_payload_whose_map_is_not_unreadable_is_not_unrestorable
+    red_confirmed: true
+    red_reason: >-
+      Against the unchanged hook the five tests that expect true FAILed with assertTrue on a false
+      answer: the word split by $", $" without the word, $ + one continuation + ", $ + one
+      continuation + ', and $ + two continuations + each quote character (both subtests). The four
+      tests that expect false (the near misses: $" only before the tail start, a blank, a newline
+      without a backslash, a backslash, or a continuation then a backslash between the $ and the
+      quote, "$x", and $" in a payload whose map has unreadable not set) passed on the unchanged
+      hook; they pin the forms the new matching must keep false. After the change all nine pass.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_env_route_tail.TestEnvBodyReading.test_the_map_of_each_unreadable_body_has_unreadable_and_an_early_tail_start
+      - tests.test_destructive_guard_env_route_tail.TestEnvBodyReading.test_the_reading_reports_unrestorable_for_each_unreadable_body
+      - tests.test_destructive_guard_env_route_tail.TestEnvBodyReading.test_the_rule_changes_neither_the_entries_nor_the_overrun
+    red_confirmed: true
+    red_reason: >-
+      The three TS-4 (d), (e), (f) bodies were added to the module's list of unreadable bodies, which
+      the three listed tests loop over. Against the unchanged hook the reading test FAILed for the
+      three new bodies (Unrestorable false where true is required), and the entries-and-overrun test
+      FAILed for the three new bodies on its assertTrue of the with-rule reading. The map-facts test
+      (unreadable set, tail start at or before the first unreadable `<<`) reads the lexer only and
+      passed for them on the unchanged hook; it pins the facts the rule relies on (A4). After the
+      change all three pass for all eight bodies.
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_env_route_tail.TestKeptAnswer.test_the_reading_reports_unrestorable_for_each_unreadable_body
+      - tests.test_destructive_guard_env_route_tail.TestKeptAnswer.test_a_chunk_builder_answering_none_keeps_the_answer
+      - tests.test_destructive_guard_env_route_tail.TestKeptAnswer.test_an_unreadable_body_whose_tail_meets_neither_condition_is_not_unrestorable
+      - tests.test_destructive_guard_env_route_tail.TestKeptAnswer.test_a_readable_body_holding_the_word_is_not_unrestorable
+      - tests.test_destructive_guard_env_route_tail.TestKeptAnswer.test_the_route_reports_unrestorable_and_nothing_propagates
+      - tests.test_destructive_guard_env_route_tail.TestKeptAnswer.test_failing_under_only_one_setting_keeps_the_answer_of_the_failing_reading
+      - tests.test_destructive_guard_env_route_tail.TestKeptAnswer.test_failing_under_only_one_setting_with_a_false_answer_leaves_the_route_restorable
+      - tests.test_destructive_guard_env_route_tail.TestKeptAnswer.test_the_lexer_flags_equal_their_entry_values_afterwards
+    red_confirmed: true
+    red_reason: >-
+      Against the unchanged hook, with the structural scan of the payload's stripped text raising
+      LexBudgetExceeded and LexUnmatchedSubscript after the payload's map was obtained, the reading
+      test FAILed for all eight unreadable bodies under both errors (the reading was the empty
+      reading with Unrestorable false, and the rule was not asked), the chunk-builder-answers-None
+      test FAILed (the rule was not asked), the route test FAILed under both errors, the
+      one-setting test FAILed for all eight combinations of error, entry setting and failing
+      setting (the failing reading was the empty reading and the rule was not asked in it), and
+      the flag test FAILed for all 32 combinations of error, one or two readings and entry values
+      on its Unrestorable assertion. The two tests that expect false (an
+      unreadable body whose tail meets neither condition, a readable body holding the word) and the
+      false-answer one-setting test passed on the unchanged hook; they pin the verdicts that must
+      not change. After the change all pass, and the flags equal their entry values for all eight
+      entry combinations.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_env_route_tail.TestPayloadMapUnavailable.test_the_reading_is_the_empty_reading_and_the_rule_is_not_asked
+      - tests.test_destructive_guard_env_route_tail.TestPayloadMapUnavailable.test_the_route_gives_the_nothing_result_and_the_lexer_flags_are_put_back
+      - tests.test_destructive_guard_env_route_tail.TestEnvBodyReading.test_the_rule_is_not_asked_when_the_chunk_cannot_be_built
+      - tests.test_destructive_guard_env_route.TestStateRestored.test_early_return_when_the_payload_chunk_cannot_be_built
+      - tests.test_destructive_guard_env_route.TestStateRestored.test_early_return_with_a_chunk_that_cannot_be_lexed_in_the_second_reading
+    red_confirmed: false
+    red_reason: >-
+      The behavior pre-exists: with the lexer raising for the payload's text the unchanged hook
+      already returns the empty reading, does not ask the rule and lets nothing propagate, so the new
+      TestPayloadMapUnavailable tests, the updated existing test (its setup now makes the lexer
+      raise for the payload's text) and the unedited tests of tests/test_destructive_guard_env_route.py
+      passed on the unchanged hook; no red state occurred for this criterion. They guard the early
+      return that the change must keep. A temporary variant of the hook with the lexer call of the
+      reading not guarded (not committed) made four tests ERROR (27 errors, the exception
+      propagated): both new tests, the updated existing test, and the early-return test of
+      tests/test_destructive_guard_env_route.py, which is unedited.
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: false
+    red_reason: >-
+      TS-21 (batch; the TS-1 body with the word mcp-bridge as the command word and a last line x[0=1
+      that opens an array subscript at an assignment position and never closes it) was run on the
+      unchanged hook through the runner and by hand: batch verdict deny with the rule
+      args-json-unrestorable (without batch, ask with the same rule), the verdict the case asks for,
+      so the case passed there and no red state occurred. The tail is not read, so the subscript opens nowhere, the map is
+      obtained, and the tail holds the word. The case carries the recorded rule
+      args-json-unrestorable. After the change the runner passes it (1678/1678).
+  AC-7:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_env_route_tail.TestEnvBodyReading.test_an_unreadable_body_without_the_word_after_the_tail_start_is_not_unrestorable
+      - tests.test_destructive_guard_env_route_tail.TestEnvBodyReading.test_a_readable_body_with_the_word_in_another_statement_is_not_unrestorable
+    red_confirmed: false
+    red_reason: >-
+      The cases at lines 1678 and 1679 of the case file (env-route-lex-flag-isolation TS-1 and TS-2),
+      the TS-6 and TS-14 cases and every other existing case pin verdicts the unchanged hook already
+      gives: the runner passed all 1674 of them there and passes them now, with no existing case
+      removed or edited (the diff of the case file adds four lines and changes only the closing comma
+      of the previous last case). No existing test is edited but the one named by the plan,
+      test_the_rule_is_not_asked_when_the_chunk_cannot_be_built, whose two assertions are unchanged.
+      Both halves of the project test command pass, and the task's commits modify only the three files
+      of the plan's scope besides this record. No executable check can be made to fail for these
+      first.
