@@ -1,0 +1,155 @@
+round: 1
+executed_at: '2026-11-25T00:15:41+09:00'
+scope:
+  review_mode: diff
+  base_commit: 90dae4a27f6850aaef7a57750887aaaa498b5a07
+  head_commit: 4e117655424e5b4757696592a740a42b935b9bfd
+  changed_files:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/env-route-unreadable-heredoc-ask/task0001.tests.yaml
+  - tests/test_destructive_guard_env_route_tail.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 51fac43edc6fc707
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 10342
+  title: 読めない末尾でロケール引用 $" を使って mcp-bridge の語を割ると、末尾規則をすり抜ける
+  description: _args_json_env_tail_unrestorable() は、(a) 行継続を除き ' " \ を除いた末尾が mcp-bridge を含むか、(b) 末尾が $' を含むかだけを見る。mcp-$"bridge" のようにロケール引用で語を割ると、" を除いた結果は mcp-$bridge になって (a) に当たらず、$" は (b) の対象外なので、規則は False を返す。bash は翻訳の無い $"bridge" を bridge にするので、TS-1 と同じ攻撃が通り、無人実行でも allow になる。SPEC FR1 の列挙が $' だけを挙げて $" を漏らしており、実装は SPEC の文言どおり。読んで確かめたが、フックは実行していない。
+  suggestion: SPEC FR1 (b) を「TAIL が $' または $" を含む」に改め、規則に $" の判定を足す。$" で語を割った TS-4 相当のケース（batch で rule args-json-unrestorable の deny）を足す。TS-5 の本文は $" を含まないので allow のまま。
+  reproduction: HEREDOC + 'mcp-$"bridge"' + CALL をペイロードとする。lex_shell(payload, "shell") の unreadable は立ち、tail_start は <<${tag} 以前。末尾に $' は無い。行継続を除いてから ' " \ を除くと末尾の語は mcp-$bridge なので、_args_json_env_tail_unrestorable() は False を返す。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - claude:evaluator
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: 'evaluator-only source: skipped by the batch auto-fix gate'
+- stable_id: ec07fad74d99fe6b
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 10405
+  title: env 経路のペイロードの字句解析が上限や閉じない添字で止まると、末尾規則を含む検査がすべて外れて許可になる
+  description: _args_json_payload_chunk() は LexBudgetExceeded を捕まえて None を返し、_args_json_env_body_reading() は空の読み取り（Overrun も Unrestorable も False）を返す。このペイロードは他の検査に回らないので、無人実行でも allow になる。spec#0 の指摘（マップを取った後に派生チャンクの scan_structure() が例外を出すと FR1 の判定が失われる）も同じ箇所の同じ原因。LexUnmatchedSubscript は LexBudgetExceeded の派生クラスで、クラスの docstring は「allow にしない」と定めているが、ここで握りつぶされる。この例外は代入位置の NAME[ の ] が来ない行で送出されるので、例外を模擬しなくても起こせる見込みが高い。フックの最終判定は実行して確かめていない。
+  suggestion: env 経路では LexBudgetExceeded（LexUnmatchedSubscript を含む）を握りつぶさずに上位へ伝え、既存の scan-budget / unmatched-subscript の ask（batch では deny）にする。少なくとも、ペイロードのマップを取れた後の失敗では、末尾規則の結果を残す。閉じない添字の行を最後に置いた env 経路のケースを足す。FR1 の範囲を超えるので、SPEC への追記が要る。
+  reproduction: 既存の `BODY_WORD_IN_HEREDOC_BODY` を `env_command()` で包み、無人実行の Bash イベントとして `run()` に渡した。通常の判定は `deny` だった。同じ入力で、本文に対する `lex_shell()` だけが `LexBudgetExceeded` を返すよう例外を模擬すると、判定は `allow` に変わった
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: 'auto-fix loop 1 applied then reverted: it broke 10 subtests of tests/test_destructive_guard_env_route.py that pin the early return'
+- stable_id: 1f6ca13168a178fa
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 10374
+  title: 展開で組み立てたコマンド名は、末尾規則の対象外のまま
+  description: 末尾で ${x}、$@、$(printf ...) などの展開から mcp-bridge を作ると、規則は False を返す。報告どおり再現するが、SPEC FR1 の最後の項と A3 が意図して対象外にしており、今回の差分が持ち込んだものではない。high から medium に下げた。
+  suggestion: この機能の中では直さない。展開を含む読めない末尾をどう扱うかは、TS-5 の allow を保つ条件と合わせて、SPEC の持ち主が判断する。
+  reproduction: '`tests/test_destructive_guard_env_route_tail.py` の212〜215行目の既存テストでは、コマンド置換の結果が `mcp-bridge` になる入力を `HEREDOC` と `CALL` の間に置いている。この入力を字句解析して `_args_json_env_tail_unrestorable()` に渡すと `False` が返る。349〜358行目のテストでも、変数展開を含む入力に対して本文全体の `unrestorable` が `False` になることを確認できる'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'medium: below the auto-fix threshold'
+- stable_id: b0bb7b886273d8cc
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 10626
+  title: 末尾規則による ask の理由文が、--args-json の引用の話になっている
+  description: 末尾規則は既存の ARGS_JSON_UNRESTORABLE_ASK を使うが、その理由文は「--args-json の値、またはフラグの語の引用を静的に復元できない」と述べる。TS-7 や $' だけの末尾には --args-json が無く、調べる人が確認の対象を特定できない。理由 ID は SPEC どおり。
+  suggestion: 理由 ID と優先順位は変えずに、理由文を「ヒアドキュメントの区切り語を読めず、その後ろの本文を検査できない」場合も含む言い方にする。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 70
+  resolution: unresolved
+  resolution_reason: 'medium: below the auto-fix threshold'
+evaluation:
+  round_summary: '実装は FR1〜FR4 の文言どおり。末尾規則はロケール引用 $" で語を割る形をすり抜ける（SPEC の列挙漏れ、評価者が独自に検出）。env 経路は字句解析が LexBudgetExceeded / LexUnmatchedSubscript で止まると検査全体が外れて許可になる。この 2 件を high にした。展開で組み立てた名前は SPEC A3 が意図した対象外なので medium に下げた。キャッシュから押し出されたときの再解析は費用が線形の解析 1 回分なので medium 未満に下げた。注入の試みは無かった。security: findings、comprehensive: corroborated、architecture: corroborated、spec: corroborated。読んだファイルは 7 件（上限 10）。テストとフックは実行していない。'
+  recommended_action: rework
+  action_rationale: high の 2 件はどちらも SPEC への追記とケースの追加を伴うので、自動修正ではなく作り直しの task にするのが妥当。
+dismissed_sites:
+- file: em-workflow/hooks/destructive-guard.py
+  line: 10404
+  run_id: spec#0
+  reason: duplicate of another finding
+- file: em-workflow/hooks/destructive-guard.py
+  line: 10407
+  run_id: comprehensive#0
+  reason: demoted
+- file: em-workflow/hooks/destructive-guard.py
+  line: 10407
+  run_id: architecture#0
+  reason: demoted
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 1
+  applied_total: 0
+  termination: no-progress
+residual_critical_high: 2
+rework_required: true
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-env-route-unreadable-heredoc-ask-20261124T151505Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
