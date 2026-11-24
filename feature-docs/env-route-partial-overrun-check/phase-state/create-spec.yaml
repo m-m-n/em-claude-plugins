@@ -5,7 +5,7 @@ status: in_progress
 generation: 1
 base_revision: e77ee01bdbd3fd1ccbec9c51912ed376706ecb1f
 last_input_digest: sha256:387b79e94c72cbbed5e7574d5ef254cb2cdddc1834e27d91bf4b945fff1fe49a
-active_request_id: create-spec-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -15,13 +15,23 @@ worker_runs:
   output_digest: sha256:145d9227cbdd6f8edbdcf842cd72fa20f45e023aa8c5bc8e14254887b4819d63
   self_write_set: []
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:387b79e94c72cbbed5e7574d5ef254cb2cdddc1834e27d91bf4b945fff1fe49a
   dispatch_digest_inputs:
     em-workflow/references/contracts/spec-writer-contract.md: sha256:825a7e5784539f66522028859f05eb00d761729dafe911b728394d4f3d440867
     em-workflow/references/templates/requirements-document.md: sha256:40ace2beeb59c708b155945c8b4dc13d34f1d9cd55e22c8c6bec58a73faed963
     em-workflow/references/templates/spec-document.md: sha256:a5d0106c39a5df7dc2365357a9546588275ed6c7a1651c866e75fa327a7fa592
-artifacts: []
+  output_digest: sha256:c3db973e083715d2302dc306a01ed671f427b3582f6865326eea8d6f28b7524c
+  self_write_set:
+  - feature-docs/env-route-partial-overrun-check/REQUIREMENTS.md
+  - feature-docs/env-route-partial-overrun-check/SPEC.md
+artifacts:
+- path: feature-docs/env-route-partial-overrun-check/REQUIREMENTS.md
+  sha256: sha256:729d13a39a57cf80e460b0cbdf4540aa51ce1a90645e1953b80f817f94f336b4
+  produced_by: create-spec-run-0002
+- path: feature-docs/env-route-partial-overrun-check/SPEC.md
+  sha256: sha256:6dcca8480230ffdd020f02e1622352e84d492091bab5a36e5900e5289db2e76f
+  produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
