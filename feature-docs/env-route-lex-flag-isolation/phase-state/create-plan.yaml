@@ -1,7 +1,7 @@
 schema_version: 1
 feature: env-route-lex-flag-isolation
 phase: create-plan
-status: dispatching
+status: applying_patch
 generation: 1
 base_revision: 69895b805187b354fbbc6743dda16880a9057502
 last_input_digest: sha256:d88028ed173f46b71b4756bbdaf78403b50b54a1d69315b2f250650d6a1ad040
@@ -10,7 +10,7 @@ packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:d88028ed173f46b71b4756bbdaf78403b50b54a1d69315b2f250650d6a1ad040
   dispatch_digest_inputs:
     em-workflow/references/contracts/planner-contract.md: sha256:18464486c0546613d92935cba80087c4980d3791d41838162d23840e431da515
@@ -23,9 +23,31 @@ worker_runs:
     em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
     feature-docs/env-route-lex-flag-isolation/SPEC.md: sha256:b1cc0f61b76ae1f733c06e85f686bd536b347e65ce888b20e89dc2e2bbaddfb3
     feature-docs/env-route-lex-flag-isolation/workflow.yaml: sha256:d8c771d38410865d771e1cdf927bdcaa9498d6d1f92c315e0823261004f68309
-artifacts: []
+  output_digest: sha256:893cf2299c6dd812d003d7d441c5d94a96265fc085ae109b9a8527f589c92fbe
+  self_write_set:
+  - feature-docs/env-route-lex-flag-isolation/IMPLEMENTATION.md
+  - feature-docs/env-route-lex-flag-isolation/THREAT-MODEL.md
+  - feature-docs/env-route-lex-flag-isolation/VERIFICATION.md
+  - feature-docs/env-route-lex-flag-isolation/tasks/task0001.md
+artifacts:
+- path: feature-docs/env-route-lex-flag-isolation/IMPLEMENTATION.md
+  sha256: sha256:e0c4a5dfe43a520c84c58ee55d7a25f72a67b656404422350b99f1b8f82956eb
+  produced_by: create-plan-run-0001
+- path: feature-docs/env-route-lex-flag-isolation/THREAT-MODEL.md
+  sha256: sha256:7935d0a94d54fd4715738019998cecd26e63b9eefec8ea5c5b40acfa1a2e818c
+  produced_by: create-plan-run-0001
+- path: feature-docs/env-route-lex-flag-isolation/VERIFICATION.md
+  sha256: sha256:5b59b8a2d16a3720b89950fa275a527ddc80ce8b0b482d826dd8922a95a3ecbb
+  produced_by: create-plan-run-0001
+- path: feature-docs/env-route-lex-flag-isolation/tasks/task0001.md
+  sha256: sha256:97c91c909bd5850fd8677956d7f08c54b2fa19aaebba8b6583a414c5a8843399
+  produced_by: create-plan-run-0001
 other_feature_doc_fixes: []
-patches: []
+patches:
+- patch_id: create-plan-p0001
+  status: validated
+  base_input_digest: sha256:d88028ed173f46b71b4756bbdaf78403b50b54a1d69315b2f250650d6a1ad040
+  base_workflow_blob: c3e2d275a273a7c091bb626826bb6c0209e5132b
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
