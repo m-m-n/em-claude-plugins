@@ -5,12 +5,43 @@ status: in_progress
 generation: 1
 base_revision: c1395206a063872c6f455a7cc310c382118261f0
 last_input_digest: sha256:28ab21061cfcf39172e03a1703a63a749e9c3a8d6042b9139095aae442449537
-active_request_id: create-spec-run-0001
-packets: {}
-answers: {}
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-11-24T22:52:00+09:00'
+    questions:
+    - question_id: requirement.mcp-bridge-word-match
+      status: answered
+    - question_id: design-step.recommendation
+      status: answered
+answers:
+  requirement.mcp-bridge-word-match:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-24T22:52:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - normalized
+    freeform: null
+    normalized_answer: env 経路の本文の読み取りで LexMap.unreadable が立ち、tail_start 以降の生テキストから ' " \ を除き、さらにバックスラッシュと改行の組（行継続）を除いたうえで mcp-bridge を含むとき、または生テキストに $' を含むときに、その読み取りの unrestorable を立てる。どちらも含まない本文では新しい ask
+      を出さない（env-route-lex-flag-isolation TS-1/TS-2 は batch で allow のまま）。展開結果で名前が完成する形（${a}cp-bridge、$(printf ...)）は読める範囲の経路でも対象外のため、末尾の照合でも対象にしない
+    resolution_note: 'gate: create-spec.requirement-clarification; policy codex_consultation; Codex consulted (codex entry, 1 turn, converged); chosen normalized（行継続の組も照合前に除く補足を含む）; not chosen literal_only,
+      any_unreadable; key points: literal_only は読める範囲の経路が拾う $''\x6dcp-bridge'' や引用で分割した名前を取りこぼす（destructive-guard.py:10159-10174, cases 1576-1578）。any_unreadable は TS-1/TS-2 を ask（batch で deny）に変え、無人実行を止める。normalized
+      は TS-1/TS-2 を allow のまま保つ。caveat: 部分文字列照合なのでヒアドキュメント本文の名前や無関係な $'' でも ask になりうる（安全側）。展開で名前が完成する形は読める範囲の経路でも対象外; Opus escalation not run'
+  design-step.recommendation:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-24T22:52:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - skip
+    freeform: null
+    normalized_answer: analyst の推奨どおり設計ステップを省く
+    resolution_note: 'gate: create-spec.design-step; policy decide_autonomously → analyst recommendation skip（UI の無いフックの判定ロジックの修正）'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:28ab21061cfcf39172e03a1703a63a749e9c3a8d6042b9139095aae442449537
 artifacts: []
 patches: []
