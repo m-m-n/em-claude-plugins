@@ -149,7 +149,8 @@ workflow:
   - TM-8
   failed_items: []
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: ca33a38b377baaca05e4b2fce1793c2f047fc01f
 tasks:
   task0001:
     title: Env-route tail rule for unreadable heredoc delimiters
