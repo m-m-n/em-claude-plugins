@@ -1,0 +1,160 @@
+task_id: task0001
+# 4a, before any edit: python3 em-workflow/hooks/tests/run-destructive-guard.py -> 1662/1662 passed;
+# python3 -m unittest discover -s tests -> Ran 17329 tests, OK (skipped=1). Nothing was red.
+baseline_failures: []
+# Re-executed after the implementation and after this record: the runner passes every case
+# (1674/1674) and unittest discover runs green with the new module included.
+final_failures: []
+acceptance_tests:
+  AC-1:
+    # The runner has no per-case selector; the first test below runs the whole
+    # runner (python3 em-workflow/hooks/tests/run-destructive-guard.py) and
+    # asserts exit 0 with no FAIL line, so it covers the env-route-unreadable-heredoc-ask
+    # TS-1, TS-2, TS-3, TS-7 and TS-15 cases of em-workflow/hooks/tests/destructive-guard-cases.json.
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_env_route_tail.TestEnvBodyReading.test_the_route_reports_unrestorable_without_a_value_for_a_body_it_cannot_read
+    red_confirmed: true
+    red_reason: >-
+      The twelve cases (TS-1 to TS-4, TS-6, TS-7, TS-13 to TS-15) were added
+      to a copy of the case file before any hook change and the real runner was
+      run against a byte-identical copy of the unchanged hook: 1665/1674
+      passed, and nine cases FAILed with got=allow rule=None where ask or deny
+      with the rule args-json-unrestorable is required: TS-1 (ask, without
+      batch), TS-2, TS-3, the three TS-4 cases, TS-7 and the two TS-15 cases. The unit test of the route (the three
+      bodies it cannot read) FAILed on the unchanged hook with Unrestorable
+      false. After the change the runner passes 1674/1674 and the unit test
+      passes.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_env_route_tail.TestTailRule.test_the_plain_word_in_the_tail_is_unrestorable
+      - tests.test_destructive_guard_env_route_tail.TestTailRule.test_the_word_split_by_quotes_is_unrestorable
+      - tests.test_destructive_guard_env_route_tail.TestTailRule.test_the_word_split_by_single_quotes_and_backslashes_is_unrestorable
+      - tests.test_destructive_guard_env_route_tail.TestTailRule.test_the_word_split_by_a_line_continuation_is_unrestorable
+      - tests.test_destructive_guard_env_route_tail.TestTailRule.test_an_ansi_c_quote_in_the_tail_is_unrestorable
+      - tests.test_destructive_guard_env_route_tail.TestTailRule.test_an_ansi_c_quote_without_the_word_is_unrestorable
+      - tests.test_destructive_guard_env_route_tail.TestTailRule.test_the_word_as_here_document_body_text_is_unrestorable
+      - tests.test_destructive_guard_env_route_tail.TestTailRule.test_a_tail_without_the_word_is_not_unrestorable
+      - tests.test_destructive_guard_env_route_tail.TestTailRule.test_a_tail_with_only_the_delimiter_word_is_not_unrestorable
+      - tests.test_destructive_guard_env_route_tail.TestTailRule.test_a_name_that_becomes_the_word_by_a_parameter_expansion_is_not_unrestorable
+      - tests.test_destructive_guard_env_route_tail.TestTailRule.test_a_name_built_by_a_command_substitution_is_not_unrestorable
+      - tests.test_destructive_guard_env_route_tail.TestTailRule.test_the_word_only_before_the_tail_start_is_not_unrestorable
+      - tests.test_destructive_guard_env_route_tail.TestTailRule.test_an_ansi_c_quote_only_before_the_tail_start_is_not_unrestorable
+      - tests.test_destructive_guard_env_route_tail.TestTailRule.test_a_map_whose_unreadable_is_not_set_is_not_unrestorable
+      - tests.test_destructive_guard_env_route_tail.TestTailRule.test_a_tail_that_is_not_from_an_unreadable_delimiter_is_not_unrestorable
+      - tests.test_destructive_guard_env_route_tail.TestTailRule.test_an_absent_tail_start_reads_as_the_start_of_the_payload
+      - tests.test_destructive_guard_env_route_tail.TestTailRule.test_the_tail_starts_at_the_tail_start_of_the_map
+      - tests.test_destructive_guard_env_route_tail.TestTailRule.test_line_continuations_are_removed_before_quotes_and_backslashes
+      - tests.test_destructive_guard_env_route_tail.TestTailRule.test_the_word_with_a_newline_inside_is_not_unrestorable
+      - tests.test_destructive_guard_env_route_tail.TestTailRule.test_it_lexes_nothing_and_raises_no_flag
+    red_confirmed: true
+    red_reason: >-
+      Against the unchanged hook the runner FAILed the three TS-4 cases
+      (got=allow rule=None: the command word split by quotes, by a line
+      continuation, and written as the ANSI-C quote), and every TestTailRule
+      test ERRORed because the predicate
+      _args_json_env_tail_unrestorable does not exist
+      (AttributeError). After the change the runner passes and the
+      TestTailRule tests pass. Temporary variants of the predicate, none
+      committed, failed the unit tests: quote removal before continuation
+      removal failed two (the order test and the newline-inside test), reading
+      the whole payload instead of the tail failed four, and dropping the
+      unreadable check failed the not-unreadable tests.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+      - tests.test_destructive_guard_env_route_tail.TestEnvBodyReading.test_an_unreadable_body_without_the_word_after_the_tail_start_is_not_unrestorable
+      - tests.test_destructive_guard_env_route_tail.TestEnvBodyReading.test_a_readable_body_with_the_word_in_another_statement_is_not_unrestorable
+    red_confirmed: false
+    red_reason: >-
+      The existing cases at lines 1678 and 1679 (env-route-lex-flag-isolation
+      TS-1 and TS-2, batch allow), TS-6 (the word only before the here-document
+      operator, batch allow) and TS-14 (the same body without env, batch deny
+      with the rule unreadable-heredoc-delimiter) pin verdicts the unchanged
+      hook already gives: TS-6 gave allow and TS-14 gave deny
+      unreadable-heredoc-delimiter on the unchanged hook, and the runner
+      passed them there (1665/1674 with only the nine cases of AC-1 and AC-2
+      failing). The two unit tests (a readable body that holds the word in a
+      statement that is not a lifted notion statement, and an unreadable body
+      whose tail holds neither the word nor `$'`) passed on the unchanged hook
+      as well. No red state occurred for this change. The unit test that
+      reads the whole payload instead of the tail (a temporary variant, not
+      committed) failed four tests, among them the before-the-tail-start
+      tests.
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_env_route_tail.TestEnvBodyReading.test_the_reading_reports_unrestorable_for_each_unreadable_body
+      - tests.test_destructive_guard_env_route_tail.TestEnvBodyReading.test_the_route_reports_unrestorable_without_a_value_for_a_body_it_cannot_read
+      - tests.test_destructive_guard_env_route_tail.TestEnvBodyReading.test_the_map_of_each_unreadable_body_has_unreadable_and_an_early_tail_start
+      - tests.test_destructive_guard_env_route_tail.TestEnvBodyReading.test_a_readable_body_with_the_word_in_another_statement_is_not_unrestorable
+      - tests.test_destructive_guard_env_route_tail.TestEnvBodyReading.test_an_unreadable_body_without_the_word_after_the_tail_start_is_not_unrestorable
+      - tests.test_destructive_guard_env_route_tail.TestEnvBodyReading.test_the_rule_changes_neither_the_entries_nor_the_overrun
+      - tests.test_destructive_guard_env_route_tail.TestEnvBodyReading.test_the_rule_gets_the_map_the_chunk_was_built_from
+      - tests.test_destructive_guard_env_route_tail.TestEnvBodyReading.test_the_rule_is_not_asked_when_the_chunk_cannot_be_built
+      - tests.test_destructive_guard_env_route_tail.TestEnvBodyReading.test_the_unrestorable_of_a_lifted_notion_statement_is_still_reported
+      - tests.test_destructive_guard_env_route_tail.TestEnvBodyReading.test_a_lex_budget_exceeded_of_the_statement_loop_propagates_unchanged
+    red_confirmed: true
+    red_reason: >-
+      Against the unchanged hook the reading test FAILed for all five bodies
+      (the TS-1 plain word, the two TS-4 forms that fit a single-quoted
+      payload, the ANSI-C form, and the TS-7 heredoc-text body) with
+      Unrestorable false where true is required, and the route test FAILed
+      for the four bodies that fit a single-quoted payload. The tests that
+      patch the predicate ERRORed because it does not exist. The map-facts
+      test (unreadable set, tail start at or before the first unreadable `<<`)
+      reads the lexer only and passed on the unchanged hook, as did the
+      readable-body test; they pin facts the rule relies on. After the change
+      all of them pass.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_env_route_tail.TestBothReadings.test_true_under_only_one_setting_makes_the_route_unrestorable
+      - tests.test_destructive_guard_env_route_tail.TestBothReadings.test_false_under_both_settings_leaves_the_route_restorable
+      - tests.test_destructive_guard_env_route_tail.TestBothReadings.test_a_delimiter_unreadable_under_extglob_on_only_is_unrestorable
+    red_confirmed: true
+    red_reason: >-
+      Against the unchanged hook the patched-predicate tests ERRORed (the
+      predicate does not exist), and the unpatched test (a body whose
+      here-document operator shares a line with an extended-pattern
+      parenthesis, so that only the extglob-on reading finds an unreadable
+      delimiter) FAILed for both entry settings with Unrestorable false where
+      true is required. After the change all pass.
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_env_route_tail.TestStateRestored.test_one_reading
+      - tests.test_destructive_guard_env_route_tail.TestStateRestored.test_one_reading_of_a_body_with_only_the_heredoc_text
+      - tests.test_destructive_guard_env_route_tail.TestStateRestored.test_two_readings_both_answering_true
+      - tests.test_destructive_guard_env_route_tail.TestStateRestored.test_two_readings_the_rule_true_under_extglob_on_only
+      - tests.test_destructive_guard_env_route_tail.TestStateRestored.test_the_rule_adds_no_extglob_unit
+      - tests.test_destructive_guard_env_route.TestStateRestored.test_normal_return_one_reading
+      - tests.test_destructive_guard_env_route.TestStateRestored.test_normal_return_two_readings
+      - tests.test_destructive_guard_env_route.TestStateRestored.test_flags_the_body_raises_do_not_stay_raised
+      - tests.test_destructive_guard_env_route.TestStateRestored.test_exception_in_the_first_reading_propagates_unchanged_and_restores
+      - tests.test_destructive_guard_env_route.TestStateRestored.test_exception_in_the_second_reading_restores_the_extglob_setting
+    red_confirmed: true
+    red_reason: >-
+      The new tests assert, for all eight entry states, that the reading is
+      unrestorable and that the three states equal their entry values. Against
+      the unchanged hook they FAILed on the unrestorable assertion (all eight
+      entry states of each of the four state tests, and the extglob-unit test),
+      so the restoration is observed only together with the rule. The existing
+      tests of tests/test_destructive_guard_env_route.py (not edited) passed
+      before and after the change; they are the flag-isolation checks the rule
+      must not disturb.
+  AC-7:
+    tests:
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: false
+    red_reason: >-
+      TS-13 (the TS-1 command followed by `; git branch -D example`, deny with
+      the rule git-branch-force-delete, no batch) pins a verdict the unchanged
+      hook already gives: it passed on the unchanged hook (the runner's nine
+      FAILs there were the cases of AC-1 and AC-2), and it still passes now
+      because a deny outranks the held ask. The other parts of this criterion
+      are checked by running both halves of the project test command (the runner
+      1674/1674 and unittest discover green, with every case of the case file
+      before this task still present: the diff of the case file adds twelve
+      lines and changes only the closing comma of the previous last case) and
+      by the file list of the task's commits (the hook, the case file, the new
+      unit test module, and this record); no executable check can be made to
+      fail for them first.

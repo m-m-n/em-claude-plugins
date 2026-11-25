@@ -10334,27 +10334,102 @@ def _args_json_has_dash_c(marked, words):
 _EnvBodyEntry = collections.namedtuple("_EnvBodyEntry", ["charge", "bodies", "commands"])
 # One reading of the payload under one extglob setting: its _EnvBodyEntry per
 # lifted notion statement, and whether it raised Overrun / Unrestorable.
+# Unrestorable comes from the tail rule (_args_json_env_tail_unrestorable())
+# or from a lifted notion statement (_args_json_read_values()); the tail rule
+# changes neither the entries nor Overrun. A reading whose chunk was not built
+# (a step of the chunk build after the payload's map failed) has no entries and
+# no Overrun, and still carries the rule's answer on that map
+# (env-route-unreadable-heredoc-ask FR1, FR2).
 _EnvBodyReading = collections.namedtuple(
     "_EnvBodyReading", ["entries", "overrun", "unrestorable"]
 )
+
+# What the tail rule looks for in the unread tail of a payload once the line
+# continuations (backslash-newline pairs) are removed from it: condition (b),
+# the two-character openers of an ANSI-C quote and of a locale quote, in the
+# tail as it stands; then, after the characters of _ENV_TAIL_QUOTE_CHARS are
+# removed from it, condition (a), the word.
+_ENV_TAIL_QUOTE_OPENERS = ("$'", '$"')
+_ENV_TAIL_WORD = "mcp-bridge"
+_ENV_TAIL_QUOTE_CHARS = ("'", '"', "\\")
+
+
+def _args_json_env_tail_unrestorable(payload, lex_map):
+    """The tail rule of the env route (env-route-unreadable-heredoc-ask FR1):
+    whether the `bash -c` payload PAYLOAD is unrestorable because a
+    here-document delimiter word of it cannot be read and what the lexer left
+    unread holds the `mcp-bridge` word, `$'` or `$"`, each as it is once the
+    line continuations are removed.
+
+    LEX_MAP is the map lex_shell() returned for PAYLOAD in shell mode under
+    the extglob setting in force, the map the payload's chunk was built from
+    (_args_json_payload_chunk()). The answer is true exactly when
+    LEX_MAP.unreadable is set and the TAIL meets one of two conditions. TAIL
+    is the raw text of PAYLOAD from LEX_MAP.tail_start to its end; an absent
+    tail start, which does not occur when `unreadable` is set, reads as the
+    start of PAYLOAD. JOINED is TAIL with every backslash-newline pair (line
+    continuation) removed, and nothing else removed.
+
+    (b) JOINED contains the two characters `$'` or the two characters `$"`.
+        A backslash between the `$` and the quote character still separates
+        them (`$\\"` is no locale quote), and a line continuation does not.
+    (a) Otherwise, with every `'`, `"` and `\\` character removed from
+        JOINED, the text contains `mcp-bridge`. The order is fixed: the
+        continuations first, then the quote and backslash characters.
+
+    No expansion is evaluated, so a name that becomes `mcp-bridge` only after
+    expansion (`${a}cp-bridge`, `$(printf ...)`) does not match, and the text
+    before the tail start is never examined. The rule lexes nothing, reads no
+    module state and raises no flag; its cost is linear in the length of
+    TAIL."""
+    if not lex_map.unreadable:
+        return False
+    start = lex_map.tail_start
+    joined = payload[0 if start is None else start:].replace("\\\n", "")
+    for opener in _ENV_TAIL_QUOTE_OPENERS:
+        if opener in joined:
+            return True
+    for char in _ENV_TAIL_QUOTE_CHARS:
+        joined = joined.replace(char, "")
+    return _ENV_TAIL_WORD in joined
 
 
 def _args_json_env_body_reading(payload, marked):
     """One reading of PAYLOAD, the text of the `bash -c` payload
     _args_json_env_payload_values() found, as an _EnvBodyReading, under the
     extglob setting in force (_lex_extglob). MARKED is the _MarkedText of the
-    chunk the statement that runs the payload sits in. A payload that cannot
-    be lexed within the lexer's bounds (_args_json_payload_chunk() answers
-    None) gives a reading with nothing in it. For each statement of the
-    payload that _args_json_lifted_notion_words() takes, the options are read
-    as for any lifted notion statement (_args_json_read_values()). A
-    LexBudgetExceeded raised by _args_json_chunk_statements() propagates."""
+    chunk the statement that runs the payload sits in.
+
+    1. The payload's map is obtained through the lexer call the chunk build
+       makes (the payload text, shell mode, the setting in force). A payload
+       that cannot be lexed within the lexer's bounds (the call raises
+       LexBudgetExceeded, LexUnmatchedSubscript included) gives a reading with
+       nothing in it, and the tail rule is not evaluated.
+    2. The tail rule (_args_json_env_tail_unrestorable()) is evaluated on that
+       map. Its answer is the starting value of the reading's Unrestorable
+       (env-route-unreadable-heredoc-ask FR1, FR2).
+    3. The payload chunk is built (_args_json_payload_chunk()); the lexer's
+       cache returns the map of step 1 inside it, so the payload is not lexed
+       again. When a later step of the build fails (it answers None), the
+       reading has no entries and no Overrun, and keeps the rule's answer.
+    4. For each statement of the payload that
+       _args_json_lifted_notion_words() takes, the options are read as for any
+       lifted notion statement (_args_json_read_values()); their Unrestorable
+       is ORed into the reading's.
+
+    The tail rule changes neither the entries nor Overrun. It runs before the
+    statements are read, so a LexBudgetExceeded raised by
+    _args_json_chunk_statements() propagates unchanged."""
+    try:
+        lex_map = lex_shell(payload, "shell")
+    except LexBudgetExceeded:
+        return _EnvBodyReading((), False, False)
+    unrestorable = _args_json_env_tail_unrestorable(payload, lex_map)
     chunk = _args_json_payload_chunk(payload, marked)
     if chunk is None:
-        return _EnvBodyReading((), False, False)
+        return _EnvBodyReading((), False, unrestorable)
     entries = []
     overrun = False
-    unrestorable = False
     for inner in _args_json_chunk_statements(chunk):
         inner_name, inner_args = head(inner)
         if inner_name is None:
@@ -10520,7 +10595,19 @@ def _args_json_env_payload_values(shaped_words, marked, args):
     items beside the reported overrun, and _queue_args_json_chunks() queues
     them (env-route-partial-overrun-check); an overrun of every returned
     reading carries none. What the route reads records no extglob unit:
-    statements() stays the only caller of _note_extglob_units()."""
+    statements() stays the only caller of _note_extglob_units().
+
+    The one way an unreadable here-document delimiter in the payload reaches
+    the decision is the tail rule (_args_json_env_tail_unrestorable();
+    env-route-unreadable-heredoc-ask FR1, FR2): when the delimiter word of a
+    here-document in the payload cannot be read and the unread tail, with its
+    line continuations removed, holds the `mcp-bridge` word, `$'` or `$"`, the
+    reading is unrestorable, and the result's Unrestorable flag becomes the
+    `args-json-unrestorable` ask (ARGS_JSON_UNRESTORABLE_ASK). It is set when
+    either reading's tail rule answers true, also when a step of the chunk
+    build after the payload's map failed. A payload whose map cannot be
+    obtained is read as nothing, as before. The flag the lexer raises for such
+    a delimiter (_lex_unreadable_met) still does not leave the route."""
     if not _args_json_has_dash_c(marked, shaped_words):
         return _ARGS_JSON_NOTHING
     head_word = shaped_words[len(shaped_words) - len(args) - 1]
@@ -10575,7 +10662,12 @@ SCAN_BUDGET_ASK = (
 # quoting cannot be restored statically (mcp-bridge-args-json-exec-guard FR11,
 # D5): an ANSI-C quote the decoder gives no result for, a locale quote, a `$`,
 # one or more line continuations (a backslash and a newline), and a character
-# that starts an expansion (args-json-quoting-bypass FR3). The `--args-json`
+# that starts an expansion (args-json-quoting-bypass FR3). One more cause is
+# the tail rule of the env route: a `bash -c` payload whose here-document
+# delimiter word cannot be read and whose unread tail holds the `mcp-bridge`
+# word, `$'` or `$"` once its line continuations are removed
+# (_args_json_env_tail_unrestorable(); env-route-unreadable-heredoc-ask FR1,
+# FR2). The `--args-json`
 # step holds it in the _DeferredAsks record and statements() settles it once
 # the queue is drained; the scan-budget ask outranks it (D6).
 ARGS_JSON_UNRESTORABLE_ASK = (

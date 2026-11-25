@@ -1,0 +1,80 @@
+feature: env-route-unreadable-heredoc-ask
+collected_at: '2026-11-25T09:03:46+09:00'
+session_ids:
+- 01a21003-30bc-77ae-b980-c19c0f979ef3
+signals:
+  review_critical_high:
+  - stable_id: 51fac43edc6fc707
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 読めない末尾でロケール引用 $" を使って mcp-bridge の語を割ると、末尾規則をすり抜ける
+    resolution: unresolved
+  - stable_id: ec07fad74d99fe6b
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: env 経路のペイロードの字句解析が上限や閉じない添字で止まると、末尾規則を含む検査がすべて外れて許可になる
+    resolution: unresolved
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: 最終読み（description_plus_code）はバケット 1 が最有力（確率 0.93、score 1.06）で、評価器は reduced を返した
+    bases:
+    - basis: description_only
+      score:
+        type: score
+        score: 1.13
+        confidence: 0.87
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.87
+          '2': 0.13
+          '3': 0.0
+      observed_at: '2026-11-24T22:27:00+09:00'
+    - basis: description_plus_code
+      score:
+        type: score
+        score: 1.06
+        confidence: 0.93
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.93
+          '2': 0.07
+          '3': 0.0
+      observed_at: '2026-11-24T22:30:00+09:00'
+    pre_survey_estimate:
+      files_expected:
+      - em-workflow/hooks/destructive-guard.py
+      - em-workflow/hooks/tests/destructive-guard-cases.json
+      changed_lines_approx: 10
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: false
+      spillover_modules: []
+      work_still_required: true
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 1
+      body_change_kind: new_logic
+      change_containment: single_function
+      caller_and_dependency_count: 9
+      changes_external_contract: false
+      changes_behavior: true
+      evidence: 静的確認では、destructive-guard.py:10243–10246 の字句解析結果から LexMap.unreadable が本文の読み取り結果に引き継がれず、10350–10360 の unrestorable は読み取れた文の結果だけで決まる。10402 で大域フラグが復元されるため、この経路では args-json-unrestorable の ask が残らない。destructive-guard-cases.json:1678–1683 に該当する組み合わせはなく、run-destructive-guard.py:269–275 で既存の形式のまま判定と理由 ID を検証できる
+follow_up_drafts: []
+lessons_candidates:
+- round 1 の high 51fac43edc6fc707 は SPEC の引用形の列挙漏れ（ロケール引用と、$ と引用符の間の行継続）が原因で、create-spec への再エントリ 1 回と task0002 の追加になった
+- implement の起動が 1 回、セッションの作業ディレクトリが integration worktree に切り替わったため queue_launch_guard と両立せず停止した
