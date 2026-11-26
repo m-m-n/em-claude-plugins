@@ -1,0 +1,33 @@
+schema_version: 1
+feature: dbracket-regex-settled
+phase: rework
+status: in_progress
+generation: 1
+base_revision: 202c5e86d0b95e05354edc38836f0e4fef323cbf
+last_input_digest: sha256:f4145da5609016692b8f400a6c8f8bd2e7f9c95f663ba04c0dd1c1ff63e53471
+active_request_id: rework-run-0001
+packets: {}
+answers: {}
+worker_runs:
+- request_id: rework-run-0001
+  status: dispatched
+  input_digest: sha256:f4145da5609016692b8f400a6c8f8bd2e7f9c95f663ba04c0dd1c1ff63e53471
+  output_digest: null
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/rework-planner-contract.md: sha256:0c9f82099c3546b6b675856539d8244628b7170ce7a4442ec951e13e16577ec3
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/dbracket-regex-settled/SPEC.md: sha256:99144de9220ec7e6968181d8a62ecccc61d3b6552fc7cf4a4d5bdfbbeadda3db
+    feature-docs/dbracket-regex-settled/VERIFICATION.md: sha256:fa13d97f84471ad4224728d1c60b3ff74506e7449ad1a93f1801489e5a0420ac
+    feature-docs/dbracket-regex-settled/tasks/task0001.md: sha256:5af590119a9de72a04ae90bd7b711edb16f9eb8ab75a4df2020c1a17f7feebbd
+    feature-docs/dbracket-regex-settled/workflow.yaml: sha256:5523808f20e6bc3df6425015371b4dfe20b4af6a20461e261f27eb90c6e03b15
+  self_write_set: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
