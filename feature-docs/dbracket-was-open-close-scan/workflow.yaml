@@ -2,64 +2,41 @@ schema_version: 1
 feature: dbracket-was-open-close-scan
 created: '2026-11-26'
 base_branch: main
-goal: '# destructive-guard の [[ ]] 継続分岐が閉じ括弧の後ろの語まで条件式として読む
-
+goal: |
+  # destructive-guard の [[ ]] 継続分岐が閉じ括弧の後ろの語まで条件式として読む
 
   種別: バグ
 
-
   ## 現象
 
-
-  `was_open` 分岐が `]]` を探す前に、その文の全単語を `_unsettled()` に渡す。条件式が `&&` をまたぐと、閉じ括弧の後ろにあるリダイレクト先のファイル名まで条件式として読む。`[[
-  true && true ]] >=~` では出力先の `=~` を正規表現演算子と見なし、後続の notion 呼び出しが `KIND_NOTHING` から
-  `KIND_INSPECTED` に変わる。
-
+  `was_open` 分岐が `]]` を探す前に、その文の全単語を `_unsettled()` に渡す。条件式が `&&` をまたぐと、閉じ括弧の後ろにあるリダイレクト先のファイル名まで条件式として読む。`[[ true && true ]] >=~` では出力先の `=~` を正規表現演算子と見なし、後続の notion 呼び出しが `KIND_NOTHING` から `KIND_INSPECTED` に変わる。
 
   ## 再現手順
 
-
   1. `[[ true && true ]] >=~` の後に `--session "$SID"` 付きの標準形の notion 呼び出しを続けたコマンドを静的判定にかける
-
   2. 後続の呼び出しが検査対象になる（誤爆）
-
 
   ## 期待する挙動
 
-
   `was_open` 分岐でも単語を出現順に読み、有効な `]]` に達した時点で条件式の走査を終える。閉じ括弧より後ろの語で検査除外が外れない。
-
 
   ## 完了の定義
 
-
   - 再現手順で現象が起きない
-
   - 再発を検出するテストがある
-
 
   ## 該当箇所
 
-
   `em-workflow/hooks/destructive-guard.py` 8789 行付近（`was_open` 分岐）
-
 
   ## 実害・発生条件
 
-
-  dbracket-opener-arith-scan のレビュー第1ラウンドで comprehensive / architecture / spec 観点が
-  medium として報告し deferred にした（stable_id: 73ea2b1bdc1a19f3）。
-
+  dbracket-opener-arith-scan のレビュー第1ラウンドで comprehensive / architecture / spec 観点が medium として報告し deferred にした（stable_id: 73ea2b1bdc1a19f3）。
 
   ## 追加指示
 
-
   - 不明点は Codex に相談し、比較して良い方の選択肢を採る。相談内容は Notion のタスクページに記録する。
-
-  - 実装完了後は integration ブランチを remote に push し、base_branch への PR を gh pr create で作る。integration
-  ブランチはローカル・リモート両方に残す（base_branch へ自動マージしない）。
-
-  '
+  - 実装完了後は integration ブランチを remote に push し、base_branch への PR を gh pr create で作る。integration ブランチはローカル・リモート両方に残す（base_branch へ自動マージしない）。
 parent_branch: em-workflow/dbracket-was-open-close-scan/integration
 tier: reduced
 tier_decision:
@@ -88,8 +65,7 @@ project:
     main:
       language: python
       build_command: ''
-      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3
-        -m unittest discover -s tests
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
       format_command: ''
 workflow:
 - id: create-spec
@@ -102,8 +78,7 @@ workflow:
   - DESIGN.md
   - design/
   status: skipped
-  skipped_reason: 'UI が無い（hook スクリプト内の静的解析の変更）。create-spec.design-step: decide_autonomously
-    → analyst の推奨どおり skip、design-system 候補 0 件'
+  skipped_reason: 'UI が無い（hook スクリプト内の静的解析の変更）。create-spec.design-step: decide_autonomously → analyst の推奨どおり skip、design-system 候補 0 件'
 - id: create-plan
   artifacts:
   - IMPLEMENTATION.md
