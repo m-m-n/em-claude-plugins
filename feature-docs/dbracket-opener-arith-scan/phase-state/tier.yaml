@@ -1,0 +1,66 @@
+schema_version: 2
+feature: dbracket-opener-arith-scan
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.05
+    confidence: 0.95
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.95
+      '2': 0.05
+      '3': 0.0
+  observed_at: '2026-11-26T19:52:01+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.03
+    confidence: 0.97
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.97
+      '2': 0.03
+      '3': 0.0
+  observed_at: '2026-11-26T19:54:42+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/hooks/destructive-guard.py
+  - tests/test_destructive_guard_args_json.py
+  changed_lines_approx: 6
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 1
+  body_change_kind: new_logic
+  change_containment: single_function
+  caller_and_dependency_count: 6
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: HEAD 6d393ee61 で、条件式を開く区間の括弧内に算術比較を置くと、後続の --session "$SID" 付き Notion
+    呼び出しが KIND_NOTHING になることを静的判定で確認した。em-workflow/hooks/destructive-guard.py:8754
+    の演算子走査は継続区間に限られ、同ファイル:8857 の呼び出し後に行う単純コマンド判定でもこの比較を拾わない。tests/test_destructive_guard_args_json.py:1850
+    の単独条件式と同ファイル:4051 の継続区間のテスト、および em-workflow/hooks/tests/destructive-guard-cases.json:1485
+    からの7件は通過した。開始区間にも既存の演算子判定を適用し、単体テストに再現例を1件追加する前提で見積もった
+decided_at: '2026-11-26T19:54:54+09:00'
