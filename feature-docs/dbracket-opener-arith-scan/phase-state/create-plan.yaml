@@ -1,16 +1,16 @@
 schema_version: 1
 feature: dbracket-opener-arith-scan
 phase: create-plan
-status: in_progress
+status: applying_patch
 generation: 1
 base_revision: 188230b218bdc9fb599a6f001ea7f8c3bfec5e5a
 last_input_digest: sha256:e373a9b11fd3b48b19ce06cbc65d2f2804907063ada209538bd39b43cf027d90
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:e373a9b11fd3b48b19ce06cbc65d2f2804907063ada209538bd39b43cf027d90
   dispatch_digest_inputs:
     em-workflow/references/contracts/planner-contract.md: sha256:18464486c0546613d92935cba80087c4980d3791d41838162d23840e431da515
@@ -23,8 +23,22 @@ worker_runs:
     em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
     feature-docs/dbracket-opener-arith-scan/SPEC.md: sha256:3ca5aa8ff3f24e5294487807cd0d1611776446b425d0bc74ceebe755eae81077
     feature-docs/dbracket-opener-arith-scan/workflow.yaml: sha256:646cb2e924394f648ab098e6154f2900c5252b894074e206b2087bbbda45c1fc
-  output_digest: null
-  self_write_set: []
-artifacts: []
+  output_digest: sha256:592b34a9e9bc78c5ae5410db9725fedfa2917d110eb60f22e0b47432d3a234d9
+  self_write_set:
+  - feature-docs/dbracket-opener-arith-scan/THREAT-MODEL.md
+  - feature-docs/dbracket-opener-arith-scan/VERIFICATION.md
+  - feature-docs/dbracket-opener-arith-scan/tasks/task0001.md
+artifacts:
+- path: feature-docs/dbracket-opener-arith-scan/THREAT-MODEL.md
+  sha256: sha256:ae1e01ba56ecde4117cc9dd4b912a38bbf6cb88cd0f8f9925e23e07b6e73beef
+  produced_by: create-plan-run-0001
+- path: feature-docs/dbracket-opener-arith-scan/VERIFICATION.md
+  sha256: sha256:fc3a5a45c5d8cd9efba38387f6cf4fbb9328056b5c18b09d6597a5090c60678e
+  produced_by: create-plan-run-0001
+- path: feature-docs/dbracket-opener-arith-scan/tasks/task0001.md
+  sha256: sha256:fead4bc6f849018824e3baec0ad9ad15b1c38c8ee387a7234d251e777b9e5209
+  produced_by: create-plan-run-0001
 other_feature_doc_fixes: []
-patches: []
+patches:
+- patch_id: create-plan-p0001
+  status: pending

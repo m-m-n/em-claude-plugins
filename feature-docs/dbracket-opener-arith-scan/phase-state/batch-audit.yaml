@@ -1,0 +1,22 @@
+schema_version: 1
+feature: dbracket-opener-arith-scan
+records:
+- question_id: create-plan.spec-discrepancy.dbracket-paren-form
+  packet_id: null
+  answered_at: '2026-11-26T20:17:20+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - keep_plan
+  freeform: null
+  normalized_answer: '計画どおり進める: [[ ( a == b ) && true ]] は修正前と同じく未確定（検査する側）のまま。SPEC
+    FR3/AC-5 の例示が実際の挙動と食い違う点は記録に残す'
+  resolution_note: 'gate: none (planner warning, unclear point); chosen: keep_plan
+    (A); not chosen: re-run create-spec to fix the SPEC example (B), change the implementation
+    to read the form as certain (C); Codex consulted: true (1 turn, readonly); Opus
+    escalation ran: false. Key points: Codex confirmed on the base code that the (
+    boundary makes a == b a simple command whose name a is outside the allow-list,
+    so the following notion call is KIND_INSPECTED while [[ ( true == x ) && true
+    ]] stays KIND_NOTHING. A keeps the stricter existing inspection, limits the change
+    to the FR1 scan, and follows FR3 (as before) and NFR1; B needs re-planning; C
+    widens the change and drops an existing inspection.'
