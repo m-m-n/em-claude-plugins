@@ -1,18 +1,18 @@
 schema_version: 1
 feature: dbracket-paren-group-spec-align
 phase: create-spec
-status: awaiting_answers
+status: dispatching
 generation: 1
 base_revision: c3d4f3cf7a8f9bf1e7accd1c1bf1d490b631bc78
 last_input_digest: sha256:6206f5fa99feb47abefbcbf283cc79378d5f9329b764f10583b315f474ff9383
 active_request_id: null
 packets:
   create-spec-q0001:
-    status: issued
+    status: answered
     issued_at: '2026-11-26T22:16:00+09:00'
     questions:
     - question_id: create-spec.paren-group-direction
-      status: issued
+      status: answered
 answers:
   create-spec.feature-identity:
     packet_id: null
@@ -23,6 +23,28 @@ answers:
     - derive_from_task_description
     freeform: null
     normalized_answer: 'feature name derived from the task description: dbracket-paren-group-spec-align'
+  create-spec.paren-group-direction:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-26T22:21:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - keep_reading_state_uncertain
+    freeform: null
+    normalized_answer: コマンド単位の読み取りは変えない。前機能 SPEC の FR3・AC-5・TS-3 に、この形は不確定のまま残り後続の
+      notion 呼び出しは KIND_INSPECTED と明記し、テストの説明文を揃え、KIND_INSPECTED と deny(git-branch-force-delete)
+      を固定するテストとケース表の deny 行を足す（assumption として記録）
+    resolution_note: 'gate: create-spec.requirement-clarification (policy: codex_consultation,
+      record_as_assumption); chosen: keep_reading_state_uncertain; not chosen: keep_reading_remove_example,
+      loosen_command_reading; Codex consulted: true (1 turn, readonly, entry codex);
+      Opus escalation ran: false. Key points: Codex confirmed on the current code
+      that the ( boundary makes a == b a simple command whose name a is outside the
+      allow-list, so the following notion call is KIND_INSPECTED and the hook denies
+      with git-branch-force-delete. Stating the form as uncertain in SPEC FR3/AC-5/TS-3
+      and aligning the test descriptions removes the disagreement while keeping the
+      stricter inspection; removing only the example would leave FR3''s general wording
+      reading the form as certain; loosening would turn a current deny into allow
+      and touch shared command-level reading.'
 worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
