@@ -4268,9 +4268,15 @@ class TestDbracketOpenerArithScan(unittest.TestCase):
     )
     # The new form the scan keeps certain (AC-4).
     ALLOW_FORM = "[[ ( true == x ) && true ]]"
-    # The form SPEC FR3 / AC-5 name as certain; the plan keeps its chunk-level
-    # answer as it was (see the task plan, "SPEC discrepancy").
+    # The parenthesised comparison with no operator word. The conditional
+    # reading reports no uncertain statement for it, because the form holds no
+    # operator word. The chunk is uncertain all the same, from the command-level
+    # reading: the `(` boundary makes `a == b` a simple command whose name `a`
+    # is not an allowlist name. The notion call with `--session "$SID"` after it
+    # is therefore KIND_INSPECTED, and the hook denies it.
     PAREN_FORM = "[[ ( a == b ) && true ]]"
+    # The label prefix of the case-table row that pins that judgment.
+    PAREN_LABEL = "dbracket-paren-group-spec-align"
 
     def plain(self, text):
         return GUARD._MarkedText.plain(text)
@@ -4378,14 +4384,58 @@ class TestDbracketOpenerArithScan(unittest.TestCase):
         self.assertFalse(self.scan(">-eq [[ a == b ]]"))
 
     def test_a_parenthesised_comparison_without_an_operator_word_reports_no_uncertain_statement(self):
-        """AC-5 (FR3, the task plan's "SPEC discrepancy"): for `[[ ( a == b )
-        && true ]]` _args_json_conditional_step() reports none of its
-        statements as uncertain, and the scan still reads true, from the
-        command-level reading, as it did before."""
+        """AC-5 (FR3): `[[ ( a == b ) && true ]]` holds no operator word, so
+        _args_json_conditional_step() reports none of its statements as
+        uncertain. The scan still reads true, from the command-level reading:
+        the `(` boundary makes `a == b` a simple command whose name `a` is not
+        an allowlist name, so the chunk is uncertain, and the notion call with
+        `--session "$SID"` after it is KIND_INSPECTED (the tests that follow
+        pin that)."""
         answer, reports = self.conditional_reports(self.PAREN_FORM)
         self.assertTrue(reports)
         self.assertEqual([], [report for report in reports if report[0]])
         self.assertTrue(answer)
+
+    def paren_command(self):
+        """The judgment command: the array assignment, the parenthesised
+        comparison, `; ` and the notion call with `--session "$SID"`."""
+        return self.ARRAY + self.PAREN_FORM + "; " + self.NOTION_SID
+
+    def test_the_notion_call_after_the_parenthesised_comparison_is_inspected(self):
+        """dbracket-paren-group-spec-align AC-1 (FR1, FR5, TM-1): the chunk
+        of `[[ ( a == b ) && true ]]` is uncertain from the command-level
+        reading, so the notion call with `--session "$SID"` after the array
+        assignment and the form records exactly KIND_INSPECTED."""
+        self.assertEqual([KIND_INSPECTED], Spy(self.paren_command()).kinds())
+
+    def test_the_hook_denies_the_command_after_the_parenthesised_comparison(self):
+        """dbracket-paren-group-spec-align AC-2 (FR5, TM-1): the whole judgment
+        of the command is deny with the reason ID of the decoded `git branch
+        -D`."""
+        self.assertEqual(
+            ("deny", "git-branch-force-delete"), judge(self.paren_command())
+        )
+
+    def test_the_parenthesised_comparison_command_stands_in_the_case_table_as_deny(self):
+        """dbracket-paren-group-spec-align AC-3, AC-4 (FR6, NFR4): the one entry
+        whose label starts with `dbracket-paren-group-spec-align` is a deny
+        entry with only the `rule` key, whose command string is the judgment
+        command and which no other entry of the table repeats."""
+        cases = self.table()
+        mine = [case for case in cases if case[1].startswith(self.PAREN_LABEL)]
+        self.assertEqual(1, len(mine), [case[1][:60] for case in mine])
+        case = mine[0]
+        self.assertEqual("deny", case[0])
+        self.assertEqual(4, len(case))
+        self.assertEqual({"rule": "git-branch-force-delete"}, case[3])
+        self.assertEqual(self.paren_command(), case[2])
+        self.assertEqual(
+            1, sum(1 for other in cases if other[2] == case[2]),
+            "the command string repeats",
+        )
+        self.assertFalse(case[1].startswith("args-json-deferred-eval-bypass TS-16:"))
+        self.assertFalse(case[1].startswith("args-json-deferred-eval-bypass TS-17:"))
+        self.assertFalse(case[1].startswith(self.LABEL))
 
     def test_the_conditional_reading_reports_the_operator_word_of_the_opener_statement(self):
         """AC-1 (FR1): the uncertain statement is reported by
