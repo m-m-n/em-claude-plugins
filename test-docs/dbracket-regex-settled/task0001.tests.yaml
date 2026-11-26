@@ -1,0 +1,123 @@
+task_id: task0001
+# 4a, before any edit (the worktree untouched for the whole run):
+# python3 em-workflow/hooks/tests/run-destructive-guard.py -> 1702/1702 passed;
+# python3 -m unittest discover -s tests -> Ran 17421 tests, OK (skipped=1). The baseline is empty.
+baseline_failures: []
+# Re-executed after the implementation and after this record: the runner passes every case and
+# python3 -m unittest discover -s tests runs with the new class included (no failure).
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_a_regex_or_extended_pattern_form_reads_the_chunk_as_certain
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_the_notion_call_after_each_regex_or_extended_pattern_form_is_excluded
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_the_hook_allows_the_command_after_each_regex_or_extended_pattern_form
+    red_confirmed: true
+    red_reason: >-
+      The class was written before the hook was changed and run against the
+      unchanged hook. The scan test failed for every form with
+      "AssertionError: True is not false", the notion-call test with "Lists
+      differ: ['nothing'] != ['inspected']", and the whole-judgment test with
+      "Tuples differ: ('allow', None) != ('deny', 'git-branch-force-delete')".
+      Two forms of this criterion, `[[ x =~ ^(ab)$ ]]` and (AC-4)
+      `[[ a == b && true =~ ^(ab)$ ]]`, read false in the per-chunk scan after
+      the change, but their notion call is still inspected (and the decision
+      deny) because _args_json_shadow_scan() item 3, a reading outside this
+      change, splits the same statement at every parenthesis and cannot
+      restore the leftover `$ ]]` command name. The notion-call and decision
+      parts of this criterion are therefore checked on the `$`-free twin
+      `[[ x =~ ^(ab)c ]]`; the `$` forms are checked for the scan answer only.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_a_closer_inside_the_pattern_is_not_the_closer
+    red_confirmed: false
+    red_reason: >-
+      The behavior pre-existed: on the unchanged hook both forms already read
+      uncertain (any `=~` or extended-pattern prefix did), so the notion call
+      was inspected and the decision deny before the implementation. The test
+      guards a fix that closes at the first `]]` or drops the depth; no red
+      state occurred for this change.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_a_depth_left_at_the_end_of_the_statement_is_uncertain
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_a_depth_below_zero_or_a_fused_parenthesis_is_uncertain
+    red_confirmed: false
+    red_reason: >-
+      The behavior pre-existed: `[[ x =~ (a|b) ]]`, `[[ x =~ (a ]]`,
+      `[[ ( x =~ a ) ]]` and `[[ x =~ (a)>b ]]` all read uncertain on the
+      unchanged hook because of their `=~` word, so both tests passed before
+      the implementation. They guard the new depth reading against reading
+      those forms as certain.
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_a_continuation_statement_reads_its_pattern_by_depth
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_a_closer_inside_a_continuation_pattern_is_not_the_closer
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_the_continuation_statement_is_not_read_past_its_closer
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged hook: the continuation form
+      `[[ a == b && true =~ ^(ab)c ]]` failed with "AssertionError: True is not
+      false" in the first test, and `[[ a == b && true ]] >=~` failed with the
+      same message in the third (the `=~` after the closer was read as a
+      pattern word). The second test, `[[ a == b && true == @(]]) || true -eq 0
+      ]]`, already read uncertain and denied on the unchanged hook; it guards
+      against closing at the first `]]` and has no red state of its own. The
+      `$` form of the criterion is covered as described under AC-1.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_an_operand_position_regex_word_and_a_quoted_parenthesis_open_no_pattern
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_an_escaped_parenthesis_is_a_word_and_is_not_counted
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_a_pattern_start_written_across_a_line_continuation_is_uncertain
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_parentheses_outside_a_conditional_pattern_stay_boundaries
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_grouping_parentheses_in_front_of_a_pattern_start_stay_boundaries
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged hook: `[[ x == =~ ]]`, `[[ a =~ "(" ]]` and
+      `[[ a =~ \( ]]` failed with "AssertionError: True is not false" (the
+      scan read true), and the grouping-parenthesis test failed because the
+      conditional reading returned two values, not three. The two
+      line-continuation deny forms, `echo @(x)` and `[[ a =~ b ]] @(x)` already
+      read uncertain on the unchanged hook; those tests guard the readings
+      that must not change and have no red state of their own. The existing
+      TestSourceTextReadings and TestDbracketOpenerArithScan classes pass
+      without being edited.
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_each_new_form_stands_in_the_case_table_with_its_decision
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_every_entry_of_this_task_is_one_of_the_forms_above_and_unique
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_the_new_labels_use_neither_of_the_prefixes_other_tests_count
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged case table and hook (a scratch copy of the
+      repository files): the first two tests failed with "no case-table entry
+      for ..." for every new form, and the second also with "Lists differ" (no
+      entry carries the label). The third passes on an empty set and has no red
+      state of its own. python3 em-workflow/hooks/tests/run-destructive-guard.py
+      with the new entries against the unchanged hook (a copy of it passed as
+      the argument) also failed the 13 new allow entries (1702/1723 passed;
+      the seven deny entries already passed, as the plan says). The plan's two
+      `^(ab)$` forms are not in the table (see AC-1); `^(ab)c` forms stand in
+      their place.
+  AC-7:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_every_function_the_change_adds_is_referenced_only_from_the_scan
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_every_function_the_change_adds_decides_nothing_and_launches_nothing
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_the_docstring_of_the_conditional_reading_states_the_depth_rule
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_the_docstring_of_the_scan_states_the_depth_rule
+      - tests.test_destructive_guard_args_json.TestDbracketOpenerArithScan.test_the_conditional_reading_makes_no_decision_and_names_no_reason
+      - tests.test_destructive_guard_args_json.TestDbracketOpenerArithScan.test_the_conditional_reading_launches_nothing_and_reads_no_file
+      - tests.test_destructive_guard_args_json.TestSourceTextReadings.test_the_readings_are_called_only_from_the_scan
+      - tests.test_destructive_guard_args_json.TestSourceTextReadings.test_the_docstring_of_the_scan_names_the_two_readings_and_no_command
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged hook: the new-function tests failed ("False is
+      not true" for the missing `_args_json_simple_commands`, an
+      AttributeError for the source read), the conditional reading's docstring
+      test failed with "'depth' not found in ..." and so did the scan's. The
+      existing TestDbracketOpenerArithScan and TestSourceTextReadings tests
+      listed pin the single call site, the forbidden names, the lack of a
+      decision and a reason ID, and the docstring of the scan; they passed
+      before and after the change without being edited (no red state of
+      their own). That neither em-workflow/.claude-plugin/plugin.json nor
+      .claude-plugin/marketplace.json is changed is checked with git diff, not
+      by a test.
