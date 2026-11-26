@@ -8583,9 +8583,12 @@ def _args_json_has_deferred_evaluation(marked):
 # written with, not by its quote-removed value: a backslash or a quote changes
 # what Bash makes of a `{name[subscript]}` word in front of a redirection
 # operator, and of the words that open and close a `[[ ]]` conditional. The
-# helpers below read those characters (_args_json_word_source()) and are
-# called only from _args_json_nameref_scan(), so their result is kept with the
-# chunk's answer.
+# helpers below read those characters (_args_json_word_source()).
+# _args_json_fd_variable_deferred() is called only from
+# _args_json_nameref_scan(). The conditional reading
+# (_args_json_conditional_step()) and the helpers it uses are called from both
+# _args_json_nameref_scan() and _args_json_shadow_scan(), and each of the two
+# scans keeps its answer per chunk.
 
 # A word Bash may take as the variable of a redirection and that names an array
 # element: `{`, a name, a bracketed subscript (group 1) and `}`.
@@ -8782,7 +8785,8 @@ def _args_json_conditional_step(marked, words, commands, sep, was_open):
     not read as one: the conditional stays open until a `;` or a lone `&`, and
     a conditional still open at the end of the chunk is uncertain too (the
     caller). A word with a trailing carriage return stripped by the lexer is
-    not read as a closer. Called only from _args_json_nameref_scan()."""
+    not read as a closer. Called only from _args_json_nameref_scan() and
+    _args_json_shadow_scan(), each of which keeps its answer per chunk."""
     is_open = was_open
 
     def _depth_reading(tokens):
@@ -9001,7 +9005,7 @@ def _args_json_simple_commands(words, counted):
     (_args_json_conditional_step()), identified by object identity: a token
     derived from one of them, itself or a piece of its split, is not a
     boundary and stays inside its simple command. Called only from
-    _args_json_nameref_scan()."""
+    _args_json_nameref_scan() and _args_json_shadow_scan()."""
     counted_ids = {id(tok) for tok in counted}
     commands = [[]]
     for tok in words:
@@ -9555,7 +9559,18 @@ def _args_json_shadow_scan(marked):
     3. Some simple command of the chunk, split at the same boundaries as
        _args_json_nameref_scan() splits it, has a command name that runs a
        string as code or cannot be read statically
-       (_args_json_runs_string_as_code()).
+       (_args_json_runs_string_as_code()). The parentheses that the
+       conditional reading (_args_json_conditional_step()) counted as a
+       pattern's, in a `[[ ]]` conditional it settled (no statement from the
+       one holding its opener through the one holding its closer was read
+       uncertain), stay inside their simple command
+       (_args_json_simple_commands()): the words between them are pattern
+       text, no command names. The reading runs over this scan's own lexing
+       of the chunk, and takes nothing from _args_json_nameref_scan(). Every
+       other statement is split at every parenthesis: one the reading read
+       uncertain, every later statement, the statements of a conditional left
+       open or abandoned, and the parentheses before a pattern start, before
+       the opener and after the closer.
     4. Some word of some statement, a redirection target included, holds one of
        _ARGS_JSON_SHADOW_ENVIRONMENT_WORDS as a substring of its value. The
        match is made on the word's raw text, on its whole restored value when
@@ -9581,6 +9596,32 @@ def _args_json_shadow_scan(marked):
         return True
     segments, starts, _operators = _lex_layout(marked, True)
     in_tail = _statements_in_tail(marked, starts, len(segments))
+    # The parentheses of a pattern that item 3 keeps inside their simple
+    # command, by the index of their statement: the conditional reading runs
+    # over this lexing's own tokens, the statements in order, the conditional
+    # closed before the first. A statement read uncertain stops the reading,
+    # and what is pending for a conditional still open at that point is
+    # dropped (as it is for one left open at the end of the chunk): only a
+    # conditional whose closer the reading reaches with no statement uncertain
+    # hands out its counted parentheses, those of its opening statement
+    # through those of the statement holding its closer.
+    counted_by_statement = {}
+    pending = []
+    in_dbracket = False
+    for index, (seg_toks, lexed, sep) in enumerate(segments):
+        if not lexed:
+            break
+        uncertain, in_dbracket, counted = _args_json_conditional_step(
+            marked, seg_toks, _args_json_simple_commands(seg_toks, ()), sep,
+            in_dbracket,
+        )
+        if uncertain:
+            break
+        if counted:
+            pending.append((index, counted))
+        if not in_dbracket:
+            counted_by_statement.update(pending)
+            pending = []
     case_stack = []
     for index, (seg_toks, lexed, sep) in enumerate(segments):
         if not lexed:
@@ -9619,12 +9660,9 @@ def _args_json_shadow_scan(marked):
         shaped_words = _shaped_remainder(words_only, lead)
         if _overrides_command_name(words_only, lead, shaped_words):
             return True
-        commands = [[]]
-        for tok in _split_fused_closer_redirects(seg_toks):
-            if _args_json_command_boundary(tok):
-                commands.append([])
-            else:
-                commands[-1].append(tok)
+        commands = _args_json_simple_commands(
+            seg_toks, counted_by_statement.get(index, ())
+        )
         for command in commands:
             if _args_json_runs_string_as_code(marked, command):
                 return True
