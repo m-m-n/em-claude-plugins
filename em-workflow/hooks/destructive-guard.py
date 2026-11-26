@@ -8764,7 +8764,9 @@ def _args_json_conditional_step(marked, words, commands, sep, was_open):
     character (`)>`), the statement ends at depth 1 or more (the lexer splits
     the statements of `(a|b)` at the `|`), or a `=~` or an extended-pattern
     prefix is written across a line continuation or `=~` carries a stripped
-    carriage return. A statement that ends at depth 0 without a closer leaves
+    carriage return, or the statement started a pattern and ended at a lone
+    `|` without a closer (the next statement would restart the depth at 0).
+    A statement that ends at depth 0 without a closer leaves
     the conditional open, and the next statement counts from depth 0. The
     words after the closer are not read by the depth reading in either
     statement.
@@ -8847,21 +8849,43 @@ def _args_json_conditional_step(marked, words, commands, sep, was_open):
                     started = True
                     continue
             if src == "]]" and not carriage_return and (not started or depth == 0):
-                if span is not None and span[0] > 0 and marked.text[span[0] - 1] == "|":
+                before = None
+                after_ch = None
+                if span is not None:
+                    text = marked.text
+                    # Line continuations (a backslash and a newline) are
+                    # removed by Bash, so the characters next to `]]` are
+                    # read past them.
+                    left = span[0]
+                    while left >= 2 and text[left - 2:left] == "\\\n":
+                        left -= 2
+                    if left > 0:
+                        before = text[left - 1]
+                    right = span[1]
+                    while text.startswith("\\\n", right):
+                        right += 2
+                    if right < len(text):
+                        after_ch = text[right]
+                if before == "|":
                     # `a|]]` is one regex word in Bash although the lexer
                     # splits the statement at the `|`: not a closer.
                     return True, None, []
                 if started:
                     # Bash reads `(x)]]` / `]](x)` as one pattern word, so a
-                    # `]]` touching a parenthesis is not the closer.
+                    # `]]` touching a parenthesis is not the closer, also
+                    # across a line continuation.
                     if span is None:
                         return True, None, []
-                    text = marked.text
-                    if (span[0] > 0 and text[span[0] - 1] in "()") or (
-                        span[1] < len(text) and text[span[1]] in "()|"
+                    if (before is not None and before in "()") or (
+                        after_ch is not None and after_ch in "()|"
                     ):
                         return True, None, []
                 return False, index, counted
+        if started and sep and "|" in re.findall(r"&&|\|&|\|\||[;&|]", sep):
+            # The lexer split a regex at a lone `|`: the parenthesis depth
+            # of the pattern would restart at 0 in the next statement, so
+            # the reading cannot place the closer.
+            return True, None, []
         return depth > 0, None, counted
 
     if was_open:
