@@ -1,0 +1,29 @@
+schema_version: 1
+feature: dbracket-paren-group-spec-align
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: c3d4f3cf7a8f9bf1e7accd1c1bf1d490b631bc78
+last_input_digest: sha256:6206f5fa99feb47abefbcbf283cc79378d5f9329b764f10583b315f474ff9383
+active_request_id: create-spec-run-0001
+packets: {}
+answers:
+  create-spec.feature-identity:
+    packet_id: null
+    answered_at: '2026-11-26T22:10:05+09:00'
+    source: batch_policy
+    answer_mode: select
+    selected_option_ids:
+    - derive_from_task_description
+    freeform: null
+    normalized_answer: 'feature name derived from the task description: dbracket-paren-group-spec-align'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:6206f5fa99feb47abefbcbf283cc79378d5f9329b764f10583b315f474ff9383
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
