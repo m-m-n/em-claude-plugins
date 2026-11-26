@@ -9,12 +9,9 @@ records:
   selected_option_ids:
   - auto_record
   freeform: null
-  normalized_answer: all project.components commands already approved; nothing newly
-    recorded
-  resolution_note: 'gate: create-spec.command-approval (policy: auto_record); commands:
-    `python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest
-    discover -s tests` (test_command, already approved in bash_guard --list); build_command
-    / format_command empty; refusal patterns: none'
+  normalized_answer: all project.components commands already approved; nothing newly recorded
+  resolution_note: 'gate: create-spec.command-approval (policy: auto_record); commands: `python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests` (test_command,
+    already approved in bash_guard --list); build_command / format_command empty; refusal patterns: none'
 - question_id: create-plan.spec-ts4-alignment
   packet_id: orchestrator-direct
   answered_at: '2026-11-27T00:05:13+09:00'
@@ -23,15 +20,24 @@ records:
   selected_option_ids:
   - amend_spec_ts4
   freeform: null
-  normalized_answer: 'SPEC TS-4 amended to match the code: the escaped-]] example
-    reports (false, false) for the continuation statement while the scan stays true
-    (command-level reading); scan-level false is stated with true-led forms'
-  resolution_note: 'unlisted-gate fallback (planner warning, no gate_id). Options:
-    (A) keep plan, leave SPEC TS-4 unchanged and record the discrepancy; (B) amend
-    SPEC TS-4 in this feature to match the code; (C) other. Codex consulted: yes;
-    it confirmed the planner''s claim by executing the planned was_open branch in
-    memory ([[ a && \]\] == x ]] >=~ -> scan True, step reports (False, True), (False,
-    False); true-led forms -> scan False) and recommended B (TS-4 and the plan agree,
-    escaped-]] read-past still checked, true-led forms check post-closer words, existing
-    command-name judgment suffices). Chosen: B. Not chosen: A, C. Opus escalation:
-    not run.'
+  normalized_answer: 'SPEC TS-4 amended to match the code: the escaped-]] example reports (false, false) for the continuation statement while the scan stays true (command-level reading); scan-level false
+    is stated with true-led forms'
+  resolution_note: 'unlisted-gate fallback (planner warning, no gate_id). Options: (A) keep plan, leave SPEC TS-4 unchanged and record the discrepancy; (B) amend SPEC TS-4 in this feature to match the code;
+    (C) other. Codex consulted: yes; it confirmed the planner''s claim by executing the planned was_open branch in memory ([[ a && \]\] == x ]] >=~ -> scan True, step reports (False, True), (False, False);
+    true-led forms -> scan False) and recommended B (TS-4 and the plan agree, escaped-]] read-past still checked, true-led forms check post-closer words, existing command-name judgment suffices). Chosen:
+    B. Not chosen: A, C. Opus escalation: not run.'
+- question_id: rework.spec-change.closer-trailing-words
+  packet_id: rework-q0001
+  answered_at: '2026-11-27T00:54:39+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - change-spec
+  freeform: null
+  normalized_answer: 'SPEC を変える: Assumptions の 1 項目目と FR1・FR4 を「閉じ括弧の後ろで読み飛ばすのはリダイレクト先だけ。then / do の後ろの新しい [[ とその演算語を含む他の語は読み続ける」に改め、if/while の then/do の形の deny 行を FR5 と AC に足す。>=~ / >-eq の allow 行は保つ'
+  resolution_note: 'gate: rework.spec-change; chosen: change-spec; not chosen: keep-spec; relaxed route (bound-set category security); Codex consulted: true (codex entry, 1 turn); Opus escalation ran: false;
+    Codex classified verdict b (spec gap: implementation meets the goal''s >=~ / >-eq misfire fix but FR1/FR4 and the Assumption that only redirections follow ]] in the same statement are wrong), evidence
+    FR1, FR2, FR4, FR5, AC-1, AC-2, AC-4, AC-5. Orchestrator agreed: it reproduced the regression itself (base deny / changed allow for `if [[ true && true ]] then [[ 0 -eq SID=1 ]]; fi; <notion call>`
+    and `while [[ true && true ]] do [[ -v x ]]; done; <notion call>`); keep-spec would ship a deny-to-allow security regression. Key points: revise Assumptions item 1 and FR1/FR4 so that only redirection
+    targets after the closer are skipped and later words (incl. a new [[ after then/do and its operators) are still read; add deny rows for the then/do forms to FR5/AC; keep the four new allow rows (>=~
+    / >-eq).'
