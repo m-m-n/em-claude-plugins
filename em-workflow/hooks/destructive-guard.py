@@ -8832,6 +8832,16 @@ def _args_json_conditional_step(marked, words, commands, sep, was_open):
                     started = True
                     continue
             if src == "]]" and not carriage_return and (not started or depth == 0):
+                if started:
+                    # Bash reads `(x)]]` / `]](x)` as one pattern word, so a
+                    # `]]` touching a parenthesis is not the closer.
+                    if span is None:
+                        return True, None, []
+                    text = marked.text
+                    if (span[0] > 0 and text[span[0] - 1] in "()") or (
+                        span[1] < len(text) and text[span[1]] in "()"
+                    ):
+                        return True, None, []
                 return False, index, counted
         return depth > 0, None, counted
 
