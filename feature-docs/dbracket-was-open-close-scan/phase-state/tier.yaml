@@ -1,0 +1,64 @@
+schema_version: 2
+feature: dbracket-was-open-close-scan
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.03
+    confidence: 0.97
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.97
+      '2': 0.03
+      '3': 0.0
+  observed_at: '2026-11-26T23:43:29+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.04
+    confidence: 0.96
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.96
+      '2': 0.04
+      '3': 0.0
+  observed_at: '2026-11-26T23:44:51+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  changed_lines_approx: 12
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 1
+  body_change_kind: new_logic
+  change_containment: single_function
+  caller_and_dependency_count: 5
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: em-workflow/hooks/destructive-guard.py:8778 で `_unsettled()` は `=~` を未確定とし、同ファイル:8789–8800
+    では閉じ括弧を確認する前にリダイレクト先まで調べる。現行コードの静的判定では、`[[ true && true ]] >=~` に続く `--session
+    "$SID"` 付きの標準形は KIND_INSPECTED となり、`>=~` を除くと KIND_NOTHING となった。既存の閉じ括弧後のテストは単一文を対象とし（tests/test_destructive_guard_args_json.py:4374）、ケース表には再現形がない。既存の許可ケースと同じ形式で追加できる（em-workflow/hooks/tests/destructive-guard-cases.json:1706、em-workflow/hooks/tests/run-destructive-guard.py:268–275）。
+decided_at: '2026-11-26T23:44:54+09:00'
