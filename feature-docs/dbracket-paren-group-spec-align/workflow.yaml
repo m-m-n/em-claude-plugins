@@ -1,0 +1,202 @@
+schema_version: 1
+feature: dbracket-paren-group-spec-align
+created: '2026-11-26'
+base_branch: main
+goal: |
+  # dbracket-opener-arith-scan: SPEC FR3・AC-5 の `[[ ( a == b ) && true ]]` の判定が SPEC・テスト・実装で食い違う
+
+  種別: バグ
+
+  ## 現象
+
+  dbracket-opener-arith-scan の SPEC FR3・AC-5・TS-3 は `[[ ( a == b ) && true ]]` を確定と読み、後続の `--session "$SID"` 付き notion 呼び出しを `KIND_NOTHING` に保つと定めている。実際は `(` で区切られた `a == b` がひとつの単純コマンドになり、許可名でない `a` を `_args_json_declares_nameref()` が不確定と読むため `KIND_INSPECTED` になる（修正前から同じ挙動）。テスト（`tests/test_destructive_guard_args_json.py` 4380 行付近）は SPEC と逆の判定（True）を固定しており、AC-6 が求めるケース表の行も無い。
+
+  ## 再現手順
+
+  1. `[[ ( a == b ) && true ]]` の後に `--session "$SID"` 付きの標準形の notion 呼び出しを続けたコマンドを静的判定にかける
+  2. 後続の呼び出しが `KIND_INSPECTED` になり、SPEC の期待（`KIND_NOTHING`）と食い違う
+
+  ## 期待する挙動
+
+  SPEC・テスト・実装の三者が同じ判定を述べている。コマンド単位の読み取りは緩めない方針なら、SPEC からこの例示を外すか「不確定のまま残り後続は `KIND_INSPECTED`」と明記し、テストの説明文もそれに揃える。
+
+  ## 完了の定義
+
+  - [ ] 再現手順で現象が起きない
+  - [ ] 再発を検出するテストがある
+
+  ## 該当箇所
+
+  `em-workflow/hooks/destructive-guard.py` 8877 行付近、`tests/test_destructive_guard_args_json.py` 4271〜4273 行・4380 行付近
+
+  ## 実害・発生条件
+
+  dbracket-opener-arith-scan のレビュー第1ラウンドで spec / architecture 観点が medium として報告し deferred にした（stable_id: 0995fb9ebc703b77, 27997561fe67bbab）。判定は検査する側に倒れているため安全側の食い違い。
+
+  ## 追加指示
+
+  - 不明点は Codex に相談し、比較して良い方の選択肢を採る。相談内容は Notion のタスクページに記録する。
+  - 実装完了後は integration ブランチを remote に push し、base_branch への PR を gh pr create で作る。integration ブランチはローカル・リモート両方に残す（base_branch へ自動マージしない）。
+parent_branch: em-workflow/dbracket-paren-group-spec-align/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.05
+      '1': 0.93
+      '2': 0.02
+      '3': 0.0
+    description_plus_code:
+      '0': 0.02
+      '1': 0.96
+      '2': 0.02
+      '3': 0.0
+  at: '2026-11-26T22:09:50+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover
+        -s tests
+      format_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: b2d7d996aa4e22e2b2371f4e7b385eca2057ff67
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'UI が無い（SPEC・テスト説明・テスト 1 件・ケース表 1 行の変更）。create-spec.design-step: decide_autonomously
+    → analyst の推奨どおり skip、design-system 候補 0 件'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: pending
+- id: implement
+  status: pending
+- id: review
+  status: pending
+- id: verify
+  status: pending
+- id: retrospect
+  status: pending
+tasks: {}
+review:
+  status: pending
+  rounds_completed: 0
+requirements:
+  FR1:
+    title: Command-level reading is unchanged
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-4
+  FR2:
+    title: Amend FR3 of the dbracket-opener-arith-scan SPEC
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+  FR3:
+    title: Amend AC-5 and TS-3 of the dbracket-opener-arith-scan SPEC
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-5
+  FR4:
+    title: Align the test descriptions
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-3
+    - TS-5
+  FR5:
+    title: Regression test for the judgment
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-1
+    - TS-3
+  FR6:
+    title: Case-table deny row
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-2
+  FR7:
+    title: Align the VERIFICATION note of the prior feature
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-3
+    - TS-5
+  NFR1:
+    title: Existing cases and tests
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-4
+  NFR2:
+    title: Static analysis only
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-4
+  NFR3:
+    title: Version
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-4
+  NFR4:
+    title: Case label prefix
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests:
+    - TS-2
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

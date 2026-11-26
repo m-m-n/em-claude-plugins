@@ -1,7 +1,7 @@
 schema_version: 1
 feature: dbracket-paren-group-spec-align
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: c3d4f3cf7a8f9bf1e7accd1c1bf1d490b631bc78
 last_input_digest: sha256:f9b475f4ee23a0d063e43e955fc210ebf045bedf3283e36d04ebe12150226b79
@@ -45,6 +45,24 @@ answers:
       stricter inspection; removing only the example would leave FR3''s general wording
       reading the form as certain; loosening would turn a current deny into allow
       and touch shared command-level reading.'
+  create-spec.design-step:
+    packet_id: null
+    answered_at: '2026-11-26T22:30:00+09:00'
+    source: batch_policy
+    answer_mode: select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design step skipped per analyst recommendation (no UI)
+  create-spec.design-system:
+    packet_id: null
+    answered_at: '2026-11-26T22:30:00+09:00'
+    source: batch_policy
+    answer_mode: select
+    selected_option_ids:
+    - top_candidate_or_none
+    freeform: null
+    normalized_answer: 'no candidates -> kind: none'
 worker_runs:
 - request_id: create-spec-run-0001
   status: needs_user_input
