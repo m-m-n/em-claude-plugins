@@ -1,0 +1,70 @@
+schema_version: 2
+feature: dbracket-regex-settled
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.04
+    confidence: 0.96
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.96
+      '2': 0.04
+      '3': 0.0
+  observed_at: '2026-11-26T22:53:45+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.03
+    confidence: 0.96
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.96
+      '2': 0.04
+      '3': 0.0
+  observed_at: '2026-11-26T22:56:14+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/hooks/destructive-guard.py
+  - tests/test_destructive_guard_args_json.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  changed_lines_approx: 50
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 5
+  body_change_kind: new_logic
+  change_containment: single_function
+  caller_and_dependency_count: 6
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: HEAD 8f65c43b9 で、報告された4条件式と継続区間に正規表現比較を置いた `[[ a == b && true =~ b ]]`
+    の直後に、既存テストと同じ `--session "$SID"` 付きの Notion 呼び出しを置いて静的判定した。5件とも変更前の aa1fda39e
+    では `KIND_NOTHING`、HEAD では `KIND_INSPECTED` になり、HEAD の最終判定は5件とも `deny`（`git-branch-force-delete`）だった。em-workflow/hooks/destructive-guard.py:8777
+    では `=~` の位置や右辺を調べず、拡張パターンの開始も検出すると真を返す。この結果で開始区間は同ファイル:8822、継続区間は同ファイル:8791 で不確定になる。同ファイル:9087
+    の演算語は算術比較6種と `-v` で、feature-docs/dbracket-opener-arith-scan/SPEC.md:40 は演算語を含まない条件式の後続呼び出しを
+    `KIND_NOTHING` に保つと定めている。tests/test_destructive_guard_args_json.py:4342 の検査除外テストと
+    em-workflow/hooks/tests/destructive-guard-cases.json:1705 以降の許可例に、再現した5入力はなかった。見積もりは、既存関数内でパターンの読み取りを閉じ括弧の判定に使い、5入力を既存の単体テストと判定表に加える前提。呼出元と依存は、同ファイル:8909
+    の直接呼出元1件と、対象関数が参照する既存の補助関数4件および定数1件を数えた
+decided_at: '2026-11-26T22:56:40+09:00'
