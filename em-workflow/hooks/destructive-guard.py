@@ -8747,7 +8747,9 @@ def _args_json_conditional_step(marked, words, commands, sep, was_open):
     true ]]`) makes the words after it a simple command of its own, and the
     command-level reading keeps such a command certain under an allowlisted
     name whatever its words hold. Words before the opener and words after the
-    closer are not read here.
+    closer are not read here. In a later statement that holds the closer, the
+    words up to just before the closer are read and the words after the closer
+    are not read here.
 
     While a conditional is open, a word that is an operator evaluating its
     operand (_ARGS_JSON_DOUBLE_BRACKET_WORDS) is uncertain, and so is a `;` or
@@ -8787,17 +8789,21 @@ def _args_json_conditional_step(marked, words, commands, sep, was_open):
         return text.startswith("(", i)
 
     if was_open:
+        # Bash accepts only redirections (and the `)` of an enclosing group)
+        # after the closer in the same statement, so the words after it are
+        # redirection targets, not words of the conditional: stop reading
+        # there.
         for tok in flat:
+            if (
+                _args_json_word_source(marked, tok) == "]]"
+                and not getattr(tok, "trailing_cr", "")
+            ):
+                is_open = False
+                break
             if _unsettled(tok):
                 return True, True
             if _args_json_declaration_word(marked, tok)[0] in _ARGS_JSON_DOUBLE_BRACKET_WORDS:
                 return True, True
-        if any(
-            _args_json_word_source(marked, tok) == "]]"
-            and not getattr(tok, "trailing_cr", "")
-            for tok in flat
-        ):
-            is_open = False
     else:
         opener = None
         for command in commands:
