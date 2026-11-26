@@ -20,19 +20,21 @@ All commands run from the root of the integration worktree.
 |----|----------|-----------------|-----------|
 | TS-1 | Pass each AC-1 / AC-4 form of SPEC to `_args_json_nameref_scan()`: `[[ ( true -eq 0 ) && true ]]`, the same with `-ne` / `-lt` / `-le` / `-gt` / `-ge`, with `\|\|` in place of `&&`, with `false` / `echo` / `:` / `mcp-bridge` in place of `true` inside the parentheses, `if [[ ( true -eq 0 ) && true ]]; then :; fi`, and `[[ ( -v x ) && true ]]` | Returns true for every form. Every form whose name inside the parentheses is allow-listed returned false before the fix (regression detection). | Unit |
 | TS-2 | Run the array assignment `A=(json --mcp desktop-commander --tool start_process); `, then `[[ ( true -eq 0 ) && true ]]` / `if [[ ( true -eq 0 ) && true ]]; then :; fi` / `[[ ( -v x ) && true ]]`, then `; `, then the canonical notion call with `--session "$SID"` whose `--args-json` `command` is `git branch -D example`, through `Spy(...).kinds()` | `[KIND_INSPECTED]` for each | Integration |
-| TS-3 | False-positive prevention: `[[ ( true == x ) && true ]]` (with the array assignment), each existing `CONDITIONAL_ALLOW` form (with the array assignment) and each existing `certain_forms()` form (without it), followed by the notion call with `--session "$SID"`. Range bounds: `[[ a == b ]] >-eq` and `>-eq [[ a == b ]]`. Discrepancy form: `[[ ( a == b ) && true ]]` | `[KIND_NOTHING]` after each listed form, and the scan returns false for `[[ ( true == x ) && true ]]` and for both range-bound forms. For `[[ ( a == b ) && true ]]`, the conditional reading reports no statement as uncertain, and the chunk answer stays what it was before the fix (true); see the note below. | Unit / Integration |
+| TS-3 | False-positive prevention: `[[ ( true == x ) && true ]]` (with the array assignment), each existing `CONDITIONAL_ALLOW` form (with the array assignment) and each existing `certain_forms()` form (without it), followed by the notion call with `--session "$SID"`. Range bounds: `[[ a == b ]] >-eq` and `>-eq [[ a == b ]]`. Uncertain form: `[[ ( a == b ) && true ]]` | `[KIND_NOTHING]` after each listed form other than the uncertain form, and the scan returns false for `[[ ( true == x ) && true ]]` and for both range-bound forms. For `[[ ( a == b ) && true ]]`, the conditional reading reports no statement as uncertain, and the chunk answer stays what it was before the fix (true); see the note below. | Unit / Integration |
 | TS-4 | Case table: the deny / allow cases added to `destructive-guard-cases.json` under labels starting with `dbracket-opener-arith-scan`, run by `run-destructive-guard.py` | Each matches its decision. Each deny case matches the reason ID `git-branch-force-delete`. No added command string repeats an existing one. | Integration |
 | TS-5 | The existing suites: all cases of `run-destructive-guard.py`, all tests of `tests.test_destructive_guard_args_json` (including the call-site, no-decision and docstring tests), and the rest of `python3 -m unittest discover -s tests` | All pass. No existing case or test is removed. | Regression |
 | TS-6 | NFR4, static analysis only (verification-only scenario, no SPEC counterpart): read the diff of `em-workflow/hooks/destructive-guard.py` between the implement base commit and the integration HEAD | The diff adds no process launch, no evaluation of a string as code, and no file or network access | Review |
 | TS-7 | NFR5, version (verification-only scenario, no SPEC counterpart): list the files changed between the implement base commit and the integration HEAD | Neither `em-workflow/.claude-plugin/plugin.json` nor `.claude-plugin/marketplace.json` is in the list | Diff check |
 
-Note on TS-3 (`[[ ( a == b ) && true ]]`): SPEC FR3 / AC-5 call this form
-certain "as before". At the base commit it already reads uncertain: the `(`
-boundary makes `a == b` a simple command whose name `a` is outside the
-allow-list, and the command-level reading is unchanged by this feature (FR3,
-NFR1). The plan therefore verifies "as before" for this form: the new FR1 scan
-adds nothing for it, and its chunk answer is unchanged. It is not expected to
-give `[KIND_NOTHING]`, and it is not in the case table as an allow case.
+Note on TS-3 (`[[ ( a == b ) && true ]]`): SPEC FR3 / AC-5 / TS-3 state that
+this form stays uncertain. The `(` boundary makes `a == b` a simple command
+whose name `a` is outside the allow-list, and the command-level reading,
+unchanged by this feature (FR3, NFR1), reads that command as uncertain, as at
+the base commit. The new FR1 scan adds nothing for this form, and its chunk
+answer is unchanged (true). The following notion call with `--session "$SID"`
+is `[KIND_INSPECTED]`: with the array assignment, the hook's decision is
+`deny` with the reason ID `git-branch-force-delete`. It is not in the case
+table as an allow case.
 
 ## Code Quality Verification
 - Format: none configured (component `main` has an empty `format_command`).

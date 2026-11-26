@@ -1,7 +1,7 @@
 schema_version: 1
 feature: dbracket-paren-group-spec-align
 phase: create-plan
-status: in_progress
+status: applying_patch
 generation: 1
 base_revision: 743e9e99e4ea4366d7f03f646293a18679c18215
 last_input_digest: sha256:fe60f7fb00a98cecbee6df33c8d434bf45bfb60717ce3e3893d24cc0cf92fe4a
@@ -26,7 +26,7 @@ worker_runs:
   output_digest: sha256:3d6f15d97d37658e61347b5d0426afedfa760479122cd88fb7376da7ede33485
   self_write_set: []
 - request_id: create-plan-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:fe60f7fb00a98cecbee6df33c8d434bf45bfb60717ce3e3893d24cc0cf92fe4a
   dispatch_digest_inputs:
     em-workflow/references/contracts/planner-contract.md: sha256:18464486c0546613d92935cba80087c4980d3791d41838162d23840e431da515
@@ -41,8 +41,57 @@ worker_runs:
     feature-docs/dbracket-opener-arith-scan/VERIFICATION.md: sha256:fc3a5a45c5d8cd9efba38387f6cf4fbb9328056b5c18b09d6597a5090c60678e
     feature-docs/dbracket-paren-group-spec-align/SPEC.md: sha256:b8816e37cd4f5ce4fb0421c830e424c4b4d4f33cc31c951a4a34f4280c1ae57f
     feature-docs/dbracket-paren-group-spec-align/workflow.yaml: sha256:6b712eb54634a3919a6cdecabd8bf4a6d0022cd009d74aaacc6f638fb29822d8
-  output_digest: null
-  self_write_set: []
-artifacts: []
-other_feature_doc_fixes: []
-patches: []
+  output_digest: sha256:5a9d791c86f3d762545cb9de275e648306f7bcc0bb50a5dd3613bd7334154195
+  self_write_set:
+  - feature-docs/dbracket-opener-arith-scan/SPEC.md
+  - feature-docs/dbracket-opener-arith-scan/VERIFICATION.md
+  - feature-docs/dbracket-paren-group-spec-align/THREAT-MODEL.md
+  - feature-docs/dbracket-paren-group-spec-align/VERIFICATION.md
+  - feature-docs/dbracket-paren-group-spec-align/tasks/task0001.md
+artifacts:
+- path: feature-docs/dbracket-opener-arith-scan/SPEC.md
+  sha256: sha256:bd52a34712f2d25e1bdab1e31947ee391fa30e0e1eb616e7c7dfe43109f92e58
+  produced_by: create-plan-run-0002
+- path: feature-docs/dbracket-opener-arith-scan/VERIFICATION.md
+  sha256: sha256:8dd606eb85c030f5324275f85118af3f3206b39a15c9d2a8096a41775f4979bd
+  produced_by: create-plan-run-0002
+- path: feature-docs/dbracket-paren-group-spec-align/THREAT-MODEL.md
+  sha256: sha256:99e5b59d85ca8e565a8bae3fa966287322bd0bc5d5b5faa2b34919a2b3336005
+  produced_by: create-plan-run-0002
+- path: feature-docs/dbracket-paren-group-spec-align/VERIFICATION.md
+  sha256: sha256:01a08a21de7a56f50364e4952b88d20e65e07e113b691e0e51903ece1bee7ef1
+  produced_by: create-plan-run-0002
+- path: feature-docs/dbracket-paren-group-spec-align/tasks/task0001.md
+  sha256: sha256:893cc7bce0826274c8e4df6877f657290c0352712a54e273b10140d0c9ce768d
+  produced_by: create-plan-run-0002
+other_feature_doc_fixes:
+- path: feature-docs/dbracket-opener-arith-scan/SPEC.md
+  change: 'FR3 no longer lists [[ ( a == b ) && true ]] among the forms read as certain:
+    it states that this form stays uncertain (the ( boundary makes a == b a simple
+    command whose name a is not an allow-list name, read as uncertain by the command-level
+    reading as before that feature) and that the following notion call with --session
+    "$SID" is KIND_INSPECTED, while [[ ( true == x ) && true ]] stays the certain
+    / KIND_NOTHING example. AC-5 drops the form from the KIND_NOTHING list and states
+    that, with the array assignment, the following notion call is KIND_INSPECTED and
+    the hook decision is deny with reason ID git-branch-force-delete. TS-3 separates
+    the [KIND_NOTHING] expectation of the certain forms from the [KIND_INSPECTED]
+    expectation of this form. Nothing else in the document changes.'
+  reason: 'dbracket-paren-group-spec-align FR2 and FR3 (SPEC assumption A0): the command-level
+    reading in destructive-guard.py is kept, so the prior SPEC is aligned to the implemented
+    judgment (uncertain, KIND_INSPECTED) instead of asking for KIND_NOTHING.'
+  produced_by: create-plan-run-0002
+- path: feature-docs/dbracket-opener-arith-scan/VERIFICATION.md
+  change: The TS-3 note no longer says that SPEC FR3 / AC-5 call [[ ( a == b ) &&
+    true ]] certain and no longer cites the plan as the basis; it states the amended
+    SPEC judgment (uncertain from the command-level reading, chunk answer unchanged
+    (true), following notion call [KIND_INSPECTED], deny with git-branch-force-delete
+    with the array assignment). In the TS-3 row, the label 'Discrepancy form' becomes
+    'Uncertain form' and the [KIND_NOTHING] expectation is stated for each listed
+    form other than that form. Nothing else in the document changes.
+  reason: 'dbracket-paren-group-spec-align FR7: the TS-3 note must state the amended
+    SPEC judgment; the row''s ''Discrepancy form'' wording described the SPEC mismatch
+    that the SPEC amendment removes.'
+  produced_by: create-plan-run-0002
+patches:
+- patch_id: create-plan-p0001
+  status: pending

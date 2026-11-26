@@ -38,11 +38,16 @@ exclusion of the following notion call and inspects its `--args-json`.
   example, `git branch -D` is `deny` with the reason ID
   `git-branch-force-delete`).
 - **FR3: Leave conditionals without operator words unchanged.**
-  A conditional in an opening statement that contains no word in
-  `_ARGS_JSON_DOUBLE_BRACKET_WORDS` (for example `[[ ( a == b ) && true ]]`,
-  `[[ ( true == x ) && true ]]`) is read as certain, as before. The following
-  notion call with `--session "$SID"` stays `KIND_NOTHING`. Words after the
-  closer and words before the opener are not part of the FR1 scan.
+  The FR1 scan adds nothing for a conditional in an opening statement that
+  contains no word in `_ARGS_JSON_DOUBLE_BRACKET_WORDS`, and such a statement
+  is read as before. `[[ ( true == x ) && true ]]` is read as certain, as
+  before, and the following notion call with `--session "$SID"` stays
+  `KIND_NOTHING`. `[[ ( a == b ) && true ]]` stays uncertain: the `(` boundary
+  makes `a == b` a simple command whose name `a` is not an allow-list name,
+  and the command-level reading reads that command as uncertain, as before
+  this feature. The following notion call with `--session "$SID"` is
+  `KIND_INSPECTED`. Words after the closer and words before the opener are
+  not part of the FR1 scan.
 
 ### Non-Functional Requirements
 
@@ -79,10 +84,15 @@ exclusion of the following notion call and inspects its `--args-json`.
 - [ ] AC-4 (FR1, FR2): A form containing `-v` (for example
   `[[ ( -v x ) && true ]]`) is also read as uncertain, and the following notion
   call becomes `KIND_INSPECTED`.
-- [ ] AC-5 (FR3): `[[ ( a == b ) && true ]]`, `[[ ( true == x ) && true ]]`,
-  and each existing `CONDITIONAL_ALLOW` / `certain_forms` form are read as
-  certain, as before, and the following call with `--session "$SID"` stays
-  `KIND_NOTHING`.
+- [ ] AC-5 (FR3): `[[ ( true == x ) && true ]]` and each existing
+  `CONDITIONAL_ALLOW` / `certain_forms` form are read as certain, as before,
+  and the following call with `--session "$SID"` stays `KIND_NOTHING`.
+  `[[ ( a == b ) && true ]]` stays uncertain from the command-level reading,
+  as before: with the array assignment
+  `A=(json --mcp desktop-commander --tool start_process); `, the following
+  canonical notion call with `--session "$SID"` (whose `--args-json`
+  `command` is `git branch -D example`) is `KIND_INSPECTED`, and the hook's
+  overall decision is `deny` with the reason ID `git-branch-force-delete`.
 - [ ] AC-6 (FR1, FR2, FR3, NFR1): The forms of AC-2 to AC-5 are added to
   `destructive-guard-cases.json` as deny / allow cases. Each deny case carries
   `{"rule": "git-branch-force-delete"}`. Both
@@ -161,8 +171,10 @@ feature that produces no implement tasks generates no
 - [ ] Existing E2E tests pass without regression
 
 ### Edge Cases
-- [ ] TS-3: False-positive prevention: the forms of AC-5 stay false (certain) -
-  the result is `[KIND_NOTHING]`.
+- [ ] TS-3: False-positive prevention: the forms of AC-5 that are read as
+  certain stay false (certain) - the result is `[KIND_NOTHING]`.
+  `[[ ( a == b ) && true ]]` stays uncertain from the command-level reading -
+  with the array assignment, the result is `[KIND_INSPECTED]`.
 
 ### Regression Tests
 - [ ] TS-4: Case table: the deny / allow cases added to
