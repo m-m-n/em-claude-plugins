@@ -1,0 +1,28 @@
+schema_version: 1
+feature: dbracket-opener-arith-scan
+phase: create-spec
+status: dispatching
+generation: 1
+base_revision: 12a26e5af40ed14ce85074cd6c53829e45506bb0
+last_input_digest: sha256:9766718238a580c799b4587da62d250b06673159d0b826e9f4a75e374afdf2e5
+active_request_id: create-spec-run-0001
+packets: {}
+answers:
+  create-spec.feature-identity:
+    packet_id: null
+    answered_at: "2026-11-26T19:55:24+09:00"
+    source: batch_policy
+    answer_mode: select
+    selected_option_ids: [derive_from_task_description]
+    freeform: null
+    normalized_answer: "feature name derived from the task description: dbracket-opener-arith-scan"
+worker_runs:
+  - request_id: create-spec-run-0001
+    status: dispatched
+    input_digest: sha256:9766718238a580c799b4587da62d250b06673159d0b826e9f4a75e374afdf2e5
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
