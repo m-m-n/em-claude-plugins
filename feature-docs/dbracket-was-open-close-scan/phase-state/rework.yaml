@@ -77,5 +77,5 @@ spec_change:
   origin_kind: review
   origin_id: 4ee256f52da6e850
   recorded_at_commit: c5ca738633f231d60661c0d702083f662aa55d54
-  consumed: false
+  consumed: true
   replan_authorized: true
