@@ -1,0 +1,79 @@
+schema_version: 2
+feature: dbracket-paren-group-spec-align
+tier: reduced
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 0.97
+    confidence: 0.93
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.05
+      '1': 0.93
+      '2': 0.02
+      '3': 0.0
+  observed_at: '2026-11-26T22:06:30+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.0
+    confidence: 0.96
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.02
+      '1': 0.96
+      '2': 0.02
+      '3': 0.0
+  observed_at: '2026-11-26T22:09:40+09:00'
+pre_survey_estimate:
+  files_expected:
+  - feature-docs/dbracket-opener-arith-scan/SPEC.md
+  - feature-docs/dbracket-opener-arith-scan/VERIFICATION.md
+  - tests/test_destructive_guard_args_json.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  changed_lines_approx: 0
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: true
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: extend_existing_one_to_one
+  added_test_cases_approx: 1
+  body_change_kind: wording_or_rule_addition
+  change_containment: single_module
+  caller_and_dependency_count: 3
+  changes_external_contract: false
+  changes_behavior: false
+  evidence:
+  - feature-docs/dbracket-opener-arith-scan/SPEC.md:40–45,82–90,164–165 で、FR3・AC-5・TS-3
+    は `[[ ( a == b ) && true ]]` の後続呼び出しを `KIND_NOTHING` とし、AC-6 は対応するケース表の行を求めている
+  - em-workflow/hooks/destructive-guard.py:8900–8916,8933–8940,9056–9059,9140–9163
+    では、括弧で区切られた `a == b` の先頭語 `a` が許可名に該当せず、走査全体が `True` を返す
+  - em-workflow/hooks/destructive-guard.py:8325–8331,8389–8391,9876,9896–9901,9985–10022
+    の分岐により、後続の `--session "$SID"` 付き Notion 呼び出しは除外対象から外れ、静的な `--args-json` が検査される。tests/test_destructive_guard_args_json.py:93–98
+    はこの結果を `KIND_INSPECTED` と分類する
+  - tests/test_destructive_guard_args_json.py:4271–4273,4380–4388 は、条件式の走査が不確定を報告しないことと、走査全体が
+    `True` になることを検証している。この入力の後続呼び出しは検証していない
+  - em-workflow/hooks/tests/destructive-guard-cases.json:1702–1724 に当該機能の行があり、1705
+    行には `[[ ( true == x ) && true ]]` の `allow` がある。`[[ ( a == b ) && true ]]` に対応する行はケース表全体に見当たらない
+  - feature-docs/dbracket-opener-arith-scan/VERIFICATION.md:23,29–35 には TS-3 の一律の
+    `[KIND_NOTHING]` と、この入力を不確定とする注記が併記されている。tasks/task0001.md:140–154 に記録された現行判定に仕様と既存テストを揃える前提で、変更候補を挙げた
+  - 接続数は、対象テストからフックとケース表への参照、およびケース実行器からケース表への参照を数えた。tests/test_destructive_guard_args_json.py:4275–4286,4400–4402、em-workflow/hooks/tests/run-destructive-guard.py:69,248–250
+  - 変更行数は見積もっていないため `changed_lines_approx` に 0 を入れた
+decided_at: '2026-11-26T22:09:50+09:00'
