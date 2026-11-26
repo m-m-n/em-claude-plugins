@@ -1,7 +1,7 @@
 schema_version: 1
 feature: dbracket-opener-arith-scan
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 188230b218bdc9fb599a6f001ea7f8c3bfec5e5a
 last_input_digest: sha256:e373a9b11fd3b48b19ce06cbc65d2f2804907063ada209538bd39b43cf027d90
@@ -41,4 +41,4 @@ artifacts:
 other_feature_doc_fixes: []
 patches:
 - patch_id: create-plan-p0001
-  status: pending
+  status: applied
