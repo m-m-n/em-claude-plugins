@@ -5,7 +5,7 @@ status: dispatching
 generation: 1
 base_revision: c3d4f3cf7a8f9bf1e7accd1c1bf1d490b631bc78
 last_input_digest: sha256:f9b475f4ee23a0d063e43e955fc210ebf045bedf3283e36d04ebe12150226b79
-active_request_id: create-spec-run-0003
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -53,9 +53,14 @@ worker_runs:
   status: completed
   input_digest: sha256:bc9030901b14742992db5b1949aaa4e44098b5d07c677324798c376d97edd29a
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:f9b475f4ee23a0d063e43e955fc210ebf045bedf3283e36d04ebe12150226b79
-artifacts: []
+  self_write_set:
+  - feature-docs/dbracket-paren-group-spec-align/SPEC.md
+artifacts:
+- path: feature-docs/dbracket-paren-group-spec-align/SPEC.md
+  sha256: sha256:b8816e37cd4f5ce4fb0421c830e424c4b4d4f33cc31c951a4a34f4280c1ae57f
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
