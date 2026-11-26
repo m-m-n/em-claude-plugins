@@ -151,6 +151,14 @@ review:
     - spec
     discretionary: []
     cross_validation: true
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  residual_critical_high: 1
+  needs_rework: true
 requirements:
   FR1:
     title: =~ / 拡張パターンの存在だけでは不確定にしない
