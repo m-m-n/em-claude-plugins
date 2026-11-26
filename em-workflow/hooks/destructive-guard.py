@@ -8755,7 +8755,10 @@ def _args_json_conditional_step(marked, words, commands, sep, was_open):
     the first word written exactly `]]` at depth 0 (before any pattern start,
     the first one). A `]]` at depth 1 or more is part of the pattern, as in
     Bash. A quoted or escaped parenthesis is a word and is not counted, and
-    neither are the grouping parentheses in front of a pattern start. The
+    neither are the grouping parentheses in front of a pattern start. A `]]`
+    that touches a `|` with no space before it, or (after a pattern start)
+    after it, is part of a regex word in Bash and not a closer: the statement
+    is uncertain. The
     statement is uncertain when a closer cannot be placed that way: the depth
     falls below 0, an operator token holds a parenthesis together with another
     character (`)>`), the statement ends at depth 1 or more (the lexer splits
@@ -8782,7 +8785,9 @@ def _args_json_conditional_step(marked, words, commands, sep, was_open):
     (_args_json_separator_breaks_conditional()). So a closer that was misread
     never lets the reading swallow the statements after it, and a closer
     written across a line continuation (`]`, a backslash, a newline, `]`) is
-    not read as one: the conditional stays open until a `;` or a lone `&`, and
+    not read as one, and a statement holding such a word is uncertain with no
+    counted parentheses handed on (_depth_reading()): the conditional stays
+    open until a `;` or a lone `&`, and
     a conditional still open at the end of the chunk is uncertain too (the
     caller). A word with a trailing carriage return stripped by the lexer is
     not read as a closer. Called only from _args_json_nameref_scan() and
@@ -8822,6 +8827,12 @@ def _args_json_conditional_step(marked, words, commands, sep, was_open):
                     return True, None, []
                 started = True
                 continue
+            if plain == "]]" and src != "]]":
+                # `]]` written across a line continuation: Bash closes the
+                # conditional here, the reading does not, so the statement
+                # is uncertain and no parentheses counted so far are handed
+                # on.
+                return True, None, []
             span = getattr(tok, "span", None)
             if span is not None and plain and plain[-1] in "?*+@!":
                 text = marked.text
@@ -8836,6 +8847,10 @@ def _args_json_conditional_step(marked, words, commands, sep, was_open):
                     started = True
                     continue
             if src == "]]" and not carriage_return and (not started or depth == 0):
+                if span is not None and span[0] > 0 and marked.text[span[0] - 1] == "|":
+                    # `a|]]` is one regex word in Bash although the lexer
+                    # splits the statement at the `|`: not a closer.
+                    return True, None, []
                 if started:
                     # Bash reads `(x)]]` / `]](x)` as one pattern word, so a
                     # `]]` touching a parenthesis is not the closer.
@@ -8843,7 +8858,7 @@ def _args_json_conditional_step(marked, words, commands, sep, was_open):
                         return True, None, []
                     text = marked.text
                     if (span[0] > 0 and text[span[0] - 1] in "()") or (
-                        span[1] < len(text) and text[span[1]] in "()"
+                        span[1] < len(text) and text[span[1]] in "()|"
                     ):
                         return True, None, []
                 return False, index, counted
