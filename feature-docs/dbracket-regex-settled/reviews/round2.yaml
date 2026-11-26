@@ -1,0 +1,538 @@
+round: 2
+executed_at: '2026-11-27T03:18:23+09:00'
+scope:
+  review_mode: diff
+  base_commit: c51f19167ded265280ec456a5a432afbbd5b57c7
+  head_commit: 505a637065704533ed11400b7fdff6363751efbe
+  changed_files:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/dbracket-regex-settled/task0001.tests.yaml
+  - test-docs/dbracket-regex-settled/task0002.tests.yaml
+  - tests/test_destructive_guard_args_json.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+- run_id: comprehensive#loop1.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#loop1.0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: architecture#loop1.0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#loop1.0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: comprehensive#loop2.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#loop2.0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: architecture#loop2.0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#loop2.0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: comprehensive#loop3.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#loop3.0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: architecture#loop3.0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#loop3.0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+findings:
+- stable_id: 08c4983eb1c84ee0
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8845
+  title: 正規表現の語に `|` で接した `]]` を閉じ括弧と読み、後ろの算術比較を見落とす
+  description: Bash は `=~` の右辺を読む間、`|` と `(...)` を語の一部として扱う。そのため `]]|true` や `a|]]` は 1 語の正規表現になる。フックの字句解析器は
+    `|` で文を分け、_depth_reading() の隣接判定は `(` `)` しか見ない。このため `[[ x =~ ]]|true || true -eq 0 ]]` では最初の `]]`
+    が深さ 0 の閉じ括弧になり、後ろの `true -eq 0 ]]` が _ARGS_JSON_DOUBLE_BRACKET_WORDS の検査を通らず、`--session "$SID"` 付きの
+    notion 呼び出しが KIND_NOTHING になる。変更前は `=~` があるだけで不確定だったので後退にあたる。
+  suggestion: パターンの開始後、`]]` が `|` に空白なしで接している場合は閉じ括弧にせず、文を不確定にする。単独の `|` で分けられた直前の文が、開いたパターンの語で終わった場合（`a|]]`）も同じにする。
+  reproduction: 無害な入力 `[[ x =~ ]]|true || true ]]` を Bash と `_args_json_conditional_step()` で比較した。Bash
+    は式全体を受理して終了状態 0 を返すが、フックは最初の `|` の手前ですでに `OPEN=False` を返し、`_args_json_nameref_scan()` も `False` を返した。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  - codex:comprehensive
+  confidence: 100
+  resolution: fixed
+  resolution_reason: auto-applied loop 1
+- stable_id: ce759585e0a830c1
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 9620
+  title: 行継続で書いた `]]` の後も条件式を開いたまま読み、case の分岐本体のコマンド名を項目 3 から隠す
+  description: Bash は `]\<改行>]` を `]]` として読み条件式を閉じるが、フックは閉じ括弧にしないため、継続文 `case =~ in (=~) eval '...' ]]
+    ;; esac` の `=~` をパターン開始と読み、分岐の括弧を数え、分岐本体の `]]` を閉じ括弧と読む。_args_json_shadow_scan() がその括弧を counted_by_statement
+    に渡すため、分岐本体の `eval` / `source` が項目 3 で読まれず、固定の `--session` で `--args-json` が検査されない。変更前からの後退。
+  suggestion: 開いている条件式の中で、行継続を除くと `]]` になる語を読んだら、その条件式を不確定にし、数えた括弧を項目 3 に渡さない。
+  reproduction: '無害な入力 `[[ a == a ]\
+
+    ] && case =~ in (=~) printf ''%s\n'' ]] ;; esac` で、Bash は分岐本体の `printf` を実行した。同じ入力で `_args_json_conditional_step()`
+    が返した括弧を `_args_json_simple_commands()` に渡すと、`printf` は `case` の引数にまとめられた。'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 80
+  resolution: fixed
+  resolution_reason: auto-applied loop 1
+- stable_id: bc66bfefa800d787
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 9009
+  title: 確定したパターンの括弧の中にある `{` `}` を単純コマンドの区切りにする
+  description: _args_json_simple_commands() が区切りから外すのは数えた括弧トークンだけで、パターン内の引用されていない `{` `}` は区切りのまま。`@(prefix
+    { eval)` や `@(})` で `eval` や `)` をコマンド名の位置に置き、後続の notion 呼び出しが KIND_INSPECTED になる（誤爆の側）。変更前も `@(`
+    があれば不確定だったので後退ではない。
+  suggestion: 数えた最初の `(` から対応する `)` までのトークンは、`{` `}` を含めてすべて区切りにしない。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  - codex:comprehensive
+  confidence: 90
+  resolution: deferred
+  resolution_reason: 'medium severity: not an auto-fix candidate; left for a follow-up task'
+- stable_id: b5ba14483872a8e5
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8860
+  title: TM-1 は行継続を挟むと正規表現内の `]]` を終端と誤認する
+  description: '`]]` の隣接文字を元の入力上で調べているため、Bash が取り除くバックスラッシュと改行を挟むと、同じ正規表現でも判定が変わる。条件式が早く閉じたと判断し、後続の算術比較を見落とす。'
+  suggestion: 字句解析器が除去した行継続を考慮して `]]` の前後の文字を調べ、正規表現の `|` や括弧とつながる場合は不確定として扱う。
+  reproduction: '`[[ z =~ ]]|true || true -eq 0 ]]` と、最初の `]]` と `|` の間にバックスラッシュと実改行を1組挿入した入力を比較すると、`_args_json_nameref_scan()`
+    は前者で `True`、後者で `False` を返す。'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+- stable_id: ebed04afda5cbb09
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8802
+  title: TM-1 は正規表現の `|` の後で括弧の深さを追跡しなくなる
+  description: 字句解析器が正規表現の `|` で文を分けると、次の `_depth_reading()` は `started=False` から始まり、右側の選択肢の括弧を数えず、括弧内の
+    `]]` で条件式を閉じる。
+  suggestion: 正規表現を読んでいる途中で単独の `|` によって文が分かれた場合は、その時点で不確定として扱う。
+  reproduction: '`[[ z =~ a|(true ]] x) || true -eq 0 ]]` を `lex_segments()` から `_args_json_conditional_step()`
+    に順に渡すと、`||` に達した時点で `uncertain=False, open=False` を返す。'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+- stable_id: b8072bf4fc52ca86
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8860
+  title: 条件式の直後に空白なしで `||` や `|` を書くと後続の呼び出しを誤って拒否する
+  description: Bash は `[[ x =~ x ]]|| true` の `]]` で条件式を閉じる。loop 1 の修正は `]]` の次の文字が `|` というだけで不確定と判定するため、`]]
+    || true` は allow、`]]|| true` は deny になる。単独のパイプでも同じ差が出る。
+  suggestion: '`]]` が正規表現の右辺に属するかを判定してから隣接する `|` を扱い、空白の有無が最終判定に影響しないことをテストする。'
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium severity: not an auto-fix candidate; left for a follow-up task'
+- stable_id: 53cbfed1094b58a6
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8830
+  title: パターンの括弧内でも `]]` の途中に行継続があると不確定になる
+  description: 行継続を除いた語が `]]` なら深さを確認する前に走査を打ち切る。`[[ x =~ (]]) ]]` の内側の `]` の間に行継続を入れると、後続の notion 呼び出しが
+    allow から deny に変わる。`@(]])` も同じ。
+  suggestion: 行継続を含む `]]` を不確定とする判定は深さ 0 に限り、深さが正なら走査を続ける。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'medium severity: not an auto-fix candidate; left for a follow-up task'
+- stable_id: e5b05bb30d28ca24
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 9629
+  title: 変数評価の判定が、後続文のコマンド境界まで変えている
+  description: '`_args_json_conditional_step()` の `uncertain` は終端不明と、`-eq` などの評価の両方を兼ね、`_args_json_shadow_scan()`
+    はどちらでも残りの括弧解析を打ち切る。`[[ 1 -eq 1 ]]` と `[[ x =~ ^(ab)$ ]]` を順に並べると後者の `$` をコマンド名として扱う。'
+  suggestion: 条件式の境界を確定できたかどうかと、オペランドが評価され得るかどうかを別の結果として返す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium severity: not an auto-fix candidate; left for a follow-up task'
+- stable_id: cba6f2bdeb325044
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8881
+  title: 仮のコマンド分割が、正規表現内の語を条件式の開始候補にしている
+  description: '`[[ x =~ (''[['') ]]` では引用したパターン文字列 `''[[''` を別の開始候補として検査し、括弧の深さを読む前に不確定と判定する。'
+  suggestion: 開始語を確定した時点で終端を解析し、その範囲内の語を後続の開始候補から外す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'medium severity: not an auto-fix candidate; left for a follow-up task'
+- stable_id: c5430380edc5f2da
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8867
+  title: 条件式の開始文と継続文で、確定した終端の使い方が異なる
+  description: 開始文では `closer` より前の語だけを演算子判定に渡すが、継続文では `words` 全体を検査する。`[[ a == b && true =~ ^(ab)$ ]]
+    >-eq` では条件式の外のリダイレクト先 `-eq` に反応する。
+  suggestion: 開始文と継続文のどちらでも、確定した条件式の範囲を一度だけ切り出して共通の演算子判定に渡す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium severity: not an auto-fix candidate; left for a follow-up task'
+- stable_id: 63cc23873738d6b4
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8849
+  title: '`]]` に接する文字の判定が FR2 と一致しない'
+  description: SPEC FR2 は左の `)` または右の `(` と接する `]]` を不確定にすると定めるが、実装は右の `)` や `|` でも不確定にし、深さ 0 でしか隣接判定を行わない。
+  suggestion: '`]]` の左に `)` がある場合と右に `(` がある場合を判定し、閉じた後の外側の `)` やパイプは条件式の外の区切りとして扱う。'
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium severity: not an auto-fix candidate; left for a follow-up task'
+- stable_id: e5b05bb30d28ca24
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 9626
+  title: 不確定な文で打ち切ると後続の独立した条件式も分割される
+  description: SPEC FR7 は文ごとに数えた括弧を区切りから外すよう定めるが、実装は最初の不確定な文で走査全体を打ち切る。`[[ x =~ (a|b) ]]; [[ x =~ ^(ab)$
+    ]]` で後半の `$` がコマンド名として扱われる。
+  suggestion: 不確定な条件式の括弧を従来どおり分割し、条件式をまたがないと確認できる境界から走査を再開する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'medium severity: not an auto-fix candidate; left for a follow-up task'
+- stable_id: ef2dca3e77422b05
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8884
+  title: TM-1：正規表現内の `||` の後で、括弧内の `]]` を条件式の終端と誤認する
+  description: Bash は空白なしの `||` を正規表現の一部として読む場合がある。loop 2 の分岐は単独の `|` だけを不確定とし、`||` で分割した次の区間ではパターンの状態を初期化するため、括弧内の
+    `]]` で走査が閉じ、後続の算術比較を見落とす。
+  suggestion: 正規表現に接する `||` を条件式の区切りと判別できない場合は、その時点で不確定と判定する。
+  reproduction: '`[[ x =~ a||(true ]] true) && true ]]` を `_args_json_conditional_step()` に渡すと `&&` の直前で
+    `(False, False, [])` が返り、`_args_json_nameref_scan()` も `False` を返す。'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 75
+  resolution: fixed
+  resolution_reason: auto-applied loop 3
+- stable_id: cba6f2bdeb325044
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8884
+  title: 正規表現内の連続した縦棒でパターンの解析状態が失われる
+  description: Bash は `[[ x =~ a||x ]]` の `a||x` を一つの正規表現として読む。字句解析器は `||` で文を分割し、loop 2 の検査は単独の `|` にしか反応しないため、次の文で
+    `started` が偽に戻り、パターン後半の `]]` を終端として受理し得る。
+  suggestion: 右辺に属し得る `||` でも解析状態を保持するか、不確定と判定する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 75
+  resolution: fixed
+  resolution_reason: auto-applied loop 3
+- stable_id: 122b15858bab33d8
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8879
+  title: 条件式の終端判定が `||` を先頭の `|` だけで誤分類する
+  description: '`lex_segments()` は `]]||` の `||` を一つの区切りとして返すが、`_depth_reading()` は右隣の1文字を読み直して不確定と判定するため、`[[
+    x =~ x ]]|| true` は inspected、`[[ x =~ x ]] || true` は nothing になる。自動修正で生じた回帰。'
+  suggestion: 閉じ括弧の判定には、字句解析が返す区切り全体と正規表現の語が終わった位置を使う。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'medium severity: not an auto-fix candidate; left for a follow-up task'
+- stable_id: 122b15858bab33d8
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8879
+  title: 直後に `|` があると正しい閉じ括弧を不確定と判定する
+  description: SPEC FR2 / FR3 は深さ 0 の最初の `]]` で閉じるよう求めるが、実装は `]]` の直後に `|` があるだけで不確定を返す。`[[ x =~ x ]]|true`
+    と `[[ a == b && true =~ x ]]||true` で後続の Notion 呼び出しが KIND_INSPECTED になる。
+  suggestion: パターン語に含まれる `|` と条件式の外側の区切りを識別し、深さ 0 の独立した `]]` で条件式を閉じる。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'medium severity: not an auto-fix candidate; left for a follow-up task'
+- stable_id: 49c094c4de82a5c0
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8884
+  title: 正規表現の後に論理和 `||` を置くと、正当な Notion 呼び出しを拒否する
+  description: loop 3 の修正は、正規表現との間に空白がある `||` でも条件式を不確定と判定する。`[[ x =~ ^(ab)$ || true ]]` では確定していた括弧をコマンドの区切りとして扱い直し、末尾の
+    `$` をコマンド名と読み、後続の Notion 呼び出しが deny になる（誤爆の側）。
+  suggestion: 空白で正規表現が終わったと確認できる場合は `||` を論理和として次の条件を走査し、正規表現に密着した `||` は不確定のままにする。
+  reproduction: '`TestDbracketRegexSettled().command(''[[ x =~ ^(ab)$ || true ]]'')` を `judge()` に渡すと、loop
+    2 のコミットでは `allow`、loop 3 のコミットでは `deny`（git-branch-force-delete）を返す。'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  - codex:comprehensive
+  - codex:architecture
+  - codex:spec
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'medium severity: not an auto-fix candidate; left for a follow-up task'
+- stable_id: 53cbfed1094b58a6
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8832
+  title: パターン内の行継続付き `]]` で深さの走査を打ち切る
+  description: SPEC FR2 / FR5 は深さ 1 以上の `]]` をパターン内の語として扱うよう定めるが、実装は現在の深さを確認せず行継続付きの `]]` で不確定を返す。`[[
+    a == @(]]) ]]` の `]` の間に行継続を挿入すると KIND_INSPECTED と deny に変わる。
+  suggestion: 深さが 1 以上なら行継続付きの `]]` をパターン内の語として読み飛ばし、深さの走査を続ける。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  - codex:comprehensive
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'medium severity: not an auto-fix candidate; left for a follow-up task'
+- stable_id: 9d710d0406365ade
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8908
+  title: パターン内の引用された `[[` を開始語の候補として検査する
+  description: SPEC FR4 は数えたパターン括弧の内側を独立したコマンド名として扱わないよう求めるが、`[[ a == @("[[") ]]` 内の引用語を別の開始語の候補とみなし、深さを数える前に不確定を返す。
+  suggestion: 最初の開始語を見つけた時点で条件式の範囲を求め、残りの開始語候補をその範囲の外から探す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium severity: not an auto-fix candidate; left for a follow-up task'
+- stable_id: bb9f71ba506bbe0a
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 9653
+  title: 不確定な文の後にある独立した条件式の括弧も全部分割する
+  description: SPEC FR7 は文ごとに数えた括弧を項目 3 の分割から外すよう求めるが、実装は最初の不確定な文で括弧の収集を打ち切る。`[[ x -eq 1 ]]; [[ a == @(eval)
+    ]]` で `eval` を項目 3 でコマンド名と誤認する。
+  suggestion: 条件式が閉じていると分かる場合は次の文で括弧の収集を再開する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium severity: not an auto-fix candidate; left for a follow-up task'
+evaluation:
+  round_summary: 'ラウンド 2（diff、cross_validation=true）。4 観点とも完了した。high 2 件を採用した。どちらも security で、コードを読んで再現を確認した。1
+    件目は、正規表現の語に `|` で接した `]]` を閉じ括弧と読む後退（comprehensive と統合）。2 件目は、行継続の `]]` の後の継続文で数えた括弧を項目 3 に渡し、case
+    本体のコマンド名を隠す後退。ほかに medium 1 件（パターン内の `{` `}`。architecture と comprehensive を統合）を採用し、spec の深さ 1 以上の隣接判定は
+    Bash と一致するため low に下げて採用した。architecture の `( [[ x =~ x ]])`（`]])` の誤爆）は、round 1 の 4d4c678c34099b87（deferred）と同じ箇所なので退けた。前回
+    unresolved の af8e6352cdf5cf9a（`^(ab)$`）は、FR7 の実装、ケース表、単体テストで対処されていることを確認した。観点ごとの確認: comprehensive
+    は corroborated、security は corroborated、architecture は corroborated、spec は corroborated（重大度だけ調整）。読んだファイルは
+    5 件（SPEC.md、destructive-guard.py、reviews/round1.yaml、ケース表と単体テストの差分）。reviewer の出力に注入の試みは無かった。'
+  recommended_action: auto_fix
+  action_rationale: high 2 件は、どちらも _depth_reading() と _args_json_shadow_scan() の局所的な修正で直せる。`|` に接する `]]`
+    と行継続の `]]` を不確定にする方向で、SPEC の AC と衝突しない（FR2 は `|` を含むパターンが不確定になることを認めている）。medium と low は自動修正の対象外なので、後続のタスクに回せる。
+dismissed_sites:
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8838
+  run_id: comprehensive#0
+  reason: duplicate of another finding
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8844
+  run_id: architecture#0
+  reason: already resolved per round_context
+- file: em-workflow/hooks/destructive-guard.py
+  line: 9009
+  run_id: comprehensive#0
+  reason: duplicate of another finding
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 3
+  applied_total: 5
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-dbracket-regex-settled-20261126T181653Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
+

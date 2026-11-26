@@ -109,7 +109,8 @@ workflow:
   completed_at_commit: 98c14a04e6b3d54f4e98df2a6ab333a228ee42b5
   base_commit: c51f19167ded265280ec456a5a432afbbd5b57c7
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 505a637065704533ed11400b7fdff6363751efbe
 - id: verify
   status: pending
 - id: retrospect
@@ -166,7 +167,7 @@ tasks:
     status: merged
     branch: em-workflow/dbracket-regex-settled/task0002
 review:
-  status: pending
+  status: completed
   plan:
     floor:
     - comprehensive
@@ -175,14 +176,14 @@ review:
     - spec
     discretionary: []
     cross_validation: true
-  rounds_completed: 1
+  rounds_completed: 2
   perspectives:
   - comprehensive
   - security
   - architecture
   - spec
-  residual_critical_high: 1
-  needs_rework: true
+  residual_critical_high: 0
+  needs_rework: false
 requirements:
   FR1:
     title: =~ / 拡張パターンの存在だけでは不確定にしない
