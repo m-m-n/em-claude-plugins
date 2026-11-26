@@ -5,7 +5,7 @@ status: dispatching
 generation: 2
 base_revision: a8ed91833ee01bf817df4bcb248d784f277d0265
 last_input_digest: sha256:2068a7f45f997c5455d0a29874b6e9ee53aae7dfcf270ced0851de92f6ec2bac
-active_request_id: create-spec-run-0005
+active_request_id: null
 packets:
   create-spec-q0001:
     status: answered
@@ -75,12 +75,17 @@ worker_runs:
   input_digest: sha256:a54dc0e2e94bf86efc6f887e328337d6f72a0fce4284883bf52647d83d97ce3f
   self_write_set: []
 - request_id: create-spec-run-0005
-  status: dispatched
+  status: completed
   input_digest: sha256:2068a7f45f997c5455d0a29874b6e9ee53aae7dfcf270ced0851de92f6ec2bac
+  self_write_set:
+  - feature-docs/dbracket-regex-settled/SPEC.md
 artifacts:
 - path: feature-docs/dbracket-regex-settled/SPEC.md
   sha256: sha256:99144de9220ec7e6968181d8a62ecccc61d3b6552fc7cf4a4d5bdfbbeadda3db
   produced_by: create-spec-run-0003
+- path: feature-docs/dbracket-regex-settled/SPEC.md
+  sha256: sha256:8b866692bd95f46bc40d4d087b0952f7adea6e53622e9cfeb306a6ccf2d5c330
+  produced_by: create-spec-run-0005
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
