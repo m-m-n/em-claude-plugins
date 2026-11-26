@@ -152,7 +152,6 @@ review:
     cross_validation: true
   residual_critical_high: 0
   needs_rework: false
-  last_round: reviews/round1.yaml
 requirements:
   FR1:
     title: Scan the operator words inside the conditional in the statement that contains
