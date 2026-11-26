@@ -1,12 +1,18 @@
 schema_version: 1
 feature: dbracket-paren-group-spec-align
 phase: create-spec
-status: dispatching
+status: awaiting_answers
 generation: 1
 base_revision: c3d4f3cf7a8f9bf1e7accd1c1bf1d490b631bc78
 last_input_digest: sha256:6206f5fa99feb47abefbcbf283cc79378d5f9329b764f10583b315f474ff9383
-active_request_id: create-spec-run-0001
-packets: {}
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: issued
+    issued_at: '2026-11-26T22:16:00+09:00'
+    questions:
+    - question_id: create-spec.paren-group-direction
+      status: issued
 answers:
   create-spec.feature-identity:
     packet_id: null
@@ -19,7 +25,7 @@ answers:
     normalized_answer: 'feature name derived from the task description: dbracket-paren-group-spec-align'
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:6206f5fa99feb47abefbcbf283cc79378d5f9329b764f10583b315f474ff9383
 artifacts: []
 patches: []
