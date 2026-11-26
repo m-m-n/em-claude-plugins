@@ -8757,14 +8757,19 @@ def _args_json_conditional_step(marked, words, commands, sep, was_open):
     written across a line continuation (`]`, a backslash, a newline, `]`) is
     not read as one: the conditional stays open until a `;` or a lone `&`, and
     a conditional still open at the end of the chunk is uncertain too (the
-    caller). Called only from _args_json_nameref_scan()."""
+    caller). A word with a trailing carriage return stripped by the lexer is
+    not read as a closer. Called only from _args_json_nameref_scan()."""
     flat = [tok for tok in words if not getattr(tok, "is_operator", False)]
     is_open = was_open
     if was_open:
         for tok in flat:
             if _args_json_declaration_word(marked, tok)[0] in _ARGS_JSON_DOUBLE_BRACKET_WORDS:
                 return True, True
-        if any(_args_json_word_source(marked, tok) == "]]" for tok in flat):
+        if any(
+            _args_json_word_source(marked, tok) == "]]"
+            and not getattr(tok, "trailing_cr", "")
+            for tok in flat
+        ):
             is_open = False
     else:
         opener = None
@@ -8787,7 +8792,10 @@ def _args_json_conditional_step(marked, words, commands, sep, was_open):
                 if tok is opener:
                     seen = True
                 elif seen:
-                    if _args_json_word_source(marked, tok) == "]]":
+                    if (
+                        _args_json_word_source(marked, tok) == "]]"
+                        and not getattr(tok, "trailing_cr", "")
+                    ):
                         closed = True
                         break
                     if _args_json_declaration_word(marked, tok)[0] in _ARGS_JSON_DOUBLE_BRACKET_WORDS:
