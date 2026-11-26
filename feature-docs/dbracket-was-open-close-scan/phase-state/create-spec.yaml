@@ -1,24 +1,56 @@
 schema_version: 1
 feature: dbracket-was-open-close-scan
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: ca16c3195fabe43e463c9241a0e3880b6a9b6dae
-last_input_digest: null
+last_input_digest: sha256:989d63e83c0b324e8b21f025ad8753602e206d6401573f403ebf27a3b24582a5
 active_request_id: null
 packets: {}
 answers:
   create-spec.feature-identity:
-    packet_id: null
+    question_id: create-spec.feature-identity
+    packet_id: orchestrator-direct
     answered_at: '2026-11-26T23:45:30+09:00'
-    source: batch_policy
-    answer_mode: select
+    source: batch-decision-table
+    answer_mode: single_select
     selected_option_ids:
     - derive_from_task_description
     freeform: null
     normalized_answer: 'feature name derived from the task description: dbracket-was-open-close-scan'
-worker_runs: []
-artifacts: []
+  create-spec.design-step:
+    question_id: create-spec.design-step
+    packet_id: orchestrator-direct
+    answered_at: '2026-11-26T23:55:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design step skipped per analyst recommendation (no UI)
+  create-spec.design-system:
+    question_id: create-spec.design-system
+    packet_id: orchestrator-direct
+    answered_at: '2026-11-26T23:55:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - top_candidate_or_none
+    freeform: null
+    normalized_answer: 'no candidates -> kind: none'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: completed
+  input_digest: sha256:e9907e9bb88ed4379226ae1acbf531e1a2bba8529d78dd1ea36111f934862b27
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:989d63e83c0b324e8b21f025ad8753602e206d6401573f403ebf27a3b24582a5
+  self_write_set:
+  - feature-docs/dbracket-was-open-close-scan/SPEC.md
+artifacts:
+- path: feature-docs/dbracket-was-open-close-scan/SPEC.md
+  sha256: sha256:89d3af82db26dad8d1b32dc021e9fdef34c5caaa354c620e4108e8b9f457a538
+  produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0

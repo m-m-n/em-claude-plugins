@@ -1,0 +1,17 @@
+schema_version: 1
+feature: dbracket-was-open-close-scan
+records:
+- question_id: create-spec.command-approval
+  packet_id: orchestrator-direct
+  answered_at: '2026-11-26T23:55:00+09:00'
+  source: batch-decision-table
+  answer_mode: single_select
+  selected_option_ids:
+  - auto_record
+  freeform: null
+  normalized_answer: all project.components commands already approved; nothing newly
+    recorded
+  resolution_note: 'gate: create-spec.command-approval (policy: auto_record); commands:
+    `python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest
+    discover -s tests` (test_command, already approved in bash_guard --list); build_command
+    / format_command empty; refusal patterns: none'
