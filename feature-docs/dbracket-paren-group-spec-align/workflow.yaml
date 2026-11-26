@@ -2,41 +2,68 @@ schema_version: 1
 feature: dbracket-paren-group-spec-align
 created: '2026-11-26'
 base_branch: main
-goal: |
-  # dbracket-opener-arith-scan: SPEC FR3・AC-5 の `[[ ( a == b ) && true ]]` の判定が SPEC・テスト・実装で食い違う
+goal: '# dbracket-opener-arith-scan: SPEC FR3・AC-5 の `[[ ( a == b ) && true ]]` の判定が
+  SPEC・テスト・実装で食い違う
+
 
   種別: バグ
 
+
   ## 現象
 
-  dbracket-opener-arith-scan の SPEC FR3・AC-5・TS-3 は `[[ ( a == b ) && true ]]` を確定と読み、後続の `--session "$SID"` 付き notion 呼び出しを `KIND_NOTHING` に保つと定めている。実際は `(` で区切られた `a == b` がひとつの単純コマンドになり、許可名でない `a` を `_args_json_declares_nameref()` が不確定と読むため `KIND_INSPECTED` になる（修正前から同じ挙動）。テスト（`tests/test_destructive_guard_args_json.py` 4380 行付近）は SPEC と逆の判定（True）を固定しており、AC-6 が求めるケース表の行も無い。
+
+  dbracket-opener-arith-scan の SPEC FR3・AC-5・TS-3 は `[[ ( a == b ) && true ]]` を確定と読み、後続の
+  `--session "$SID"` 付き notion 呼び出しを `KIND_NOTHING` に保つと定めている。実際は `(` で区切られた `a ==
+  b` がひとつの単純コマンドになり、許可名でない `a` を `_args_json_declares_nameref()` が不確定と読むため `KIND_INSPECTED`
+  になる（修正前から同じ挙動）。テスト（`tests/test_destructive_guard_args_json.py` 4380 行付近）は SPEC と逆の判定（True）を固定しており、AC-6
+  が求めるケース表の行も無い。
+
 
   ## 再現手順
 
+
   1. `[[ ( a == b ) && true ]]` の後に `--session "$SID"` 付きの標準形の notion 呼び出しを続けたコマンドを静的判定にかける
+
   2. 後続の呼び出しが `KIND_INSPECTED` になり、SPEC の期待（`KIND_NOTHING`）と食い違う
+
 
   ## 期待する挙動
 
+
   SPEC・テスト・実装の三者が同じ判定を述べている。コマンド単位の読み取りは緩めない方針なら、SPEC からこの例示を外すか「不確定のまま残り後続は `KIND_INSPECTED`」と明記し、テストの説明文もそれに揃える。
+
 
   ## 完了の定義
 
+
   - [ ] 再現手順で現象が起きない
+
   - [ ] 再発を検出するテストがある
+
 
   ## 該当箇所
 
-  `em-workflow/hooks/destructive-guard.py` 8877 行付近、`tests/test_destructive_guard_args_json.py` 4271〜4273 行・4380 行付近
+
+  `em-workflow/hooks/destructive-guard.py` 8877 行付近、`tests/test_destructive_guard_args_json.py`
+  4271〜4273 行・4380 行付近
+
 
   ## 実害・発生条件
 
-  dbracket-opener-arith-scan のレビュー第1ラウンドで spec / architecture 観点が medium として報告し deferred にした（stable_id: 0995fb9ebc703b77, 27997561fe67bbab）。判定は検査する側に倒れているため安全側の食い違い。
+
+  dbracket-opener-arith-scan のレビュー第1ラウンドで spec / architecture 観点が medium として報告し deferred
+  にした（stable_id: 0995fb9ebc703b77, 27997561fe67bbab）。判定は検査する側に倒れているため安全側の食い違い。
+
 
   ## 追加指示
 
+
   - 不明点は Codex に相談し、比較して良い方の選択肢を採る。相談内容は Notion のタスクページに記録する。
-  - 実装完了後は integration ブランチを remote に push し、base_branch への PR を gh pr create で作る。integration ブランチはローカル・リモート両方に残す（base_branch へ自動マージしない）。
+
+  - 実装完了後は integration ブランチを remote に push し、base_branch への PR を gh pr create で作る。integration
+  ブランチはローカル・リモート両方に残す（base_branch へ自動マージしない）。
+
+  '
 parent_branch: em-workflow/dbracket-paren-group-spec-align/integration
 tier: reduced
 tier_decision:
@@ -65,8 +92,8 @@ project:
     main:
       language: python
       build_command: ''
-      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover
-        -s tests
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3
+        -m unittest discover -s tests
       format_command: ''
 workflow:
 - id: create-spec
@@ -79,15 +106,16 @@ workflow:
   - DESIGN.md
   - design/
   status: skipped
-  skipped_reason: 'UI が無い（SPEC・テスト説明・テスト 1 件・ケース表 1 行の変更）。create-spec.design-step: decide_autonomously
-    → analyst の推奨どおり skip、design-system 候補 0 件'
+  skipped_reason: 'UI が無い（SPEC・テスト説明・テスト 1 件・ケース表 1 行の変更）。create-spec.design-step:
+    decide_autonomously → analyst の推奨どおり skip、design-system 候補 0 件'
 - id: create-plan
   artifacts:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - THREAT-MODEL.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: f8e6e8ccba9ccd09852f3cdf42dc7f31925e218b
 - id: implement
   status: pending
 - id: review
@@ -96,7 +124,29 @@ workflow:
   status: pending
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Pin the uncertain reading of the parenthesised comparison form
+    plan: tasks/task0001.md
+    files:
+    - tests/test_destructive_guard_args_json.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    skills: []
+    domains:
+    - input-handling
+    complexity: low
+    requirements:
+    - FR1
+    - FR4
+    - FR5
+    - FR6
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: pending
+    branch: em-workflow/dbracket-paren-group-spec-align/task0001
+    notes: null
 review:
   status: pending
   rounds_completed: 0
@@ -106,9 +156,11 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-4
+    - TS-1
   FR2:
     title: Amend FR3 of the dbracket-opener-arith-scan SPEC
     status: ok
@@ -130,7 +182,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-3
     - TS-5
@@ -139,7 +192,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-3
@@ -148,7 +202,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-2
   FR7:
@@ -165,7 +220,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-4
   NFR2:
@@ -173,7 +229,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-4
   NFR3:
@@ -181,7 +238,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-4
   NFR4:
@@ -189,7 +247,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-2
 batch:

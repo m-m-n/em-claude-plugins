@@ -1,11 +1,11 @@
 schema_version: 1
 feature: dbracket-paren-group-spec-align
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 743e9e99e4ea4366d7f03f646293a18679c18215
 last_input_digest: sha256:fe60f7fb00a98cecbee6df33c8d434bf45bfb60717ce3e3893d24cc0cf92fe4a
-active_request_id: create-plan-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -94,4 +94,4 @@ other_feature_doc_fixes:
   produced_by: create-plan-run-0002
 patches:
 - patch_id: create-plan-p0001
-  status: pending
+  status: applied
