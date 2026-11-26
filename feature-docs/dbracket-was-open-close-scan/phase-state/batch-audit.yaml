@@ -41,3 +41,16 @@ records:
     and `while [[ true && true ]] do [[ -v x ]]; done; <notion call>`); keep-spec would ship a deny-to-allow security regression. Key points: revise Assumptions item 1 and FR1/FR4 so that only redirection
     targets after the closer are skipped and later words (incl. a new [[ after then/do and its operators) are still read; add deny rows for the then/do forms to FR5/AC; keep the four new allow rows (>=~
     / >-eq).'
+- question_id: review.evaluator-absolute-path
+  packet_id: orchestrator-direct
+  answered_at: '2026-11-27T00:55:10+09:00'
+  source: codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - normalize_and_route_to_rework
+  freeform: null
+  normalized_answer: 評価者の high の指摘 4ee256f52da6e850 の file が project_root 配下の絶対パスだったので、相対パスに正規化して R3b の残りのゲートを通し、評価者由来のため自動修正はスキップ、残存 high として batch の自動手直しへ回した
+  resolution_note: 'unlisted-gate fallback (no gate_id; R3b step 1 rejects absolute paths). Options: (A) drop the finding literally; (B) normalize to project-relative after confirming containment and route
+    the residual high to batch auto-rework; (C) drop it and only disclose / file a follow-up. Codex consulted: yes (codex entry, 1 turn) and chose B: an independently reproduced serious regression must
+    stay in the completion gate; normalization is an exception limited to a path independently confirmed inside project_root. Orchestrator reproduced the regression (base deny / changed allow). Chosen:
+    B. Not chosen: A, C. Opus escalation: not run.'
