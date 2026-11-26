@@ -1,7 +1,7 @@
 schema_version: 1
 feature: dbracket-regex-settled
 phase: create-spec
-status: dispatching
+status: completed
 generation: 2
 base_revision: a8ed91833ee01bf817df4bcb248d784f277d0265
 last_input_digest: sha256:2068a7f45f997c5455d0a29874b6e9ee53aae7dfcf270ced0851de92f6ec2bac

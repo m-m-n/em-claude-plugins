@@ -87,7 +87,8 @@ workflow:
 - id: create-spec
   artifacts:
   - SPEC.md
-  status: in_progress
+  status: completed
+  completed_at_commit: 58661d1e9a5e14600d8033bd03b1aa09199f94a9
 - id: design
   artifacts:
   - DESIGN.md
@@ -215,6 +216,13 @@ requirements:
     - task0001
     tests:
     - TS-6
+  FR7:
+    title: _args_json_shadow_scan() の項目 3 も数えた括弧を区切りにしない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
   NFR1:
     title: 既存の検知力と既存テストの保持
     status: ok
