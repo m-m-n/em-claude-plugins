@@ -1,0 +1,29 @@
+schema_version: 1
+feature: dbracket-regex-settled
+phase: create-spec
+status: in_progress
+generation: 1
+base_revision: a6c5a17ccbed5ff7bed48c756240b33aa9881daa
+last_input_digest: sha256:55ad3222014496bf52c34b84e4cfd5bf3c4f68e3abfc019dfb957e482873ab35
+active_request_id: create-spec-run-0001
+packets: {}
+answers:
+  create-spec.feature-identity:
+    packet_id: null
+    answered_at: '2026-11-26T23:00:00+09:00'
+    source: batch_policy
+    answer_mode: select
+    selected_option_ids:
+    - derive_from_task_description
+    freeform: null
+    normalized_answer: 'feature name derived from the task description: dbracket-regex-settled'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:55ad3222014496bf52c34b84e4cfd5bf3c4f68e3abfc019dfb957e482873ab35
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
