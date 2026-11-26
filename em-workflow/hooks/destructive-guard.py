@@ -8881,10 +8881,13 @@ def _args_json_conditional_step(marked, words, commands, sep, was_open):
                     ):
                         return True, None, []
                 return False, index, counted
-        if started and sep and "|" in re.findall(r"&&|\|&|\|\||[;&|]", sep):
-            # The lexer split a regex at a lone `|`: the parenthesis depth
-            # of the pattern would restart at 0 in the next statement, so
-            # the reading cannot place the closer.
+        if started and sep and any(
+            s in ("|", "||") for s in re.findall(r"&&|\|&|\|\||[;&|]", sep)
+        ):
+            # The lexer split a regex at a `|` or a `||` (Bash can read a
+            # `||` without spaces as part of the pattern): the parenthesis
+            # depth of the pattern would restart at 0 in the next
+            # statement, so the reading cannot place the closer.
             return True, None, []
         return depth > 0, None, counted
 
