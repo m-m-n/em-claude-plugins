@@ -1,11 +1,11 @@
 schema_version: 1
 feature: dbracket-was-open-close-scan
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 4ab2da413143708d7b9d0ea1c86487a21ba25ef1
 last_input_digest: sha256:0f8092b251c9ee03cc93e51456c0f512a2005f5f2fd4e6dc244c65c6b903697e
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -41,7 +41,7 @@ artifacts:
 other_feature_doc_fixes: []
 patches:
 - patch_id: dbracket-was-open-close-scan-create-plan-p0001
-  status: validated
+  status: applied
   base_input_digest: sha256:0f8092b251c9ee03cc93e51456c0f512a2005f5f2fd4e6dc244c65c6b903697e
   base_workflow_blob: b788431deafabc8a1d237a35bd4687d4daac86e5
 stale_redispatch_count: 0
