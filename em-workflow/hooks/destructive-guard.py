@@ -8757,16 +8757,38 @@ def _args_json_conditional_step(marked, words, commands, sep, was_open):
     written across a line continuation (`]`, a backslash, a newline, `]`) is
     not read as one: the conditional stays open until a `;` or a lone `&`, and
     a conditional still open at the end of the chunk is uncertain too (the
-    caller). A word with a trailing carriage return stripped by the lexer is
+    caller). A `=~` written with a line continuation, or a word ending in one
+    of `?*+@!` directly followed by `(` (an extended pattern), makes the
+    conditional uncertain as well. A word with a trailing carriage return stripped by the lexer is
     not read as a closer. A word written exactly `=~` inside the conditional
     makes it uncertain, since the end of a parenthesized regex cannot be told
     (a `]]` inside it does not close the conditional in Bash). Called only
     from _args_json_nameref_scan()."""
     flat = [tok for tok in words if not getattr(tok, "is_operator", False)]
     is_open = was_open
+
+    def _unsettled(tok):
+        # `=~` written across a line continuation, or a word ending in one of
+        # `?*+@!` that is directly followed by `(` (an extended pattern whose
+        # end cannot be told): the end of the conditional is uncertain.
+        src = _args_json_word_source(marked, tok)
+        if src is None:
+            return False
+        src = src.replace("\\\n", "")
+        if src == "=~":
+            return True
+        span = getattr(tok, "span", None)
+        if span is None or not src or src[-1] not in "?*+@!":
+            return False
+        text = marked.text
+        i = span[1]
+        while text.startswith("\\\n", i):
+            i += 2
+        return text.startswith("(", i)
+
     if was_open:
         for tok in flat:
-            if _args_json_word_source(marked, tok) == "=~":
+            if _unsettled(tok):
                 return True, True
             if _args_json_declaration_word(marked, tok)[0] in _ARGS_JSON_DOUBLE_BRACKET_WORDS:
                 return True, True
@@ -8797,7 +8819,7 @@ def _args_json_conditional_step(marked, words, commands, sep, was_open):
                 if tok is opener:
                     seen = True
                 elif seen:
-                    if _args_json_word_source(marked, tok) == "=~":
+                    if _unsettled(tok):
                         evaluates = True
                     if (
                         _args_json_word_source(marked, tok) == "]]"
