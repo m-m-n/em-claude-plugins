@@ -1,0 +1,91 @@
+feature: dbracket-opener-arith-scan
+collected_at: '2026-11-26T21:52:00+09:00'
+session_ids:
+- 01a217e8-742f-7299-9bb2-3537e2ff5b9f
+signals:
+  review_critical_high:
+  - stable_id: f94451111f3d366f
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 末尾に復帰文字が付いた `]]` を閉じ括弧と読み、後続の算術比較が走査されない
+    resolution: fixed
+  - stable_id: 11d110990b0cbc46
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 'TM-1: 正規表現内の `]]` で条件式の走査が終了する'
+    resolution: fixed
+  - stable_id: ebed04afda5cbb09
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: TM-1：行継続を含む `=~` と拡張パターン内の `]]` で条件式の走査が早く終わる
+    resolution: fixed
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: description_plus_code の読み（バケット 1 の確率 0.97、スコア 1.03）で reduced に決まった
+    bases:
+    - basis: description_only
+      score:
+        type: score
+        score: 1.05
+        confidence: 0.95
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread across a few files
+            together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to
+            the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.95
+          '2': 0.05
+          '3': 0.0
+      observed_at: '2026-11-26T19:52:01+09:00'
+    - basis: description_plus_code
+      score:
+        type: score
+        score: 1.03
+        confidence: 0.97
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread across a few files
+            together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to
+            the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.97
+          '2': 0.03
+          '3': 0.0
+      observed_at: '2026-11-26T19:54:42+09:00'
+    pre_survey_estimate:
+      files_expected:
+      - em-workflow/hooks/destructive-guard.py
+      - tests/test_destructive_guard_args_json.py
+      changed_lines_approx: 6
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: false
+      spillover_modules: []
+      work_still_required: true
+      test_change_kind: extend_existing_one_to_one
+      added_test_cases_approx: 1
+      body_change_kind: new_logic
+      change_containment: single_function
+      caller_and_dependency_count: 6
+      changes_external_contract: false
+      changes_behavior: true
+      evidence: HEAD 6d393ee61 で、条件式を開く区間の括弧内に算術比較を置くと、後続の --session "$SID" 付き Notion 呼び出しが KIND_NOTHING
+        になることを静的判定で確認した。em-workflow/hooks/destructive-guard.py:8754 の演算子走査は継続区間に限られ、同ファイル:8857 の呼び出し後に行う単純コマンド判定でもこの比較を拾わない。tests/test_destructive_guard_args_json.py:1850
+        の単独条件式と同ファイル:4051 の継続区間のテスト、および em-workflow/hooks/tests/destructive-guard-cases.json:1485 からの7件は通過した。開始区間にも既存の演算子判定を適用し、単体テストに再現例を1件追加する前提で見積もった
+follow_up_drafts: []
+lessons_candidates:
+- '[[ ]] の閉じ括弧判定は復帰文字・正規表現・拡張パターン・行継続のそれぞれで早期終了しうり、review の auto-fix が 3 ループ続いた。条件式の境界判定はケース表で網羅的に固定する価値がある'
+- SPEC FR3・AC-5 の「従来どおり確定」という前提が base コミットの挙動と違い、medium の spec 指摘として deferred になった。create-spec で前提となる現状挙動を実行で確かめる手順があると防げた

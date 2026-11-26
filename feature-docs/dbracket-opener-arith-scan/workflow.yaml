@@ -120,7 +120,8 @@ workflow:
   failed_items: []
   completed_at_commit: 2dd8d1825fd905f270924ceaca840f96804d6597
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: 96ee7d95c573a28ace062fb49e4d5b8f3fbcef8c
 tasks:
   task0001:
     title: Scan the operator words of a [[ ]] conditional in its opening statement
