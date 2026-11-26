@@ -4538,5 +4538,230 @@ class TestDbracketOpenerArithScan(unittest.TestCase):
         self.assertNotIn("permissionDecision", text)
 
 
+class TestDbracketWasOpenCloseScan(unittest.TestCase):
+    """dbracket-was-open-close-scan task0001 (FR1 to FR5, NFR1 to NFR5): in a
+    statement entered while a `[[ ]]` conditional opened in an earlier
+    statement is still open (`&&`, `||` and the parentheses of a conditional
+    split it into statements), the words are read in order and the reading
+    stops at the closer, a word written exactly `]]` with no stripped trailing
+    carriage return. A redirection target after the closer (`=~`, `-eq`) is
+    not a word of the conditional, so the notion call with `--session "$SID"`
+    after it keeps the exclusion (KIND_NOTHING); an operator word before the
+    closer still leaves the chunk uncertain (KIND_INSPECTED)."""
+
+    LABEL = "dbracket-was-open-close-scan"
+    # The array assignment, the notion call and the per-statement spy are those
+    # of TestDbracketOpenerArithScan, read from it and not copied.
+    ARRAY = TestDbracketOpenerArithScan.ARRAY
+    NOTION_SID = TestDbracketOpenerArithScan.NOTION_SID
+    # The forms whose word after the closer is a redirection target (AC-1, AC-2).
+    READ_PAST = ("[[ true && true ]] >=~", "[[ true && true ]] >-eq")
+    # The forms whose operator word stands before the closer (AC-3).
+    KEEP_DENY = ("[[ true && true =~ true ]]", "[[ true && true -eq 0 ]]")
+    # The sentence AC-5 pins, and the one the docstring already holds.
+    NEW_SENTENCE = (
+        "In a later statement that holds the closer, the words up to just "
+        "before the closer are read and the words after the closer are not "
+        "read here."
+    )
+    OLD_SENTENCE = (
+        "Words before the opener and words after the closer are not read here."
+    )
+
+    def helper(self):
+        """The test class whose helpers (per-chunk scan, the spy on
+        _args_json_conditional_step(), kinds, the case-table reader) this class
+        reuses."""
+        return TestDbracketOpenerArithScan()
+
+    def command(self, form, with_array):
+        """The judgment command: the optional array assignment, FORM, `; ` and
+        the notion call with `--session "$SID"`."""
+        head = self.ARRAY if with_array else ""
+        return head + form + "; " + self.NOTION_SID
+
+    def reports(self, text):
+        """(the per-chunk answer for TEXT, the (UNCERTAIN, OPEN) results of
+        _args_json_conditional_step() during that scan, in order). The second
+        report is the one of the statement after the first `&&` or `||`."""
+        answer, reports = self.helper().conditional_reports(text)
+        self.assertGreaterEqual(len(reports), 2, reports)
+        return answer, reports
+
+    # --- AC-1: the words after the closer are not read ---------------------
+
+    def test_a_redirection_target_after_the_closer_reads_the_chunk_as_certain(self):
+        """AC-1 (FR1, FR2; TS-1): the scan reads false for `[[ true && true ]]
+        >=~` and `[[ true && true ]] >-eq`."""
+        for form in self.READ_PAST:
+            with self.subTest(form):
+                self.assertFalse(self.helper().scan(form))
+
+    def test_the_closing_statement_reports_no_uncertain_word(self):
+        """AC-1 (FR1, FR2; TS-1): _args_json_conditional_step() reports
+        (false, false) for the closing (second) statement of each form: the
+        reading stopped at the closer and the conditional is closed."""
+        for form in self.READ_PAST:
+            with self.subTest(form):
+                _, reports = self.reports(form)
+                self.assertEqual((False, False), reports[1])
+
+    # --- AC-2: the notion call after the conditional ----------------------
+
+    def test_the_notion_call_after_each_read_past_form_keeps_the_exclusion(self):
+        """AC-2 (FR2; TS-2): with and without the array assignment, the
+        `mcp-bridge` statements are exactly [KIND_NOTHING]."""
+        for form in self.READ_PAST:
+            for with_array in (True, False):
+                with self.subTest((form, with_array)):
+                    self.assertEqual(
+                        [KIND_NOTHING], self.helper().kinds(form, with_array)
+                    )
+
+    def test_the_hook_allows_the_command_after_each_read_past_form(self):
+        """AC-2 (FR2; TS-2): the whole judgment of the command is allow, with
+        and without the array assignment."""
+        for form in self.READ_PAST:
+            for with_array in (True, False):
+                with self.subTest((form, with_array)):
+                    self.assertEqual(
+                        ("allow", None), judge(self.command(form, with_array))
+                    )
+
+    # --- AC-3: an operator word before the closer is still read -----------
+
+    def test_an_operator_word_before_the_closer_reads_the_chunk_as_uncertain(self):
+        """AC-3 (FR3; TS-3): the scan reads true for `[[ true && true =~ true
+        ]]` and `[[ true && true -eq 0 ]]`."""
+        for form in self.KEEP_DENY:
+            with self.subTest(form):
+                self.assertTrue(self.helper().scan(form))
+
+    def test_the_notion_call_after_each_keep_deny_form_is_inspected(self):
+        """AC-3 (FR3; TS-3): the `mcp-bridge` statement after the array
+        assignment and the form is exactly [KIND_INSPECTED]."""
+        for form in self.KEEP_DENY:
+            with self.subTest(form):
+                self.assertEqual([KIND_INSPECTED], self.helper().kinds(form, True))
+
+    def test_the_hook_denies_the_command_after_each_keep_deny_form(self):
+        """AC-3 (FR3; TS-3): the whole judgment is deny with the reason ID of
+        the decoded `git branch -D`."""
+        for form in self.KEEP_DENY:
+            with self.subTest(form):
+                self.assertEqual(
+                    ("deny", "git-branch-force-delete"),
+                    judge(self.command(form, True)),
+                )
+
+    # --- AC-4: what closes a continuation statement -----------------------
+
+    def test_a_closer_operand_before_the_real_closer_reads_the_chunk_as_certain(self):
+        """AC-4 (a) (FR1, FR3; TS-4; TM-1): after an operand that looks like a
+        closer, the real closer ends the reading: `[[ a && true == X ]] >=~`
+        and `[[ a && true == X ]] >-eq` read false for each X of
+        TestSourceTextReadings.CLOSER_OPERANDS, and the statement holding X
+        reports (false, false)."""
+        for operand in TestSourceTextReadings.CLOSER_OPERANDS:
+            for target in (">=~", ">-eq"):
+                form = "[[ a && true == " + operand + " ]] " + target
+                with self.subTest(form):
+                    answer, reports = self.reports(form)
+                    self.assertFalse(answer)
+                    self.assertEqual((False, False), reports[1])
+
+    def test_a_closer_operand_with_no_real_closer_keeps_the_conditional_open(self):
+        """AC-4 (b) (FR1, FR3; TS-4; TM-1): `[[ a && true == X || true -eq 0
+        ]]` reads true for each X, and the statement holding X reports (false,
+        true): the conditional is still open after it."""
+        for operand in TestSourceTextReadings.CLOSER_OPERANDS:
+            form = "[[ a && true == " + operand + " || true -eq 0 ]]"
+            with self.subTest(form):
+                answer, reports = self.reports(form)
+                self.assertTrue(answer)
+                self.assertEqual((False, True), reports[1])
+
+    def test_an_escaped_closer_alone_does_not_close_the_conditional(self):
+        """AC-4 (c) (FR1, FR3; TS-4): `[[ a && true -eq \\]\\]` has no real
+        closer and an operator word before the end: the scan reads true."""
+        self.assertTrue(self.helper().scan("[[ a && true -eq \\]\\]"))
+
+    def test_a_closer_with_a_stripped_carriage_return_is_not_a_closer(self):
+        """AC-4 (d) (FR1, FR3; TS-4): a carriage return directly after `]]` is
+        taken off the word by the lexer, so that `]]` is not a closer and the
+        `=~` after it is read: the scan reads true and the second statement
+        reports (true, true)."""
+        answer, reports = self.reports("[[ a && true == b ]]\r >=~")
+        self.assertTrue(answer)
+        self.assertEqual((True, True), reports[1])
+
+    def test_an_escaped_closer_at_the_head_of_a_continuation_statement_is_an_operand(self):
+        """AC-4 (e) (FR1; TS-4): in `[[ a && \\]\\] == x ]] >=~` the statement
+        after `&&` begins with an escaped `]]`, an operand; the real closer
+        after `x` ends the reading, and the statement reports (false, false).
+        (The scan of the chunk stays true from the command-level reading,
+        which finds a command name that is no allowlist name, so only the
+        report of the conditional reading is asserted.)"""
+        _, reports = self.reports("[[ a && \\]\\] == x ]] >=~")
+        self.assertEqual((False, False), reports[1])
+
+    # --- AC-5: the docstring ----------------------------------------------
+
+    def test_the_docstring_states_the_reading_of_a_statement_that_holds_the_closer(self):
+        """AC-5 (FR4; TS-6): the whitespace-normalized docstring of
+        _args_json_conditional_step() holds the new sentence verbatim and still
+        holds the sentence about the opener statement."""
+        doc = " ".join(inspect.getdoc(GUARD._args_json_conditional_step).split())
+        self.assertIn(self.NEW_SENTENCE, doc)
+        self.assertIn(self.OLD_SENTENCE, doc)
+
+    # --- AC-6: the case table ---------------------------------------------
+
+    def wanted(self):
+        """(decision, command) of the six rows of the case table."""
+        rows = []
+        for form in self.READ_PAST:
+            rows.append(("allow", self.command(form, False)))
+            rows.append(("allow", self.command(form, True)))
+        for form in self.KEEP_DENY:
+            rows.append(("deny", self.command(form, True)))
+        return rows
+
+    def test_the_six_rows_stand_in_the_case_table_with_their_decision(self):
+        """AC-6 (FR5, NFR1, NFR4; TS-5): the six rows stand in the case table
+        with their decision and fourth element (the deny rows carry only the
+        reason ID of the decoded command, the allow rows no fourth element),
+        under a label that starts with `dbracket-was-open-close-scan`, and each
+        command string appears once in the table."""
+        cases = self.helper().table()
+        counts = collections.Counter(case[2] for case in cases)
+        by_command = {case[2]: case for case in cases}
+        for decision, command in self.wanted():
+            with self.subTest(command[:80]):
+                case = by_command.get(command)
+                self.assertIsNotNone(case, "no case-table entry for " + command)
+                self.assertEqual(decision, case[0])
+                self.assertTrue(case[1].startswith(self.LABEL), case[1][:60])
+                self.assertEqual(1, counts[command], "the command string repeats")
+                if decision == "deny":
+                    self.assertEqual(4, len(case))
+                    self.assertEqual({"rule": "git-branch-force-delete"}, case[3])
+                else:
+                    self.assertEqual(3, len(case))
+
+    def test_every_row_of_this_task_is_one_of_the_six(self):
+        """AC-6 (FR5, NFR4): the rows whose label starts with
+        `dbracket-was-open-close-scan` are exactly the six the tests above
+        name."""
+        mine = [
+            case for case in self.helper().table()
+            if case[1].startswith(self.LABEL)
+        ]
+        self.assertEqual(
+            sorted(command for _, command in self.wanted()),
+            sorted(case[2] for case in mine),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
