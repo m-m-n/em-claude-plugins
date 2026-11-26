@@ -1,0 +1,33 @@
+schema_version: 1
+feature: dbracket-regex-settled
+records:
+- question_id: requirement.closer-determination
+  packet_id: create-spec-q0001
+  answered_at: '2026-11-26T23:10:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: select
+  selected_option_ids:
+  - balanced_group
+  freeform: null
+  normalized_answer: '閉じ括弧の判定は括弧の対応を数える: =~ または拡張パターンの接頭語の後ろにある引用されていない括弧トークンの深さを
+    1 つずつ数え（)) のような連結トークンも括弧ごとに数える）、深さ 1 以上の ]] は閉じ括弧にしない。深さ 0 の最初の ]] が閉じ括弧。括弧が無ければ最初の
+    ]] で閉じ、不確定にしない。文末でグループが閉じていなければその文は不確定（今と同じ）。確定と読んだパターン内の断片（@(x) の x、^(ab)$ の
+    ab）は後続のコマンド名として判定しない'
+  resolution_note: 'gate: create-spec.requirement-clarification; chosen: balanced_group;
+    not chosen: untrust_after_paren, ignore_in_opener; Codex consulted: true (1 turn,
+    readonly); Opus escalation ran: false. Key points: 括弧の深さを追い深さ 0 の最初の ]] で閉じれば、演算語の無い閉じた条件式は確定のまま、括弧内の
+    ]] の後ろの -eq は検出できる。現行の flat からは括弧が消えるので絞り込み前の words を使い、)) 等の連結トークンは括弧ごとに数える。untrust_after_paren
+    は @(x) の誤爆が残り、ignore_in_opener は開き文の迂回を見逃す。リスク: 字句解析はパターン内の | でも文を分けるため、分割時点で深さが残る形は不確定のまま。呼び出し側は
+    @(x) の x や ^(ab)$ の ab を別コマンド名として再判定するので、呼び出し側でも確定したパターンの断片をコマンド扱いから外す必要がある'
+- question_id: requirement.continued-statement-scope
+  packet_id: create-spec-q0001
+  answered_at: '2026-11-26T23:10:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - same_rule_both
+  freeform: null
+  normalized_answer: 開き文と && / || 後の継続文（was_open 側）の両方に同じ規則を適用する
+  resolution_note: 'gate: create-spec.requirement-clarification; chosen: same_rule_both;
+    not chosen: opener_only; Codex consulted: true (same turn); Opus escalation ran:
+    false. Key points: 開き文と継続文は一つの条件式で、両方が _unsettled() を呼ぶため、開き文だけ直すと継続文に同じ誤検知が残る'

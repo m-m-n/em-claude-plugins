@@ -6,7 +6,9 @@ generation: 1
 base_revision: a6c5a17ccbed5ff7bed48c756240b33aa9881daa
 last_input_digest: sha256:55ad3222014496bf52c34b84e4cfd5bf3c4f68e3abfc019dfb957e482873ab35
 active_request_id: create-spec-run-0001
-packets: {}
+packets:
+  create-spec-q0001:
+    status: answered
 answers:
   create-spec.feature-identity:
     packet_id: null
@@ -17,9 +19,39 @@ answers:
     - derive_from_task_description
     freeform: null
     normalized_answer: 'feature name derived from the task description: dbracket-regex-settled'
+  requirement.closer-determination:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-26T23:10:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids:
+    - balanced_group
+    freeform: null
+    normalized_answer: '閉じ括弧の判定は括弧の対応を数える: =~ または拡張パターンの接頭語の後ろにある引用されていない括弧トークンの深さを
+      1 つずつ数え（)) のような連結トークンも括弧ごとに数える）、深さ 1 以上の ]] は閉じ括弧にしない。深さ 0 の最初の ]] が閉じ括弧。括弧が無ければ最初の
+      ]] で閉じ、不確定にしない。文末でグループが閉じていなければその文は不確定（今と同じ）。確定と読んだパターン内の断片（@(x) の x、^(ab)$
+      の ab）は後続のコマンド名として判定しない'
+  requirement.continued-statement-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-26T23:10:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - same_rule_both
+    freeform: null
+    normalized_answer: 開き文と && / || 後の継続文（was_open 側）の両方に同じ規則を適用する
+  create-spec.design-step:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-26T23:10:00+09:00'
+    source: batch_policy
+    answer_mode: select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design step skipped per analyst recommendation (no UI)
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: needs_user_input
   input_digest: sha256:55ad3222014496bf52c34b84e4cfd5bf3c4f68e3abfc019dfb957e482873ab35
 artifacts: []
 patches: []
