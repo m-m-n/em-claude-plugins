@@ -138,7 +138,7 @@ workflow:
   - SC-2
   failed_items: []
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: Pin the uncertain reading of the parenthesised comparison form
