@@ -162,7 +162,8 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
+    branch: em-workflow/dbracket-regex-settled/task0002
 review:
   status: pending
   plan:
