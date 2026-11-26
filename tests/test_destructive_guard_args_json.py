@@ -4168,15 +4168,23 @@ class TestSourceTextReadings(unittest.TestCase):
                 self.assertIsNone(re.search(r"\b" + re.escape(command) + r"\b", doc))
 
     def test_the_readings_are_called_only_from_the_scan(self):
-        """AC-6 (NFR2): their results are kept with the per-chunk answer
-        because nothing but the scan calls them."""
+        """AC-6 (NFR2): the redirection reading is called only from the
+        per-chunk scan, whose answer keeps its result; the conditional reading
+        is called from that scan and from the shadow scan, each of which keeps
+        its own answer per chunk."""
         with open(HOOK, encoding="utf-8") as handle:
             sites = _CallSites()
             sites.visit(ast.parse(handle.read()))
-        for name in ("_args_json_fd_variable_deferred", "_args_json_conditional_step"):
+        for name, expected in (
+            ("_args_json_fd_variable_deferred", {"_args_json_nameref_scan"}),
+            (
+                "_args_json_conditional_step",
+                {"_args_json_nameref_scan", "_args_json_shadow_scan"},
+            ),
+        ):
             with self.subTest(name):
                 places = {where for ref, where in sites.references if ref == name}
-                self.assertEqual({"_args_json_nameref_scan"}, places)
+                self.assertEqual(expected, places)
 
     def test_the_readings_make_no_decision_and_name_no_reason(self):
         """AC-6 (FR8): the helpers of the two readings build no decision and
@@ -4497,7 +4505,13 @@ class TestDbracketRegexSettled(unittest.TestCase):
     notion call after it excluded (KIND_NOTHING), and one whose closer cannot
     be placed stays uncertain, so the call is inspected (KIND_INSPECTED). The
     parentheses the reading counted stay inside their simple command, so the
-    words between them are no command names."""
+    words between them are no command names.
+
+    task0002 (FR2, FR3, FR6, FR7, NFR1 to NFR4; TM-1, TM-3): item 3 of
+    `_args_json_shadow_scan()` shares those parentheses, in a conditional the
+    reading settled, so the notion call after a regex that ends in `$` keeps
+    its exclusion through the whole hook; a `]]` that touches a pattern's
+    parenthesis is no closer."""
 
     LABEL = "dbracket-regex-settled"
     ARRAY = "A=(json --mcp desktop-commander --tool start_process); "
@@ -4507,12 +4521,15 @@ class TestDbracketRegexSettled(unittest.TestCase):
     )
     CONTINUATION = "\\" + "\n"
     # AC-1: forms the depth reading places a closer for, and whose notion call
-    # keeps the exclusion all the way through the hook.
+    # keeps the exclusion all the way through the hook. `^(ab)$` ends the regex
+    # in `$`: the shadow scan keeps its counted parentheses inside the `[[`
+    # command, so the `$` is no command name it cannot restore.
     REGEX_ALLOW = (
         "[[ x =~ a ]]",
         "[[ version =~ ^v ]]",
         "[[ a =~ b ]]",
         "[[ x =~ ^(ab)c ]]",
+        "[[ x =~ ^(ab)$ ]]",
         "[[ a == @(x) ]]",
         "[[ a == ?(x) ]]",
         "[[ a == *(x) ]]",
@@ -4520,28 +4537,52 @@ class TestDbracketRegexSettled(unittest.TestCase):
         "[[ a == !(x) ]]",
         "[[ a == @(true) && true ]]",
     )
-    # AC-4: the same rule in a continuation statement.
-    CONTINUATION_ALLOW = ("[[ a == b && true =~ ^(ab)c ]]",)
-    # AC-1, AC-4: the forms of the task plan that end the regex in `$`. The
-    # conditional reading and the per-chunk scan place their closer and read
-    # false; the notion call after them is still inspected, because the
-    # separate reading of _args_json_shadow_scan() (item 3) splits the same
-    # statement at every parenthesis and reads the `$ ]]` left over as a
-    # command name it cannot restore. That reading is outside this change.
-    SHADOW_HELD = ("[[ x =~ ^(ab)$ ]]", "[[ a == b && true =~ ^(ab)$ ]]")
+    # AC-1, AC-4: the same rule in a continuation statement.
+    CONTINUATION_ALLOW = (
+        "[[ a == b && true =~ ^(ab)c ]]",
+        "[[ a == b && true =~ ^(ab)$ ]]",
+    )
     # AC-5: a `=~` word and a quoted parenthesis that open no pattern.
     READING_ALLOW = ("[[ x == =~ ]]", '[[ a =~ "(" ]]')
+    # AC-2: a `]]` that touches a pattern's parenthesis (a `)` before it, a
+    # `(` after it, no blank between) is no closer, so the `-eq` after the
+    # `||` stands in the conditional.
+    TOUCHING_CLOSER = (
+        "[[ x =~ (x)]] || true -eq 0 ]]",
+        "[[ a == @(x)]] || true -eq 0 ]]",
+        "[[ a == b && true =~ (x)]] || true -eq 0 ]]",
+    )
+    # AC-2: the form whose `]]` touches the `(` after it; read by the tests
+    # only, it is no entry of the case table.
+    TOUCHING_OPENER = ("[[ x =~ ]](x) || true -eq 0 ]]",)
     # AC-2, AC-3, AC-4, AC-5: forms whose closer cannot be placed, or is not
-    # the first `]]`.
+    # the first `]]`. The last two are written across a line continuation.
     DENY = (
         "[[ x =~ (]]) || true -eq 0 ]]",
         "[[ a == @(]]) || true -eq 0 ]]",
         "[[ x =~ (a|b) ]]",
         "[[ x =~ (a ]]",
         "[[ a == b && true == @(]]) || true -eq 0 ]]",
+        *TOUCHING_CLOSER,
         "[[ x =" + CONTINUATION + "~ a ]]",
         "[[ a == @" + CONTINUATION + "(x) ]]",
     )
+    # AC-3: forms the shadow scan reads true. Their parentheses stay
+    # boundaries (before the pattern start, before the opener, after the
+    # closer, no conditional) or stand in a conditional the reading did not
+    # settle (a statement read uncertain, a conditional left open, a statement
+    # after an uncertain one).
+    SHADOW_BOUNDARY = (
+        "[[ ( $y == b ) ]]",
+        "[[ x =~ (a) ]] && ( eval x )",
+        "echo @(eval)",
+        "[[ a =~ b ]] @(eval)",
+        "[[ x =~ (eval) && y =~ (a|b) ]]",
+        "[[ x =~ (eval) && true",
+        "[[ x =~ (a|b) ]]; [[ a == @(eval) ]]",
+        "( eval x ) && [[ a == @(y) ]]",
+    )
+    SCANS = {"_args_json_nameref_scan", "_args_json_shadow_scan"}
 
     def plain(self, text):
         return GUARD._MarkedText.plain(text)
@@ -4549,6 +4590,10 @@ class TestDbracketRegexSettled(unittest.TestCase):
     def scan(self, text):
         """The per-chunk answer for the chunk TEXT (no heredoc)."""
         return GUARD._args_json_nameref_scan(self.plain(text))
+
+    def shadow(self, text):
+        """The answer of _args_json_shadow_scan() for the chunk TEXT."""
+        return GUARD._args_json_shadow_scan(self.plain(text))
 
     def command(self, form):
         return self.ARRAY + form + "; " + self.NOTION_SID
@@ -4576,10 +4621,32 @@ class TestDbracketRegexSettled(unittest.TestCase):
     def test_a_regex_or_extended_pattern_form_reads_the_chunk_as_certain(self):
         """AC-1, AC-4 (FR1 to FR4): the per-chunk scan reads false for each
         form, the two that end the regex in `$` included."""
-        forms = self.REGEX_ALLOW + self.CONTINUATION_ALLOW + self.SHADOW_HELD
+        forms = self.REGEX_ALLOW + self.CONTINUATION_ALLOW
         for form in forms:
             with self.subTest(form):
                 self.assertFalse(self.scan(form))
+
+    def test_the_shadow_scan_reads_false_for_every_allow_form(self):
+        """AC-1 (FR7, FR1, FR2; TM-3): the shadow scan reads false for each
+        allow form of the class, the two that end the regex in `$` included,
+        and so does the per-chunk scan for those two."""
+        for form in ("[[ x =~ ^(ab)$ ]]", "[[ a == b && true =~ ^(ab)$ ]]"):
+            with self.subTest("both scans: " + form):
+                self.assertFalse(self.scan(form))
+                self.assertFalse(self.shadow(form))
+        forms = self.REGEX_ALLOW + self.CONTINUATION_ALLOW + self.READING_ALLOW
+        for form in forms:
+            with self.subTest("shadow scan: " + form):
+                self.assertFalse(self.shadow(form))
+
+    def test_a_word_inside_a_counted_pattern_is_no_command_name_for_the_shadow_scan(self):
+        """AC-1 (FR7, A7): the `eval` in `@(eval)` and in `(eval)` is pattern
+        text, as in Bash, in a conditional the reading settled: the opening
+        statement closes it itself, or a later statement that is read certain
+        closes it."""
+        for form in ("[[ a == @(eval) ]]", "[[ x =~ (eval) && true ]]"):
+            with self.subTest(form):
+                self.assertFalse(self.shadow(form))
 
     def test_the_notion_call_after_each_regex_or_extended_pattern_form_is_excluded(self):
         """AC-1 (FR1, FR2, FR4): the notion call with `--session "$SID"` after
@@ -4605,6 +4672,20 @@ class TestDbracketRegexSettled(unittest.TestCase):
             "[[ x =~ (]]) || true -eq 0 ]]",
             "[[ a == @(]]) || true -eq 0 ]]",
         ):
+            with self.subTest(form):
+                self.assertTrue(self.scan(form))
+                self.assertEqual([KIND_INSPECTED], self.kinds(form))
+                self.assertEqual(
+                    ("deny", "git-branch-force-delete"), judge(self.command(form))
+                )
+
+    def test_a_closer_touching_a_pattern_parenthesis_is_not_the_closer(self):
+        """AC-2 (FR2, FR3, TM-1): a `]]` with a `)` before it or a `(` after
+        it, no blank between, is no closer: the statement is uncertain, so the
+        `-eq` after the `||` stands in the conditional, the per-chunk scan
+        reads true, the notion call is inspected and the hook denies it with
+        the reason ID of the decoded command."""
+        for form in self.TOUCHING_CLOSER + self.TOUCHING_OPENER:
             with self.subTest(form):
                 self.assertTrue(self.scan(form))
                 self.assertEqual([KIND_INSPECTED], self.kinds(form))
@@ -4736,6 +4817,46 @@ class TestDbracketRegexSettled(unittest.TestCase):
             [[str(tok) for tok in result[2]] for _words, result in calls],
         )
 
+    # --- AC-3, AC-4: the shadow scan shares the counted parentheses --------
+
+    def test_the_shadow_scan_keeps_every_other_parenthesis_a_boundary(self):
+        """AC-3 (FR7, TM-3): the shadow scan reads true for a parenthesis in
+        front of the pattern start, after the closer, in a statement with no
+        conditional, and in a conditional the reading did not settle (a
+        statement read uncertain before the closer, a conditional left open at
+        the end of the chunk, a statement after an uncertain one)."""
+        for form in self.SHADOW_BOUNDARY:
+            with self.subTest(form):
+                self.assertTrue(self.shadow(form))
+
+    def test_the_shadow_scan_reads_the_counted_parentheses_from_its_own_tokens(self):
+        """AC-4 (FR7, TM-3): during one shadow-scan call the conditional
+        reading is called at least once, every token it reports as counted is
+        one of the token objects passed to that same call, and the per-chunk
+        scan is not called (nothing is taken from its result or its cache)."""
+        original = GUARD._args_json_conditional_step
+        calls = []
+
+        def spy(marked, words, *args, **kwargs):
+            result = original(marked, words, *args, **kwargs)
+            calls.append((words, result))
+            return result
+
+        def not_called(*args, **kwargs):
+            raise AssertionError("_args_json_nameref_scan() was called")
+
+        with mock.patch.object(GUARD, "_args_json_conditional_step", spy), \
+                mock.patch.object(GUARD, "_args_json_nameref_scan", not_called):
+            answer = self.shadow("[[ x =~ ^(ab)$ ]]")
+        self.assertFalse(answer)
+        self.assertTrue(calls, "the conditional reading was never called")
+        reported = []
+        for words, (_uncertain, _is_open, counted) in calls:
+            for tok in counted:
+                self.assertTrue(any(tok is word for word in words))
+                reported.append(str(tok))
+        self.assertEqual(["(", ")"], reported)
+
     # --- AC-6: the case table ----------------------------------------------
 
     def table(self):
@@ -4798,8 +4919,10 @@ class TestDbracketRegexSettled(unittest.TestCase):
     ADDED_FUNCTIONS = ("_args_json_simple_commands",)
 
     def test_every_function_the_change_adds_is_referenced_only_from_the_scan(self):
-        """AC-7 (NFR2): the module-level functions this change adds are
-        referenced only inside `_args_json_nameref_scan()`."""
+        """AC-6 (NFR2): the module-level functions this change adds are
+        referenced only inside `_args_json_nameref_scan()` and
+        `_args_json_shadow_scan()`, and `_args_json_simple_commands()` inside
+        both of them."""
         with open(HOOK, encoding="utf-8") as handle:
             sites = _CallSites()
             sites.visit(ast.parse(handle.read()))
@@ -4807,7 +4930,13 @@ class TestDbracketRegexSettled(unittest.TestCase):
             with self.subTest(name):
                 self.assertTrue(callable(getattr(GUARD, name, None)))
                 places = {where for ref, where in sites.references if ref == name}
-                self.assertEqual({"_args_json_nameref_scan"}, places)
+                self.assertTrue(places)
+                self.assertLessEqual(places, self.SCANS)
+        places = {
+            where for ref, where in sites.references
+            if ref == "_args_json_simple_commands"
+        }
+        self.assertEqual(self.SCANS, places)
 
     def test_every_function_the_change_adds_decides_nothing_and_launches_nothing(self):
         """AC-7 (NFR2, NFR3): the source of each added function holds none of
@@ -4850,6 +4979,57 @@ class TestDbracketRegexSettled(unittest.TestCase):
         depth rule."""
         doc = " ".join(inspect.getdoc(GUARD._args_json_nameref_scan).split())
         self.assertIn("depth", doc)
+
+    def test_the_docstring_of_the_shadow_scan_states_the_shared_parentheses(self):
+        """AC-7 (NFR4): the docstring of `_args_json_shadow_scan()` names the
+        conditional reading and the split of the simple commands, and keeps
+        the phrases other tests pin."""
+        doc = " ".join(inspect.getdoc(GUARD._args_json_shadow_scan).split())
+        for phrase in (
+            "_args_json_conditional_step()",
+            "_args_json_simple_commands()",
+            "Fail safe",
+            "Only the chunk's own text is read",
+            "the static-run match",
+            "_args_json_static_runs()",
+        ):
+            with self.subTest(phrase):
+                self.assertIn(phrase, doc)
+
+    def test_the_docstrings_of_the_conditional_reading_and_the_split_name_both_scans(self):
+        """AC-7 (NFR4): each docstring names `_args_json_nameref_scan()` and
+        `_args_json_shadow_scan()` as its callers and no longer says that the
+        first one is the only caller."""
+        for name in ("_args_json_conditional_step", "_args_json_simple_commands"):
+            doc = " ".join(inspect.getdoc(getattr(GUARD, name)).split())
+            with self.subTest(name):
+                self.assertIn("_args_json_nameref_scan()", doc)
+                self.assertIn("_args_json_shadow_scan()", doc)
+                self.assertNotIn("Called only from _args_json_nameref_scan().", doc)
+
+    def test_the_comment_opening_the_word_source_section_names_both_scans(self):
+        """AC-7 (NFR4): the comment block that opens the section of
+        `_args_json_word_source()` says that the conditional reading is called
+        from both scans, and no longer that every helper below it is called
+        only from `_args_json_nameref_scan()`."""
+        with open(HOOK, encoding="utf-8") as handle:
+            lines = handle.read().splitlines()
+        (start,) = [
+            number for number, line in enumerate(lines)
+            if line.startswith("# --- Syntax read from a word as written")
+        ]
+        block = []
+        for line in lines[start:]:
+            if not line.startswith("#"):
+                break
+            block.append(line.lstrip("#"))
+        text = " ".join(" ".join(block).split())
+        self.assertIn("_args_json_shadow_scan()", text)
+        self.assertIn("_args_json_nameref_scan()", text)
+        self.assertIn("_args_json_fd_variable_deferred()", text)
+        self.assertNotIn(
+            "called only from _args_json_nameref_scan(), so their result", text
+        )
 
 
 if __name__ == "__main__":
