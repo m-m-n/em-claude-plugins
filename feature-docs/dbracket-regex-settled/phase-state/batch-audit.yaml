@@ -31,3 +31,13 @@ records:
   resolution_note: 'gate: create-spec.requirement-clarification; chosen: same_rule_both;
     not chosen: opener_only; Codex consulted: true (same turn); Opus escalation ran:
     false. Key points: 開き文と継続文は一つの条件式で、両方が _unsettled() を呼ぶため、開き文だけ直すと継続文に同じ誤検知が残る'
+- question_id: create-plan.planner-judgment-calls
+  packet_id: null
+  answered_at: '2026-11-26T23:30:43+09:00'
+  source: batch-codex-consultation
+  answer_mode: select
+  selected_option_ids:
+  - keep_planner_choices
+  freeform: null
+  normalized_answer: 'プランナーの 3 つの判断をそのまま採用: (1) 深さを数える処理は _args_json_conditional_step() の入れ子関数に置き、モジュール直下の補助関数は _args_json_nameref_scan() からだけ参照する (2) _args_json_conditional_step() の戻り値を 3 要素にし、3 つ目で数えた括弧トークンを返す (3) 数えている途中の括弧と他の演算子文字が連結したトークン（)> 等）と、末尾 CR 付きの =~ は不確定にする'
+  resolution_note: 'gate: none (planner judgment calls on SPEC gaps, no packet); chosen: keep_planner_choices for all three; not chosen: module-level helper under _args_json_conditional_step, separate side channel for counted parens, settled reading of glued paren tokens; Codex consulted: true (1 turn, readonly); Opus escalation ran: false. Key points: (1) 既存の _unsettled() と同じ位置に置けば構成図どおり条件式の解析へ閉じ込められ、外側の呼び出し口は _args_json_nameref_scan() に限られる。NFR2 の制限は入れ子関数に間接的に及ぶ (2) 戻り値を展開する本体側の箇所は _args_json_nameref_scan() の 1 か所で、既存テストが読む第 1 要素の意味も保てる (3) )> を区切り対象から外すとリダイレクト部分を巻き込み、読み飛ばすと閉じ括弧を見落とすため不確定が妥当。末尾 CR 付き =~ は現行の判定を維持できる'

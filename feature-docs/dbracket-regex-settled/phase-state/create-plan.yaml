@@ -1,16 +1,16 @@
 schema_version: 1
 feature: dbracket-regex-settled
 phase: create-plan
-status: in_progress
+status: applying_patch
 generation: 1
 base_revision: a57b776e89189d1871f408a5a06866c5ece0ecc7
 last_input_digest: sha256:ced1aa792cf99b4f91c0877c79a3411a4c52dc77f4db0d0d508a02d42a95fd01
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:ced1aa792cf99b4f91c0877c79a3411a4c52dc77f4db0d0d508a02d42a95fd01
   dispatch_digest_inputs:
     em-workflow/references/contracts/planner-contract.md: sha256:18464486c0546613d92935cba80087c4980d3791d41838162d23840e431da515
@@ -23,9 +23,25 @@ worker_runs:
     em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
     feature-docs/dbracket-regex-settled/SPEC.md: sha256:99144de9220ec7e6968181d8a62ecccc61d3b6552fc7cf4a4d5bdfbbeadda3db
     feature-docs/dbracket-regex-settled/workflow.yaml: sha256:7b95d4f780ff31c83908b7f75edaae3fa645f961c5fe12c5df7199b4095d89c5
-artifacts: []
+  output_digest: sha256:07bfc9158325853c31a713a2de8711fb1996bd66b013b1c6ec4bc807a87dd583
+  self_write_set:
+  - feature-docs/dbracket-regex-settled/THREAT-MODEL.md
+  - feature-docs/dbracket-regex-settled/VERIFICATION.md
+  - feature-docs/dbracket-regex-settled/tasks/task0001.md
+artifacts:
+- path: feature-docs/dbracket-regex-settled/THREAT-MODEL.md
+  sha256: sha256:c6f00fe5c514593142a01419297152a79ef5bf08ef49e0378b99370415eb3011
+  produced_by: create-plan-run-0001
+- path: feature-docs/dbracket-regex-settled/VERIFICATION.md
+  sha256: sha256:fa13d97f84471ad4224728d1c60b3ff74506e7449ad1a93f1801489e5a0420ac
+  produced_by: create-plan-run-0001
+- path: feature-docs/dbracket-regex-settled/tasks/task0001.md
+  sha256: sha256:5af590119a9de72a04ae90bd7b711edb16f9eb8ab75a4df2020c1a17f7feebbd
+  produced_by: create-plan-run-0001
 other_feature_doc_fixes: []
-patches: []
+patches:
+- patch_id: create-plan-p0001
+  status: pending
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}
