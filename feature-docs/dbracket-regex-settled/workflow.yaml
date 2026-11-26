@@ -2,33 +2,56 @@ schema_version: 1
 feature: dbracket-regex-settled
 created: '2026-11-26'
 base_branch: main
-goal: |
-  # destructive-guard が [[ ]] 内の正規表現比較・拡張パターンだけで後続の notion 呼び出しを検査対象にする
+goal: '# destructive-guard が [[ ]] 内の正規表現比較・拡張パターンだけで後続の notion 呼び出しを検査対象にする
+
 
   種別: バグ
 
+
   ## 現象
-  `_unsettled()` が `=~` の位置と右辺を確認せず、正規表現比較や拡張パターンがあるだけで条件式を不確定と読む。`[[ version =~ ^v ]]`、`[[ a =~ b ]]`、`[[ x == =~ ]]`、`[[ a == @(true) && true ]]` で、修正前は `KIND_NOTHING` だった後続の notion 呼び出しが `KIND_INSPECTED` になり、最終判定が `deny` になる場合もある。
+
+  `_unsettled()` が `=~` の位置と右辺を確認せず、正規表現比較や拡張パターンがあるだけで条件式を不確定と読む。`[[ version =~ ^v
+  ]]`、`[[ a =~ b ]]`、`[[ x == =~ ]]`、`[[ a == @(true) && true ]]` で、修正前は `KIND_NOTHING`
+  だった後続の notion 呼び出しが `KIND_INSPECTED` になり、最終判定が `deny` になる場合もある。
+
 
   ## 再現手順
+
   1. `[[ version =~ ^v ]]` の後に `--session "$SID"` 付きの標準形の notion 呼び出しを続けたコマンドを静的判定にかける
+
   2. 後続の呼び出しが検査対象になる（誤爆）
 
+
   ## 期待する挙動
-  SPEC FR3 のとおり、`_ARGS_JSON_DOUBLE_BRACKET_WORDS` の演算語（算術比較・`-v`）を含まない条件式は確定として扱い、後続の呼び出しを `KIND_NOTHING` に保つ。正規表現・拡張パターンの情報は閉じ括弧の判定にだけ使う。
+
+  SPEC FR3 のとおり、`_ARGS_JSON_DOUBLE_BRACKET_WORDS` の演算語（算術比較・`-v`）を含まない条件式は確定として扱い、後続の呼び出しを
+  `KIND_NOTHING` に保つ。正規表現・拡張パターンの情報は閉じ括弧の判定にだけ使う。
+
 
   ## 完了の定義
+
   - [ ] 再現手順で現象が起きない
+
   - [ ] 再発を検出するテストがある
 
+
   ## 該当箇所
+
   `em-workflow/hooks/destructive-guard.py` の `_unsettled()`（8777 行・8822 行付近）
 
+
   ## 実害・発生条件
-  無人実行で誤爆すると ask/deny で run が止まる。dbracket-opener-arith-scan のレビュー第1ラウンドで comprehensive / architecture / spec 観点が medium として報告し deferred にした（stable_id: 225b48189d76347d, ea1bfdc61f810e3e, 56b5aa2890c19362）。
+
+  無人実行で誤爆すると ask/deny で run が止まる。dbracket-opener-arith-scan のレビュー第1ラウンドで comprehensive
+  / architecture / spec 観点が medium として報告し deferred にした（stable_id: 225b48189d76347d,
+  ea1bfdc61f810e3e, 56b5aa2890c19362）。
+
 
   ## 追加指示
+
   不明点は Codex に相談し、比較的良いと判断した選択肢を採用する。
+
+  '
 parent_branch: em-workflow/dbracket-regex-settled/integration
 tier: reduced
 tier_decision:
@@ -57,7 +80,8 @@ project:
     main:
       language: python
       build_command: ''
-      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py && python3
+        -m unittest discover -s tests
       format_command: ''
 workflow:
 - id: create-spec
@@ -70,7 +94,8 @@ workflow:
   - DESIGN.md
   - design/
   status: skipped
-  skipped_reason: 'フックの静的判定の修正だけで UI が無い（create-spec.design-step: decide_autonomously → analyst の推奨どおり skip、design-system 候補 0 件）'
+  skipped_reason: 'フックの静的判定の修正だけで UI が無い（create-spec.design-step: decide_autonomously
+    → analyst の推奨どおり skip、design-system 候補 0 件）'
 - id: create-plan
   artifacts:
   - IMPLEMENTATION.md
@@ -84,14 +109,15 @@ workflow:
   base_commit: c51f19167ded265280ec456a5a432afbbd5b57c7
   completed_at_commit: 61b49bc85ef6950f20c1c79d71cb2f917b2fd4e4
 - id: review
-  status: pending
+  status: in_progress
 - id: verify
   status: pending
 - id: retrospect
   status: pending
 tasks:
   task0001:
-    title: Place the closer of a [[ ]] conditional that holds a regex or an extended pattern by parenthesis depth
+    title: Place the closer of a [[ ]] conditional that holds a regex or an extended
+      pattern by parenthesis depth
     plan: tasks/task0001.md
     files:
     - em-workflow/hooks/destructive-guard.py
@@ -117,6 +143,14 @@ tasks:
     branch: em-workflow/dbracket-regex-settled/task0001
 review:
   status: pending
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
 requirements:
   FR1:
     title: =~ / 拡張パターンの存在だけでは不確定にしない
