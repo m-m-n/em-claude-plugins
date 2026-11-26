@@ -99,7 +99,8 @@ workflow:
   base_commit: 6d393ee61e88e74df666c97cf3f56910c00924c7
   completed_at_commit: e4b4ba51e2beccfa42e8ab7e946411443eac9d83
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: c1e38073e41b39ab99569f613ca986eab9819095
 - id: verify
   status: pending
   result: null
@@ -134,8 +135,13 @@ tasks:
     branch: em-workflow/dbracket-opener-arith-scan/task0001
     notes: null
 review:
-  status: pending
-  rounds_completed: 0
+  status: completed
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
   plan:
     floor:
     - comprehensive
@@ -146,6 +152,7 @@ review:
     cross_validation: true
   residual_critical_high: 0
   needs_rework: false
+  last_round: reviews/round1.yaml
 requirements:
   FR1:
     title: Scan the operator words inside the conditional in the statement that contains

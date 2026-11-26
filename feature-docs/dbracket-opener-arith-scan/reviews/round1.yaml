@@ -1,0 +1,429 @@
+round: 1
+executed_at: '2026-11-26T21:29:39+09:00'
+scope:
+  review_mode: diff
+  base_commit: 6d393ee61e88e74df666c97cf3f56910c00924c7
+  head_commit: c1e38073e41b39ab99569f613ca986eab9819095
+  changed_files:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/dbracket-opener-arith-scan/task0001.tests.yaml
+  - tests/test_destructive_guard_args_json.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+- run_id: comprehensive#loop1.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#loop1.0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: architecture#loop1.0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#loop1.0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: comprehensive#loop2.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#loop2.0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: architecture#loop2.0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#loop2.0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: comprehensive#loop3.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#loop3.0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: architecture#loop3.0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#loop3.0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+findings:
+- stable_id: f94451111f3d366f
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8790
+  title: 末尾に復帰文字が付いた `]]` を閉じ括弧と読み、後続の算術比較が走査されない
+  description: '`_args_json_word_source()` は語末から外された復帰文字（U+000D）を除いた書かれ方を返すため、`_args_json_conditional_step()`
+    の閉じ括弧判定（開始文・継続文）が `]]<CR>` も閉じ括弧と読む。Bash では比較の右辺のまま残り、後ろの `&&` / `||` の先の算術比較は条件式の中で評価されるが、フックは条件式の外と読み、後続の
+    notion 呼び出しの `--args-json` が判定されない。'
+  suggestion: 開始文と継続文の両方で、`trailing_cr` を持つ語を閉じ括弧と読まない。
+  reproduction: 比較の右辺を `]]` の直後に実際の U+000D を1文字置いた語にする。Bash で `[[ $sample == <右辺> ]]` を評価すると、`sample`
+    が復帰文字込みなら終了値は 0、`]]` だけなら 1 になることを確認した。フック側では、この右辺の直後を `&&` で区切り、開始文を `lex_segments()` から `_args_json_conditional_step()`
+    に渡す。8607～8608行で復帰文字が除かれ、8790～8792行で `closed` が真になるため、継続すべき条件式に対して `is_open` が偽になる。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 85
+  resolution: fixed
+  resolution_reason: auto-applied loop 1
+- stable_id: 11d110990b0cbc46
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8796
+  title: 'TM-1: 正規表現内の `]]` で条件式の走査が終了する'
+  description: '`=~` の右辺にある括弧付き正規表現では、Bash は空白に囲まれた `]]` もパターンの一部として扱う。フックはここで条件式を閉じるため、後続の `&&` や `||`
+    の先にある算術比較を見落とす。比較の左辺が `true` などの許可名なら、後続の Notion 呼び出しが検査対象外のままになり、`--args-json` 内のコマンドが判定されない。これは
+    `feature-docs/dbracket-opener-arith-scan/THREAT-MODEL.md` の TB-1 で、TM-1 が求める実際の閉じ括弧までの走査が途切れるケースに当たる'
+  suggestion: 開始文と継続文の両方で、正規表現の内部にある語を閉じ括弧の候補から除く。正規表現の終端を特定できない場合は条件式を不確定と判定し、後続のペイロードを検査する
+  reproduction: 無害な条件式 `[[ x =~ (true ]] y) && false ]]` は `bash -n` で構文検査を通る。同じ文字列を `lex_segments()`
+    で分割し、最初の区間を `_args_json_conditional_step()` に渡すと、`&&` の時点で `(False, False)` が返る。ここではまだ条件式の内側なので、第2要素は
+    `True` であるべき
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2
+- stable_id: ebed04afda5cbb09
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8800
+  title: TM-1：行継続を含む `=~` と拡張パターン内の `]]` で条件式の走査が早く終わる
+  description: '`_args_json_word_source()` は行継続を残すため、`=` と `~` を行継続で分けると、8800行と8769行の完全一致判定をどちらも通らない。Bash
+    は同じ入力を正規表現の比較として扱う。この差により、正規表現内の `]]` で走査が終わり、後続の算術比較と `--args-json` の検査を見落とす経路が残る。feature-docs/dbracket-opener-arith-scan/THREAT-MODEL.md
+    の TB-1 で求める TM-1 の緩和が、この表記には適用されない。
+
+
+    `==`、`=`、`!=` の右辺では、Bash は括弧を含む拡張パターンを認識する。ところが8802行の終了判定はパターンの内側かどうかを確認せず、独立した語に見える `]]` で走査を打ち切る。その後にある算術比較を見落とすと、後続の
+    Notion 呼び出しが `--args-json` の検査対象から外れたままになる。feature-docs/dbracket-opener-arith-scan/THREAT-MODEL.md
+    の TB-1 における TM-1 の走査範囲を満たさない。[Bash の条件式仕様](https://www.gnu.org/software/bash/manual/html_node/Conditional-Constructs.html)'
+  suggestion: 引用とエスケープを区別したまま、Bash が取り除く行継続を除いた値で `=~` を判定する。開始文と継続文の両方で同じ判定を使う。 拡張パターンの右辺を一つのオペランドとして読み、その外側でだけ
+    `]]` を終端と判定する。右辺の終端を特定できない場合は、後続の `--args-json` を検査対象に残す。
+  reproduction: 無害な `[[ abc =~ b ]]` の `=` と `~` の間にバックスラッシュと改行を挿入しても、Bash は終了値0を返した。比較対象を `z` に変えると終了値は1になった。同じ演算子を
+    `_args_json_word_source()` から8800行に渡すと、元の改行が残るため `evaluates` はこの分岐で真にならない。
+  reproduction_alternates:
+  - 無害な `[[ "label ]] data" == @(label ]] data) ]]` は Bash で終了値0になり、右辺の `]]` がパターンの一部であることを確認できた。`_args_json_conditional_step()`
+    では、括弧内の語列にある `]]` が8803行の比較に一致し、本来の終端に達する前に8807行でループを抜ける。
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 3
+- stable_id: 0995fb9ebc703b77
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8877
+  title: SPEC FR3・AC-5 が確定とする `[[ ( a == b ) && true ]]` が不確定のままで、ケース表にも行が無い
+  description: SPEC の FR3・AC-5・TS-3 は `[[ ( a == b ) && true ]]` を確定と読み、後ろの `--session $SID` 付き notion
+    呼び出しを `KIND_NOTHING` に保つよう求める。実際は `(` で区切られた `a == b` がひとつの単純コマンドになり、許可名でない `a` を `_args_json_declares_nameref()`
+    が不確定と読むので `KIND_INSPECTED` になる（base コミットから同じ挙動）。タスク計画は既存の挙動を保ち、`tests/test_destructive_guard_args_json.py`
+    4388 行は SPEC と逆の判定（True）を固定しており、AC-6 が求めるケース表の行も無い。
+  suggestion: コマンド単位の読み取りは緩めない。SPEC の FR3・AC-5・TS-3 からこの形を外すか、不確定のまま残り後続の呼び出しは `KIND_INSPECTED` になると明記する（SPEC
+    改訂には承認が要る）。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 90
+  resolution: deferred
+  resolution_reason: 'medium severity: not an auto-fix candidate; left for a follow-up task (SPEC revision
+    needs approval)'
+- stable_id: 225b48189d76347d
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8777
+  title: 単独の `=~` があるだけで、後続の Notion 呼び出しが拒否される
+  description: '`_unsettled()` は `=~` の位置と右辺を確認しない。括弧を含まない `[[ version =~ ^v ]]` でも、`=~` が文字列比較の右辺にすぎない
+    `[[ x == =~ ]]` でも、基準版で false だった走査結果が true に変わり、後続の Notion 呼び出しが検査対象になる。前者では既存テストと同じ Notion 呼び出しの最終判定が
+    `deny` になることも確認した'
+  suggestion: '`=~` を演算子の位置で識別し、正規表現の終端を確定できない場合に限って不確定と判定する。単純な正規表現と、比較対象が文字列 `=~` の場合を回帰テストに加える'
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'medium severity: not an auto-fix candidate; left for a follow-up task'
+- stable_id: 73ea2b1bdc1a19f3
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8789
+  title: 条件式が `&&` をまたぐと、閉じ括弧の後のファイル名まで条件式として読む
+  description: '`was_open` 分岐は `]]` を探す前に、その文の全単語を `_unsettled()` に渡す。そのため `[[ true && true ]] >=~` では、出力先のファイル名
+    `=~` が条件式の判定を変え、後続の Notion 呼び出しが拒否される。基準版では同じ入力の走査結果は false だった'
+  suggestion: '`was_open` 分岐でも単語を出現順に処理し、有効な `]]` に達した時点で条件式の走査を終える。閉じ括弧とリダイレクト先が同じ文にある場合をテストする'
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'medium severity: not an auto-fix candidate; left for a follow-up task'
+- stable_id: 765df5f34cbc66d5
+  severity: medium
+  category: comprehensive
+  file: tests/test_destructive_guard_args_json.py
+  line: 4368
+  title: 閉じ括弧の末尾にある復帰文字を区別する修正に回帰テストがない
+  description: 追加された境界テストは通常の `]]` だけを使っている。`trailing_cr` の確認を両分岐からメモリ上で外すと、末尾に復帰文字がある入力の走査結果は true から
+    false に変わったが、追加された16件のテストはすべて通った
+  suggestion: 開始時の分岐と `was_open` 分岐のそれぞれで、末尾が `]]` なら条件式が閉じ、`]]` の直後に復帰文字があれば開いたままになることを検証する
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium severity: not an auto-fix candidate; left for a follow-up task'
+- stable_id: 73ea2b1bdc1a19f3
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8789
+  title: 条件式の途中に `&&` があると、閉じ括弧の後ろまで条件式として判定する
+  description: 開始側の分岐は `]]` で走査を終える。一方、`was_open` 側は全単語に `_unsettled()` を適用してから `]]` を探す。そのため、`&&` をまたぐと、閉じ括弧の後ろにあるリダイレクト先のファイル名
+    `=~` まで正規表現演算子として扱う。後続の Notion 呼び出しを検査対象にするかどうかが、条件式の分割位置で変わる。
+  suggestion: 開始位置だけを分岐で決め、その後は同じループで単語を順に読み、有効な `]]` に達した時点で走査を終える。閉じ括弧の後ろを読まない既存テストに、`&&` をまたぐ場合も加える。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'medium severity: not an auto-fix candidate; left for a follow-up task'
+- stable_id: ea1bfdc61f810e3e
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8777
+  title: 単純な正規表現比較の扱いがテストに記された契約と食い違う
+  description: '`_unsettled()` は `=~` を見つけると右辺を問わず不確実と判定する。この変更は括弧を含まない `[[ a =~ a ]]` にも及び、後続の Notion
+    呼び出しの除外を外す。一方、新しいテストクラスの4251～4253行は、整数比較と `-v` を含まない条件式では従来の判定を保つと明記している。追加されたテストには、この違いを判別する例がない。'
+  suggestion: 単純な正規表現比較でも除外を外す仕様かを受け入れ条件に明記し、`[[ a =~ a ]]` と括弧を含む正規表現の両方について、後続呼び出しの期待値をテストに固定する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'medium severity: not an auto-fix candidate; left for a follow-up task'
+- stable_id: 27997561fe67bbab
+  severity: medium
+  category: architecture
+  file: tests/test_destructive_guard_args_json.py
+  line: 4380
+  title: AC-5 のテストが仕様と逆の走査結果を要求している
+  description: 4271～4273行は、FR3 と AC-5 が `[[ ( a == b ) && true ]]` を「確実」と定めていると記載している。一方、AC-5 に紐づくテストは
+    `self.assertTrue(answer)` で走査全体が「不確実」を返すことを必須にしている。条件式を読む関数が不確実性を報告しないことは直前の表明で検証済みであり、最後の表明は走査全体を仕様に合わせたときに失敗する。
+  suggestion: AC-5 が対象とする判定を受け入れ条件とテストで揃える。条件式を読む関数だけが対象なら、その報告値を検証する。走査全体が対象なら、FR3 の期待値を実装とテストの両方に反映する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'medium severity: not an auto-fix candidate; left for a follow-up task'
+- stable_id: 56b5aa2890c19362
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8822
+  title: 正規表現や拡張パターンだけで後続の検査除外が外れる
+  description: SPEC FR3（40–45行）は、指定された演算語を含まない条件式を確定として扱い、後続の Notion 呼び出しを `KIND_NOTHING` に保つよう求めている。追加された
+    `_unsettled()` の判定により、`[[ a =~ b ]]` と `[[ a == @(true) && true ]]` はどちらも基準版で `KIND_NOTHING` だった後続呼び出しが
+    `KIND_INSPECTED` になる。
+  suggestion: 正規表現と拡張パターンの情報は閉じ括弧の判定に使い、FR1 の不確実判定は `_ARGS_JSON_DOUBLE_BRACKET_WORDS` に含まれる復元語に限定する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'medium severity: not an auto-fix candidate; left for a follow-up task'
+- stable_id: 73ea2b1bdc1a19f3
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8789
+  title: 条件式の継続分岐が閉じ括弧の後ろの語を不確実と判定する
+  description: SPEC の Implementation Approach（101–103行）は、既存の `was_open` 分岐の挙動を維持するよう求めている。追加された `_unsettled()`
+    は閉じ括弧の確認より先に文全体を調べるため、`[[ a == b && true ]] >=~` では閉じ括弧の外にあるリダイレクト先の `=~` を拾う。後続の Notion 呼び出しは基準版の
+    `KIND_NOTHING` から `KIND_INSPECTED` に変わる。
+  suggestion: '`was_open` 分岐の既存の判定を維持し、閉じ括弧より後ろにある語で新たに検査除外が外れないことをテストする。'
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'medium severity: not an auto-fix candidate; left for a follow-up task'
+- stable_id: 27997561fe67bbab
+  severity: medium
+  category: spec
+  file: tests/test_destructive_guard_args_json.py
+  line: 4380
+  title: AC-5 が確定と定める条件式を不確実として固定している
+  description: SPEC FR3・AC-5（40–45行、82–85行）は、`[[ ( a == b ) && true ]]` を確定とし、後続の Notion 呼び出しを `KIND_NOTHING`
+    にするよう明示している。実際にはコマンド単位の判定で括弧内の `a` がコマンド名として扱われ、走査は `True`、後続呼び出しは `KIND_INSPECTED` になる。追加テストはこの `True`
+    を期待値にしており、AC-6（86–90行）が求める同じ形式の `allow` ケースもケース表にない。
+  suggestion: この形式の括弧内を条件式として扱い、走査結果が `False`、後続呼び出しが `KIND_NOTHING` になることを検証する。ケース表にも対応する `allow` を追加する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'medium severity: not an auto-fix candidate; left for a follow-up task'
+evaluation:
+  round_summary: '第 1 ラウンド（diff、cross_validation=true）。4 観点の実行はすべて完了し、レビュー結果に注入の試みは無かった。security#0 の高
+    1 件（末尾に復帰文字が付いた `]]` を閉じ括弧と読む件）は、コードを読んで再現を確かめた（reproduced）。`[[ ( a == b ) && true ]]` が SPEC FR3・AC-5
+    と逆に不確定のままになる件は spec の中 1 件にまとめた。原因は、SPEC の「従来どおり確定」という前提が base コミットの挙動と違うこと。architecture#0 のテストの結合は低に下げた。comprehensive#0
+    の、右辺に `"-eq"` と書いた文字列比較も不確定と読む件は採らなかった（demoted）。観点ごとの結果: comprehensive = corroborated、security = corroborated、architecture
+    = corroborated、spec = corroborated。'
+  recommended_action: auto_fix
+  action_rationale: 再現を確かめた security の高 1 件の修正は、閉じ括弧判定 2 か所の変更で済むので auto_fix を勧める。spec の中 1 件は SPEC FR3・AC-5・TS-3
+    の改訂で解く。architecture の低 1 件は任意。
+dismissed_sites:
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8793
+  run_id: comprehensive#0
+  reason: demoted
+- file: tests/test_destructive_guard_args_json.py
+  line: 4385
+  run_id: comprehensive#0
+  reason: duplicate of another finding
+- file: tests/test_destructive_guard_args_json.py
+  line: 4388
+  run_id: architecture#0
+  reason: duplicate of another finding
+- file: em-workflow/hooks/tests/destructive-guard-cases.json
+  line: 1705
+  run_id: spec#0
+  reason: duplicate of another finding
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 3
+  applied_total: 3
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-dbracket-opener-arith-scan-20261126T122901Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
