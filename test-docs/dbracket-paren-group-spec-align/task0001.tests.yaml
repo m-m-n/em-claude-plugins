@@ -1,0 +1,76 @@
+task_id: task0001
+# 4a, before any edit: python3 em-workflow/hooks/tests/run-destructive-guard.py -> 1703/1703 passed;
+# python3 -m unittest discover -s tests -> Ran 17421 tests, OK (skipped=1). Nothing was edited while it ran
+# (the first edit came after it had finished), so the baseline is empty.
+baseline_failures: []
+# Re-executed after the implementation and after this record: the runner passes every case (1704/1704, the
+# new row included) and python3 -m unittest discover -s tests runs green with the new tests included.
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDbracketOpenerArithScan.test_the_notion_call_after_the_parenthesised_comparison_is_inspected
+    red_confirmed: false
+    red_reason: >-
+      The judgment pre-exists: the hook is not changed by this task, and on
+      the base commit the notion call after `[[ ( a == b ) && true ]]` already
+      records exactly [KIND_INSPECTED], so the test passed on its first run and
+      no red state occurred. A search of tests/ and em-workflow/hooks/tests/
+      for the form (by relative path and by basename) found no existing test
+      that runs the notion call after this form. The assertion compares
+      against the exact kinds list, so a later change that read the form as
+      certain (KIND_NOTHING) fails it.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDbracketOpenerArithScan.test_the_hook_denies_the_command_after_the_parenthesised_comparison
+    red_confirmed: false
+    red_reason: >-
+      The judgment pre-exists: the whole judgment of the command is already
+      ("deny", "git-branch-force-delete") on the base commit, so the test
+      passed on its first run and no red state occurred. The assertion
+      compares against the exact decision and reason ID, so a later change
+      that allowed the command fails it.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDbracketOpenerArithScan.test_the_parenthesised_comparison_command_stands_in_the_case_table_as_deny
+    red_confirmed: true
+    red_reason: >-
+      The red concerns the row itself. Before the row existed the test failed
+      with "AssertionError: 1 != 0 : []" (no case-table entry has a label
+      starting with `dbracket-paren-group-spec-align`). The test checks the
+      decision, the label prefix, that the fourth element is only
+      {"rule": "git-branch-force-delete"}, the command string and that no other
+      row repeats it. The runner outcome (python3
+      em-workflow/hooks/tests/run-destructive-guard.py passes the row on both
+      the decision and the reason ID, 1704/1704) is verified by running it;
+      the runner is not a test ID, and the row has no red state of its own
+      there because the judgment pre-exists.
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDbracketOpenerArithScan.test_the_parenthesised_comparison_command_stands_in_the_case_table_as_deny
+    red_confirmed: true
+    red_reason: >-
+      Before the row was added the test failed with "AssertionError: 1 != 0 :
+      []" at the lookup of the row by its label prefix.
+  AC-5:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      The criterion is the wording of a comment and of a docstring, and no
+      executable check can be made to fail on it: the existing
+      tests.test_destructive_guard_args_json.TestDbracketOpenerArithScan
+      .test_a_parenthesised_comparison_without_an_operator_word_reports_no_uncertain_statement
+      keeps its name and assertions and passes before and after, but it does
+      not read the comment or the docstring text. Checked by reading the
+      two texts and by a search for "SPEC discrepancy" and "task plan" in
+      them (none remain).
+  AC-6:
+    tests: []
+    red_confirmed: false
+    red_reason: >-
+      The criterion is the exit status of the project test command and the
+      scope of the diff (git diff --stat names only
+      tests/test_destructive_guard_args_json.py and
+      em-workflow/hooks/tests/destructive-guard-cases.json, the case table
+      only gains a row). No check of it could be observed failing before the
+      implementation, because it holds on the base commit.
