@@ -1,7 +1,7 @@
 schema_version: 1
 feature: dbracket-opener-arith-scan
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 12a26e5af40ed14ce85074cd6c53829e45506bb0
 last_input_digest: sha256:9766718238a580c799b4587da62d250b06673159d0b826e9f4a75e374afdf2e5
