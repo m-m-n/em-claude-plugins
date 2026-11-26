@@ -224,7 +224,11 @@ case — a declared path that never materializes is not a violation.
 - [ ] TS-3: Detection kept - `Spy(...).kinds()` on the AC-3 commands gives
   `[KIND_INSPECTED]`; `judge()` gives `("deny", "git-branch-force-delete")`.
 - [ ] TS-4: A non-closer `]]` in the continuation statement before the real
-  closer (for example `[[ a && \]\] == x ]] >=~`) is read past; the scan reads
+  closer is read past. For `[[ a && \]\] == x ]] >=~` the continuation
+  statement reports (false, false), and the scan still reads true because the
+  command-level reading treats the statement's command name `]]` (written
+  escaped) as uncertain. For `[[ a && true == X ]] >=~` and
+  `[[ a && true == X ]] >-eq`, with X a non-closer `]]` form, the scan reads
   false. A continuation statement with `-eq` before a non-closer and no real
   closer stays uncertain.
 

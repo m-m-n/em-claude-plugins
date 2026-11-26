@@ -15,3 +15,23 @@ records:
     `python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest
     discover -s tests` (test_command, already approved in bash_guard --list); build_command
     / format_command empty; refusal patterns: none'
+- question_id: create-plan.spec-ts4-alignment
+  packet_id: orchestrator-direct
+  answered_at: '2026-11-27T00:05:13+09:00'
+  source: codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - amend_spec_ts4
+  freeform: null
+  normalized_answer: 'SPEC TS-4 amended to match the code: the escaped-]] example
+    reports (false, false) for the continuation statement while the scan stays true
+    (command-level reading); scan-level false is stated with true-led forms'
+  resolution_note: 'unlisted-gate fallback (planner warning, no gate_id). Options:
+    (A) keep plan, leave SPEC TS-4 unchanged and record the discrepancy; (B) amend
+    SPEC TS-4 in this feature to match the code; (C) other. Codex consulted: yes;
+    it confirmed the planner''s claim by executing the planned was_open branch in
+    memory ([[ a && \]\] == x ]] >=~ -> scan True, step reports (False, True), (False,
+    False); true-led forms -> scan False) and recommended B (TS-4 and the plan agree,
+    escaped-]] read-past still checked, true-led forms check post-closer words, existing
+    command-name judgment suffices). Chosen: B. Not chosen: A, C. Opus escalation:
+    not run.'
