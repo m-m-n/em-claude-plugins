@@ -87,7 +87,7 @@ workflow:
 - id: create-spec
   artifacts:
   - SPEC.md
-  status: needs_update
+  status: in_progress
 - id: design
   artifacts:
   - DESIGN.md
