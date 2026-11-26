@@ -8740,6 +8740,15 @@ def _args_json_conditional_step(marked, words, commands, sep, was_open):
     operand: the conditional stays open and the words of the later statements
     are the conditional's.
 
+    In the statement that holds the opener, the words from just after the
+    opener up to just before the closer (to the end of the statement when it
+    has none) are read for those operator words too, whatever simple command
+    they fall in: a parenthesis inside the conditional (`[[ ( true -eq 0 ) &&
+    true ]]`) makes the words after it a simple command of its own, and the
+    command-level reading keeps such a command certain under an allowlisted
+    name whatever its words hold. Words before the opener and words after the
+    closer are not read here.
+
     While a conditional is open, a word that is an operator evaluating its
     operand (_ARGS_JSON_DOUBLE_BRACKET_WORDS) is uncertain, and so is a `;` or
     a lone `&` that ends a statement before the closer
@@ -8773,13 +8782,19 @@ def _args_json_conditional_step(marked, words, commands, sep, was_open):
         if opener is not None:
             seen = False
             closed = False
+            evaluates = False
             for tok in flat:
                 if tok is opener:
                     seen = True
-                elif seen and _args_json_word_source(marked, tok) == "]]":
-                    closed = True
-                    break
+                elif seen:
+                    if _args_json_word_source(marked, tok) == "]]":
+                        closed = True
+                        break
+                    if _args_json_declaration_word(marked, tok)[0] in _ARGS_JSON_DOUBLE_BRACKET_WORDS:
+                        evaluates = True
             is_open = not closed
+            if evaluates:
+                return True, is_open
     if is_open and _args_json_separator_breaks_conditional(sep):
         return True, True
     return False, is_open

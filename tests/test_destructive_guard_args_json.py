@@ -47,6 +47,7 @@ import os
 import re
 import subprocess
 import sys
+import textwrap
 import unittest
 from unittest import mock
 
@@ -4236,6 +4237,255 @@ class TestSourceTextReadings(unittest.TestCase):
                     self.assertEqual({"rule": "git-branch-force-delete"}, case[3])
                 else:
                     self.assertEqual("allow", case[0])
+
+
+class TestDbracketOpenerArithScan(unittest.TestCase):
+    """dbracket-opener-arith-scan task0001 (FR1 to FR3, NFR1 to NFR5; TM-1):
+    in the statement that holds the opener of a `[[ ]]` conditional, the words
+    from just after the opener up to just before the closer (to the end of the
+    statement when it has none) are read for the operator words (`-eq` and the
+    other integer comparisons, `-v`) whatever simple command they fall in. A
+    parenthesis inside the conditional makes the words after it a simple
+    command of its own, whose name the allowlist may keep certain; the operator
+    word is counted all the same, so the notion call after the conditional is
+    inspected (KIND_INSPECTED). A conditional with no such word keeps the
+    reading it had (KIND_NOTHING), and words before the opener and after the
+    closer are not part of the scan."""
+
+    LABEL = "dbracket-opener-arith-scan"
+    ARRAY = "A=(json --mcp desktop-commander --tool start_process); "
+    NOTION_SID = (
+        "mcp-bridge run --mcp notion --tool notion-create-comment "
+        "--session \"$SID\" --args-json '{\"command\":\"git branch -D example\"}'"
+    )
+    OPERATORS = ("-eq", "-ne", "-lt", "-le", "-gt", "-ge")
+    NAMES = ("true", "false", "echo", ":", "mcp-bridge")
+    # The forms whose notion call is inspected and denied (AC-2, AC-3).
+    DENY_FORMS = (
+        "[[ ( true -eq 0 ) && true ]]",
+        "if [[ ( true -eq 0 ) && true ]]; then :; fi",
+        "[[ ( -v x ) && true ]]",
+    )
+    # The new form the scan keeps certain (AC-4).
+    ALLOW_FORM = "[[ ( true == x ) && true ]]"
+    # The form SPEC FR3 / AC-5 name as certain; the plan keeps its chunk-level
+    # answer as it was (see the task plan, "SPEC discrepancy").
+    PAREN_FORM = "[[ ( a == b ) && true ]]"
+
+    def plain(self, text):
+        return GUARD._MarkedText.plain(text)
+
+    def scan(self, text):
+        """The per-chunk answer for the chunk TEXT (no heredoc)."""
+        return GUARD._args_json_nameref_scan(self.plain(text))
+
+    def kinds(self, form, with_array):
+        """The kinds of the `mcp-bridge` statements of FORM, `; ` and the
+        notion call with `--session "$SID"`."""
+        head = self.ARRAY if with_array else ""
+        return Spy(head + form + "; " + self.NOTION_SID).kinds()
+
+    def conditional_reports(self, text):
+        """(the per-chunk answer for TEXT, the (UNCERTAIN, OPEN) results of
+        _args_json_conditional_step() during that scan, in order)."""
+        original = GUARD._args_json_conditional_step
+        reports = []
+
+        def spy(*args, **kwargs):
+            result = original(*args, **kwargs)
+            reports.append(result)
+            return result
+
+        with mock.patch.object(GUARD, "_args_json_conditional_step", spy):
+            answer = self.scan(text)
+        return answer, reports
+
+    # --- AC-1: the operator word after a parenthesis -----------------------
+
+    def test_an_operator_word_after_a_parenthesis_reads_the_chunk_as_uncertain(self):
+        """AC-1 (FR1, TM-1): the scan reads true for `[[ ( true -eq 0 ) && true
+        ]]` and for every variant: the other five comparisons, `||` for `&&`,
+        and each allowlisted name in place of `true` inside the parentheses."""
+        for operator in self.OPERATORS:
+            for joiner in ("&&", "||"):
+                for name in self.NAMES:
+                    form = "[[ ( " + name + " " + operator + " 0 ) " + joiner + " true ]]"
+                    with self.subTest(form):
+                        self.assertTrue(self.scan(form))
+
+    def test_the_scan_reads_each_deny_form_as_uncertain(self):
+        """AC-1, AC-3 (FR1, FR2): the scan reads true for each deny form,
+        the `if` form and the `-v` form included."""
+        for form in self.DENY_FORMS:
+            with self.subTest(form):
+                self.assertTrue(self.scan(form))
+
+    # --- AC-2 / AC-3: the notion call after the conditional ---------------
+
+    def test_the_notion_call_after_each_deny_form_is_inspected(self):
+        """AC-2, AC-3 (FR1, FR2, TM-1): the notion call with `--session
+        "$SID"` after the array assignment and the form is inspected."""
+        for form in self.DENY_FORMS:
+            with self.subTest(form):
+                self.assertEqual([KIND_INSPECTED], self.kinds(form, True))
+
+    def test_the_hook_denies_the_command_after_each_deny_form(self):
+        """AC-2, AC-3 (FR2, TM-1): the whole judgment of the command is deny
+        with the reason ID of the decoded `git branch -D`."""
+        for form in self.DENY_FORMS:
+            with self.subTest(form):
+                command = self.ARRAY + form + "; " + self.NOTION_SID
+                self.assertEqual(("deny", "git-branch-force-delete"), judge(command))
+
+    # --- AC-4: forms that evaluate nothing ---------------------------------
+
+    def test_a_conditional_with_no_operator_word_keeps_the_exclusion(self):
+        """AC-4 (FR3): `[[ ( true == x ) && true ]]` reads false and the notion
+        call after it (with the array assignment) gives KIND_NOTHING."""
+        with self.subTest("per-chunk scan"):
+            self.assertFalse(self.scan(self.ALLOW_FORM))
+        with self.subTest("notion call"):
+            self.assertEqual([KIND_NOTHING], self.kinds(self.ALLOW_FORM, True))
+
+    def test_each_closed_conditional_form_of_the_source_text_readings_keeps_the_exclusion(self):
+        """AC-4 (FR3, NFR1): the notion call after each CONDITIONAL_ALLOW form
+        of TestSourceTextReadings (with the array assignment) gives
+        KIND_NOTHING; the forms are read from that table, not copied."""
+        for label, form in TestSourceTextReadings.CONDITIONAL_ALLOW:
+            with self.subTest(label):
+                self.assertEqual([KIND_NOTHING], self.kinds(form, True))
+
+    def test_each_certain_form_of_the_allowlist_reading_keeps_the_exclusion(self):
+        """AC-4 (FR3, NFR1): the notion call after each certain_forms() form of
+        TestCommandNameAllowlist (without the array assignment) gives
+        KIND_NOTHING; the forms are read from that method, not copied."""
+        for label, form in TestCommandNameAllowlist().certain_forms():
+            with self.subTest(label):
+                self.assertEqual([KIND_NOTHING], self.kinds(form, False))
+
+    # --- AC-5: the range of the scan is bounded ----------------------------
+
+    def test_an_operator_word_after_the_closer_is_not_scanned(self):
+        """AC-5 (FR3): the word `-eq` stands after the closer, as the target of
+        a redirection the command-level reading takes out; the scan reads
+        false."""
+        self.assertFalse(self.scan("[[ a == b ]] >-eq"))
+
+    def test_an_operator_word_before_the_opener_is_not_scanned(self):
+        """AC-5 (FR3): the word `-eq` stands before the opener, as the target
+        of a redirection the command-level reading takes out; the scan reads
+        false."""
+        self.assertFalse(self.scan(">-eq [[ a == b ]]"))
+
+    def test_a_parenthesised_comparison_without_an_operator_word_reports_no_uncertain_statement(self):
+        """AC-5 (FR3, the task plan's "SPEC discrepancy"): for `[[ ( a == b )
+        && true ]]` _args_json_conditional_step() reports none of its
+        statements as uncertain, and the scan still reads true, from the
+        command-level reading, as it did before."""
+        answer, reports = self.conditional_reports(self.PAREN_FORM)
+        self.assertTrue(reports)
+        self.assertEqual([], [report for report in reports if report[0]])
+        self.assertTrue(answer)
+
+    def test_the_conditional_reading_reports_the_operator_word_of_the_opener_statement(self):
+        """AC-1 (FR1): the uncertain statement is reported by
+        _args_json_conditional_step() itself, whatever the command-level
+        reading says of the simple command that holds the word."""
+        answer, reports = self.conditional_reports("[[ ( true -eq 0 ) && true ]]")
+        self.assertTrue(answer)
+        self.assertTrue(reports and reports[0][0], reports)
+
+    # --- AC-6: the case table ----------------------------------------------
+
+    def table(self):
+        with open(CASES_PATH, encoding="utf-8") as handle:
+            return json.load(handle)
+
+    def existing_forms(self):
+        """The AC-4 forms that stand in the tables of other test classes."""
+        forms = [form for _, form in TestSourceTextReadings.CONDITIONAL_ALLOW]
+        forms += [form for _, form in TestCommandNameAllowlist().certain_forms()]
+        return forms
+
+    def test_the_new_forms_stand_in_the_case_table_with_their_decision(self):
+        """AC-6 (FR1, FR2, FR3, NFR1): the deny forms and the allow form stand
+        in the case table in the shape of the new forms (the array assignment,
+        the form, `; `, the notion call), under a label that starts with
+        `dbracket-opener-arith-scan`; each deny entry carries the reason ID of
+        the decoded command, the allow entry no fourth element."""
+        table = {case[2]: case for case in self.table()}
+        wanted = [("deny", form) for form in self.DENY_FORMS]
+        wanted.append(("allow", self.ALLOW_FORM))
+        for decision, form in wanted:
+            command = self.ARRAY + form + "; " + self.NOTION_SID
+            with self.subTest(form):
+                case = table.get(command)
+                self.assertIsNotNone(case, "no case-table entry for " + command)
+                self.assertEqual(decision, case[0])
+                self.assertTrue(case[1].startswith(self.LABEL), case[1][:60])
+                if decision == "deny":
+                    self.assertEqual(
+                        {"rule": "git-branch-force-delete"},
+                        case[3] if len(case) == 4 else None,
+                    )
+                else:
+                    self.assertEqual(3, len(case))
+
+    def test_the_existing_forms_stand_in_the_case_table_as_allow(self):
+        """AC-6 (FR3, NFR1): each CONDITIONAL_ALLOW form of
+        TestSourceTextReadings and each certain_forms() form of
+        TestCommandNameAllowlist stands in the case table, without the array
+        assignment, as an allow entry with no fourth element."""
+        table = {case[2]: case for case in self.table()}
+        for form in self.existing_forms():
+            command = form + "; " + self.NOTION_SID
+            with self.subTest(form):
+                case = table.get(command)
+                self.assertIsNotNone(case, "no case-table entry for " + command)
+                self.assertEqual("allow", case[0])
+                self.assertEqual(3, len(case))
+
+    def test_every_entry_of_this_task_is_one_of_the_forms_above_and_unique(self):
+        """AC-6: the entries whose label starts with `dbracket-opener-arith-scan`
+        are forms the tests above name, each with a command string that no
+        other entry of the table repeats."""
+        cases = self.table()
+        counts = collections.Counter(case[2] for case in cases)
+        wanted = {
+            self.ARRAY + form + "; " + self.NOTION_SID
+            for form in self.DENY_FORMS + (self.ALLOW_FORM,)
+        }
+        wanted |= {form + "; " + self.NOTION_SID for form in self.existing_forms()}
+        mine = [case for case in cases if case[1].startswith(self.LABEL)]
+        self.assertTrue(mine)
+        for case in mine:
+            with self.subTest(case[1][:60]):
+                self.assertIn(case[2], wanted)
+                self.assertEqual(1, counts[case[2]], "the command string repeats")
+
+    # --- AC-7: conventions -------------------------------------------------
+
+    def test_the_conditional_reading_launches_nothing_and_reads_no_file(self):
+        """AC-7 (NFR4): the helper names no process launch, no evaluation of a
+        string as code and no file or network access."""
+        tree = ast.parse(textwrap.dedent(inspect.getsource(GUARD._args_json_conditional_step)))
+        names = {
+            node.id for node in ast.walk(tree) if isinstance(node, ast.Name)
+        } | {
+            node.attr for node in ast.walk(tree) if isinstance(node, ast.Attribute)
+        }
+        forbidden = {
+            "subprocess", "Popen", "system", "popen", "eval", "exec", "compile",
+            "open", "os", "socket", "urllib", "requests", "pathlib", "Path",
+        }
+        self.assertEqual(set(), names & forbidden)
+
+    def test_the_conditional_reading_makes_no_decision_and_names_no_reason(self):
+        """AC-7 (NFR2): the helper builds no decision and carries no reason ID,
+        the docstring included."""
+        text = inspect.getsource(GUARD._args_json_conditional_step)
+        self.assertNotIn("destructive-guard/", text)
+        self.assertNotIn("permissionDecision", text)
 
 
 if __name__ == "__main__":
