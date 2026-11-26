@@ -1,0 +1,111 @@
+task_id: task0001
+# 4a, before any edit: python3 em-workflow/hooks/tests/run-destructive-guard.py -> 1680/1680 passed;
+# python3 -m unittest discover -s tests -> Ran 17404 tests, OK (skipped=1). The unittest run was started before
+# the first edit and finished green; the first edits of this task (the new test class, the hook, the case table)
+# were made while it was still running, and it ended with no failure, so the baseline is empty.
+baseline_failures: []
+# Re-executed after the implementation and after this record: the runner passes every case (1703/1703) and
+# python3 -m unittest discover -s tests runs green with the new class included (no failure).
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDbracketOpenerArithScan.test_an_operator_word_after_a_parenthesis_reads_the_chunk_as_uncertain
+      - tests.test_destructive_guard_args_json.TestDbracketOpenerArithScan.test_the_scan_reads_each_deny_form_as_uncertain
+      - tests.test_destructive_guard_args_json.TestDbracketOpenerArithScan.test_the_conditional_reading_reports_the_operator_word_of_the_opener_statement
+    red_confirmed: true
+    red_reason: >-
+      The new class was written before the hook was changed and run against
+      the unchanged hook. All 60 variants of the parenthesised form (six
+      comparison operators, `&&` and `||`, five allowlisted names) failed with
+      "AssertionError: False is not true" (the per-chunk scan read false), the
+      `-eq` form and the `if` form failed in the deny-form scan test with the
+      same message, and the conditional-step reading of
+      `[[ ( true -eq 0 ) && true ]]` reported no uncertain statement.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDbracketOpenerArithScan.test_the_notion_call_after_each_deny_form_is_inspected
+      - tests.test_destructive_guard_args_json.TestDbracketOpenerArithScan.test_the_hook_denies_the_command_after_each_deny_form
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged hook: the notion call after
+      `[[ ( true -eq 0 ) && true ]]` gave "Lists differ: ['inspected'] !=
+      ['nothing']" (it stayed excluded), and the whole judgment of the command
+      gave "Tuples differ: ('deny', 'git-branch-force-delete') != ('allow',
+      None)".
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDbracketOpenerArithScan.test_the_scan_reads_each_deny_form_as_uncertain
+      - tests.test_destructive_guard_args_json.TestDbracketOpenerArithScan.test_the_notion_call_after_each_deny_form_is_inspected
+      - tests.test_destructive_guard_args_json.TestDbracketOpenerArithScan.test_the_hook_denies_the_command_after_each_deny_form
+    red_confirmed: true
+    red_reason: >-
+      The `if [[ ( true -eq 0 ) && true ]]; then :; fi` form failed on the
+      unchanged hook in all three tests (scan "False is not true", notion call
+      "Lists differ: ['inspected'] != ['nothing']", judgment "Tuples differ:
+      ('deny', 'git-branch-force-delete') != ('allow', None)"). The
+      `[[ ( -v x ) && true ]]` form already read uncertain on the unchanged hook
+      (its simple command after the `(` boundary is named `-v`, outside the
+      allowlist); it is kept because the criterion names it, and it has no red
+      state of its own.
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDbracketOpenerArithScan.test_a_conditional_with_no_operator_word_keeps_the_exclusion
+      - tests.test_destructive_guard_args_json.TestDbracketOpenerArithScan.test_each_closed_conditional_form_of_the_source_text_readings_keeps_the_exclusion
+      - tests.test_destructive_guard_args_json.TestDbracketOpenerArithScan.test_each_certain_form_of_the_allowlist_reading_keeps_the_exclusion
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing
+      tests.test_destructive_guard_args_json.TestSourceTextReadings
+      (test_every_conditional_allow_form_keeps_the_exclusion) and
+      tests.test_destructive_guard_args_json.TestCommandNameAllowlist
+      (test_each_certain_form_keeps_the_exclusion) detect that a chunk read as
+      certain keeps the notion-pair exclusion; no red state occurred for this
+      change. The forms of this criterion were already read as certain on the
+      unchanged hook, so the new tests guard the new reading against reading
+      too much and passed before the implementation.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDbracketOpenerArithScan.test_an_operator_word_after_the_closer_is_not_scanned
+      - tests.test_destructive_guard_args_json.TestDbracketOpenerArithScan.test_an_operator_word_before_the_opener_is_not_scanned
+      - tests.test_destructive_guard_args_json.TestDbracketOpenerArithScan.test_a_parenthesised_comparison_without_an_operator_word_reports_no_uncertain_statement
+    red_confirmed: false
+    red_reason: >-
+      The behavior pre-existed: on the unchanged hook `[[ a == b ]] >-eq` and
+      `>-eq [[ a == b ]]` read false and `[[ ( a == b ) && true ]]` read true
+      through the command-level reading with no uncertain statement from the
+      conditional step, so these tests passed before the implementation. They
+      bound the new reading; a scratch copy of the hook whose new scan read
+      the whole statement instead of the range made the two redirection-target
+      tests fail.
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDbracketOpenerArithScan.test_the_new_forms_stand_in_the_case_table_with_their_decision
+      - tests.test_destructive_guard_args_json.TestDbracketOpenerArithScan.test_the_existing_forms_stand_in_the_case_table_as_allow
+      - tests.test_destructive_guard_args_json.TestDbracketOpenerArithScan.test_every_entry_of_this_task_is_one_of_the_forms_above_and_unique
+      - tests.test_destructive_guard_command_substitution.TestCaseTableDiscipline.test_runner_reports_every_case_passing
+    red_confirmed: true
+    red_reason: >-
+      The three table tests were run before the entries existed and failed
+      ("no case-table entry for ..." for the deny forms, the allow form and the
+      existing forms, and no entry carried the label prefix). With the 23
+      entries added and the hook still unchanged, the real runner gave
+      1701/1703 passed with two FAIL lines, the deny entries for
+      `[[ ( true -eq 0 ) && true ]]` and its `if` form, each answered
+      "got=allow rule=None".
+  AC-7:
+    tests:
+      - tests.test_destructive_guard_args_json.TestSourceTextReadings.test_the_readings_are_called_only_from_the_scan
+      - tests.test_destructive_guard_args_json.TestSourceTextReadings.test_the_readings_make_no_decision_and_name_no_reason
+      - tests.test_destructive_guard_args_json.TestSourceTextReadings.test_the_docstring_of_the_scan_names_the_two_readings_and_no_command
+      - tests.test_destructive_guard_args_json.TestDbracketOpenerArithScan.test_the_conditional_reading_launches_nothing_and_reads_no_file
+      - tests.test_destructive_guard_args_json.TestDbracketOpenerArithScan.test_the_conditional_reading_makes_no_decision_and_names_no_reason
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing
+      tests.test_destructive_guard_args_json.TestSourceTextReadings tests above
+      detect the single call site, the missing decision and reason ID, and the
+      docstring of the scan; they pass without being edited and no red state
+      occurred for this change. The two new tests of this task guard the
+      helper's source and were green before and after the change. The plugin
+      version files are not changed (no test reads them for this task).
