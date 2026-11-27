@@ -1,0 +1,143 @@
+feature: wake-task-cleanup-script
+collected_at: '2026-11-27T23:22:01+09:00'
+session_ids:
+- 01a21d61-9b50-7167-b817-4371b336f7d3
+signals:
+  review_critical_high:
+  - stable_id: 542962274156d724
+    category: security
+    file: em-workflow/scripts/cleanup-task.py
+    title: 追跡先が設定されたタスクブランチは integration に未統合でも branch -d で削除される
+    resolution: fixed
+  - stable_id: 42c7e97a120f1fbc
+    category: security
+    file: em-workflow/scripts/cleanup-task.py
+    title: タスクのパスが別の登録済み worktree へのシンボリックリンクだと、その worktree を削除する
+    resolution: fixed
+  - stable_id: 44bf4b5ec5fde2cb
+    category: comprehensive
+    file: em-workflow/scripts/cleanup-task.py
+    title: 取り込み確認後に更新されたタスクブランチを削除できる
+    resolution: fixed
+  - stable_id: 01c97ddc0fd731a2
+    category: security
+    file: em-workflow/scripts/cleanup-task.py
+    title: 再確認の直後に更新されたタスクブランチを削除できる
+    resolution: fixed
+  - stable_id: b0ffb4ffbb1ffcc4
+    category: security
+    file: em-workflow/scripts/cleanup-task.py
+    title: TM-1 のパス検証を通って別機能の作業ツリーを削除できる
+    resolution: fixed
+  - stable_id: b4041b0405244d19
+    category: security
+    file: em-workflow/references/implement-phase.md
+    title: TM-4 の呼び出し行で作業パスがシェル構文として解釈される
+    resolution: fixed
+  - stable_id: ed06793e93ac3c27
+    category: comprehensive
+    file: em-workflow/scripts/cleanup-task.py
+    title: 確認したコミットと削除するブランチ先端が一致する保証がない
+    resolution: unresolved
+  - stable_id: c092d863994f0170
+    category: architecture
+    file: em-workflow/scripts/cleanup-task.py
+    title: 検証したコミットと実際に削除するコミットが一致する保証がない
+    resolution: unresolved
+  - stable_id: ae2ab614431664d3
+    category: comprehensive
+    file: em-workflow/scripts/cleanup-task.py
+    title: 同名の機能を持つ別リポジトリを削除対象にできる
+    resolution: unresolved
+  - stable_id: 6ca3af1949db66a6
+    category: security
+    file: em-workflow/scripts/cleanup-task.py
+    title: 同じ機能名を持つ別リポジトリの作業ツリーを削除できる
+    resolution: unresolved
+  - stable_id: 7a5fbc33c0c8adf8
+    category: architecture
+    file: em-workflow/references/implement-phase.md
+    title: 手順4の呼び出し行の変更に試験と C1 が追随しておらず、ガード検証が実行されない
+    resolution: deferred
+  conflict_reworks: []
+  file_prediction_misses:
+  - task: task0003
+    files:
+    - test-docs/wake-task-cleanup-script/task0001.tests.yaml
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: description_plus_code の最終読みがバケット 2（新しいロジックと外部契約の変更）を confidence 0.89 で示し、full を採用した
+    bases:
+    - basis: description_only
+      score:
+        type: score
+        score: 1.72
+        confidence: 0.63
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread across a few files
+            together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to
+            the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.32
+          '2': 0.63
+          '3': 0.05
+      observed_at: '2026-11-27T19:28:29+09:00'
+    - basis: description_plus_code
+      score:
+        type: score
+        score: 2.07
+        confidence: 0.89
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread across a few files
+            together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to
+            the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.02
+          '2': 0.89
+          '3': 0.09
+      observed_at: '2026-11-27T19:30:53+09:00'
+    pre_survey_estimate:
+      files_expected:
+      - em-workflow/references/implement-phase.md
+      - tests/test_implement_phase_guard_compatible_wording.py
+      - tests/test_protocol_git_ops_pass_destructive_guard.py
+      changed_lines_approx: 150
+      new_functions_needed: 2
+      new_files_needed: 2
+      new_dependencies_needed: 0
+      covering_tests_exist: false
+      spillover_modules: []
+      work_still_required: true
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 2
+      body_change_kind: new_logic
+      change_containment: multiple_modules
+      caller_and_dependency_count: 4
+      changes_external_contract: true
+      changes_behavior: true
+      evidence: 'develop は implement の手順書をインライン実行する（em-workflow/skills/develop/SKILL.md:856）。wake は手順
+        1 で取り込みを確認し、手順 4 でオーケストレーターが `git worktree remove` と integration worktree を基準にした `git branch -d`
+        を順に直接実行する。削除に失敗した場合は強制削除を禁じ、wake の報告には残したブランチ名を書く規定がある。失敗理由を機械で読める形で返す処理はない（em-workflow/references/implement-phase.md:971、em-workflow/references/implement-phase.md:1151）。
+
+        既存の文面テストは Git コマンドの直接記載と順序を検査し、ガードのテストは手順 4 から両コマンドを抽出して判定する。メインの worktree から後片付けを呼び、実際にタスクブランチが消えることを確かめるテストは確認できなかった（tests/test_implement_phase_guard_compatible_wording.py:123、tests/test_implement_phase_guard_compatible_wording.py:170、tests/test_protocol_git_ops_pass_destructive_guard.py:382、tests/test_protocol_git_ops_pass_destructive_guard.py:472）。呼び出し・依存の
+        4 件は develop、手順を直接参照する既存テスト 2 本、Git。新規ファイル 2 件は後片付けスクリプトと実動作テストで、テストの見積もりはメインからの削除成功と削除失敗時の構造化出力の
+        2 件。既存の wake 用ヘルパーに JSON 出力の先例があり、テスト規則は標準ライブラリの unittest と一時 Git リポジトリを使う（em-workflow/scripts/recover-orphaned-task.py:99、test/README.md:5、test/README.md:36）。
+
+        Step C と merge スキルの削除対象は integration ブランチで、今回の wake とは別の手順にある（em-workflow/skills/develop/SKILL.md:1238、em-workflow/skills/merge/SKILL.md:618）。現行バージョンは両方の定義で
+        0.5.13。リポジトリの規則では、通常のパッチ更新は main への push 後に GitHub Actions が両方の定義に適用する（em-workflow/.claude-plugin/plugin.json:7、.claude-plugin/marketplace.json:27、.claude/rules/core-plugin-version-bump.md:3、.github/workflows/plugin-version-bump.yml:148）。ファイル変更とテスト実行は行っていない。'
+follow_up_drafts: []
+lessons_candidates:
+- round 1 の review 修正で手順4の呼び出し行の形が変わったが、それを検査する試験と IMPLEMENTATION.md C1 が追随せず、round 2 と verify round 1
+  の失敗（TS-8/TS-9 等）を招いた。文書の形を変える修正では、その形を検査する試験を同じ修正に含める
+- verify round 1 の失敗は rework 1 回（task0004）で解消し、round 2 で pass した

@@ -147,7 +147,8 @@ workflow:
   - TM-5
   failed_items: []
 - id: retrospect
-  status: in_progress
+  status: completed
+  completed_at_commit: cc75bda9e7e5e147110d76edac398bf0b19ec7f1
 tasks:
   task0001:
     title: wake cleanup script and its behavior tests
