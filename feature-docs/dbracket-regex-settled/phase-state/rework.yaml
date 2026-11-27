@@ -1,0 +1,75 @@
+schema_version: 1
+feature: dbracket-regex-settled
+phase: rework
+status: completed
+generation: 1
+base_revision: 202c5e86d0b95e05354edc38836f0e4fef323cbf
+last_input_digest: sha256:f4145da5609016692b8f400a6c8f8bd2e7f9c95f663ba04c0dd1c1ff63e53471
+active_request_id: null
+packets:
+  rework-q0001:
+    status: answered
+    issued_at: '2026-11-28T01:05:00+09:00'
+    questions:
+    - question_id: rework.spec-change.af8e6352
+      status: answered
+answers:
+  rework.spec-change.af8e6352:
+    question_id: rework.spec-change.af8e6352
+    packet_id: rework-q0001
+    answered_at: '2026-11-28T01:05:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - share-split
+    freeform: null
+    normalized_answer: 'SPEC を変える: NFR2 の呼び出し元の制限を緩め、数えた括弧の読みを _args_json_shadow_scan() でも使えるようにして、AC-1・AC-4 の $ 付きの形を allow にする'
+    resolution_note: 'gate: rework.spec-change; chosen: share-split; not chosen: exclude-dollar; relaxed route (bound-set category security); Codex consulted: true (codex entry, 1 turn); Opus escalation ran: false; Codex chose share-split (labelled goal_not_met, evidence AC-1, AC-4, FR2, FR3, FR4, NFR1, NFR2, TM-1, TM-2). Key points: Codex ran the scans itself; the ^v repro gives allow, but both $ forms give nameref False / shadow True / inspected / deny, so the goal of removing the misfire is not met for AC-1/AC-4. exclude-dollar is smaller but leaves the false deny in place. Relax only NFR2''s caller restriction so _args_json_shadow_scan() item 3 shares the counted-parenthesis reading, keep it decision- and reason-free, keep existing deny/ask coverage (NFR1), fail-safe closers (TM-1) and boundaries outside confirmed patterns (TM-2).'
+worker_runs:
+- request_id: rework-run-0001
+  status: needs_user_input
+  input_digest: sha256:f4145da5609016692b8f400a6c8f8bd2e7f9c95f663ba04c0dd1c1ff63e53471
+  output_digest: sha256:31f906aab41acd385cda138549e2588ad73889952dbec75de16bcf6c5f48d733
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/rework-planner-contract.md: sha256:0c9f82099c3546b6b675856539d8244628b7170ce7a4442ec951e13e16577ec3
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/dbracket-regex-settled/SPEC.md: sha256:99144de9220ec7e6968181d8a62ecccc61d3b6552fc7cf4a4d5bdfbbeadda3db
+    feature-docs/dbracket-regex-settled/VERIFICATION.md: sha256:fa13d97f84471ad4224728d1c60b3ff74506e7449ad1a93f1801489e5a0420ac
+    feature-docs/dbracket-regex-settled/tasks/task0001.md: sha256:5af590119a9de72a04ae90bd7b711edb16f9eb8ab75a4df2020c1a17f7feebbd
+    feature-docs/dbracket-regex-settled/workflow.yaml: sha256:5523808f20e6bc3df6425015371b4dfe20b4af6a20461e261f27eb90c6e03b15
+  self_write_set: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
+classification:
+- question_id: rework.spec-change.af8e6352
+  origin_kind: review
+  origin_ids:
+  - af8e6352cdf5cf9a
+  route: relaxed (bound-set category security)
+  decision: proceed
+  selected_option_id: share-split
+  classifier: codex
+  verdict: a (goal not met)
+  evidence:
+  - AC-1
+  - AC-4
+  - FR2
+  - FR3
+  - FR4
+  - NFR2
+  recorded_at: '2026-11-28T01:05:00+09:00'
+spec_change:
+  reason: 'review round 1: AC-1・AC-4 の ^(ab)$ の形で _args_json_shadow_scan() が括弧で文を分け $ をコマンド名と読むため deny が残る。NFR2 の呼び出し元の制限を緩め、数えた括弧の読みを共有する'
+  origin_kind: review
+  origin_id: af8e6352cdf5cf9a
+  recorded_at_commit: 881c3a1a3c342463638b7e982d8b50f5a4c51db6
+  consumed: true
+  replan_authorized: false

@@ -1,0 +1,80 @@
+schema_version: 1
+feature: dbracket-regex-settled
+phase: create-plan
+status: completed
+generation: 2
+base_revision: 6c9cae3f83ebdfdc288645b9ab9e10319c55ac9a
+last_input_digest: sha256:3a770ce7301d6f07e00748974c5655e12fcae654dc87c8e4e4a7335ad06bb38b
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-plan-run-0001
+  status: completed
+  input_digest: sha256:ced1aa792cf99b4f91c0877c79a3411a4c52dc77f4db0d0d508a02d42a95fd01
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/planner-contract.md: sha256:18464486c0546613d92935cba80087c4980d3791d41838162d23840e431da515
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
+    em-workflow/references/workflow-schema.md: sha256:5bd8500c203c4f17cde4193ee43d561073fe7f47099d61a55eb593e098881d87
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/dbracket-regex-settled/SPEC.md: sha256:99144de9220ec7e6968181d8a62ecccc61d3b6552fc7cf4a4d5bdfbbeadda3db
+    feature-docs/dbracket-regex-settled/workflow.yaml: sha256:7b95d4f780ff31c83908b7f75edaae3fa645f961c5fe12c5df7199b4095d89c5
+  output_digest: sha256:07bfc9158325853c31a713a2de8711fb1996bd66b013b1c6ec4bc807a87dd583
+  self_write_set:
+  - feature-docs/dbracket-regex-settled/THREAT-MODEL.md
+  - feature-docs/dbracket-regex-settled/VERIFICATION.md
+  - feature-docs/dbracket-regex-settled/tasks/task0001.md
+- request_id: create-plan-run-0002
+  status: completed
+  input_digest: sha256:3a770ce7301d6f07e00748974c5655e12fcae654dc87c8e4e4a7335ad06bb38b
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/planner-contract.md: sha256:18464486c0546613d92935cba80087c4980d3791d41838162d23840e431da515
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
+    em-workflow/references/workflow-schema.md: sha256:5bd8500c203c4f17cde4193ee43d561073fe7f47099d61a55eb593e098881d87
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/dbracket-regex-settled/SPEC.md: sha256:8b866692bd95f46bc40d4d087b0952f7adea6e53622e9cfeb306a6ccf2d5c330
+    feature-docs/dbracket-regex-settled/THREAT-MODEL.md: sha256:c6f00fe5c514593142a01419297152a79ef5bf08ef49e0378b99370415eb3011
+    feature-docs/dbracket-regex-settled/VERIFICATION.md: sha256:fa13d97f84471ad4224728d1c60b3ff74506e7449ad1a93f1801489e5a0420ac
+    feature-docs/dbracket-regex-settled/tasks/task0001.md: sha256:5af590119a9de72a04ae90bd7b711edb16f9eb8ab75a4df2020c1a17f7feebbd
+    feature-docs/dbracket-regex-settled/workflow.yaml: sha256:9bd34a773e9bf899e35be320ba09e2e5f604d13d91794049ca69bbceec373e45
+  output_digest: sha256:5067361471343ade0f26afee868a5a4651a63676525b50750223bfef50e3f81a
+  self_write_set:
+  - feature-docs/dbracket-regex-settled/THREAT-MODEL.md
+  - feature-docs/dbracket-regex-settled/VERIFICATION.md
+  - feature-docs/dbracket-regex-settled/tasks/task0002.md
+artifacts:
+- path: feature-docs/dbracket-regex-settled/THREAT-MODEL.md
+  sha256: sha256:c6f00fe5c514593142a01419297152a79ef5bf08ef49e0378b99370415eb3011
+  produced_by: create-plan-run-0001
+- path: feature-docs/dbracket-regex-settled/VERIFICATION.md
+  sha256: sha256:fa13d97f84471ad4224728d1c60b3ff74506e7449ad1a93f1801489e5a0420ac
+  produced_by: create-plan-run-0001
+- path: feature-docs/dbracket-regex-settled/tasks/task0001.md
+  sha256: sha256:5af590119a9de72a04ae90bd7b711edb16f9eb8ab75a4df2020c1a17f7feebbd
+  produced_by: create-plan-run-0001
+- path: feature-docs/dbracket-regex-settled/THREAT-MODEL.md
+  sha256: sha256:d5590c9df2276a5ca991bfe747f2e503eb8db8012d6b3de527f459c5f80a7235
+  produced_by: create-plan-run-0002
+- path: feature-docs/dbracket-regex-settled/VERIFICATION.md
+  sha256: sha256:1a06e03ac942a60704f5e6ac13839cd2b96b201767c10e2f4654cc8c3a3d43d3
+  produced_by: create-plan-run-0002
+- path: feature-docs/dbracket-regex-settled/tasks/task0002.md
+  sha256: sha256:08ff146c821766a31a5cca913cdc36101e38f31ffac60c814efb6f8b41b2f5f3
+  produced_by: create-plan-run-0002
+other_feature_doc_fixes: []
+patches:
+- patch_id: create-plan-p0001
+  status: applied
+- patch_id: create-plan-p0002
+  status: applied
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}

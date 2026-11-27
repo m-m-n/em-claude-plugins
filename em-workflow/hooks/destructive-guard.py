@@ -8583,9 +8583,12 @@ def _args_json_has_deferred_evaluation(marked):
 # written with, not by its quote-removed value: a backslash or a quote changes
 # what Bash makes of a `{name[subscript]}` word in front of a redirection
 # operator, and of the words that open and close a `[[ ]]` conditional. The
-# helpers below read those characters (_args_json_word_source()) and are
-# called only from _args_json_nameref_scan(), so their result is kept with the
-# chunk's answer.
+# helpers below read those characters (_args_json_word_source()).
+# _args_json_fd_variable_deferred() is called only from
+# _args_json_nameref_scan(). The conditional reading
+# (_args_json_conditional_step()) and the helpers it uses are called from both
+# _args_json_nameref_scan() and _args_json_shadow_scan(), and each of the two
+# scans keeps its answer per chunk.
 
 # A word Bash may take as the variable of a redirection and that names an array
 # element: `{`, a name, a bracketed subscript (group 1) and `}`.
@@ -8720,12 +8723,16 @@ def _args_json_separator_breaks_conditional(sep):
 
 def _args_json_conditional_step(marked, words, commands, sep, was_open):
     r"""One statement's share of the `[[ ]]` reading of
-    _args_json_nameref_scan(): (UNCERTAIN, OPEN). WORDS are the tokens of the
-    statement, COMMANDS its simple commands (split at the boundaries of
-    _args_json_command_boundary()), SEP the separator that ended it and
-    WAS_OPEN whether a conditional opened in an earlier statement of the chunk
-    is still open: `&&`, `||` and the parentheses of a conditional split it
-    into several statements. OPEN is whether one is open after the statement.
+    _args_json_nameref_scan(): (UNCERTAIN, OPEN, COUNTED). WORDS are the
+    tokens of the statement, operators included, COMMANDS its simple commands
+    (split at the boundaries of _args_json_command_boundary()), SEP the
+    separator that ended it and WAS_OPEN whether a conditional opened in an
+    earlier statement of the chunk is still open: `&&`, `||` and the
+    parentheses of a conditional split it into several statements. OPEN is
+    whether one is open after the statement. COUNTED are the parenthesis
+    tokens of WORDS that the depth reading below counted, kept by position
+    (never read from their text, which is the same for every `(`); the caller
+    reads them only when UNCERTAIN is false.
 
     Opener and closer are judged from each word as written
     (_args_json_word_source()). An opener is the command-name word of a simple
@@ -8740,6 +8747,30 @@ def _args_json_conditional_step(marked, words, commands, sep, was_open):
     operand: the conditional stays open and the words of the later statements
     are the conditional's.
 
+    The closer is placed by the depth of the parentheses of a pattern. A word
+    written exactly `=~`, or a word ending in one of `?*+@!` that is directly
+    followed by `(` (an extended pattern), starts a pattern; after it, each
+    unquoted operator token made of parentheses only changes the depth by one
+    for every character (`(` adds one, `)` takes one away), and the closer is
+    the first word written exactly `]]` at depth 0 (before any pattern start,
+    the first one). A `]]` at depth 1 or more is part of the pattern, as in
+    Bash. A quoted or escaped parenthesis is a word and is not counted, and
+    neither are the grouping parentheses in front of a pattern start. A `]]`
+    that touches a `|` with no space before it, or (after a pattern start)
+    after it, is part of a regex word in Bash and not a closer: the statement
+    is uncertain. The
+    statement is uncertain when a closer cannot be placed that way: the depth
+    falls below 0, an operator token holds a parenthesis together with another
+    character (`)>`), the statement ends at depth 1 or more (the lexer splits
+    the statements of `(a|b)` at the `|`), or a `=~` or an extended-pattern
+    prefix is written across a line continuation or `=~` carries a stripped
+    carriage return, or the statement started a pattern and ended at a lone
+    `|` without a closer (the next statement would restart the depth at 0).
+    A statement that ends at depth 0 without a closer leaves
+    the conditional open, and the next statement counts from depth 0. The
+    words after the closer are not read by the depth reading in either
+    statement.
+
     In the statement that holds the opener, the words from just after the
     opener up to just before the closer (to the end of the statement when it
     has none) are read for those operator words too, whatever simple command
@@ -8747,7 +8778,8 @@ def _args_json_conditional_step(marked, words, commands, sep, was_open):
     true ]]`) makes the words after it a simple command of its own, and the
     command-level reading keeps such a command certain under an allowlisted
     name whatever its words hold. Words before the opener and words after the
-    closer are not read here.
+    closer are not read here. In a statement that continues an open
+    conditional, every word of the statement is read for them.
 
     While a conditional is open, a word that is an operator evaluating its
     operand (_ARGS_JSON_DOUBLE_BRACKET_WORDS) is uncertain, and so is a `;` or
@@ -8755,50 +8787,123 @@ def _args_json_conditional_step(marked, words, commands, sep, was_open):
     (_args_json_separator_breaks_conditional()). So a closer that was misread
     never lets the reading swallow the statements after it, and a closer
     written across a line continuation (`]`, a backslash, a newline, `]`) is
-    not read as one: the conditional stays open until a `;` or a lone `&`, and
+    not read as one, and a statement holding such a word is uncertain with no
+    counted parentheses handed on (_depth_reading()): the conditional stays
+    open until a `;` or a lone `&`, and
     a conditional still open at the end of the chunk is uncertain too (the
-    caller). A `=~` written with a line continuation, or a word ending in one
-    of `?*+@!` directly followed by `(` (an extended pattern), makes the
-    conditional uncertain as well. A word with a trailing carriage return stripped by the lexer is
-    not read as a closer. A word written exactly `=~` inside the conditional
-    makes it uncertain, since the end of a parenthesized regex cannot be told
-    (a `]]` inside it does not close the conditional in Bash). Called only
-    from _args_json_nameref_scan()."""
-    flat = [tok for tok in words if not getattr(tok, "is_operator", False)]
+    caller). A word with a trailing carriage return stripped by the lexer is
+    not read as a closer. Called only from _args_json_nameref_scan() and
+    _args_json_shadow_scan(), each of which keeps its answer per chunk."""
     is_open = was_open
 
-    def _unsettled(tok):
-        # `=~` written across a line continuation, or a word ending in one of
-        # `?*+@!` that is directly followed by `(` (an extended pattern whose
-        # end cannot be told): the end of the conditional is uncertain.
-        src = _args_json_word_source(marked, tok)
-        if src is None:
-            return False
-        src = src.replace("\\\n", "")
-        if src == "=~":
-            return True
-        span = getattr(tok, "span", None)
-        if span is None or not src or src[-1] not in "?*+@!":
-            return False
-        text = marked.text
-        i = span[1]
-        while text.startswith("\\\n", i):
-            i += 2
-        return text.startswith("(", i)
+    def _depth_reading(tokens):
+        # (UNCERTAIN, CLOSER, COUNTED) of TOKENS, the range of one statement:
+        # CLOSER is the index in TOKENS of the word that closes the
+        # conditional, None when the range has none.
+        counted = []
+        depth = 0
+        started = False
+        for index, tok in enumerate(tokens):
+            if getattr(tok, "is_operator", False):
+                if not started:
+                    continue
+                if tok and all(c in "()" for c in tok):
+                    for c in tok:
+                        depth += 1 if c == "(" else -1
+                        if depth < 0:
+                            return True, None, []
+                    counted.append(tok)
+                elif "(" in tok or ")" in tok:
+                    return True, None, []
+                continue
+            src = _args_json_word_source(marked, tok)
+            if src is None:
+                continue
+            carriage_return = getattr(tok, "trailing_cr", "")
+            plain = src.replace("\\\n", "")
+            if plain == "=~":
+                # `=~` written across a line continuation, or with a
+                # carriage return stripped from it: where the pattern ends
+                # cannot be told.
+                if src != "=~" or carriage_return:
+                    return True, None, []
+                started = True
+                continue
+            if plain == "]]" and src != "]]":
+                # `]]` written across a line continuation: Bash closes the
+                # conditional here, the reading does not, so the statement
+                # is uncertain and no parentheses counted so far are handed
+                # on.
+                return True, None, []
+            span = getattr(tok, "span", None)
+            if span is not None and plain and plain[-1] in "?*+@!":
+                text = marked.text
+                after = span[1]
+                skipped = False
+                while text.startswith("\\\n", after):
+                    after += 2
+                    skipped = True
+                if text.startswith("(", after):
+                    if skipped:
+                        return True, None, []
+                    started = True
+                    continue
+            if src == "]]" and not carriage_return and (not started or depth == 0):
+                before = None
+                after_ch = None
+                if span is not None:
+                    text = marked.text
+                    # Line continuations (a backslash and a newline) are
+                    # removed by Bash, so the characters next to `]]` are
+                    # read past them.
+                    left = span[0]
+                    while left >= 2 and text[left - 2:left] == "\\\n":
+                        left -= 2
+                    if left > 0:
+                        before = text[left - 1]
+                    right = span[1]
+                    while text.startswith("\\\n", right):
+                        right += 2
+                    if right < len(text):
+                        after_ch = text[right]
+                if before == "|":
+                    # `a|]]` is one regex word in Bash although the lexer
+                    # splits the statement at the `|`: not a closer.
+                    return True, None, []
+                if started:
+                    # Bash reads `(x)]]` / `]](x)` as one pattern word, so a
+                    # `]]` touching a parenthesis is not the closer, also
+                    # across a line continuation.
+                    if span is None:
+                        return True, None, []
+                    if (before is not None and before in "()") or (
+                        after_ch is not None and after_ch in "()|"
+                    ):
+                        return True, None, []
+                return False, index, counted
+        if started and sep and any(
+            s in ("|", "||") for s in re.findall(r"&&|\|&|\|\||[;&|]", sep)
+        ):
+            # The lexer split a regex at a `|` or a `||` (Bash can read a
+            # `||` without spaces as part of the pattern): the parenthesis
+            # depth of the pattern would restart at 0 in the next
+            # statement, so the reading cannot place the closer.
+            return True, None, []
+        return depth > 0, None, counted
 
     if was_open:
-        for tok in flat:
-            if _unsettled(tok):
-                return True, True
+        uncertain, closer, counted = _depth_reading(words)
+        if uncertain:
+            return True, True, []
+        for tok in words:
+            if getattr(tok, "is_operator", False):
+                continue
             if _args_json_declaration_word(marked, tok)[0] in _ARGS_JSON_DOUBLE_BRACKET_WORDS:
-                return True, True
-        if any(
-            _args_json_word_source(marked, tok) == "]]"
-            and not getattr(tok, "trailing_cr", "")
-            for tok in flat
-        ):
+                return True, True, []
+        if closer is not None:
             is_open = False
     else:
+        counted = []
         opener = None
         for command in commands:
             name = _args_json_command_name_word(marked, command)
@@ -8808,33 +8913,30 @@ def _args_json_conditional_step(marked, words, commands, sep, was_open):
             if not ok or text != "[[":
                 continue
             if _args_json_word_source(marked, name) != "[[":
-                return True, False
+                return True, False, []
             if opener is None:
                 opener = name
         if opener is not None:
+            rest = []
             seen = False
-            closed = False
-            evaluates = False
-            for tok in flat:
-                if tok is opener:
+            for tok in words:
+                if seen:
+                    rest.append(tok)
+                elif tok is opener:
                     seen = True
-                elif seen:
-                    if _unsettled(tok):
-                        evaluates = True
-                    if (
-                        _args_json_word_source(marked, tok) == "]]"
-                        and not getattr(tok, "trailing_cr", "")
-                    ):
-                        closed = True
-                        break
-                    if _args_json_declaration_word(marked, tok)[0] in _ARGS_JSON_DOUBLE_BRACKET_WORDS:
-                        evaluates = True
-            is_open = not closed
-            if evaluates:
-                return True, is_open
+            uncertain, closer, counted = _depth_reading(rest)
+            if uncertain:
+                return True, True, []
+            inside = rest if closer is None else rest[:closer]
+            is_open = closer is None
+            for tok in inside:
+                if getattr(tok, "is_operator", False):
+                    continue
+                if _args_json_declaration_word(marked, tok)[0] in _ARGS_JSON_DOUBLE_BRACKET_WORDS:
+                    return True, is_open, []
     if is_open and _args_json_separator_breaks_conditional(sep):
-        return True, True
-    return False, is_open
+        return True, True, []
+    return False, is_open, counted
 
 
 def _args_json_nameref_scan(marked):
@@ -8868,9 +8970,12 @@ def _args_json_nameref_scan(marked):
        of the operator) is taken out of a simple command before the command
        is read, whether it stands before the name, touches it or comes after
        it, so a glued form and its spaced form read the same. A `(`, `)`, `{`
-       or `}` word begins a new simple command. That function holds the rules
-       for command names, options and words, decided from the words as Bash
-       reads them after quote removal, at command position only.
+       or `}` word begins a new simple command, except the parentheses of a
+       `[[ ]]` pattern that item 5 counted by depth: those stay inside their
+       simple command (_args_json_simple_commands()), so the words between
+       them are no command names. That function holds the rules for command
+       names, options and words, decided from the words as Bash reads them
+       after quote removal, at command position only.
     5. Two readings of the lexed statements that judge a word by the
        characters it was written with, not by its quote-removed value, each
        read from every statement whatever command it holds. A word that Bash
@@ -8881,7 +8986,10 @@ def _args_json_nameref_scan(marked):
        conditional, which `&&`, `||` and parentheses split across statements:
        an opener or closer written with a backslash or a quote is neither,
        and a conditional left open at a `;`, at a lone `&` or at the end of
-       the chunk is uncertain (_args_json_conditional_step()).
+       the chunk is uncertain. After a regex word or an extended-pattern
+       prefix the closer is placed by the depth of the pattern's parentheses
+       (the first closer at depth 0); a closer that cannot be placed that way
+       is uncertain (_args_json_conditional_step()).
 
     False otherwise. Only the chunk's own text is read; nothing is executed
     and no lexer exception escapes."""
@@ -8897,20 +9005,20 @@ def _args_json_nameref_scan(marked):
             return True
         if _args_json_fd_variable_deferred(marked, words):
             return True
-        commands = [[]]
-        for tok in _split_fused_closer_redirects(words):
-            if _args_json_command_boundary(tok):
-                commands.append([])
-            else:
-                commands[-1].append(tok)
+        commands = _args_json_simple_commands(words, ())
         # A `[[ ]]` that `&&` or `||` split into several statements: the words
         # of every statement up to the one holding the closer are the
         # conditional's.
-        uncertain, in_dbracket = _args_json_conditional_step(
+        uncertain, in_dbracket, counted = _args_json_conditional_step(
             marked, words, commands, sep, in_dbracket
         )
         if uncertain:
             return True
+        if counted:
+            # The parentheses of a pattern whose end the conditional reading
+            # placed by depth stay inside their simple command, so the words
+            # between them are no command names.
+            commands = _args_json_simple_commands(words, counted)
         for command in commands:
             if _args_json_declares_nameref(marked, command):
                 return True
@@ -8928,6 +9036,28 @@ def _args_json_nameref_scan(marked):
             if _args_json_declares_nameref(marked, whole):
                 return True
     return in_dbracket
+
+
+def _args_json_simple_commands(words, counted):
+    """The simple commands of the statement WORDS (its tokens, operators
+    included): the tokens split at every boundary
+    (_args_json_command_boundary()), the fused operators first split by
+    _split_fused_closer_redirects(). COUNTED are the parenthesis tokens of
+    WORDS that the conditional reading counted as a pattern's
+    (_args_json_conditional_step()), identified by object identity: a token
+    derived from one of them, itself or a piece of its split, is not a
+    boundary and stays inside its simple command. Called only from
+    _args_json_nameref_scan() and _args_json_shadow_scan()."""
+    counted_ids = {id(tok) for tok in counted}
+    commands = [[]]
+    for tok in words:
+        inside = id(tok) in counted_ids
+        for piece in _split_fused_closer_redirects([tok]):
+            if not inside and _args_json_command_boundary(piece):
+                commands.append([])
+            else:
+                commands[-1].append(piece)
+    return commands
 
 
 def _args_json_command_boundary(tok):
@@ -9471,7 +9601,18 @@ def _args_json_shadow_scan(marked):
     3. Some simple command of the chunk, split at the same boundaries as
        _args_json_nameref_scan() splits it, has a command name that runs a
        string as code or cannot be read statically
-       (_args_json_runs_string_as_code()).
+       (_args_json_runs_string_as_code()). The parentheses that the
+       conditional reading (_args_json_conditional_step()) counted as a
+       pattern's, in a `[[ ]]` conditional it settled (no statement from the
+       one holding its opener through the one holding its closer was read
+       uncertain), stay inside their simple command
+       (_args_json_simple_commands()): the words between them are pattern
+       text, no command names. The reading runs over this scan's own lexing
+       of the chunk, and takes nothing from _args_json_nameref_scan(). Every
+       other statement is split at every parenthesis: one the reading read
+       uncertain, every later statement, the statements of a conditional left
+       open or abandoned, and the parentheses before a pattern start, before
+       the opener and after the closer.
     4. Some word of some statement, a redirection target included, holds one of
        _ARGS_JSON_SHADOW_ENVIRONMENT_WORDS as a substring of its value. The
        match is made on the word's raw text, on its whole restored value when
@@ -9497,6 +9638,32 @@ def _args_json_shadow_scan(marked):
         return True
     segments, starts, _operators = _lex_layout(marked, True)
     in_tail = _statements_in_tail(marked, starts, len(segments))
+    # The parentheses of a pattern that item 3 keeps inside their simple
+    # command, by the index of their statement: the conditional reading runs
+    # over this lexing's own tokens, the statements in order, the conditional
+    # closed before the first. A statement read uncertain stops the reading,
+    # and what is pending for a conditional still open at that point is
+    # dropped (as it is for one left open at the end of the chunk): only a
+    # conditional whose closer the reading reaches with no statement uncertain
+    # hands out its counted parentheses, those of its opening statement
+    # through those of the statement holding its closer.
+    counted_by_statement = {}
+    pending = []
+    in_dbracket = False
+    for index, (seg_toks, lexed, sep) in enumerate(segments):
+        if not lexed:
+            break
+        uncertain, in_dbracket, counted = _args_json_conditional_step(
+            marked, seg_toks, _args_json_simple_commands(seg_toks, ()), sep,
+            in_dbracket,
+        )
+        if uncertain:
+            break
+        if counted:
+            pending.append((index, counted))
+        if not in_dbracket:
+            counted_by_statement.update(pending)
+            pending = []
     case_stack = []
     for index, (seg_toks, lexed, sep) in enumerate(segments):
         if not lexed:
@@ -9535,12 +9702,9 @@ def _args_json_shadow_scan(marked):
         shaped_words = _shaped_remainder(words_only, lead)
         if _overrides_command_name(words_only, lead, shaped_words):
             return True
-        commands = [[]]
-        for tok in _split_fused_closer_redirects(seg_toks):
-            if _args_json_command_boundary(tok):
-                commands.append([])
-            else:
-                commands[-1].append(tok)
+        commands = _args_json_simple_commands(
+            seg_toks, counted_by_statement.get(index, ())
+        )
         for command in commands:
             if _args_json_runs_string_as_code(marked, command):
                 return True

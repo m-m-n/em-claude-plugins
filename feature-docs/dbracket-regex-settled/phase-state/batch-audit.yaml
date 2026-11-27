@@ -1,0 +1,92 @@
+schema_version: 1
+feature: dbracket-regex-settled
+records:
+- question_id: requirement.closer-determination
+  packet_id: create-spec-q0001
+  answered_at: '2026-11-26T23:10:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: select
+  selected_option_ids:
+  - balanced_group
+  freeform: null
+  normalized_answer: '閉じ括弧の判定は括弧の対応を数える: =~ または拡張パターンの接頭語の後ろにある引用されていない括弧トークンの深さを
+    1 つずつ数え（)) のような連結トークンも括弧ごとに数える）、深さ 1 以上の ]] は閉じ括弧にしない。深さ 0 の最初の ]] が閉じ括弧。括弧が無ければ最初の
+    ]] で閉じ、不確定にしない。文末でグループが閉じていなければその文は不確定（今と同じ）。確定と読んだパターン内の断片（@(x) の x、^(ab)$ の
+    ab）は後続のコマンド名として判定しない'
+  resolution_note: 'gate: create-spec.requirement-clarification; chosen: balanced_group;
+    not chosen: untrust_after_paren, ignore_in_opener; Codex consulted: true (1 turn,
+    readonly); Opus escalation ran: false. Key points: 括弧の深さを追い深さ 0 の最初の ]] で閉じれば、演算語の無い閉じた条件式は確定のまま、括弧内の
+    ]] の後ろの -eq は検出できる。現行の flat からは括弧が消えるので絞り込み前の words を使い、)) 等の連結トークンは括弧ごとに数える。untrust_after_paren
+    は @(x) の誤爆が残り、ignore_in_opener は開き文の迂回を見逃す。リスク: 字句解析はパターン内の | でも文を分けるため、分割時点で深さが残る形は不確定のまま。呼び出し側は
+    @(x) の x や ^(ab)$ の ab を別コマンド名として再判定するので、呼び出し側でも確定したパターンの断片をコマンド扱いから外す必要がある'
+- question_id: requirement.continued-statement-scope
+  packet_id: create-spec-q0001
+  answered_at: '2026-11-26T23:10:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - same_rule_both
+  freeform: null
+  normalized_answer: 開き文と && / || 後の継続文（was_open 側）の両方に同じ規則を適用する
+  resolution_note: 'gate: create-spec.requirement-clarification; chosen: same_rule_both;
+    not chosen: opener_only; Codex consulted: true (same turn); Opus escalation ran:
+    false. Key points: 開き文と継続文は一つの条件式で、両方が _unsettled() を呼ぶため、開き文だけ直すと継続文に同じ誤検知が残る'
+- question_id: create-plan.planner-judgment-calls
+  packet_id: null
+  answered_at: '2026-11-26T23:30:43+09:00'
+  source: batch-codex-consultation
+  answer_mode: select
+  selected_option_ids:
+  - keep_planner_choices
+  freeform: null
+  normalized_answer: 'プランナーの 3 つの判断をそのまま採用: (1) 深さを数える処理は _args_json_conditional_step()
+    の入れ子関数に置き、モジュール直下の補助関数は _args_json_nameref_scan() からだけ参照する (2) _args_json_conditional_step()
+    の戻り値を 3 要素にし、3 つ目で数えた括弧トークンを返す (3) 数えている途中の括弧と他の演算子文字が連結したトークン（)> 等）と、末尾 CR 付きの
+    =~ は不確定にする'
+  resolution_note: 'gate: none (planner judgment calls on SPEC gaps, no packet); chosen:
+    keep_planner_choices for all three; not chosen: module-level helper under _args_json_conditional_step,
+    separate side channel for counted parens, settled reading of glued paren tokens;
+    Codex consulted: true (1 turn, readonly); Opus escalation ran: false. Key points:
+    (1) 既存の _unsettled() と同じ位置に置けば構成図どおり条件式の解析へ閉じ込められ、外側の呼び出し口は _args_json_nameref_scan()
+    に限られる。NFR2 の制限は入れ子関数に間接的に及ぶ (2) 戻り値を展開する本体側の箇所は _args_json_nameref_scan() の 1
+    か所で、既存テストが読む第 1 要素の意味も保てる (3) )> を区切り対象から外すとリダイレクト部分を巻き込み、読み飛ばすと閉じ括弧を見落とすため不確定が妥当。末尾
+    CR 付き =~ は現行の判定を維持できる'
+- question_id: rework.spec-change.af8e6352
+  packet_id: rework-q0001
+  answered_at: '2026-11-28T01:05:00+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - share-split
+  freeform: null
+  normalized_answer: 'SPEC を変える: NFR2 の呼び出し元の制限を緩め、数えた括弧の読みを _args_json_shadow_scan()
+    でも使えるようにして、AC-1・AC-4 の $ 付きの形を allow にする'
+  resolution_note: 'gate: rework.spec-change; chosen: share-split; not chosen: exclude-dollar;
+    relaxed route (bound-set category security); Codex consulted: true (codex entry,
+    1 turn); Opus escalation ran: false; Codex chose share-split (labelled goal_not_met,
+    evidence AC-1, AC-4, FR2, FR3, FR4, NFR1, NFR2, TM-1, TM-2). Key points: Codex
+    ran the scans itself; the ^v repro gives allow, but both $ forms give nameref
+    False / shadow True / inspected / deny, so the goal of removing the misfire is
+    not met for AC-1/AC-4. exclude-dollar is smaller but leaves the false deny in
+    place. Relax only NFR2''s caller restriction so _args_json_shadow_scan() item
+    3 shares the counted-parenthesis reading, keep it decision- and reason-free, keep
+    existing deny/ask coverage (NFR1), fail-safe closers (TM-1) and boundaries outside
+    confirmed patterns (TM-2).'
+- question_id: create-plan.planner-judgment-calls.replan
+  packet_id: null
+  answered_at: '2026-11-27T01:10:49+09:00'
+  source: batch-codex-consultation
+  answer_mode: select
+  selected_option_ids:
+  - keep_planner_choices
+  freeform: null
+  normalized_answer: '再計画のプランナーの 3 つの判断をそのまま採用: (1) NFR1 の「既存テスト」は機能着手前のテストと読み、task0001
+    で足した TestDbracketRegexSettled も必要な範囲で更新する (2) FR7 の項目 3 が数えた括弧を使うのは、途中に不確定の文を挟まず閉じ括弧まで読めた条件式だけにし、それ以外はすべての括弧で分割する
+    (3) VERIFICATION.md の TS-7 を SPEC の TS-7（docstring）に合わせ、version の差分確認を TS-9 に移す'
+  resolution_note: 'gate: none (planner judgment calls on SPEC gaps, no packet); chosen:
+    keep_planner_choices for all three; not chosen: new test class only, SPEC minimum
+    fail-safe, old TS numbering; Codex consulted: true (1 turn, readonly); Opus escalation
+    ran: false. Key points: (1) FR6 の 5 件の追加と NFR2 の走査追加はどちらも TestDbracketRegexSettled
+    の完全一致チェック・呼び出し元チェックを失敗させ、新クラスを足しても失敗は残る。NFR1 の「既存」を機能着手前と読めば FR6・NFR2・AC-6 と両立する
+    (2) 項目 3 は括弧で分割した先頭語を検査するので、不確定以降と開いたままの条件式で従来の分割を保つ方がコマンド名の見落としを防げる (3) SPEC
+    と同じ TS 番号の方が照合しやすく、version の据え置きは TS-9 で追跡できる'

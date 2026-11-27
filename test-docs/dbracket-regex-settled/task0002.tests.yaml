@@ -1,0 +1,111 @@
+task_id: task0002
+# 4a, before any edit (the worktree untouched for the whole run):
+# python3 em-workflow/hooks/tests/run-destructive-guard.py -> 1723/1723 passed;
+# python3 -m unittest discover -s tests -> Ran 17446 tests, OK (skipped=1). The baseline is empty.
+baseline_failures: []
+# Re-executed after the implementation and after this record: the runner passes every case
+# (including the five new entries) and python3 -m unittest discover -s tests passes with the new
+# and the changed tests included (no failure).
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_the_shadow_scan_reads_false_for_every_allow_form
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_a_word_inside_a_counted_pattern_is_no_command_name_for_the_shadow_scan
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_a_regex_or_extended_pattern_form_reads_the_chunk_as_certain
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_the_notion_call_after_each_regex_or_extended_pattern_form_is_excluded
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_the_hook_allows_the_command_after_each_regex_or_extended_pattern_form
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged hook (the class written first). The shadow-scan
+      tests failed with "AssertionError: True is not false" for
+      `[[ x =~ ^(ab)$ ]]`, `[[ a == b && true =~ ^(ab)$ ]]`, `[[ a == @(eval) ]]`
+      and `[[ x =~ (eval) && true ]]`; the notion-call test failed for
+      `[[ x =~ ^(ab)$ ]]` with "Lists differ: ['nothing'] != ['inspected']"; the
+      whole-judgment test failed with "Tuples differ: ('allow', None) !=
+      ('deny', 'git-branch-force-delete')". The per-chunk scan test already
+      passed before the change (_args_json_nameref_scan() placed the closer of
+      the `$` forms at the base of this task); it stays listed as the half of
+      the criterion that guards that answer.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_a_closer_touching_a_pattern_parenthesis_is_not_the_closer
+    red_confirmed: false
+    red_reason: >-
+      The behavior pre-existed: the rule that a `]]` touching a pattern's
+      parenthesis is no closer is in _args_json_conditional_step() at the base
+      of this task, and the new test passed on the unchanged hook (observed).
+      A search of the test directory by path and by file name found no test
+      that pinned it before; this test and the three case-table entries pin it
+      now, and guard a share that drops the rule. No red state occurred for
+      this change.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_the_shadow_scan_keeps_every_other_parenthesis_a_boundary
+    red_confirmed: false
+    red_reason: >-
+      The behavior pre-existed: before this change the shadow scan split every
+      statement at every parenthesis, so each listed form already read true and
+      the test passed on the unchanged hook (observed). It guards a share that
+      uses counted parentheses outside a settled conditional (before the
+      pattern start, before the opener, after the closer, in a statement with no
+      conditional, in a statement read uncertain, in a conditional left open or
+      abandoned, after an uncertain statement). No red state occurred for this
+      change.
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_the_shadow_scan_reads_the_counted_parentheses_from_its_own_tokens
+      - tests.test_destructive_guard_args_json.TestNotionLiftChain
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged hook, the new test failed with
+      "AssertionError: True is not false" (the shadow scan read the form true and
+      never called the conditional reading). The existing TestNotionLiftChain
+      tests, which exercise the shadow scan and the notion lift, are listed for
+      the second half of the criterion (they pass without being edited); they
+      have no red state of their own.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_each_new_form_stands_in_the_case_table_with_its_decision
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_every_entry_of_this_task_is_one_of_the_forms_above_and_unique
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_the_new_labels_use_neither_of_the_prefixes_other_tests_count
+    red_confirmed: true
+    red_reason: >-
+      Run with the table read from the base commit (the five entries absent),
+      the first test failed with "no case-table entry for ..." for each of the
+      five forms and the second with "Lists differ" (the class lists forms the
+      table lacks); the third has nothing to check without the entries and
+      passes. The decision of the two allow entries was also seen red through
+      the whole-judgment test of AC-1 on the unchanged hook, which is the
+      judgment the runner
+      (em-workflow/hooks/tests/run-destructive-guard.py) makes per entry.
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_args_json.TestSourceTextReadings.test_the_readings_are_called_only_from_the_scan
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_every_function_the_change_adds_is_referenced_only_from_the_scan
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_every_function_the_change_adds_decides_nothing_and_launches_nothing
+      - tests.test_destructive_guard_args_json.TestSourceTextReadings.test_the_readings_make_no_decision_and_name_no_reason
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged hook, the two call-site tests failed with
+      "AssertionError: Items in the first set but not the second" (the
+      references of _args_json_conditional_step and _args_json_simple_commands
+      stood in _args_json_nameref_scan only). The forbidden-name and
+      no-decision tests passed before and after the change; they are the
+      existing checks the criterion asks to keep passing, and no function is
+      added by this task.
+  AC-7:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_the_docstring_of_the_shadow_scan_states_the_shared_parentheses
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_the_docstrings_of_the_conditional_reading_and_the_split_name_both_scans
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_the_comment_opening_the_word_source_section_names_both_scans
+      - tests.test_destructive_guard_args_json.TestDbracketRegexSettled.test_the_docstring_of_the_conditional_reading_states_the_depth_rule
+      - tests.test_destructive_guard_args_json.TestDocstring.test_the_shadow_scan_names_the_static_run_match
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged hook, the first three failed with
+      "AssertionError: '_args_json_conditional_step()' not found in ..." (the
+      shadow-scan docstring), "'_args_json_shadow_scan()' not found in ..." (the
+      docstrings of the conditional reading and of the split, and the comment
+      block). The two existing docstring tests pass before and after the change
+      without being edited.

@@ -1,0 +1,93 @@
+schema_version: 1
+feature: dbracket-regex-settled
+phase: create-spec
+status: completed
+generation: 2
+base_revision: a8ed91833ee01bf817df4bcb248d784f277d0265
+last_input_digest: sha256:2068a7f45f997c5455d0a29874b6e9ee53aae7dfcf270ced0851de92f6ec2bac
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+answers:
+  create-spec.feature-identity:
+    packet_id: null
+    answered_at: '2026-11-26T23:00:00+09:00'
+    source: batch_policy
+    answer_mode: select
+    selected_option_ids:
+    - derive_from_task_description
+    freeform: null
+    normalized_answer: 'feature name derived from the task description: dbracket-regex-settled'
+  requirement.closer-determination:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-26T23:10:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: select
+    selected_option_ids:
+    - balanced_group
+    freeform: null
+    normalized_answer: '閉じ括弧の判定は括弧の対応を数える: =~ または拡張パターンの接頭語の後ろにある引用されていない括弧トークンの深さを
+      1 つずつ数え（)) のような連結トークンも括弧ごとに数える）、深さ 1 以上の ]] は閉じ括弧にしない。深さ 0 の最初の ]] が閉じ括弧。括弧が無ければ最初の
+      ]] で閉じ、不確定にしない。文末でグループが閉じていなければその文は不確定（今と同じ）。確定と読んだパターン内の断片（@(x) の x、^(ab)$
+      の ab）は後続のコマンド名として判定しない'
+  requirement.continued-statement-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-26T23:10:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - same_rule_both
+    freeform: null
+    normalized_answer: 開き文と && / || 後の継続文（was_open 側）の両方に同じ規則を適用する
+  create-spec.design-step:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-26T23:10:00+09:00'
+    source: batch_policy
+    answer_mode: select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design step skipped per analyst recommendation (no UI)
+  create-spec.design-system:
+    packet_id: null
+    answered_at: '2026-11-26T23:25:00+09:00'
+    source: batch_policy
+    answer_mode: select
+    selected_option_ids:
+    - top_candidate_or_none
+    freeform: null
+    normalized_answer: 'no candidates -> kind: none'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:55ad3222014496bf52c34b84e4cfd5bf3c4f68e3abfc019dfb957e482873ab35
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:9c0c1209c0b1d469e64e60520e54ddd7e867043b6608dcbb20da95a7070bcac5
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:9c0c1209c0b1d469e64e60520e54ddd7e867043b6608dcbb20da95a7070bcac5
+  self_write_set:
+  - feature-docs/dbracket-regex-settled/SPEC.md
+- request_id: create-spec-run-0004
+  status: completed
+  input_digest: sha256:a54dc0e2e94bf86efc6f887e328337d6f72a0fce4284883bf52647d83d97ce3f
+  self_write_set: []
+- request_id: create-spec-run-0005
+  status: completed
+  input_digest: sha256:2068a7f45f997c5455d0a29874b6e9ee53aae7dfcf270ced0851de92f6ec2bac
+  self_write_set:
+  - feature-docs/dbracket-regex-settled/SPEC.md
+artifacts:
+- path: feature-docs/dbracket-regex-settled/SPEC.md
+  sha256: sha256:99144de9220ec7e6968181d8a62ecccc61d3b6552fc7cf4a4d5bdfbbeadda3db
+  produced_by: create-spec-run-0003
+- path: feature-docs/dbracket-regex-settled/SPEC.md
+  sha256: sha256:8b866692bd95f46bc40d4d087b0952f7adea6e53622e9cfeb306a6ccf2d5c330
+  produced_by: create-spec-run-0005
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
