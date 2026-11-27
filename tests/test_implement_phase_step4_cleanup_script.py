@@ -1,7 +1,19 @@
-"""Tests for task0002 (wake-task-cleanup-script): Step I.2.b step 4 of
-`em-workflow/references/implement-phase.md` calls the cleanup script
+"""Tests for task0002 and task0004 (wake-task-cleanup-script): Step I.2.b
+step 4 of `em-workflow/references/implement-phase.md` calls the cleanup script
 (IMPLEMENTATION.md C1) instead of spelling git commands, reads the script's
 JSON (C2), and keeps the wording the SPEC pins.
+
+Call-line shape (C1). The one fenced line of step 4 is
+
+    python3 {cleanup_script} --integration-worktree {integration_worktree} --feature {feature} --task {T}
+
+The script is named only through `{cleanup_script}`, which stands for the
+script's absolute path resolved per Step I.0 step 4. When the line runs,
+`{cleanup_script}` is replaced by that resolved path and the other three
+placeholders by the validated literal values, and each substituted value is
+first escaped for the shell as one whole argument: single-quoted, an embedded
+single quote written as close-quote, escaped quote, open-quote. No
+placeholder, unescaped `$` or brace is left on the line that runs.
 
 Covers task0002 Acceptance Criteria
 (feature-docs/wake-task-cleanup-script/tasks/task0002.md):
@@ -27,35 +39,77 @@ Covers task0002 Acceptance Criteria
   brace behind and passes `destructive-guard.py` and
   `interpreter-mismatch-guard.py`, with `CLAUDE_BATCH` removed and set.
 
+Covers task0004 Acceptance Criteria
+(feature-docs/wake-task-cleanup-script/tasks/task0004.md), which align the
+checks above to the call-line shape of C1:
+
+- AC-1 (FR4, TM-3, TS-8): the call line is, byte for byte, the C1 line and
+  is extracted as the fenced line whose first word is `python3` and that
+  holds `{cleanup_script}` (TestAC1CallLineAndResolution).
+- AC-2 (FR4, TM-3, TS-8): the resolution statements, six whitespace-
+  normalized phrases of the current step 4 (TestAC1CallLineAndResolution).
+- AC-3 (FR4, TM-3, TS-8): no occurrence of `cleanup-task.py` in the whole
+  document is named by a relative path, and the call line holds none
+  (TestAC1CallLineAndResolution).
+- AC-4 (NFR2, TM-4, TS-9): the call line, expanded with escaped values for
+  the sample set, the repository copy and the shell-special paths, leaves no
+  placeholder and splits into the eight intended words
+  (TestTask4AC4ExpansionYieldsTheEightIntendedWords).
+- AC-5 (NFR2, TM-4, TS-9): every one of those expanded lines passes both
+  guards (TestTask4AC5ExpandedLinesPassTheGuards).
+- AC-6 (FR3, FR8, FR4, TM-5, TS-8, NFR3): the AC-2, AC-3 and AC-4 classes
+  keep their assertions and every test name the task0002 and task0003
+  records name stays.
+
 This module reads `em-workflow/references/implement-phase.md` and runs the
 repository copies of `em-workflow/hooks/destructive-guard.py` and
 `em-workflow/hooks/interpreter-mismatch-guard.py` as child processes. It does
-not need `em-workflow/scripts/cleanup-task.py` to exist, does not run it,
-writes no files, and does not import from, and is not imported by, any other
-test module.
+not need `em-workflow/scripts/cleanup-task.py` to exist (the repository copy
+value set only uses its path as a string), does not run it, writes no files,
+and does not import from, and is not imported by, any other test module.
 
 Prose assertions compare whitespace-normalized text; byte-identity
 assertions (the call line, the Batch mode opening) compare the raw text. The
 two are never mixed in one assertion. Every matcher asserting NEW wording is
 paired with a negative proof against a verbatim pre-change copy of step 4,
-captured from this task's base revision (commit
+captured from task0002's base revision (commit
 2d3d61fed9efa06dd45a7671e35480cf9d3b85aa) and never reconstructed, plus a
 non-vacuity guard proving the copy is itself the old text.
 
+Value sets of the expansion (AC-4, AC-5 of task0004). Sample values are the
+ones `tests/test_protocol_git_ops_pass_destructive_guard.py` defines:
+`{root}` = `/home/user`, feature `some-feature`, task `task0001`,
+integration worktree
+`{root}/.claude/worktrees/em-workflow/some-feature/integration`.
+
+- the sample set: the script under the module's sample plugin root and the
+  sample feature, task and integration worktree;
+- the repository copy: the absolute path of `em-workflow/scripts/cleanup-task.py`
+  in this repository, with the sample feature, task and integration worktree;
+- shell-special paths: for the script path and for the integration worktree
+  in turn, a value holding a space, a single quote, a double quote, a
+  backtick, `$` (a variable form, a brace form, a command-substitution form),
+  a newline, and every one of them together. The feature and task values stay
+  the sample ones, since Step I.0 step 2 admits nothing else for them.
+
+An expanded line is correct when no placeholder is left (nothing outside the
+escaped values holds `$`, a brace) and splitting it by POSIX shell word rules
+(standard library) yields exactly eight words: `python3`, the script path,
+`--integration-worktree`, the integration worktree, `--feature`, the feature,
+`--task`, the task, each value recovered exactly as given.
+
 Guard invocation: the current Python interpreter, the repository copy of the
 guard, stdin = one JSON object with `tool_name` `Bash` and
-`tool_input.command` set to the expanded call line (no `cwd` key). "Passes"
-means exit status 0 and a verdict that is neither `ask` nor `deny` (`allow`
-and no output both pass).
-
-Sample values are the ones `tests/test_protocol_git_ops_pass_destructive_guard.py`
-defines: `{root}` = `/home/user`, feature `some-feature`, task `task0001`,
-integration worktree `{root}/.claude/worktrees/em-workflow/some-feature/integration`.
+`tool_input.command` set to the expanded call line (no `cwd` key; a value
+with a newline travels inside that JSON, never through a command line or a
+file). "Passes" means exit status 0 and a verdict that is neither `ask` nor
+`deny` (`allow` and no output both pass).
 """
 
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 import unittest
@@ -76,9 +130,18 @@ FAILED_HEADING = "### I.2.c: Failed handling"
 STEP4_HEADING_LINE = "4. **Clean up** every newly-merged task's worktree and branch:"
 STEP5_START = "5. **Refill**:"
 
-SCRIPT_PATH_IN_DOC = "${CLAUDE_PLUGIN_ROOT}/scripts/cleanup-task.py"
+SCRIPT_PLACEHOLDER = "{cleanup_script}"
+PLACEHOLDERS = (SCRIPT_PLACEHOLDER, "{integration_worktree}", "{feature}", "{T}")
 CALL_LINE = (
-    f"python3 {SCRIPT_PATH_IN_DOC} "
+    "python3 {cleanup_script} --integration-worktree {integration_worktree} "
+    "--feature {feature} --task {T}"
+)
+# The one spelling of the script path besides a bare file name that the
+# document may use anywhere (Step I.0 step 4 resolves the script from it).
+PLUGIN_ROOT_FORM_PREFIX = "${CLAUDE_PLUGIN_ROOT}/scripts/"
+# The call line step 4 had before it named the script through a placeholder.
+PLUGIN_ROOT_CALL_LINE = (
+    f"python3 {PLUGIN_ROOT_FORM_PREFIX}cleanup-task.py "
     '--integration-worktree "{integration_worktree}" '
     "--feature {feature} --task {T}"
 )
@@ -93,6 +156,9 @@ SAMPLE_INTEGRATION_WT = (
 SAMPLE_PLUGIN_ROOT = (
     f"{SAMPLE_ROOT}/.claude/plugins/cache/em-claude-plugins/em-workflow/1.2.3"
 )
+SAMPLE_SCRIPT = f"{SAMPLE_PLUGIN_ROOT}/scripts/cleanup-task.py"
+# The repository's own copy: only its path is used, as a string.
+REPO_SCRIPT = str(PLUGIN_ROOT / "scripts" / "cleanup-task.py")
 
 FAILURE_RULE = (
     "If this branch deletion fails, do NOT fall back to a forced deletion "
@@ -136,9 +202,11 @@ _CODE_SPAN_RE = re.compile(r"`([^`]+)`", re.DOTALL)
 
 
 def _fenced_blocks(region):
-    """Each fenced block's body, as a list of its non-blank lines (stripped)."""
+    """Each fenced block's body, as a list of its non-blank lines. Only the
+    layout indentation is removed: the rest of a line is kept as written, so
+    a comparison with the call line is byte for byte."""
     return [
-        [line.strip() for line in m.group(1).split("\n") if line.strip()]
+        [line.lstrip() for line in m.group(1).split("\n") if line.strip()]
         for m in _FENCE_RE.finditer(region)
     ]
 
@@ -166,28 +234,52 @@ def _git_shaped_items(region):
     return items
 
 
+def _is_call_line_candidate(line):
+    """A fenced-block line whose first word is `python3` and that holds
+    `{cleanup_script}`."""
+    words = line.split()
+    return bool(words) and words[0] == "python3" and SCRIPT_PLACEHOLDER in line
+
+
 def _extract_call_line(region):
-    """The one fenced-block line naming the cleanup script. Raises
+    """The one fenced-block line that calls the cleanup script. Raises
     AssertionError naming the reason when the region has none or several."""
-    lines = [line for line in _fenced_lines(region) if "cleanup-task.py" in line]
+    lines = [line for line in _fenced_lines(region) if _is_call_line_candidate(line)]
     if not lines:
-        raise AssertionError("step 4 region has no call line naming cleanup-task.py")
+        raise AssertionError(
+            "step 4 region has no call line (a fenced line whose first word is "
+            f"python3 and that holds {SCRIPT_PLACEHOLDER})"
+        )
     if len(lines) > 1:
         raise AssertionError(
-            f"step 4 region has more than one call line naming cleanup-task.py: {lines!r}"
+            f"step 4 region has more than one call line holding {SCRIPT_PLACEHOLDER}: {lines!r}"
         )
     return lines[0]
 
 
-def _script_namings_without_plugin_root_prefix(text):
-    """Offsets of every `cleanup-task.py` in TEXT that is not written as
-    `${CLAUDE_PLUGIN_ROOT}/scripts/cleanup-task.py` (a path relative to the
-    current directory, for one)."""
-    prefix = "${CLAUDE_PLUGIN_ROOT}/scripts/"
+def _relative_script_namings(text):
+    """Offsets of every `cleanup-task.py` in TEXT that is named by a path
+    relative to the current directory. Accepted: the occurrence written as
+    `${CLAUDE_PLUGIN_ROOT}/scripts/cleanup-task.py`, and the bare file name
+    (nothing path-like directly before it: no `/`, no backslash, so no `./`
+    either). Every other occurrence is reported."""
+    offsets = []
+    for m in re.finditer(r"cleanup-task\.py", text):
+        before = text[: m.start()]
+        if before.endswith(PLUGIN_ROOT_FORM_PREFIX):
+            continue
+        if before.endswith(("/", "\\")):
+            offsets.append(m.start())
+    return offsets
+
+
+def _script_name_in_fenced_line_problems(region):
+    """The call line names the script only through `{cleanup_script}`: no
+    fenced-block line of the region holds the file name."""
     return [
-        m.start()
-        for m in re.finditer(r"cleanup-task\.py", text)
-        if text[max(0, m.start() - len(prefix)) : m.start()] != prefix
+        f"fenced line holds cleanup-task.py: {line!r}"
+        for line in _fenced_lines(region)
+        if "cleanup-task.py" in line
     ]
 
 
@@ -206,6 +298,10 @@ def _call_line_problems(region):
 
 RESOLUTION_PHRASES = (
     "resolved per Step I.0 step 4",
+    "the script's resolved absolute path (the whole path of `cleanup-task.py`) "
+    "in place of `{cleanup_script}`",
+    "Each substituted value is first escaped for the shell as one whole argument",
+    "No placeholder, unescaped `$` or brace is left on the line that runs",
     "When the script cannot be resolved, nothing is invoked",
     "no other location, a path relative to the current directory included, is tried",
 )
@@ -292,23 +388,151 @@ PRE_CHANGE_STEP4 = (
 )
 
 
-# --- Expansion and guard invocation -----------------------------------------
+# --- Expansion, word check and guard invocation ------------------------------
+
+_PLACEHOLDER_RE = re.compile(r"\{(cleanup_script|integration_worktree|feature|T)\}")
 
 
-def _expand(call_line):
-    """`${CLAUDE_PLUGIN_ROOT}` first (it contains braces itself), then the
-    three brace placeholders."""
-    text = call_line.replace("${CLAUDE_PLUGIN_ROOT}", SAMPLE_PLUGIN_ROOT)
-    text = text.replace("{integration_worktree}", SAMPLE_INTEGRATION_WT)
-    text = text.replace("{feature}", SAMPLE_FEATURE)
-    text = text.replace("{T}", SAMPLE_TASK)
-    return text
+def _shell_escape(value):
+    """The form step 4 states: the value single-quoted as one whole argument,
+    an embedded single quote written as close-quote, escaped quote,
+    open-quote."""
+    return "'" + value.replace("'", "'\\''") + "'"
 
 
-def _assert_no_residue(expanded):
-    for residue in ("$", "{", "}"):
-        if residue in expanded:
-            raise AssertionError(f"{residue!r} left behind in {expanded!r}")
+def _no_escape(value):
+    return value
+
+
+def _double_quote(value):
+    return '"' + value + '"'
+
+
+def _expand(
+    call_line,
+    script=SAMPLE_SCRIPT,
+    integration_worktree=SAMPLE_INTEGRATION_WT,
+    feature=SAMPLE_FEATURE,
+    task=SAMPLE_TASK,
+    escape=_shell_escape,
+):
+    """Replace `{cleanup_script}`, `{integration_worktree}`, `{feature}` and
+    `{T}` with their values, each passed through ESCAPE. One pass over the
+    line: a value that holds placeholder-looking text is never expanded again,
+    so nothing of the script's own location (`${CLAUDE_PLUGIN_ROOT}` included)
+    is left to the order of the replacements."""
+    values = {
+        "cleanup_script": escape(script),
+        "integration_worktree": escape(integration_worktree),
+        "feature": escape(feature),
+        "T": escape(task),
+    }
+    return _PLACEHOLDER_RE.sub(lambda m: values[m.group(1)], call_line)
+
+
+def _escaped_values(script, integration_worktree):
+    """The four values in the form step 4 states: the only text the residue
+    check lets hold `$` and braces."""
+    return [
+        _shell_escape(v)
+        for v in (script, integration_worktree, SAMPLE_FEATURE, SAMPLE_TASK)
+    ]
+
+
+def _expected_words(script, integration_worktree):
+    return [
+        "python3",
+        script,
+        "--integration-worktree",
+        integration_worktree,
+        "--feature",
+        SAMPLE_FEATURE,
+        "--task",
+        SAMPLE_TASK,
+    ]
+
+
+def _residue_problems(expanded, escaped_values=()):
+    """A placeholder, `$` or brace left outside the escaped values. The
+    escaped values themselves may hold `$` and braces: they are quoted, so
+    the shell reads them as literal text."""
+    rest = expanded
+    for value in sorted(escaped_values, key=len, reverse=True):
+        rest = rest.replace(value, "")
+    return [
+        f"{residue!r} left behind outside the escaped values: {expanded!r}"
+        for residue in ("$", "{", "}")
+        if residue in rest
+    ]
+
+
+def _assert_no_residue(expanded, escaped_values=()):
+    problems = _residue_problems(expanded, escaped_values)
+    if problems:
+        raise AssertionError("; ".join(problems))
+
+
+def _word_problems(expanded, expected_words):
+    """Split EXPANDED by POSIX shell word rules; the words must be exactly
+    EXPECTED_WORDS (eight of them), each value recovered as given."""
+    try:
+        words = shlex.split(expanded)
+    except ValueError as exc:
+        return [f"not splittable into shell words ({exc}): {expanded!r}"]
+    if len(words) != len(expected_words):
+        return [f"{len(words)} words instead of {len(expected_words)}: {words!r}"]
+    if words != expected_words:
+        return [f"words differ from the values: {words!r} != {expected_words!r}"]
+    return []
+
+
+def _expansion_problems(call_line, script, integration_worktree, escape=_shell_escape):
+    expanded = _expand(call_line, script, integration_worktree, escape=escape)
+    return _residue_problems(
+        expanded, _escaped_values(script, integration_worktree)
+    ) + _word_problems(expanded, _expected_words(script, integration_worktree))
+
+
+# One fragment per shell-special form; the plan's list, plus all of them at
+# once. Each is placed in the project-root part of the script path and of the
+# integration worktree in turn.
+SPECIAL_FRAGMENTS = (
+    ("a space", "with space"),
+    ("a single quote", "it's"),
+    ("a double quote", 'say "hi"'),
+    ("a backtick", "back`tick"),
+    ("a variable form of $", "$HOME"),
+    ("a brace form of $", "${HOME}"),
+    ("a command-substitution form of $", "$(whoami)"),
+    ("a newline", "line\nbreak"),
+    ("every one of them together", "it's \"a\" `b` $c ${d} $(e)\nf"),
+)
+
+
+def _value_sets():
+    """(label, script path, integration worktree): the sample set, the
+    repository copy and the shell-special paths."""
+    sets = [
+        ("sample set", SAMPLE_SCRIPT, SAMPLE_INTEGRATION_WT),
+        ("repository copy", REPO_SCRIPT, SAMPLE_INTEGRATION_WT),
+    ]
+    for label, fragment in SPECIAL_FRAGMENTS:
+        sets.append(
+            (
+                f"script path holding {label}",
+                f"{SAMPLE_ROOT}/{fragment}/em-workflow/scripts/cleanup-task.py",
+                SAMPLE_INTEGRATION_WT,
+            )
+        )
+        sets.append(
+            (
+                f"integration worktree holding {label}",
+                SAMPLE_SCRIPT,
+                f"{SAMPLE_ROOT}/{fragment}/.claude/worktrees/em-workflow/"
+                f"{SAMPLE_FEATURE}/integration",
+            )
+        )
+    return sets
 
 
 def _guard_verdict(guard_path, command, batch):
@@ -336,11 +560,11 @@ def _passes(verdict):
     return verdict not in ("ask", "deny") and not verdict.startswith("(exit")
 
 
-# --- AC-1 --------------------------------------------------------------------
+# --- AC-1 to AC-3 of task0004 / AC-1 of task0002 -----------------------------
 
 
 class TestAC1CallLineAndResolution(unittest.TestCase):
-    """AC-1 (FR4, TM-3, TS-8)."""
+    """AC-1 (FR4, TM-3, TS-8) of task0002; AC-1 to AC-3 of task0004."""
 
     @classmethod
     def setUpClass(cls):
@@ -358,7 +582,11 @@ class TestAC1CallLineAndResolution(unittest.TestCase):
 
     def test_script_is_never_named_by_a_path_relative_to_the_current_directory(self):
         self.assertIn("cleanup-task.py", self.text)
-        self.assertEqual(_script_namings_without_plugin_root_prefix(self.text), [])
+        self.assertEqual(_relative_script_namings(self.text), [])
+
+    def test_call_line_names_the_script_only_through_its_placeholder(self):
+        self.assertNotIn("cleanup-task.py", _extract_call_line(self.region))
+        self.assertEqual(_script_name_in_fenced_line_problems(self.region), [])
 
     def test_trusted_root_search_literals_are_not_restated_in_the_region(self):
         for literal in ("$HOME/.claude/plugins", "$HOME/.claude/skills", "*/em-workflow/*/scripts/*"):
@@ -369,9 +597,54 @@ class TestAC1CallLineAndResolution(unittest.TestCase):
         self.assertNotEqual(_call_line_problems(PRE_CHANGE_STEP4), [])
         self.assertEqual(len(_resolution_problems(PRE_CHANGE_STEP4)), len(RESOLUTION_PHRASES))
 
+    def test_negative_proof_removing_each_resolution_phrase_is_detected(self):
+        text = _normalize_ws(self.region)
+        for phrase in RESOLUTION_PHRASES:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, text)
+                self.assertNotEqual(_resolution_problems(text.replace(phrase, "")), [])
+
     def test_negative_proof_a_script_named_relative_to_the_cwd_is_detected(self):
-        forged = self.text.replace(SCRIPT_PATH_IN_DOC, "em-workflow/scripts/cleanup-task.py", 1)
-        self.assertNotEqual(_script_namings_without_plugin_root_prefix(forged), [])
+        for naming in (
+            "em-workflow/scripts/cleanup-task.py",
+            "scripts/cleanup-task.py",
+            "./cleanup-task.py",
+        ):
+            with self.subTest(naming=naming):
+                forged_line = CALL_LINE.replace(SCRIPT_PLACEHOLDER, naming)
+                forged_text = self.text.replace(CALL_LINE, forged_line, 1)
+                self.assertIn(forged_line, forged_text)
+                self.assertNotEqual(_relative_script_namings(forged_text), [])
+                forged_region = _step4_region(forged_text)
+                self.assertNotEqual(_script_name_in_fenced_line_problems(forged_region), [])
+                self.assertNotEqual(_call_line_problems(forged_region), [])
+
+    def test_negative_proof_a_prose_mention_by_relative_path_is_detected(self):
+        forged_region = self.region + "   Run em-workflow/scripts/cleanup-task.py by hand.\n"
+        forged_text = self.text.replace(self.region, forged_region, 1)
+        self.assertNotEqual(forged_text, self.text)
+        self.assertNotEqual(_relative_script_namings(forged_text), [])
+
+    def test_relative_path_detection_accepts_only_the_plugin_root_form_and_the_bare_name(self):
+        accepted = (
+            "${CLAUDE_PLUGIN_ROOT}/scripts/cleanup-task.py",
+            "the whole path of `cleanup-task.py`",
+            "cleanup-task.py",
+        )
+        reported = (
+            "./cleanup-task.py",
+            "scripts/cleanup-task.py",
+            "em-workflow/scripts/cleanup-task.py",
+            "/abs/path/cleanup-task.py",
+            "scripts\\cleanup-task.py",
+            "${CLAUDE_PLUGIN_ROOT}/cleanup-task.py",
+        )
+        for sample in accepted:
+            with self.subTest(accepted=sample):
+                self.assertEqual(_relative_script_namings(sample), [])
+        for sample in reported:
+            with self.subTest(reported=sample):
+                self.assertEqual(len(_relative_script_namings(sample)), 1)
 
     def test_negative_proof_a_second_fenced_block_is_detected(self):
         forged = self.region + "   ```bash\n   echo done\n   ```\n"
@@ -380,6 +653,21 @@ class TestAC1CallLineAndResolution(unittest.TestCase):
     def test_negative_proof_an_extra_line_next_to_the_call_line_is_detected(self):
         forged = self.region.replace(CALL_LINE, CALL_LINE + " | cat")
         self.assertNotEqual(_call_line_problems(forged), [])
+
+    def test_negative_proof_an_extra_token_after_the_call_line_is_detected(self):
+        for token in ("--force", "extra", "$HOME", ""):
+            with self.subTest(token=token):
+                forged = self.region.replace(CALL_LINE, f"{CALL_LINE} {token}")
+                self.assertNotEqual(forged, self.region)
+                self.assertNotEqual(_call_line_problems(forged), [])
+
+    def test_negative_proof_the_plugin_root_call_line_of_the_earlier_wording_is_not_accepted(self):
+        forged = self.region.replace(CALL_LINE, PLUGIN_ROOT_CALL_LINE)
+        self.assertNotEqual(forged, self.region)
+        self.assertNotEqual(_call_line_problems(forged), [])
+        with self.assertRaises(AssertionError) as ctx:
+            _extract_call_line(forged)
+        self.assertIn("no call line", str(ctx.exception))
 
     def test_negative_proof_pre_change_samples_are_the_old_text(self):
         self.assertIn('git worktree remove "$WT_ROOT/{T}"', PRE_CHANGE_STEP4)
@@ -495,11 +783,11 @@ class TestAC4PinnedWordingStays(unittest.TestCase):
         self.assertIn(STEP4_HEADING_LINE, PRE_CHANGE_STEP4)
 
 
-# --- AC-5 --------------------------------------------------------------------
+# --- AC-5 of task0002: the sample call line passes the guards ----------------
 
 
 class TestAC5CallLinePassesTheGuards(unittest.TestCase):
-    """AC-5 (NFR2, TM-4, TS-9)."""
+    """AC-5 (NFR2, TM-4, TS-9) of task0002, for the sample value set."""
 
     @classmethod
     def setUpClass(cls):
@@ -512,9 +800,9 @@ class TestAC5CallLinePassesTheGuards(unittest.TestCase):
     def test_expanded_call_line_has_the_expected_shape(self):
         self.assertEqual(
             self.expanded,
-            f"python3 {SAMPLE_PLUGIN_ROOT}/scripts/cleanup-task.py "
-            f'--integration-worktree "{SAMPLE_INTEGRATION_WT}" '
-            f"--feature {SAMPLE_FEATURE} --task {SAMPLE_TASK}",
+            f"python3 '{SAMPLE_PLUGIN_ROOT}/scripts/cleanup-task.py' "
+            f"--integration-worktree '{SAMPLE_INTEGRATION_WT}' "
+            f"--feature '{SAMPLE_FEATURE}' --task '{SAMPLE_TASK}'",
         )
 
     def test_call_line_passes_each_guard_without_and_with_claude_batch(self):
@@ -550,8 +838,12 @@ class TestAC5CallLinePassesTheGuards(unittest.TestCase):
                     _assert_no_residue(residue_line)
 
     def test_negative_proof_expansion_order_leaves_no_brace_from_plugin_root(self):
-        # `${CLAUDE_PLUGIN_ROOT}` carries braces itself: it is expanded as a
-        # whole, so nothing of it survives.
+        # No placeholder and no `CLAUDE_PLUGIN_ROOT` text survives the
+        # expansion: the script is named through `{cleanup_script}` and is
+        # replaced as a whole, in the same pass as the other three.
+        for placeholder in PLACEHOLDERS:
+            with self.subTest(placeholder=placeholder):
+                self.assertNotIn(placeholder, self.expanded)
         self.assertNotIn("CLAUDE_PLUGIN_ROOT", self.expanded)
 
     def test_negative_proof_the_guard_check_rejects_a_forced_deletion(self):
@@ -569,6 +861,183 @@ class TestAC5CallLinePassesTheGuards(unittest.TestCase):
 
     def test_negative_proof_a_guard_failure_is_not_a_pass(self):
         self.assertFalse(_passes("(exit 1)"))
+
+
+# --- AC-4 of task0004: expansion into the eight intended words ---------------
+
+
+class TestTask4AC4ExpansionYieldsTheEightIntendedWords(unittest.TestCase):
+    """AC-4 (NFR2, TM-4, TS-9): every value set, expanded with escaped values,
+    leaves no placeholder and splits into the eight intended words."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.call_line = _extract_call_line(_step4_region(_read()))
+
+    def test_every_value_set_leaves_no_placeholder_and_splits_into_eight_words(self):
+        for label, script, worktree in _value_sets():
+            with self.subTest(values=label):
+                self.assertEqual(
+                    _expansion_problems(self.call_line, script, worktree), []
+                )
+
+    def test_value_sets_hold_every_special_form_in_both_positions(self):
+        sets = _value_sets()
+        for needle in (" ", "'", '"', "`", "$HOME", "${HOME}", "$(whoami)", "\n"):
+            with self.subTest(form=needle):
+                self.assertTrue(any(needle in script for _, script, _ in sets), "script path")
+                self.assertTrue(any(needle in wt for _, _, wt in sets), "integration worktree")
+
+    def test_value_sets_hold_the_sample_set_and_the_repository_copy(self):
+        by_label = {label: (script, wt) for label, script, wt in _value_sets()}
+        self.assertEqual(by_label["sample set"], (SAMPLE_SCRIPT, SAMPLE_INTEGRATION_WT))
+        script, wt = by_label["repository copy"]
+        self.assertTrue(os.path.isabs(script))
+        self.assertTrue(script.endswith("/em-workflow/scripts/cleanup-task.py"))
+        self.assertEqual(wt, SAMPLE_INTEGRATION_WT)
+
+    def test_escaping_is_single_quotes_with_an_embedded_quote_written_out(self):
+        self.assertEqual(_shell_escape("a b"), "'a b'")
+        self.assertEqual(_shell_escape("it's"), "'it'\\''s'")
+        self.assertEqual(_shell_escape("$HOME`x`\n"), "'$HOME`x`\n'")
+
+    def test_a_value_holding_placeholder_text_is_never_expanded_again(self):
+        script = f"{SAMPLE_ROOT}/{{feature}}/{{T}}/{{cleanup_script}}/cleanup-task.py"
+        worktree = f"{SAMPLE_ROOT}/{{integration_worktree}}/.claude/worktrees/integration"
+        expanded = _expand(self.call_line, script, worktree)
+        self.assertEqual(shlex.split(expanded), _expected_words(script, worktree))
+
+    def test_negative_proof_a_placeholder_left_on_the_line_is_detected(self):
+        self.assertNotEqual(_residue_problems(self.call_line), [])
+        left = _expand(self.call_line).replace(f"'{SAMPLE_TASK}'", "{T}")
+        self.assertNotEqual(
+            _residue_problems(left, _escaped_values(SAMPLE_SCRIPT, SAMPLE_INTEGRATION_WT)), []
+        )
+
+    def test_negative_proof_a_value_with_a_space_expanded_without_escaping_fails(self):
+        cases = (
+            ("script path", f"{SAMPLE_ROOT}/with space/cleanup-task.py", SAMPLE_INTEGRATION_WT),
+            ("integration worktree", SAMPLE_SCRIPT, f"{SAMPLE_ROOT}/with space/integration"),
+        )
+        for label, script, worktree in cases:
+            with self.subTest(value=label):
+                self.assertNotEqual(
+                    _word_problems(
+                        _expand(self.call_line, script, worktree, escape=_no_escape),
+                        _expected_words(script, worktree),
+                    ),
+                    [],
+                )
+                self.assertNotEqual(
+                    _expansion_problems(self.call_line, script, worktree, escape=_no_escape), []
+                )
+
+    def test_negative_proof_a_value_with_dollar_and_newline_expanded_without_escaping_fails(self):
+        cases = (
+            ("script path", f"{SAMPLE_ROOT}/$HOME\nx/cleanup-task.py", SAMPLE_INTEGRATION_WT),
+            ("integration worktree", SAMPLE_SCRIPT, f"{SAMPLE_ROOT}/$HOME\nx/integration"),
+        )
+        for label, script, worktree in cases:
+            with self.subTest(value=label):
+                self.assertNotEqual(
+                    _word_problems(
+                        _expand(self.call_line, script, worktree, escape=_no_escape),
+                        _expected_words(script, worktree),
+                    ),
+                    [],
+                )
+                self.assertNotEqual(
+                    _expansion_problems(self.call_line, script, worktree, escape=_no_escape), []
+                )
+
+    def test_negative_proof_a_value_with_a_single_quote_expanded_without_escaping_fails(self):
+        script = f"{SAMPLE_ROOT}/it's/cleanup-task.py"
+        problems = _word_problems(
+            _expand(self.call_line, script, escape=_no_escape),
+            _expected_words(script, SAMPLE_INTEGRATION_WT),
+        )
+        self.assertNotEqual(problems, [])
+
+    def test_negative_proof_a_double_quoted_value_with_dollar_is_detected(self):
+        # Double quotes keep the words intact but leave `$` live for the
+        # shell: the residue check outside the escaped values catches it.
+        script = f"{SAMPLE_ROOT}/$HOME/cleanup-task.py"
+        self.assertNotEqual(
+            _expansion_problems(self.call_line, script, SAMPLE_INTEGRATION_WT, escape=_double_quote),
+            [],
+        )
+
+    def test_negative_proof_a_word_check_fails_for_a_changed_word_count_or_value(self):
+        expanded = _expand(self.call_line)
+        words = _expected_words(SAMPLE_SCRIPT, SAMPLE_INTEGRATION_WT)
+        self.assertEqual(_word_problems(expanded, words), [])
+        self.assertNotEqual(_word_problems(expanded + " extra", words), [])
+        self.assertNotEqual(_word_problems(expanded.replace(SAMPLE_TASK, "task0002"), words), [])
+        self.assertNotEqual(_word_problems(expanded.replace("'", ""), words[:1] + ["x"]), [])
+
+
+# --- AC-5 of task0004: expanded lines pass the guards -------------------------
+
+
+class TestTask4AC5ExpandedLinesPassTheGuards(unittest.TestCase):
+    """AC-5 (NFR2, TM-4, TS-9): every expanded line of AC-4 passes
+    `destructive-guard.py` and `interpreter-mismatch-guard.py`, with
+    `CLAUDE_BATCH` removed and set."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.call_line = _extract_call_line(_step4_region(_read()))
+
+    def test_every_expanded_line_passes_each_guard_without_and_with_claude_batch(self):
+        for label, script, worktree in _value_sets():
+            expanded = _expand(self.call_line, script, worktree)
+            for name, path in GUARD_PATHS.items():
+                for batch in (False, True):
+                    with self.subTest(values=label, guard=name, claude_batch=batch):
+                        verdict = _guard_verdict(path, expanded, batch)
+                        self.assertTrue(
+                            _passes(verdict),
+                            f"{name} (CLAUDE_BATCH {'set' if batch else 'removed'}) "
+                            f"judged {expanded!r}: {verdict}",
+                        )
+
+    def test_the_value_with_a_newline_reaches_the_guard_inside_the_json_input(self):
+        script = f"{SAMPLE_ROOT}/line\nbreak/cleanup-task.py"
+        expanded = _expand(self.call_line, script)
+        self.assertIn("\n", expanded)
+        self.assertEqual(json.loads(json.dumps({"command": expanded}))["command"], expanded)
+        self.assertTrue(_passes(_guard_verdict(DESTRUCTIVE_GUARD_PATH, expanded, False)))
+
+    def test_passing_means_a_clean_exit_and_neither_ask_nor_deny(self):
+        for verdict in ("allow", "(silent)"):
+            with self.subTest(verdict=verdict):
+                self.assertTrue(_passes(verdict))
+        for verdict in ("ask", "deny", "(exit 1)", "(exit 2)"):
+            with self.subTest(verdict=verdict):
+                self.assertFalse(_passes(verdict))
+
+    def test_negative_proof_a_forced_branch_deletion_does_not_pass_the_destructive_guard(self):
+        for batch in (False, True):
+            with self.subTest(claude_batch=batch):
+                verdict = _guard_verdict(
+                    DESTRUCTIVE_GUARD_PATH,
+                    "git branch -D em-workflow/some-feature/task0001",
+                    batch,
+                )
+                self.assertFalse(_passes(verdict), verdict)
+
+    def test_negative_proof_a_python_script_run_by_bash_does_not_pass_the_interpreter_guard(self):
+        command = f"bash {PLUGIN_ROOT / 'scripts' / 'merge-git.py'}"
+        for batch in (False, True):
+            with self.subTest(claude_batch=batch):
+                verdict = _guard_verdict(INTERPRETER_GUARD_PATH, command, batch)
+                self.assertFalse(_passes(verdict), verdict)
+
+    def test_negative_proof_a_guard_that_exits_non_zero_is_not_a_pass(self):
+        missing = REPO_ROOT / "em-workflow" / "hooks" / "no-such-guard.py"
+        verdict = _guard_verdict(missing, "python3 x", False)
+        self.assertTrue(verdict.startswith("(exit"), verdict)
+        self.assertFalse(_passes(verdict))
 
 
 class TestModuleHygiene(unittest.TestCase):
