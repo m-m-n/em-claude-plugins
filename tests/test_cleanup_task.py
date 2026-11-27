@@ -1,6 +1,9 @@
 """Behavior and static tests of em-workflow/scripts/cleanup-task.py.
 
-Covers AC-1..AC-7 of feature-docs/wake-task-cleanup-script/tasks/task0001.md.
+Covers AC-1..AC-7 of feature-docs/wake-task-cleanup-script/tasks/task0001.md
+(the classes named TestAC<n>...) and AC-1..AC-7 of
+feature-docs/wake-task-cleanup-script/tasks/task0003.md (the classes named
+TestTask3AC<n>..., plus the invocation policy checks of TestAC7...).
 
 Every behavior test builds a disposable git repository in a temporary
 directory (system and global git configuration disabled, fixed author
@@ -16,7 +19,8 @@ Every exit-0 run of the script is checked against the result JSON contract
 (one line, one object, exactly the keys of IMPLEMENTATION.md C2), and the git
 invocations the shim logged are checked against the invocation policy (no
 forcing flag, no prune, the integration worktree as repository location, the
-exact `branch -d <task branch>` deletion).
+exact `branch -d <task branch>` deletion, the only other repository location
+being the project root for its one git common-directory query).
 """
 
 import json
@@ -83,18 +87,43 @@ def forbidden_token(token):
     return FORCING_SHORT_FLAG.fullmatch(token) is not None
 
 
+# The one git call whose repository location is the project root.
+COMMON_DIR_QUERY = ["rev-parse", "--path-format=absolute", "--git-common-dir"]
+
+
+def project_root_of(integration_worktree):
+    """The part of the integration worktree path before its five fixed segments."""
+    return integration_worktree.rsplit("/", 5)[0]
+
+
 def policy_violations(calls, integration_worktree, branch):
-    """Every way the logged git calls break the invocation policy of AC-7."""
+    """Every way the logged git calls break the invocation policy (task0001 AC-7, task0003 AC-6).
+
+    Every call names the integration worktree as its repository location; the
+    only exception is the project root's git common-directory query. A branch
+    invocation is exactly `branch -d <task branch>`; a config invocation is
+    exactly a read of the task branch's remote or merge setting.
+    """
     problems = []
+    project_root = project_root_of(integration_worktree)
+    upstream_reads = (
+        ["config", "--get", f"branch.{branch}.remote"],
+        ["config", "--get", f"branch.{branch}.merge"],
+    )
     for args in calls:
         for token in args:
             if forbidden_token(token):
                 problems.append(f"forbidden token {token!r} in {args}")
         locations, sub = parse_invocation(args)
-        if locations != [integration_worktree]:
+        if locations == [project_root]:
+            if sub != COMMON_DIR_QUERY:
+                problems.append(f"the project root is a repository location only for the common-directory query in {args}")
+        elif locations != [integration_worktree]:
             problems.append(f"repository location {locations} is not the integration worktree in {args}")
         if sub[:1] == ["branch"] and sub != ["branch", "-d", branch]:
             problems.append(f"branch invocation is not 'branch -d <task branch>' in {args}")
+        if sub[:1] == ["config"] and sub not in upstream_reads:
+            problems.append(f"config invocation is not a read of the task branch's upstream setting in {args}")
     return problems
 
 
@@ -105,6 +134,9 @@ def policy_violations(calls, integration_worktree, branch):
 
 class CleanupBase(unittest.TestCase):
     """A temporary repository with the integration worktree, plus the shim."""
+
+    # A subclass that registers the integration worktree elsewhere sets this to False.
+    create_integration_worktree = True
 
     def setUp(self):
         self.assertTrue(SCRIPT.is_file(), "the script under test does not exist: em-workflow/scripts/cleanup-task.py")
@@ -140,7 +172,8 @@ class CleanupBase(unittest.TestCase):
         self.wt_dir = self.repo / ".claude" / "worktrees" / "em-workflow" / FEATURE
         self.iw = self.wt_dir / "integration"
         self.task_wt = self.wt_dir / TASK
-        self.git("worktree", "add", "-q", "-b", INTEGRATION_BRANCH, str(self.iw), "main")
+        if self.create_integration_worktree:
+            self.git("worktree", "add", "-q", "-b", INTEGRATION_BRANCH, str(self.iw), "main")
 
         self.git_log = self.tmp / "git-shim.log"
         self.shim_dir = self.tmp / "shims"
@@ -151,6 +184,12 @@ class CleanupBase(unittest.TestCase):
             "#!/bin/sh\n"
             '{ for a in "$@"; do printf \'%s\\n\' "$a"; done; printf -- \'--END--\\n\'; }'
             ' >> "$GIT_SHIM_LOG"\n'
+            # On request (GIT_SHIM_MOVE_REF set), move one ref with the real git,
+            # outside the script, right before the branch deletion
+            # `git -C <integration worktree> branch -d <branch>` runs.
+            'if [ -n "$GIT_SHIM_MOVE_REF" ] && [ "$3" = "branch" ] && [ "$4" = "-d" ]; then\n'
+            f'  "{real_git}" -C "$GIT_SHIM_REPO" update-ref "$GIT_SHIM_MOVE_REF" "$GIT_SHIM_MOVE_TO"\n'
+            "fi\n"
             f'exec "{real_git}" "$@"\n',
             encoding="utf-8",
         )
@@ -520,11 +559,19 @@ class TestAC2MergedTaskFromAnyDirectory(CleanupBase):
         self.assert_cleaned_up(self.run_cleanup(cwd=self.repo, env_extra=redirect))
 
     def test_every_git_call_names_the_integration_worktree_as_its_location(self):
+        # The one exception is the project root's git common-directory query
+        # (task0003); it is asked for exactly once.
         self.run_cleanup(cwd=self.repo)
         calls = self.git_calls()
         self.assertTrue(calls)
+        project_root_queries = 0
         for args in calls:
-            self.assertEqual(parse_invocation(args)[0], [str(self.iw)], args)
+            locations, sub = parse_invocation(args)
+            if locations == [str(self.repo)] and sub == COMMON_DIR_QUERY:
+                project_root_queries += 1
+                continue
+            self.assertEqual(locations, [str(self.iw)], args)
+        self.assertEqual(project_root_queries, 1)
 
 
 # --------------------------------------------------------------------------
@@ -579,10 +626,18 @@ class TestAC3UnmergedBranchIsKept(CleanupBase):
         self.assertNotIn(str(self.task_wt), self.registered_paths())
         self.assertEqual(self.ref_sha(TASK_REF), tip)
 
-    def test_the_branch_reason_is_the_git_message_of_the_refused_deletion(self):
+    def test_the_kept_branch_has_a_non_empty_reason_whoever_refused(self):
+        # IMPLEMENTATION.md C2: the reason is git's message when git refused and
+        # the script's own fixed text when the script declined to run the
+        # deletion; the contract does not pin either wording.
         self.add_task()
+        tip = self.ref_sha(TASK_REF)
         result = self.run_cleanup(cwd=self.repo)
-        self.assertIn("not fully merged", result["branch"]["reason"])
+        self.assertEqual(result["branch"]["result"], "kept")
+        self.assertEqual(result["branch"]["name"], TASK_BRANCH)
+        self.assertIsInstance(result["branch"]["reason"], str)
+        self.assertTrue(result["branch"]["reason"].strip())
+        self.assertEqual(self.ref_sha(TASK_REF), tip)
 
 
 # --------------------------------------------------------------------------
@@ -759,13 +814,44 @@ class TestAC7InvocationPolicy(unittest.TestCase):
     def test_a_conforming_log_has_no_violation(self):
         self.assertEqual(
             self.violations(
+                ["-C", "/r", "rev-parse", "--path-format=absolute", "--git-common-dir"],
+                ["-C", self.IW, "rev-parse", "--path-format=absolute", "--git-common-dir"],
                 ["-C", self.IW, "worktree", "list", "--porcelain"],
                 ["-C", self.IW, "worktree", "remove", "/r/.claude/worktrees/em-workflow/f/task0001"],
                 ["-C", self.IW, "show-ref", "--verify", "--quiet", "--", "refs/heads/" + self.BRANCH],
+                ["-C", self.IW, "merge-base", "--is-ancestor", "0" * 40, "refs/heads/em-workflow/f/integration"],
+                ["-C", self.IW, "config", "--get", "branch." + self.BRANCH + ".remote"],
+                ["-C", self.IW, "config", "--get", "branch." + self.BRANCH + ".merge"],
                 ["-C", self.IW, "branch", "-d", self.BRANCH],
             ),
             [],
         )
+
+    def test_the_project_root_is_a_location_only_for_the_common_directory_query(self):
+        bad = [
+            ["-C", "/r", "worktree", "list", "--porcelain"],
+            ["-C", "/r", "worktree", "remove", "/r/.claude/worktrees/em-workflow/f/task0001"],
+            ["-C", "/r", "rev-parse", "--git-common-dir"],
+            ["-C", "/r", "rev-parse", "--path-format=absolute", "--git-common-dir", "extra"],
+            ["-C", "/r", "-C", self.IW, "rev-parse", "--path-format=absolute", "--git-common-dir"],
+            ["-C", "/elsewhere", "rev-parse", "--path-format=absolute", "--git-common-dir"],
+        ]
+        for call in bad:
+            with self.subTest(call):
+                self.assertNotEqual(self.violations(call), [])
+
+    def test_a_config_invocation_must_be_a_read_of_the_task_branchs_upstream_setting(self):
+        bad = [
+            ["-C", self.IW, "config", "branch." + self.BRANCH + ".remote", "origin"],
+            ["-C", self.IW, "config", "--unset", "branch." + self.BRANCH + ".remote"],
+            ["-C", self.IW, "config", "--get", "core.editor"],
+            ["-C", self.IW, "config", "--get", "branch.main.remote"],
+            ["-C", self.IW, "config", "--get", "branch." + self.BRANCH + ".remote", "extra"],
+            ["-C", self.IW, "config", "--get-all", "branch." + self.BRANCH + ".merge"],
+        ]
+        for call in bad:
+            with self.subTest(call):
+                self.assertNotEqual(self.violations(call), [])
 
     def test_forcing_flags_and_prune_are_violations(self):
         bad = [
@@ -836,6 +922,290 @@ class TestAC7RunsHonourThePolicy(CleanupBase):
         proc = self.run_raw(self.argv(task="integration"), cwd=self.repo)
         self.assertEqual(proc.returncode, 2)
         self.assertEqual(self.git_calls(), [])
+
+
+
+# --------------------------------------------------------------------------
+# task0003: the upstream check before the branch deletion
+# --------------------------------------------------------------------------
+
+
+class TestTask3AC1UpstreamKeepsTheBranch(CleanupBase):
+    """task0003 AC-1 (FR2, FR3, FR8, TM-2, TS-10): a branch with an upstream setting is never deleted by the script."""
+
+    UPSTREAM = "upstream-local"
+
+    def setUp(self):
+        super().setUp()
+        self.add_task()
+        self.merge_task_into_integration()
+        # A local branch that also contains the tip: with an upstream configured,
+        # git would judge `branch -d` against this branch instead of the
+        # integration branch.
+        self.git("branch", self.UPSTREAM, INTEGRATION_BRANCH)
+        self.assertEqual(self.git_rc("merge-base", "--is-ancestor", TASK_BRANCH, self.UPSTREAM), 0)
+        self.tip = self.ref_sha(TASK_REF)
+
+    def configure(self, remote, merge):
+        if remote:
+            self.git("config", f"branch.{TASK_BRANCH}.remote", ".")
+        if merge:
+            self.git("config", f"branch.{TASK_BRANCH}.merge", f"refs/heads/{self.UPSTREAM}")
+
+    def assert_kept_for_its_upstream(self, result):
+        self.assertEqual(result["worktree"], {"result": "removed", "reason": None})
+        branch = result["branch"]
+        self.assertEqual(branch["result"], "kept")
+        self.assertEqual(branch["name"], TASK_BRANCH)
+        self.assertIsInstance(branch["reason"], str)
+        self.assertTrue(branch["reason"].strip())
+        self.assertIn("upstream", branch["reason"])
+        self.assertEqual(self.ref_sha(TASK_REF), self.tip)
+        self.assertNotIn("branch", self.git_subcommands())
+
+    def test_a_remote_and_a_merge_setting_keep_the_branch(self):
+        self.configure(remote=True, merge=True)
+        self.assert_kept_for_its_upstream(self.run_cleanup(cwd=self.repo))
+
+    def test_a_remote_setting_alone_keeps_the_branch(self):
+        self.configure(remote=True, merge=False)
+        self.assert_kept_for_its_upstream(self.run_cleanup(cwd=self.repo))
+
+    def test_a_merge_setting_alone_keeps_the_branch(self):
+        self.configure(remote=False, merge=True)
+        self.assert_kept_for_its_upstream(self.run_cleanup(cwd=self.repo))
+
+    def test_the_upstream_configuration_is_read_and_never_changed(self):
+        self.configure(remote=True, merge=True)
+        before = self.git("config", "--local", "--list")
+        self.run_cleanup(cwd=self.repo)
+        self.assertEqual(self.git("config", "--local", "--list"), before)
+
+    def test_control_without_an_upstream_the_same_branch_is_removed(self):
+        # The upstream setting is what changes the outcome of the tests above.
+        result = self.run_cleanup(cwd=self.repo)
+        self.assertEqual(result["branch"], {"name": TASK_BRANCH, "result": "removed", "reason": None})
+        self.assertIsNone(self.ref_sha(TASK_REF))
+
+
+# --------------------------------------------------------------------------
+# task0003: a tip that moves off the integration branch after the script's check
+# --------------------------------------------------------------------------
+
+
+class TestTask3AC2TipMovedAfterTheScriptsCheck(CleanupBase):
+    """task0003 AC-2 (FR2, FR3, TM-2, TS-10): git judges the deletion against the integration branch at the moment of deletion."""
+
+    def setUp(self):
+        super().setUp()
+        self.add_task()
+        self.merge_task_into_integration()
+        # A commit that is not contained in the integration branch; a branch
+        # keeps it reachable.
+        tree = self.git("rev-parse", "main^{tree}")
+        self.moved = self.git("commit-tree", tree, "-p", "main", "-m", "elsewhere")
+        self.git("branch", "elsewhere", self.moved)
+        self.assertEqual(self.git_rc("merge-base", "--is-ancestor", self.moved, INTEGRATION_BRANCH), 1)
+        self.assertEqual(self.git_rc("config", "--get", f"branch.{TASK_BRANCH}.remote"), 1)
+        self.assertEqual(self.git_rc("config", "--get", f"branch.{TASK_BRANCH}.merge"), 1)
+
+    def test_a_tip_moved_when_the_deletion_is_invoked_is_refused_by_git_and_kept(self):
+        # The shim, not the script, moves the ref: on seeing the branch deletion
+        # it runs the real git once to move the task ref, then runs the real git
+        # with the original arguments.
+        shim_env = {
+            "GIT_SHIM_REPO": str(self.repo),
+            "GIT_SHIM_MOVE_REF": TASK_REF,
+            "GIT_SHIM_MOVE_TO": self.moved,
+        }
+
+        result = self.run_cleanup(cwd=self.repo, env_extra=shim_env)
+
+        self.assertEqual(result["worktree"], {"result": "removed", "reason": None})
+        branch = result["branch"]
+        self.assertEqual(branch["result"], "kept")
+        self.assertEqual(branch["name"], TASK_BRANCH)
+        self.assertIsInstance(branch["reason"], str)
+        self.assertTrue(branch["reason"].strip())
+        self.assertEqual(self.ref_sha(TASK_REF), self.moved)
+        deletions = [parse_invocation(args)[1] for args in self.git_calls() if parse_invocation(args)[1][:1] == ["branch"]]
+        self.assertEqual(deletions, [["branch", "-d", TASK_BRANCH]])
+
+
+# --------------------------------------------------------------------------
+# task0003: a symbolic link to another repository
+# --------------------------------------------------------------------------
+
+
+class TestTask3AC3LinksToAnotherRepository(CleanupBase):
+    """task0003 AC-3 (FR5, TM-1, TS-11): the project repository's lexical path leads into a second repository."""
+
+    LINKED_PLACES = (
+        (".claude",),
+        (".claude", "worktrees"),
+        (".claude", "worktrees", "em-workflow"),
+        (".claude", "worktrees", "em-workflow", FEATURE),
+    )
+
+    def setUp(self):
+        super().setUp()
+        # self.repo is the second repository: the same feature, an integration
+        # worktree, a task worktree and a task branch merged into the
+        # integration branch.
+        self.add_task()
+        self.merge_task_into_integration()
+        self.project = self.tmp / "project"
+        self.project.mkdir()
+        self.git("init", "-q", "-b", "main", cwd=self.project)
+        (self.project / "README.md").write_text("project\n", encoding="utf-8")
+        self.git("add", "-A", cwd=self.project)
+        self.git("commit", "-q", "-m", "init", cwd=self.project)
+        self.project_iw = self.project / ".claude" / "worktrees" / "em-workflow" / FEATURE / "integration"
+
+    def link(self, *parts):
+        """A symbolic link at the project repository's <parts> leading to the same place of the second repository."""
+        link = self.project.joinpath(*parts)
+        link.parent.mkdir(parents=True, exist_ok=True)
+        os.symlink(self.repo.joinpath(*parts), link)
+
+    def clear_links(self):
+        dot_claude = self.project / ".claude"
+        if dot_claude.is_symlink():
+            dot_claude.unlink()
+        elif dot_claude.exists():
+            shutil.rmtree(dot_claude)  # removes inner links without following them
+
+    def test_a_link_leading_to_the_second_repository_exits_2_without_running_git(self):
+        for places in self.LINKED_PLACES:
+            with self.subTest("/".join(places)):
+                self.clear_links()
+                self.link(*places)
+                self.assertTrue(self.project_iw.is_dir(), "the lexical integration worktree path must resolve")
+                before = self.state()
+                if self.git_log.exists():
+                    self.git_log.unlink()
+
+                proc = self.run_raw(self.argv(iw=str(self.project_iw)), cwd=self.project)
+
+                self.assertEqual(proc.returncode, 2, f"stderr: {proc.stderr}")
+                self.assertEqual(proc.stdout, "")
+                self.assertEqual(self.git_calls(), [])
+                self.assertEqual(self.state(), before)
+                self.assertIn(str(self.task_wt), self.registered_paths())
+                self.assertTrue(self.task_wt.is_dir())
+                self.assertIsNotNone(self.ref_sha(TASK_REF))
+
+    def test_control_a_project_root_reached_through_a_link_is_accepted(self):
+        # A link above the project root is not a link inside the feature layout.
+        alias = self.tmp / "alias"
+        os.symlink(self.repo, alias)
+        alias_iw = alias / ".claude" / "worktrees" / "em-workflow" / FEATURE / "integration"
+
+        proc = self.run_raw(self.argv(iw=str(alias_iw)), cwd=self.tmp)
+
+        self.assertEqual(proc.returncode, 0, f"stderr: {proc.stderr}")
+        result = self.parse_result(proc.stdout)
+        self.assert_git_policy(integration_worktree=str(alias_iw))
+        self.assertEqual(result["worktree"], {"result": "removed", "reason": None})
+        self.assertEqual(result["branch"], {"name": TASK_BRANCH, "result": "removed", "reason": None})
+
+
+# --------------------------------------------------------------------------
+# task0003: the task directory is a symbolic link
+# --------------------------------------------------------------------------
+
+
+class TestTask3AC4LinkedTaskDirectory(CleanupBase):
+    """task0003 AC-4 (FR5, TM-1, TS-11): the task directory next to a valid integration worktree resolves elsewhere."""
+
+    def setUp(self):
+        super().setUp()
+        self.other = self.wt_dir / "other"
+        self.git("worktree", "add", "-q", "-b", "other-branch", str(self.other), INTEGRATION_BRANCH)
+
+    def test_a_task_directory_linking_elsewhere_exits_2_without_running_git(self):
+        cases = [
+            ("another registered worktree of the repository", self.other),
+            ("the main tree", self.repo),
+            ("the integration worktree", self.iw),
+            ("a directory that does not exist", self.tmp / "nowhere"),
+        ]
+        for label, target in cases:
+            with self.subTest(label):
+                os.symlink(target, self.task_wt)
+                try:
+                    before = self.state()
+                    if self.git_log.exists():
+                        self.git_log.unlink()
+
+                    proc = self.run_raw(self.argv(), cwd=self.repo)
+
+                    self.assertEqual(proc.returncode, 2, f"stderr: {proc.stderr}")
+                    self.assertEqual(proc.stdout, "")
+                    self.assertEqual(self.git_calls(), [])
+                    self.assertEqual(self.state(), before)
+                    self.assertIn(str(self.other), self.registered_paths())
+                    self.assertTrue(self.other.is_dir())
+                    self.assertTrue(self.task_wt.is_symlink())
+                finally:
+                    self.task_wt.unlink()
+
+
+# --------------------------------------------------------------------------
+# task0003: the integration worktree belongs to another repository
+# --------------------------------------------------------------------------
+
+
+class TestTask3AC5IntegrationPathRegisteredElsewhere(CleanupBase):
+    """task0003 AC-5 (FR5, FR8, TS-11): the directory at the expected integration path belongs to a second repository."""
+
+    create_integration_worktree = False
+
+    def setUp(self):
+        super().setUp()
+        # The project repository (self.repo) holds no integration worktree.
+        # A second repository registers the worktrees at the project
+        # repository's expected paths, no symbolic link involved.
+        self.other = self.tmp / "other-repo"
+        self.other.mkdir()
+        self.git("init", "-q", "-b", "main", cwd=self.other)
+        (self.other / "README.md").write_text("other\n", encoding="utf-8")
+        self.git("add", "-A", cwd=self.other)
+        self.git("commit", "-q", "-m", "init", cwd=self.other)
+        self.git("worktree", "add", "-q", "-b", INTEGRATION_BRANCH, str(self.iw), "main", cwd=self.other)
+        self.git("worktree", "add", "-q", "-b", TASK_BRANCH, str(self.task_wt), INTEGRATION_BRANCH, cwd=self.other)
+        (self.task_wt / "task.txt").write_text("task work\n", encoding="utf-8")
+        self.git("add", "-A", cwd=self.task_wt)
+        self.git("commit", "-q", "-m", "task work", cwd=self.task_wt)
+        self.git("merge", "-q", "--no-ff", "-m", "merge task", TASK_BRANCH, cwd=self.iw)
+        self.assertEqual(self.git_rc("merge-base", "--is-ancestor", TASK_BRANCH, INTEGRATION_BRANCH, cwd=self.other), 0)
+
+    def other_state(self):
+        return (
+            self.git("rev-parse", f"refs/heads/{INTEGRATION_BRANCH}", cwd=self.other),
+            self.git("rev-parse", TASK_REF, cwd=self.other),
+            self.git("worktree", "list", "--porcelain", cwd=self.other),
+        )
+
+    def test_the_run_exits_1_with_empty_output_and_removes_nothing(self):
+        before = self.other_state()
+
+        proc = self.run_raw(self.argv(), cwd=self.repo)
+
+        self.assertEqual(proc.returncode, 1, f"stderr: {proc.stderr}")
+        self.assertEqual(proc.stdout, "")
+        self.assert_git_policy()
+        self.assertNotIn("branch", self.git_subcommands())
+        self.assertNotIn(["worktree", "remove"], self.git_subcommand_prefixes())
+        self.assertEqual(self.other_state(), before)
+        self.assertTrue(self.task_wt.is_dir())
+
+    def test_the_project_root_is_asked_for_its_git_common_directory(self):
+        self.run_raw(self.argv(), cwd=self.repo)
+        self.assertIn(
+            ["-C", str(self.repo), "rev-parse", "--path-format=absolute", "--git-common-dir"],
+            self.git_calls(),
+        )
 
 
 if __name__ == "__main__":
