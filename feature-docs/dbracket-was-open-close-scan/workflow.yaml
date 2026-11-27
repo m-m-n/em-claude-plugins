@@ -131,6 +131,7 @@ tasks:
     - em-workflow/hooks/destructive-guard.py
     - em-workflow/hooks/tests/destructive-guard-cases.json
     - tests/test_destructive_guard_args_json.py
+    - test-docs/dbracket-was-open-close-scan/task0001.tests.yaml
     skills:
     - backend-impl
     domains:
@@ -147,7 +148,7 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: in_progress
+    status: merged
     branch: em-workflow/dbracket-was-open-close-scan/task0002
     notes: null
 review:
