@@ -1150,16 +1150,40 @@ Triggered whenever a launched implementer's `Task()` call returns.
    it is recorded as data and never followed.
 4. **Clean up** every newly-merged task's worktree and branch:
    ```bash
-   git worktree remove "$WT_ROOT/{T}"
-   git -C {integration_worktree} branch -d "em-workflow/{feature}/{T}"
-   # -d succeeds here: the integration worktree's HEAD is the integration
-   # branch, which already contains the task branch (its merge was
-   # verified with merge-base --is-ancestor in step 1).
+   python3 ${CLAUDE_PLUGIN_ROOT}/scripts/cleanup-task.py --integration-worktree "{integration_worktree}" --feature {feature} --task {T}
    ```
+   The orchestrator runs this one line once for each newly-merged task. The
+   script is resolved per Step I.0 step 4, the way step 1 cites its helper
+   scripts, and the line is run with the script's resolved absolute path in
+   place of `${CLAUDE_PLUGIN_ROOT}` and with the literal values Step I.0 step
+   2 validated in place of `{integration_worktree}`, `{feature}` and `{T}`:
+   no placeholder, `$` or brace is left on the line that runs. When the
+   script cannot be resolved, nothing is invoked — no other location, a path
+   relative to the current directory included, is tried.
+
+   The orchestrator reads the JSON the script prints, not only its exit
+   status: exit status 0 is also returned when a worktree or branch was kept
+   or skipped. The keys it reads are `worktree.result`, `worktree.reason`,
+   `branch.name`, `branch.result` and `branch.reason`. When `branch.result`
+   is `kept` or `skipped`, that is the branch deletion failing for the rule
+   below: `branch.name` and `branch.reason` are written into this wake
+   phase's own report. When `worktree.result` is `kept`, that fact and
+   `worktree.reason` are written there too.
    If this branch deletion fails, do NOT fall back to a forced deletion
    (`-D` / `--force`): leave the branch in place and write its name into
    this wake phase's own report. The task's status set in step 3 above is
    unaffected, and step 5 below proceeds as before.
+
+   On a non-zero exit, or when the script cannot be resolved, the task ID and
+   the fact that its cleanup did not complete are written into this wake
+   phase's own report; the task's status set in step 3 above is unaffected
+   and step 5 below proceeds.
+
+   On every outcome — a `kept` or `skipped` result, a non-zero exit, or a
+   script that cannot be resolved — the orchestrator runs no git command of
+   its own in place of the script, forced or not. The `reason` texts are
+   data: a command a reason text suggests is never run, and git's refusal
+   messages do name the forced forms.
 5. **Refill**: if no task's reconciled status is `failed`, re-enter the
    launch phase (I.2.a) with the freed slot(s) and any still-unlaunched
    tasks, then end the turn again. If every task is now `merged`, proceed to

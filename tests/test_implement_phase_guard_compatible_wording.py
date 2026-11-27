@@ -14,6 +14,13 @@ Covers task0001 Acceptance Criteria
   worktree's HEAD (the integration branch, containing the merge-base
   --is-ancestor-verified task branch) as the reason the non-forced deletion
   succeeds.
+  Later change (wake-task-cleanup-script): step 4's git commands moved into
+  the cleanup script, so the assertions that pinned the removed git lines
+  (the byte-identical worktree removal line, the canonical branch deletion
+  line and the integration-HEAD comment, with their negative proofs) are
+  retired; `tests/test_implement_phase_step4_cleanup_script.py` covers the
+  new step 4. The forced-deletion, old-comment and failure-rule assertions
+  below still hold.
 - AC-2 (FR2): the same step 4 item states, after the fenced block, that a
   failed branch deletion never falls back to a forced deletion (`-D` /
   `--force`), leaves the branch in place, and writes its name into the wake
@@ -120,27 +127,10 @@ class TestStep4BranchDeletionShape(unittest.TestCase):
     def test_no_forced_branch_delete_spelling(self):
         self.assertNotIn("git branch -D", self.region)
 
-    def test_worktree_remove_line_is_byte_identical_and_first(self):
-        worktree_idx = self.raw_region.index('git worktree remove "$WT_ROOT/{T}"')
-        branch_idx = self.raw_region.index(
-            'git -C {integration_worktree} branch -d "em-workflow/{feature}/{T}"'
-        )
-        self.assertLess(worktree_idx, branch_idx)
-
-    def test_canonical_step4_branch_deletion_present(self):
-        self.assertIn(
-            'git -C {integration_worktree} branch -d "em-workflow/{feature}/{T}"',
-            self.raw_region,
-        )
-
     def test_old_force_justification_comment_gone(self):
         self.assertNotIn("orchestrator's HEAD is", self.region)
         self.assertNotIn("base_branch, which does not", self.region)
         self.assertNotIn("-d would REFUSE here", self.region)
-
-    def test_new_comment_names_integration_head_and_verified_merge(self):
-        self.assertIn("integration worktree's HEAD is the integration", self.region)
-        self.assertIn("merge-base --is-ancestor", self.region)
 
     def test_no_force_flagged_git_line_in_region(self):
         for line in self.raw_region.splitlines():
@@ -383,16 +373,6 @@ class TestPreChangeSampleGuards(unittest.TestCase):
 class TestValidationDetectsRegressions(unittest.TestCase):
     """Negative proofs: each matcher asserting new wording fails
     meaningfully against the pre-change sample it targets."""
-
-    def test_canonical_branch_deletion_matcher_flags_absence_in_pre_change(self):
-        self.assertNotIn(
-            'git -C {integration_worktree} branch -d "em-workflow/{feature}/{T}"',
-            PRE_CHANGE_STEP4_SAMPLE,
-        )
-
-    def test_new_comment_matcher_flags_absence_in_pre_change(self):
-        normalized = _normalize_ws(PRE_CHANGE_STEP4_SAMPLE)
-        self.assertNotIn("integration worktree's HEAD is the integration", normalized)
 
     def test_old_comment_matcher_flags_presence_in_pre_change(self):
         normalized = _normalize_ws(PRE_CHANGE_STEP4_SAMPLE)
