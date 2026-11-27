@@ -2,44 +2,68 @@ schema_version: 1
 feature: orchestrator-spec-edit-overwrite
 created: '2026-11-27'
 base_branch: main
-goal: |
-  # em-workflow: create-plan でオーケストレーターが直した SPEC.md が、spec-change 後の create-spec 再実行で digest 不一致として preserve になり batch が止まる
+goal: '# em-workflow: create-plan でオーケストレーターが直した SPEC.md が、spec-change 後の create-spec 再実行で digest 不一致として preserve になり batch が止まる
+
 
   種別: バグ
 
+
   ## 現象
 
-  バッチ実行で、create-plan 中にオーケストレーターが Codex 相談を経て SPEC.md を直してコミットすると、その後 review の rework で spec-change 遷移（change-spec）が決まって create-spec を再実行したとき、SPEC.md の現ダイジェストが「直前の同フェーズ出力」（前回の create-spec の spec-writer 出力）と一致しない。spec-writer-contract.md の「How the orchestrator chooses each target's action before dispatch」で digest-mismatch 分岐に入り、バッチ方針 `create-spec.artifact-overwrite: preserve_and_reuse` により SPEC.md が `preserve` になる。決定済みの SPEC 変更を書けず、オーケストレーターは `unmapped_stop` で停止する。
+
+  バッチ実行で、create-plan 中にオーケストレーターが Codex 相談を経て SPEC.md を直してコミットすると、その後 review の rework で spec-change 遷移（change-spec）が決まって create-spec を再実行したとき、SPEC.md の現ダイジェストが「直前の同フェーズ出力」（前回の create-spec の spec-writer
+  出力）と一致しない。spec-writer-contract.md の「How the orchestrator chooses each target''s action before dispatch」で digest-mismatch 分岐に入り、バッチ方針 `create-spec.artifact-overwrite: preserve_and_reuse` により SPEC.md が
+  `preserve` になる。決定済みの SPEC 変更を書けず、オーケストレーターは `unmapped_stop` で停止する。
+
 
   ## 再現手順
 
+
   1. バッチ実行の create-plan で、オーケストレーターが SPEC.md を直してコミットする（例: 計画と SPEC の TS-4 の食い違いを Codex 相談で B 採用）
+
   2. review で high の指摘が出て、rework-planner が `rework.spec-change` を返し、change-spec が採用される
+
   3. create-spec が `needs_update` で再実行され、spec-writer の起動前の書き込み方針決定で SPEC.md が digest 不一致となり、`preserve_and_reuse` で停止する
+
 
   ## 期待する挙動
 
+
   オーケストレーター自身がバッチ内で承認・コミットした SPEC.md の変更は、spec-change 再実行の書き込み方針決定で上書きしてよい版として扱われ、決定済みの SPEC 変更が書き込まれる。ほかの経路（人の手による変更など）で変わった SPEC.md は、従来どおり digest-mismatch 分岐で守られる。
+
 
   ## 完了の定義
 
+
   - [ ] 再現手順で現象が起きない
+
   - [ ] 再発を検出するテストがある
+
 
   ## 該当箇所
 
-  - `em-workflow/references/contracts/spec-writer-contract.md`（How the orchestrator chooses each target's action before dispatch / write_policy actions）
+
+  - `em-workflow/references/contracts/spec-writer-contract.md`（How the orchestrator chooses each target''s action before dispatch / write_policy actions）
+
   - `em-workflow/references/artifact-digest.md`
+
   - `em-workflow/skills/develop/SKILL.md`（rework の spec-change 遷移、create-plan での SPEC 修正の記録）
+
 
   ## 実害・発生条件
 
+
   別の feature が create-spec 再実行で停止している。SPEC.md の現ダイジェスト sha256:802788d2…、直前の create-spec 出力 sha256:89d3af82…。
+
 
   ## 追加指示
 
+
   - 不明点は Codex に相談し、比較して良い方の選択肢を採る。相談内容は Notion のタスクページに記録する。
+
   - 実装完了後は integration ブランチを remote に push し、base_branch への PR を gh pr create で作る。integration ブランチはローカル・リモート両方に残す（base_branch へ自動マージしない）。
+
+  '
 parent_branch: em-workflow/orchestrator-spec-edit-overwrite/integration
 tier: full
 tier_decision:
@@ -87,7 +111,8 @@ workflow:
   - VERIFICATION.md
   - THREAT-MODEL.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: 8531af7e700cc8a33c8d963160cacfbd02bfea18
 - id: implement
   status: pending
 - id: review
@@ -96,7 +121,54 @@ workflow:
   status: pending
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: create-spec action decision counts the orchestrator's create-plan record
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/references/contracts/spec-writer-contract.md
+    - em-workflow/references/phases/create-spec-phase.md
+    - tests/test_orchestrator_doc_edits_action_docs.py
+    skills: []
+    domains:
+    - api-contract
+    - auth
+    - input-handling
+    complexity: high
+    requirements:
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: pending
+    branch: em-workflow/orchestrator-spec-edit-overwrite/task0001
+    notes: null
+  task0002:
+    title: record the orchestrator's own SPEC / REQUIREMENTS edits during create-plan
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/references/phase-state.md
+    - em-workflow/skills/develop/SKILL.md
+    - tests/test_orchestrator_doc_edits_record_docs.py
+    skills: []
+    domains:
+    - api-contract
+    - data-persistence
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR7
+    - NFR3
+    - NFR4
+    status: pending
+    branch: em-workflow/orchestrator-spec-edit-overwrite/task0002
+    notes: null
 review:
   status: pending
   rounds_completed: 0
@@ -106,78 +178,117 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS-1
+    - TS-6
   FR2:
     title: 記録のスキーマ
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0002
+    tests:
+    - TS-1
+    - TS-6
   FR3:
     title: create-spec の書き込み方針決定で記録版を replace_own にする
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-4
+    - TS-6
   FR4:
     title: 記録を読むときの条件
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-3
+    - TS-6
   FR5:
     title: 適用範囲を create-spec に限る
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-5
+    - TS-6
   FR6:
     title: replace_own 行と create-spec §9 の整合
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-6
+    - TS-7
   FR7:
     title: 再発検出テスト
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-6
   NFR1:
     title: write_policy の action を増やさない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-6
+    - TS-7
+    - TS-8
   NFR2:
     title: 文書構造の固定を壊さない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-6
+    - TS-8
   NFR3:
     title: 既存テストがすべて通る
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-6
   NFR4:
     title: 引用で済ませ、書き直さない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-1
+    - TS-3
+    - TS-7
+    - TS-9
 batch:
   review_rework_count: 0
   verify_rework:
