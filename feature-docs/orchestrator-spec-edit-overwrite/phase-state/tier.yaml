@@ -1,0 +1,77 @@
+schema_version: 2
+feature: orchestrator-spec-edit-overwrite
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.22
+    confidence: 0.77
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.01
+      '1': 0.77
+      '2': 0.22
+      '3': 0.0
+  observed_at: '2026-11-27T08:57:59+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 1.65
+    confidence: 0.66
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.34
+      '2': 0.66
+      '3': 0.0
+  observed_at: '2026-11-27T09:01:10+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/references/contracts/spec-writer-contract.md
+  - em-workflow/references/artifact-digest.md
+  - em-workflow/references/phase-state.md
+  - em-workflow/references/phases/create-plan-phase.md
+  - em-workflow/references/phases/create-spec-phase.md
+  - tests/test_artifact_digest_docs.py
+  changed_lines_approx: 90
+  new_functions_needed: 0
+  new_files_needed: 0
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules:
+  - create-plan
+  - phase-state
+  - artifact-digest
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 4
+  body_change_kind: wording_or_rule_addition
+  change_containment: multiple_modules
+  caller_and_dependency_count: 4
+  changes_external_contract: false
+  changes_behavior: true
+  evidence: バッチでは分類ゲートが続行を決めると、rework が create-spec を needs_update にして再実行する（em-workflow/skills/develop/SKILL.md:562–584、em-workflow/references/rework-task-synthesis.md:319–342）。再実行時も直前の同フェーズのワーカー出力と照合するため、ダイジェストが異なる既存
+    SPEC.md はバッチ方針の preserve_and_reuse に従い、読み取り専用の preserve になる（em-workflow/references/phases/create-spec-phase.md:183–198、em-workflow/references/contracts/spec-writer-contract.md:69–74、137–159、em-workflow/references/batch-policies.yaml:34–44、74–77）。unmapped_stop
+    は個別の理由に当てはまらない停止の既定値で、報告された実行は再現していない（em-workflow/references/batch-terminal-line.md:294–304）。create-plan
+    でオーケストレーター自身が承認・コミットした当該 feature の SPEC.md を記録し、再実行時に参照する仕組みは確認できなかった。SPEC.md
+    は通常の計画作成では入力であり、artifacts はワーカーの written_artifacts を記録する。self_write_set はワーカーの起動から復帰までに観測した書き込みを対象とし、入力ダイジェストの比較に使う（em-workflow/references/phases/create-plan-phase.md:187–206、299–318、em-workflow/references/artifact-digest.md:121–147、em-workflow/references/phase-state.md:139–141、em-workflow/scripts/self-write-digest.py:304–350）。既存テストが確認するのはファイルのハッシュ計算、計画作成ワーカーの復帰時の照合、create-plan
+    自体の上書き判定で、この再実行経路の回帰テストは確認できなかった（tests/test_artifact_digest_script.py:172–212、tests/test_self_write_digest.py:1244–1271、tests/test_artifact_digest_docs.py:1708–1731）。見積もりは、承認した
+    SPEC.md の変更とダイジェストを同じコミットで記録し、再実行時に対象 feature・パス・直前の create-spec 出力との対応と現ダイジェストの一致を確認して、既存の
+    replace_own を使う案に基づく。判定規則に直接つながる変更箇所は、create-plan の記録、phase-state の定義、ダイジェストの定義、create-spec
+    の起動手順の4箇所。既存のハッシュ計算とワーカーへの入力形式を使い、回帰テストには記録との一致、記録なし、記録後の別経路による編集、古い記録の4ケースを見込む（em-workflow/scripts/artifact-digest.py:129–137、em-workflow/scripts/commit-docs.sh:153–176、em-workflow/references/contracts/spec-writer-contract.md:54–74）。
+decided_at: '2026-11-27T09:01:17+09:00'
