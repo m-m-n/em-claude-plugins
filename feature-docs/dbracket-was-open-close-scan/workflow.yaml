@@ -113,7 +113,6 @@ workflow:
   - SC-4
   - SC-5
   failed_items: []
-  verified_commit: b2c602784c66cde8c856a573218edabd7c7ad2bd
   completed_at_commit: b2c602784c66cde8c856a573218edabd7c7ad2bd
 - id: retrospect
   status: pending
