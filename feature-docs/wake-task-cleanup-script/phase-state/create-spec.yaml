@@ -5,7 +5,7 @@ status: in_progress
 generation: 1
 base_revision: 6ee41d499bf3e302d7fd7d93fc116e9edb6c932e
 last_input_digest: null
-active_request_id: null
+active_request_id: create-spec-run-0001
 packets: {}
 answers:
   create-spec.feature-identity:
@@ -18,7 +18,10 @@ answers:
     - derive_from_task_description
     freeform: null
     normalized_answer: 'feature name derived from the task description: wake-task-cleanup-script'
-worker_runs: []
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:e8641051d4378b9329f5992da0e7179325d026be36b7a9bf77773b7cf5facf08
 artifacts: []
 patches: []
 progress_fingerprint: null
