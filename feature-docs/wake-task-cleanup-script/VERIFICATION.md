@@ -32,6 +32,8 @@
 | TS-7 | Static scan of the script | No `-D`, `--force` or `-f` in the script text | Unit (static) |
 | TS-8 | Static scan of `implement-phase.md` step 4 | No git command line; the script call line is present; JSON-reading and reporting of kept branch name and reason are stated; the no-forced-fallback, step 3 status and step 5 wording remain | Unit (static) |
 | TS-9 | Step 4's call line through `destructive-guard.py` and `interpreter-mismatch-guard.py` | Neither guard returns `ask` or `deny` | Unit (guard subprocess) |
+| TS-10 | Task branch merged into the integration branch, (a) with an upstream configured, (b) without an upstream but moved to a commit outside the integration branch just before the branch deletion runs | (a) Worktree removed; branch kept with a non-empty reason, no branch deletion run, ref unchanged. (b) Branch kept with a non-empty reason; the ref still resolves to the moved commit. Exit 0 in both | Integration |
+| TS-11 | `--integration-worktree` reaching another repository that has the same feature (symbolic link at `.claude/worktrees` or below, a task directory that is a symbolic link, or an integration directory registered as a worktree of another repository) | Non-zero exit with empty standard output; no worktree removal and no branch deletion run; the other repository's worktrees, task branch and integration branch unchanged | Integration |
 
 ## Code Quality Verification
 
@@ -57,17 +59,17 @@
 | Requirement | Tasks | Verification |
 |-------------|-------|--------------|
 | FR1 | task0001 | TS-1, TS-6 |
-| FR2 | task0001 | TS-1, TS-2, TS-7 |
-| FR3 | task0001, task0002 | TS-2, TS-8 |
+| FR2 | task0001, task0003 | TS-1, TS-2, TS-7, TS-10 |
+| FR3 | task0001, task0002, task0003 | TS-2, TS-8, TS-10 |
 | FR4 | task0002 | TS-8, TS-9 |
-| FR5 | task0001 | TS-6 |
+| FR5 | task0001, task0003 | TS-6, TS-11 |
 | FR6 | task0001 | TS-3, TS-5 |
 | FR7 | task0001 | TS-1, TS-4, TS-5 |
-| FR8 | task0001, task0002 | TS-1, TS-2, TS-3, TS-6, TS-8 |
-| NFR1 | task0001 | TS-1 |
+| FR8 | task0001, task0002, task0003 | TS-1, TS-2, TS-3, TS-6, TS-8, TS-10, TS-11 |
+| NFR1 | task0001, task0003 | TS-1 |
 | NFR2 | task0002 | TS-9 |
-| NFR3 | task0001, task0002 | TS-1, TS-2, TS-3, TS-4, TS-5, TS-6 (unittest on disposable git repositories) |
-| NFR4 | task0001, task0002 | SC-6 (no SPEC scenario) |
+| NFR3 | task0001, task0002, task0003 | TS-1, TS-2, TS-3, TS-4, TS-5, TS-6, TS-10, TS-11 (unittest on disposable git repositories) |
+| NFR4 | task0001, task0002, task0003 | SC-6 (no SPEC scenario) |
 
 ## Manual Testing (E2E Not Possible)
 
@@ -79,12 +81,18 @@ None. Every scenario is automated.
 - TM-1: inputs validated before any git command — TS-6 (task0001 AC-1):
   every invalid value exits 2 with zero git invocations in the shim log and
   leaves the integration branch, the worktree list and the task branch
-  unchanged.
+  unchanged. TS-11 (task0003 AC-3, AC-4, AC-5): an integration worktree path
+  that reaches another repository through a symbolic link exits 2 with zero
+  git invocations, and an integration worktree registered with another
+  repository exits 1 with no worktree removal and no branch deletion.
 - TM-2: only non-forced removal and deletion, branch skipped after a failed
   worktree removal — TS-7 (no forcing token in the script; no forcing flag
   or prune in any logged git invocation; branch deletion runs from the
   integration worktree) and TS-3 (no branch invocation after a refused
-  worktree removal) (task0001 AC-4, AC-7).
+  worktree removal) (task0001 AC-4, AC-7). TS-10 (task0003 AC-1, AC-2): a
+  task branch with an upstream configured is kept without a deletion run,
+  and a task branch moved off the integration branch just before the
+  deletion runs is kept.
 - TM-3: script resolved per Step I.0 step 4, never from the current
   directory — TS-8 (task0002 AC-1): step 4 names
   `${CLAUDE_PLUGIN_ROOT}/scripts/cleanup-task.py`, cites Step I.0 step 4, and
@@ -100,7 +108,7 @@ None. Every scenario is automated.
 | Category | Items | Automated | E2E | Manual |
 |----------|-------|-----------|-----|--------|
 | Build | 0 | 0 | 0 | 0 |
-| Test scenarios (TS-1 to TS-9) | 9 | 9 | 0 | 0 |
+| Test scenarios (TS-1 to TS-11) | 11 | 11 | 0 | 0 |
 | Success criteria (SC-1 to SC-6) | 6 | 5 | 0 | 1 (SC-4, review phase) |
 | Security (TM-1 to TM-5) | 5 | 5 | 0 | 0 |
 | Requirements coverage (FR1 to FR8, NFR1 to NFR4) | 12 | 12 | 0 | 0 |

@@ -32,9 +32,9 @@ reads the document.
 
 | Component | Responsibility | Contract (pre/postcondition) | Used by tasks |
 |-----------|----------------|------------------------------|---------------|
-| C1: Cleanup script CLI | The one entry point of the wake cleanup | See "C1: CLI" below | task0001 (provides), task0002 (step 4 call line, TS-9 guard test) |
-| C2: Result JSON | The machine-readable result step 4 reads | See "C2: Result JSON" below | task0001 (emits), task0002 (step 4 tells the orchestrator which keys to read and report) |
-| C3: Exit status | Separates "a result was produced" from "invalid input" and "internal error" | See "C3: Exit status" below | task0001 (returns), task0002 (step 4 handles a non-zero exit) |
+| C1: Cleanup script CLI | The one entry point of the wake cleanup | See "C1: CLI" below | task0001 (provides), task0002 (step 4 call line, TS-9 guard test), task0003 (tightens the `--integration-worktree` rule) |
+| C2: Result JSON | The machine-readable result step 4 reads | See "C2: Result JSON" below | task0001 (emits), task0002 (step 4 tells the orchestrator which keys to read and report), task0003 (adds the script's own `kept` reasons) |
+| C3: Exit status | Separates "a result was produced" from "invalid input" and "internal error" | See "C3: Exit status" below | task0001 (returns), task0002 (step 4 handles a non-zero exit), task0003 (adds the repository-identity refusal to exit 1) |
 
 ### C1: CLI
 
@@ -47,13 +47,14 @@ reads the document.
 
 | Option | Value | Rule |
 |--------|-------|------|
-| `--integration-worktree` | Absolute path of the feature's integration worktree, `{project_root}/.claude/worktrees/em-workflow/{feature}/integration` | Shape checked before any git command (FR5) |
+| `--integration-worktree` | Absolute path of the feature's integration worktree, `{project_root}/.claude/worktrees/em-workflow/{feature}/integration` | Shape checked before any git command (FR5). The shape includes the real path: the project root is the part of the value before the five fixed segments, and the value's real path must equal the project root's real path joined with those five segments |
 | `--feature` | Feature name | Whole-string match of `^[a-z0-9][a-z0-9-]*$` (Step I.0 step 2) |
 | `--task` | Task ID | Whole-string match of `^task[0-9]+$` (Step I.0 step 2) |
 
 - **Derived targets**: the task worktree is the directory named `{T}` next to
   the integration worktree (the same location step 4 called
-  `$WT_ROOT/{T}`); the task branch is `em-workflow/{feature}/{T}`.
+  `$WT_ROOT/{T}`), built from the project root's real path; the task branch
+  is `em-workflow/{feature}/{T}`.
 - **Step 4 call-line shape**: the command word `python3`, then the script path
   `${CLAUDE_PLUGIN_ROOT}/scripts/cleanup-task.py`, then the three options with
   the values `"{integration_worktree}"`, `{feature}` and `{T}`. Those
@@ -83,7 +84,7 @@ Meaning of the result tokens:
 |-------|---------------------|
 | `removed` | Removed by this run (今回消した) |
 | `absent` | Already absent before this run (既に無い): the worktree is not in git's worktree registration list, or the exact ref `refs/heads/em-workflow/{feature}/{T}` does not resolve |
-| `kept` | The non-forced removal or deletion was refused and the target remains (残した); `reason` is git's own message |
+| `kept` | The non-forced removal or deletion was refused, or (branch only) the script declined to run the deletion, and the target remains (残した); `reason` is git's own message when git refused, and fixed text naming the cause when the script declined (the branch tip is not contained in the integration branch, or the branch has an upstream configured) |
 | `skipped` | Branch only: deletion was not attempted because the worktree removal failed (削除を見送った); `reason` is fixed text saying so |
 
 Invariant: `branch.result` is `skipped` exactly when `worktree.result` is
@@ -95,7 +96,7 @@ Invariant: `branch.result` is `skipped` exactly when `worktree.result` is
 |------|---------|-----------------|
 | 0 | A result was produced, including when something was kept or skipped (FR8) | C2 |
 | 2 | Invalid input: a missing, repeated or unknown option, or a value failing C1's rules. No git command was run (FR5) | Empty |
-| 1 | Internal error: an unexpected git failure other than the refusals that C2 reports as `kept` (for example the worktree listing itself failing), or any unexpected exception | Empty |
+| 1 | Internal error: an unexpected git failure other than the refusals that C2 reports as `kept` (for example the worktree listing itself failing), any unexpected exception, or a repository-identity refusal (the integration worktree does not belong to the repository of its project root). No worktree removal and no branch deletion was run | Empty |
 
 Diagnostics go to standard error only. Their text is not part of the
 contract.
