@@ -19,3 +19,13 @@ records:
     to create-spec via the spec-change transition. Risks Codex raised, adopted as assumptions A-9..A-11: OR match also accepts a body reverted to the recorded create-plan version; exit-4 recovery recomputes
     the digest from the rebuilt body; pre-dispatch expect_digest verification applies unchanged. Codex consulted: yes. Opus escalation: not run. Requirements-analyst had proposed the same choices (A-3,
     A-5, A-6).'
+- question_id: create-spec.command-approval
+  packet_id: orchestrator-direct
+  answered_at: '2026-11-27T09:14:16+09:00'
+  source: batch-decision-table
+  answer_mode: single_select
+  selected_option_ids:
+  - auto_record
+  freeform: null
+  normalized_answer: all project.components commands already approved; nothing newly recorded
+  resolution_note: 'gate: create-spec.command-approval (policy: auto_record); commands:  (test_command, already approved in bash_guard --list); build_command / format_command empty; refusal patterns: none'

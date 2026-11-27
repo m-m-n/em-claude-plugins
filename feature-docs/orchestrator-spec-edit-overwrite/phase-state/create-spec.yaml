@@ -1,7 +1,7 @@
 schema_version: 1
 feature: orchestrator-spec-edit-overwrite
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: 1d3cdf85d97fd7f34457a941e2d2a74a995c55b0
 last_input_digest: sha256:d8fd2acf5fbfb8d29849f44e37ef7559a8eb25e6ef0362de5157f4b99662c357
@@ -30,6 +30,26 @@ answers:
     - Q3:A
     freeform: null
     normalized_answer: 両モードで適用 / phase-state/create-plan.yaml に追記専用欄を新設 / 記録対象は create-plan 中の編集だけ
+  create-spec.design-step:
+    question_id: create-spec.design-step
+    packet_id: orchestrator-direct
+    answered_at: '2026-11-27T09:14:16+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design step skipped per analyst recommendation (no UI)
+  create-spec.design-system:
+    question_id: create-spec.design-system
+    packet_id: orchestrator-direct
+    answered_at: '2026-11-27T09:14:16+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - top_candidate_or_none
+    freeform: null
+    normalized_answer: 'no candidates -> kind: none'
 worker_runs:
 - request_id: create-spec-run-0001
   status: completed
