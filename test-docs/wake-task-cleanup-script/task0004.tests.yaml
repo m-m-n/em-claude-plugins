@@ -1,0 +1,79 @@
+task_id: task0004
+baseline_failures:             # 4a: python3 -m unittest discover -s tests -> Ran 17621 tests, FAILED (failures=3, errors=1, skipped=1); all four are in tests/test_implement_phase_step4_cleanup_script.py (the module still expected the earlier call-line wording)
+  - tests.test_implement_phase_step4_cleanup_script.TestAC1CallLineAndResolution.test_call_line_is_the_only_line_naming_the_script_in_a_fenced_block
+  - tests.test_implement_phase_step4_cleanup_script.TestAC1CallLineAndResolution.test_region_holds_the_call_line_as_the_only_line_of_one_fenced_block
+  - tests.test_implement_phase_step4_cleanup_script.TestAC1CallLineAndResolution.test_script_is_never_named_by_a_path_relative_to_the_current_directory
+  - tests.test_implement_phase_step4_cleanup_script.TestAC5CallLinePassesTheGuards   # setUpClass error
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> the module and tests.test_tests_yaml_id_resolution report no failure and no error
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_implement_phase_step4_cleanup_script.TestAC1CallLineAndResolution.test_region_holds_the_call_line_as_the_only_line_of_one_fenced_block
+      - tests.test_implement_phase_step4_cleanup_script.TestAC1CallLineAndResolution.test_call_line_is_the_only_line_naming_the_script_in_a_fenced_block
+      - tests.test_implement_phase_step4_cleanup_script.TestAC1CallLineAndResolution.test_negative_proof_pre_change_step4_fails_every_ac1_matcher
+      - tests.test_implement_phase_step4_cleanup_script.TestAC1CallLineAndResolution.test_negative_proof_a_second_fenced_block_is_detected
+      - tests.test_implement_phase_step4_cleanup_script.TestAC1CallLineAndResolution.test_negative_proof_an_extra_line_next_to_the_call_line_is_detected
+      - tests.test_implement_phase_step4_cleanup_script.TestAC1CallLineAndResolution.test_negative_proof_an_extra_token_after_the_call_line_is_detected
+      - tests.test_implement_phase_step4_cleanup_script.TestAC1CallLineAndResolution.test_negative_proof_the_plugin_root_call_line_of_the_earlier_wording_is_not_accepted
+      - tests.test_implement_phase_step4_cleanup_script.TestAC5CallLinePassesTheGuards.test_negative_proof_extraction_fails_naming_the_reason_with_no_call_line
+      - tests.test_implement_phase_step4_cleanup_script.TestAC5CallLinePassesTheGuards.test_negative_proof_extraction_fails_naming_the_reason_with_two_call_lines
+    red_confirmed: true
+    red_reason: "Run at baseline against the current document, test_region_holds_the_call_line_as_the_only_line_of_one_fenced_block failed (the fenced block is not the call line alone: the module still compared against the earlier call line) and test_call_line_is_the_only_line_naming_the_script_in_a_fenced_block failed with AssertionError: step 4 region has no call line naming cleanup-task.py (the earlier extraction looked for the file name, which the call line no longer holds). The negative-proof tests listed here pass against the current document; they prove that a second fenced block, an extra token after the call line, the plugin-root call line of the earlier wording and the base-revision step 4 are each rejected."
+  AC-2:
+    tests:
+      - tests.test_implement_phase_step4_cleanup_script.TestAC1CallLineAndResolution.test_script_resolved_per_step_i0_step4_and_no_other_location_is_tried
+      - tests.test_implement_phase_step4_cleanup_script.TestAC1CallLineAndResolution.test_negative_proof_pre_change_step4_fails_every_ac1_matcher
+      - tests.test_implement_phase_step4_cleanup_script.TestAC1CallLineAndResolution.test_negative_proof_removing_each_resolution_phrase_is_detected
+    red_confirmed: true
+    red_reason: "The current document already states all six phrases, so the check cannot fail against it. The red was observed with the module's document reader replaced in-process by the base-revision text from git show (nothing written): test_script_resolved_per_step_i0_step4_and_no_other_location_is_tried failed listing the missing phrases, and test_negative_proof_removing_each_resolution_phrase_is_detected failed for every one of the six phrases because the phrase is absent from that text. Against the current document the second test shows that removing any single phrase makes the matcher report it."
+  AC-3:
+    tests:
+      - tests.test_implement_phase_step4_cleanup_script.TestAC1CallLineAndResolution.test_script_is_never_named_by_a_path_relative_to_the_current_directory
+      - tests.test_implement_phase_step4_cleanup_script.TestAC1CallLineAndResolution.test_call_line_names_the_script_only_through_its_placeholder
+      - tests.test_implement_phase_step4_cleanup_script.TestAC1CallLineAndResolution.test_negative_proof_a_script_named_relative_to_the_cwd_is_detected
+      - tests.test_implement_phase_step4_cleanup_script.TestAC1CallLineAndResolution.test_negative_proof_a_prose_mention_by_relative_path_is_detected
+      - tests.test_implement_phase_step4_cleanup_script.TestAC1CallLineAndResolution.test_relative_path_detection_accepts_only_the_plugin_root_form_and_the_bare_name
+    red_confirmed: true
+    red_reason: "Run at baseline against the current document, test_script_is_never_named_by_a_path_relative_to_the_current_directory failed with AssertionError: Lists differ: [72955] != [] (the earlier matcher reported the bare file name in the prose of step 4 as a naming without the plugin root prefix). The negative-proof and classification tests are new and pass; they prove the three forged call lines and a forged prose mention are each reported while the plugin root form and the bare file name are accepted."
+  AC-4:
+    tests:
+      - tests.test_implement_phase_step4_cleanup_script.TestTask4AC4ExpansionYieldsTheEightIntendedWords.test_every_value_set_leaves_no_placeholder_and_splits_into_eight_words
+      - tests.test_implement_phase_step4_cleanup_script.TestTask4AC4ExpansionYieldsTheEightIntendedWords.test_value_sets_hold_every_special_form_in_both_positions
+      - tests.test_implement_phase_step4_cleanup_script.TestTask4AC4ExpansionYieldsTheEightIntendedWords.test_value_sets_hold_the_sample_set_and_the_repository_copy
+      - tests.test_implement_phase_step4_cleanup_script.TestTask4AC4ExpansionYieldsTheEightIntendedWords.test_escaping_is_single_quotes_with_an_embedded_quote_written_out
+      - tests.test_implement_phase_step4_cleanup_script.TestTask4AC4ExpansionYieldsTheEightIntendedWords.test_a_value_holding_placeholder_text_is_never_expanded_again
+      - tests.test_implement_phase_step4_cleanup_script.TestTask4AC4ExpansionYieldsTheEightIntendedWords.test_negative_proof_a_placeholder_left_on_the_line_is_detected
+      - tests.test_implement_phase_step4_cleanup_script.TestTask4AC4ExpansionYieldsTheEightIntendedWords.test_negative_proof_a_value_with_a_space_expanded_without_escaping_fails
+      - tests.test_implement_phase_step4_cleanup_script.TestTask4AC4ExpansionYieldsTheEightIntendedWords.test_negative_proof_a_value_with_dollar_and_newline_expanded_without_escaping_fails
+      - tests.test_implement_phase_step4_cleanup_script.TestTask4AC4ExpansionYieldsTheEightIntendedWords.test_negative_proof_a_value_with_a_single_quote_expanded_without_escaping_fails
+      - tests.test_implement_phase_step4_cleanup_script.TestTask4AC4ExpansionYieldsTheEightIntendedWords.test_negative_proof_a_double_quoted_value_with_dollar_is_detected
+      - tests.test_implement_phase_step4_cleanup_script.TestTask4AC4ExpansionYieldsTheEightIntendedWords.test_negative_proof_a_word_check_fails_for_a_changed_word_count_or_value
+      - tests.test_implement_phase_step4_cleanup_script.TestAC5CallLinePassesTheGuards.test_expanded_call_line_leaves_no_placeholder_dollar_or_brace
+      - tests.test_implement_phase_step4_cleanup_script.TestAC5CallLinePassesTheGuards.test_expanded_call_line_has_the_expected_shape
+      - tests.test_implement_phase_step4_cleanup_script.TestAC5CallLinePassesTheGuards.test_negative_proof_an_unexpanded_placeholder_is_detected
+      - tests.test_implement_phase_step4_cleanup_script.TestAC5CallLinePassesTheGuards.test_negative_proof_expansion_order_leaves_no_brace_from_plugin_root
+    red_confirmed: true
+    red_reason: "Run at baseline against the current document, setUpClass of TestAC5CallLinePassesTheGuards raised AssertionError: step 4 region has no call line naming cleanup-task.py, so the sample-set expansion tests of that class errored. The new class has no earlier counterpart: against the base-revision step 4 (the module's document reader replaced in-process by the git show text, nothing written) its setUpClass errored with step 4 region has no call line, and with the expansion's escape default replaced in-process by identity, by single quotes without the embedded-quote form, and by double quotes, test_every_value_set_leaves_no_placeholder_and_splits_into_eight_words failed (17, 4 and 11 failure entries)."
+  AC-5:
+    tests:
+      - tests.test_implement_phase_step4_cleanup_script.TestTask4AC5ExpandedLinesPassTheGuards.test_every_expanded_line_passes_each_guard_without_and_with_claude_batch
+      - tests.test_implement_phase_step4_cleanup_script.TestTask4AC5ExpandedLinesPassTheGuards.test_the_value_with_a_newline_reaches_the_guard_inside_the_json_input
+      - tests.test_implement_phase_step4_cleanup_script.TestTask4AC5ExpandedLinesPassTheGuards.test_passing_means_a_clean_exit_and_neither_ask_nor_deny
+      - tests.test_implement_phase_step4_cleanup_script.TestTask4AC5ExpandedLinesPassTheGuards.test_negative_proof_a_forced_branch_deletion_does_not_pass_the_destructive_guard
+      - tests.test_implement_phase_step4_cleanup_script.TestTask4AC5ExpandedLinesPassTheGuards.test_negative_proof_a_python_script_run_by_bash_does_not_pass_the_interpreter_guard
+      - tests.test_implement_phase_step4_cleanup_script.TestTask4AC5ExpandedLinesPassTheGuards.test_negative_proof_a_guard_that_exits_non_zero_is_not_a_pass
+      - tests.test_implement_phase_step4_cleanup_script.TestAC5CallLinePassesTheGuards.test_call_line_passes_each_guard_without_and_with_claude_batch
+      - tests.test_implement_phase_step4_cleanup_script.TestAC5CallLinePassesTheGuards.test_negative_proof_the_guard_check_rejects_a_forced_deletion
+      - tests.test_implement_phase_step4_cleanup_script.TestAC5CallLinePassesTheGuards.test_negative_proof_the_guard_check_rejects_a_script_run_through_a_shell
+      - tests.test_implement_phase_step4_cleanup_script.TestAC5CallLinePassesTheGuards.test_negative_proof_a_guard_failure_is_not_a_pass
+    red_confirmed: true
+    red_reason: "Run at baseline against the current document, setUpClass of TestAC5CallLinePassesTheGuards raised AssertionError: step 4 region has no call line naming cleanup-task.py, so test_call_line_passes_each_guard_without_and_with_claude_batch and the negative proofs of that class errored. For the new class the observed red is the same kind: against the base-revision step 4 (document reader replaced in-process, nothing written) its setUpClass errored with step 4 region has no call line. The guard verdict itself is not sensitive to the escaping (with the escape replaced by identity in-process the guards still returned allow or no output), so the guard check is a compatibility proof, and its detection power is shown by the negative proofs that a forced branch deletion and a script run by bash are denied."
+  AC-6:
+    tests:
+      - tests.test_implement_phase_step4_cleanup_script.TestAC2NoGitCommandInTheRegion
+      - tests.test_implement_phase_step4_cleanup_script.TestAC3ReadsTheJsonAndReports
+      - tests.test_implement_phase_step4_cleanup_script.TestAC4PinnedWordingStays
+      - tests.test_implement_phase_step4_cleanup_script.TestModuleHygiene
+      - tests.test_tests_yaml_id_resolution
+    red_confirmed: true
+    red_reason: "The outcome of the criterion is that the module and the record check report no failure and no error. At baseline python3 -m unittest discover -s tests ended FAILED (failures=3, errors=1) and python3 -m unittest tests.test_implement_phase_step4_cleanup_script ended FAILED (failures=3, errors=1) with the four tests named in baseline_failures; the retained classes TestAC2NoGitCommandInTheRegion, TestAC3ReadsTheJsonAndReports and TestAC4PinnedWordingStays and TestModuleHygiene passed at baseline and still pass unchanged (the three classes are byte-identical to the base revision), so they show no red of their own."
