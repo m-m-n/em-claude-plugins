@@ -1,11 +1,11 @@
 schema_version: 1
 feature: wake-task-cleanup-script
 phase: rework
-status: in_progress
+status: completed
 generation: 2
 base_revision: f66cbc996ab70bde735452f91e9952cb626161d9
 last_input_digest: sha256:7a4bda16c970a931dcaf8d06c8292e77f14f0f10c1e15c4a0fda8ad33bda6ac7
-active_request_id: rework-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -30,7 +30,7 @@ worker_runs:
   - feature-docs/wake-task-cleanup-script/VERIFICATION.md
   - feature-docs/wake-task-cleanup-script/tasks/task0003.md
 - request_id: rework-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:7a4bda16c970a931dcaf8d06c8292e77f14f0f10c1e15c4a0fda8ad33bda6ac7
   dispatch_digest_inputs:
     ${CLAUDE_PLUGIN_ROOT}/references/contracts/rework-planner-contract.md: sha256:0c9f82099c3546b6b675856539d8244628b7170ce7a4442ec951e13e16577ec3
@@ -46,16 +46,27 @@ worker_runs:
     feature-docs/wake-task-cleanup-script/tasks/task0002.md: sha256:ca52bf25534dcdd00ee7d99c7dcb99fc0100ecad63be0bf6c14c0d37f27e76f6
     feature-docs/wake-task-cleanup-script/tasks/task0003.md: sha256:b2eceeddbe9fcb5e430388ca5748e6c6ff15ce95c664b307ea4024fb63a18a9b
     feature-docs/wake-task-cleanup-script/workflow.yaml: sha256:b110622f1f3126eec6c5004625b8cafc67ec7c9f032c81cb4aa84c2c6f153cce
+  self_write_set:
+  - feature-docs/wake-task-cleanup-script/IMPLEMENTATION.md
+  - feature-docs/wake-task-cleanup-script/VERIFICATION.md
+  - feature-docs/wake-task-cleanup-script/tasks/task0002.md
+  - feature-docs/wake-task-cleanup-script/tasks/task0004.md
 artifacts:
 - path: feature-docs/wake-task-cleanup-script/tasks/task0003.md
   sha256: sha256:b2eceeddbe9fcb5e430388ca5748e6c6ff15ce95c664b307ea4024fb63a18a9b
   produced_by: rework-run-0001
 - path: feature-docs/wake-task-cleanup-script/IMPLEMENTATION.md
-  sha256: sha256:fb4c24605b861c9be13ad6de74ebcd6f0aafe84a2c78053caf18e33a47b77e92
-  produced_by: rework-run-0001
+  sha256: sha256:cfbc5b995789139d85f7099afd867cef42fb730c0e50d968ba558714b1d12092
+  produced_by: rework-run-0002
 - path: feature-docs/wake-task-cleanup-script/VERIFICATION.md
-  sha256: sha256:78419559c928192f269f7b9772b9b686a5f14f570e67bfe1cfce7634bfcfa670
-  produced_by: rework-run-0001
+  sha256: sha256:c3c360114c4940c98cbf157a7dbcd71b850db20f07fabefb13ceb2c6a2d08398
+  produced_by: rework-run-0002
+- path: feature-docs/wake-task-cleanup-script/tasks/task0004.md
+  sha256: sha256:ace69c8c97b25ae77f902b2901ecd7f108cf9578810ac4f72c7e182a0ba05947
+  produced_by: rework-run-0002
+- path: feature-docs/wake-task-cleanup-script/tasks/task0002.md
+  sha256: sha256:246ead8fb9b4a4b62028bcb5a771967aa1a7fbf74950673b34326b5ab03f7970
+  produced_by: rework-run-0002
 other_feature_doc_fixes: []
 orchestrator_doc_edits: []
 patches:
@@ -63,6 +74,10 @@ patches:
   status: applied
   base_input_digest: sha256:583a996eb9a34d6846c22b420c65268d898b86d289ed2045b5a18111175c0f1c
   base_workflow_blob: a691ac8ed12d8ca8c1a17e1cd74e72a951f42cf2
+- patch_id: wake-task-cleanup-script-verify-p0001
+  status: applied
+  base_input_digest: sha256:7a4bda16c970a931dcaf8d06c8292e77f14f0f10c1e15c4a0fda8ad33bda6ac7
+  base_workflow_blob: 8d3a4e25d26fc426e9126e7f7a64e652c4a58ac2
 progress_fingerprint: null
 stale_redispatch_count: 0
 resolved_input_cache: {}

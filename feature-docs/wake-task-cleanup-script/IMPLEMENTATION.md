@@ -32,15 +32,17 @@ reads the document.
 
 | Component | Responsibility | Contract (pre/postcondition) | Used by tasks |
 |-----------|----------------|------------------------------|---------------|
-| C1: Cleanup script CLI | The one entry point of the wake cleanup | See "C1: CLI" below | task0001 (provides), task0002 (step 4 call line, TS-9 guard test), task0003 (tightens the `--integration-worktree` rule) |
+| C1: Cleanup script CLI | The one entry point of the wake cleanup | See "C1: CLI" below | task0001 (provides), task0002 (step 4 call line, TS-9 guard test), task0003 (tightens the `--integration-worktree` rule), task0004 (aligns the TS-8 / TS-9 tests to the call-line shape below) |
 | C2: Result JSON | The machine-readable result step 4 reads | See "C2: Result JSON" below | task0001 (emits), task0002 (step 4 tells the orchestrator which keys to read and report), task0003 (adds the script's own `kept` reasons) |
 | C3: Exit status | Separates "a result was produced" from "invalid input" and "internal error" | See "C3: Exit status" below | task0001 (returns), task0002 (step 4 handles a non-zero exit), task0003 (adds the repository-identity refusal to exit 1) |
 
 ### C1: CLI
 
 - **Path**: `em-workflow/scripts/cleanup-task.py`. In the protocol document
-  it is written as `${CLAUDE_PLUGIN_ROOT}/scripts/cleanup-task.py` and resolved
-  per Step I.0 step 4 of `implement-phase.md`.
+  the call line names it through the placeholder `{cleanup_script}`, which
+  stands for the script's absolute path resolved per Step I.0 step 4 of
+  `implement-phase.md` (the `${CLAUDE_PLUGIN_ROOT}/scripts/` resolution). The
+  document never names it by a path relative to the current directory.
 - **Interpreter**: run with `python3`.
 - **Arguments**: long options only, each given exactly once. No positional
   argument and no other option is accepted (FR1).
@@ -55,12 +57,19 @@ reads the document.
   the integration worktree (the same location step 4 called
   `$WT_ROOT/{T}`), built from the project root's real path; the task branch
   is `em-workflow/{feature}/{T}`.
-- **Step 4 call-line shape**: the command word `python3`, then the script path
-  `${CLAUDE_PLUGIN_ROOT}/scripts/cleanup-task.py`, then the three options with
-  the values `"{integration_worktree}"`, `{feature}` and `{T}`. Those
-  placeholders are the ones step 4 already uses and are filled with the
-  literal values Step I.0 step 2 validated. The line holds no other shell
-  variable, no pipe, no redirection and no second command.
+- **Step 4 call-line shape**: the line as written in the document is
+  `python3 {cleanup_script} --integration-worktree {integration_worktree} --feature {feature} --task {T}`:
+  the command word `python3`, then the script placeholder, then the three
+  options. When the line runs, `{cleanup_script}` is replaced by the resolved
+  absolute path of `cleanup-task.py`, and `{integration_worktree}`,
+  `{feature}` and `{T}` by the literal values Step I.0 step 2 validated. Each
+  substituted value is first escaped for the shell as one whole argument
+  (single-quoted, an embedded single quote written as close-quote, escaped
+  quote, open-quote), so that a quote, backtick, `$`, space or newline inside
+  a value is never read as shell syntax and each value reaches the script as
+  exactly one argument. No placeholder, unescaped `$` or brace is left on the
+  line that runs. The line holds no other shell variable, no pipe, no
+  redirection and no second command.
 - **Precondition**: none beyond the inputs. The script works from any current
   working directory (NFR1).
 - **Postcondition (exit 0)**: each target is removed, already absent, kept, or
@@ -119,9 +128,11 @@ contract.
   - Guard checks run the repository copies of `em-workflow/hooks/*.py`, never
     an installed copy.
 - **Placeholders in protocol text**: step 4 keeps the literal placeholders
-  `{integration_worktree}`, `{feature}` and `{T}` the document already uses.
-  Tests expand them to the sample values that
-  `tests/test_protocol_git_ops_pass_destructive_guard.py` already defines.
+  `{integration_worktree}`, `{feature}` and `{T}` the document already uses,
+  and adds `{cleanup_script}` for the resolved script path. Tests expand them,
+  each escaped for the shell as C1 states, to the sample values that
+  `tests/test_protocol_git_ops_pass_destructive_guard.py` already defines and
+  to values holding shell-special characters.
 
 ## Cross-task Design Decisions
 

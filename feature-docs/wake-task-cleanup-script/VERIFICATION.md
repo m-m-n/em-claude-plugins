@@ -16,7 +16,7 @@
 - Feature modules, runnable on their own:
   `python3 -m unittest tests.test_cleanup_task tests.test_implement_phase_step4_cleanup_script tests.test_implement_phase_guard_compatible_wording tests.test_protocol_git_ops_pass_destructive_guard tests.test_tests_yaml_id_resolution`
 - Coverage target: no coverage tool is configured (standard library only).
-  Instead, every Acceptance Criterion of task0001 and task0002 maps to at least
+  Instead, every Acceptance Criterion of task0001 to task0004 maps to at least
   one test, recorded in `test-docs/wake-task-cleanup-script/{T}.tests.yaml`.
 
 ### Test Scenarios from SPEC.md
@@ -31,7 +31,7 @@
 | TS-6 | Invalid feature / task ID / integration worktree (path separator, `integration`, empty, leading hyphen, and so on) | Non-zero exit with no git command run; integration branch and integration worktree unchanged | Integration |
 | TS-7 | Static scan of the script | No `-D`, `--force` or `-f` in the script text | Unit (static) |
 | TS-8 | Static scan of `implement-phase.md` step 4 | No git command line; the script call line is present; JSON-reading and reporting of kept branch name and reason are stated; the no-forced-fallback, step 3 status and step 5 wording remain | Unit (static) |
-| TS-9 | Step 4's call line through `destructive-guard.py` and `interpreter-mismatch-guard.py` | Neither guard returns `ask` or `deny` | Unit (guard subprocess) |
+| TS-9 | Step 4's call line, with `{cleanup_script}`, `{integration_worktree}`, `{feature}` and `{T}` replaced by shell-escaped values (sample values, and values holding a space, quotes, a backtick, `$` and a newline), through `destructive-guard.py` and `interpreter-mismatch-guard.py` | Each expanded line splits into exactly the intended arguments; neither guard returns `ask` or `deny`, with and without `CLAUDE_BATCH` | Unit (guard subprocess) |
 | TS-10 | Task branch merged into the integration branch, (a) with an upstream configured, (b) without an upstream but moved to a commit outside the integration branch just before the branch deletion runs | (a) Worktree removed; branch kept with a non-empty reason, no branch deletion run, ref unchanged. (b) Branch kept with a non-empty reason; the ref still resolves to the moved commit. Exit 0 in both | Integration |
 | TS-11 | `--integration-worktree` reaching another repository that has the same feature (symbolic link at `.claude/worktrees` or below, a task directory that is a symbolic link, or an integration directory registered as a worktree of another repository) | Non-zero exit with empty standard output; no worktree removal and no branch deletion run; the other repository's worktrees, task branch and integration branch unchanged | Integration |
 
@@ -60,15 +60,15 @@
 |-------------|-------|--------------|
 | FR1 | task0001 | TS-1, TS-6 |
 | FR2 | task0001, task0003 | TS-1, TS-2, TS-7, TS-10 |
-| FR3 | task0001, task0002, task0003 | TS-2, TS-8, TS-10 |
-| FR4 | task0002 | TS-8, TS-9 |
+| FR3 | task0001, task0002, task0003, task0004 | TS-2, TS-8, TS-10 |
+| FR4 | task0002, task0004 | TS-8, TS-9 |
 | FR5 | task0001, task0003 | TS-6, TS-11 |
 | FR6 | task0001 | TS-3, TS-5 |
 | FR7 | task0001 | TS-1, TS-4, TS-5 |
-| FR8 | task0001, task0002, task0003 | TS-1, TS-2, TS-3, TS-6, TS-8, TS-10, TS-11 |
+| FR8 | task0001, task0002, task0003, task0004 | TS-1, TS-2, TS-3, TS-6, TS-8, TS-10, TS-11 |
 | NFR1 | task0001, task0003 | TS-1 |
-| NFR2 | task0002 | TS-9 |
-| NFR3 | task0001, task0002, task0003 | TS-1, TS-2, TS-3, TS-4, TS-5, TS-6, TS-10, TS-11 (unittest on disposable git repositories) |
+| NFR2 | task0002, task0004 | TS-9 |
+| NFR3 | task0001, task0002, task0003, task0004 | TS-1, TS-2, TS-3, TS-4, TS-5, TS-6, TS-10, TS-11 (unittest on disposable git repositories) |
 | NFR4 | task0001, task0002, task0003 | SC-6 (no SPEC scenario) |
 
 ## Manual Testing (E2E Not Possible)
@@ -94,14 +94,20 @@ None. Every scenario is automated.
   and a task branch moved off the integration branch just before the
   deletion runs is kept.
 - TM-3: script resolved per Step I.0 step 4, never from the current
-  directory — TS-8 (task0002 AC-1): step 4 names
-  `${CLAUDE_PLUGIN_ROOT}/scripts/cleanup-task.py`, cites Step I.0 step 4, and
-  states that an unresolvable script invokes nothing and tries no other
-  location.
-- TM-4: the call line passes both guards — TS-9 (task0002 AC-5), with and
-  without `CLAUDE_BATCH`.
+  directory — TS-8 (task0002 AC-1, task0004 AC-1 to AC-3): step 4's call line
+  names the script only through `{cleanup_script}`, the region states that it
+  is replaced by the absolute path of `cleanup-task.py` resolved per Step I.0
+  step 4 and that each substituted value is escaped for the shell as one
+  whole argument, an unresolvable script invokes nothing and tries no other
+  location, and no `cleanup-task.py` in `implement-phase.md` is named by a
+  path relative to the current directory.
+- TM-4: the call line passes both guards — TS-9 (task0002 AC-5, task0004
+  AC-4 and AC-5): the line expanded with shell-escaped values, including
+  values holding a space, quotes, a backtick, `$` and a newline, splits into
+  exactly the intended arguments and passes both guards, with and without
+  `CLAUDE_BATCH`.
 - TM-5: no git command in place of the script on any outcome, reason texts
-  treated as data — TS-8 (task0002 AC-2).
+  treated as data — TS-8 (task0002 AC-2, task0004 AC-6).
 
 ## Verification Summary
 
