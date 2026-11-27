@@ -51,6 +51,9 @@ artifacts:
 - path: feature-docs/dbracket-was-open-close-scan/SPEC.md
   sha256: sha256:89d3af82db26dad8d1b32dc021e9fdef34c5caaa354c620e4108e8b9f457a538
   produced_by: create-spec-run-0002
+- path: feature-docs/dbracket-was-open-close-scan/SPEC.md
+  sha256: sha256:4253efd6f4d5971f20ac93a1ed9722c155b0fd753470c82567c23d6916530129
+  produced_by: user-approved-overwrite-2026-11-28
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0

@@ -3,16 +3,19 @@
 ## Overview
 
 destructive-guard reads a `[[ ]]` conditional that `&&` / `||` split across
-statements only up to its valid closer `]]`. Words after the closer in the
-statement that holds it (redirection targets such as `=~` or `-eq`) never drop
-the exclusion of the following notion call.
+statements only up to its valid closer `]]`. Redirection targets after the
+closer in the statement that holds it (such as `=~` or `-eq`) never drop the
+exclusion of the following notion call. Other words after the closer, such as a
+new `[[` after `then` / `do` and its operator words, are still read.
 
 ## Objectives
 
 - In the `was_open` branch of `_args_json_conditional_step()`, read the words of
-  the closing statement in order and stop at the valid closer `]]`.
+  the closing statement in order, stop the conditional at the valid closer
+  `]]`, and skip only the redirection targets after it.
 - Keep the exclusion of the notion call that follows such a statement.
-- Keep the detection of uncertain words that stand before the closer.
+- Keep the detection of uncertain words that stand before the closer, and of a
+  new `[[` and its operator words after the closer.
 
 ## Acceptance Criteria
 
@@ -27,9 +30,14 @@ the exclusion of the following notion call.
   `[KIND_INSPECTED]` and `deny` with reason ID `git-branch-force-delete`; every
   existing CONDITIONAL_DENY / CONDITIONAL_ALLOW / CLOSER_OPERANDS form keeps its
   judgment.
-- [ ] AC-4 (FR4): the docstring of `_args_json_conditional_step()` states that the
-  words after the closer of a later statement are not read.
-- [ ] AC-5 (FR5, NFR1, NFR4): the rows of AC-2 / AC-3 stand in
+- [ ] AC-4 (FR4): the docstring of `_args_json_conditional_step()` states that in
+  a later statement only the redirection targets after the closer are not read,
+  and that other words after the closer are still read.
+- [ ] AC-6 (FR1, FR3): `if [[ true && true ]] then [[ 0 -eq SID=1 ]]; fi; ` and
+  `while [[ true && true ]] do [[ -v x ]]; done; ` each followed by the same
+  notion call give `[KIND_INSPECTED]` and `deny` with reason ID
+  `git-branch-force-delete`.
+- [ ] AC-5 (FR5, NFR1, NFR4): the rows of AC-2 / AC-3 / AC-6 stand in
   `destructive-guard-cases.json` under labels starting with
   `dbracket-was-open-close-scan` (deny rows with
   `{"rule": "git-branch-force-delete"}`, allow rows with no fourth element), and
@@ -40,7 +48,8 @@ the exclusion of the following notion call.
 
 ### Functional Requirements
 
-- **FR1:** Read the closing statement in word order and stop at the valid closer.
+- **FR1:** Read the closing statement in word order, close the conditional at the
+  valid closer, and skip only the redirection targets after it.
   In the `was_open` branch of `_args_json_conditional_step()` (a statement
   entered while a conditional opened in an earlier statement is still open), the
   non-operator words are read in their order of appearance. Each word before the
@@ -49,8 +58,10 @@ the exclusion of the following notion call.
   `(`) and membership of its restored text in `_ARGS_JSON_DOUBLE_BRACKET_WORDS`
   make the statement uncertain (UNCERTAIN true, OPEN true). The first word
   written exactly `]]` with no stripped trailing carriage return is the closer:
-  the conditional is closed there and the words after it are not read by this
-  function. A word whose restored text is `]]` but which is written with a
+  the conditional is closed there. After the closer, only redirection targets
+  (the words that redirection operators such as `>` take) are not read. Other
+  words after the closer, such as `then` / `do` followed by a new `[[` and its
+  operator words, are still read as the existing reading reads them. A word whose restored text is `]]` but which is written with a
   backslash or a quote, or a `]]` with a stripped trailing carriage return, is
   not a closer and the reading continues past it, as today.
 - **FR2:** The reported notion call keeps its exclusion. For
@@ -66,17 +77,22 @@ the exclusion of the following notion call.
   continuation statement still makes the chunk uncertain, and the following
   notion call with `--session "$SID"` stays `KIND_INSPECTED` / `deny` with reason
   ID `git-branch-force-delete` (for example `[[ true && true =~ true ]]`,
-  `[[ true && true -eq 0 ]]`). A continuation statement with no closer keeps the
+  `[[ true && true -eq 0 ]]`). A new `[[` after `then` / `do` that follows the
+  closer and holds such a word also keeps the following notion call
+  `KIND_INSPECTED` / `deny` (for example
+  `if [[ true && true ]] then [[ 0 -eq SID=1 ]]; fi` and
+  `while [[ true && true ]] do [[ -v x ]]; done`). A continuation statement with no closer keeps the
   existing behavior (open at a `;` / lone `&` or at the end of the chunk is
   uncertain). The opener-statement branch (`was_open` false) is not changed.
 - **FR4:** Docstring. The docstring of `_args_json_conditional_step()` states that
-  in a later statement that holds the closer, the words are read up to the closer
-  and words after the closer are not read, matching the existing statement for
-  the opener statement.
+  in a later statement that holds the closer, the words are read up to the
+  closer, the redirection targets after the closer are not read, and other words
+  after the closer (such as a new `[[` after `then` / `do`) are still read.
 - **FR5:** Regression tests. Unit / integration tests in
   `tests/test_destructive_guard_args_json.py` (a new test class) pin FR1 to FR3,
   and `em-workflow/hooks/tests/destructive-guard-cases.json` gains the allow rows
-  of FR2 and the deny rows of FR3 under labels starting with
+  of FR2 and the deny rows of FR3 (including the `then` / `do` forms of AC-6)
+  under labels starting with
   `dbracket-was-open-close-scan`; each deny row carries
   `{"rule": "git-branch-force-delete"}`. Per the hook-test rule, the rows are
   added before the fix.
@@ -101,10 +117,11 @@ the exclusion of the following notion call.
 
 ## Assumptions
 
-- Bash accepts only redirections (and a closing `)` of an enclosing group) after
-  `]]` in the same statement, so words after the closer are redirection targets
-  or a syntax error; skipping them in the conditional reading loses no
-  evaluating word. The command-level reading (`_args_json_declares_nameref()`)
+- After `]]` in the same statement, Bash accepts redirections, a closing `)` of
+  an enclosing group, and reserved words such as `then` / `do` that start
+  further commands (which may hold a new `[[`). Skipping only the redirection
+  targets loses no evaluating word; the other words are still read. The
+  command-level reading (`_args_json_declares_nameref()`)
   still reads the statement's simple commands as today. (reversible)
 - The sentence in `feature-docs/dbracket-opener-arith-scan/SPEC.md` ('The
   existing behavior of the `was_open` branch, which scans the whole statement,
@@ -135,7 +152,9 @@ continuation statement words (in order)
   → word before the closer: _unsettled() / _ARGS_JSON_DOUBLE_BRACKET_WORDS check
       → uncertain: (UNCERTAIN true, OPEN true)
   → first word written exactly `]]` (no stripped trailing carriage return): closer
-      → conditional closed; words after it are not read
+      → conditional closed
+  → after the closer: redirection targets are skipped; other words (e.g. `then` /
+    `do` and a new `[[` with its operator words) are read as before
 ```
 
 ### API Design
@@ -223,6 +242,7 @@ case — a declared path that never materializes is not a violation.
 ### Edge Cases
 - [ ] TS-3: Detection kept - `Spy(...).kinds()` on the AC-3 commands gives
   `[KIND_INSPECTED]`; `judge()` gives `("deny", "git-branch-force-delete")`.
+  The same holds for the `then` / `do` commands of AC-6.
 - [ ] TS-4: A non-closer `]]` in the continuation statement before the real
   closer is read past. For `[[ a && \]\] == x ]] >=~` the continuation
   statement reports (false, false), and the scan still reads true because the
@@ -259,7 +279,7 @@ Not applicable.
 
 - [ ] All functional requirements are implemented and tested
 - [ ] All test scenarios pass
-- [ ] AC-1 to AC-5 are satisfied
+- [ ] AC-1 to AC-6 are satisfied
 - [ ] `python3 em-workflow/hooks/tests/run-destructive-guard.py` and
   `python3 -m unittest discover -s tests` pass
 - [ ] Code review is completed
