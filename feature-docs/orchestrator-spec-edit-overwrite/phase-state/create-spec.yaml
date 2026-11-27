@@ -4,8 +4,8 @@ phase: create-spec
 status: in_progress
 generation: 1
 base_revision: 1d3cdf85d97fd7f34457a941e2d2a74a995c55b0
-last_input_digest: sha256:c54e4f458deea0097846d7687def17d0f771f87c1dea3fd4f24c63c532c4367c
-active_request_id: create-spec-run-0002
+last_input_digest: sha256:d8fd2acf5fbfb8d29849f44e37ef7559a8eb25e6ef0362de5157f4b99662c357
+active_request_id: null
 packets: {}
 answers:
   create-spec.feature-identity:
@@ -35,9 +35,18 @@ worker_runs:
   status: completed
   input_digest: sha256:c54e4f458deea0097846d7687def17d0f771f87c1dea3fd4f24c63c532c4367c
 - request_id: create-spec-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:d8fd2acf5fbfb8d29849f44e37ef7559a8eb25e6ef0362de5157f4b99662c357
-artifacts: []
+  self_write_set:
+  - feature-docs/orchestrator-spec-edit-overwrite/REQUIREMENTS.md
+  - feature-docs/orchestrator-spec-edit-overwrite/SPEC.md
+artifacts:
+- path: feature-docs/orchestrator-spec-edit-overwrite/REQUIREMENTS.md
+  sha256: sha256:cc615d2ed4f117db236514539396e748c42bdb21754cac4d6402d7262ebbbfe5
+  produced_by: create-spec-run-0002
+- path: feature-docs/orchestrator-spec-edit-overwrite/SPEC.md
+  sha256: sha256:615d930bc3487202c676b9e98c4074200f97a382a1804762672da0eaa85bd54a
+  produced_by: create-spec-run-0002
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
