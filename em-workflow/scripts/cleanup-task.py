@@ -45,6 +45,7 @@ worktree records, never retries, and reads no file other than what git itself
 reads.
 """
 
+import fcntl
 import json
 import os
 import re
@@ -251,6 +252,30 @@ def normalize_leaf(path):
     return os.path.join(os.path.realpath(parent), name)
 
 
+def feature_mismatch(git, integration_worktree, task_worktree, feature):
+    """Reason text when the normalized paths or the integration registration do not belong to the feature; else None."""
+    expected_parent = WORKTREE_TAIL + (feature,)
+    normalized_integration = normalize_leaf(integration_worktree)
+    for path in (task_worktree, normalized_integration):
+        segments = tuple(os.path.dirname(path).split("/")[1:])
+        if segments[-len(expected_parent):] != expected_parent:
+            return "the normalized worktree path does not belong to the feature"
+    if os.path.dirname(task_worktree) != os.path.dirname(normalized_integration):
+        return "the task worktree and the integration worktree are in different directories"
+    rc, out, err = git.run(["worktree", "list", "--porcelain"], LIST_TIMEOUT)
+    if rc != 0:
+        raise InternalError(refusal_text("git worktree list", rc, err))
+    want_branch = "refs/heads/em-workflow/%s/integration" % feature
+    for block in out.split("\n\n"):
+        lines = block.split("\n")
+        paths = [l[len("worktree "):] for l in lines if l.startswith("worktree ")]
+        if paths and normalize_leaf(paths[0]) == normalized_integration:
+            if "branch " + want_branch in lines:
+                return None
+            return "the integration worktree is not registered with the feature's integration branch"
+    return "the integration worktree is not registered"
+
+
 def branch_exists(git, ref):
     """True when the exact ref resolves (a full ref name is looked up as that name only)."""
     rc, _, err = git.run(["show-ref", "--verify", "--quiet", "--", ref], REF_TIMEOUT)
@@ -271,6 +296,11 @@ def cleanup(integration_worktree, feature, task):
     branch_result = {"name": branch, "result": "absent", "reason": None}
 
     task_worktree = normalize_leaf(task_worktree)
+    mismatch = feature_mismatch(git, integration_worktree, task_worktree, feature)
+    if mismatch is not None:
+        worktree = {"result": "kept", "reason": mismatch}
+        branch_result = {"name": branch, "result": "skipped", "reason": SKIPPED_REASON}
+        return result_object(feature, task, worktree, branch_result)
     if os.path.islink(task_worktree):
         worktree = {
             "result": "kept",
@@ -292,6 +322,29 @@ def cleanup(integration_worktree, feature, task):
             return result_object(feature, task, worktree, branch_result)
 
     if branch_exists(git, ref):
+        rc, out, err = git.run(
+            ["rev-parse", "--path-format=absolute", "--git-common-dir"], REF_TIMEOUT
+        )
+        if rc != 0 or not out.strip():
+            raise InternalError(refusal_text("git rev-parse", rc, err))
+        lock_path = os.path.join(out.strip(), "em-workflow-merge.lock")
+        # Hold the same exclusive lock as merge-task.sh / commit-docs.sh while
+        # the ancestry check, tip re-check and deletion run, so the integration
+        # branch cannot move in between.
+        lock_fd = os.open(lock_path, os.O_RDWR | os.O_CREAT, 0o644)
+        try:
+            fcntl.flock(lock_fd, fcntl.LOCK_EX)
+            branch_result = delete_merged_branch(git, feature, branch, ref, worktree, task)
+        finally:
+            os.close(lock_fd)
+        if isinstance(branch_result, tuple):
+            return result_object(feature, task, worktree, branch_result[0])
+    return result_object(feature, task, worktree, branch_result)
+
+
+def delete_merged_branch(git, feature, branch, ref, worktree, task):
+    """Check and delete under the lock; a 1-tuple wraps an early 'kept' result."""
+    if True:
         integration_ref = "refs/heads/em-workflow/%s/integration" % feature
         rc, out, err = git.run(["rev-parse", "--verify", ref], REF_TIMEOUT)
         if rc != 0:
@@ -301,32 +354,28 @@ def cleanup(integration_worktree, feature, task):
             ["merge-base", "--is-ancestor", checked_tip, integration_ref], REF_TIMEOUT
         )
         if rc == 1:
-            branch_result = {
+            return ({
                 "name": branch,
                 "result": "kept",
                 "reason": "the task branch is not merged into the integration branch",
-            }
-            return result_object(feature, task, worktree, branch_result)
+            },)
         if rc != 0:
             raise InternalError(refusal_text("git merge-base", rc, err))
         rc, out, err = git.run(["rev-parse", "--verify", ref], REF_TIMEOUT)
         if rc != 0 or out.strip() != checked_tip:
-            branch_result = {
+            return ({
                 "name": branch,
                 "result": "kept",
                 "reason": "the task branch changed after the merge check",
-            }
-            return result_object(feature, task, worktree, branch_result)
+            },)
         rc, _, err = git.run(["branch", "-d", branch], DELETE_TIMEOUT)
         if rc == 0:
-            branch_result = {"name": branch, "result": "removed", "reason": None}
-        else:
-            branch_result = {
-                "name": branch,
-                "result": "kept",
-                "reason": refusal_text("git branch -d", rc, err),
-            }
-    return result_object(feature, task, worktree, branch_result)
+            return {"name": branch, "result": "removed", "reason": None}
+        return {
+            "name": branch,
+            "result": "kept",
+            "reason": refusal_text("git branch -d", rc, err),
+        }
 
 
 def result_object(feature, task, worktree, branch):

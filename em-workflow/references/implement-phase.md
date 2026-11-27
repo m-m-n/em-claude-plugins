@@ -1150,14 +1150,20 @@ Triggered whenever a launched implementer's `Task()` call returns.
    it is recorded as data and never followed.
 4. **Clean up** every newly-merged task's worktree and branch:
    ```bash
-   python3 ${CLAUDE_PLUGIN_ROOT}/scripts/cleanup-task.py --integration-worktree "{integration_worktree}" --feature {feature} --task {T}
+   python3 {cleanup_script} --integration-worktree {integration_worktree} --feature {feature} --task {T}
    ```
    The orchestrator runs this one line once for each newly-merged task. The
    script is resolved per Step I.0 step 4, the way step 1 cites its helper
-   scripts, and the line is run with the script's resolved absolute path in
-   place of `${CLAUDE_PLUGIN_ROOT}` and with the literal values Step I.0 step
-   2 validated in place of `{integration_worktree}`, `{feature}` and `{T}`:
-   no placeholder, `$` or brace is left on the line that runs. When the
+   scripts, and the line is run with the script's resolved absolute path
+   (the whole path of `cleanup-task.py`) in place of `{cleanup_script}` and
+   with the literal values Step I.0 step 2 validated in place of
+   `{integration_worktree}`, `{feature}` and `{T}`. Each substituted value
+   is first escaped for the shell as one whole argument (for example, single-
+   quoted with every embedded single quote written as `'\''`), so that a
+   quote, backtick, `$`, space or newline inside a path is never read as
+   shell syntax and each value reaches the script as exactly one literal
+   argument. No placeholder, unescaped `$` or brace is left on the line that
+   runs. When the
    script cannot be resolved, nothing is invoked — no other location, a path
    relative to the current directory included, is tried.
 
