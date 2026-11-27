@@ -85,8 +85,8 @@ workflow:
   - VERIFICATION.md
   - THREAT-MODEL.md
   - tasks/
-  status: pending
-  completed_at_commit: 0228d15f27d5cb91257ff1e8d63dbc670e5ea95b
+  status: completed
+  completed_at_commit: c73d327213330cf0a1464d4080e2f79a9f57a279
 - id: implement
   status: pending
   base_commit: f5c51bd1f2e12f11429a41ac7c276d25bad69035
@@ -124,6 +124,31 @@ tasks:
     status: merged
     branch: em-workflow/dbracket-was-open-close-scan/task0001
     notes: null
+  task0002:
+    title: Keep reading the words after the closer except redirection targets
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_args_json.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    status: pending
+    notes: null
 review:
   status: pending
   rounds_completed: 1
@@ -150,9 +175,11 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-1
     - TS-4
+    - TS-8
   FR2:
     title: The reported notion call keeps its exclusion
     status: ok
@@ -160,9 +187,11 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-1
     - TS-2
+    - TS-8
   FR3:
     title: Detection before the closer, and of a new [[ after then / do, is kept
     status: ok
@@ -170,9 +199,11 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-3
     - TS-4
+    - TS-8
   FR4:
     title: Docstring
     status: ok
@@ -180,6 +211,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-6
   FR5:
@@ -189,6 +221,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-5
   NFR1:
@@ -198,6 +231,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-5
   NFR2:
@@ -207,6 +241,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-5
   NFR3:
@@ -216,6 +251,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-5
   NFR4:
@@ -225,6 +261,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-5
   NFR5:
@@ -234,6 +271,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0001
+    - task0002
     tests:
     - TS-7
 batch:
