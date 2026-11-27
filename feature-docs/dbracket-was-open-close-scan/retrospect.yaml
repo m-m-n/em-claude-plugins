@@ -1,0 +1,99 @@
+feature: dbracket-was-open-close-scan
+collected_at: '2026-11-28T02:49:56+09:00'
+session_ids:
+- 01a21e20-1da6-72a9-9378-ca10c131e5b8
+signals:
+  review_critical_high:
+  - stable_id: 4ee256f52da6e850
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: was_open 分岐が最初の ]] で読みを止めたため、]] の直後に then / do で続く新しい [[ -v ]] / [[ -eq ]] を読まなくなった（deny から allow への後退）
+    resolution: unresolved
+  - stable_id: 1de15f9c04743f1a
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: then / do の後ろで開いた新しい [[ が && / || で文をまたぐと、開いた状態が次の文に渡らず演算語を読まない
+    resolution: fixed
+  - stable_id: efce07e213b7bf56
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: ']] の直後の then / do に続くコマンドがコマンドとして分類されず、リダイレクト先の読み飛ばしで偶然の検出もなくなった'
+    resolution: fixed
+  - stable_id: 1d968e14be227feb
+    category: comprehensive
+    file: em-workflow/hooks/destructive-guard.py
+    title: 行継続を含む then や do の後でコマンドの判定が抜ける
+    resolution: fixed
+  - stable_id: 6cda2f23489b839a
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 閉じ括弧の直後にある then の本体がコマンド別の検査に届かない
+    resolution: deferred
+  - stable_id: 0d3bc1a7a14e8455
+    category: security
+    file: em-workflow/hooks/destructive-guard.py
+    title: 閉じ括弧を行継続で書くと、then の後のコマンドを見落とす
+    resolution: fixed
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: description_plus_code の最終読みがバケット 1 に 0.96 で集中し、reduced を採用した
+    bases:
+    - basis: description_only
+      score:
+        type: score
+        score: 1.03
+        confidence: 0.97
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.97
+          '2': 0.03
+          '3': 0.0
+      observed_at: '2026-11-26T23:43:29+09:00'
+    - basis: description_plus_code
+      score:
+        type: score
+        score: 1.04
+        confidence: 0.96
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency, or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.96
+          '2': 0.04
+          '3': 0.0
+      observed_at: '2026-11-26T23:44:51+09:00'
+    pre_survey_estimate:
+      files_expected:
+      - em-workflow/hooks/destructive-guard.py
+      - em-workflow/hooks/tests/destructive-guard-cases.json
+      changed_lines_approx: 12
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: false
+      spillover_modules: []
+      work_still_required: true
+      test_change_kind: extend_existing_one_to_one
+      added_test_cases_approx: 1
+      body_change_kind: new_logic
+      change_containment: single_function
+      caller_and_dependency_count: 5
+      changes_external_contract: false
+      changes_behavior: true
+      evidence: em-workflow/hooks/destructive-guard.py:8778 で `_unsettled()` は `=~` を未確定とし、同ファイル:8789–8800 では閉じ括弧を確認する前にリダイレクト先まで調べる。現行コードの静的判定では、`[[ true && true ]] >=~` に続く `--session "$SID"` 付きの標準形は
+        KIND_INSPECTED となり、`>=~` を除くと KIND_NOTHING となった。既存の閉じ括弧後のテストは単一文を対象とし（tests/test_destructive_guard_args_json.py:4374）、ケース表には再現形がない。既存の許可ケースと同じ形式で追加できる（em-workflow/hooks/tests/destructive-guard-cases.json:1706、em-workflow/hooks/tests/run-destructive-guard.py:268–275）。
+follow_up_drafts: []
+lessons_candidates: []
