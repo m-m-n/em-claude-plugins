@@ -97,3 +97,31 @@ records:
     (C) other. Codex consulted: yes; it confirmed by reading the code that the gap is real in both the was_open branch (OPEN is not carried into the next statement after a re-opened [[) and the opener branch
     (breaks at the first closer), and recommended A: SPEC AC-6 covers a re-opened [[ within the same statement and FR3 excludes the opener branch; task0002 already lists the cross-statement re-open as out
     of scope; a separate task can design state carry-over for both branches and test && and || together. Chosen: A. Not chosen: B, C. Opus escalation: not run.'
+- question_id: review.auto-fix-scope.then-body-lexer-gap
+  packet_id: orchestrator-direct
+  answered_at: '2026-11-28T02:19:15+09:00'
+  source: codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - fix_diff_scope_defer_lexer_gap
+  freeform: null
+  normalized_answer: 'Review round 2: auto-fix only the problems this diff introduced or that close inside _args_json_conditional_step''s was_open branch (line-continued then/do in loop 2, line-continued
+    closer in loop 3); record the pre-existing statements() gap (`if [[ x ]] then <cmd>; fi` body never reaches the command-name checks, allow on the base commit too) as deferred out of scope and file it
+    as a separate task'
+  resolution_note: 'gate: review.auto-fix-judgment (batch default Apply as-is) for finding 6cda2f23489b839a (high, security, loop 1 re-review). Options: (A) auto-fix both the then/do line-continuation finding
+    and the statements() gap via the single-file review editor; (B) fix only the diff-introduced / function-local problems, defer the statements() gap and file it separately; (C) fix it all in this feature''s
+    rework with a SPEC revision. Codex consulted: yes (codex entry, 1 turn) and chose B: the line-continuation problem came from the loop 1 fix and can be fixed and verified inside the function; the statements()
+    gap reproduces on the base commit and needs a change to the lexical split every check uses, which a separate task can verify against the other checks while this feature keeps its SPEC scope. Chosen:
+    B. Not chosen: A, C. Opus escalation: not run. The orchestrator reproduced the gap itself (hook verdict allow for `if [[ true ]] then git branch -D foo; fi` on both the base and the current hook, deny
+    with `; then`).'
+- question_id: review.auto-fix-docstring-restore
+  packet_id: orchestrator-direct
+  answered_at: '2026-11-28T02:19:15+09:00'
+  source: orchestrator
+  answer_mode: single_select
+  selected_option_ids:
+  - restore_pinned_sentence
+  freeform: null
+  normalized_answer: Loop 1's editor reworded a docstring sentence that task0002 AC-5 pins verbatim (the unit test failed); the orchestrator restored the pinned sentence and kept the editor's added sentence
+    after it, in the same loop 1 fix commit
+  resolution_note: 'no gate_id; minimum-side-effect fix that keeps the existing test intact (tests are never weakened). Codex consulted: no.'

@@ -92,7 +92,8 @@ workflow:
   base_commit: f5c51bd1f2e12f11429a41ac7c276d25bad69035
   completed_at_commit: af15b42bbbad49015187403b80d9b7f9b03d2e88
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: 89fef5230b39eb0f6a76c3eeab3094e8264a5136
 - id: verify
   status: pending
 - id: retrospect
@@ -152,8 +153,8 @@ tasks:
     branch: em-workflow/dbracket-was-open-close-scan/task0002
     notes: null
 review:
-  status: pending
-  rounds_completed: 1
+  status: completed
+  rounds_completed: 2
   plan:
     floor:
     - comprehensive
@@ -167,8 +168,8 @@ review:
   - security
   - architecture
   - spec
-  residual_critical_high: 1
-  needs_rework: true
+  residual_critical_high: 0
+  needs_rework: false
 requirements:
   FR1:
     title: Read the closing statement in word order, close at the valid closer, skip only redirection targets after it
