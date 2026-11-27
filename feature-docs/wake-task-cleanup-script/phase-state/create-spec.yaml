@@ -5,8 +5,17 @@ status: in_progress
 generation: 1
 base_revision: 6ee41d499bf3e302d7fd7d93fc116e9edb6c932e
 last_input_digest: null
-active_request_id: create-spec-run-0001
-packets: {}
+active_request_id: null
+packets:
+  create-spec-q0001:
+    path: null
+    iteration: 1
+    status: answered
+    question_ids:
+    - requirement.cleanup.worktree-remove-failure
+    - requirement.cleanup.already-absent
+    - requirement.cleanup.exit-status
+    - design-step.recommendation
 answers:
   create-spec.feature-identity:
     question_id: create-spec.feature-identity
@@ -18,9 +27,67 @@ answers:
     - derive_from_task_description
     freeform: null
     normalized_answer: 'feature name derived from the task description: wake-task-cleanup-script'
+  requirement.cleanup.worktree-remove-failure:
+    question_id: requirement.cleanup.worktree-remove-failure
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-27T19:37:41+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - skip_branch
+    freeform: null
+    normalized_answer: ブランチ削除は試さない
+    resolution_note: 'gate: create-spec.requirement-clarification (policy: codex_consultation,
+      record_as_assumption). chosen: skip_branch; not chosen: attempt_both. Codex
+      reason: worktree が残るとタスクブランチはチェックアウト中のままで branch -d も拒否されるため、worktree の削除エラーとブランチ削除を見送った理由を返す方が原因を追いやすい（merge-task.sh
+      はタスク worktree でブランチがチェックアウトされていることを前提にする）。リスク: worktree が別ブランチに切り替わっていた場合に、消せるブランチも残る。
+      Codex consulted: yes (1 turn, entry codex). Opus escalation: not run. Analyst''s
+      tentative position was the same.'
+  requirement.cleanup.already-absent:
+    question_id: requirement.cleanup.already-absent
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-27T19:37:41+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - treat_as_done
+    freeform: null
+    normalized_answer: 片付け済みとして扱う
+    resolution_note: 'gate: create-spec.requirement-clarification (policy: codex_consultation,
+      record_as_assumption). chosen: treat_as_done; not chosen: treat_as_failure.
+      Codex reason: 手順 1 は手順 4 がブランチを既に消した場合を想定しており、中断後の再実行では片方だけ消えていることがある。対象ごとに不在を確かめ「既に無い」と区別して返す。リスク:
+      パスの有無だけで判断すると git の worktree 登録が残っていても片付け済みと誤報するため、不在は git の登録一覧で判定する（merge-git.py
+      の先例）。 Codex consulted: yes (1 turn, entry codex). Opus escalation: not run.
+      Analyst''s tentative position was the same.'
+  requirement.cleanup.exit-status:
+    question_id: requirement.cleanup.exit-status
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-27T19:37:41+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - exit0_with_json
+    freeform: null
+    normalized_answer: 結果は JSON で返し exit 0
+    resolution_note: 'gate: create-spec.requirement-clarification (policy: codex_consultation,
+      record_as_assumption). chosen: exit0_with_json; not chosen: nonzero_when_left.
+      Codex reason: 手順 4 ではブランチが残っても手順 3 の status は変わらず手順 5 に進む。結果は標準出力の JSON、終了コード
+      0、入力不正と内部エラーだけ 0 以外という形は recover-orphaned-task.py の契約と揃う。リスク: 呼び出し側が終了コードだけを見ると残したものを見落とすため、手順書で
+      JSON を読んで報告に書くと定める。 Codex consulted: yes (1 turn, entry codex). Opus escalation:
+      not run. Analyst''s tentative position was the same.'
+  design-step.recommendation:
+    question_id: design-step.recommendation
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-27T19:37:41+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design step skipped per analyst recommendation (no UI)
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:e8641051d4378b9329f5992da0e7179325d026be36b7a9bf77773b7cf5facf08
 artifacts: []
 patches: []
