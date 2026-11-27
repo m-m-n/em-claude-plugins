@@ -4,8 +4,8 @@ phase: create-spec
 status: in_progress
 generation: 1
 base_revision: 6ee41d499bf3e302d7fd7d93fc116e9edb6c932e
-last_input_digest: sha256:24516865c495a0d02a94bb6521c5caa3dd5afa810359c450b2803185f7db2f25
-active_request_id: create-spec-run-0003
+last_input_digest: sha256:a565b0b7e6a3373dda5eaa3517eaaca2bd4b41326f0dc056a0234e87155afdef
+active_request_id: null
 packets:
   create-spec-q0001:
     path: null
@@ -93,9 +93,18 @@ worker_runs:
   status: completed
   input_digest: sha256:24516865c495a0d02a94bb6521c5caa3dd5afa810359c450b2803185f7db2f25
 - request_id: create-spec-run-0003
-  status: dispatched
+  status: completed
   input_digest: sha256:a565b0b7e6a3373dda5eaa3517eaaca2bd4b41326f0dc056a0234e87155afdef
-artifacts: []
+  self_write_set:
+  - feature-docs/wake-task-cleanup-script/REQUIREMENTS.md
+  - feature-docs/wake-task-cleanup-script/SPEC.md
+artifacts:
+- path: feature-docs/wake-task-cleanup-script/REQUIREMENTS.md
+  sha256: sha256:4385a590b2d45d836913f17b4c485cf9ece0b2385a1ec7f40392a88979b4329d
+  produced_by: create-spec-run-0003
+- path: feature-docs/wake-task-cleanup-script/SPEC.md
+  sha256: sha256:85af46fb26ff5257154194da65130c0275a686d88d8fcda3860594e7e4b3a772
+  produced_by: create-spec-run-0003
 patches: []
 progress_fingerprint: null
 stale_redispatch_count: 0
