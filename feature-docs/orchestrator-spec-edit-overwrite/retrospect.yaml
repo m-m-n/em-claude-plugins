@@ -1,0 +1,45 @@
+feature: orchestrator-spec-edit-overwrite
+collected_at: "2026-11-27T10:42:00+09:00"
+session_ids: [01a21aa9-bc7a-778e-bf41-e0cdd327a514]
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: "description_plus_code の最終読みが score 1.65（バケット 2 の確率 0.66）で、削減しない full を採用した"
+    bases:
+      - basis: description_only
+        score:
+          type: score
+          score: 1.22
+          confidence: 0.77
+          probabilities: {"0": 0.01, "1": 0.77, "2": 0.22, "3": 0.0}
+        observed_at: "2026-11-27T08:57:59+09:00"
+      - basis: description_plus_code
+        score:
+          type: score
+          score: 1.65
+          confidence: 0.66
+          probabilities: {"0": 0.0, "1": 0.34, "2": 0.66, "3": 0.0}
+        observed_at: "2026-11-27T09:01:10+09:00"
+    pre_survey_estimate:
+      changed_lines_approx: 90
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: false
+      work_still_required: true
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 4
+      body_change_kind: wording_or_rule_addition
+      change_containment: multiple_modules
+      caller_and_dependency_count: 4
+      changes_external_contract: false
+      changes_behavior: true
+follow_up_drafts: []
+lessons_candidates:
+  - "review round 1 の medium 2 件（6ba8c829518cfdef / 706b65394e7fcc54）は auto-fix 対象外として deferred のまま残った"
