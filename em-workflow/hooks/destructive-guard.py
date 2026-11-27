@@ -8812,7 +8812,7 @@ def _args_json_conditional_step(marked, words, commands, sep, was_open):
                 target_next = False
                 continue
             tok_src = _args_json_word_source(marked, tok)
-            before = prev_src
+            before = prev_src.replace("\\\n", "") if prev_src is not None else None
             prev_src = tok_src
             if (
                 not closed
@@ -8824,6 +8824,7 @@ def _args_json_conditional_step(marked, words, commands, sep, was_open):
             if (
                 closed
                 and tok_src == "[["
+                and not getattr(tok, "trailing_cr", "")
                 and before in ("then", "do", "else", "elif")
             ):
                 # A new conditional opened at command position after the
