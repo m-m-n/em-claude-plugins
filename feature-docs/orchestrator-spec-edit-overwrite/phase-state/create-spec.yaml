@@ -4,8 +4,8 @@ phase: create-spec
 status: in_progress
 generation: 1
 base_revision: 1d3cdf85d97fd7f34457a941e2d2a74a995c55b0
-last_input_digest: null
-active_request_id: create-spec-run-0001
+last_input_digest: sha256:c54e4f458deea0097846d7687def17d0f771f87c1dea3fd4f24c63c532c4367c
+active_request_id: null
 packets: {}
 answers:
   create-spec.feature-identity:
@@ -18,9 +18,21 @@ answers:
     - derive_from_task_description
     freeform: null
     normalized_answer: 'feature name derived from the task description: orchestrator-spec-edit-overwrite'
+  create-spec.requirement-clarification.orchestrator-edit-scope:
+    question_id: create-spec.requirement-clarification.orchestrator-edit-scope
+    packet_id: orchestrator-direct
+    answered_at: '2026-11-27T09:10:00+09:00'
+    source: codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - Q1:A
+    - Q2:A
+    - Q3:A
+    freeform: null
+    normalized_answer: 両モードで適用 / phase-state/create-plan.yaml に追記専用欄を新設 / 記録対象は create-plan 中の編集だけ
 worker_runs:
 - request_id: create-spec-run-0001
-  status: dispatched
+  status: completed
   input_digest: sha256:c54e4f458deea0097846d7687def17d0f771f87c1dea3fd4f24c63c532c4367c
 artifacts: []
 patches: []

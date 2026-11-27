@@ -1,0 +1,21 @@
+schema_version: 1
+feature: orchestrator-spec-edit-overwrite
+records:
+- question_id: create-spec.requirement-clarification.orchestrator-edit-scope
+  packet_id: orchestrator-direct
+  answered_at: '2026-11-27T09:10:00+09:00'
+  source: codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - Q1:A
+  - Q2:A
+  - Q3:A
+  freeform: null
+  normalized_answer: 両モードで適用 / phase-state/create-plan.yaml に追記専用欄を新設 / 記録対象は create-plan 中の編集だけ
+  resolution_note: 'gate: create-spec.requirement-clarification (policy: codex_consultation, record_as_assumption). Q1 mode scope: options (A) both interactive and batch, (B) batch only; chosen A; Codex
+    reason: mode only splits after a mismatch is fixed, and a resumed interactive run must reach the same decision from the same record (spec-writer-contract.md, SKILL.md). Q2 record location: options (A)
+    new append-only field in phase-state/create-plan.yaml, (B) reuse create-spec.yaml artifacts, (C) other; chosen A; Codex reason: artifacts records a worker''s written_artifacts with request_id; other_feature_doc_fixes
+    is the precedent for a create-plan-only append-only field. Q3 which edits: options (A) only create-plan edits, (B) any phase; chosen A; Codex reason: review/verify-origin spec changes already go back
+    to create-spec via the spec-change transition. Risks Codex raised, adopted as assumptions A-9..A-11: OR match also accepts a body reverted to the recorded create-plan version; exit-4 recovery recomputes
+    the digest from the rebuilt body; pre-dispatch expect_digest verification applies unchanged. Codex consulted: yes. Opus escalation: not run. Requirements-analyst had proposed the same choices (A-3,
+    A-5, A-6).'
