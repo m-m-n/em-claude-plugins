@@ -118,11 +118,49 @@ workflow:
   status: completed
   completed_at_commit: e738eb5636d58c6871d2f50ebd035f1fbd58a684
 - id: verify
-  status: in_progress
-  result: null
-  round: 0
-  passed_ids: []
-  failed_items: []
+  status: failed
+  result: fail
+  round: 1
+  passed_ids:
+  - TS-1
+  - TS-2
+  - TS-3
+  - TS-4
+  - TS-5
+  - TS-6
+  - TS-7
+  - TS-10
+  - TS-11
+  - SC-4
+  - SC-5
+  - SC-6
+  - TM-1
+  - TM-2
+  failed_items:
+  - id: TS-8
+    category: spec
+    note: "Step I.2.b step 4 of em-workflow/references/implement-phase.md now writes the call line as `python3 {cleanup_script} --integration-worktree {integration_worktree} --feature {feature} --task {T}` (changed by the review round 1 auto-fix), while tests/test_implement_phase_step4_cleanup_script.py still expects the `${CLAUDE_PLUGIN_ROOT}/scripts/cleanup-task.py` form: 3 tests of TestAC1CallLineAndResolution fail (no call line naming cleanup-task.py; fenced block is not the expected call line; a cleanup-task.py naming without the plugin-root prefix)."
+  - id: TS-9
+    category: spec
+    note: "TestAC5CallLinePassesTheGuards errors in setUpClass: step 4 region has no call line naming cleanup-task.py, so the guard check never runs."
+  - id: SC-1
+    category: unknown
+    note: "FR3, FR4, FR8 and NFR2 coverage rows lack a passing verification because TS-8 and TS-9 fail."
+  - id: SC-2
+    category: unknown
+    note: "python3 -m unittest discover -s tests: 17621 tests, failures=3, errors=1 (all in tests.test_implement_phase_step4_cleanup_script)."
+  - id: SC-3
+    category: unknown
+    note: "TS-8 does not pass."
+  - id: TM-3
+    category: security
+    note: "TS-8 does not pass, so script resolution per Step I.0 step 4 is not verified."
+  - id: TM-4
+    category: security
+    note: "TS-9 does not pass, so the call line passing both guards is not verified."
+  - id: TM-5
+    category: security
+    note: "TS-8 does not pass, so the no-git-command-in-place-of-the-script wording is not verified."
 - id: retrospect
   status: pending
 tasks:
@@ -368,8 +406,16 @@ requirements:
 batch:
   review_rework_count: 1
   verify_rework:
-    rounds: 0
-    failed_id_counts: {}
+    rounds: 1
+    failed_id_counts:
+      TS-8: 1
+      TS-9: 1
+      SC-1: 1
+      SC-2: 1
+      SC-3: 1
+      TM-3: 1
+      TM-4: 1
+      TM-5: 1
   infra_resume:
     rounds: 0
     cap: 2
