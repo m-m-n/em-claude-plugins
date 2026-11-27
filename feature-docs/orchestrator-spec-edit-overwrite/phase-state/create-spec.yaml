@@ -5,7 +5,7 @@ status: in_progress
 generation: 1
 base_revision: 1d3cdf85d97fd7f34457a941e2d2a74a995c55b0
 last_input_digest: null
-active_request_id: null
+active_request_id: create-spec-run-0001
 packets: {}
 answers:
   create-spec.feature-identity:
@@ -18,7 +18,10 @@ answers:
     - derive_from_task_description
     freeform: null
     normalized_answer: 'feature name derived from the task description: orchestrator-spec-edit-overwrite'
-worker_runs: []
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:c54e4f458deea0097846d7687def17d0f771f87c1dea3fd4f24c63c532c4367c
 artifacts: []
 patches: []
 progress_fingerprint: null
