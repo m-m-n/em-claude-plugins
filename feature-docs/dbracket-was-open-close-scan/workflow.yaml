@@ -71,8 +71,8 @@ workflow:
 - id: create-spec
   artifacts:
   - SPEC.md
-  status: in_progress
-  completed_at_commit: 5ae098831f5a5ff857601e99411b3ff12b87ca12
+  status: completed
+  completed_at_commit: 42d68e5e57d2296424cd9ce6d4a1bf64fe2cdfd5
 - id: design
   artifacts:
   - DESIGN.md
@@ -144,7 +144,7 @@ review:
   needs_rework: true
 requirements:
   FR1:
-    title: Read the closing statement in word order and stop at the valid closer
+    title: Read the closing statement in word order, close at the valid closer, skip only redirection targets after it
     status: ok
     tbd_reason: null
     excluded_reason: null
@@ -164,7 +164,7 @@ requirements:
     - TS-1
     - TS-2
   FR3:
-    title: Detection before the closer is kept
+    title: Detection before the closer, and of a new [[ after then / do, is kept
     status: ok
     tbd_reason: null
     excluded_reason: null

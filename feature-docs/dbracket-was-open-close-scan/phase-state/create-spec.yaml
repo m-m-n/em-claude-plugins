@@ -1,7 +1,7 @@
 schema_version: 1
 feature: dbracket-was-open-close-scan
 phase: create-spec
-status: dispatching
+status: completed
 generation: 2
 base_revision: c8e077bfb0b78e2f1134952b28a42804763026a9
 last_input_digest: sha256:c2bdd26e72cd568e6e179504f536822594a14bb175686f7462fd7f3ce3e20a67
