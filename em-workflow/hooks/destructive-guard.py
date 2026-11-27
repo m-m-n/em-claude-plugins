@@ -8750,7 +8750,11 @@ def _args_json_conditional_step(marked, words, commands, sep, was_open):
     closer are not read here. In a later statement that holds the closer, the
     words up to just before the closer are read; after the closer, the
     redirection targets are not read here, and the other words, such as a new
-    `[[` after `then` or `do`, are still read.
+    `[[` after `then` or `do`, are still read. A `[[` written as is at command position after `then`, `do`, `else` or
+    `elif` opens the conditional again, and the next valid `]]` closes it; the
+    state at the end of the statement is the OPEN returned. A word other than
+    `[[` that directly follows `then`, `do`, `else` or `elif` after the closer
+    is a command this reading does not classify, so it is uncertain.
 
     While a conditional is open, a word that is an operator evaluating its
     operand (_ARGS_JSON_DOUBLE_BRACKET_WORDS) is uncertain, and so is a `;` or
@@ -8799,6 +8803,7 @@ def _args_json_conditional_step(marked, words, commands, sep, was_open):
         # followed by `>`; a quoted or escaped `>` is a word, not an operator.
         closed = False
         target_next = False
+        prev_src = None
         for tok in _split_fused_closer_redirects(words):
             if getattr(tok, "is_operator", False):
                 target_next = closed and REDIRECT.fullmatch(tok) is not None
@@ -8806,13 +8811,29 @@ def _args_json_conditional_step(marked, words, commands, sep, was_open):
             if target_next:
                 target_next = False
                 continue
+            tok_src = _args_json_word_source(marked, tok)
+            before = prev_src
+            prev_src = tok_src
             if (
                 not closed
-                and _args_json_word_source(marked, tok) == "]]"
+                and tok_src == "]]"
                 and not getattr(tok, "trailing_cr", "")
             ):
                 closed = True
                 continue
+            if (
+                closed
+                and tok_src == "[["
+                and before in ("then", "do", "else", "elif")
+            ):
+                # A new conditional opened at command position after the
+                # closer: it stays open until the next valid closer.
+                closed = False
+                continue
+            if closed and before in ("then", "do", "else", "elif"):
+                # A command after `then` / `do` / `else` / `elif` that follows
+                # the closer is not classified here: uncertain (safe side).
+                return True, True
             if _unsettled(tok):
                 return True, True
             if _args_json_declaration_word(marked, tok)[0] in _ARGS_JSON_DOUBLE_BRACKET_WORDS:
