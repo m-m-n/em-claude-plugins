@@ -126,7 +126,8 @@ tasks:
     - NFR1
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
+    branch: em-workflow/wake-task-cleanup-script/task0001
     notes: null
   task0002:
     title: wake step 4 calls the cleanup script
@@ -149,7 +150,8 @@ tasks:
     - NFR2
     - NFR3
     - NFR4
-    status: pending
+    status: in_progress
+    branch: em-workflow/wake-task-cleanup-script/task0002
     notes: null
 review:
   status: pending
