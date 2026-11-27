@@ -8748,8 +8748,9 @@ def _args_json_conditional_step(marked, words, commands, sep, was_open):
     command-level reading keeps such a command certain under an allowlisted
     name whatever its words hold. Words before the opener and words after the
     closer are not read here. In a later statement that holds the closer, the
-    words up to just before the closer are read and the words after the closer
-    are not read here.
+    words up to just before the closer are read; after the closer, the
+    redirection targets are not read here, and the other words, such as a new
+    `[[` after `then` or `do`, are still read.
 
     While a conditional is open, a word that is an operator evaluating its
     operand (_ARGS_JSON_DOUBLE_BRACKET_WORDS) is uncertain, and so is a `;` or
@@ -8789,21 +8790,34 @@ def _args_json_conditional_step(marked, words, commands, sep, was_open):
         return text.startswith("(", i)
 
     if was_open:
-        # Bash accepts only redirections (and the `)` of an enclosing group)
-        # after the closer in the same statement, so the words after it are
-        # redirection targets, not words of the conditional: stop reading
-        # there.
-        for tok in flat:
+        # The statement can go on after the closer: `then` and `do` end no
+        # statement, so a new `[[` may follow them right after `]]`. Keep
+        # reading the words after the closer, and skip only the word that
+        # directly follows a redirection operator there (its target), since
+        # that word is no word of a conditional. An operator is read from the
+        # tokens after the fused-closer split, so a fused `)>` counts as `)`
+        # followed by `>`; a quoted or escaped `>` is a word, not an operator.
+        closed = False
+        target_next = False
+        for tok in _split_fused_closer_redirects(words):
+            if getattr(tok, "is_operator", False):
+                target_next = closed and REDIRECT.fullmatch(tok) is not None
+                continue
+            if target_next:
+                target_next = False
+                continue
             if (
-                _args_json_word_source(marked, tok) == "]]"
+                not closed
+                and _args_json_word_source(marked, tok) == "]]"
                 and not getattr(tok, "trailing_cr", "")
             ):
-                is_open = False
-                break
+                closed = True
+                continue
             if _unsettled(tok):
                 return True, True
             if _args_json_declaration_word(marked, tok)[0] in _ARGS_JSON_DOUBLE_BRACKET_WORDS:
                 return True, True
+        is_open = not closed
     else:
         opener = None
         for command in commands:

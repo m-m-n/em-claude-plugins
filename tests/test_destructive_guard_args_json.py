@@ -4539,15 +4539,19 @@ class TestDbracketOpenerArithScan(unittest.TestCase):
 
 
 class TestDbracketWasOpenCloseScan(unittest.TestCase):
-    """dbracket-was-open-close-scan task0001 (FR1 to FR5, NFR1 to NFR5): in a
-    statement entered while a `[[ ]]` conditional opened in an earlier
-    statement is still open (`&&`, `||` and the parentheses of a conditional
-    split it into statements), the words are read in order and the reading
-    stops at the closer, a word written exactly `]]` with no stripped trailing
-    carriage return. A redirection target after the closer (`=~`, `-eq`) is
-    not a word of the conditional, so the notion call with `--session "$SID"`
-    after it keeps the exclusion (KIND_NOTHING); an operator word before the
-    closer still leaves the chunk uncertain (KIND_INSPECTED)."""
+    """dbracket-was-open-close-scan task0001 and task0002 (FR1 to FR5, NFR1 to
+    NFR5): in a statement entered while a `[[ ]]` conditional opened in an
+    earlier statement is still open (`&&`, `||` and the parentheses of a
+    conditional split it into statements), the words are read in order up to
+    the closer, a word written exactly `]]` with no stripped trailing carriage
+    return, and the reading goes on after it. After the closer, the target of
+    a redirection (`=~`, `-eq` after `>`, `>>`, `<`, `2>`, a fused `)>`) is not
+    read, so the notion call with `--session "$SID"` after it keeps the
+    exclusion (KIND_NOTHING). Every other word after the closer is read: a
+    new `[[` after `then` or `do`, its operator words, and the word after a
+    quoted or escaped `>`. An operator word before the closer, or after it
+    outside a redirection target, leaves the chunk uncertain
+    (KIND_INSPECTED)."""
 
     LABEL = "dbracket-was-open-close-scan"
     # The array assignment, the notion call and the per-statement spy are those
@@ -4556,15 +4560,28 @@ class TestDbracketWasOpenCloseScan(unittest.TestCase):
     NOTION_SID = TestDbracketOpenerArithScan.NOTION_SID
     # The forms whose word after the closer is a redirection target (AC-1, AC-2).
     READ_PAST = ("[[ true && true ]] >=~", "[[ true && true ]] >-eq")
-    # The forms whose operator word stands before the closer (AC-3).
+    # The forms whose operator word stands before the closer (task0001 AC-3).
     KEEP_DENY = ("[[ true && true =~ true ]]", "[[ true && true -eq 0 ]]")
-    # The sentence AC-5 pins, and the one the docstring already holds.
+    # The forms with a new `[[` after `then` and after `do`, right after the
+    # closer (task0002 AC-1, AC-2).
+    THEN_DO_FORMS = (
+        "if [[ true && true ]] then [[ 0 -eq SID=1 ]]; fi",
+        "while [[ true && true ]] do [[ -v x ]]; done",
+    )
+    # The sentence task0002 AC-5 pins, the sentence it replaces, and the
+    # sentence about the opener statement that stays.
     NEW_SENTENCE = (
+        "In a later statement that holds the closer, the words up to just "
+        "before the closer are read; after the closer, the redirection "
+        "targets are not read here, and the other words, such as a new `[[` "
+        "after `then` or `do`, are still read."
+    )
+    REPLACED_SENTENCE = (
         "In a later statement that holds the closer, the words up to just "
         "before the closer are read and the words after the closer are not "
         "read here."
     )
-    OLD_SENTENCE = (
+    OPENER_SENTENCE = (
         "Words before the opener and words after the closer are not read here."
     )
 
@@ -4705,34 +4722,147 @@ class TestDbracketWasOpenCloseScan(unittest.TestCase):
         _, reports = self.reports("[[ a && \\]\\] == x ]] >=~")
         self.assertEqual((False, False), reports[1])
 
+    # --- task0002 AC-1: a new `[[` after `then` / `do` is read -------------
+
+    def then_do_forms(self, operators):
+        """(operator, form) for the `if` form (a new `[[` after `then`) and the
+        `while` form (after `do`) with each of OPERATORS (`(operator, operand
+        text)` pairs) inside the new conditional."""
+        forms = []
+        for operator, inner in operators:
+            forms.append((operator, "if [[ true && true ]] then " + inner + "; fi"))
+            forms.append((operator, "while [[ true && true ]] do " + inner + "; done"))
+        return forms
+
+    def test_a_new_conditional_after_then_or_do_reads_the_chunk_as_uncertain(self):
+        """task0002 AC-1 (FR1, FR3; TS-3; TM-2): the scan reads true for each
+        then / do form, and the statement that holds the first closer reports
+        (true, true)."""
+        for form in self.THEN_DO_FORMS:
+            with self.subTest(form):
+                answer, reports = self.reports(form)
+                self.assertTrue(answer)
+                self.assertEqual((True, True), reports[1])
+
+    # --- task0002 AC-2: the notion call after a then / do form ------------
+
+    def test_the_notion_call_after_each_then_do_form_is_inspected(self):
+        """task0002 AC-2 (FR3, FR5; TS-3, TS-5): the `mcp-bridge` statements
+        after the form and `; ` (no array assignment) are exactly
+        [KIND_INSPECTED]."""
+        for form in self.THEN_DO_FORMS:
+            with self.subTest(form):
+                self.assertEqual([KIND_INSPECTED], self.helper().kinds(form, False))
+
+    def test_the_hook_denies_the_command_after_each_then_do_form(self):
+        """task0002 AC-2 (FR3, FR5; TS-3, TS-5): the whole judgment is deny
+        with the reason ID of the decoded `git branch -D`."""
+        for form in self.THEN_DO_FORMS:
+            with self.subTest(form):
+                self.assertEqual(
+                    ("deny", "git-branch-force-delete"),
+                    judge(self.command(form, False)),
+                )
+
+    # --- task0002 AC-3: the words after the closer that are no target -----
+
+    def test_each_operator_word_of_a_new_conditional_after_the_closer_is_read(self):
+        """task0002 AC-3 (a) (FR1, FR3; TS-8; TM-2): a new `[[` after `then`
+        (`if` form) and after `do` (`while` form) holding `-eq`, `-ne`, `-lt`,
+        `-le`, `-gt`, `-ge` (as `[[ 0 OP 1 ]]`), `-v` (as `[[ -v x ]]`) or
+        `=~` (as `[[ a =~ b ]]`): the scan reads true and the second statement
+        reports (true, true)."""
+        operators = [
+            (operator, "[[ 0 " + operator + " 1 ]]")
+            for operator in TestDbracketOpenerArithScan.OPERATORS
+        ]
+        operators.append(("-v", "[[ -v x ]]"))
+        operators.append(("=~", "[[ a =~ b ]]"))
+        for operator, form in self.then_do_forms(operators):
+            with self.subTest(form):
+                answer, reports = self.reports(form)
+                self.assertTrue(answer)
+                self.assertEqual((True, True), reports[1])
+
+    def test_the_word_after_a_quoted_or_escaped_greater_than_is_read(self):
+        """task0002 AC-3 (b) (FR1, FR3; TS-8; TM-2): a quoted or escaped `>` is
+        a word, not a redirection operator, so the `-eq` after it is read: the
+        scan reads true and the second statement reports (true, true)."""
+        for form in ('[[ true && true ]] ">" -eq', "[[ true && true ]] \\> -eq"):
+            with self.subTest(form):
+                answer, reports = self.reports(form)
+                self.assertTrue(answer)
+                self.assertEqual((True, True), reports[1])
+
+    def test_the_word_after_a_closing_parenthesis_after_the_closer_is_read(self):
+        """task0002 AC-3 (c) (FR1, FR3; TS-8): a `)` is an operator token but
+        not a redirection operator, so the `-eq` after `( [[ true && true ]]
+        )` is read and the second statement reports (true, true)."""
+        answer, reports = self.reports("( [[ true && true ]] ) -eq")
+        self.assertTrue(answer)
+        self.assertEqual((True, True), reports[1])
+
+    # --- task0002 AC-4: a redirection target after the closer stays unread -
+
+    def test_the_target_of_each_redirection_after_the_closer_is_not_read(self):
+        """task0002 AC-4 (FR1, FR2; TS-1, TS-2, TS-8): `[[ true && true ]]`
+        followed directly by `>`, `>>`, `<` or `2>` and then by `=~` or `-eq`:
+        the scan reads false and the second statement reports (false,
+        false)."""
+        for redirection in (">", ">>", "<", "2>"):
+            for target in ("=~", "-eq"):
+                form = "[[ true && true ]] " + redirection + target
+                with self.subTest(form):
+                    answer, reports = self.reports(form)
+                    self.assertFalse(answer)
+                    self.assertEqual((False, False), reports[1])
+
+    def test_the_target_of_a_redirection_fused_to_a_closing_parenthesis_is_not_read(self):
+        """task0002 AC-4 (FR1, FR2; TS-8): in `( [[ true && true ]])>=~` the
+        lexer fuses `)>` into one operator token; read as `)` and `>`, the
+        `=~` is the target of the `>` and is not read, so the second statement
+        reports (false, false)."""
+        _, reports = self.reports("( [[ true && true ]])>=~")
+        self.assertEqual((False, False), reports[1])
+
     # --- AC-5: the docstring ----------------------------------------------
 
     def test_the_docstring_states_the_reading_of_a_statement_that_holds_the_closer(self):
-        """AC-5 (FR4; TS-6): the whitespace-normalized docstring of
-        _args_json_conditional_step() holds the new sentence verbatim and still
-        holds the sentence about the opener statement."""
+        """task0002 AC-5 (FR4; TS-6): the whitespace-normalized docstring of
+        _args_json_conditional_step() holds the revised sentence verbatim, no
+        longer holds the sentence it replaces, and still holds the sentence
+        about the opener statement; the source of the function no longer holds
+        the claim that Bash accepts only redirections after the closer."""
         doc = " ".join(inspect.getdoc(GUARD._args_json_conditional_step).split())
         self.assertIn(self.NEW_SENTENCE, doc)
-        self.assertIn(self.OLD_SENTENCE, doc)
+        self.assertNotIn(self.REPLACED_SENTENCE, doc)
+        self.assertIn(self.OPENER_SENTENCE, doc)
+        source = inspect.getsource(GUARD._args_json_conditional_step)
+        self.assertNotIn("accepts only redirections", " ".join(source.split()))
 
     # --- AC-6: the case table ---------------------------------------------
 
     def wanted(self):
-        """(decision, command) of the six rows of the case table."""
+        """(decision, command) of the eight rows of the case table: the six of
+        task0001, then the two then / do forms (without the array assignment,
+        SPEC AC-6) of task0002."""
         rows = []
         for form in self.READ_PAST:
             rows.append(("allow", self.command(form, False)))
             rows.append(("allow", self.command(form, True)))
         for form in self.KEEP_DENY:
             rows.append(("deny", self.command(form, True)))
+        for form in self.THEN_DO_FORMS:
+            rows.append(("deny", self.command(form, False)))
         return rows
 
-    def test_the_six_rows_stand_in_the_case_table_with_their_decision(self):
-        """AC-6 (FR5, NFR1, NFR4; TS-5): the six rows stand in the case table
-        with their decision and fourth element (the deny rows carry only the
-        reason ID of the decoded command, the allow rows no fourth element),
-        under a label that starts with `dbracket-was-open-close-scan`, and each
-        command string appears once in the table."""
+    def test_the_eight_rows_stand_in_the_case_table_with_their_decision(self):
+        """task0002 AC-2, AC-6 (FR5, NFR1, NFR4; TS-5): the eight rows stand
+        in the case table with their decision and fourth element (the deny
+        rows carry only the reason ID of the decoded command, the allow rows
+        no fourth element), under a label that starts with
+        `dbracket-was-open-close-scan`, and each command string appears once
+        in the table."""
         cases = self.helper().table()
         counts = collections.Counter(case[2] for case in cases)
         by_command = {case[2]: case for case in cases}
@@ -4749,9 +4879,9 @@ class TestDbracketWasOpenCloseScan(unittest.TestCase):
                 else:
                     self.assertEqual(3, len(case))
 
-    def test_every_row_of_this_task_is_one_of_the_six(self):
-        """AC-6 (FR5, NFR4): the rows whose label starts with
-        `dbracket-was-open-close-scan` are exactly the six the tests above
+    def test_every_row_of_this_task_is_one_of_the_eight(self):
+        """task0002 AC-6 (FR5, NFR4): the rows whose label starts with
+        `dbracket-was-open-close-scan` are exactly the eight the tests above
         name."""
         mine = [
             case for case in self.helper().table()

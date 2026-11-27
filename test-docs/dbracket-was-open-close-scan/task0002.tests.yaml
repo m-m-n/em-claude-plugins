@@ -1,0 +1,129 @@
+task_id: task0002
+# 4a: python3 em-workflow/hooks/tests/run-destructive-guard.py -> every case ok;
+# python3 -m unittest discover -s tests -> Ran 17441 tests, FAILED (failures=1, skipped=1). The one failure was
+# test_tests_yaml_id_resolution ... task0001_tests_yaml: two IDs of the task0001 record were "not found" because I
+# renamed two test methods of TestDbracketWasOpenCloseScan (the six-row tests became eight-row tests) while the
+# run was in progress and the record check imports the live test module. That failure comes from my own edit and
+# is not inherited (task0001 recorded an empty baseline on the same parent state); the inherited suite is green.
+baseline_failures: []
+# Re-executed after the implementation, the renamed IDs in the task0001 record and this record:
+# python3 em-workflow/hooks/tests/run-destructive-guard.py (1712/1712 cases) and
+# python3 -m unittest discover -s tests, with no failure.
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_a_new_conditional_after_then_or_do_reads_the_chunk_as_uncertain
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged hook, the test failed for both forms
+      (`if [[ true && true ]] then [[ 0 -eq SID=1 ]]; fi` and `while [[ true &&
+      true ]] do [[ -v x ]]; done`) with "AssertionError: False is not true":
+      the scan read the chunk as certain because the branch stopped at the
+      first `]]`.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_the_notion_call_after_each_then_do_form_is_inspected
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_the_hook_denies_the_command_after_each_then_do_form
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_the_eight_rows_stand_in_the_case_table_with_their_decision
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged hook and the unchanged case table, the first
+      test failed for both forms with "AssertionError: Lists differ:
+      ['inspected'] != ['nothing']", the second with "AssertionError: Tuples
+      differ: ('deny', 'git-branch-force-delete') != ('allow', None)", and the
+      third with "AssertionError: unexpectedly None : no case-table entry for"
+      each of the two commands. With the two rows added and the hook still
+      unchanged, python3 em-workflow/hooks/tests/run-destructive-guard.py
+      failed exactly those two rows with got=allow (1710/1712); the runner is
+      not a test ID.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_each_operator_word_of_a_new_conditional_after_the_closer_is_read
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_the_word_after_a_quoted_or_escaped_greater_than_is_read
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_the_word_after_a_closing_parenthesis_after_the_closer_is_read
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged hook, the first test failed for all sixteen
+      forms (eight operators in the `if` form and in the `while` form) and the
+      second for both forms (`">"` and `\>`), each with "AssertionError: False
+      is not true". The third test was added after the first run of the class;
+      against the unchanged hook (HEAD copy, run outside the worktree) the
+      statement after `&&` of `( [[ true && true ]] ) -eq` reported (False,
+      False) where the test requires (True, True), so it fails there too.
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_the_target_of_each_redirection_after_the_closer_is_not_read
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_the_target_of_a_redirection_fused_to_a_closing_parenthesis_is_not_read
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_a_redirection_target_after_the_closer_reads_the_chunk_as_certain
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_the_closing_statement_reports_no_uncertain_word
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_the_notion_call_after_each_read_past_form_keeps_the_exclusion
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_the_hook_allows_the_command_after_each_read_past_form
+    red_confirmed: false
+    red_reason: >-
+      The behavior pre-exists: the branch before this change stopped at the
+      closer, so no redirection target after it was ever read. A dedicated
+      new module is out of scope, but the tests above (the two new ones and
+      the four READ_PAST tests of task0001, found by searching tests/ for the
+      path em-workflow/hooks/destructive-guard.py and for the basename
+      destructive-guard.py) detect that a redirection target after the closer
+      stays unread; no red state occurred for this change, they passed on
+      their first run. They guard the other side of the change. A check run
+      outside the worktree on in-memory copies of the changed hook showed the
+      guard working: without the fused-closer split the `=~` after `)>` is
+      read (`( [[ true && true ]])>=~` scans true), and without the skip of a
+      redirection target every form of the criterion scans true.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_the_docstring_states_the_reading_of_a_statement_that_holds_the_closer
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged hook, the test failed with "AssertionError:
+      'In a later statement that holds the closer, the words up to just before
+      the closer are read; after the closer, the redirection targets are not
+      read here, and the other words, such as a new `[[` after `then` or
+      `do`, are still read.' not found in" the normalized docstring.
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_the_eight_rows_stand_in_the_case_table_with_their_decision
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_every_row_of_this_task_is_one_of_the_eight
+    red_confirmed: true
+    red_reason: >-
+      Run against the unchanged case table, the first test failed for the two
+      new commands with "AssertionError: unexpectedly None : no case-table
+      entry for <command>" and the second failed with "AssertionError: Lists
+      differ" (eight expected commands against six entries). The two test
+      methods are the renamed ones of task0001 (six rows became eight), so the
+      IDs of the task0001 record were renamed with them. The six existing rows
+      and the existing tests are otherwise unchanged (checked on the diff:
+      only two rows inserted in the case table), and the two commands of the
+      criterion, python3 em-workflow/hooks/tests/run-destructive-guard.py and
+      python3 -m unittest discover -s tests, exit 0 after the change.
+  AC-7:
+    tests:
+      - tests.test_destructive_guard_args_json.TestSourceTextReadings.test_every_conditional_deny_form_reads_the_chunk_as_uncertain
+      - tests.test_destructive_guard_args_json.TestSourceTextReadings.test_every_conditional_allow_form_keeps_the_exclusion
+      - tests.test_destructive_guard_args_json.TestSourceTextReadings.test_every_misread_closer_leaves_the_conditional_open
+      - tests.test_destructive_guard_args_json.TestSourceTextReadings.test_the_readings_are_called_only_from_the_scan
+      - tests.test_destructive_guard_args_json.TestDbracketOpenerArithScan.test_an_operator_word_after_the_closer_is_not_scanned
+      - tests.test_destructive_guard_args_json.TestDbracketOpenerArithScan.test_each_closed_conditional_form_of_the_source_text_readings_keeps_the_exclusion
+      - tests.test_destructive_guard_args_json.TestDbracketOpenerArithScan.test_the_conditional_reading_launches_nothing_and_reads_no_file
+      - tests.test_destructive_guard_args_json.TestDbracketOpenerArithScan.test_the_conditional_reading_makes_no_decision_and_names_no_reason
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_an_operator_word_before_the_closer_reads_the_chunk_as_uncertain
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_the_notion_call_after_each_keep_deny_form_is_inspected
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_the_hook_denies_the_command_after_each_keep_deny_form
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_a_closer_operand_before_the_real_closer_reads_the_chunk_as_certain
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_a_closer_operand_with_no_real_closer_keeps_the_conditional_open
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_an_escaped_closer_alone_does_not_close_the_conditional
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_a_closer_with_a_stripped_carriage_return_is_not_a_closer
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_an_escaped_closer_at_the_head_of_a_continuation_statement_is_an_operand
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing tests above
+      (found by searching tests/ for the path
+      em-workflow/hooks/destructive-guard.py and for the basename
+      destructive-guard.py; they load the hook and run its conditional
+      reading) detect the criterion: the opener-statement branch and the tail
+      of the function are not changed, and every existing judgment of these
+      tests stays as it was; no red state occurred for this change, because
+      the criterion is that these tests keep passing unedited.
