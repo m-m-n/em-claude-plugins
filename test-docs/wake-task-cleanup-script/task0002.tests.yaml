@@ -1,0 +1,73 @@
+task_id: task0002
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 17549 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 17581 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_implement_phase_step4_cleanup_script.TestAC1CallLineAndResolution.test_region_holds_the_call_line_as_the_only_line_of_one_fenced_block
+      - tests.test_implement_phase_step4_cleanup_script.TestAC1CallLineAndResolution.test_call_line_is_the_only_line_naming_the_script_in_a_fenced_block
+      - tests.test_implement_phase_step4_cleanup_script.TestAC1CallLineAndResolution.test_script_resolved_per_step_i0_step4_and_no_other_location_is_tried
+      - tests.test_implement_phase_step4_cleanup_script.TestAC1CallLineAndResolution.test_script_is_never_named_by_a_path_relative_to_the_current_directory
+      - tests.test_implement_phase_step4_cleanup_script.TestAC1CallLineAndResolution.test_trusted_root_search_literals_are_not_restated_in_the_region
+      - tests.test_implement_phase_step4_cleanup_script.TestAC1CallLineAndResolution.test_negative_proof_pre_change_step4_fails_every_ac1_matcher
+      - tests.test_implement_phase_step4_cleanup_script.TestAC1CallLineAndResolution.test_negative_proof_a_script_named_relative_to_the_cwd_is_detected
+      - tests.test_implement_phase_step4_cleanup_script.TestAC1CallLineAndResolution.test_negative_proof_a_second_fenced_block_is_detected
+      - tests.test_implement_phase_step4_cleanup_script.TestAC1CallLineAndResolution.test_negative_proof_an_extra_line_next_to_the_call_line_is_detected
+      - tests.test_implement_phase_step4_cleanup_script.TestAC1CallLineAndResolution.test_negative_proof_pre_change_samples_are_the_old_text
+    red_confirmed: true
+    red_reason: "Run against the unchanged step 4, test_region_holds_the_call_line_as_the_only_line_of_one_fenced_block failed (the fenced block held the two git lines and a comment, not the call line alone), test_call_line_is_the_only_line_naming_the_script_in_a_fenced_block failed with AssertionError: step 4 region has no call line naming cleanup-task.py, test_script_resolved_per_step_i0_step4_and_no_other_location_is_tried failed listing the three missing phrases, and test_script_is_never_named_by_a_path_relative_to_the_current_directory failed because the script was named nowhere. The negative-proof tests run matchers over a verbatim copy of the old step 4 or over a forged copy of the new one; they pass before and after and prove the matchers are not vacuous."
+  AC-2:
+    tests:
+      - tests.test_implement_phase_step4_cleanup_script.TestAC2NoGitCommandInTheRegion.test_no_git_shaped_line_or_code_span_and_no_forbidden_spelling
+      - tests.test_implement_phase_step4_cleanup_script.TestAC2NoGitCommandInTheRegion.test_region_states_no_git_command_replaces_the_script_on_any_outcome
+      - tests.test_implement_phase_step4_cleanup_script.TestAC2NoGitCommandInTheRegion.test_negative_proof_pre_change_step4_is_git_shaped
+      - tests.test_implement_phase_step4_cleanup_script.TestAC2NoGitCommandInTheRegion.test_negative_proof_a_git_inline_code_span_is_detected
+      - tests.test_implement_phase_step4_cleanup_script.TestAC2NoGitCommandInTheRegion.test_negative_proof_a_git_line_in_a_fenced_block_is_detected
+      - tests.test_implement_phase_step4_cleanup_script.TestAC2NoGitCommandInTheRegion.test_negative_proof_each_forbidden_spelling_is_detected_in_prose
+      - tests.test_implement_phase_step4_cleanup_script.TestAC2NoGitCommandInTheRegion.test_negative_proof_removing_each_statement_phrase_is_detected
+    red_confirmed: true
+    red_reason: "Run against the unchanged step 4, test_no_git_shaped_line_or_code_span_and_no_forbidden_spelling failed listing git-shaped items git worktree remove and git -C ... branch -d plus the forbidden spellings git worktree remove and git -C, and test_region_states_no_git_command_replaces_the_script_on_any_outcome failed listing all four missing statement phrases. The negative-proof tests pass before and after and prove the matchers detect the old text and forged git lines."
+  AC-3:
+    tests:
+      - tests.test_implement_phase_step4_cleanup_script.TestAC3ReadsTheJsonAndReports.test_region_states_what_is_read_and_what_is_reported
+      - tests.test_implement_phase_step4_cleanup_script.TestAC3ReadsTheJsonAndReports.test_negative_proof_pre_change_step4_states_none_of_it
+      - tests.test_implement_phase_step4_cleanup_script.TestAC3ReadsTheJsonAndReports.test_negative_proof_removing_each_phrase_is_detected
+    red_confirmed: true
+    red_reason: "Run against the unchanged step 4, test_region_states_what_is_read_and_what_is_reported failed listing all six missing phrases (the JSON is read and not only the exit status, exit status 0 also when something was kept or skipped, the kept/skipped branch fields, the worktree kept fields, the non-zero-exit report)."
+  AC-4:
+    tests:
+      - tests.test_implement_phase_step4_cleanup_script.TestAC4PinnedWordingStays.test_heading_failure_rule_and_batch_mode_opening_are_present
+      - tests.test_implement_phase_step4_cleanup_script.TestAC4PinnedWordingStays.test_failure_rule_sits_inside_the_step4_region
+      - tests.test_implement_phase_step4_cleanup_script.TestAC4PinnedWordingStays.test_batch_mode_paragraph_follows_step5_outside_the_region
+      - tests.test_implement_phase_step4_cleanup_script.TestAC4PinnedWordingStays.test_negative_proof_each_pinned_item_is_detected_when_removed
+      - tests.test_implement_phase_step4_cleanup_script.TestAC4PinnedWordingStays.test_pre_change_step4_carries_the_pinned_rule_too
+      - tests.test_implement_phase_guard_compatible_wording.TestStep4FailureRule
+      - tests.test_implement_phase_guard_compatible_wording.TestBatchModeParagraphAfterStep5Untouched
+      - tests.test_batch_quiet_output_phase_wiring.TestAC2WakePhaseWithheldWritesUnchanged
+    red_confirmed: false
+    red_reason: "The criterion is a retention guarantee: the heading, the failure rule and the Batch mode opening existed before this change and still hold, so the new test class and the existing classes passed against the unchanged step 4; no red state occurred for this change. TestAC4PinnedWordingStays.test_negative_proof_each_pinned_item_is_detected_when_removed shows the matcher fails when the heading, the rule or the Batch mode opening is removed from a forged copy."
+  AC-5:
+    tests:
+      - tests.test_implement_phase_step4_cleanup_script.TestAC5CallLinePassesTheGuards.test_call_line_passes_each_guard_without_and_with_claude_batch
+      - tests.test_implement_phase_step4_cleanup_script.TestAC5CallLinePassesTheGuards.test_expanded_call_line_leaves_no_placeholder_dollar_or_brace
+      - tests.test_implement_phase_step4_cleanup_script.TestAC5CallLinePassesTheGuards.test_expanded_call_line_has_the_expected_shape
+      - tests.test_implement_phase_step4_cleanup_script.TestAC5CallLinePassesTheGuards.test_negative_proof_extraction_fails_naming_the_reason_with_no_call_line
+      - tests.test_implement_phase_step4_cleanup_script.TestAC5CallLinePassesTheGuards.test_negative_proof_extraction_fails_naming_the_reason_with_two_call_lines
+      - tests.test_implement_phase_step4_cleanup_script.TestAC5CallLinePassesTheGuards.test_negative_proof_an_unexpanded_placeholder_is_detected
+      - tests.test_implement_phase_step4_cleanup_script.TestAC5CallLinePassesTheGuards.test_negative_proof_expansion_order_leaves_no_brace_from_plugin_root
+      - tests.test_implement_phase_step4_cleanup_script.TestAC5CallLinePassesTheGuards.test_negative_proof_the_guard_check_rejects_a_forced_deletion
+      - tests.test_implement_phase_step4_cleanup_script.TestAC5CallLinePassesTheGuards.test_negative_proof_the_guard_check_rejects_a_script_run_through_a_shell
+      - tests.test_implement_phase_step4_cleanup_script.TestAC5CallLinePassesTheGuards.test_negative_proof_a_guard_failure_is_not_a_pass
+    red_confirmed: true
+    red_reason: "Run against the unchanged step 4, setUpClass of TestAC5CallLinePassesTheGuards raised AssertionError: step 4 region has no call line naming cleanup-task.py, so every test of the class errored (the old step 4 has no call line to extract and run through the guards). Every negative-proof test is one of that class and so errored too in that run; they pass after the change and prove the extraction fails naming its reason, the residue check fires, and the guard helper reports deny for a forced deletion and for a Python script run through bash."
+  AC-6:
+    tests:
+      - tests.test_implement_phase_guard_compatible_wording
+      - tests.test_protocol_git_ops_pass_destructive_guard
+      - tests.test_batch_quiet_output_phase_wiring
+      - tests.test_write_rejection_parent_docs
+      - tests.test_deviation_auto_addition
+      - tests.test_orphan_recovery_plugin_root_path_doc_contract
+      - tests.test_tests_yaml_id_resolution
+    red_confirmed: true
+    red_reason: "With the new step 4 in place and the two existing test files at their base revision (loaded from git without writing files), tests.test_implement_phase_guard_compatible_wording failed (test_worktree_remove_line_is_byte_identical_and_first errored, test_canonical_step4_branch_deletion_present and test_new_comment_names_integration_head_and_verified_merge failed: the old git lines are not in the region) and tests.test_protocol_git_ops_pass_destructive_guard failed (test_every_site_yields_and_passes and test_no_selected_command_originates_inside_an_excluded_region: zero extracted commands for the two step-4 sites). Retiring those assertions and sites makes all seven modules pass."

@@ -12,6 +12,11 @@ Covers task0001 Acceptance Criteria
   every in-scope site in the task plan's Part C table, leaves no
   placeholder unexpanded, and every extracted command is neither `deny`
   nor `ask` under the repository's `destructive-guard.py`.
+  Later change (wake-task-cleanup-script): Step I.2.b step 4's git commands
+  moved into the cleanup script, so the two step-4 sites ("I.2.b step 4
+  worktree removal" and "I.2.b step 4 branch deletion") left the table;
+  `tests/test_implement_phase_step4_cleanup_script.py` runs the step 4 call
+  line through the guards instead.
 - AC-6 (FR6, TS-7): a site with a missing anchor or zero extracted
   commands makes the extraction test fail, naming the site -- demonstrated
   by a negative proof running the per-site check over a sample lacking the
@@ -378,22 +383,6 @@ def _implement_phase_sites(text):
             "3. **write**,",
             "reset",
             search_start=i3_start,
-        ),
-        SiteSpec(
-            "I.2.b step 4 worktree removal",
-            IMPLEMENT_PHASE_PATH,
-            "4. **Clean up** every newly-merged task's worktree and branch:",
-            "5. **Refill**:",
-            "worktree_removal",
-            search_start=i2b_start,
-        ),
-        SiteSpec(
-            "I.2.b step 4 branch deletion",
-            IMPLEMENT_PHASE_PATH,
-            "4. **Clean up** every newly-merged task's worktree and branch:",
-            "5. **Refill**:",
-            "branch",
-            search_start=i2b_start,
         ),
     ]
 
