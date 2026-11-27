@@ -187,8 +187,8 @@ directly below, because this document is where they take effect:
 - `write_policy` is built per the per-target decision procedure in
   `references/contracts/spec-writer-contract.md` ("How the orchestrator
   chooses each target's action before dispatch"): a target that does not yet
-  exist gets `action: create`; one whose digest matches the immediately
-  preceding same-phase output gets `replace_own`; a digest mismatch raises
+  exist gets `action: create`; one whose digest matches a recorded output
+  that the cited section counts gets `replace_own`; a digest mismatch raises
   the `create-spec.artifact-overwrite` gate (interactive) or follows
   `references/batch-policies.yaml` (batch).
 - The orchestrator verifies each target's `expect_digest` itself before

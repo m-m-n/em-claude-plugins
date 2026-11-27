@@ -69,7 +69,7 @@ write_policy:
 | action | `expect_digest` | worker behaviour |
 |---|---|---|
 | `create` | always `null` | The file must not already exist. If it does, return `blocked` instead of writing. |
-| `replace_own` | required | Overwrites the same-phase output the worker itself produced earlier. For an implementation-planner dispatch of create-plan, this output also covers a planning artifact to which the orchestrator gave `replace_own` by "How the orchestrator chooses each target's action before dispatch", rework-planner's recorded output included. |
+| `replace_own` | required | Overwrites the same-phase output the worker itself produced earlier. For an implementation-planner dispatch of create-plan, this output also covers a planning artifact to which the orchestrator gave `replace_own` by "How the orchestrator chooses each target's action before dispatch", rework-planner's recorded output included. For a spec-writer dispatch of create-spec, the same-phase output also covers a target to which the orchestrator gave `replace_own` by "How the orchestrator chooses each target's action before dispatch", the version the orchestrator recorded during create-plan included. |
 | `replace_authorized` | required (the digest as of approval time) | A user-approved overwrite (see below — the digest is re-verified even though the overwrite was approved). |
 | `preserve` | required | Read-only: the worker must not write this path, only use its content as input. |
 | `extend_only` | required | The worker may add new keys but must not modify or remove any existing key. |
@@ -155,8 +155,10 @@ recorded digest written by the earlier git-blob method is compared as its
 
 For an implementation-planner dispatch of create-plan, the orchestrator tells
 the second bullet's case from the third bullet's case by the planning-lineage
-rule below. For create-spec and the design step the three bullets apply as
-written to every existing target whose action is not fixed individually. The
+rule below. For the design step the three bullets apply as written to every
+existing target whose action is not fixed individually. For create-spec, the
+create-spec rule below says which recorded outputs count as the immediately
+preceding same-phase output. The
 design step's existing `design-system/tokens.yaml` (`extend_only`) and existing
 `design-system/tokens.html` (`regenerate`) keep the actions fixed by this
 contract's table and by `designer-contract.md`'s table; they do not enter the
@@ -206,6 +208,45 @@ are not used for it.
   recorded value that differs from the file's current digest as
   `references/artifact-digest.md` "Legacy records" states, the same way as a
   `phase-state/create-plan.yaml` recorded value.
+
+For a spec-writer dispatch of create-spec, the orchestrator tells the second
+bullet's case from the third bullet's case by the create-spec rule below. The
+rule counts two recorded outputs as the immediately preceding same-phase
+output: the output that create-spec itself recorded, and the version the
+orchestrator recorded during create-plan.
+
+- Match. The orchestrator gives an existing create-spec target the action
+  `replace_own` when the path's current digest equals either (a) the last
+  `artifacts` entry for that path in `phase-state/create-spec.yaml`, or (b) the
+  last entry for that path in the `orchestrator_doc_edits` record of
+  `phase-state/create-plan.yaml`, the record `references/phase-state.md`
+  defines. The last entry for a path is the entry for that path that comes last
+  in that list. The orchestrator counts only those two and only their last
+  entries: earlier entries for the same path, entries for other paths, and
+  other phase-state files do not count.
+- No match. The orchestrator takes the digest-mismatch branch above for an
+  existing create-spec target whose current digest equals neither of those two
+  entries: the `create-spec.artifact-overwrite` gate in interactive mode, and
+  the `references/batch-policies.yaml` decision in batch mode. No other
+  condition gives `replace_own`; a spec-change record or a re-planning
+  authorization does not.
+- Reading the record. The orchestrator counts (b) only when the mapping of
+  `phase-state/create-plan.yaml` has phase `create-plan` and a feature equal to
+  the workflow's feature. An absent file, an unreadable file, a malformed file,
+  a mismatched phase or feature, or no `orchestrator_doc_edits` entry for the
+  path each count as no (b) record. The decision then rests on the
+  `phase-state/create-spec.yaml` comparison alone.
+- Recorded values. The orchestrator compares a (b) recorded value that differs
+  from the file's current digest as `references/artifact-digest.md` "Legacy
+  records" states, the same way as a `phase-state/create-spec.yaml` recorded
+  value.
+- Verification. A target that gets `replace_own` by either match carries
+  `expect_digest`, and the orchestrator verifies it by
+  `references/artifact-digest.md` "Pre-dispatch verification" like every other
+  target that carries `expect_digest`.
+- Scope. The orchestrator counts the `orchestrator_doc_edits` record only in
+  this create-spec decision. The create-plan planning-lineage rule above and the
+  design step do not count it.
 
 ## `completed` payload
 

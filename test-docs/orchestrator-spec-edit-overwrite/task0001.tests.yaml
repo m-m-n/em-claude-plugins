@@ -1,0 +1,76 @@
+task_id: task0001
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 17425 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 17489 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_orchestrator_doc_edits_action_docs.TestAC1CreateSpecBlockMatchRule.test_the_create_spec_lead_occurs_once_and_opens_a_paragraph
+      - tests.test_orchestrator_doc_edits_action_docs.TestAC1CreateSpecBlockMatchRule.test_the_block_sits_after_the_recorded_values_bullet
+      - tests.test_orchestrator_doc_edits_action_docs.TestAC1CreateSpecBlockMatchRule.test_the_block_states_the_match_rule_with_both_entries
+      - tests.test_orchestrator_doc_edits_action_docs.TestAC1CreateSpecBlockMatchRule.test_the_block_adds_no_heading
+      - tests.test_orchestrator_doc_edits_action_docs.TestAC1CreateSpecBlockMatchRule.test_the_heading_text_and_level_of_the_owner_section_are_unchanged
+      - tests.test_orchestrator_doc_edits_action_docs.TestAC1CreateSpecBlockMatchRule.test_every_digest_sentence_of_the_block_names_the_orchestrator
+      - tests.test_orchestrator_doc_edits_action_docs.TestAC1CreateSpecBlockMatchRule.test_the_block_never_writes_b_as_an_artifacts_entry_of_create_plan
+    red_confirmed: true
+    red_reason: "Against the unchanged documents the whole class errored in setUpClass with AssertionError: expected the words 'For a spec-writer dispatch of create-spec' exactly once in the owner section, found 0. The create-spec block did not exist, so every statement of the block (match rule with both entries, phase-state.md citation, last-entry meaning, verification) was unprovable."
+  AC-2:
+    tests:
+      - tests.test_orchestrator_doc_edits_action_docs.TestAC2CreateSpecBlockNoMatchRouting.test_the_block_routes_a_non_matching_target_and_names_no_other_condition
+    red_confirmed: true
+    red_reason: "Errored in setUpClass against the unchanged documents with the same AssertionError (the create-spec lead was found 0 times in the owner section): there was no block that routes a non-matching create-spec target to the create-spec.artifact-overwrite gate or the batch-policies.yaml decision."
+  AC-3:
+    tests:
+      - tests.test_orchestrator_doc_edits_action_docs.TestAC3CreateSpecBlockReadConditions.test_the_block_states_the_read_conditions_and_the_no_record_cases
+      - tests.test_orchestrator_doc_edits_action_docs.TestAC3CreateSpecBlockReadConditions.test_the_owner_section_does_not_name_git_hash_object
+    red_confirmed: true
+    red_reason: "Errored in setUpClass against the unchanged documents with the same AssertionError (the create-spec lead was found 0 times in the owner section): the read conditions, the five no-record cases and the Legacy records comparison were not stated anywhere for the orchestrator_doc_edits record."
+  AC-4:
+    tests:
+      - tests.test_orchestrator_doc_edits_action_docs.TestAC4CreatePlanPartStaysFreeOfTheRecord.test_the_create_plan_part_names_no_orchestrator_doc_edits
+      - tests.test_orchestrator_doc_edits_action_docs.TestAC4CreatePlanPartStaysFreeOfTheRecord.test_the_create_plan_part_keeps_its_pinned_sentences
+      - tests.test_orchestrator_doc_edits_action_docs.TestAC4CreatePlanPartStaysFreeOfTheRecord.test_the_create_plan_part_starts_at_its_lead
+      - tests.test_orchestrator_doc_edits_action_docs.TestAC4OldSentenceIsReplaced.test_the_old_three_bullets_sentence_is_gone_from_the_owner_section
+      - tests.test_orchestrator_doc_edits_action_docs.TestAC4OldSentenceIsReplaced.test_the_design_step_sentence_is_still_in_the_owner_section
+      - tests.test_artifact_digest_docs.TestActionChoiceOwnerStatesPlanningLineageRule.test_no_owner_statement_is_left_unchecked
+    red_confirmed: true
+    red_reason: "TestAC4OldSentenceIsReplaced failed against the unchanged documents on both tests: the old sentence 'For create-spec and the design step the three bullets apply as written' was still present (assertFalse failed) and 'For the design step the three bullets apply as written to every existing target whose action is not fixed individually' was missing. The create-plan part tests errored in setUpClass with the create-spec lead found 0 times. The existing tests/test_artifact_digest_docs.py planning-lineage tests detect the pinned statements of the create-plan rule; no red state occurred for them, they passed before and after and stay unchanged."
+  AC-5:
+    tests:
+      - tests.test_orchestrator_doc_edits_action_docs.TestAC5ReplaceOwnRow.test_the_row_keeps_its_sentences_and_adds_the_create_spec_sentence
+      - tests.test_orchestrator_doc_edits_action_docs.TestAC5ReplaceOwnRow.test_the_row_carries_none_of_the_rule
+      - tests.test_orchestrator_doc_edits_action_docs.TestAC5ReplaceOwnRow.test_the_row_has_three_cells_and_no_other_pipe
+      - tests.test_orchestrator_doc_edits_action_docs.TestAC5ReplaceOwnRow.test_the_row_stays_one_line
+      - tests.test_orchestrator_doc_edits_action_docs.TestAC5ReplaceOwnRow.test_the_action_table_still_has_seven_rows
+      - tests.test_artifact_digest_docs.TestCreatePlanPassesTheChosenActions.test_ts10_the_replace_own_row_keeps_its_sentence_and_cites_the_owner
+      - tests.test_artifact_digest_docs.TestCreatePlanPassesTheChosenActions.test_ts10_the_action_table_still_has_seven_rows_and_the_row_has_three_cells
+    red_confirmed: true
+    red_reason: "test_the_row_keeps_its_sentences_and_adds_the_create_spec_sentence failed against the unchanged row on four statements: the row names a spec-writer dispatch of create-spec, covers a target to which the orchestrator gave replace_own, names the version the orchestrator recorded during create-plan, and cites the action decision after the create-spec sentence. The other four new tests and the two existing tests/test_artifact_digest_docs.py row tests passed before the change; they guard the three-cell, one-line, seven-row and keep-the-old-sentences conditions, and no red state occurred for them."
+  AC-6:
+    tests:
+      - tests.test_orchestrator_doc_edits_action_docs.TestAC6CreateSpecPhaseSection9.test_the_write_policy_bullet_cites_the_contract_and_the_owner_section
+      - tests.test_orchestrator_doc_edits_action_docs.TestAC6CreateSpecPhaseSection9.test_the_write_policy_bullet_keeps_its_cases_and_cites_the_match
+      - tests.test_orchestrator_doc_edits_action_docs.TestAC6CreateSpecPhaseSection9.test_section_9_no_longer_carries_the_old_match_phrase
+      - tests.test_orchestrator_doc_edits_action_docs.TestAC6CreateSpecPhaseSection9.test_the_write_policy_bullet_states_none_of_the_rule
+      - tests.test_orchestrator_doc_edits_action_docs.TestAC6CreateSpecPhaseSection9.test_section_9_still_cites_pre_dispatch_verification
+      - tests.test_orchestrator_doc_edits_action_docs.TestAC6CreateSpecPhaseSection9.test_the_level_2_headings_of_the_document_are_unchanged
+      - tests.test_orchestrator_doc_edits_action_docs.TestAC6CreateSpecPhaseSection9.test_the_other_bullets_of_section_9_are_still_there
+      - tests.test_artifact_digest_docs.TestCreateSpecPhaseWiring.test_section_9_cites_pre_dispatch_verification
+    red_confirmed: true
+    red_reason: "Against the unchanged section 9, test_section_9_no_longer_carries_the_old_match_phrase failed (the phrase 'matches the immediately preceding same-phase output' was present), test_the_write_policy_bullet_states_none_of_the_rule failed on the same phrase, and test_the_write_policy_bullet_keeps_its_cases_and_cites_the_match failed on the statement that the replace_own clause refers to the section the bullet cites. The citation, heading-list, other-bullets and Pre-dispatch verification tests, and the existing tests/test_artifact_digest_docs.py section 9 test, passed before the change; they guard what must stay, and no red state occurred for them."
+  AC-7:
+    tests:
+      - tests.test_orchestrator_doc_edits_action_docs.TestPresenceStatementsFailOnForgedCopies.test_each_statement_matches_its_slice_and_fails_without_its_token
+      - tests.test_orchestrator_doc_edits_action_docs.TestPresenceStatementsFailOnForgedCopies.test_a_statement_placed_in_another_slice_does_not_satisfy_the_check
+      - tests.test_orchestrator_doc_edits_action_docs.TestPresenceStatementsFailOnForgedCopies.test_no_statement_is_left_unchecked
+      - tests.test_orchestrator_doc_edits_action_docs.TestAbsenceChecksFailOnForgedLiveSlices.test_every_live_absence_check_fires_on_the_slice_with_its_token
+      - tests.test_orchestrator_doc_edits_action_docs.TestAbsenceChecksFailOnForgedLiveSlices.test_the_citation_check_fails_on_the_bullet_without_the_citation
+      - tests.test_orchestrator_doc_edits_action_docs.TestAbsenceChecksFailOnForgedLiveSlices.test_the_pre_dispatch_citation_check_fails_without_the_citation
+      - tests.test_orchestrator_doc_edits_action_docs.TestAbsenceChecksFailOnForgedLiveSlices.test_the_heading_list_check_fails_on_a_changed_heading_list
+      - tests.test_orchestrator_doc_edits_action_docs.TestAbsenceChecksFailOnForgedLiveSlices.test_the_row_cell_check_fails_on_a_row_with_a_forged_pipe
+      - tests.test_orchestrator_doc_edits_action_docs.TestAbsenceChecksFailOnForgedLiveSlices.test_the_seven_row_check_fails_on_a_forged_table
+      - tests.test_orchestrator_doc_edits_action_docs.TestMatchersFireOnForgedText.test_every_absence_matcher_fires_on_its_forged_copy
+      - tests.test_orchestrator_doc_edits_action_docs.TestSlicersAreNotVacuous.test_owner_slices_reject_a_missing_create_spec_lead
+      - tests.test_orchestrator_doc_edits_action_docs.TestSlicersAreNotVacuous.test_a_block_placed_in_another_section_is_not_found
+      - tests.test_orchestrator_doc_edits_action_docs.TestModuleHygiene.test_only_stdlib_top_level_imports
+    red_confirmed: true
+    red_reason: "The two classes that read the live documents (TestPresenceStatementsFailOnForgedCopies and TestAbsenceChecksFailOnForgedLiveSlices) errored in setUpClass against the unchanged documents with the create-spec lead found 0 times in the owner section. The helper self-tests (TestSlicersAreNotVacuous, TestMatchersFireOnForgedText) and the stdlib-only test run on forged text or on the module itself and passed from the start; they have no red state of their own. 'No existing test method is removed or changed' is checked by git diff (this task adds one new test file and edits only the two documents), not by a test; the full suite result is in final_failures."
