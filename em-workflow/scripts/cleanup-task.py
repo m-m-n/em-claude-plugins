@@ -38,8 +38,9 @@ output. Diagnostics go to standard error only.
 git: every git child process runs with the integration worktree as its
 repository location, so neither the caller's working directory nor its branch
 affects the outcome. The only git operations are the worktree registration
-list, a non-forced worktree removal, exact ref resolution and a non-forced
-`branch -d`. The script never forces a removal or a deletion, never prunes
+list, a non-forced worktree removal, exact ref resolution, a read-only
+ancestry check (`merge-base --is-ancestor`) of the task branch against the
+integration branch, and a non-forced `branch -d`. The script never forces a removal or a deletion, never prunes
 worktree records, never retries, and reads no file other than what git itself
 reads.
 """
@@ -240,8 +241,14 @@ def is_registered(git, worktree_path):
     An entry whose directory no longer exists still matches by its registered
     path.
     """
-    wanted = os.path.realpath(worktree_path)
-    return any(os.path.realpath(path) == wanted for path in registered_worktree_paths(git))
+    wanted = normalize_leaf(worktree_path)
+    return any(normalize_leaf(path) == wanted for path in registered_worktree_paths(git))
+
+
+def normalize_leaf(path):
+    """Resolve symbolic links in the parent directory only; the last name is kept as is."""
+    parent, name = os.path.split(os.path.abspath(path))
+    return os.path.join(os.path.realpath(parent), name)
 
 
 def branch_exists(git, ref):
@@ -263,6 +270,15 @@ def cleanup(integration_worktree, feature, task):
     worktree = {"result": "absent", "reason": None}
     branch_result = {"name": branch, "result": "absent", "reason": None}
 
+    task_worktree = normalize_leaf(task_worktree)
+    if os.path.islink(task_worktree):
+        worktree = {
+            "result": "kept",
+            "reason": "the task worktree path is a symbolic link",
+        }
+        branch_result = {"name": branch, "result": "skipped", "reason": SKIPPED_REASON}
+        return result_object(feature, task, worktree, branch_result)
+
     if is_registered(git, task_worktree):
         rc, _, err = git.run(["worktree", "remove", task_worktree], REMOVE_TIMEOUT)
         if rc == 0:
@@ -276,6 +292,19 @@ def cleanup(integration_worktree, feature, task):
             return result_object(feature, task, worktree, branch_result)
 
     if branch_exists(git, ref):
+        integration_ref = "refs/heads/em-workflow/%s/integration" % feature
+        rc, _, err = git.run(
+            ["merge-base", "--is-ancestor", ref, integration_ref], REF_TIMEOUT
+        )
+        if rc == 1:
+            branch_result = {
+                "name": branch,
+                "result": "kept",
+                "reason": "the task branch is not merged into the integration branch",
+            }
+            return result_object(feature, task, worktree, branch_result)
+        if rc != 0:
+            raise InternalError(refusal_text("git merge-base", rc, err))
         rc, _, err = git.run(["branch", "-d", branch], DELETE_TIMEOUT)
         if rc == 0:
             branch_result = {"name": branch, "result": "removed", "reason": None}
