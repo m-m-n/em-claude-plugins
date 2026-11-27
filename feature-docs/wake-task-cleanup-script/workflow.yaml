@@ -258,7 +258,7 @@ tasks:
     - FR8
     - NFR2
     - NFR3
-    status: in_progress
+    status: merged
     branch: em-workflow/wake-task-cleanup-script/task0004
     notes: null
 review:
