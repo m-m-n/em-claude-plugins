@@ -1,0 +1,131 @@
+round: 1
+executed_at: '2026-11-27T10:27:36+09:00'
+scope:
+  review_mode: diff
+  base_commit: 7c2f371d9d6919f82eb61605357aa594bd781ca7
+  head_commit: 101c7810d02c7e21b52d57d44db95a064995f50a
+  changed_files:
+  - em-workflow/references/contracts/spec-writer-contract.md
+  - em-workflow/references/phase-state.md
+  - em-workflow/references/phases/create-spec-phase.md
+  - em-workflow/skills/develop/SKILL.md
+  - test-docs/orchestrator-spec-edit-overwrite/task0001.tests.yaml
+  - test-docs/orchestrator-spec-edit-overwrite/task0002.tests.yaml
+  - tests/test_orchestrator_doc_edits_action_docs.py
+  - tests/test_orchestrator_doc_edits_record_docs.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 6ba8c829518cfdef
+  severity: medium
+  category: security
+  file: em-workflow/skills/develop/SKILL.md
+  line: 647
+  title: 記録する digest が、修正前から文書にあった他者の編集まで上書きできる版にしてしまう
+  description: Step B の記録手順は、修正後の文書全体の digest を条件なしで記録する。修正前の文書が phase-state/create-spec.yaml のそのパスの最後の artifacts エントリと一致するか、既存の orchestrator_doc_edits の最後のエントリと一致するかは確かめていない。ユーザーが create-spec の後に SPEC.md へ要件を追記し、その後 create-plan 中にオーケストレーターが別の段落だけを直すと、追記を含む全文が (b) の記録になる。次の create-spec では replace_own が選ばれ、上書き確認を通らない。exit 4 の再試行（657〜660行）でも同じことが起きる。最新 tip から取り込んだ他者の並行コミットの内容も記録の digest に入る。同じ修正がすでに入っていて差分が出ない場合も、手順は記録を追記するよう指示している。comprehensive#0 の high 指摘は同じ原因なので、この項目にまとめた。SPEC の Objective 2 と US2（ほかの経路で変わった SPEC.md は従来どおり digest-mismatch 分岐で守る）と食い違う。手順を読んで再現を確認した。発生には、create-plan の前か最中に同じ文書が別の経路で変わっている必要があるので、medium とした。
+  suggestion: 記録を追記する条件を加える。修正前の文書の digest が、(a) create-spec.yaml のそのパスの最後の artifacts エントリ、または (b) 既存の orchestrator_doc_edits のそのパスの最後のエントリと一致するときだけ記録する。一致しないときは記録しない。この場合、次の create-spec は従来どおり digest-mismatch 分岐に入る。exit 4 の再試行でも、最新 tip の修正前の文書で同じ確認をやり直し、修正で差分が生じないときは記録しない。FR1 の記録条件を狭める変更なので、SPEC の FR1 と A-10 の記述も合わせて直す。
+  reproduction: ユーザーが独自の要件を追記した SPEC.md を入力に、create-plan でオーケストレーターが別段落の誤字だけを修正するケースを追う。647〜655行では要件と誤字修正の両方を含む全文が記録される。次の create-spec ではその記録に一致して `replace_own` が選ばれ、要件を含まない分析結果から仕様書を再生成しても上書き確認が発生しない。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 85
+  resolution: deferred
+  resolution_reason: 'medium severity: not an auto-fix candidate; left for a follow-up task'
+- stable_id: 706b65394e7fcc54
+  severity: medium
+  category: spec
+  file: tests/test_orchestrator_doc_edits_action_docs.py
+  line: 595
+  title: FR5 の Scope 箇条書き（記録は create-spec の決定でしか数えない）を検査するテストが無い
+  description: FR7 は、FR1〜FR6 の記述ごとに存在検査と、偽の写しで失敗することの確認を求めている。spec-writer-contract.md の create-spec ブロックにある Scope 箇条書きは、記録を create-spec の決定でしか数えず、planning-lineage rule と design step では数えないと定めている。この箇条書きに対応する検査が、STATEMENTS にも S_BLOCK にも無い。AC-4 の検査は create-plan 側の本文（S_PLAN_PART）が記録の名前を出さないことと、既存文が残っていることしか見ない。そのため、Scope 箇条書きを消しても、逆の意味に書き換えても、テストは通る。テストファイルを grep して、該当する検査が無いことを確認した。comprehensive#0 も同じ箇所を指摘している。
+  suggestion: S_BLOCK の存在検査に、Scope 箇条書きの 2 文を加える。1 つは、記録を数えるのが create-spec のこの決定だけであること。もう 1 つは、create-plan の planning-lineage rule と design step が記録を数えないこと。箇条書きを取り除いた偽の写しで検査が失敗することも、TestPresenceStatementsFailOnForgedCopies の方式で確かめる。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 85
+  resolution: deferred
+  resolution_reason: 'medium severity: not an auto-fix candidate; left for a follow-up task'
+evaluation:
+  round_summary: Round 1（diff、cross_validation=true）。critical と high は残っていない。medium が 2 件、low が 4 件ある（low 4 件は R3b step 2 の severity ゲートで除外）。comprehensive#0 の high 指摘（exit 4 の再試行）は security#0 の medium 指摘と原因が同じなのでまとめた。architecture#0 の high 指摘（未知の schema_version）は、phase-state.md の Format-version compatibility がどの phase-state ファイルの読み取りにも適用されるため誤検知と判断した。architecture#0 の medium 指摘（digest 計算失敗時に文書だけをコミット）は SPEC の FR1 とエラー処理の表が明示する安全側の動作なので不採用。プロンプト注入の試みは見当たらなかった。
+  recommended_action: auto_fix
+  action_rationale: critical と high は残っておらず、指摘はどれも範囲の限られた文書とテストの修正である。セキュリティの medium 指摘は SPEC の FR1 と A-10 が定めた記録条件を狭めるため、人の判断に回す必要がある。
+dismissed_sites:
+- file: em-workflow/skills/develop/SKILL.md
+  line: 657
+  run_id: comprehensive#0
+  reason: duplicate of another finding
+- file: em-workflow/references/contracts/spec-writer-contract.md
+  line: 233
+  run_id: architecture#0
+  reason: false positive
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-orchestrator-spec-edit-overwrite-20261127T012707Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
