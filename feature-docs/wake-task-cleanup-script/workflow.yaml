@@ -111,14 +111,14 @@ workflow:
   status: completed
   completed_at_commit: 98ce4d84b6b5bc4e608ef07a6fbe7c0df99c642e
 - id: implement
-  status: completed
+  status: pending
   completed_at_commit: 3ac04f771ec951e19313fd52bc7cf252c2fb3e6d
   base_commit: f66cbc996ab70bde735452f91e9952cb626161d9
 - id: review
   status: completed
   completed_at_commit: e738eb5636d58c6871d2f50ebd035f1fbd58a684
 - id: verify
-  status: failed
+  status: pending
   result: fail
   round: 1
   passed_ids:
@@ -240,6 +240,26 @@ tasks:
     status: merged
     branch: em-workflow/wake-task-cleanup-script/task0003
     notes: null
+  task0004:
+    title: step 4 document tests follow the {cleanup_script} call line
+    plan: tasks/task0004.md
+    files:
+    - tests/test_implement_phase_step4_cleanup_script.py
+    skills:
+    - infra-impl
+    domains:
+    - api-contract
+    - config-infra
+    - input-handling
+    complexity: medium
+    requirements:
+    - FR3
+    - FR4
+    - FR8
+    - NFR2
+    - NFR3
+    status: pending
+    notes: null
 review:
   status: completed
   rounds_completed: 2
@@ -293,6 +313,7 @@ requirements:
     - task0001
     - task0002
     - task0003
+    - task0004
     tests:
     - TS-2
     - TS-8
@@ -304,6 +325,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0002
+    - task0004
     tests:
     - TS-8
     - TS-9
@@ -348,6 +370,7 @@ requirements:
     - task0001
     - task0002
     - task0003
+    - task0004
     tests:
     - TS-1
     - TS-2
@@ -373,6 +396,7 @@ requirements:
     excluded_reason: null
     tasks:
     - task0002
+    - task0004
     tests:
     - TS-9
   NFR3:
@@ -384,6 +408,7 @@ requirements:
     - task0001
     - task0002
     - task0003
+    - task0004
     tests:
     - TS-1
     - TS-2
