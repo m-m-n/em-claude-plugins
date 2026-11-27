@@ -1,11 +1,11 @@
 schema_version: 1
 feature: dbracket-was-open-close-scan
 phase: create-spec
-status: completed
-generation: 1
-base_revision: ca16c3195fabe43e463c9241a0e3880b6a9b6dae
-last_input_digest: sha256:989d63e83c0b324e8b21f025ad8753602e206d6401573f403ebf27a3b24582a5
-active_request_id: null
+status: dispatching
+generation: 2
+base_revision: c8e077bfb0b78e2f1134952b28a42804763026a9
+last_input_digest: sha256:62f58c4458603235fc35c295c6a19fd6944beda1ca7f5a750ad38e1a4b672545
+active_request_id: create-spec-run-0003
 packets: {}
 answers:
   create-spec.feature-identity:
@@ -47,6 +47,15 @@ worker_runs:
   input_digest: sha256:989d63e83c0b324e8b21f025ad8753602e206d6401573f403ebf27a3b24582a5
   self_write_set:
   - feature-docs/dbracket-was-open-close-scan/SPEC.md
+- request_id: create-spec-run-0003
+  worker: requirements-analyst
+  status: dispatched
+  input_digest: sha256:62f58c4458603235fc35c295c6a19fd6944beda1ca7f5a750ad38e1a4b672545
+  dispatch_digest_inputs:
+    CLAUDE.md: sha256:89e0309dc43417704c6885e087ff9c681888cbe94f4f451380a6949884321ff5
+    test/README.md: sha256:d7af674574555db4ec8905a6c422e68b80a8984a469ecfd53b0b1aa8b5cda911
+    feature-docs/dbracket-was-open-close-scan/SPEC.md: sha256:4253efd6f4d5971f20ac93a1ed9722c155b0fd753470c82567c23d6916530129
+    em-workflow/references/contracts/analyst-contract.md: sha256:2f4394c4ef60bca84df8001158a691707e200124e264a1fc5e28b38a73dd13e9
 artifacts:
 - path: feature-docs/dbracket-was-open-close-scan/SPEC.md
   sha256: sha256:89d3af82db26dad8d1b32dc021e9fdef34c5caaa354c620e4108e8b9f457a538
