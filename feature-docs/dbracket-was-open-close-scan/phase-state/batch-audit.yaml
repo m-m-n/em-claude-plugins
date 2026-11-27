@@ -62,8 +62,13 @@ records:
   selected_option_ids:
   - abort
   freeform: null
-  normalized_answer: spec-change 再実行で SPEC.md の現ダイジェスト sha256:802788d2… が直前の create-spec 出力 sha256:89d3af82… と一致せず（create-plan 中の TS-4 整合 f5c51bd1f による）、batch 方針 preserve_and_reuse では決定済みの SPEC 変更を書けないため、spec-writer を起動せず停止した
-  resolution_note: 'gate: create-spec.artifact-overwrite (digest-mismatch branch on spec-change re-entry); batch policy: preserve_and_reuse. Options: (A) follow policy literally (spec-writer gets preserve, the decided change-spec cannot be written: abort or an unchanged SPEC contradicting the decision); (B) treat the rework.spec-change change-spec answer as authorization and give SPEC.md replace_authorized with expect_digest sha256:802788d2…; (C) stop now with a report, no dispatch. Codex consulted: yes (codex entry, 1 turn) and chose C: the contract gives preserve_and_reuse on this mismatch, the change-spec answer decides content but records no overwrite approval required for replace_authorized, and the unlisted-gate fallback does not apply to a listed gate; A would not reflect the decided fix. Chosen: C. Not chosen: A, B. Opus escalation: not run. State left: workflow create-spec in_progress, phase-state/create-spec.yaml still status completed (generation 1), rework.yaml spec_change consumed: true.'
+  normalized_answer: spec-change 再実行で SPEC.md の現ダイジェスト sha256:802788d2… が直前の create-spec 出力 sha256:89d3af82… と一致せず（create-plan 中の TS-4 整合 f5c51bd1f による）、batch 方針 preserve_and_reuse では決定済みの SPEC 変更を書けないため、spec-writer
+    を起動せず停止した
+  resolution_note: 'gate: create-spec.artifact-overwrite (digest-mismatch branch on spec-change re-entry); batch policy: preserve_and_reuse. Options: (A) follow policy literally (spec-writer gets preserve,
+    the decided change-spec cannot be written: abort or an unchanged SPEC contradicting the decision); (B) treat the rework.spec-change change-spec answer as authorization and give SPEC.md replace_authorized
+    with expect_digest sha256:802788d2…; (C) stop now with a report, no dispatch. Codex consulted: yes (codex entry, 1 turn) and chose C: the contract gives preserve_and_reuse on this mismatch, the change-spec
+    answer decides content but records no overwrite approval required for replace_authorized, and the unlisted-gate fallback does not apply to a listed gate; A would not reflect the decided fix. Chosen:
+    C. Not chosen: A, B. Opus escalation: not run. State left: workflow create-spec in_progress, phase-state/create-spec.yaml still status completed (generation 1), rework.yaml spec_change consumed: true.'
 - question_id: create-spec.artifact-overwrite.orchestrator-doc-edits-backfill
   packet_id: orchestrator-direct
   answered_at: '2026-11-28T00:20:00+09:00'
@@ -73,4 +78,22 @@ records:
   - stop_no_backfill
   freeform: null
   normalized_answer: 再開時も SPEC.md の現ダイジェスト sha256:802788d2… が create-spec の記録 sha256:89d3af82… と一致せず、create-plan.yaml に orchestrator_doc_edits の記録も無いため、後付けで記録を足さずに spec-writer を起動せず停止した
-  resolution_note: 'gate: create-spec.artifact-overwrite (digest-mismatch branch on spec-change re-entry, second run); batch policy: preserve_and_reuse. Options: (A) backfill one orchestrator_doc_edits entry for the create-plan-time TS-4 edit (commit f5c51bd1f) and give SPEC.md replace_own; (B) no backfill, follow preserve_and_reuse, stop with a report; (C) other. Codex consulted: yes (codex entry, 1 turn) and chose B: the field is recorded in the same commit as the document change and a file written before the field existed stays valid without it, so a backfill is outside the rule; the contract gives a digest mismatch. Chosen: B. Not chosen: A, C. Opus escalation: not run. State left: workflow create-spec in_progress, phase-state/create-spec.yaml status completed (generation 1), rework.yaml spec_change consumed: true.'
+  resolution_note: 'gate: create-spec.artifact-overwrite (digest-mismatch branch on spec-change re-entry, second run); batch policy: preserve_and_reuse. Options: (A) backfill one orchestrator_doc_edits
+    entry for the create-plan-time TS-4 edit (commit f5c51bd1f) and give SPEC.md replace_own; (B) no backfill, follow preserve_and_reuse, stop with a report; (C) other. Codex consulted: yes (codex entry,
+    1 turn) and chose B: the field is recorded in the same commit as the document change and a file written before the field existed stays valid without it, so a backfill is outside the rule; the contract
+    gives a digest mismatch. Chosen: B. Not chosen: A, C. Opus escalation: not run. State left: workflow create-spec in_progress, phase-state/create-spec.yaml status completed (generation 1), rework.yaml
+    spec_change consumed: true.'
+- question_id: create-plan.post-closer-reopened-split
+  packet_id: orchestrator-direct
+  answered_at: '2026-11-28T00:34:30+09:00'
+  source: codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - keep_scope_follow_up
+  freeform: null
+  normalized_answer: Keep task0002 within the SPEC scope; the gap (a [[ re-opened after then/do past the closer and split again by && / || into a later statement is not followed; same shape in the opener
+    branch) is recorded as out of scope and filed as a separate follow-up task
+  resolution_note: 'unlisted-gate fallback (planner warning, no gate_id). Options: (A) keep the plan, record the gap out of scope, file a follow-up task; (B) widen this feature now (SPEC change + re-plan);
+    (C) other. Codex consulted: yes; it confirmed by reading the code that the gap is real in both the was_open branch (OPEN is not carried into the next statement after a re-opened [[) and the opener branch
+    (breaks at the first closer), and recommended A: SPEC AC-6 covers a re-opened [[ within the same statement and FR3 excludes the opener branch; task0002 already lists the cross-statement re-open as out
+    of scope; a separate task can design state carry-over for both branches and test && and || together. Chosen: A. Not chosen: B, C. Opus escalation: not run.'
