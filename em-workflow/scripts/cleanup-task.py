@@ -23,8 +23,11 @@ Output (exit 0 only): one line holding one JSON object
   removed  removed by this run
   absent   already gone: the worktree is not in git's worktree registration
            list, or the exact ref refs/heads/<branch> does not resolve
-  kept     the non-forced removal or deletion was refused and the target
-           remains; `reason` is git's own message
+  kept     the non-forced removal or deletion was refused, or the script
+           declined to run the deletion (the branch tip is not contained in
+           the integration branch, or the branch has an upstream configured),
+           and the target remains; `reason` is git's own message when git
+           refused and fixed text naming the cause when the script declined
   skipped  branch only: the worktree removal was refused, so the branch
            deletion was not attempted; `reason` is fixed text
 
@@ -32,19 +35,34 @@ Output (exit 0 only): one line holding one JSON object
 
 Exit status: 0 when a result was produced (kept and skipped included); 2 for
 invalid input, before any git command ran, with empty standard output; 1 for an
-internal error (for example the worktree listing failing), with empty standard
-output. Diagnostics go to standard error only.
+internal error (for example the worktree listing failing, or the integration
+worktree not belonging to the repository of its project root), with empty
+standard output and no worktree removal or branch deletion run. Diagnostics go
+to standard error only.
 
-git: every git child process runs with the integration worktree as its
+Invalid input includes a --integration-worktree whose real path is not the
+project root's real path followed by the five fixed segments (a symbolic link
+at .claude, .claude/worktrees or any deeper segment leading elsewhere), and an
+existing task worktree path whose real path is not the expected one (a symbolic
+link there). The project root is the part of the value before the five fixed
+segments; it is fixed from the input value before anything is read through the
+feature directory.
+
+git: every git child process but one runs with the integration worktree as its
 repository location, so neither the caller's working directory nor its branch
-affects the outcome. The only git operations are the worktree registration
-list, a non-forced worktree removal, exact ref resolution, a read-only
-ancestry check (`merge-base --is-ancestor`) of the task branch against the
-integration branch, and a non-forced `branch -d`. The script never forces a removal or a deletion, never prunes
-worktree records, never retries, and reads no file other than what git itself
-reads.
+affects the outcome. The exception is one read-only query of the git common
+directory with the project root as its location; it is compared with the same
+query of the integration worktree before the worktree registration list is used
+for any decision. The only git operations are those two common-directory
+queries, the worktree registration list, a non-forced worktree removal, exact
+ref resolution, a read-only ancestry check (`merge-base --is-ancestor`) of the
+task branch against the integration branch, a read-only read of the task
+branch's upstream configuration (`config --get`) and a non-forced `branch -d`.
+The script never forces a removal or a deletion, never prunes worktree records,
+never retries, and reads no file other than what git itself reads.
 """
 
+import collections
 import fcntl
 import json
 import os
@@ -83,6 +101,16 @@ REF_TIMEOUT = 60.0
 DELETE_TIMEOUT = 60.0
 
 SKIPPED_REASON = "the branch deletion was not attempted because the worktree removal was refused"
+UPSTREAM_REASON = "the branch deletion was not run because the task branch has an upstream configured"
+
+# The paths the input value stands for, checked by validate().
+#   project_root          the part of the value before the five fixed segments
+#   integration_worktree  the value as given (the repository location of git)
+#   integration_real      project root's real path + the five fixed segments
+#   task_worktree         project root's real path + the task worktree segments
+Locations = collections.namedtuple(
+    "Locations", ("project_root", "integration_worktree", "integration_real", "task_worktree")
+)
 
 
 class InvalidInput(Exception):
@@ -129,8 +157,12 @@ def has_control_character(text):
     return any(unicodedata.category(ch) == "Cc" for ch in text)
 
 
-def validate_integration_worktree(path, feature):
-    """Shape check of the integration worktree path; it must be an existing directory."""
+def validate_integration_worktree(path, feature, task):
+    """Shape and real-path check of the integration worktree path; no git is run.
+
+    Returns the Locations the later steps use. The project root is fixed from
+    the value here, before anything is read through the feature directory.
+    """
     if not path.startswith("/"):
         raise InvalidInput("--integration-worktree is not an absolute path")
     if has_control_character(path):
@@ -144,9 +176,22 @@ def validate_integration_worktree(path, feature):
     if not os.path.isdir(path):
         raise InvalidInput("--integration-worktree is not an existing directory")
 
+    project_root = "/" + "/".join(segments[:-len(expected)])
+    feature_dir = os.path.join(os.path.realpath(project_root), *WORKTREE_TAIL, feature)
+    integration_real = os.path.join(feature_dir, INTEGRATION_SEGMENT)
+    if os.path.realpath(path) != integration_real:
+        raise InvalidInput(
+            "--integration-worktree does not resolve to the integration worktree location under its project root"
+        )
+    task_worktree = os.path.join(feature_dir, task)
+    lexical_task_worktree = os.path.join(os.path.dirname(path), task)
+    if os.path.lexists(lexical_task_worktree) and os.path.realpath(lexical_task_worktree) != task_worktree:
+        raise InvalidInput("the task worktree path does not resolve to the task worktree location")
+    return Locations(project_root, path, integration_real, task_worktree)
+
 
 def validate(argv):
-    """Return (integration worktree, feature, task); raise InvalidInput."""
+    """Return (Locations, feature, task); raise InvalidInput."""
     values = parse_options(argv)
     feature = values["--feature"]
     task = values["--task"]
@@ -154,9 +199,8 @@ def validate(argv):
         raise InvalidInput("--feature is not a feature name")
     if TASK_RE.fullmatch(task) is None:
         raise InvalidInput("--task is not a task ID")
-    integration_worktree = values["--integration-worktree"]
-    validate_integration_worktree(integration_worktree, feature)
-    return integration_worktree, feature, task
+    locations = validate_integration_worktree(values["--integration-worktree"], feature, task)
+    return locations, feature, task
 
 
 # --------------------------------------------------------------------------
@@ -165,10 +209,10 @@ def validate(argv):
 
 
 class Git:
-    """Runs git with the integration worktree as its repository location."""
+    """Runs git with one directory as its repository location."""
 
-    def __init__(self, integration_worktree):
-        self.location = integration_worktree
+    def __init__(self, location):
+        self.location = location
         self.env = {
             key: value
             for key, value in os.environ.items()
@@ -224,6 +268,29 @@ def refusal_text(operation, returncode, stderr):
 # --------------------------------------------------------------------------
 
 
+def common_directory(git):
+    """Real path of the git common directory of the repository at the git runner's location."""
+    rc, out, err = git.run(["rev-parse", "--path-format=absolute", "--git-common-dir"], REF_TIMEOUT)
+    path = out.rstrip("\n")
+    if rc != 0 or not path:
+        raise InternalError(refusal_text("git rev-parse", rc, err))
+    return os.path.realpath(path)
+
+
+def verify_repository_identity(project_git, integration_git):
+    """Return the integration worktree's git common directory; raise InternalError unless it is the project root's.
+
+    Read-only queries only. This runs before the worktree registration list is
+    used for any decision, so a path that names another repository's worktree
+    is never acted on.
+    """
+    project_common = common_directory(project_git)
+    integration_common = common_directory(integration_git)
+    if project_common != integration_common:
+        raise InternalError("the integration worktree does not belong to the repository of its project root")
+    return integration_common
+
+
 def registered_worktree_paths(git):
     """Paths of every entry of git's worktree registration list."""
     rc, out, err = git.run(["worktree", "list", "--porcelain"], LIST_TIMEOUT)
@@ -252,16 +319,8 @@ def normalize_leaf(path):
     return os.path.join(os.path.realpath(parent), name)
 
 
-def feature_mismatch(git, integration_worktree, task_worktree, feature):
-    """Reason text when the normalized paths or the integration registration do not belong to the feature; else None."""
-    expected_parent = WORKTREE_TAIL + (feature,)
-    normalized_integration = normalize_leaf(integration_worktree)
-    for path in (task_worktree, normalized_integration):
-        segments = tuple(os.path.dirname(path).split("/")[1:])
-        if segments[-len(expected_parent):] != expected_parent:
-            return "the normalized worktree path does not belong to the feature"
-    if os.path.dirname(task_worktree) != os.path.dirname(normalized_integration):
-        return "the task worktree and the integration worktree are in different directories"
+def integration_mismatch(git, integration_real, feature):
+    """Reason text when the integration worktree is not registered with the feature's integration branch; else None."""
     rc, out, err = git.run(["worktree", "list", "--porcelain"], LIST_TIMEOUT)
     if rc != 0:
         raise InternalError(refusal_text("git worktree list", rc, err))
@@ -269,7 +328,7 @@ def feature_mismatch(git, integration_worktree, task_worktree, feature):
     for block in out.split("\n\n"):
         lines = block.split("\n")
         paths = [l[len("worktree "):] for l in lines if l.startswith("worktree ")]
-        if paths and normalize_leaf(paths[0]) == normalized_integration:
+        if paths and normalize_leaf(paths[0]) == integration_real:
             if "branch " + want_branch in lines:
                 return None
             return "the integration worktree is not registered with the feature's integration branch"
@@ -286,26 +345,31 @@ def branch_exists(git, ref):
     raise InternalError(refusal_text("git show-ref", rc, err))
 
 
-def cleanup(integration_worktree, feature, task):
-    git = Git(integration_worktree)
-    task_worktree = os.path.join(os.path.dirname(integration_worktree), task)
+def has_upstream(git, branch):
+    """True when the branch has a remote or a merge setting (read-only; every configuration scope git reads)."""
+    for key in ("remote", "merge"):
+        rc, _, err = git.run(["config", "--get", "branch.%s.%s" % (branch, key)], REF_TIMEOUT)
+        if rc == 0:
+            return True
+        if rc != 1:
+            raise InternalError(refusal_text("git config", rc, err))
+    return False
+
+
+def cleanup(locations, feature, task):
+    git = Git(locations.integration_worktree)
+    task_worktree = locations.task_worktree
     branch = "em-workflow/%s/%s" % (feature, task)
     ref = "refs/heads/%s" % branch
 
     worktree = {"result": "absent", "reason": None}
     branch_result = {"name": branch, "result": "absent", "reason": None}
 
-    task_worktree = normalize_leaf(task_worktree)
-    mismatch = feature_mismatch(git, integration_worktree, task_worktree, feature)
+    common_dir = verify_repository_identity(Git(locations.project_root), git)
+
+    mismatch = integration_mismatch(git, locations.integration_real, feature)
     if mismatch is not None:
         worktree = {"result": "kept", "reason": mismatch}
-        branch_result = {"name": branch, "result": "skipped", "reason": SKIPPED_REASON}
-        return result_object(feature, task, worktree, branch_result)
-    if os.path.islink(task_worktree):
-        worktree = {
-            "result": "kept",
-            "reason": "the task worktree path is a symbolic link",
-        }
         branch_result = {"name": branch, "result": "skipped", "reason": SKIPPED_REASON}
         return result_object(feature, task, worktree, branch_result)
 
@@ -322,12 +386,7 @@ def cleanup(integration_worktree, feature, task):
             return result_object(feature, task, worktree, branch_result)
 
     if branch_exists(git, ref):
-        rc, out, err = git.run(
-            ["rev-parse", "--path-format=absolute", "--git-common-dir"], REF_TIMEOUT
-        )
-        if rc != 0 or not out.strip():
-            raise InternalError(refusal_text("git rev-parse", rc, err))
-        lock_path = os.path.join(out.strip(), "em-workflow-merge.lock")
+        lock_path = os.path.join(common_dir, "em-workflow-merge.lock")
         # Hold the same exclusive lock as merge-task.sh / commit-docs.sh while
         # the ancestry check, tip re-check and deletion run, so the integration
         # branch cannot move in between.
@@ -368,6 +427,16 @@ def delete_merged_branch(git, feature, branch, ref, worktree, task):
                 "result": "kept",
                 "reason": "the task branch changed after the merge check",
             },)
+        # With an upstream configured, `branch -d` would judge the deletion
+        # against the upstream instead of the integration branch. Read it
+        # immediately before the deletion; without one, git judges the deletion
+        # against the integration worktree's checked-out branch at that moment.
+        if has_upstream(git, branch):
+            return ({
+                "name": branch,
+                "result": "kept",
+                "reason": UPSTREAM_REASON,
+            },)
         rc, _, err = git.run(["branch", "-d", branch], DELETE_TIMEOUT)
         if rc == 0:
             return {"name": branch, "result": "removed", "reason": None}
@@ -389,12 +458,12 @@ def result_object(feature, task, worktree, branch):
 
 def main(argv):
     try:
-        integration_worktree, feature, task = validate(argv)
+        locations, feature, task = validate(argv)
     except InvalidInput as exc:
         print("cleanup-task: invalid input: %s" % exc, file=sys.stderr)
         return 2
     try:
-        result = cleanup(integration_worktree, feature, task)
+        result = cleanup(locations, feature, task)
     except InternalError as exc:
         print("cleanup-task: internal error: %s" % exc, file=sys.stderr)
         return 1

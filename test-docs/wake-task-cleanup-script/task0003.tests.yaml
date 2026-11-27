@@ -1,0 +1,61 @@
+task_id: task0003
+baseline_failures:             # 4a: python3 -m unittest discover -s tests -> Ran 17607 tests, FAILED (failures=4, errors=1, skipped=1)
+  - tests.test_cleanup_task.TestAC3UnmergedBranchIsKept.test_the_branch_reason_is_the_git_message_of_the_refused_deletion
+  - tests.test_implement_phase_step4_cleanup_script.TestAC1CallLineAndResolution.test_call_line_is_the_only_line_naming_the_script_in_a_fenced_block
+  - tests.test_implement_phase_step4_cleanup_script.TestAC1CallLineAndResolution.test_region_holds_the_call_line_as_the_only_line_of_one_fenced_block
+  - tests.test_implement_phase_step4_cleanup_script.TestAC1CallLineAndResolution.test_script_is_never_named_by_a_path_relative_to_the_current_directory
+  - tests.test_implement_phase_step4_cleanup_script.TestAC5CallLinePassesTheGuards   # setUpClass error
+final_failures:                # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> the four test_implement_phase_step4_cleanup_script entries only (task0002 owns them); the cleanup test that failed at the base was renamed and now passes
+  - tests.test_implement_phase_step4_cleanup_script.TestAC1CallLineAndResolution.test_call_line_is_the_only_line_naming_the_script_in_a_fenced_block
+  - tests.test_implement_phase_step4_cleanup_script.TestAC1CallLineAndResolution.test_region_holds_the_call_line_as_the_only_line_of_one_fenced_block
+  - tests.test_implement_phase_step4_cleanup_script.TestAC1CallLineAndResolution.test_script_is_never_named_by_a_path_relative_to_the_current_directory
+  - tests.test_implement_phase_step4_cleanup_script.TestAC5CallLinePassesTheGuards   # setUpClass error
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_cleanup_task.TestTask3AC1UpstreamKeepsTheBranch.test_a_remote_and_a_merge_setting_keep_the_branch
+      - tests.test_cleanup_task.TestTask3AC1UpstreamKeepsTheBranch.test_a_remote_setting_alone_keeps_the_branch
+      - tests.test_cleanup_task.TestTask3AC1UpstreamKeepsTheBranch.test_a_merge_setting_alone_keeps_the_branch
+      - tests.test_cleanup_task.TestTask3AC1UpstreamKeepsTheBranch.test_the_upstream_configuration_is_read_and_never_changed
+    red_confirmed: true
+    red_reason: "Run against the unchanged script, the three keep-the-branch tests failed with AssertionError: 'removed' != 'kept' (git branch -d judged the deletion against the upstream local branch that also contains the tip and deleted it), and test_the_upstream_configuration_is_read_and_never_changed failed because the deletion also removed the branch.<name>.* configuration. The control test test_control_without_an_upstream_the_same_branch_is_removed passes before and after and is not listed as evidence."
+  AC-2:
+    tests:
+      - tests.test_cleanup_task.TestTask3AC2TipMovedAfterTheScriptsCheck.test_a_tip_moved_when_the_deletion_is_invoked_is_refused_by_git_and_kept
+    red_confirmed: false
+    red_reason: "The behavior pre-existed: the unchanged script already ends in a non-forced branch -d, which git judges against the integration worktree's checked-out branch when no upstream is configured, so the new test passed against it and no red state occurred for this change. A search of tests/ for cleanup-task.py and its basename found only tests/test_cleanup_task.py and tests/test_implement_phase_step4_cleanup_script.py, and neither moves the ref at the deletion. The test is not vacuous: with the deletion changed to a forced one in a temporary edit it failed (the policy check reported the forcing token), and the moved task ref is only reachable through the shim."
+  AC-3:
+    tests:
+      - tests.test_cleanup_task.TestTask3AC3LinksToAnotherRepository.test_a_link_leading_to_the_second_repository_exits_2_without_running_git
+    red_confirmed: true
+    red_reason: "Run against the unchanged script, each of the four subtests (links at .claude, .claude/worktrees, .claude/worktrees/em-workflow and .claude/worktrees/em-workflow/<feature>) failed with AssertionError: 0 != 2; the script cleaned up the second repository through the link. The control test test_control_a_project_root_reached_through_a_link_is_accepted passes before and after and is not listed as evidence."
+  AC-4:
+    tests:
+      - tests.test_cleanup_task.TestTask3AC4LinkedTaskDirectory.test_a_task_directory_linking_elsewhere_exits_2_without_running_git
+    red_confirmed: true
+    red_reason: "Run against the unchanged script, each of the four subtests (link to another registered worktree, to the main tree, to the integration worktree, to a missing directory) failed with AssertionError: 0 != 2; the unchanged script exited 0."
+  AC-5:
+    tests:
+      - tests.test_cleanup_task.TestTask3AC5IntegrationPathRegisteredElsewhere.test_the_run_exits_1_with_empty_output_and_removes_nothing
+      - tests.test_cleanup_task.TestTask3AC5IntegrationPathRegisteredElsewhere.test_the_project_root_is_asked_for_its_git_common_directory
+    red_confirmed: true
+    red_reason: "Run against the unchanged script, test_the_run_exits_1_with_empty_output_and_removes_nothing failed with AssertionError: 0 != 1 (the script removed the second repository's task worktree and branch) and test_the_project_root_is_asked_for_its_git_common_directory failed because the shim log held no git call with the project root as its location."
+  AC-6:
+    tests:
+      - tests.test_cleanup_task.TestAC7StaticScan.test_the_script_text_has_no_standalone_forcing_token
+      - tests.test_cleanup_task.TestAC7InvocationPolicy.test_a_conforming_log_has_no_violation
+      - tests.test_cleanup_task.TestAC7InvocationPolicy.test_forcing_flags_and_prune_are_violations
+      - tests.test_cleanup_task.TestAC7InvocationPolicy.test_a_branch_deletion_must_name_the_task_branch_only_from_the_integration_worktree
+      - tests.test_cleanup_task.TestAC7InvocationPolicy.test_the_project_root_is_a_location_only_for_the_common_directory_query
+      - tests.test_cleanup_task.TestAC7InvocationPolicy.test_a_config_invocation_must_be_a_read_of_the_task_branchs_upstream_setting
+      - tests.test_cleanup_task.TestAC7RunsHonourThePolicy.test_merged_task_run_deletes_the_branch_with_exactly_branch_d
+      - tests.test_cleanup_task.TestAC2MergedTaskFromAnyDirectory.test_every_git_call_names_the_integration_worktree_as_its_location
+    red_confirmed: false
+    red_reason: "A dedicated new module is out of scope, but the existing TestAC7StaticScan and TestAC7RunsHonourThePolicy detect a forcing token, a prune and a branch invocation that is not 'branch -d <task branch>' from the integration worktree; the script never had any of them, so no red state occurred for this change. The extended policy checker (project root location, config reads) is exercised by the TestAC7InvocationPolicy self-tests, which pass before and after because they test only the checker. The one extension that failed against the unchanged script, test_every_git_call_names_the_integration_worktree_as_its_location (AssertionError: 0 != 1, the project root's common-directory query was absent), checks the new query, not a forcing flag or a prune."
+  AC-7:
+    tests:
+      - tests.test_cleanup_task
+      - tests.test_cleanup_task.TestAC3UnmergedBranchIsKept.test_the_kept_branch_has_a_non_empty_reason_whoever_refused
+      - tests.test_cleanup_task.TestAC2MergedTaskFromAnyDirectory.test_run_from_the_main_tree_removes_the_worktree_and_the_branch
+    red_confirmed: true
+    red_reason: "At the base, python3 -m unittest tests.test_cleanup_task ended with FAILED (failures=1): test_the_branch_reason_is_the_git_message_of_the_refused_deletion, AssertionError: 'not fully merged' not found in 'the task branch is not merged into the integration branch'. That test was renamed to test_the_kept_branch_has_a_non_empty_reason_whoever_refused and now asserts the C2 contract only; the module passes as a whole. The main-tree working directory run (TS-1) passed before and after."

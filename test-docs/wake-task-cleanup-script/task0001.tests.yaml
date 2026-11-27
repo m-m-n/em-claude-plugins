@@ -23,9 +23,9 @@ acceptance_tests:
   AC-3:
     tests:
       - tests.test_cleanup_task.TestAC3UnmergedBranchIsKept.test_the_worktree_is_removed_and_the_unmerged_branch_is_kept_with_a_reason
-      - tests.test_cleanup_task.TestAC3UnmergedBranchIsKept.test_the_branch_reason_is_the_git_message_of_the_refused_deletion
+      - tests.test_cleanup_task.TestAC3UnmergedBranchIsKept.test_the_kept_branch_has_a_non_empty_reason_whoever_refused
     red_confirmed: true
-    red_reason: "Both tests failed in setUp with AssertionError: False is not true : the script under test does not exist: em-workflow/scripts/cleanup-task.py."
+    red_reason: "Both tests failed in setUp with AssertionError: False is not true : the script under test does not exist: em-workflow/scripts/cleanup-task.py. The second test was renamed and rewritten by task0003 to assert the C2 contract without pinning git's refusal text; the failure observation above is of the test as it was then."
   AC-4:
     tests:
       - tests.test_cleanup_task.TestAC4DirtyWorktreeIsKept.test_a_modified_tracked_file_keeps_the_worktree_and_skips_the_branch
