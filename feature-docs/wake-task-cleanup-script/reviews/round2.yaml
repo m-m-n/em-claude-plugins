@@ -1,0 +1,176 @@
+round: 2
+executed_at: '2026-11-27T22:14:56+09:00'
+scope:
+  review_mode: diff
+  base_commit: f66cbc996ab70bde735452f91e9952cb626161d9
+  head_commit: e738eb5636d58c6871d2f50ebd035f1fbd58a684
+  changed_files:
+  - em-workflow/references/implement-phase.md
+  - em-workflow/scripts/cleanup-task.py
+  - test-docs/wake-task-cleanup-script/task0001.tests.yaml
+  - test-docs/wake-task-cleanup-script/task0002.tests.yaml
+  - test-docs/wake-task-cleanup-script/task0003.tests.yaml
+  - tests/test_cleanup_task.py
+  - tests/test_implement_phase_guard_compatible_wording.py
+  - tests/test_implement_phase_step4_cleanup_script.py
+  - tests/test_protocol_git_ops_pass_destructive_guard.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 7a5fbc33c0c8adf8
+  severity: high
+  category: architecture
+  file: em-workflow/references/implement-phase.md
+  line: 1153
+  title: 手順4の呼び出し行の変更に試験と C1 が追随しておらず、ガード検証が実行されない
+  description: round 1 の修正（7a852c398）で手順4の呼び出し行は `python3 {cleanup_script} --integration-worktree {integration_worktree} --feature {feature} --task {T}`（値は単一引用符でエスケープ）に変わった。一方 tests/test_implement_phase_step4_cleanup_script.py は task0002（6fa904694）以降変更されておらず、79-84行の CALL_LINE は `${CLAUDE_PLUGIN_ROOT}/scripts/cleanup-task.py` と `"{integration_worktree}"` の旧形式のまま。IMPLEMENTATION.md C1（41-43行、58-63行）も旧形式を定めている。_call_line_problems は不一致で失敗する。_extract_call_line（172行）は新しい行を見つけられず例外となり、TestAC1 の抽出テストが失敗し、TestAC5 は setUpClass で止まる。そのため NFR2/TS-9 のガード検証は実際の呼び出し行に一度も実行されない。本文の「(the whole path of `cleanup-task.py`)」には接頭辞が無いため、test_script_is_never_named_by_a_path_relative_to_the_current_directory も失敗する。オーケストレーターが `python3 -m unittest tests.test_implement_phase_step4_cleanup_script` を実行し、failures=3, errors=1 を確認した。
+  suggestion: IMPLEMENTATION.md C1 の呼び出し行の形を、手順書と同じ `{cleanup_script}` と、シェル用にエスケープした値の形に改める。試験では CALL_LINE を手順書の行に合わせ、囲みブロックの行を `{cleanup_script}` で抽出する。展開では `{cleanup_script}` を絶対パスの見本値で置き換え、各値を単一引用符で囲む。残りの検査は shlex.split で分けた語に対して行う。スクリプト名の検査は、カレントディレクトリからの相対パスを引き続き拒みつつ、`{cleanup_script}` と本文での言及を許すように直す。展開した行を CLAUDE_BATCH なし・ありの両方で2つのガードに通す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 90
+  resolution: deferred
+  resolution_reason: 'batch mode: rework cap reached'
+- stable_id: ac1caa2191ac55a1
+  severity: medium
+  category: architecture
+  file: em-workflow/scripts/cleanup-task.py
+  line: 376
+  title: 作業ツリーを削除した後の内部エラーで、C3 が「削除未実行」と定める終了コード1を返す
+  description: C3（IMPLEMENTATION.md 99行）と docstring（36-41行）は、終了コード1のとき作業ツリーの削除もブランチの削除も実行していないと定めている。実際には、377行の worktree remove の成功後に、ロックファイルの os.open、show-ref（終了値2以上）、rev-parse / merge-base、config、git のタイムアウトのどれかが失敗すると、main が標準出力を空にして1を返す。手順4は「後片付けが完了しなかった」と記録するだけなので破壊的な後続操作は起きないが、作業ツリーが既に消えたことは報告から失われ、契約の記述が実際の挙動と食い違う。
+  suggestion: ロックの取得と読み取りだけの検査を、作業ツリーの削除より前に済ませる。削除後にも起こり得る失敗は、終了コード0で worktree=removed、branch=kept と理由を返すか、C3 に「部分的に完了した場合」を追加する。どちらかに決めて手順4に反映し、試験も追加する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 95
+  resolution: deferred
+  resolution_reason: 'batch round 2: medium severity, not an auto-fix candidate; left for the human evaluator'
+- stable_id: 1a31cd1bc516fd83
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/cleanup-task.py
+  line: 348
+  title: GIT_CONFIG を継承すると has_upstream() と branch -d で追跡先の見え方が食い違う
+  description: Git クラス（216-222行）が子プロセスの環境から取り除くのは REPO_LOCATION_VARS だけ。GIT_CONFIG=/dev/null のとき `git config --get branch.<b>.remote` は終了値1を返すが、for-each-ref は同じ追跡先を返す。呼び出し元の環境に GIT_CONFIG があると、has_upstream() は False を返し、`git branch -d` は設定済みの追跡先を基準に判定する。その結果「追跡先があれば保持」を素通りする。ただし先端はロックの中で integration に含まれることを確かめており、-d は追跡先への取り込みも求めるため、コミットが失われることはない。
+  suggestion: 子プロセスの環境から GIT_CONFIG を取り除く（REPO_LOCATION_VARS と同じ扱い）。そのうえで、追跡先のあるブランチに GIT_CONFIG=/dev/null を渡しても branch.result が kept になる試験を追加する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 80
+  resolution: deferred
+  resolution_reason: 'batch round 2: medium severity, not an auto-fix candidate; left for the human evaluator'
+evaluation:
+  round_summary: 'Round 2（task0003 による差し戻し後）。5 観点すべてが完了した。high として残すのは 1 件: round 1 の修正（7a852c398）で手順4の呼び出し行が `{cleanup_script}` の形に変わったが、tests/test_implement_phase_step4_cleanup_script.py と IMPLEMENTATION.md C1 は旧形式のまま（AC-1 の試験の失敗と AC-5 の setUpClass のエラー、TS-9 のガード検証が実行されない）。medium は 2 件（作業ツリー削除後の終了コード1、GIT_CONFIG の継承）。low は 5 件で、severity の機械的ゲートで記録から外した: 2回目の rev-parse の失敗を「先端が変わった」と報告する（cleanup-task.py:423）、手順4の波括弧の規則の読み方（implement-phase.md:1161）、UTF-8 置換文字で復号した共通ディレクトリの照合（cleanup-task.py:287、security#0 は high で報告）、branch -d がリポジトリ側の reference-transaction フックを起動する（cleanup-task.py:440、security#0 は high で報告、変更前の手順4と同じ露出）、-z なしの worktree list を改行で分ける（cleanup-task.py:324）。spec の high（再確認と branch -d の間の競合）は round 1 の deferred 90e3b65612e3196c と同じ系統でコミットは失われないため demoted。security の medium 2 件（.gitignore 対象ファイル、refs/replace）は git 外部の挙動で unverifiable、変更前の手順4と同じ挙動のため demoted。reviewer の出力に注入の試みは見つからなかった。'
+  recommended_action: auto_fix
+  action_rationale: high の 1 件は、試験モジュール1つと IMPLEMENTATION.md C1 を、round 1 で直した手順書の呼び出し行に合わせる機械的な修正で済む。cleanup-task.py の挙動も SPEC も変えずに直せる。medium の 2 件は cleanup-task.py の中で閉じる修正で、人による判断に回せる。その他の再掲は round 1 の deferred の判断をそのまま引き継ぐ。
+dismissed_sites:
+- file: em-workflow/scripts/cleanup-task.py
+  line: 423
+  run_id: spec#0
+  reason: demoted
+- file: em-workflow/scripts/cleanup-task.py
+  line: 376
+  run_id: comprehensive#0
+  reason: duplicate of another finding
+- file: em-workflow/scripts/cleanup-task.py
+  line: 370
+  run_id: architecture#0
+  reason: already resolved per round_context
+- file: em-workflow/scripts/cleanup-task.py
+  line: 388
+  run_id: architecture#0
+  reason: already resolved per round_context
+- file: em-workflow/scripts/cleanup-task.py
+  line: 395
+  run_id: performance#0
+  reason: already resolved per round_context
+- file: em-workflow/scripts/cleanup-task.py
+  line: 434
+  run_id: spec#0
+  reason: demoted
+- file: tests/test_cleanup_task.py
+  line: 629
+  run_id: spec#0
+  reason: already resolved per round_context
+- file: em-workflow/scripts/cleanup-task.py
+  line: 376
+  run_id: security#0
+  reason: demoted
+- file: em-workflow/scripts/cleanup-task.py
+  line: 412
+  run_id: security#0
+  reason: demoted
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 1
+  applied_total: 0
+  termination: no-progress
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-wake-task-cleanup-script-20261127T131413Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

@@ -115,7 +115,8 @@ workflow:
   completed_at_commit: 3ac04f771ec951e19313fd52bc7cf252c2fb3e6d
   base_commit: f66cbc996ab70bde735452f91e9952cb626161d9
 - id: review
-  status: in_progress
+  status: completed
+  completed_at_commit: e738eb5636d58c6871d2f50ebd035f1fbd58a684
 - id: verify
   status: pending
   result: null
@@ -202,8 +203,8 @@ tasks:
     branch: em-workflow/wake-task-cleanup-script/task0003
     notes: null
 review:
-  status: pending
-  rounds_completed: 1
+  status: completed
+  rounds_completed: 2
   plan:
     floor:
     - comprehensive
@@ -219,8 +220,8 @@ review:
   - performance
   - architecture
   - spec
-  residual_critical_high: 4
-  needs_rework: true
+  residual_critical_high: 0
+  needs_rework: false
 requirements:
   FR1:
     title: 後片付けスクリプト
