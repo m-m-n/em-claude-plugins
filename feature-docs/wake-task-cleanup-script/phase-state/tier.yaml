@@ -1,0 +1,72 @@
+schema_version: 2
+feature: wake-task-cleanup-script
+tier: full
+bases:
+- basis: description_only
+  score:
+    type: score
+    score: 1.72
+    confidence: 0.63
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.32
+      '2': 0.63
+      '3': 0.05
+  observed_at: '2026-11-27T19:28:29+09:00'
+- basis: description_plus_code
+  score:
+    type: score
+    score: 2.07
+    confidence: 0.89
+    legend:
+      '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+      '1': A rule addition combined with a test addition, or a small change spread
+        across a few files together with a small test change.
+      '2': New logic, a change reaching across several modules, or a change to an
+        external contract.
+      '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+        or a change to the architecture.'
+    probabilities:
+      '0': 0.0
+      '1': 0.02
+      '2': 0.89
+      '3': 0.09
+  observed_at: '2026-11-27T19:30:53+09:00'
+pre_survey_estimate:
+  files_expected:
+  - em-workflow/references/implement-phase.md
+  - tests/test_implement_phase_guard_compatible_wording.py
+  - tests/test_protocol_git_ops_pass_destructive_guard.py
+  changed_lines_approx: 150
+  new_functions_needed: 2
+  new_files_needed: 2
+  new_dependencies_needed: 0
+  covering_tests_exist: false
+  spillover_modules: []
+  work_still_required: true
+  test_change_kind: new_behavior_tests
+  added_test_cases_approx: 2
+  body_change_kind: new_logic
+  change_containment: multiple_modules
+  caller_and_dependency_count: 4
+  changes_external_contract: true
+  changes_behavior: true
+  evidence: 'develop は implement の手順書をインライン実行する（em-workflow/skills/develop/SKILL.md:856）。wake
+    は手順 1 で取り込みを確認し、手順 4 でオーケストレーターが `git worktree remove` と integration worktree
+    を基準にした `git branch -d` を順に直接実行する。削除に失敗した場合は強制削除を禁じ、wake の報告には残したブランチ名を書く規定がある。失敗理由を機械で読める形で返す処理はない（em-workflow/references/implement-phase.md:971、em-workflow/references/implement-phase.md:1151）。
+
+    既存の文面テストは Git コマンドの直接記載と順序を検査し、ガードのテストは手順 4 から両コマンドを抽出して判定する。メインの worktree から後片付けを呼び、実際にタスクブランチが消えることを確かめるテストは確認できなかった（tests/test_implement_phase_guard_compatible_wording.py:123、tests/test_implement_phase_guard_compatible_wording.py:170、tests/test_protocol_git_ops_pass_destructive_guard.py:382、tests/test_protocol_git_ops_pass_destructive_guard.py:472）。呼び出し・依存の
+    4 件は develop、手順を直接参照する既存テスト 2 本、Git。新規ファイル 2 件は後片付けスクリプトと実動作テストで、テストの見積もりはメインからの削除成功と削除失敗時の構造化出力の
+    2 件。既存の wake 用ヘルパーに JSON 出力の先例があり、テスト規則は標準ライブラリの unittest と一時 Git リポジトリを使う（em-workflow/scripts/recover-orphaned-task.py:99、test/README.md:5、test/README.md:36）。
+
+    Step C と merge スキルの削除対象は integration ブランチで、今回の wake とは別の手順にある（em-workflow/skills/develop/SKILL.md:1238、em-workflow/skills/merge/SKILL.md:618）。現行バージョンは両方の定義で
+    0.5.13。リポジトリの規則では、通常のパッチ更新は main への push 後に GitHub Actions が両方の定義に適用する（em-workflow/.claude-plugin/plugin.json:7、.claude-plugin/marketplace.json:27、.claude/rules/core-plugin-version-bump.md:3、.github/workflows/plugin-version-bump.yml:148）。ファイル変更とテスト実行は行っていない。'
+decided_at: '2026-11-27T19:30:57+09:00'
