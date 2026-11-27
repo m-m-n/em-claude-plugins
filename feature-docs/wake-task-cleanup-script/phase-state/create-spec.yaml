@@ -1,7 +1,7 @@
 schema_version: 1
 feature: wake-task-cleanup-script
 phase: create-spec
-status: in_progress
+status: completed
 generation: 1
 base_revision: 6ee41d499bf3e302d7fd7d93fc116e9edb6c932e
 last_input_digest: sha256:a565b0b7e6a3373dda5eaa3517eaaca2bd4b41326f0dc056a0234e87155afdef
@@ -85,6 +85,16 @@ answers:
     - decide_autonomously
     freeform: null
     normalized_answer: design step skipped per analyst recommendation (no UI)
+  create-spec.design-system:
+    question_id: create-spec.design-system
+    packet_id: null
+    answered_at: '2026-11-27T19:58:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - top_candidate_or_none
+    freeform: null
+    normalized_answer: 'no candidates -> kind: none'
 worker_runs:
 - request_id: create-spec-run-0001
   status: completed
