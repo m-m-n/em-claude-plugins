@@ -76,8 +76,8 @@ acceptance_tests:
       not read here.' not found in" the normalized docstring.
   AC-6:
     tests:
-      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_the_six_rows_stand_in_the_case_table_with_their_decision
-      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_every_row_of_this_task_is_one_of_the_six
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_the_eight_rows_stand_in_the_case_table_with_their_decision
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_every_row_of_this_task_is_one_of_the_eight
     red_confirmed: true
     red_reason: >-
       Run with the case-table path pointed at the table of the base commit (a
