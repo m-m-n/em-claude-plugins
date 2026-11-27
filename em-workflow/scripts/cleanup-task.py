@@ -293,8 +293,12 @@ def cleanup(integration_worktree, feature, task):
 
     if branch_exists(git, ref):
         integration_ref = "refs/heads/em-workflow/%s/integration" % feature
+        rc, out, err = git.run(["rev-parse", "--verify", ref], REF_TIMEOUT)
+        if rc != 0:
+            raise InternalError(refusal_text("git rev-parse", rc, err))
+        checked_tip = out.strip()
         rc, _, err = git.run(
-            ["merge-base", "--is-ancestor", ref, integration_ref], REF_TIMEOUT
+            ["merge-base", "--is-ancestor", checked_tip, integration_ref], REF_TIMEOUT
         )
         if rc == 1:
             branch_result = {
@@ -305,6 +309,14 @@ def cleanup(integration_worktree, feature, task):
             return result_object(feature, task, worktree, branch_result)
         if rc != 0:
             raise InternalError(refusal_text("git merge-base", rc, err))
+        rc, out, err = git.run(["rev-parse", "--verify", ref], REF_TIMEOUT)
+        if rc != 0 or out.strip() != checked_tip:
+            branch_result = {
+                "name": branch,
+                "result": "kept",
+                "reason": "the task branch changed after the merge check",
+            }
+            return result_object(feature, task, worktree, branch_result)
         rc, _, err = git.run(["branch", "-d", branch], DELETE_TIMEOUT)
         if rc == 0:
             branch_result = {"name": branch, "result": "removed", "reason": None}
