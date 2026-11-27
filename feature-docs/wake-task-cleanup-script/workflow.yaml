@@ -258,7 +258,8 @@ tasks:
     - FR8
     - NFR2
     - NFR3
-    status: pending
+    status: in_progress
+    branch: em-workflow/wake-task-cleanup-script/task0004
     notes: null
 review:
   status: completed
