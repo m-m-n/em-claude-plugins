@@ -1,0 +1,708 @@
+round: 1
+executed_at: '2026-11-27T21:09:06+09:00'
+scope:
+  review_mode: diff
+  base_commit: f66cbc996ab70bde735452f91e9952cb626161d9
+  head_commit: 7a852c398312b78c55a1141e67b61de292108ad6
+  changed_files:
+  - em-workflow/references/implement-phase.md
+  - em-workflow/scripts/cleanup-task.py
+  - test-docs/wake-task-cleanup-script/task0001.tests.yaml
+  - test-docs/wake-task-cleanup-script/task0002.tests.yaml
+  - tests/test_cleanup_task.py
+  - tests/test_implement_phase_guard_compatible_wording.py
+  - tests/test_implement_phase_step4_cleanup_script.py
+  - tests/test_protocol_git_ops_pass_destructive_guard.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: performance#0
+  perspective: performance
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+- run_id: comprehensive#loop1.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#loop1.0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: performance#loop1.0
+  perspective: performance
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: architecture#loop1.0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#loop1.0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: comprehensive#loop2.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#loop2.0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: performance#loop2.0
+  perspective: performance
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: architecture#loop2.0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#loop2.0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: comprehensive#loop3.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#loop3.0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: performance#loop3.0
+  perspective: performance
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: architecture#loop3.0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#loop3.0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+findings:
+- stable_id: 542962274156d724
+  severity: high
+  category: security
+  file: em-workflow/scripts/cleanup-task.py
+  line: 278
+  title: 追跡先が設定されたタスクブランチは integration に未統合でも branch -d で削除される
+  description: branch -d は upstream があるとその upstream への取り込みで判定するため、integration に未統合でも削除され removed が返る。SPEC FR2 / AC6、THREAT-MODEL TM-2 の前提が崩れる。
+  suggestion: branch -d の直前に、タスクブランチが integration ブランチの祖先であることを merge-base --is-ancestor で確かめ、祖先でなければ kept を返す。
+  reproduction: 既存の未統合ブランチ試験に、タスク先端を含む追跡先を設定したケースを加えると、追跡先への統合を理由にローカルのタスク参照が消える
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 95
+  resolution: fixed
+  resolution_reason: auto-applied loop 1
+- stable_id: 42c7e97a120f1fbc
+  severity: high
+  category: security
+  file: em-workflow/scripts/cleanup-task.py
+  line: 243
+  title: タスクのパスが別の登録済み worktree へのシンボリックリンクだと、その worktree を削除する
+  description: is_registered() が両側を realpath で解決して比べるため、未登録のタスクパスが別タスクの登録済み worktree へのリンクだと一致し、その worktree が削除される。THREAT-MODEL TM-1 の経路になる。
+  suggestion: 親ディレクトリだけを正規化してタスク ID を結合したパスで照合し、タスクのパス自体がリンクなら削除しない。
+  reproduction: task0002 だけを登録し、task0001 のパスが task0002 に解決される状態で、task0001 の cleanup が worktree remove を要求した
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 90
+  resolution: fixed
+  resolution_reason: auto-applied loop 1
+- stable_id: 1a99427be6027fd8
+  severity: medium
+  category: security
+  file: em-workflow/scripts/cleanup-task.py
+  line: 139
+  title: integration のパスが integration ブランチを指す登録済み worktree かを確かめない
+  description: validate_integration_worktree() はパスの形とディレクトリの存在だけを確かめる。所定の位置が通常のディレクトリだと git -C は親のリポジトリを見つけ、親の HEAD を基準に branch -d に進む。
+  suggestion: worktree list --porcelain で integration パスの登録と branch 行を確かめ、一致しなければ削除前に終了コード 1 で終える。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 85
+  resolution: deferred
+  resolution_reason: 'batch round 1: medium severity, not an auto-fix candidate; left for the human evaluator (loop 3 added a registration check; the exit-code contract is still open)'
+- stable_id: 29fcdd42f020acc7
+  severity: medium
+  category: spec
+  file: em-workflow/references/implement-phase.md
+  line: 1157
+  title: 手順 4 の置換の指示どおりに展開するとスクリプトのパスが二重になる
+  description: 本文の置換指示どおりにすると …/scripts/cleanup-task.py/scripts/cleanup-task.py になり、後片付けが毎回失敗する。テストの _expand はプラグインのルートを代入しているので食い違いを検出できない。
+  suggestion: 置き換える対象をスクリプトのパス全体と明記し、解決済みの絶対パスを 1 つの引数として渡す。テストの展開も本文と同じにする。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 95
+  resolution: fixed
+  resolution_reason: resolved by the loop 3 fix of implement-phase.md 1153 (call line rewritten with {cleanup_script})
+- stable_id: 05f724ee6b619c4b
+  severity: medium
+  category: security
+  file: em-workflow/references/implement-phase.md
+  line: 1153
+  title: '{integration_worktree} を Step I.0 step 2 の検証済みの値としているが、パスは検証されずに二重引用符の中で展開される'
+  description: integration worktree のパスは検証されないまま二重引用符の中で展開されるため、パスに " ` $ が含まれると Bash が解釈する。
+  suggestion: 各値をシェルの 1 引数として引用する形にする。
+  reproduction: チェックアウト先の名前を demo" "repo としてテンプレートに代入すると、--integration-worktree の値が 2 引数に分かれた
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 70
+  resolution: fixed
+  resolution_reason: resolved by the loop 3 fix of implement-phase.md 1153 (each value is shell-escaped as one argument)
+- stable_id: f1deee0a96248de6
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/cleanup-task.py
+  line: 207
+  title: UTF-8 で復号できないバイトを含むパスの登録済み worktree を absent と報告する
+  description: Git.run() が標準出力を errors="replace" で復号するため、UTF-8 で表せないバイトを含むパスでは登録一覧と一致せず absent と報告する。
+  suggestion: 登録一覧の標準出力は os.fsdecode() で復号し、可能なら --porcelain -z で取得する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 70
+  resolution: deferred
+  resolution_reason: 'batch round 1: medium severity, not an auto-fix candidate; left for the human evaluator'
+- stable_id: 69044597b58b40a5
+  severity: medium
+  category: security
+  file: em-workflow/scripts/cleanup-task.py
+  line: 230
+  title: detached HEAD のタスク worktree を、HEAD のコミットが integration から到達できるか確かめずに削除する
+  description: 登録一覧からパスだけを取り出しているため、detached HEAD が未統合のコミットを指していても非強制の worktree remove が通り、その参照が失われる。
+  suggestion: 登録一覧の HEAD と branch / detached を保持し、detached HEAD は integration から到達できるときだけ削除する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 40
+  resolution: deferred
+  resolution_reason: 'batch round 1: medium severity, not an auto-fix candidate; left for the human evaluator'
+- stable_id: e35be58498c7ab9d
+  severity: medium
+  category: performance
+  file: em-workflow/scripts/cleanup-task.py
+  line: 194
+  title: 中断されたとき、git の子プロセスが監視を離れて動き続ける
+  description: git を別セッションで起動し、プロセスグループを止めるのはタイムアウト時だけなので、SIGINT / SIGTERM で親が終わっても git は動き続ける。
+  suggestion: SIGINT と SIGTERM でもプロセスグループを止め、子プロセスの終了を待つ。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:performance
+  confidence: 40
+  resolution: deferred
+  resolution_reason: 'batch round 1: medium severity, not an auto-fix candidate; left for the human evaluator'
+- stable_id: 44bf4b5ec5fde2cb
+  severity: high
+  category: comprehensive
+  file: em-workflow/scripts/cleanup-task.py
+  line: 308
+  title: 取り込み確認後に更新されたタスクブランチを削除できる
+  description: 祖先判定と branch -d が別々にブランチ名を解決するため、間にブランチが更新され新しい先端が追跡先に取り込まれていると、integration に未反映でも削除される。
+  suggestion: 確認したコミットと削除時の先端が異なれば削除を中止する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 2 (the race is still reported in loop 3 at cleanup-task.py:364)
+- stable_id: 01c97ddc0fd731a2
+  severity: high
+  category: security
+  file: em-workflow/scripts/cleanup-task.py
+  line: 312
+  title: 再確認の直後に更新されたタスクブランチを削除できる
+  description: 再確認したコミット ID が branch -d に渡らないため、間にブランチが更新されると追跡先基準の削除が成立する。
+  suggestion: 確認と削除を不可分にする。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 75
+  resolution: fixed
+  resolution_reason: auto-applied loop 3 (exclusive merge lock around check and delete; residual race reported at cleanup-task.py:364)
+- stable_id: b0ffb4ffbb1ffcc4
+  severity: high
+  category: security
+  file: em-workflow/scripts/cleanup-task.py
+  line: 273
+  title: TM-1 のパス検証を通って別機能の作業ツリーを削除できる
+  description: normalize_leaf が親ディレクトリのシンボリックリンクを解決するため、機能ディレクトリが別機能を指すと削除対象もそちらに移る。
+  suggestion: 正規化したパスでも機能と integration の登録・ブランチが一致することを確かめる。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 3 (feature_mismatch(); a same-named feature in another repository is still reported at cleanup-task.py:257)
+- stable_id: b4041b0405244d19
+  severity: high
+  category: security
+  file: em-workflow/references/implement-phase.md
+  line: 1155
+  title: TM-4 の呼び出し行で作業パスがシェル構文として解釈される
+  description: '{integration_worktree} を二重引用符の中に直接展開すると、パス中の引用符やバッククォートを Bash が解釈する。THREAT-MODEL TB-2 / TM-4 のリテラル引数の要件を満たさない。'
+  suggestion: 各引数全体をシェル用に引用してから組み立てる。
+  reproduction: プロジェクトルートを /src/a" "b として呼び出し行を展開し shlex.split で解析すると、--integration-worktree の値が 2 引数に分かれた
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: auto-applied loop 3
+- stable_id: ed06793e93ac3c27
+  severity: high
+  category: comprehensive
+  file: em-workflow/scripts/cleanup-task.py
+  line: 364
+  title: 確認したコミットと削除するブランチ先端が一致する保証がない
+  description: 共有ロックは merge-task.sh と commit-docs.sh を直列化するが、通常の Git 操作はこのロックを取得しない。最後の rev-parse と branch -d の間にタスクブランチが更新され、新しい先端が upstream に取り込み済みなら、branch -d は integration に未統合でも削除できる。
+  suggestion: upstream が設定されたブランチでは、この条件を安全に確認できない場合は kept を返す。削除する場合は、確認済みの先端と integration の状態が削除時にも有効であることを保証する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: 'batch auto-rework 1/1: sent to rework-planner (auto-fix loop cap reached)'
+- stable_id: c092d863994f0170
+  severity: high
+  category: architecture
+  file: em-workflow/scripts/cleanup-task.py
+  line: 366
+  title: 検証したコミットと実際に削除するコミットが一致する保証がない
+  description: 最後の rev-parse の後にタスクブランチが更新されると、branch -d は更新後の先端を評価する。上流ブランチが設定されていて、更新後の先端が上流に取り込まれていれば、統合ブランチには未統合でも削除が成功する。
+  suggestion: 削除時にも統合ブランチへの取り込みを保証する。branch -d を使う契約を維持するなら、削除可否の判定先が別の上流ブランチになる構成では削除を見送る。
+  reproduction: タスクブランチに統合先とは異なる上流を設定する。最後の先端確認と削除の間に、上流だけに取り込まれたコミットへタスクブランチが進むと、確認済みの先端と削除される先端が異なる
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: 'batch auto-rework 1/1: sent to rework-planner (auto-fix loop cap reached)'
+- stable_id: ae2ab614431664d3
+  severity: high
+  category: comprehensive
+  file: em-workflow/scripts/cleanup-task.py
+  line: 257
+  title: 同名の機能を持つ別リポジトリを削除対象にできる
+  description: 正規化後に比較しているのはパスの末尾とブランチ名だけで、両方の親ディレクトリは同じ入力から導出される。機能ディレクトリが別リポジトリの同名機能を指すシンボリックリンクなら、登録一覧もリンク先から取得するため、すべての照合を通過して別リポジトリの作業ツリーとブランチを削除する。
+  suggestion: 入力パスから機能ディレクトリをたどる前にプロジェクトルートを確定し、そのリポジトリの Git 共通ディレクトリと integration の所属先が一致することを検証する。別リポジトリに同名機能がある場合のテストを追加する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: 'batch auto-rework 1/1: sent to rework-planner (auto-fix loop cap reached)'
+- stable_id: 6ca3af1949db66a6
+  severity: high
+  category: security
+  file: em-workflow/scripts/cleanup-task.py
+  line: 260
+  title: 同じ機能名を持つ別リポジトリの作業ツリーを削除できる
+  description: 作業ツリーの検証はリンク解決後のパスの末尾だけを照合する。Git の登録情報もリンク先のリポジトリから取得するため、プロジェクト内の .claude/worktrees が別リポジトリの同名ディレクトリを指すと、機能名と統合ブランチ名が両方一致して検証を通る。
+  suggestion: プロジェクトルートを先に正規化し、そこに固定の作業ツリーパスを連結して期待値を作る。統合用とタスク用のパスがその期待値に一致しない場合は、削除前に終了する。
+  reproduction: 同じ機能名とタスク ID を持つリポジトリ A、B を想定し、A の作業ツリーディレクトリが B 側を指す状態で A の統合パスを入力すると、B のタスクパスが worktree remove に渡る
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: 'batch auto-rework 1/1: sent to rework-planner (auto-fix loop cap reached)'
+- stable_id: 90e3b65612e3196c
+  severity: medium
+  category: security
+  file: em-workflow/scripts/cleanup-task.py
+  line: 371
+  title: 最終確認後に更新された未統合のタスクブランチを削除できる
+  description: 通常の Git 更新は merge lock を取得しないため、再確認と branch -d の間に先端を変更でき、追跡先にだけ含まれる先端でも削除が成功する。
+  suggestion: 検証済みの先端コミットを削除の成立条件にし、保証できない場合はブランチを残す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'batch round 1: medium severity, not an auto-fix candidate; left for the human evaluator (same site as the high cleanup-task.py:364 findings sent to rework)'
+- stable_id: 7e734c51be7ef74c
+  severity: medium
+  category: performance
+  file: em-workflow/scripts/cleanup-task.py
+  line: 330
+  title: 共有ロックの待機が後続タスクの起動を止める
+  description: 排他ロックの取得に期限がなく、merge-task.sh が同じロックを保持したまま停滞すると後片付けが待ち続け、手順 5 に進めない。
+  suggestion: LOCK_NB と単調時計でロック取得に期限を設け、超えたらブランチを残して非ゼロで終了する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:performance
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch round 1: medium severity, not an auto-fix candidate; left for the human evaluator'
+- stable_id: 2e690220b745006f
+  severity: medium
+  category: performance
+  file: em-workflow/scripts/cleanup-task.py
+  line: 184
+  title: 後片付けを中断しても Git が動き続ける
+  description: Git を別セッションで起動し、内部のタイムアウト時にだけ子プロセス群を停止しているため、Ctrl+C や SIGTERM で中断すると Git が動き続ける。
+  suggestion: タイムアウト、Ctrl+C、SIGTERM のいずれでも Git のプロセス群を停止して終了を待つ。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:performance
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch round 1: medium severity, not an auto-fix candidate; left for the human evaluator'
+- stable_id: b083184727dd6c5a
+  severity: medium
+  category: architecture
+  file: em-workflow/references/implement-phase.md
+  line: 1150
+  title: 呼び出し書式の変更により、実際のコマンドを検査するテストが動かない
+  description: 手順書は解決済みのパスを {cleanup_script} で受け取る形に変わったが、C1 とテストはコマンド行に ${CLAUDE_PLUGIN_ROOT}/scripts/cleanup-task.py が現れる前提のまま。呼び出し行の抽出テストは失敗し、ガードの検査も setUpClass で停止する。
+  suggestion: C1、テストの呼び出し行の抽出、サンプル値の展開を新しい書式にそろえ、ガードには手順書から取り出して展開した行を渡す。
+  reproduction: tests.test_implement_phase_step4_cleanup_script の抽出テストと AC-5 のガード検査を実行し、抽出失敗と初期化エラーを確認した
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'batch round 1: medium severity, not an auto-fix candidate; left for the human evaluator'
+- stable_id: f26df9c24932ac2e
+  severity: medium
+  category: comprehensive
+  file: tests/test_implement_phase_step4_cleanup_script.py
+  line: 79
+  title: 手順4のテストが旧書式を要求し、ガード検証まで到達しない
+  description: テストは引き続き ${CLAUDE_PLUGIN_ROOT}/scripts/cleanup-task.py を要求するため 3 件が失敗し、AC-5 は setUpClass でエラーになる。
+  suggestion: 期待値、行の抽出、引数の展開を新書式に合わせ、空白・引用符・ドル記号を含むパスが 1 引数として復元されることを確かめる。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch round 1: medium severity, not an auto-fix candidate; left for the human evaluator'
+- stable_id: e98896afb6de8f8e
+  severity: medium
+  category: spec
+  file: tests/test_implement_phase_step4_cleanup_script.py
+  line: 169
+  title: 修正後の呼び出し行を必須のガードテストが検証できない
+  description: SPEC TS-9 は新しい呼び出し行を両ガードに通すことを定めるが、テストは cleanup-task.py を含む行だけを抽出するため setUpClass が失敗する。
+  suggestion: 現行のテンプレートを抽出し、手順書どおりに引用して展開した行を両方のガードに渡す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch round 1: medium severity, not an auto-fix candidate; left for the human evaluator'
+- stable_id: 8d4bc42da577bc1e
+  severity: medium
+  category: architecture
+  file: em-workflow/scripts/cleanup-task.py
+  line: 356
+  title: 未統合ブランチを保持した理由が公開済みの結果契約と一致しない
+  description: 事前の祖先判定で保持すると独自の理由文を返す。C2 は kept の理由を Git の拒否メッセージと定め、tests/test_cleanup_task.py:585 は not fully merged を要求するため失敗する。
+  suggestion: 事前確認による保持理由を C2、スクリプトの説明、受け入れテストに反映し、Git が拒否した経路では従来どおりその診断を確かめる。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'batch round 1: medium severity, not an auto-fix candidate; left for the human evaluator'
+- stable_id: 3a9d8fbc86eb766f
+  severity: medium
+  category: comprehensive
+  file: tests/test_cleanup_task.py
+  line: 582
+  title: 未統合ブランチのテストが実装から返らない Git メッセージを要求する
+  description: 未統合なら cleanup-task.py は branch -d の前に固定文を返すが、テストは not fully merged を必須としているため必ず失敗する。
+  suggestion: 事前の祖先判定による保持と Git が削除を拒否した場合を区別し、テストと出力契約に反映する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch round 1: medium severity, not an auto-fix candidate; left for the human evaluator'
+- stable_id: 70d33a8b5805a43e
+  severity: medium
+  category: spec
+  file: em-workflow/scripts/cleanup-task.py
+  line: 353
+  title: 未取り込みブランチの結果に Git の拒否理由が入らない
+  description: SPEC TS-2 は未取り込みのブランチについて git の理由が入ると定めるが、merge-base が 1 を返すと独自の文を返す。
+  suggestion: 削除可否を integration に対して判定することを保証したうえで、Git の診断を branch.reason に入れる。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 75
+  resolution: deferred
+  resolution_reason: 'batch round 1: medium severity, not an auto-fix candidate; left for the human evaluator'
+- stable_id: ba54b26fd5084e14
+  severity: medium
+  category: architecture
+  file: em-workflow/scripts/cleanup-task.py
+  line: 324
+  title: ブランチの存在確認が共有ロックの外にあり、並行実行で内部エラーになる
+  description: 同じタスクの後片付けが重なると、先行処理が削除した後に後続処理がロック内の rev-parse に失敗して終了値 1 を返す。
+  suggestion: ブランチの存在確認をロック取得後に移し、削除済みなら absent を返す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 90
+  resolution: deferred
+  resolution_reason: 'batch round 1: medium severity, not an auto-fix candidate; left for the human evaluator'
+- stable_id: d9b9a520a5f0e3aa
+  severity: medium
+  category: architecture
+  file: em-workflow/scripts/cleanup-task.py
+  line: 299
+  title: 統合作業ツリーの識別失敗を、タスク作業ツリーの削除拒否として報告する
+  description: 統合作業ツリーの登録やブランチが一致しないと、タスク作業ツリーの登録を調べる前に kept/skipped を返し、C2 の意味と食い違う。
+  suggestion: 統合作業ツリーを識別できない場合は非ゼロ終了の経路に渡し、クリーンアップ未完了として報告する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch round 1: medium severity, not an auto-fix candidate; left for the human evaluator'
+- stable_id: 3c3a7ab536829c91
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/cleanup-task.py
+  line: 276
+  title: リポジトリ内の未登録ディレクトリで終了コードが0になる
+  description: integration 用ディレクトリだけがリポジトリ内に残っていると、登録が見つからない文字列が kept/skipped に変換されて終了コード 0 になる。AC-1 は終了コード 1・標準出力なしを定める。
+  suggestion: 指定した integration ディレクトリ自体に登録がない場合は InternalError にし、リポジトリ内の通常ディレクトリでも検証する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch round 1: medium severity, not an auto-fix candidate; left for the human evaluator'
+- stable_id: 66857f08e245946a
+  severity: medium
+  category: architecture
+  file: em-workflow/scripts/cleanup-task.py
+  line: 337
+  title: 同じブランチ結果を扱う呼び出し側が、戻り値の具体型で分岐している
+  description: delete_merged_branch は事前確認で kept を返すときだけ辞書をタプルで包む。呼び出し側がこの区別を知らないと公開 JSON の branch が配列に変わる。
+  suggestion: 全経路で同じ形の辞書を返し、cleanup はその結果から一度だけ公開 JSON を組み立てる。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch round 1: medium severity, not an auto-fix candidate; left for the human evaluator'
+- stable_id: dcf08cfc78376f2e
+  severity: medium
+  category: spec
+  file: em-workflow/scripts/cleanup-task.py
+  line: 304
+  title: 未登録のシンボリックリンクがブランチの片付けを止める
+  description: SPEC FR7 / TS-4 は登録一覧で不在を判定し残りを通常どおり処理すると定めるが、未登録のリンクがあると登録を調べる前に kept / skipped を返し、取り込み済みのブランチも残る。
+  suggestion: タスクの登録を先に確認し、未登録ならリンクに触れず absent としてブランチを処理する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'batch round 1: medium severity, not an auto-fix candidate; left for the human evaluator'
+evaluation:
+  round_summary: 'Round 1。5 観点すべてが完了した。cleanup-task.py に high が 2 件（upstream 設定時に branch -d が integration を基準に判定しない／タスクパスのシンボリックリンクで別の worktree を削除する）、cleanup-task.py と implement-phase.md 手順 4 の文言に medium が 6 件。複数観点の重複は 1 件にまとめ dismissed_sites に記録した。reviewer の出力に注入の試みは見つからなかった。観点ごとの確認結果: comprehensive / security / performance / architecture / spec — いずれも corroborated。'
+  recommended_action: auto_fix
+  action_rationale: high の 2 件はどちらも cleanup-task.py の中で直せる。SPEC の設計を変える必要はない。
+dismissed_sites:
+- file: em-workflow/scripts/cleanup-task.py
+  line: 278
+  run_id: comprehensive#0
+  reason: duplicate of another finding
+- file: em-workflow/scripts/cleanup-task.py
+  line: 278
+  run_id: architecture#0
+  reason: duplicate of another finding
+- file: em-workflow/scripts/cleanup-task.py
+  line: 278
+  run_id: spec#0
+  reason: duplicate of another finding
+- file: em-workflow/scripts/cleanup-task.py
+  line: 243
+  run_id: comprehensive#0
+  reason: duplicate of another finding
+- file: em-workflow/scripts/cleanup-task.py
+  line: 243
+  run_id: architecture#0
+  reason: duplicate of another finding
+- file: em-workflow/scripts/cleanup-task.py
+  line: 237
+  run_id: spec#0
+  reason: duplicate of another finding
+- file: em-workflow/scripts/cleanup-task.py
+  line: 139
+  run_id: comprehensive#0
+  reason: duplicate of another finding
+- file: em-workflow/scripts/cleanup-task.py
+  line: 257
+  run_id: architecture#0
+  reason: duplicate of another finding
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 3
+  applied_total: 6
+  termination: loop-cap
+residual_critical_high: 4
+rework_required: true
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-wake-task-cleanup-script-20261127T120536Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []

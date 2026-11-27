@@ -156,7 +156,7 @@ tasks:
     notes: null
 review:
   status: pending
-  rounds_completed: 0
+  rounds_completed: 1
   plan:
     floor:
     - comprehensive
@@ -166,8 +166,14 @@ review:
     - spec
     discretionary: []
     cross_validation: true
-  residual_critical_high: 0
-  needs_rework: false
+  perspectives:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  residual_critical_high: 4
+  needs_rework: true
 requirements:
   FR1:
     title: 後片付けスクリプト
