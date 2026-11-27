@@ -86,7 +86,8 @@ workflow:
   - IMPLEMENTATION.md
   - VERIFICATION.md
   - tasks/
-  status: pending
+  status: completed
+  completed_at_commit: 98ce4d84b6b5bc4e608ef07a6fbe7c0df99c642e
 - id: implement
   status: pending
   base_commit: f66cbc996ab70bde735452f91e9952cb626161d9
@@ -100,7 +101,56 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: wake cleanup script and its behavior tests
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/cleanup-task.py
+    - tests/test_cleanup_task.py
+    skills:
+    - infra-impl
+    domains:
+    - input-handling
+    - external-io
+    - api-contract
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR5
+    - FR6
+    - FR7
+    - FR8
+    - NFR1
+    - NFR3
+    - NFR4
+    status: pending
+    notes: null
+  task0002:
+    title: wake step 4 calls the cleanup script
+    plan: tasks/task0002.md
+    files:
+    - em-workflow/references/implement-phase.md
+    - tests/test_implement_phase_step4_cleanup_script.py
+    - tests/test_implement_phase_guard_compatible_wording.py
+    - tests/test_protocol_git_ops_pass_destructive_guard.py
+    skills:
+    - infra-impl
+    domains:
+    - api-contract
+    - config-infra
+    complexity: medium
+    requirements:
+    - FR3
+    - FR4
+    - FR8
+    - NFR2
+    - NFR3
+    - NFR4
+    status: pending
+    notes: null
 review:
   status: pending
   rounds_completed: 0
@@ -112,14 +162,18 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-6
   FR2:
     title: 実行するコマンド
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-2
@@ -129,7 +183,9 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
     tests:
     - TS-2
     - TS-8
@@ -138,7 +194,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0002
     tests:
     - TS-8
     - TS-9
@@ -147,7 +204,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-6
   FR6:
@@ -155,7 +213,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-3
     - TS-5
@@ -164,7 +223,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-4
@@ -174,7 +234,9 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
     tests:
     - TS-1
     - TS-2
@@ -186,7 +248,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
   NFR2:
@@ -194,7 +257,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0002
     tests:
     - TS-9
   NFR3:
@@ -202,14 +266,24 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    - task0002
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
+    - TS-6
   NFR4:
     title: version を変えない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
+    - task0002
     tests: []
 batch:
   review_rework_count: 0

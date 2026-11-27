@@ -1,11 +1,11 @@
 schema_version: 1
 feature: wake-task-cleanup-script
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 158775fb07ebdbeb0e00f8a950773fc3113fadf7
 last_input_digest: sha256:927bd5b7a89f23c946ce4c949f02e68f9c54ab7c86f72f480b0b938b6c7eed92
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -51,7 +51,7 @@ other_feature_doc_fixes: []
 orchestrator_doc_edits: []
 patches:
 - patch_id: wake-task-cleanup-script-p0001
-  status: validated
+  status: applied
   base_input_digest: sha256:927bd5b7a89f23c946ce4c949f02e68f9c54ab7c86f72f480b0b938b6c7eed92
   base_workflow_blob: 42143714badced51e164be3fefee6f73d22da6c2
 progress_fingerprint: null
