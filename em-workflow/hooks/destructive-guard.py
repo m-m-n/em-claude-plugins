@@ -8816,6 +8816,15 @@ def _args_json_conditional_step(marked, words, commands, sep, was_open):
             prev_src = tok_src
             if (
                 not closed
+                and tok_src is not None
+                and tok_src != "]]"
+                and tok_src.replace("\\\n", "") == "]]"
+            ):
+                # A closer written with a line continuation closes the
+                # conditional in the shell but not here: uncertain (safe side).
+                return True, True
+            if (
+                not closed
                 and tok_src == "]]"
                 and not getattr(tok, "trailing_cr", "")
             ):
