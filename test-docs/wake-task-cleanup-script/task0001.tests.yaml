@@ -1,0 +1,61 @@
+task_id: task0001
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 17549 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 17585 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_cleanup_task.TestAC1InvalidInput.test_a_valid_run_on_the_same_fixture_is_accepted
+      - tests.test_cleanup_task.TestAC1InvalidInput.test_invalid_feature_values_exit_2
+      - tests.test_cleanup_task.TestAC1InvalidInput.test_invalid_task_values_exit_2
+      - tests.test_cleanup_task.TestAC1InvalidInput.test_invalid_integration_worktree_values_exit_2
+      - tests.test_cleanup_task.TestAC1InvalidInput.test_missing_repeated_and_unknown_options_exit_2
+      - tests.test_cleanup_task.TestAC1InvalidInput.test_a_shape_valid_directory_that_is_not_a_git_worktree_exits_1
+    red_confirmed: true
+    red_reason: "Before em-workflow/scripts/cleanup-task.py existed, all six tests failed in setUp with AssertionError: False is not true : the script under test does not exist: em-workflow/scripts/cleanup-task.py. The setUp existence check is what makes the red real: a missing script file makes the Python interpreter itself exit 2 with empty stdout, which would satisfy the exit-2 checks vacuously. The control test (a valid run on the same fixture exits 0) shows that each rejected command line differs from an accepted one in exactly one element."
+  AC-2:
+    tests:
+      - tests.test_cleanup_task.TestAC2MergedTaskFromAnyDirectory.test_run_from_the_main_tree_removes_the_worktree_and_the_branch
+      - tests.test_cleanup_task.TestAC2MergedTaskFromAnyDirectory.test_run_from_outside_any_repository_removes_the_worktree_and_the_branch
+      - tests.test_cleanup_task.TestAC2MergedTaskFromAnyDirectory.test_repository_redirecting_environment_does_not_change_the_outcome
+      - tests.test_cleanup_task.TestAC2MergedTaskFromAnyDirectory.test_every_git_call_names_the_integration_worktree_as_its_location
+    red_confirmed: true
+    red_reason: "All four tests failed in setUp with AssertionError: False is not true : the script under test does not exist: em-workflow/scripts/cleanup-task.py."
+  AC-3:
+    tests:
+      - tests.test_cleanup_task.TestAC3UnmergedBranchIsKept.test_the_worktree_is_removed_and_the_unmerged_branch_is_kept_with_a_reason
+      - tests.test_cleanup_task.TestAC3UnmergedBranchIsKept.test_the_branch_reason_is_the_git_message_of_the_refused_deletion
+    red_confirmed: true
+    red_reason: "Both tests failed in setUp with AssertionError: False is not true : the script under test does not exist: em-workflow/scripts/cleanup-task.py."
+  AC-4:
+    tests:
+      - tests.test_cleanup_task.TestAC4DirtyWorktreeIsKept.test_a_modified_tracked_file_keeps_the_worktree_and_skips_the_branch
+      - tests.test_cleanup_task.TestAC4DirtyWorktreeIsKept.test_an_untracked_file_keeps_the_worktree_and_skips_the_branch
+      - tests.test_cleanup_task.TestAC4DirtyWorktreeIsKept.test_the_worktree_reason_is_the_git_message
+    red_confirmed: true
+    red_reason: "All three tests failed in setUp with AssertionError: False is not true : the script under test does not exist: em-workflow/scripts/cleanup-task.py."
+  AC-5:
+    tests:
+      - tests.test_cleanup_task.TestAC5AlreadyGoneTargets.test_branch_already_gone_worktree_on_a_detached_head
+      - tests.test_cleanup_task.TestAC5AlreadyGoneTargets.test_worktree_already_gone_branch_merged
+      - tests.test_cleanup_task.TestAC5AlreadyGoneTargets.test_both_already_gone
+      - tests.test_cleanup_task.TestAC5AlreadyGoneTargets.test_a_directory_at_the_task_path_without_a_registration_is_not_a_worktree
+    red_confirmed: true
+    red_reason: "All four tests failed in setUp with AssertionError: False is not true : the script under test does not exist: em-workflow/scripts/cleanup-task.py."
+  AC-6:
+    tests:
+      - tests.test_cleanup_task.TestAC6RegistrationWithoutDirectory.test_the_result_is_not_absent_and_nothing_is_pruned
+      - tests.test_cleanup_task.TestAC6RegistrationWithoutDirectory.test_the_registration_of_a_missing_directory_is_matched_by_its_registered_path
+    red_confirmed: true
+    red_reason: "Both tests failed in setUp with AssertionError: False is not true : the script under test does not exist: em-workflow/scripts/cleanup-task.py."
+  AC-7:
+    tests:
+      - tests.test_cleanup_task.TestAC7StaticScan.test_the_script_text_has_no_standalone_forcing_token
+      - tests.test_cleanup_task.TestAC7RunsHonourThePolicy.test_merged_task_run_deletes_the_branch_with_exactly_branch_d
+      - tests.test_cleanup_task.TestAC7RunsHonourThePolicy.test_unmerged_task_run
+      - tests.test_cleanup_task.TestAC7RunsHonourThePolicy.test_dirty_worktree_run
+      - tests.test_cleanup_task.TestAC7RunsHonourThePolicy.test_branch_gone_run
+      - tests.test_cleanup_task.TestAC7RunsHonourThePolicy.test_worktree_gone_run
+      - tests.test_cleanup_task.TestAC7RunsHonourThePolicy.test_missing_directory_run
+      - tests.test_cleanup_task.TestAC7RunsHonourThePolicy.test_rejected_input_runs_no_git_at_all
+    red_confirmed: true
+    red_reason: "The listed tests failed with AssertionError: False is not true : the script under test does not exist: em-workflow/scripts/cleanup-task.py (the static scan test names the same missing file; the run tests fail in setUp). The policy-checker and scan-pattern self-tests of the same module (TestAC7InvocationPolicy, TestAC7StaticScan.test_the_scan_pattern_finds_forcing_tokens_and_ignores_look_alikes) exercise only the test helpers, passed before the script existed, and are not listed as evidence for the criterion; they show that the checker detects -D, a force flag, a prune and a branch invocation that is not 'branch -d <task branch>' from the integration worktree."
