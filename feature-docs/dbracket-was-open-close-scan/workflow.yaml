@@ -147,7 +147,8 @@ tasks:
     - NFR3
     - NFR4
     - NFR5
-    status: pending
+    status: in_progress
+    branch: em-workflow/dbracket-was-open-close-scan/task0002
     notes: null
 review:
   status: pending
