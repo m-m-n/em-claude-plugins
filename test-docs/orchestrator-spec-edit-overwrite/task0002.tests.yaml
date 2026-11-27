@@ -1,0 +1,87 @@
+task_id: task0002
+baseline_failures: []          # 4a: python3 -m unittest discover -s tests -> Ran 17425 tests, OK (skipped=1)
+final_failures: []             # re-executed after implementation and after this record: python3 -m unittest discover -s tests -> Ran 17485 tests, OK (skipped=1)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC1SchemaExample.test_ac1_the_example_holds_one_record_with_one_complete_entry
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC1SchemaExample.test_ac1_the_record_sits_after_the_previous_record_and_before_patches
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC1SchemaExample.test_ac1_the_existing_example_lines_are_kept
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC1SchemaExample.test_ac1_the_whole_example_passes
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC1SchemaExample.test_ac1_proof_the_good_sample_passes
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC1SchemaExample.test_ac1_proof_a_missing_record_fails
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC1SchemaExample.test_ac1_proof_a_second_top_level_line_fails
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC1SchemaExample.test_ac1_proof_no_entry_fails
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC1SchemaExample.test_ac1_proof_two_entries_fail
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC1SchemaExample.test_ac1_proof_each_removed_key_fails
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC1SchemaExample.test_ac1_proof_an_extra_key_fails
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC1SchemaExample.test_ac1_proof_a_comment_without_the_phase_or_append_only_fails
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC1SchemaExample.test_ac1_proof_a_path_outside_the_own_documents_fails
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC1SchemaExample.test_ac1_proof_the_wrong_position_fails
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC1SchemaExample.test_ac1_proof_each_lost_existing_line_fails
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC1SchemaExample.test_ac1_proof_the_block_finder_rejects_a_document_without_a_block
+    red_confirmed: true
+    red_reason: "Against the unchanged phase-state.md, test_ac1_the_example_holds_one_record_with_one_complete_entry and test_ac1_the_whole_example_passes failed with AssertionError: expected one top-level orchestrator_doc_edits: line, found 0; test_ac1_the_record_sits_after_the_previous_record_and_before_patches failed with AssertionError: expected one top-level orchestrator_doc_edits key. test_ac1_the_existing_example_lines_are_kept passed before the edit (a guard that the existing example lines survive). The proof tests run on in-test samples and pass before and after; each shows the check failing on a forged copy (no record, a second line, no entry, two entries, a removed key, an extra key, a comment without its tokens, a path outside SPEC.md and REQUIREMENTS.md, a wrong position, a lost existing line)."
+  AC-2:
+    tests:
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC2FieldTableRow.test_ac2_exactly_one_row_sits_directly_after_the_previous_record_row
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC2FieldTableRow.test_ac2_the_row_states_its_shape_owners_and_lifetime
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC2FieldTableRow.test_ac2_the_row_carries_no_forbidden_token
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC2FieldTableRow.test_ac2_the_table_keeps_its_existing_rows
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC2FieldTableRow.test_ac2_proof_the_good_sample_passes
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC2FieldTableRow.test_ac2_proof_each_missing_wording_element_fails
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC2FieldTableRow.test_ac2_proof_each_forbidden_token_fails
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC2FieldTableRow.test_ac2_proof_a_missing_row_fails
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC2FieldTableRow.test_ac2_proof_a_second_row_fails
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC2FieldTableRow.test_ac2_proof_a_row_in_another_place_fails
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC2FieldTableRow.test_ac2_proof_the_table_finder_rejects_a_missing_or_repeated_marker
+    red_confirmed: true
+    red_reason: "Against the unchanged phase-state.md, test_ac2_exactly_one_row_sits_directly_after_the_previous_record_row failed with AssertionError: expected one orchestrator_doc_edits row; test_ac2_the_row_states_its_shape_owners_and_lifetime and test_ac2_the_row_carries_no_forbidden_token failed with AssertionError: expected exactly one field table row for orchestrator_doc_edits, found 0. test_ac2_the_table_keeps_its_existing_rows passed before the edit (a guard). The proof tests run on in-test samples and pass before and after; each shows a check failing on a forged row (a removed wording element, an added forbidden token, a missing row, a second row, a row in another place)."
+  AC-3:
+    tests:
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC3WriterParagraph.test_ac3_the_paragraph_sits_between_the_exit4_paragraph_and_the_batch_exception
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC3WriterParagraph.test_ac3_the_paragraph_states_when_and_what_the_orchestrator_appends
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC3WriterParagraph.test_ac3_the_paragraph_states_the_entry_is_in_the_same_commit
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC3WriterParagraph.test_ac3_the_paragraph_cites_the_reader
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC3WriterParagraph.test_ac3_proof_the_good_sample_passes
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC3WriterParagraph.test_ac3_proof_each_missing_when_and_what_element_fails
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC3WriterParagraph.test_ac3_proof_each_missing_same_commit_element_fails
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC3WriterParagraph.test_ac3_proof_each_missing_reader_citation_element_fails
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC3WriterParagraph.test_ac3_proof_a_missing_paragraph_fails
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC3WriterParagraph.test_ac3_proof_a_paragraph_before_the_exit4_paragraph_fails
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC3WriterParagraph.test_ac3_proof_a_paragraph_after_the_batch_exception_fails
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC3WriterParagraph.test_ac3_proof_a_paragraph_separated_from_the_exit4_paragraph_fails
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC3WriterParagraph.test_ac3_proof_a_paragraph_split_in_two_before_the_batch_exception_fails
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC3WriterParagraph.test_ac3_proof_a_repeated_label_fails
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC3WriterParagraph.test_ac3_proof_the_step_b_finder_rejects_a_document_without_the_heading
+    red_confirmed: true
+    red_reason: "Against the unchanged SKILL.md, the class setUpClass raised AssertionError: expected exactly one paragraph starting with '**create-plan 中の自 feature 文書修正の記録**', found 0, so every live test of the class errored. The proof tests run on in-test samples; each shows a check failing on a forged Step B or paragraph (a removed statement, a missing paragraph, a paragraph before the exit-4 paragraph, after the batch exception, separated from the exit-4 paragraph, split in two, or repeated)."
+  AC-4:
+    tests:
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC4FailureAndExit4.test_ac4_no_entry_is_written_when_the_digest_calculation_fails
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC4FailureAndExit4.test_ac4_an_exit4_follows_the_recovery_and_retries_with_the_entry
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC4FailureAndExit4.test_ac4_proof_the_good_sample_passes
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC4FailureAndExit4.test_ac4_proof_each_missing_calculation_failure_element_fails
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC4FailureAndExit4.test_ac4_proof_each_missing_exit4_element_fails
+    red_confirmed: true
+    red_reason: "Against the unchanged SKILL.md, the class setUpClass raised AssertionError: expected exactly one paragraph starting with '**create-plan 中の自 feature 文書修正の記録**', found 0, so both live tests errored. The proof tests run on in-test samples; each shows a check failing on a paragraph without one of its statements (the no-record-on-failure statement, the exit-4 recovery citation, the re-created edit, the recalculation, the retry with the entry)."
+  AC-5:
+    tests:
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC5Absences.test_ac5_the_paragraph_carries_no_forbidden_token_or_command
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC5Absences.test_ac5_proof_the_good_sample_passes
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC5Absences.test_ac5_proof_each_forbidden_token_fires
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC5Absences.test_ac5_proof_each_forbidden_command_pattern_fires
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC5UnchangedNeighbours.test_ac5_the_create_plan_exemption_block_is_unchanged
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC5UnchangedNeighbours.test_ac5_the_commit_discipline_paragraph_is_unchanged
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC5UnchangedNeighbours.test_ac5_the_exit4_paragraph_is_unchanged
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC5UnchangedNeighbours.test_ac5_proof_an_edited_block_fails_its_digest_check
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC5UnchangedNeighbours.test_ac5_proof_the_block_finders_reject_a_document_without_the_block
+    red_confirmed: true
+    red_reason: "The absence half was observed red: against the unchanged SKILL.md the TestAC5Absences setUpClass raised AssertionError: expected exactly one paragraph starting with '**create-plan 中の自 feature 文書修正の記録**', found 0. The three unchanged-neighbour tests are guards that passed before the edit, as the edit must leave those three blocks byte-identical; they pass after it. The proof tests run on in-test samples; each shows an absence check firing on a paragraph carrying one forbidden token or command, and the digest check failing on an edited block. The existing tests that slice Step B (tests.test_implement_phase_guard_compatible_wording, tests.test_protocol_git_ops_pass_destructive_guard, tests.test_implement_routeback_gate) also read these blocks and passed before and after."
+  AC-6:
+    tests:
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC6OwnModule.test_ac6_imports_are_all_standard_library
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC6OwnModule.test_ac6_the_module_never_writes_a_file
+      - tests.test_orchestrator_doc_edits_record_docs.TestAC6OwnModule.test_ac6_the_documents_exist_and_are_read_from_the_working_tree
+    red_confirmed: false
+    red_reason: "The new test module is itself the deliverable of this criterion, so no test of it existed to fail before it was written; the three TestAC6OwnModule tests passed on their first run. The red of the checks the module holds was observed under AC-1 to AC-4, and the forged-copy proof tests of each class show that every presence check fails without its token and every absence check fires on its token. That no existing test method was removed or changed was checked on the change set: git diff against the base revision shows tests/test_orchestrator_doc_edits_record_docs.py as the only change under tests/."

@@ -644,6 +644,23 @@ re-derive して書き直し、`commit-docs.sh` を 1 回だけ再試行する�
 exit 4 ならそこでフェーズを中断し、状況をユーザーに報告する（無限リトライ
 しない）。
 
+**create-plan 中の自 feature 文書修正の記録**: create-plan の間に、
+オーケストレーター自身がその feature 自身の SPEC.md または REQUIREMENTS.md を
+変更してコミットしたときは、`phase-state/create-plan.yaml` の
+`orchestrator_doc_edits` にエントリを 1 件追記する。エントリには、変更した
+ドキュメントの path、その時点のそのドキュメントの digest
+（`references/artifact-digest.md` の `Calculation` で計算する）、変更の理由を
+入れる。エントリの形は `references/phase-state.md` の `## Schema` を引く。
+エントリは、ドキュメントの変更と同じ `commit-docs.sh` のコミットに含める
+（phase-state の書き込みが取るコミットの形は `references/phase-state.md` の
+「Update, commit, and exit-4 recovery」を引く）。digest の計算が失敗したときは、
+エントリを書かない。そのコミットが exit 4 を返したときは、上記の
+「**exit-4 リカバリ**」に従い、最新ツリーの上で修正を作り直し、作り直した本文から
+digest を計算し直し、読み直した `phase-state/create-plan.yaml` にエントリを追記
+して、エントリを同じコミットに含めて再試行する。このエントリを読むのは、
+`references/contracts/spec-writer-contract.md` の「How the orchestrator chooses
+each target's action before dispatch」が定める create-spec の action 決定である。
+
 **batch: verify の cap 到達に対する停止条件の例外**（FR7）: 次の条件が
 揃ったときにのみ適用される — batch モードであり、かつ verify が系譜 cap
 または hard cap の到達により `failed` であること。
