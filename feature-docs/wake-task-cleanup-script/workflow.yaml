@@ -147,7 +147,7 @@ workflow:
   - TM-5
   failed_items: []
 - id: retrospect
-  status: pending
+  status: in_progress
 tasks:
   task0001:
     title: wake cleanup script and its behavior tests
