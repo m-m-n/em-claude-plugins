@@ -46,3 +46,16 @@ records:
     0、入力不正と内部エラーだけ 0 以外という形は recover-orphaned-task.py の契約と揃う。リスク: 呼び出し側が終了コードだけを見ると残したものを見落とすため、手順書で
     JSON を読んで報告に書くと定める。 Codex consulted: yes (1 turn, entry codex). Opus escalation:
     not run. Analyst''s tentative position was the same.'
+- question_id: create-spec.command-approval
+  packet_id: null
+  answered_at: '2026-11-27T19:43:36+09:00'
+  source: batch-decision-table
+  answer_mode: single_select
+  selected_option_ids:
+  - auto_record
+  freeform: null
+  normalized_answer: all project.components commands already approved; nothing newly
+    recorded
+  resolution_note: 'gate: create-spec.command-approval (policy: auto_record); commands:
+    python3 -m unittest discover -s tests (test_command, already approved in bash_guard
+    --list); build_command / format_command empty; refusal patterns: none'
