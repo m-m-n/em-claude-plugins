@@ -1,0 +1,152 @@
+round: 1
+executed_at: '2026-11-28T22:48:27+09:00'
+scope:
+  review_mode: diff
+  base_commit: 8932eefed31a47035146ea21412d8bcfc9fe1cf7
+  head_commit: d64385233738ebd080c1f566fd4a54c7e23c17fa
+  changed_files:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/destructive-guard-resolver-only-evidence/task0001.tests.yaml
+  - tests/test_destructive_guard_lexer_agreement.py
+  - tests/test_destructive_guard_resolver_evidence.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: daac18f6f1aeabfa
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 12705
+  title: TS-2 の `$(ls -d /usr/bin/rm) -rf` は実際に rm を起動するのに allow になる（SPEC と THREAT-MODEL で受容済みの見逃し）
+  description: '`ls -d /usr/bin/rm` は /usr/bin/rm をそのまま出力するので、この文はシェル上では `rm -rf /home/user/valuable` と同じに動く。変更後の読み取りでは先頭語 `ls` が _RESOLVER_OPTION_RUNS に無いため None になり、route_substitution_headed_statement()
+    は経路に入らず allow になる（変更前は rm-recursive の deny）。SPEC FR2 / FR5 / AC-1 と元のタスクはこのケースを allow と明示し、THREAT-MODEL.md も受容済みのリスクとして記録している。実装は仕様どおり。comprehensive#0 も同じ点を cases.json:1760 で high として挙げており、1 件にまとめた。'
+  suggestion: コードとケース表は変えない（TS-2 を deny に戻すと FR5 / AC-1 と元のタスクに反する）。受容を見直すかは人が判断する。見直す場合は SPEC を改め、`ls -d` のように引数のパスをそのまま出力する形を evidence に含めるかを決める。
+  reproduction: コマンドを実行せず、`em-workflow/hooks/tests/destructive-guard-cases.json` の TS-2（1760行目）と TS-5（1763行目）を比較できる。どちらも同じ再帰削除引数を渡すが、TS-2 の置換本文は12707行目で `None` となり、`route_substitution_headed_statement`
+    は空の判定を返す。ケース表でも TS-2 は `allow`、TS-5 は `rm-recursive` による `deny` になっている。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: 'medium severity: outside the auto-fix candidate gate (critical/high only) and not counted in residual; filed as a follow-up task'
+- stable_id: d6c84e92746140be
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 12701
+  title: 演算子が空白なしで接した本文でも、NAME の末尾から rm / git を読む
+  description: 本文をスペースとタブだけで分割するため、リダイレクト・パイプ・区切り演算子が空白なしで接した語も 1 語の NAME として扱われ、その basename が evidence になる。`printf </usr/bin/rm` と `printf ok>/tmp/rm` は `rm` を、`which tool|/usr/bin/git` と `which tool;/usr/bin/git`
+    は `git` を返す。変更前の末尾語の読み取りも同じ値を返していたので今回の後退ではなく、FR1 の分割規則の文言にも一致している。architecture#0 と spec#0 も同じ根本原因を同じ箇所で挙げており、1 件にまとめた。
+  suggestion: NAME（または本文の全語）に引用されていない `|` `&` `;` `<` `>` `(` `)` が含まれるときは None を返す。allow 側に倒れる変更なので NFR1 と矛盾しない。FR1 の分割規則の文言とずれるので、入れる場合は SPEC の注記も合わせて直す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 95
+  resolution: unresolved
+  resolution_reason: 'medium severity: outside the auto-fix candidate gate (critical/high only) and not counted in residual; filed as a follow-up task'
+- stable_id: 320cfabfcdf53e06
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 12639
+  title: TM-1 が求めるケース表の deny 固定が `which -- NAME` と `which -a -- NAME` で欠けている
+  description: THREAT-MODEL.md の TM-1 は、FR1 の各形についてケース表で deny と理由 ID を固定するとしている。`$(which -- rm)` と `$(which -a -- rm)` の行はケース表に 0 件で、この 2 形はユニットテストで読み取り関数の戻り値だけを確かめている。
+  suggestion: 'ケース表に `$(which -- rm) -rf /home/user/valuable` と `$(which -a -- rm) -rf /home/user/valuable` を、判定 deny、4 要素目 `{"rule": "rm-recursive"}` で追加する。'
+  reproduction: '`tests/test_destructive_guard_resolver_evidence.py` の `ACCEPTED` には両形式があり、検証対象は読み取り関数の戻り値になっている。`em-workflow/hooks/tests/destructive-guard-cases.json` のコマンド欄を照合すると、両形式とも該当件数は0件だった。'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: 'medium severity: outside the auto-fix candidate gate (critical/high only) and not counted in residual; filed as a follow-up task'
+evaluation:
+  round_summary: round 1（diff モード、cross_validation あり）。実装は SPEC の FR1〜FR7 と NFR1〜NFR4 に沿っている。reviewer の high 2 件は同じ点（TS-2 の `$(ls -d /usr/bin/rm)` は実際に rm を起動するのに allow になる）を指し、SPEC と元のタスクが allow を明示し THREAT-MODEL
+    も受容済みのため medium に下げて 1 件にまとめた。演算子が接した NAME の件は 3 観点の指摘を 1 件にまとめて medium（変更前からある挙動）。TM-1 のケース表の欠けは medium。architecture#0 のテスト一意性と AC-7 の対応付けの件は demoted。reviewer 出力に注入の試みは無かった。全観点 corroborated。
+  recommended_action: complete
+  action_rationale: critical/high は残っていない。残る medium 3 件はどれも完了を止めない。後続の作業か、人が受容を見直すときに扱えばよい。
+dismissed_sites:
+- file: em-workflow/hooks/tests/destructive-guard-cases.json
+  line: 1760
+  run_id: comprehensive#0
+  reason: duplicate of another finding
+- file: em-workflow/hooks/destructive-guard.py
+  line: 12701
+  run_id: architecture#0
+  reason: duplicate of another finding
+- file: em-workflow/hooks/destructive-guard.py
+  line: 12701
+  run_id: spec#0
+  reason: duplicate of another finding
+- file: tests/test_destructive_guard_resolver_evidence.py
+  line: 318
+  run_id: architecture#0
+  reason: demoted
+- file: test-docs/destructive-guard-resolver-only-evidence/task0001.tests.yaml
+  line: 91
+  run_id: architecture#0
+  reason: demoted
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-destructive-guard-resolver-only-evidence-20261128T134530Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
