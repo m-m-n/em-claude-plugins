@@ -1,0 +1,113 @@
+task_id: task0001
+# 4a, before any edit: python3 em-workflow/hooks/tests/run-destructive-guard.py -> every case ok;
+# python3 -m unittest discover -s tests -> Ran 17425 tests, OK (skipped=1). Nothing was edited while it ran
+# (the first edit came after it had finished), so the baseline is empty.
+baseline_failures: []
+# Re-executed after the implementation and after this record: the runner passes every case (1710/1710, the
+# six new rows included) and python3 -m unittest discover -s tests runs green with the new tests included.
+final_failures: []
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_a_redirection_target_after_the_closer_reads_the_chunk_as_certain
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_the_closing_statement_reports_no_uncertain_word
+    red_confirmed: true
+    red_reason: >-
+      Run against a copy of the unchanged hook, the first test failed with
+      "AssertionError: True is not false" for `[[ true && true ]] >=~` and for
+      `[[ true && true ]] >-eq` (the scan read the redirection target as a word
+      of the conditional), and the second failed with "AssertionError: Tuples
+      differ: (False, False) != (True, True)" for both forms (the closing
+      statement was reported uncertain).
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_the_notion_call_after_each_read_past_form_keeps_the_exclusion
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_the_hook_allows_the_command_after_each_read_past_form
+    red_confirmed: true
+    red_reason: >-
+      Run against a copy of the unchanged hook, the first test failed for all
+      four commands (both forms, with and without the array assignment) with
+      "AssertionError: Lists differ: ['nothing'] != ['inspected']", and the
+      second failed for all four with "AssertionError: Tuples differ:
+      ('allow', None) != ('deny', 'git-branch-force-delete')". The runner
+      (python3 em-workflow/hooks/tests/run-destructive-guard.py) also failed
+      the four allow rows with got=deny rule=git-branch-force-delete; the
+      runner is not a test ID.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_an_operator_word_before_the_closer_reads_the_chunk_as_uncertain
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_the_notion_call_after_each_keep_deny_form_is_inspected
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_the_hook_denies_the_command_after_each_keep_deny_form
+    red_confirmed: false
+    red_reason: >-
+      The judgment pre-exists: `[[ true && true =~ true ]]` and `[[ true &&
+      true -eq 0 ]]` already read true, the notion call after them is already
+      exactly [KIND_INSPECTED] and the hook already denies with
+      git-branch-force-delete on the base commit, so the three tests passed on
+      their first run and no red state occurred. They guard the other side of
+      the change: a reading that stopped too early would fail them.
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_a_closer_operand_before_the_real_closer_reads_the_chunk_as_certain
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_a_closer_operand_with_no_real_closer_keeps_the_conditional_open
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_an_escaped_closer_alone_does_not_close_the_conditional
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_a_closer_with_a_stripped_carriage_return_is_not_a_closer
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_an_escaped_closer_at_the_head_of_a_continuation_statement_is_an_operand
+    red_confirmed: true
+    red_reason: >-
+      Part (a) and part (e) were observed red against a copy of the unchanged
+      hook. Part (a) failed for all ten forms (five operands, `>=~` and `>-eq`)
+      with "AssertionError: True is not false"; part (e) failed with
+      "AssertionError: Tuples differ: (False, False) != (True, True)". Parts
+      (b), (c) and (d) pre-exist (the conditional stays open after an operand
+      that looks like a closer, an escaped closer alone closes nothing, and a
+      closer with a stripped carriage return is not a closer, all on the base
+      commit), so those three tests passed on their first run; they are
+      regression guards for a reading that closes on a word that is not
+      exactly `]]`.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_the_docstring_states_the_reading_of_a_statement_that_holds_the_closer
+    red_confirmed: true
+    red_reason: >-
+      Run against a copy of the unchanged hook, the test failed with
+      "AssertionError: 'In a later statement that holds the closer, the words
+      up to just before the closer are read and the words after the closer are
+      not read here.' not found in" the normalized docstring.
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_the_eight_rows_stand_in_the_case_table_with_their_decision
+      - tests.test_destructive_guard_args_json.TestDbracketWasOpenCloseScan.test_every_row_of_this_task_is_one_of_the_eight
+    red_confirmed: true
+    red_reason: >-
+      Run with the case-table path pointed at the table of the base commit (a
+      copy outside the worktree), the first test failed for each of the six
+      commands with "AssertionError: unexpectedly None : no case-table entry
+      for <command>", and the second failed with "AssertionError: Lists
+      differ" (the six commands against no entry). That the existing rows and
+      tests are neither removed nor changed was checked on the diff (only
+      insertions in the case table; the test module only gains a class), and
+      the two commands of the criterion, python3
+      em-workflow/hooks/tests/run-destructive-guard.py and python3 -m unittest
+      discover -s tests, exit 0 after the change.
+  AC-7:
+    tests:
+      - tests.test_destructive_guard_args_json.TestDbracketOpenerArithScan.test_an_operator_word_after_the_closer_is_not_scanned
+      - tests.test_destructive_guard_args_json.TestDbracketOpenerArithScan.test_each_closed_conditional_form_of_the_source_text_readings_keeps_the_exclusion
+      - tests.test_destructive_guard_args_json.TestDbracketOpenerArithScan.test_the_conditional_reading_launches_nothing_and_reads_no_file
+      - tests.test_destructive_guard_args_json.TestDbracketOpenerArithScan.test_the_conditional_reading_makes_no_decision_and_names_no_reason
+      - tests.test_destructive_guard_args_json.TestSourceTextReadings.test_every_conditional_deny_form_reads_the_chunk_as_uncertain
+      - tests.test_destructive_guard_args_json.TestSourceTextReadings.test_every_conditional_allow_form_keeps_the_exclusion
+      - tests.test_destructive_guard_args_json.TestSourceTextReadings.test_every_misread_closer_leaves_the_conditional_open
+      - tests.test_destructive_guard_args_json.TestSourceTextReadings.test_the_readings_are_called_only_from_the_scan
+    red_confirmed: false
+    red_reason: >-
+      A dedicated new module is out of scope, but the existing tests above
+      (found by searching tests/ for the path em-workflow/hooks/destructive-guard.py
+      and for the basename destructive-guard.py; they load the hook and run
+      its conditional reading) detect the criterion: the opener-statement
+      branch is not changed and every existing judgment of
+      TestSourceTextReadings (CONDITIONAL_DENY, CONDITIONAL_ALLOW,
+      CLOSER_OPERANDS) and TestDbracketOpenerArithScan stays as it was; no red
+      state occurred for this change, because the criterion is that these
+      tests keep passing unedited.

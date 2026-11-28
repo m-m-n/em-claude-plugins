@@ -8778,8 +8778,17 @@ def _args_json_conditional_step(marked, words, commands, sep, was_open):
     true ]]`) makes the words after it a simple command of its own, and the
     command-level reading keeps such a command certain under an allowlisted
     name whatever its words hold. Words before the opener and words after the
-    closer are not read here. In a statement that continues an open
-    conditional, every word of the statement is read for them.
+    closer are not read here. In a later statement that holds the closer, the
+    words up to just before the closer are read; after the closer, the
+    redirection targets are not read here, and the other words, such as a new
+    `[[` after `then` or `do`, are still read. A `[[` written as is at command
+    position after `then`, `do`, `else` or `elif` opens the conditional again,
+    and the next valid `]]` closes it; the state at the end of the statement
+    is the OPEN returned. A word other than `[[` that directly follows `then`,
+    `do`, `else` or `elif` after the closer is a command this reading does not
+    classify, so it is uncertain. After the closer, a `=~` (also across a line
+    continuation) or a word ending in one of `?*+@!` directly followed by `(`
+    is uncertain too: the depth reading does not place a closer there.
 
     While a conditional is open, a word that is an operator evaluating its
     operand (_ARGS_JSON_DOUBLE_BRACKET_WORDS) is uncertain, and so is a `;` or
@@ -8891,17 +8900,94 @@ def _args_json_conditional_step(marked, words, commands, sep, was_open):
             return True, None, []
         return depth > 0, None, counted
 
+    def _pattern_start_after_closer(tok, src):
+        # After the closer the depth reading places no closer, so a `=~`
+        # (also across a line continuation) or a word ending in one of
+        # `?*+@!` that is directly followed by `(` (an extended pattern)
+        # leaves the end of a reopened conditional unknown.
+        if src is None:
+            return False
+        src = src.replace("\\\n", "")
+        if src == "=~":
+            return True
+        span = getattr(tok, "span", None)
+        if span is None or not src or src[-1] not in "?*+@!":
+            return False
+        text = marked.text
+        i = span[1]
+        while text.startswith("\\\n", i):
+            i += 2
+        return text.startswith("(", i)
+
     if was_open:
         uncertain, closer, counted = _depth_reading(words)
         if uncertain:
             return True, True, []
-        for tok in words:
+        head = words if closer is None else words[:closer]
+        for tok in head:
             if getattr(tok, "is_operator", False):
                 continue
             if _args_json_declaration_word(marked, tok)[0] in _ARGS_JSON_DOUBLE_BRACKET_WORDS:
                 return True, True, []
         if closer is not None:
-            is_open = False
+            # The statement can go on after the closer: `then` and `do` end
+            # no statement, so a new `[[` may follow them right after `]]`.
+            # Keep reading the words after the closer, and skip only the word
+            # that directly follows a redirection operator there (its
+            # target), since that word is no word of a conditional. An
+            # operator is read from the tokens after the fused-closer split,
+            # so a fused `)>` counts as `)` followed by `>`; a quoted or
+            # escaped `>` is a word, not an operator.
+            closed = True
+            target_next = False
+            prev_src = "]]"
+            for tok in _split_fused_closer_redirects(words[closer + 1:]):
+                if getattr(tok, "is_operator", False):
+                    target_next = closed and REDIRECT.fullmatch(tok) is not None
+                    continue
+                if target_next:
+                    target_next = False
+                    continue
+                tok_src = _args_json_word_source(marked, tok)
+                before = prev_src.replace("\\\n", "") if prev_src is not None else None
+                prev_src = tok_src
+                if (
+                    not closed
+                    and tok_src is not None
+                    and tok_src != "]]"
+                    and tok_src.replace("\\\n", "") == "]]"
+                ):
+                    # A closer written with a line continuation closes the
+                    # conditional in the shell but not here: uncertain
+                    # (safe side).
+                    return True, True, []
+                if (
+                    not closed
+                    and tok_src == "]]"
+                    and not getattr(tok, "trailing_cr", "")
+                ):
+                    closed = True
+                    continue
+                if (
+                    closed
+                    and tok_src == "[["
+                    and not getattr(tok, "trailing_cr", "")
+                    and before in ("then", "do", "else", "elif")
+                ):
+                    # A new conditional opened at command position after the
+                    # closer: it stays open until the next valid closer.
+                    closed = False
+                    continue
+                if closed and before in ("then", "do", "else", "elif"):
+                    # A command after `then` / `do` / `else` / `elif` that
+                    # follows the closer is not classified here: uncertain
+                    # (safe side).
+                    return True, True, []
+                if _pattern_start_after_closer(tok, tok_src):
+                    return True, True, []
+                if _args_json_declaration_word(marked, tok)[0] in _ARGS_JSON_DOUBLE_BRACKET_WORDS:
+                    return True, True, []
+            is_open = not closed
     else:
         counted = []
         opener = None

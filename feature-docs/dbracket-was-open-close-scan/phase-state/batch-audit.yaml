@@ -1,0 +1,127 @@
+schema_version: 1
+feature: dbracket-was-open-close-scan
+records:
+- question_id: create-spec.command-approval
+  packet_id: orchestrator-direct
+  answered_at: '2026-11-26T23:55:00+09:00'
+  source: batch-decision-table
+  answer_mode: single_select
+  selected_option_ids:
+  - auto_record
+  freeform: null
+  normalized_answer: all project.components commands already approved; nothing newly recorded
+  resolution_note: 'gate: create-spec.command-approval (policy: auto_record); commands: `python3 em-workflow/hooks/tests/run-destructive-guard.py && python3 -m unittest discover -s tests` (test_command,
+    already approved in bash_guard --list); build_command / format_command empty; refusal patterns: none'
+- question_id: create-plan.spec-ts4-alignment
+  packet_id: orchestrator-direct
+  answered_at: '2026-11-27T00:05:13+09:00'
+  source: codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - amend_spec_ts4
+  freeform: null
+  normalized_answer: 'SPEC TS-4 amended to match the code: the escaped-]] example reports (false, false) for the continuation statement while the scan stays true (command-level reading); scan-level false
+    is stated with true-led forms'
+  resolution_note: 'unlisted-gate fallback (planner warning, no gate_id). Options: (A) keep plan, leave SPEC TS-4 unchanged and record the discrepancy; (B) amend SPEC TS-4 in this feature to match the code;
+    (C) other. Codex consulted: yes; it confirmed the planner''s claim by executing the planned was_open branch in memory ([[ a && \]\] == x ]] >=~ -> scan True, step reports (False, True), (False, False);
+    true-led forms -> scan False) and recommended B (TS-4 and the plan agree, escaped-]] read-past still checked, true-led forms check post-closer words, existing command-name judgment suffices). Chosen:
+    B. Not chosen: A, C. Opus escalation: not run.'
+- question_id: rework.spec-change.closer-trailing-words
+  packet_id: rework-q0001
+  answered_at: '2026-11-27T00:54:39+09:00'
+  source: batch-codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - change-spec
+  freeform: null
+  normalized_answer: 'SPEC を変える: Assumptions の 1 項目目と FR1・FR4 を「閉じ括弧の後ろで読み飛ばすのはリダイレクト先だけ。then / do の後ろの新しい [[ とその演算語を含む他の語は読み続ける」に改め、if/while の then/do の形の deny 行を FR5 と AC に足す。>=~ / >-eq の allow 行は保つ'
+  resolution_note: 'gate: rework.spec-change; chosen: change-spec; not chosen: keep-spec; relaxed route (bound-set category security); Codex consulted: true (codex entry, 1 turn); Opus escalation ran: false;
+    Codex classified verdict b (spec gap: implementation meets the goal''s >=~ / >-eq misfire fix but FR1/FR4 and the Assumption that only redirections follow ]] in the same statement are wrong), evidence
+    FR1, FR2, FR4, FR5, AC-1, AC-2, AC-4, AC-5. Orchestrator agreed: it reproduced the regression itself (base deny / changed allow for `if [[ true && true ]] then [[ 0 -eq SID=1 ]]; fi; <notion call>`
+    and `while [[ true && true ]] do [[ -v x ]]; done; <notion call>`); keep-spec would ship a deny-to-allow security regression. Key points: revise Assumptions item 1 and FR1/FR4 so that only redirection
+    targets after the closer are skipped and later words (incl. a new [[ after then/do and its operators) are still read; add deny rows for the then/do forms to FR5/AC; keep the four new allow rows (>=~
+    / >-eq).'
+- question_id: review.evaluator-absolute-path
+  packet_id: orchestrator-direct
+  answered_at: '2026-11-27T00:55:10+09:00'
+  source: codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - normalize_and_route_to_rework
+  freeform: null
+  normalized_answer: 評価者の high の指摘 4ee256f52da6e850 の file が project_root 配下の絶対パスだったので、相対パスに正規化して R3b の残りのゲートを通し、評価者由来のため自動修正はスキップ、残存 high として batch の自動手直しへ回した
+  resolution_note: 'unlisted-gate fallback (no gate_id; R3b step 1 rejects absolute paths). Options: (A) drop the finding literally; (B) normalize to project-relative after confirming containment and route
+    the residual high to batch auto-rework; (C) drop it and only disclose / file a follow-up. Codex consulted: yes (codex entry, 1 turn) and chose B: an independently reproduced serious regression must
+    stay in the completion gate; normalization is an exception limited to a path independently confirmed inside project_root. Orchestrator reproduced the regression (base deny / changed allow). Chosen:
+    B. Not chosen: A, C. Opus escalation: not run.'
+- question_id: create-spec.artifact-overwrite
+  packet_id: orchestrator-direct
+  answered_at: '2026-11-27T01:05:00+09:00'
+  source: codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - abort
+  freeform: null
+  normalized_answer: spec-change 再実行で SPEC.md の現ダイジェスト sha256:802788d2… が直前の create-spec 出力 sha256:89d3af82… と一致せず（create-plan 中の TS-4 整合 f5c51bd1f による）、batch 方針 preserve_and_reuse では決定済みの SPEC 変更を書けないため、spec-writer
+    を起動せず停止した
+  resolution_note: 'gate: create-spec.artifact-overwrite (digest-mismatch branch on spec-change re-entry); batch policy: preserve_and_reuse. Options: (A) follow policy literally (spec-writer gets preserve,
+    the decided change-spec cannot be written: abort or an unchanged SPEC contradicting the decision); (B) treat the rework.spec-change change-spec answer as authorization and give SPEC.md replace_authorized
+    with expect_digest sha256:802788d2…; (C) stop now with a report, no dispatch. Codex consulted: yes (codex entry, 1 turn) and chose C: the contract gives preserve_and_reuse on this mismatch, the change-spec
+    answer decides content but records no overwrite approval required for replace_authorized, and the unlisted-gate fallback does not apply to a listed gate; A would not reflect the decided fix. Chosen:
+    C. Not chosen: A, B. Opus escalation: not run. State left: workflow create-spec in_progress, phase-state/create-spec.yaml still status completed (generation 1), rework.yaml spec_change consumed: true.'
+- question_id: create-spec.artifact-overwrite.orchestrator-doc-edits-backfill
+  packet_id: orchestrator-direct
+  answered_at: '2026-11-28T00:20:00+09:00'
+  source: codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - stop_no_backfill
+  freeform: null
+  normalized_answer: 再開時も SPEC.md の現ダイジェスト sha256:802788d2… が create-spec の記録 sha256:89d3af82… と一致せず、create-plan.yaml に orchestrator_doc_edits の記録も無いため、後付けで記録を足さずに spec-writer を起動せず停止した
+  resolution_note: 'gate: create-spec.artifact-overwrite (digest-mismatch branch on spec-change re-entry, second run); batch policy: preserve_and_reuse. Options: (A) backfill one orchestrator_doc_edits
+    entry for the create-plan-time TS-4 edit (commit f5c51bd1f) and give SPEC.md replace_own; (B) no backfill, follow preserve_and_reuse, stop with a report; (C) other. Codex consulted: yes (codex entry,
+    1 turn) and chose B: the field is recorded in the same commit as the document change and a file written before the field existed stays valid without it, so a backfill is outside the rule; the contract
+    gives a digest mismatch. Chosen: B. Not chosen: A, C. Opus escalation: not run. State left: workflow create-spec in_progress, phase-state/create-spec.yaml status completed (generation 1), rework.yaml
+    spec_change consumed: true.'
+- question_id: create-plan.post-closer-reopened-split
+  packet_id: orchestrator-direct
+  answered_at: '2026-11-28T00:34:30+09:00'
+  source: codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - keep_scope_follow_up
+  freeform: null
+  normalized_answer: Keep task0002 within the SPEC scope; the gap (a [[ re-opened after then/do past the closer and split again by && / || into a later statement is not followed; same shape in the opener
+    branch) is recorded as out of scope and filed as a separate follow-up task
+  resolution_note: 'unlisted-gate fallback (planner warning, no gate_id). Options: (A) keep the plan, record the gap out of scope, file a follow-up task; (B) widen this feature now (SPEC change + re-plan);
+    (C) other. Codex consulted: yes; it confirmed by reading the code that the gap is real in both the was_open branch (OPEN is not carried into the next statement after a re-opened [[) and the opener branch
+    (breaks at the first closer), and recommended A: SPEC AC-6 covers a re-opened [[ within the same statement and FR3 excludes the opener branch; task0002 already lists the cross-statement re-open as out
+    of scope; a separate task can design state carry-over for both branches and test && and || together. Chosen: A. Not chosen: B, C. Opus escalation: not run.'
+- question_id: review.auto-fix-scope.then-body-lexer-gap
+  packet_id: orchestrator-direct
+  answered_at: '2026-11-28T02:19:15+09:00'
+  source: codex-consultation
+  answer_mode: single_select
+  selected_option_ids:
+  - fix_diff_scope_defer_lexer_gap
+  freeform: null
+  normalized_answer: 'Review round 2: auto-fix only the problems this diff introduced or that close inside _args_json_conditional_step''s was_open branch (line-continued then/do in loop 2, line-continued
+    closer in loop 3); record the pre-existing statements() gap (`if [[ x ]] then <cmd>; fi` body never reaches the command-name checks, allow on the base commit too) as deferred out of scope and file it
+    as a separate task'
+  resolution_note: 'gate: review.auto-fix-judgment (batch default Apply as-is) for finding 6cda2f23489b839a (high, security, loop 1 re-review). Options: (A) auto-fix both the then/do line-continuation finding
+    and the statements() gap via the single-file review editor; (B) fix only the diff-introduced / function-local problems, defer the statements() gap and file it separately; (C) fix it all in this feature''s
+    rework with a SPEC revision. Codex consulted: yes (codex entry, 1 turn) and chose B: the line-continuation problem came from the loop 1 fix and can be fixed and verified inside the function; the statements()
+    gap reproduces on the base commit and needs a change to the lexical split every check uses, which a separate task can verify against the other checks while this feature keeps its SPEC scope. Chosen:
+    B. Not chosen: A, C. Opus escalation: not run. The orchestrator reproduced the gap itself (hook verdict allow for `if [[ true ]] then git branch -D foo; fi` on both the base and the current hook, deny
+    with `; then`).'
+- question_id: review.auto-fix-docstring-restore
+  packet_id: orchestrator-direct
+  answered_at: '2026-11-28T02:19:15+09:00'
+  source: orchestrator
+  answer_mode: single_select
+  selected_option_ids:
+  - restore_pinned_sentence
+  freeform: null
+  normalized_answer: Loop 1's editor reworded a docstring sentence that task0002 AC-5 pins verbatim (the unit test failed); the orchestrator restored the pinned sentence and kept the editor's added sentence
+    after it, in the same loop 1 fix commit
+  resolution_note: 'no gate_id; minimum-side-effect fix that keeps the existing test intact (tests are never weakened). Codex consulted: no.'

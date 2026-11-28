@@ -1,0 +1,81 @@
+schema_version: 1
+feature: dbracket-was-open-close-scan
+phase: rework
+status: completed
+generation: 1
+base_revision: f7b78add8548637160c0c0ba4b2bd296d223920b
+last_input_digest: sha256:f659367733c6b40f025edc25833051d4c0724c05a984b4da070842ab0914847c
+active_request_id: null
+packets:
+  rework-q0001:
+    status: answered
+    issued_at: '2026-11-27T00:54:39+09:00'
+    questions:
+    - question_id: rework.spec-change.closer-trailing-words
+      status: answered
+answers:
+  rework.spec-change.closer-trailing-words:
+    question_id: rework.spec-change.closer-trailing-words
+    packet_id: rework-q0001
+    answered_at: '2026-11-27T00:54:39+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - change-spec
+    freeform: null
+    normalized_answer: 'SPEC を変える: Assumptions の 1 項目目と FR1・FR4 を「閉じ括弧の後ろで読み飛ばすのはリダイレクト先だけ。then / do の後ろの新しい [[ とその演算語を含む他の語は読み続ける」に改め、if/while の then/do の形の deny 行を FR5 と AC に足す。>=~ / >-eq の allow 行は保つ'
+    resolution_note: 'gate: rework.spec-change; chosen: change-spec; not chosen: keep-spec; relaxed route (bound-set category security); Codex consulted: true (codex entry, 1 turn); Opus escalation ran:
+      false; Codex classified verdict b (spec gap: implementation meets the goal''s >=~ / >-eq misfire fix but FR1/FR4 and the Assumption that only redirections follow ]] in the same statement are wrong),
+      evidence FR1, FR2, FR4, FR5, AC-1, AC-2, AC-4, AC-5. Orchestrator agreed: it reproduced the regression itself (base deny / changed allow for `if [[ true && true ]] then [[ 0 -eq SID=1 ]]; fi; <notion
+      call>` and `while [[ true && true ]] do [[ -v x ]]; done; <notion call>`); keep-spec would ship a deny-to-allow security regression. Key points: revise Assumptions item 1 and FR1/FR4 so that only
+      redirection targets after the closer are skipped and later words (incl. a new [[ after then/do and its operators) are still read; add deny rows for the then/do forms to FR5/AC; keep the four new allow
+      rows (>=~ / >-eq).'
+worker_runs:
+- request_id: rework-run-0001
+  status: needs_user_input
+  input_digest: sha256:f659367733c6b40f025edc25833051d4c0724c05a984b4da070842ab0914847c
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/rework-planner-contract.md: sha256:0c9f82099c3546b6b675856539d8244628b7170ce7a4442ec951e13e16577ec3
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/dbracket-was-open-close-scan/SPEC.md: sha256:802788d213f4e22c1f69c06fce981d1605caf41a7631ff9f6c02dde51ba5306a
+    feature-docs/dbracket-was-open-close-scan/VERIFICATION.md: sha256:c165c915e51d30db6e2a87e8c65006a55d154f501a931a5b90445ea797b3e7bb
+    feature-docs/dbracket-was-open-close-scan/tasks/task0001.md: sha256:e631a1af8072338425bf6778dd16e591e89e72664429a0d724b7881d84b16504
+    feature-docs/dbracket-was-open-close-scan/workflow.yaml: sha256:78a49042cbef22dba3346ef4c017099b9cd6a1855ade5a198abcc41f748069c8
+  self_write_set: []
+artifacts: []
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null
+classification:
+- question_id: rework.spec-change.closer-trailing-words
+  origin_kind: review
+  origin_ids:
+  - 4ee256f52da6e850
+  route: relaxed (bound-set category security)
+  decision: proceed
+  selected_option_id: change-spec
+  classifier: codex
+  verdict: b (specification gap)
+  evidence:
+  - FR1
+  - FR2
+  - FR4
+  - FR5
+  - AC-1
+  - AC-2
+  - AC-4
+  - AC-5
+  recorded_at: '2026-11-27T00:54:39+09:00'
+spec_change:
+  reason: 'review round 1: 閉じ括弧 ]] の直後に区切りなしで then / do が続き、その後ろに新しい [[ -v ]] / [[ -eq ]] がある形を was_open 分岐が読まなくなり、deny が allow に変わった。SPEC の Assumptions 1 項目目（]] の後ろはリダイレクトだけ）と FR1・FR4 を改め、リダイレクト先だけを読み飛ばす'
+  origin_kind: review
+  origin_id: 4ee256f52da6e850
+  recorded_at_commit: c5ca738633f231d60661c0d702083f662aa55d54
+  consumed: true
+  replan_authorized: false

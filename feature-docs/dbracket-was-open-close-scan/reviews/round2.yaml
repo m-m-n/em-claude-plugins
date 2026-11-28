@@ -1,0 +1,427 @@
+round: 2
+executed_at: '2026-11-28T02:18:41+09:00'
+scope:
+  review_mode: diff
+  base_commit: f5c51bd1f2e12f11429a41ac7c276d25bad69035
+  head_commit: 762ff192bfbf4cf1e29ceaa8463c2a13eef4e75e
+  changed_files:
+  - em-workflow/hooks/destructive-guard.py
+  - em-workflow/hooks/tests/destructive-guard-cases.json
+  - test-docs/dbracket-was-open-close-scan/task0001.tests.yaml
+  - test-docs/dbracket-was-open-close-scan/task0002.tests.yaml
+  - tests/test_destructive_guard_args_json.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+passes:
+- loop: 0
+  fixed_files: []
+- loop: 1
+  fixed_files:
+  - em-workflow/hooks/destructive-guard.py
+  fix_commit: 0015988a12bb3045501826af078c374971b4dfae
+- loop: 2
+  fixed_files:
+  - em-workflow/hooks/destructive-guard.py
+  fix_commit: 8988e385bffb9db0f2b453301c2545df6f338034
+- loop: 3
+  fixed_files:
+  - em-workflow/hooks/destructive-guard.py
+  fix_commit: 89fef5230b39eb0f6a76c3eeab3094e8264a5136
+perspective_runs:
+- run_id: comprehensive#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: architecture#0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: comprehensive#loop1.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#loop1.0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: architecture#loop1.0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#loop1.0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: comprehensive#loop2.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#loop2.0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: architecture#loop2.0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#loop2.0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: comprehensive#loop3.0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security#loop3.0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: architecture#loop3.0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#loop3.0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 1de15f9c04743f1a
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8820
+  title: then / do の後ろで開いた新しい [[ が && / || で文をまたぐと、開いた状態が次の文に渡らず演算語を読まない
+  description: was_open 分岐は最初の有効な `]]` で closed を立てると、同じ文の後ろで `then` / `do` に続く新しい `[[` が開いても状態を更新せず、末尾で `is_open = not closed`（偽）を返す。新しい条件式が `&&` / `||` で分かれると、次の文で演算語を読まず、notion ペアの除外が残る。4 観点の reviewer
+    が独立に同じ箇所を指摘した。基底版も同じ結果で、今回の差分による後退ではない。
+  suggestion: 閉じ括弧の後ろでも、コマンド位置（then / do / else / elif の後）にある、書かれたとおりの `[[` で条件式を開き直し、次の有効な `]]` で閉じる。末尾の実際の状態を OPEN として返す。
+  reproduction: 無害な入力 `if [[ true && true ]] then [[ true && true ]]; fi` を `TestDbracketWasOpenCloseScan.reports()` に渡す。最初の `&&` と次の `&&` の間では二つ目の条件式が開いているため、`reports[1]` は `(False, True)` になるべきだが、実装は
+    `(False, False)` を返す。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  - codex:comprehensive
+  - codex:architecture
+  - codex:spec
+  confidence: 100
+  resolution: fixed
+  resolution_reason: 'auto-applied loop 1 (batch: review.auto-fix-judgment Apply as-is)'
+- stable_id: efce07e213b7bf56
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8804
+  title: ']] の直後の then / do に続くコマンドがコマンドとして分類されず、リダイレクト先の読み飛ばしで偶然の検出もなくなった'
+  description: '&& で分かれた条件式の続きの文（例 `true ]] then pwd >-eq`）は 1 つの単純コマンドになり、コマンド名は条件式の被演算子 `true`（許可名）として読まれ、`then` の後ろの本体コマンドは分類されない。今回の変更で閉じ括弧の後ろのリダイレクト先を読まなくなったため、`if [[ true && true ]] then pwd >-eq;
+    fi` は基底版の真から偽に変わった。'
+  suggestion: 閉じ括弧の後ろで then / do / else / elif がコマンド位置に来たら、その後ろの語を新しい単純コマンドとして既存の検査に渡す。難しければ、その文を uncertain として扱う（安全側）。
+  reproduction: シェルでは実行せず、`TestDbracketOpenerArithScan.scan()` に `if [[ true && true ]] then pwd >-eq; fi` を渡す。`pwd` は単独なら不確実と判定されるが、この形では `true` がコマンド名になり、`-eq` はリダイレクト先として除かれるため、走査は `False` を返す。`]]` と
+    `then` の間に `;` を入れると `pwd` が独立して検査され、結果は `True` になる。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  - codex:spec
+  confidence: 95
+  resolution: fixed
+  resolution_reason: 'auto-applied loop 1 (batch: review.auto-fix-judgment Apply as-is; the editor took the safe-side fallback: a word after then/do/else/elif past the closer, other than a new [[, makes
+    the statement uncertain)'
+- stable_id: 1d968e14be227feb
+  severity: high
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8814
+  title: 行継続を含む then や do の後でコマンドの判定が抜ける
+  description: '`prev_src` は元の綴りを保持する。Bash がバックスラッシュと改行を取り除いて `then` と解釈する場合でも、後続の完全一致は失敗し、新しい条件式を開く処理と通常のコマンドを不確実とする処理の両方を通らない（loop 1 の再レビューで検出）。'
+  suggestion: 予約語の判定では、引用の有無を保持したまま、Bash が除去する行継続を正規化する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  - codex:security
+  confidence: 75
+  resolution: fixed
+  resolution_reason: 'auto-applied loop 2 (batch: review.auto-fix-judgment Apply as-is)'
+- stable_id: 6cda2f23489b839a
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8833
+  title: 閉じ括弧の直後にある then の本体がコマンド別の検査に届かない
+  description: statements() は `]] then` で文を区切らないため、`if [[ true ]] then git branch -D foo; fi`（Bash は受理して実行する）の本体コマンドがコマンド名による拒否規則に届かず、フックは allow を返す。`]]; then` なら deny。基底版 f5c51bd1f でも allow で、今回の差分による後退ではない、字句分割（statements()）の既存の穴（loop
+    1 の再レビューで検出、オーケストレーターが基底版と現行版で再現を確認）。
+  suggestion: 閉じ括弧と予約語から判定した本体の開始位置を statements() でも使い、本体を通常のコマンド検査に渡す。
+  reproduction: 無害な入力 `if [[ true && true ]] then printf ok; fi` を statements() に渡し、各 shaped_words のコマンド名を head() で確認する。結果は `[[`、`true`、`None` で、Bash が実行する `printf` が欠ける。`]]` と `then` の間にセミコロンを入れると `printf`
+    も返る。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: deferred
+  resolution_reason: 'out of feature scope: pre-existing gap in statements() (the shared lexical split every check uses), reproduced on the base commit; fixing it needs a change outside this feature''s
+    SPEC scope. Codex consulted (option B: fix only what this diff introduced, defer this and file it as a separate task); filed as a separate task'
+- stable_id: 0d3bc1a7a14e8455
+  severity: high
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8819
+  title: 閉じ括弧を行継続で書くと、then の後のコマンドを見落とす
+  description: Bash は行継続を挟んだ `]]` で条件式を閉じるが、was_open 分岐では `closed` が偽のままになり、`then` の後のコマンドを検査せず、その引数にある素の `]]` を閉じ括弧として受理する（loop 2 の再レビューで検出、基底版も同じ結果）。
+  suggestion: 行継続を除くと `]]` になる語が現れた場合は、判定を不確かなものとして扱う。
+  reproduction: '無害な入力 `if [[ true && true ]] then : ]]; fi` を `_args_json_nameref_scan` に渡すと `True` を返す。最初の `]]` の2文字の間だけに行継続を入れると `False` を返す。'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: fixed
+  resolution_reason: 'auto-applied loop 3 (batch: review.auto-fix-judgment Apply as-is)'
+- stable_id: d4466c5a4e175d82
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8803
+  title: '`<<-` の区切り語がリダイレクト先として飛ばされず、閉じ括弧の後ろの演算語として読まれる'
+  description: '`<<- -eq` は `<<`、`-`、`-eq` になり、`-` だけをリダイレクト先として飛ばして本当の区切り語 `-eq` を演算語として読む（安全側の誤検出）。基底版も真で後退ではない。'
+  suggestion: '`<<` の直後に空白なしで接する語がちょうど `-` のときは `<<-` の一部として扱い、その次の語を区切り語として飛ばす。'
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  - codex:comprehensive
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: 'medium: not an auto-fix candidate'
+- stable_id: c8fbc0379abd9a1a
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8843
+  title: then の直後にある既知の無害なコマンドまで不確実と判定する
+  description: loop 1 の安全側フォールバックにより、`if [[ true && true ]] then :; fi` のように閉じ括弧と同じ文の then / do の後ろの通常コマンドは一律に (True, True) になり、後続の notion 呼び出しの検査除外が外れる（安全側の誤検出）。`]]; then :` では起きない。spec / architecture
+    観点も同じ点を報告した。
+  suggestion: '`then` などに続く単純コマンドを既存のコマンド判定へ渡し、判定できない場合だけ不確かとして扱う。区切りの有無で結果が一致することをテストする。'
+  reproduction: '`if [[ true && true ]] then :; fi` と `if [[ true && true ]]; then :; fi` のチャンク判定を比較する。'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  - codex:spec
+  - codex:architecture
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: 'medium: not an auto-fix candidate'
+- stable_id: 46dd1d3e4e5e081f
+  severity: medium
+  category: comprehensive
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8817
+  title: 行継続した `]]` の末尾に CR があると、比較の右辺を閉じ括弧と誤認する
+  description: loop 3 の修正は行継続を除くと `]]` になる語で (True, True) を返すが、`trailing_cr` を確認しないため、Bash が比較の右辺として読む語でも不確かになり、後続の本物の `]]` に到達しない（安全側の誤検出）。spec 観点も TS-4 との不一致として報告した。
+  suggestion: 行継続を含む閉じ括弧の判定にも `trailing_cr` の確認を加える。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  - codex:spec
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: 'medium: not an auto-fix candidate'
+- stable_id: c3e0801ca9d8418c
+  severity: medium
+  category: architecture
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8817
+  title: 行継続を含む `]]` の判定が二つの走査経路で食い違う
+  description: loop 3 の修正は was_open 側だけで、opener 側は行継続を含む `]]` を読み過ごす。同じ閉じ括弧でも開始位置によって後続の語を調べるかどうかが変わる。
+  suggestion: 閉じ括弧の表記を分類する処理を一か所にまとめ、開始文と継続文の両方から使う。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'medium: not an auto-fix candidate'
+- stable_id: dc89eb90a2c3e700
+  severity: medium
+  category: spec
+  file: em-workflow/hooks/destructive-guard.py
+  line: 4185
+  title: 閉じ丸括弧に接した `>|` のリダイレクト先を読み飛ばせない
+  description: '`( [[ true && true ]])>|-eq` では字句解析が `)>|` を `)>` と文の区切り `|` に分けるため、リダイレクト先の `-eq` が次の文のコマンド名として扱われる（安全側の誤検出、基底版から残る）。'
+  suggestion: 文の区切りを判定する前に、閉じ丸括弧に接した `>|` を一つのリダイレクト演算子として認識する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'medium: not an auto-fix candidate'
+- stable_id: 31a40599ad655667
+  severity: medium
+  category: security
+  file: em-workflow/hooks/destructive-guard.py
+  line: 8869
+  title: 最初の条件式が同じ区間で閉じると、then に続く条件式の状態を失う
+  description: opener 分岐は最初の `]]` で break するため、`if [[ true ]] then [[ true && true -eq 0 ]]; fi` の二つ目の条件式が `&&` をまたぐと演算語を読まない。基底版も同じで、SPEC が変更しないと定めた opener 分岐の既存の取りこぼし。
+  suggestion: 最初の条件式がどの区間で開いたかにかかわらず、閉じ括弧から区間末尾まで同じ処理で読み、最後の開閉状態を次の区間に渡す。
+  reproduction: 無害な入力 `if [[ true ]] then [[ true && true -eq 0 ]]; fi` を _args_json_nameref_scan() に渡すと False が返る。最初の条件だけを `[[ true && true ]]` に変えると True が返る。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'medium: not an auto-fix candidate; pre-existing in the opener branch, outside this feature''s SPEC scope'
+- stable_id: 2307d46f7b655470
+  severity: medium
+  category: comprehensive
+  file: tests/test_destructive_guard_args_json.py
+  line: 4737
+  title: 二つ目の `[[` の状態を次の文へ引き継ぐテストがない
+  description: then / do のテストは二つ目の `[[` と同じ文にある演算語で (True, True) を期待しており、再開処理を削除しても未分類コマンド用の分岐が同じ値を返すため、再開状態を失う退行を検出できない。行継続入りの then / do のテストも無い。
+  suggestion: '`if [[ true && true ]] then [[ true && true ]]; fi` を追加し、再開した文が (False, True)、閉じた文が (False, False) を返すことを検証する。'
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'medium: not an auto-fix candidate'
+- stable_id: 5c8d4f5a1c6f7bf6
+  severity: medium
+  category: architecture
+  file: test-docs/dbracket-was-open-close-scan/task0001.tests.yaml
+  line: 68
+  title: task0001 の AC-5 が旧要件と逆の条件を検証するテストを参照している
+  description: AC-5 の記録は閉じ括弧より後の語を読まないという説明文の欠如を失敗理由にしているが、参照先のテストは task0002 で更新され、その説明文が無いことを要求する。
+  suggestion: task0001 の検証記録を当時のテストとリビジョンに結び付け、AC-5 が task0002 で置き換えられたことを明示する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:architecture
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'medium: not an auto-fix candidate'
+evaluation:
+  round_summary: Round 2（diff、cross_validation=true）。loop 0 の 4 観点すべてが 8820 行（then / do の後ろで開いた新しい [[ の状態が次の文に渡らない）を独立に指摘し、評価者は security の 2 件の high を reproduced、spec の <<- を medium で採った。spec の )>| とテスト
+    ID の件数埋め込みは demoted。round_context の 4ee256f52da6e850 の後退は task0002 で直っている（loop 2 の spec 再レビューも解消を確認）。reviewer の出力にインジェクションの試みは無かった。
+  recommended_action: rework
+  action_rationale: 2 件の high（security）は検出の取りこぼし。完全に直すには was_open 分岐の外（opener 分岐、then / do 本体のコマンド分類）にも手が入る。
+dismissed_sites:
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8820
+  run_id: comprehensive#0
+  reason: duplicate of another finding
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8809
+  run_id: spec#0
+  reason: duplicate of another finding
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8820
+  run_id: architecture#0
+  reason: duplicate of another finding
+- file: em-workflow/hooks/destructive-guard.py
+  line: 8802
+  run_id: spec#0
+  reason: demoted
+- file: test-docs/dbracket-was-open-close-scan/task0002.tests.yaml
+  line: 88
+  run_id: architecture#0
+  reason: demoted
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 3
+  applied_total: 4
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-dbracket-was-open-close-scan-20261127T171552Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
