@@ -116,7 +116,34 @@ workflow:
   failed_items: []
 - id: retrospect
   status: pending
-tasks: {}
+tasks:
+  task0001:
+    title: Restrict substitution-head command-name evidence to resolver forms
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_lexer_agreement.py
+    - tests/test_destructive_guard_resolver_evidence.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: pending
+    notes: null
 review:
   status: pending
   rounds_completed: 0
@@ -126,17 +153,22 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-5
     - TS-6
     - TS-9
+    - TS-12
+    - TS-13
+    - TS-14
   FR2:
     title: それ以外の本文は unreadable
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-2
@@ -149,15 +181,18 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-9
+    - TS-11
   FR4:
     title: unreadable の扱いは変えない
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-2
@@ -169,12 +204,16 @@ requirements:
     - TS-8
     - TS-9
     - TS-10
+    - TS-12
+    - TS-13
+    - TS-14
   FR5:
     title: ケース表に追加する
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-1
     - TS-2
@@ -185,12 +224,16 @@ requirements:
     - TS-7
     - TS-8
     - TS-11
+    - TS-12
+    - TS-13
+    - TS-14
   FR6:
     title: docstring を直す
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-11
   FR7:
@@ -198,7 +241,8 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests:
     - TS-11
   NFR1:
@@ -206,28 +250,38 @@ requirements:
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
-    tests: []
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-7
+    - TS-8
   NFR2:
     title: 見逃し側（区切り演算子やパイプを含む本文、クォートでコマンド名を包んだ本文）は対象外のまま。
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests: []
   NFR3:
     title: plugin の version は触らない。
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests: []
   NFR4:
     title: failed-run-cleanup-guard.py のミラーは変えない。
     status: ok
     tbd_reason: null
     excluded_reason: null
-    tasks: []
+    tasks:
+    - task0001
     tests: []
 batch:
   review_rework_count: 0
