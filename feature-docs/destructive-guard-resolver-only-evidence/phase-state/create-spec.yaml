@@ -1,7 +1,7 @@
 schema_version: 1
 feature: destructive-guard-resolver-only-evidence
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: 838bffa91ecbc156705748c8fde68b98403033e7
 last_input_digest: sha256:2db941d145fb208d1a851df43ebdfdd34b73da6d09971eae3ed306add4de5169
