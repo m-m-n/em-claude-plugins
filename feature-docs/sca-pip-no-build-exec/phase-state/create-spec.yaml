@@ -1,14 +1,18 @@
 schema_version: 1
 feature: sca-pip-no-build-exec
 phase: create-spec
-status: initialized
+status: dispatching
 generation: 1
 base_revision: ea7a4ebea25d7935f7cc350afbc50108aa1ab2bb
-last_input_digest: null
-active_request_id: null
+last_input_digest: sha256:d06b9a1a99156f731fedb38f1f9529beb94f42bfae96139a49bf11becefd39e5
+active_request_id: create-spec-run-0001
 packets: {}
 answers: {}
-worker_runs: []
+worker_runs:
+- request_id: create-spec-run-0001
+  status: dispatched
+  input_digest: sha256:d06b9a1a99156f731fedb38f1f9529beb94f42bfae96139a49bf11becefd39e5
+  output_digest: null
 artifacts: []
 patches: []
 progress_fingerprint: null
