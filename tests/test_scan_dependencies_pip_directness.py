@@ -70,6 +70,11 @@ PIP_NOTE_ONE = " 1 pip advisory with undetermined directness (pip_directness_und
 PIP_NOTE_TWO = " 2 pip advisories with undetermined directness (pip_directness_undetermined)."
 SEVERITY_NOTE_ONE = " 1 pip advisory with undetermined severity (pip_severity_undetermined)."
 UNPINNABLE_NOTE_ONE = " 1 pip lockfile entry not auditable (pip_lockfile_entries_unpinnable)."
+# sca-pip-no-build-exec: a manifest unit that audits its exact pins and left
+# at least one item out reports this fixed token, and pip still counts as
+# scanned (the summary names it in front of the notes).
+ENTRIES_UNPINNABLE = "pip_manifest_entries_unpinnable"
+NOT_COMPLETED = f" Not completed: {ENTRIES_UNPINNABLE}."
 GO_NOTE_ONE = " 1 go advisory with undetermined severity (go_severity_undetermined)."
 CARGO_NOTE_TWO = " 2 cargo advisories with undetermined directness (cargo_directness_undetermined)."
 
@@ -227,10 +232,14 @@ class PipDirectnessCase(unittest.TestCase):
         return self.scan(["requirements.txt"], pip_payload)
 
     def assertUndeterminedOne(self, result):
+        """One undetermined-directness advisory and no finding. Every fixture
+        of this note leaves an item out of the audited pins, so the unit
+        reports the fixed manifest token -- and nothing else: the note itself
+        never adds a skip reason."""
         self.assertEqual(result["findings"], [], result)
         self.assertIn(PIP_NOTE_ONE, result["summary"])
-        self.assertFalse(result["skipped"], result)
-        self.assertIsNone(result["skip_reason"])
+        self.assertTrue(result["skipped"], result)
+        self.assertEqual(result["skip_reason"], ENTRIES_UNPINNABLE)
 
 
 # ---------------------------------------------------------------------------
@@ -555,7 +564,7 @@ class TestUnresolvableDeclarations(PipDirectnessCase):
     def assert_incomplete(self, requirements_text, extra_files=None):
         """The resolver result is incomplete and keeps `own-pkg`; the scan
         counts an undeclared high advisory as pip undetermined."""
-        self.write("requirements.txt", requirements_text + "\nown-pkg\n")
+        self.write("requirements.txt", requirements_text + "\nown-pkg==1.0\n")
         for rel, text in (extra_files or {}).items():
             self.write(rel, text)
         names = self.resolve()
@@ -671,6 +680,7 @@ class TestUnresolvableDeclarations(PipDirectnessCase):
                 "-r bad\x00name",
                 "--requirement",
                 "-r adir",
+                "own-pkg==1.0",
             ]
         )
         (self.root / "adir").mkdir()
@@ -730,9 +740,9 @@ class TestCyclesAndConstraints(PipDirectnessCase):
 
     def test_a_cycle_scan_yields_a_finding_and_no_undetermined_note(self):
         result = self.scan_requirements(
-            "-r other.txt\nfirst-pkg\n",
+            "-r other.txt\nfirst-pkg==1.0\n",
             payload(advisory("second-pkg"), advisory("transitive-pkg")),
-            extra_files={"other.txt": "-r requirements.txt\nsecond-pkg\n"},
+            extra_files={"other.txt": "-r requirements.txt\nsecond-pkg==1.0\n"},
         )
         self.assertEqual(len(result["findings"]), 1, result)
         self.assertTrue(result["findings"][0]["title"].startswith("second-pkg:"))
@@ -910,7 +920,10 @@ class TestClassification(PipDirectnessCase):
     # -- the pyproject seam (IMPLEMENTATION.md D5) -------------------------
 
     def run_with_pyproject_resolver(self, resolver_result, pip_payload):
-        self.write("pyproject.toml", '[project]\nname = "demo"\n')
+        self.write(
+            "pyproject.toml",
+            '[project]\nname = "demo"\ndependencies = ["anchor-pkg==1.0"]\n',
+        )
         with mock.patch.object(SCAN, "_pip_pyproject_direct_names", lambda *a, **k: resolver_result):
             return self.scan(["pyproject.toml"], pip_payload)
 
@@ -962,29 +975,40 @@ class TestUndeterminedNote(PipDirectnessCase):
 
     def test_the_note_for_one_advisory_is_exact(self):
         result = self.scan_requirements(INCOMPLETE_REQUIREMENTS, payload(advisory("undeclared-pkg")))
-        self.assertEqual(result["summary"], self.PREFIX + PIP_NOTE_ONE)
+        self.assertEqual(result["summary"], self.PREFIX + NOT_COMPLETED + PIP_NOTE_ONE)
 
     def test_the_note_for_two_advisories_uses_the_plural(self):
         result = self.scan_requirements(
             INCOMPLETE_REQUIREMENTS, payload(advisory("undeclared-a"), advisory("undeclared-b"))
         )
-        self.assertEqual(result["summary"], self.PREFIX + PIP_NOTE_TWO)
+        self.assertEqual(result["summary"], self.PREFIX + NOT_COMPLETED + PIP_NOTE_TWO)
 
     def test_the_note_carries_no_package_name_path_or_advisory_text(self):
         result = self.scan_requirements(
-            "-r ../outside/distinctive-include.txt\n",
+            "-r ../outside/distinctive-include.txt\nanchor-pkg==1.0\n",
             payload(advisory("distinctive-package-name")),
         )
-        self.assertEqual(result["summary"], self.PREFIX + PIP_NOTE_ONE)
+        self.assertEqual(result["summary"], self.PREFIX + NOT_COMPLETED + PIP_NOTE_ONE)
         for fragment in ("distinctive", str(self.root), "outside", "Test advisory"):
             self.assertNotIn(fragment, result["summary"])
-        self.assertIsNone(result["skip_reason"])
+        self.assertEqual(result["skip_reason"], ENTRIES_UNPINNABLE)
 
-    def test_the_note_does_not_change_skipped_or_skip_reason(self):
+    def test_the_note_adds_no_skip_reason_of_its_own(self):
+        # The fixture leaves an item out of the pins, so the unit reports the
+        # manifest token; the directness note adds nothing to it.
         result = self.scan_requirements(INCOMPLETE_REQUIREMENTS, payload(advisory("undeclared-pkg")))
+        self.assertIs(result["skipped"], True)
+        self.assertEqual(result["skip_reason"], ENTRIES_UNPINNABLE)
+        self.assertEqual(result["source"], "tool")
+
+    def test_the_note_does_not_change_skipped_when_every_item_is_pinned(self):
+        self.write("pyproject.toml", '[project]\nname = "demo"\ndependencies = ["anchor-pkg==1.0"]\n')
+        incomplete = SCAN.DirectNames({"anchor-pkg"}, complete=False)
+        with mock.patch.object(SCAN, "_pip_pyproject_direct_names", lambda *a, **k: incomplete):
+            result = self.scan(["pyproject.toml"], payload(advisory("undeclared-pkg")))
+        self.assertIn(PIP_NOTE_ONE, result["summary"])
         self.assertIs(result["skipped"], False)
         self.assertIsNone(result["skip_reason"])
-        self.assertEqual(result["source"], "tool")
 
     def test_a_skip_elsewhere_keeps_its_reason_and_the_note_still_appears(self):
         self.write("go.mod", "module example.invalid/demo\n")
@@ -992,7 +1016,7 @@ class TestUndeterminedNote(PipDirectnessCase):
         # No govulncheck stand-in: the go unit reports its tool as missing.
         result = self.scan(["requirements.txt", "go.mod"], payload(advisory("undeclared-pkg")))
         self.assertTrue(result["skipped"])
-        self.assertEqual(result["skip_reason"], "go_tool_not_found")
+        self.assertEqual(result["skip_reason"], "go_tool_not_found+" + ENTRIES_UNPINNABLE)
         self.assertTrue(result["summary"].endswith(PIP_NOTE_ONE), result["summary"])
 
     def test_the_note_follows_the_severity_go_notes_and_precedes_the_cargo_note(self):
@@ -1019,12 +1043,13 @@ class TestUndeterminedNote(PipDirectnessCase):
         self.assertEqual(
             result["summary"],
             "Scanned cargo, go, pip; 0 finding(s) at or above threshold."
+            + NOT_COMPLETED
             + SEVERITY_NOTE_ONE
             + GO_NOTE_ONE
             + PIP_NOTE_ONE
             + CARGO_NOTE_TWO,
         )
-        self.assertFalse(result["skipped"])
+        self.assertEqual(result["skip_reason"], ENTRIES_UNPINNABLE)
 
     def test_the_note_follows_the_unpinnable_note_of_a_lockfile_unit(self):
         self.write(
@@ -1066,7 +1091,7 @@ class TestUndeterminedNote(PipDirectnessCase):
         result = self.scan(
             ["requirements.txt", "sub/requirements.txt"], payload(advisory("undeclared-pkg"))
         )
-        self.assertEqual(result["summary"], self.PREFIX + PIP_NOTE_TWO)
+        self.assertEqual(result["summary"], self.PREFIX + NOT_COMPLETED + PIP_NOTE_TWO)
 
 
 # ---------------------------------------------------------------------------
@@ -1306,7 +1331,7 @@ class TestUnsplittableAndValuelessOptionLines(MultiOptionLineCase):
         for label, line in self.UNSPLITTABLE.items():
             with self.subTest(form=label):
                 result = self.scan_requirements(
-                    line + "\nown-pkg\n", payload(advisory("undeclared-pkg"))
+                    line + "\nown-pkg==1.0\n", payload(advisory("undeclared-pkg"))
                 )
                 self.assertUndeterminedOne(result)
                 self.assertEqual(result["summary"].count(UNDETERMINED_NOTE_TOKEN), 1)
@@ -1329,7 +1354,7 @@ class TestUnsplittableAndValuelessOptionLines(MultiOptionLineCase):
 
     def test_ac3_a_missing_include_value_counts_an_undeclared_advisory_once(self):
         result = self.scan_requirements(
-            f"--index-url {EXAMPLE_INDEX_URL} -r\nown-pkg\n", payload(advisory("undeclared-pkg"))
+            f"--index-url {EXAMPLE_INDEX_URL} -r\nown-pkg==1.0\n", payload(advisory("undeclared-pkg"))
         )
         self.assertUndeterminedOne(result)
 
@@ -1442,18 +1467,22 @@ class TestMidLineEditable(MultiOptionLineCase):
 
     def test_ac5_an_unnamed_editable_counts_an_undeclared_advisory_once(self):
         result = self.scan_requirements(
-            "-c a -e ./pkg\nown-pkg\n", payload(advisory("undeclared-pkg"))
+            "-c a -e ./pkg\nown-pkg==1.0\n", payload(advisory("undeclared-pkg"))
         )
         self.assertUndeterminedOne(result)
 
     def test_ac5_a_named_editable_after_an_option_makes_its_advisory_a_finding(self):
+        # The editable is never audited itself (it is an excluded item), but
+        # its name still makes an advisory for it direct; the anchor pin makes
+        # the unit launch.
         result = self.scan_requirements(
-            f"--index-url {EXAMPLE_INDEX_URL} --editable=named-pkg\n",
+            f"--index-url {EXAMPLE_INDEX_URL} --editable=named-pkg\nanchor-pkg==1.0\n",
             payload(advisory("named-pkg")),
         )
         self.assertEqual(len(result["findings"]), 1, result)
         self.assertTrue(result["findings"][0]["title"].startswith("named-pkg:"))
         self.assertNotIn(UNDETERMINED_NOTE_TOKEN, result["summary"])
+        self.assertEqual(result["skip_reason"], ENTRIES_UNPINNABLE)
 
     def test_ac5_a_leading_editable_takes_only_the_next_token_as_its_value(self):
         names, opened, _ = self.resolve_line(
@@ -1592,7 +1621,7 @@ class TestIncompleteSetsReportOnlyThroughTheExistingNote(MultiOptionLineCase):
         for label, line in cases.items():
             with self.subTest(case=label):
                 result = self.scan_requirements(
-                    line + "\nown-pkg\n", payload(advisory("undeclared-pkg"))
+                    line + "\nown-pkg==1.0\n", payload(advisory("undeclared-pkg"))
                 )
                 self.assertUndeterminedOne(result)
                 summary = result["summary"]
@@ -1603,7 +1632,7 @@ class TestIncompleteSetsReportOnlyThroughTheExistingNote(MultiOptionLineCase):
 
     def test_ac7_the_note_counts_each_undeclared_advisory_with_the_fixed_wording(self):
         result = self.scan_requirements(
-            "-c a --requirem deps.txt\nown-pkg\n",
+            "-c a --requirem deps.txt\nown-pkg==1.0\n",
             payload(advisory("undeclared-one"), advisory("undeclared-two"), advisory("own-pkg")),
         )
         self.assertIn(PIP_NOTE_TWO, result["summary"])
@@ -1850,7 +1879,7 @@ class TestValueTakingLongOptionAbbreviations(MultiOptionLineCase):
         for line in ("--trusted -c -r deps.txt", "--index -c -r deps.txt", "--find -c -r deps.txt"):
             with self.subTest(line=line), OpenRecorder() as recorder, NetworkGuard() as network:
                 result = self.scan_requirements(
-                    line + "\nown-pkg\n",
+                    line + "\nown-pkg==1.0\n",
                     payload(advisory("undeclared-pkg")),
                     extra_files={"deps.txt": "deps-pkg\n"},
                 )
@@ -2043,7 +2072,7 @@ class TestOptionValuesStayOutOfTheSummary(MultiOptionLineCase):
         for line in lines:
             with self.subTest(line=line):
                 result = self.scan_requirements(
-                    line + "\nown-pkg\n",
+                    line + "\nown-pkg==1.0\n",
                     payload(advisory("undeclared-pkg")),
                     extra_files={"deps.txt": "deps-pkg\n"},
                 )
@@ -2064,7 +2093,7 @@ class TestOptionValuesStayOutOfTheSummary(MultiOptionLineCase):
         for line in lines:
             with self.subTest(line=line):
                 result = self.scan_requirements(
-                    line + "\nown-pkg\n",
+                    line + "\nown-pkg==1.0\n",
                     payload(advisory("undeclared-pkg")),
                     extra_files={"deps.txt": "deps-pkg\n"},
                 )
@@ -2084,7 +2113,7 @@ class TestOptionValuesStayOutOfTheSummary(MultiOptionLineCase):
                 result = self.scan_requirements(
                     line + "\n",
                     payload(advisory("deps-pkg"), advisory("undeclared-pkg")),
-                    extra_files={"deps.txt": "deps-pkg\n"},
+                    extra_files={"deps.txt": "deps-pkg==1.0\n"},
                 )
                 self.assertEqual(len(result["findings"]), 1, result)
                 self.assertTrue(result["findings"][0]["title"].startswith("deps-pkg:"))

@@ -26,9 +26,8 @@ acceptance_tests:
   AC-2:
     tests:
       - tests.test_sca_scan_normalization.TestEcosystemSelectionAndCommandAssembly.test_command_assembled_from_registry_tool_and_args
-      - tests.test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_requirements_file_is_itself_the_audited_target
-      - tests.test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_pyproject_toml_at_project_root_audits_the_current_directory
-      - tests.test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_pyproject_toml_in_a_subdirectory_audits_that_directory
+      - tests.test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_a_requirements_file_is_never_the_audited_target
+      - tests.test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_a_pyproject_toml_never_audits_a_directory
       - tests.test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_no_argument_form_installs_or_writes_a_resolution_artifact
     red_confirmed: true
     red_reason: >-

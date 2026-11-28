@@ -24,7 +24,9 @@ Covers the task's Acceptance Criteria
   what `run_scan` really launches: npm argv with the workspace flag, cargo
   argv with the target flag and the copied lockfile, go argv, pip argv,
   absolute argv[0], npm / cargo cwd in their own isolation directory, go cwd
-  in the group directory, pip cwd the project root. (The npm / cargo job
+  in the group directory, pip cwd the project root (pip's argv is the
+  prepared-requirements form since sca-pip-no-build-exec: the flag, a
+  prepared file outside the reviewed tree, then the form's arguments). (The npm / cargo job
   without prepared inputs being rejected by `build_scan_job` is asserted in
   tests/test_sca_scanner_project_config_isolation.py.)
 - AC-8: this module and the three modules task0004 rewrote import the
@@ -82,6 +84,24 @@ NPM_CLEAN = {"vulnerabilities": {}}
 CARGO_CLEAN = {"vulnerabilities": {"found": False, "list": []}}
 GO_CLEAN = {"config": {"protocol_version": "v1.0.0", "scanner_name": "govulncheck"}}
 PIP_CLEAN = {"dependencies": []}
+PIP_HIGH_VECTOR = "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"
+PIP_VULN = {
+    "dependencies": [
+        {
+            "name": "django",
+            "version": "3.2.0",
+            "vulns": [
+                {
+                    "id": "PYSEC-2021-9",
+                    "fix_versions": ["3.2.1"],
+                    "aliases": [],
+                    "description": f"Advisory. {PIP_HIGH_VECTOR}",
+                }
+            ],
+        }
+    ]
+}
+PIP_FORM_ARGS = ["--no-deps", "--disable-pip", "--format", "json"]
 NPM_VULN = {
     "vulnerabilities": {
         "lodash": {
@@ -381,7 +401,10 @@ class TestRunScanLaunchesThePlansBuildScanJobsReturns(RunScanCase):
 
     def test_a_pip_plan_is_launched_for_its_own_target_not_for_a_reselected_one(self):
         self.write("requirements.txt", "django==3.2.0\n")
+        # No exact pin: were the target selected again (pyproject.toml), the
+        # unit would launch nothing.
         self.write("pyproject.toml", "[project]\nname = 'p'\n")
+        self.configure("pip-audit", PIP_VULN, exit_code=1)
         plan = self.plan_for(
             "pip", files=("pyproject.toml", "requirements.txt"), target="requirements.txt"
         )
@@ -391,12 +414,13 @@ class TestRunScanLaunchesThePlansBuildScanJobsReturns(RunScanCase):
         ) as planner, mock.patch.object(
             SCAN, "manifest_file_for", side_effect=AssertionError("target selected again")
         ):
-            self.scan(["pyproject.toml", "requirements.txt"])
+            result = self.scan(["pyproject.toml", "requirements.txt"])
         self.assertEqual(planner.call_count, 1)
         (record,) = self.launches("pip-audit")
-        self.assertEqual(
-            record["argv"], [str(self.bin_dir / "pip-audit"), "-r", "requirements.txt", "--format", "json"]
-        )
+        self.assertEqual(record["argv"][:2], [str(self.bin_dir / "pip-audit"), "-r"])
+        self.assertEqual(record["argv"][3:], PIP_FORM_ARGS)
+        self.assertEqual([f["file"] for f in result["findings"]], ["requirements.txt"])
+        self.assertIsNone(result["skip_reason"])
 
     def test_the_binding_check_runs_against_the_basename_of_the_plans_target(self):
         self.go_project("svc")
@@ -691,24 +715,49 @@ class TestWhatRunScanLaunches(RunScanCase):
         (record,) = self.launches("govulncheck")
         self.assertEqual(record["cwd"], str(self.root))
 
+    def assertPreparedFormArgv(self, record):
+        """argv is [executable, -r, <prepared file outside the reviewed tree>,
+        --no-deps, --disable-pip, --format, json]; the prepared file is gone
+        once the scan has returned."""
+        argv = record["argv"]
+        self.assertEqual(argv[:2], [str(self.bin_dir / "pip-audit"), "-r"])
+        self.assertEqual(argv[3:], PIP_FORM_ARGS)
+        self.assertTrue(os.path.isabs(argv[2]), argv[2])
+        self.assertTrue(inside(self.iso_tmp, argv[2]), argv[2])
+        self.assertFalse(inside(self.root, argv[2]), argv[2])
+        self.assertFalse(os.path.exists(argv[2]), "the prepared file was left behind")
+        self.assertNoIsolationDirectoryRemains()
+
     def test_pip_runs_from_the_project_root_whatever_the_target_directory(self):
         self.write("backend/requirements.txt", "django==3.2.0\n")
-        self.scan(["backend/requirements.txt"])
+        self.configure("pip-audit", PIP_VULN, exit_code=1)
+        result = self.scan(["backend/requirements.txt"])
         (record,) = self.launches("pip-audit")
-        self.assertEqual(
-            record["argv"],
-            [str(self.bin_dir / "pip-audit"), "-r", "backend/requirements.txt", "--format", "json"],
-        )
+        self.assertPreparedFormArgv(record)
+        self.assertNotIn("backend/requirements.txt", record["argv"])
         self.assertTrue(os.path.isabs(record["argv"][0]))
         self.assertEqual(record["cwd"], str(self.root))
+        self.assertEqual([f["file"] for f in result["findings"]], ["backend/requirements.txt"])
 
-    def test_a_pip_pyproject_target_audits_its_own_directory(self):
-        self.write("services/api/pyproject.toml", "[project]\nname = 'api'\n")
-        self.scan(["services/api/pyproject.toml"])
-        (record,) = self.launches("pip-audit")
-        self.assertEqual(
-            record["argv"], [str(self.bin_dir / "pip-audit"), "services/api", "--format", "json"]
+    def test_a_pip_pyproject_target_is_audited_through_a_prepared_file_too(self):
+        self.write(
+            "services/api/pyproject.toml",
+            "[project]\nname = 'api'\ndependencies = ['django==3.2.0']\n",
         )
+        self.configure("pip-audit", PIP_VULN, exit_code=1)
+        result = self.scan(["services/api/pyproject.toml"])
+        (record,) = self.launches("pip-audit")
+        self.assertPreparedFormArgv(record)
+        self.assertNotIn("services/api", record["argv"])
+        self.assertEqual(record["cwd"], str(self.root))
+        self.assertEqual([f["file"] for f in result["findings"]], ["services/api/pyproject.toml"])
+
+    def test_a_pip_pyproject_without_a_pin_launches_nothing(self):
+        self.write("services/api/pyproject.toml", "[project]\nname = 'api'\n")
+        result = self.scan(["services/api/pyproject.toml"])
+        self.assertEqual(self.launches("pip-audit"), [])
+        self.assertTrue(result["skipped"], result)
+        self.assertEqual(result["skip_reason"], "pip_manifest_unpinnable")
 
     def test_every_launched_argv0_is_the_absolute_path_of_the_resolved_executable(self):
         self.npm_project("")

@@ -18,7 +18,9 @@ Covers the task's Acceptance Criteria
   never disturb a separate valid project.
 - AC-5 (TM-2, TM-5; TS-4, TS-9): aggregation, path-free reasons, the
   ecosystem gate coming first, schema conformance.
-- AC-6 (TS-8): pip per-project grouping with the project root as cwd.
+- AC-6 (TS-8): pip per-project grouping with the project root as cwd. (Since
+  sca-pip-no-build-exec a requirements / pyproject group is launched on a
+  prepared requirements file, the form the lockfile group already used.)
 - AC-7 (NFR2): determinism and order-independence of skip_reason.
 - AC-8 (FR14): this module imports only the standard library (asserted
   below); the full suite and the invariants checker are run by the
@@ -138,6 +140,12 @@ PIP_PAYLOAD = {
 PYPROJECT_DJANGO = (
     '[tool.poetry]\nname = "demo"\nversion = "0.1.0"\n\n'
     '[tool.poetry.dependencies]\npython = "^3.9"\ndjango = ">=3.2"\n'
+)
+# The same project with an exact pin: a pyproject unit is audited only on the
+# exact pins it states.
+PYPROJECT_DJANGO_PINNED = (
+    '[tool.poetry]\nname = "demo"\nversion = "0.1.0"\n\n'
+    '[tool.poetry.dependencies]\npython = "^3.9"\ndjango = "==3.2.0"\n'
 )
 POETRY_LOCK_DJANGO = (
     "[[package]]\n"
@@ -316,13 +324,14 @@ class TestBuildScanJobWorkingDirectoryAndPrecondition(unittest.TestCase):
         self.assertEqual(job["cwd"], "/proj/crates/a")
 
     def test_every_pip_form_keeps_the_project_root_as_the_working_directory(self):
+        prepared = {"prepared_file": "/tmp/prepared.txt"}
         cases = [
-            ("requirements.txt", {}),
-            ("backend/requirements.txt", {}),
-            ("pyproject.toml", {}),
-            ("services/api/pyproject.toml", {}),
-            ("poetry.lock", {"prepared_file": "/tmp/prepared.txt"}),
-            ("services/api/Pipfile.lock", {"prepared_file": "/tmp/prepared.txt"}),
+            ("requirements.txt", prepared),
+            ("backend/requirements.txt", prepared),
+            ("pyproject.toml", prepared),
+            ("services/api/pyproject.toml", prepared),
+            ("poetry.lock", prepared),
+            ("services/api/Pipfile.lock", prepared),
         ]
         for target, kwargs in cases:
             with self.subTest(target=target):
@@ -1064,7 +1073,13 @@ class TestPipGroupsKeepTheirExistingBehavior(BindingCase):
         lock_call, req_call = calls  # ascending group order: "lock" < "req"
         self.assertIn("--no-deps", lock_call["argv"])  # the lockfile form
         self.assertIn("--disable-pip", lock_call["argv"])
-        self.assertEqual(req_call["argv"], ["-r", "req/requirements.txt", "--format", "json"])
+        # The requirements group is audited through a prepared file, not the
+        # reviewed path.
+        self.assertEqual(len(req_call["argv"]), 6, req_call["argv"])
+        self.assertEqual(req_call["argv"][0], "-r")
+        self.assertNotIn("req/requirements.txt", req_call["argv"])
+        self.assertEqual(req_call["argv"][2:], ["--no-deps", "--disable-pip", "--format", "json"])
+        self.assertFalse(os.path.exists(req_call["argv"][1]), "the prepared file was left behind")
         self.assertFalse(result["skipped"], result)
         self.assertEqual(
             sorted(f["file"] for f in result["findings"]),
@@ -1086,7 +1101,7 @@ class TestPipGroupsKeepTheirExistingBehavior(BindingCase):
 
     def test_a_requirements_file_and_a_pyproject_of_one_directory_make_one_launch(self):
         self.write("svc/requirements.txt", "django==3.2.0\n")
-        self.write("svc/pyproject.toml", PYPROJECT_DJANGO)
+        self.write("svc/pyproject.toml", PYPROJECT_DJANGO_PINNED)
         self.install_pip_audit()
         self.scan(["svc/pyproject.toml", "svc/requirements.txt"])
         self.assertEqual(len(self.launches()), 1)

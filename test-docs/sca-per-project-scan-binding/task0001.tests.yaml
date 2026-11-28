@@ -7,7 +7,7 @@ acceptance_tests:
       - tests.test_sca_scan_job_grouping.TestArgumentVectorsFromTheRealRegistry.test_npm_registry_args_carry_the_workspace_flag_as_third_element
       - tests.test_sca_scan_job_grouping.TestArgumentVectorsFromTheRealRegistry.test_npm_job_argv_is_exactly_executable_audit_json_workspaces_false
       - tests.test_sca_scan_job_grouping.TestArgumentVectorsFromTheRealRegistry.test_go_argv_is_unchanged
-      - tests.test_sca_scan_job_grouping.TestArgumentVectorsFromTheRealRegistry.test_pip_vectors_are_unchanged
+      - tests.test_sca_scan_job_grouping.TestArgumentVectorsFromTheRealRegistry.test_pip_vectors_are_the_prepared_requirements_form_for_every_manifest
     red_confirmed: true
     red_reason: "npm vector tests failed before the registry change: Lists differ: ['/x/npm', 'audit', '--json'] != ['/x/npm', 'audit', '--json', '--workspaces=false']. The cargo / go / pip unchanged-vector tests were already green (their behavior pre-existed); the npm tests carry the red."
   AC-2:

@@ -5,11 +5,11 @@ construction, trusted-binary resolution, and configuration isolation in
 Covers task0008 Acceptance Criteria
 (feature-docs/review-sca-axis/tasks/task0008.md):
 
-- AC-1: for a changed requirements file the constructed pip job's argument
-  vector audits THAT file; for a changed pyproject.toml it audits THAT
-  project's directory; in neither case does the vector contain an install
-  or write-resolution form, and in neither case does the audited target
-  default to the ambient environment.
+- AC-1: the constructed pip job's argument vector audits a prepared
+  requirements file of the REVIEWED project's pins (sca-pip-no-build-exec
+  replaced the earlier reviewed-file and project-directory forms, which are
+  gone); it never contains an install or write-resolution form, and the
+  audited target never defaults to the ambient environment.
 - AC-2: every constructed job's first argument-vector element is an
   absolute path to an allowlisted scanner binary, and no constructed
   vector has the multiplexer-front-end + subcommand form. The registry and
@@ -29,10 +29,19 @@ for a changed poetry.lock / Pipfile.lock: the pip job is built for a PREPARED
 requirements file -- [executable, `-r`, prepared file, `--no-deps`,
 `--disable-pip`, `--format`, `json`] with the lockfile as the job's manifest --
 without reading, writing or launching anything; a lockfile manifest without a
-prepared file is rejected and never yields the directory form; requirements.txt
-and pyproject.toml jobs keep their previous vectors with neither new flag; and
-the registry pip entry, ALLOWED_EXECUTABLES, ECOSYSTEM_LOCKFILES and the pip
-child-environment pins hold their previous (literal) values.
+prepared file is rejected; and ALLOWED_EXECUTABLES, ECOSYSTEM_LOCKFILES and the
+pip child-environment pins hold their previous (literal) values.
+
+sca-pip-no-build-exec task0001 (TS-6) moves pip's flag and arguments into the
+registry's per-target-form table: the pip entry carries `target_forms` with
+exactly the form `prepared_requirements` (`target_flag` `-r`, `args`
+`--no-deps`, `--disable-pip`, `--format`, `json`) and no top-level `args` /
+`target_flag`, asserted here through this module's restricted parser and the
+script's loader; `validate_ecosystem_entry` checks the table
+(`pip_target_forms_invalid`); the npm, cargo and go entry texts are pinned
+literally. The same prepared-file job form now serves requirements.txt and
+pyproject.toml too (its scenarios live in
+tests/test_sca_pip_manifest_prepared_audit.py).
 
 sca-scanner-project-config-isolation task0001 updates the npm / cargo job
 expectations to the isolation contract: an npm / cargo job is built from the
@@ -63,7 +72,9 @@ exercised by placing an executable stub -- or nothing -- on a temporary
 PATH.
 """
 
+import copy
 import importlib.util
+import json
 import os
 import re
 import sys
@@ -113,19 +124,55 @@ def _prepared(name):
 # Module-local restricted-subset YAML parser (Test Notes: "the registry is
 # read with the module-local restricted YAML parser convention this
 # repository's test modules already use, not with a third-party import").
-# Deliberately scoped to just what AC-2 needs: `ecosystem` and `executable`.
+# Scoped to what the registry holds: a list of ecosystem items whose keys sit
+# at indent 4, flow lists (`[a, b]`), flow mappings (`{a: b}`) and -- for a
+# target-form table (`target_forms:`) -- block mappings nested at indent 6
+# (the form name) and indent 8 (its keys).
 # ---------------------------------------------------------------------------
+
+def _parse_flow_list(value):
+    if not (value.startswith("[") and value.endswith("]")):
+        raise ValueError(f"expected a flow list, got: {value!r}")
+    inner = value[1:-1].strip()
+    if not inner:
+        return []
+    return [item.strip() for item in inner.split(",")]
+
+
+def _parse_flow_mapping(value):
+    if not (value.startswith("{") and value.endswith("}")):
+        raise ValueError(f"expected a flow mapping, got: {value!r}")
+    inner = value[1:-1].strip()
+    result = {}
+    if not inner:
+        return result
+    for part in inner.split(","):
+        key, _, item = part.partition(":")
+        result[key.strip()] = item.strip()
+    return result
+
+
+def _parse_value(value):
+    if value.startswith("["):
+        return _parse_flow_list(value)
+    if value.startswith("{"):
+        return _parse_flow_mapping(value)
+    return value
+
 
 def parse_vuln_scanners_yaml(text):
     """Restricted-subset parser for vuln-scanners.yaml's `ecosystems:` list.
-    Returns a list of per-ecosystem dicts (string values only). Raises
-    ValueError if no top-level `ecosystems:` key is found or a line inside
-    the block violates the expected nesting."""
+    Returns a list of per-ecosystem dicts: scalars stay strings, flow lists
+    become lists of strings, flow mappings become dicts of strings, and a key
+    with no value opens a nested block mapping whose keys sit two columns
+    deeper (the `target_forms` table). Raises ValueError if no top-level
+    `ecosystems:` key is found or a line inside the block violates the
+    expected nesting."""
     lines = text.splitlines()
     ecosystems = []
     in_block = False
     saw_block = False
-    current = None
+    stack = []  # (indent of the key, the mapping it opened), innermost last
 
     for raw in lines:
         line = raw.split("#", 1)[0].rstrip()
@@ -148,11 +195,14 @@ def parse_vuln_scanners_yaml(text):
                 raise ValueError(f"expected an ecosystem list item, got: {raw!r}")
             current = {"ecosystem": stripped[len("- ecosystem:"):].strip()}
             ecosystems.append(current)
+            stack = [(2, current)]
             continue
 
-        if current is None:
+        if not stack:
             raise ValueError(f"attribute line before any ecosystem: {raw!r}")
-        if indent != 4:
+        while len(stack) > 1 and indent <= stack[-1][0]:
+            stack.pop()
+        if indent != 2 + 2 * len(stack):
             raise ValueError(f"unexpected indentation: {raw!r}")
 
         key, sep, value = stripped.partition(":")
@@ -160,8 +210,13 @@ def parse_vuln_scanners_yaml(text):
         value = value.strip()
         if not sep:
             raise ValueError(f"malformed line: {raw!r}")
-        if not (value.startswith("[") or value.startswith("{")):
-            current[key] = value
+        container = stack[-1][1]
+        if value == "":
+            child = {}
+            container[key] = child
+            stack.append((indent, child))
+        else:
+            container[key] = _parse_value(value)
 
     if not saw_block:
         raise ValueError("no top-level `ecosystems:` key found")
@@ -253,6 +308,7 @@ class TestBuildScanJobArgumentVectors(unittest.TestCase):
                 job = SCAN.build_scan_job(
                     self.by_name[name], manifest, "/proj", executable,
                     prepared_inputs=_prepared(name),
+                    prepared_file="/prepared/pip-0001.txt" if name == "pip" else None,
                 )
                 self.assertTrue(os.path.isabs(job["argv"][0]))
                 self.assertEqual(job["argv"][0], executable)
@@ -282,6 +338,12 @@ class TestBuildScanJobArgumentVectors(unittest.TestCase):
 # ---------------------------------------------------------------------------
 # AC-1 (TS-26): the pip job audits the REVIEWED PROJECT, never the ambient
 # environment.
+#
+# sca-pip-no-build-exec task0001: the job is built for a PREPARED requirements
+# file of the reviewed manifest's pins -- the reviewed requirements file and
+# the project directory are never handed to pip-audit any more. Every manifest
+# kind gets the same vector; the job form is exercised against the full set of
+# targets in tests/test_sca_pip_manifest_prepared_audit.py.
 # ---------------------------------------------------------------------------
 
 class TestPipJobAuditsTheReviewedProject(unittest.TestCase):
@@ -290,53 +352,58 @@ class TestPipJobAuditsTheReviewedProject(unittest.TestCase):
         registry = SCAN.load_registry(SCAN.DEFAULT_REGISTRY_PATH)
         cls.pip_entry = {e["ecosystem"]: e for e in registry["ecosystems"]}["pip"]
 
-    def test_requirements_file_is_itself_the_audited_target(self):
-        job = SCAN.build_scan_job(self.pip_entry, "requirements.txt", "/proj", "/x/pip-audit")
-        self.assertEqual(job["argv"], ["/x/pip-audit", "-r", "requirements.txt", "--format", "json"])
-
-    def test_nested_requirements_file_path_is_preserved_verbatim(self):
-        job = SCAN.build_scan_job(self.pip_entry, "backend/requirements.txt", "/proj", "/x/pip-audit")
-        self.assertIn("backend/requirements.txt", job["argv"])
-        self.assertEqual(job["argv"][1], "-r")
-
-    def test_pyproject_toml_at_project_root_audits_the_current_directory(self):
-        job = SCAN.build_scan_job(self.pip_entry, "pyproject.toml", "/proj", "/x/pip-audit")
-        self.assertEqual(job["argv"], ["/x/pip-audit", ".", "--format", "json"])
-
-    def test_pyproject_toml_in_a_subdirectory_audits_that_directory(self):
-        job = SCAN.build_scan_job(self.pip_entry, "services/api/pyproject.toml", "/proj", "/x/pip-audit")
-        self.assertEqual(job["argv"], ["/x/pip-audit", "services/api", "--format", "json"])
-
     # sca-python-lockfile-audit task0001 AC-2 (FR3, NFR2, NFR6, TM-5): a
     # lockfile is never handed to pip-audit directly nor audited through its
-    # directory. The lockfile job audits a PREPARED requirements file (one
+    # directory. The job audits a PREPARED requirements file (one
     # `name==version` line per pin) that a separate stage wrote outside the
     # project root; build_scan_job only receives that file's path.
-    PREPARED = "/tmp/prepared-requirements.txt"
-    LOCKFILE_JOB_ARGV_TAIL = ["--no-deps", "--disable-pip", "--format", "json"]
+    PREPARED = "/tmp/prepared-pins-0001.txt"
+    JOB_ARGV_TAIL = ["--no-deps", "--disable-pip", "--format", "json"]
+    LOCKFILES = ("poetry.lock", "Pipfile.lock")
+    MANIFESTS = ("requirements.txt", "pyproject.toml")
 
     def _build(self, manifest):
-        prepared = self.PREPARED if os.path.basename(manifest) in ("poetry.lock", "Pipfile.lock") else None
         return SCAN.build_scan_job(
-            self.pip_entry, manifest, "/proj", "/x/pip-audit", prepared_file=prepared
+            self.pip_entry, manifest, "/proj", "/x/pip-audit", prepared_file=self.PREPARED
         )
 
-    def test_a_changed_lockfile_gets_the_lockfile_job_form(self):
+    def test_a_requirements_file_is_never_the_audited_target(self):
+        job = self._build("requirements.txt")
+        self.assertEqual(job["argv"], ["/x/pip-audit", "-r", self.PREPARED] + self.JOB_ARGV_TAIL)
+        self.assertNotIn("requirements.txt", job["argv"])
+        self.assertEqual(job["manifest"], "requirements.txt")
+
+    def test_a_nested_requirements_path_is_the_label_only(self):
+        job = self._build("backend/requirements.txt")
+        self.assertEqual(job["argv"], ["/x/pip-audit", "-r", self.PREPARED] + self.JOB_ARGV_TAIL)
+        self.assertNotIn("backend/requirements.txt", job["argv"])
+        self.assertEqual(job["manifest"], "backend/requirements.txt")
+
+    def test_a_pyproject_toml_never_audits_a_directory(self):
+        for manifest, directory in (("pyproject.toml", "."), ("services/api/pyproject.toml", "services/api")):
+            with self.subTest(manifest=manifest):
+                job = self._build(manifest)
+                self.assertEqual(
+                    job["argv"], ["/x/pip-audit", "-r", self.PREPARED] + self.JOB_ARGV_TAIL
+                )
+                self.assertNotIn(directory, job["argv"])
+                self.assertEqual(job["manifest"], manifest)
+                self.assertEqual(job["cwd"], "/proj")
+
+    def test_a_changed_lockfile_gets_the_same_job_form(self):
         for lockfile in ("poetry.lock", "Pipfile.lock", "services/api/poetry.lock", "svc/Pipfile.lock"):
             with self.subTest(lockfile=lockfile):
-                job = SCAN.build_scan_job(
-                    self.pip_entry, lockfile, "/proj", "/x/pip-audit", prepared_file=self.PREPARED
-                )
+                job = self._build(lockfile)
                 self.assertEqual(
                     job["argv"],
-                    ["/x/pip-audit", "-r", self.PREPARED] + self.LOCKFILE_JOB_ARGV_TAIL,
+                    ["/x/pip-audit", "-r", self.PREPARED] + self.JOB_ARGV_TAIL,
                 )
                 self.assertEqual(job["manifest"], lockfile)
                 self.assertEqual(job["ecosystem"], "pip")
                 self.assertEqual(job["cwd"], "/proj")
 
-    def test_lockfile_job_is_built_even_when_the_prepared_path_does_not_exist(self):
-        missing = "/definitely/not/a/real/dir/prepared-requirements.txt"
+    def test_the_job_is_built_even_when_the_prepared_path_does_not_exist(self):
+        missing = "/definitely/not/a/real/dir/prepared-pins.txt"
         with mock.patch("builtins.open", side_effect=AssertionError("file opened")), \
                 mock.patch("os.open", side_effect=AssertionError("file opened")), \
                 mock.patch("subprocess.Popen", side_effect=AssertionError("process launched")), \
@@ -347,31 +414,25 @@ class TestPipJobAuditsTheReviewedProject(unittest.TestCase):
         self.assertEqual(job["argv"][:3], ["/x/pip-audit", "-r", missing])
         self.assertFalse(os.path.exists(missing))
 
-    def test_a_lockfile_manifest_without_a_prepared_file_is_rejected(self):
-        for lockfile in ("poetry.lock", "Pipfile.lock", "sub/poetry.lock"):
+    def test_a_manifest_without_a_prepared_file_is_rejected(self):
+        for manifest in self.LOCKFILES + self.MANIFESTS + ("sub/poetry.lock", "backend/requirements.txt"):
             for kwargs in ({}, {"prepared_file": None}, {"prepared_file": ""}):
-                with self.subTest(lockfile=lockfile, kwargs=kwargs):
+                with self.subTest(manifest=manifest, kwargs=kwargs):
                     with self.assertRaises(ValueError):
                         SCAN.build_scan_job(
-                            self.pip_entry, lockfile, "/proj", "/x/pip-audit", **kwargs
+                            self.pip_entry, manifest, "/proj", "/x/pip-audit", **kwargs
                         )
 
-    def test_the_directory_form_is_never_produced_for_a_lockfile(self):
-        for lockfile in ("poetry.lock", "Pipfile.lock"):
-            with self.subTest(lockfile=lockfile):
-                with self.assertRaises(ValueError):
-                    SCAN._pip_target(lockfile)
+    def test_the_directory_and_reviewed_file_forms_are_gone(self):
+        self.assertFalse(hasattr(SCAN, "_pip_target"))
 
-    def test_non_lockfile_jobs_ignore_a_prepared_file_and_carry_neither_flag(self):
-        for manifest in ("requirements.txt", "pyproject.toml", "backend/requirements.txt"):
+    def test_every_pip_job_carries_the_prepared_file_and_both_flags(self):
+        for manifest in self.MANIFESTS + self.LOCKFILES:
+            job = self._build(manifest)
             with self.subTest(manifest=manifest):
-                with_file = SCAN.build_scan_job(
-                    self.pip_entry, manifest, "/proj", "/x/pip-audit", prepared_file=self.PREPARED
-                )
-                without = SCAN.build_scan_job(self.pip_entry, manifest, "/proj", "/x/pip-audit")
-                self.assertEqual(with_file["argv"], without["argv"])
-                self.assertNotIn("--no-deps", without["argv"])
-                self.assertNotIn("--disable-pip", without["argv"])
+                self.assertEqual(job["argv"][1:3], ["-r", self.PREPARED])
+                self.assertIn("--no-deps", job["argv"])
+                self.assertIn("--disable-pip", job["argv"])
 
     def test_target_is_never_absent_never_the_ambient_environment(self):
         for manifest in ("requirements.txt", "pyproject.toml", "poetry.lock", "Pipfile.lock"):
@@ -388,18 +449,6 @@ class TestPipJobAuditsTheReviewedProject(unittest.TestCase):
             with self.subTest(manifest=manifest):
                 for forbidden in forbidden_tokens:
                     self.assertNotIn(forbidden, job["argv"])
-
-    def test_no_deps_and_disable_pip_appear_only_on_lockfile_jobs(self):
-        for manifest in ("requirements.txt", "pyproject.toml"):
-            job = self._build(manifest)
-            with self.subTest(manifest=manifest, kind="non-lockfile"):
-                self.assertNotIn("--no-deps", job["argv"])
-                self.assertNotIn("--disable-pip", job["argv"])
-        for manifest in ("poetry.lock", "Pipfile.lock"):
-            job = self._build(manifest)
-            with self.subTest(manifest=manifest, kind="lockfile"):
-                self.assertIn("--no-deps", job["argv"])
-                self.assertIn("--disable-pip", job["argv"])
 
 
 # ---------------------------------------------------------------------------
@@ -546,28 +595,401 @@ class TestConfigurationIsolationIgnoresProjectFiles(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# sca-python-lockfile-audit task0001 AC-2 (NFR6): the pip registry entry, the
-# executable allowlist, the lockfile sets and the pip child-environment pins
-# hold their previous values -- asserted against literals.
+# sca-pip-no-build-exec task0001 AC-1 (FR5; TS-6): pip's flag and arguments
+# live in the registry's `target_forms` table. Asserted through this module's
+# restricted parser, through the script's loader (both against literals) and
+# on the registry text: the header names `target_forms` and keeps its
+# ownership phrases, and the npm, cargo and go entry texts are pinned.
 # ---------------------------------------------------------------------------
 
-class TestPipInvariantsUnchanged(unittest.TestCase):
-    def test_pip_registry_entry_is_unchanged(self):
-        registry = SCAN.load_registry(SCAN.DEFAULT_REGISTRY_PATH)
-        pip_entry = {e["ecosystem"]: e for e in registry["ecosystems"]}["pip"]
+PIP_FORM = {
+    "prepared_requirements": {
+        "target_flag": "-r",
+        "args": ["--no-deps", "--disable-pip", "--format", "json"],
+    }
+}
+
+NPM_ENTRY_TEXT = "\n".join([
+    "  - ecosystem: npm",
+    "    manifests: [package.json]",
+    "    executable: npm",
+    "    # --workspaces=false: npm does not escape to an ancestor workspace root.",
+    "    args: [audit, --json, --workspaces=false]",
+    "    severity_map: {critical: critical, high: high}",
+    "    threshold: {direct_only: true, min_severity: high}",
+])
+CARGO_ENTRY_TEXT = "\n".join([
+    "  - ecosystem: cargo",
+    "    manifests: [Cargo.toml]",
+    "    executable: cargo-audit",
+    "    # cargo-audit runs from a per-group isolation directory outside the",
+    "    # reviewed tree, so the reviewed project's `.cargo/audit.toml` is not on",
+    "    # its discovery path. The directory holds a copy of Cargo.lock only, and",
+    "    # --file (target_flag) points at that copy: scan-dependencies.py puts",
+    "    # `--file <copy>` immediately after `audit`. --url and --db are never",
+    "    # passed (the advisory DB stays the reviewer's own configuration).",
+    "    args: [audit, --json]",
+    "    target_flag: --file",
+    "    severity_map: {critical: critical, high: high}",
+    "    threshold: {direct_only: true, min_severity: high}",
+])
+GO_ENTRY_TEXT = "\n".join([
+    "  - ecosystem: go",
+    "    manifests: [go.mod]",
+    "    executable: govulncheck",
+    "    args: [-json, ./...]",
+    "    severity_map: {critical: critical, high: high}",
+    "    threshold: {direct_only: true, min_severity: high}",
+])
+PIP_ENTRY_TEXT = "\n".join([
+    "  - ecosystem: pip",
+    "    manifests: [pyproject.toml, requirements.txt]",
+    "    executable: pip-audit",
+    "    target_forms:",
+    "      prepared_requirements:",
+    "        target_flag: -r",
+    "        args: [--no-deps, --disable-pip, --format, json]",
+    "    severity_map: {critical: critical, high: high}",
+    "    threshold: {direct_only: true, min_severity: high}",
+])
+
+
+def registry_entry_text(text, name):
+    """The text of ecosystem `name`'s entry in the registry document, from its
+    `- ecosystem:` line up to the next entry (trailing blank lines removed)."""
+    start = text.index(f"  - ecosystem: {name}\n")
+    following = text.find("\n  - ecosystem:", start + 1)
+    block = text[start:] if following == -1 else text[start:following]
+    return block.rstrip()
+
+
+class TestPipTargetFormRegistry(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.text = REGISTRY_PATH.read_text(encoding="utf-8")
+        cls.parsed = {e["ecosystem"]: e for e in parse_vuln_scanners_yaml(cls.text)}
+        cls.loaded = {
+            e["ecosystem"]: e for e in SCAN.load_registry(SCAN.DEFAULT_REGISTRY_PATH)["ecosystems"]
+        }
+
+    def test_the_restricted_parser_reads_the_nested_form(self):
+        pip = self.parsed["pip"]
+        self.assertEqual(pip["target_forms"], PIP_FORM)
+        self.assertNotIn("args", pip)
+        self.assertNotIn("target_flag", pip)
+
+    def test_the_script_loader_reads_the_same_form(self):
+        pip = self.loaded["pip"]
+        self.assertEqual(pip["target_forms"], PIP_FORM)
+        self.assertNotIn("args", pip)
+        self.assertNotIn("target_flag", pip)
+
+    def test_the_whole_pip_entry_equals_its_literal_through_the_loader(self):
         self.assertEqual(
-            pip_entry,
+            self.loaded["pip"],
             {
                 "ecosystem": "pip",
                 "manifests": ["pyproject.toml", "requirements.txt"],
                 "executable": "pip-audit",
-                "args": ["--format", "json"],
-                "target_flag": "-r",
+                "target_forms": PIP_FORM,
                 "severity_map": {"critical": "critical", "high": "high"},
                 "threshold": {"direct_only": True, "min_severity": "high"},
             },
         )
 
+    def test_the_form_table_holds_exactly_one_form(self):
+        self.assertEqual(list(self.parsed["pip"]["target_forms"]), ["prepared_requirements"])
+        self.assertEqual(list(self.loaded["pip"]["target_forms"]), ["prepared_requirements"])
+
+    def test_the_pip_entry_text_is_a_block_style_nested_mapping(self):
+        self.assertEqual(registry_entry_text(self.text, "pip"), PIP_ENTRY_TEXT)
+
+    def test_the_npm_cargo_and_go_entry_texts_equal_their_pinned_literals(self):
+        for name, literal in (("npm", NPM_ENTRY_TEXT), ("cargo", CARGO_ENTRY_TEXT), ("go", GO_ENTRY_TEXT)):
+            with self.subTest(ecosystem=name):
+                self.assertEqual(registry_entry_text(self.text, name), literal)
+
+    def test_the_restricted_parser_can_tell_a_missing_nested_value_apart(self):
+        # Regression proof (tdd-testing discipline): the parser must be able
+        # to fail on the nested form, not just succeed on it.
+        broken = self.text.replace("        target_flag: -r\n", "")
+        parsed = {e["ecosystem"]: e for e in parse_vuln_scanners_yaml(broken)}
+        self.assertNotEqual(parsed["pip"]["target_forms"], PIP_FORM)
+        with self.assertRaises(ValueError):
+            parse_vuln_scanners_yaml(self.text.replace("        target_flag: -r\n", "      target_flag: -r\n"))
+
+    def test_the_header_names_target_forms_and_keeps_its_ownership_phrases(self):
+        header = self.text.split("\nversion:", 1)[0]
+        normalized = re.sub(r"\s+", " ", header.replace("#", "")).lower()
+        self.assertIn("target_forms", header)
+        self.assertIn("prepared_requirements", header)
+        self.assertIn("this registry owns which tool serves each manifest", normalized)
+        self.assertIn("scan-dependencies.py owns how to run", normalized)
+        self.assertIn("how to normalize", normalized)
+
+    def test_the_header_keeps_the_cargo_sentence_and_drops_the_old_pip_sentence(self):
+        header = self.text.split("\nversion:", 1)[0]
+        normalized = re.sub(r"\s+", " ", header.replace("#", "")).lower()
+        self.assertIn(
+            "cargo's come immediately after the leading `audit` subcommand in `args`", normalized
+        )
+        self.assertNotIn("pip's come first", normalized)
+
+
+# ---------------------------------------------------------------------------
+# sca-pip-no-build-exec task0001 AC-2 (FR5; TS-6): `validate_ecosystem_entry`
+# checks the target-form table at planning time; a violation yields
+# `<ecosystem>_target_forms_invalid`, no pip plan and no scanner launch.
+# ---------------------------------------------------------------------------
+
+class TestTargetFormValidation(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        registry = SCAN.load_registry(SCAN.DEFAULT_REGISTRY_PATH)
+        cls.by_name = {e["ecosystem"]: e for e in registry["ecosystems"]}
+
+    def pip_entry(self):
+        return copy.deepcopy(self.by_name["pip"])
+
+    def mutated(self, mutate):
+        entry = self.pip_entry()
+        mutate(entry)
+        return entry
+
+    @staticmethod
+    def form(entry):
+        return entry["target_forms"]["prepared_requirements"]
+
+    def test_the_shipped_entries_validate(self):
+        for name, entry in self.by_name.items():
+            with self.subTest(ecosystem=name):
+                self.assertIsNone(SCAN.validate_ecosystem_entry(entry))
+
+    def test_each_form_violation_yields_the_fixed_reason(self):
+        cases = {
+            "no target_forms": lambda e: e.pop("target_forms"),
+            "target_forms is None": lambda e: e.update(target_forms=None),
+            "target_forms is a string": lambda e: e.update(target_forms="prepared_requirements"),
+            "target_forms is a list": lambda e: e.update(target_forms=["prepared_requirements"]),
+            "target_forms is empty": lambda e: e.update(target_forms={}),
+            "prepared_requirements is missing": lambda e: e.update(
+                target_forms={"another_form": copy.deepcopy(PIP_FORM["prepared_requirements"])}
+            ),
+            "the form is a string": lambda e: e["target_forms"].update(prepared_requirements="-r"),
+            "the form is a list": lambda e: e["target_forms"].update(prepared_requirements=["-r"]),
+            "the form is None": lambda e: e["target_forms"].update(prepared_requirements=None),
+            "target_flag is missing": lambda e: self.form(e).pop("target_flag"),
+            "target_flag is empty": lambda e: self.form(e).update(target_flag=""),
+            "target_flag is None": lambda e: self.form(e).update(target_flag=None),
+            "target_flag is a number": lambda e: self.form(e).update(target_flag=5),
+            "target_flag is a list": lambda e: self.form(e).update(target_flag=["-r"]),
+            "args is missing": lambda e: self.form(e).pop("args"),
+            "args is a string": lambda e: self.form(e).update(args="--no-deps"),
+            "args is None": lambda e: self.form(e).update(args=None),
+            "args is a mapping": lambda e: self.form(e).update(args={"a": "b"}),
+            "an args item is a number": lambda e: self.form(e).update(args=["--no-deps", 5]),
+            "an args item is None": lambda e: self.form(e).update(args=[None]),
+        }
+        for label, mutate in cases.items():
+            with self.subTest(case=label):
+                self.assertEqual(
+                    SCAN.validate_ecosystem_entry(self.mutated(mutate)), "pip_target_forms_invalid"
+                )
+
+    def test_a_token_with_a_shell_metacharacter_is_rejected_in_the_flag_and_in_every_arg(self):
+        for token in (
+            "-r;rm", "--a&b", "--a|b", "--a`b`", "--$HOME", "--a>b", "--a<b", "--a\nb", "--a\rb",
+        ):
+            with self.subTest(token=token, where="target_flag"):
+                entry = self.mutated(lambda e: self.form(e).update(target_flag=token))
+                self.assertEqual(SCAN.validate_ecosystem_entry(entry), "pip_target_forms_invalid")
+            with self.subTest(token=token, where="args"):
+                entry = self.mutated(lambda e: self.form(e).update(args=["--no-deps", token]))
+                self.assertEqual(SCAN.validate_ecosystem_entry(entry), "pip_target_forms_invalid")
+
+    def test_a_token_starting_with_a_path_separator_is_rejected(self):
+        for token in ("/bin/sh", "/tmp/x", os.sep + "x"):
+            with self.subTest(token=token, where="target_flag"):
+                entry = self.mutated(lambda e: self.form(e).update(target_flag=token))
+                self.assertEqual(SCAN.validate_ecosystem_entry(entry), "pip_target_forms_invalid")
+            with self.subTest(token=token, where="args"):
+                entry = self.mutated(lambda e: self.form(e).update(args=[token]))
+                self.assertEqual(SCAN.validate_ecosystem_entry(entry), "pip_target_forms_invalid")
+
+    def test_a_well_formed_variation_still_validates(self):
+        entry = self.mutated(
+            lambda e: e["target_forms"].update(
+                prepared_requirements={"target_flag": "--requirement-file", "args": []},
+                another_form={"target_flag": "-x", "args": ["--y", "z"]},
+            )
+        )
+        self.assertIsNone(SCAN.validate_ecosystem_entry(entry))
+
+    def test_the_old_top_level_shape_is_not_a_valid_pip_entry(self):
+        old = {k: v for k, v in self.pip_entry().items() if k != "target_forms"}
+        old["args"] = ["--format", "json"]
+        old["target_flag"] = "-r"
+        self.assertEqual(SCAN.validate_ecosystem_entry(old), "pip_target_forms_invalid")
+
+    def test_the_checks_that_exist_keep_their_order_and_reasons(self):
+        # Each earlier check wins over a broken target_forms table.
+        broken = {"target_forms": None}
+        self.assertEqual(
+            SCAN.validate_ecosystem_entry({"ecosystem": "bogus", "executable": "x", **broken}),
+            "bogus_ecosystem_not_allowlisted",
+        )
+        self.assertEqual(
+            SCAN.validate_ecosystem_entry({"ecosystem": "pip", "executable": "", **broken}),
+            "pip_executable_invalid",
+        )
+        self.assertEqual(
+            SCAN.validate_ecosystem_entry({"ecosystem": "pip", "executable": "/x/pip-audit", **broken}),
+            "pip_executable_invalid",
+        )
+        self.assertEqual(
+            SCAN.validate_ecosystem_entry({"ecosystem": "pip", "executable": "pip", **broken}),
+            "pip_executable_not_allowlisted",
+        )
+        self.assertEqual(
+            SCAN.validate_ecosystem_entry(
+                {"ecosystem": "pip", "executable": "pip-audit", "args": "x", **broken}
+            ),
+            "pip_args_invalid",
+        )
+        self.assertEqual(
+            SCAN.validate_ecosystem_entry(
+                {"ecosystem": "pip", "executable": "pip-audit", "args": ["a;b"], **broken}
+            ),
+            "pip_args_invalid",
+        )
+
+    def test_the_other_ecosystems_keep_their_validation_reasons(self):
+        self.assertEqual(
+            SCAN.validate_ecosystem_entry({"ecosystem": "npm", "executable": "npm", "args": ["a;b"]}),
+            "npm_args_invalid",
+        )
+        self.assertEqual(
+            SCAN.validate_ecosystem_entry({"ecosystem": "cargo", "executable": "cargo"}),
+            "cargo_executable_not_allowlisted",
+        )
+        self.assertEqual(
+            SCAN.validate_ecosystem_entry({"ecosystem": "go", "executable": "/x/govulncheck"}),
+            "go_executable_invalid",
+        )
+        self.assertEqual(
+            SCAN.validate_ecosystem_entry({"ecosystem": "go", "executable": "govulncheck", "args": ["/x"]}),
+            "go_args_invalid",
+        )
+
+    def test_an_entry_that_carries_target_forms_is_checked_for_any_ecosystem(self):
+        for name in ("npm", "cargo", "go"):
+            entry = copy.deepcopy(self.by_name[name])
+            entry["target_forms"] = {}
+            with self.subTest(ecosystem=name):
+                self.assertEqual(
+                    SCAN.validate_ecosystem_entry(entry), f"{name}_target_forms_invalid"
+                )
+
+    def test_an_npm_cargo_or_go_entry_needs_no_target_forms(self):
+        for name in ("npm", "cargo", "go"):
+            self.assertNotIn("target_forms", self.by_name[name])
+            self.assertIsNone(SCAN.validate_ecosystem_entry(self.by_name[name]))
+
+
+class TestAnInvalidPipFormStartsNoScanner(unittest.TestCase):
+    """With a registry whose pip form is invalid, planning gives the fixed
+    reason once and no plan, and `run_scan` starts no scanner."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        base = Path(self._tmp.name).resolve()
+        self.base = base
+        self.root = base / "project"
+        self.bin_dir = base / "bin"
+        self.root.mkdir()
+        self.bin_dir.mkdir()
+        self.marker = base / "launched.txt"
+        stub = self.bin_dir / "pip-audit"
+        stub.write_text(
+            f"#!{sys.executable}\nopen({str(self.marker)!r}, 'a').write('launched')\n",
+            encoding="utf-8",
+        )
+        stub.chmod(0o755)
+        (self.root / "requirements.txt").write_text("django==3.2.0\n", encoding="utf-8")
+        (self.root / "svc").mkdir()
+        (self.root / "svc" / "requirements.txt").write_text("django==3.2.0\n", encoding="utf-8")
+
+    def registry_with(self, pip_block):
+        text = REGISTRY_PATH.read_text(encoding="utf-8")
+        text = text.replace(PIP_ENTRY_TEXT, pip_block)
+        self.assertIn(pip_block, text)
+        path = self.base / "registry.yaml"
+        path.write_text(text, encoding="utf-8")
+        return path
+
+    INVALID_BLOCKS = {
+        "the old top-level shape": "\n".join([
+            "  - ecosystem: pip",
+            "    manifests: [pyproject.toml, requirements.txt]",
+            "    executable: pip-audit",
+            "    args: [--format, json]",
+            "    target_flag: -r",
+            "    severity_map: {critical: critical, high: high}",
+            "    threshold: {direct_only: true, min_severity: high}",
+        ]),
+        "a missing prepared_requirements form": PIP_ENTRY_TEXT.replace(
+            "prepared_requirements:", "another_form:"
+        ),
+        "an empty target_flag": PIP_ENTRY_TEXT.replace("target_flag: -r", "target_flag: ''"),
+        "an absolute target_flag": PIP_ENTRY_TEXT.replace("target_flag: -r", "target_flag: /bin/sh"),
+        "a shell metacharacter in args": PIP_ENTRY_TEXT.replace("--disable-pip", "'--disable-pip;id'"),
+        "a non-list args": PIP_ENTRY_TEXT.replace(
+            "args: [--no-deps, --disable-pip, --format, json]", "args: --no-deps"
+        ),
+    }
+
+    def test_planning_gives_the_reason_once_and_no_plan(self):
+        for label, block in self.INVALID_BLOCKS.items():
+            with self.subTest(case=label):
+                registry = SCAN.load_registry(self.registry_with(block))
+                with mock.patch.dict(os.environ, {"PATH": str(self.bin_dir)}):
+                    plans, reasons = SCAN.build_scan_jobs(
+                        registry, ["requirements.txt", "svc/requirements.txt", "pyproject.toml"], self.root
+                    )
+                self.assertEqual(plans, [])
+                self.assertEqual(reasons, ["pip_target_forms_invalid"])
+
+    def test_run_scan_reports_the_reason_and_starts_no_scanner(self):
+        for label, block in self.INVALID_BLOCKS.items():
+            with self.subTest(case=label):
+                registry_path = self.registry_with(block)
+                with mock.patch.dict(os.environ, {"PATH": str(self.bin_dir)}):
+                    result = SCAN.run_scan(
+                        self.root, ["requirements.txt", "svc/requirements.txt"], registry_path
+                    )
+                self.assertTrue(result["skipped"], result)
+                self.assertEqual(result["skip_reason"], "pip_target_forms_invalid")
+                self.assertEqual(result["findings"], [])
+                self.assertEqual(result["summary"], "Scan skipped: pip_target_forms_invalid")
+                self.assertFalse(self.marker.exists(), "a scanner was started")
+
+    def test_the_shipped_registry_does_launch_the_scanner(self):
+        # Control for the two tests above: the same fixture, with the valid
+        # registry, starts the scanner (so the stub and the PATH work).
+        with mock.patch.dict(os.environ, {"PATH": str(self.bin_dir)}):
+            SCAN.run_scan(self.root, ["requirements.txt"], SCAN.DEFAULT_REGISTRY_PATH)
+        self.assertTrue(self.marker.exists())
+
+
+# ---------------------------------------------------------------------------
+# sca-python-lockfile-audit task0001 AC-2 (NFR6): the executable allowlist, the
+# lockfile sets and the pip child-environment pins hold their previous values
+# -- asserted against literals. (The pip registry entry itself moved to the
+# per-target-form table; see TestPipTargetFormRegistry.)
+# ---------------------------------------------------------------------------
+
+class TestPipInvariantsUnchanged(unittest.TestCase):
     def test_allowed_executables_are_unchanged(self):
         self.assertEqual(
             SCAN.ALLOWED_EXECUTABLES,
