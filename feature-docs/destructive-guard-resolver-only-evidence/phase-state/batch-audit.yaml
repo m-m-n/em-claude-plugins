@@ -1,0 +1,36 @@
+schema_version: 1
+feature: destructive-guard-resolver-only-evidence
+records:
+- question_id: create-spec.requirement-clarification.resolver-scope
+  packet_id: null
+  answered_at: '2026-11-28T21:27:19+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: which / command -v / printf のみ（Codex B）
+  normalized_answer: which / command -v / printf のみ（Codex B）
+  resolution_note: 'Q1 受け付ける本文の形。選択肢: A=which/command -v/type -P/type -p/printf/echo、B=which/command
+    -v/printf、C=その他。Codex は B を選んだ（resolver は which/command -v、printf は既存テスト互換の例外）。採用:
+    B。選ばなかった: A, C。Opus escalation: 実行なし'
+- question_id: create-spec.requirement-clarification.lexer-agreement-expectation
+  packet_id: null
+  answered_at: '2026-11-28T21:27:19+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 期待値を None に変える（Codex A）
+  normalized_answer: 期待値を None に変える（Codex A）
+  resolution_note: 'Q2 lexer_agreement の `which a\\<改行>m` → "m" の扱い。選択肢: A=None に変更、B=特別扱いで
+    m を残す、C=その他。Codex は A（二重バックスラッシュ後の改行が残り、引数 1 個の呼び出しと読めない）。採用: A。選ばなかった: B, C。Opus
+    escalation: 実行なし'
+- question_id: create-spec.requirement-clarification.resolver-head-path
+  packet_id: null
+  answered_at: '2026-11-28T21:27:19+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 先頭語は完全一致（Codex A）
+  normalized_answer: 先頭語は完全一致（Codex A）
+  resolution_note: 'Q3 先頭語がパス形（/usr/bin/which）の扱い。選択肢: A=受け付けない、B=basename で受け付ける。Codex
+    は A（同じ動作の実行ファイルか静的に確認できない）。採用: A。選ばなかった: B。追加の指摘: 改行で区切られた本文は単一呼び出しでないため unreadable
+    にする→FR2 に反映。Opus escalation: 実行なし'
