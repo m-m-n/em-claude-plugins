@@ -47,7 +47,7 @@ other_feature_doc_fixes: []
 orchestrator_doc_edits: []
 patches:
 - patch_id: sca-pip-no-build-exec-create-plan-p0001
-  status: validated
+  status: applied
   base_input_digest: sha256:1874655bebaeaea02aae22720fb9a9b86680d80552a640314487fdbeb0e9d77c
   base_workflow_blob: cf71a6414a91359dd60dec01fb7f88eadd91c985
 stale_redispatch_count: 0
