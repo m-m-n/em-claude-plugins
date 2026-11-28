@@ -44,7 +44,11 @@ artifacts:
   sha256: sha256:d2dd1ff757ffe9212f121e7dc2cb19d8740dc36f23740b28e515fa2320743e46
   produced_by: create-plan-run-0001
 other_feature_doc_fixes: []
-orchestrator_doc_edits: []
+orchestrator_doc_edits:
+- path: feature-docs/sca-pip-no-build-exec/SPEC.md
+  sha256: sha256:1eacf805e31f614799292ab2fb6b1c2b4b1fcb52698e6b8ed63dfa3fab9622dd
+  reason: 'FR9: planner が SPEC.md を書けないため、Codex の読み取り専用調査に基づき npm / cargo / go の確認結果と
+    go の後続タスクへの参照を「他エコシステムの確認結果」の表に記録した'
 patches:
 - patch_id: sca-pip-no-build-exec-create-plan-p0001
   status: applied
