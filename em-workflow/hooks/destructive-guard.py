@@ -12633,9 +12633,19 @@ def short_flags(args):
     return out
 
 
+# Option words each resolver head accepts between the head and NAME, in the
+# only order they are accepted. Every word is compared exactly.
+_RESOLVER_OPTION_RUNS = {
+    "which": ((), ("-a",), ("--",), ("-a", "--")),
+    "command": (("-v",), ("-v", "--")),
+    "printf": ((),),
+}
+
+
 def read_command_name_evidence(raw_body):
     """Read a command name out of RAW_BODY, or return None ("unreadable")
-    when it cannot be read (task0002 FR11).
+    when it cannot be read (task0002 FR11; narrowed to resolver forms by
+    destructive-guard-resolver-only-evidence).
 
     RAW_BODY is the raw text of the substitution that sat at a statement's
     command-word position — recovered by _strip_unresolved_marks()'s
@@ -12648,36 +12658,63 @@ def read_command_name_evidence(raw_body):
 
     String processing only: no substitution is evaluated, no subprocess is
     launched, no path is resolved or stat-ed, nothing is read from the
-    filesystem (R1, NFR1). Evidence is never taken from any word of the
-    body other than the last one — a body in which an rm/git word appears
-    as some other command's own argument must not produce a route entry.
+    filesystem (R1, NFR1). A body is evidence only when it is a resolver
+    form that prints the name of the command to run — a body in which an
+    rm/git word appears as some other command's own argument (`dirname
+    /opt/rm`, `ls -d /usr/bin/rm`, `echo rm`) must not produce a route entry.
 
     Reading, in order:
     1. RAW_BODY is None, or empty/whitespace-only once stripped: unreadable.
-       Bash removes backslash-newline before it reads, so the pairs are taken
-       out of RAW_BODY first: `r\\<newline>m` is the word `rm` (round 2
-       deferred, task0007).
-    2. Split on whitespace; take the LAST word.
-    3. That word begins with `-`: unreadable — a real shell could never use
-       an option spelling as a command name.
-    4. Otherwise, the basename of that last word (`os.path.basename`) — an
+       Bash removes backslash-newline before it reads, so the pairs
+       (continuation lines) are taken out of RAW_BODY first: `r\\<newline>m`
+       is the word `rm`. A backslash that is itself escaped does not start a
+       continuation.
+    2. Leading and trailing whitespace, newlines included, is dropped.
+    3. A body that still holds a newline is unreadable.
+    4. The body is split into words on spaces and tabs only; a run of spaces
+       and tabs is one separator and no other character separates words.
+    5. The words must be one of these resolver forms, where NAME is exactly
+       one word. Every other word is compared exactly; a different option
+       word, a different order, a second operand, a path-form `command` or
+       `printf`, or any other head is unreadable:
+         which NAME, which -a NAME, which -- NAME, which -a -- NAME
+           (the head is `which`, or a word containing `/` whose last path
+           segment is exactly `which`; with both options only the order
+           `-a --` is read)
+         command -v NAME, command -v -- NAME
+         printf NAME
+    6. NAME begins with `-`: unreadable — a real shell could never use an
+       option spelling as a command name.
+    7. Otherwise, the last path segment of NAME (`os.path.basename`) — an
        absolute or relative path (`/usr/bin/rm`) reads the same as the bare
-       name, matching how a real shell would resolve it. A basename that
-       comes out empty (the word was a bare trailing path separator, naming
-       no file) is unreadable too.
+       name, matching how a real shell would resolve it. A last segment that
+       comes out empty (NAME ended in a path separator, naming no file) is
+       unreadable too.
     """
     if raw_body is None:
         return None
     body = _ESCAPE_OR_CONTINUATION.sub(
         lambda m: "" if m.group(1) is not None else m.group(), raw_body
     ).strip()
-    if not body:
+    if not body or "\n" in body:
         return None
-    last = body.split()[-1]
-    if last.startswith("-"):
+    words = [w for w in re.split(r"[ \t]+", body) if w]
+    head = words[0]
+    if "/" in head and os.path.basename(head) == "which":
+        head = "which"
+    runs = _RESOLVER_OPTION_RUNS.get(head)
+    if runs is None:
         return None
-    name = os.path.basename(last)
-    return name or None
+    operands = words[1:]
+    for run in runs:
+        if len(operands) == len(run) + 1 and tuple(operands[:-1]) == run:
+            name = operands[-1]
+            break
+    else:
+        return None
+    if name.startswith("-"):
+        return None
+    return os.path.basename(name) or None
 
 
 def route_substitution_headed_statement(

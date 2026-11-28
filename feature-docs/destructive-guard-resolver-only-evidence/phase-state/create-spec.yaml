@@ -1,0 +1,30 @@
+schema_version: 1
+feature: destructive-guard-resolver-only-evidence
+phase: create-spec
+status: completed
+generation: 1
+base_revision: 838bffa91ecbc156705748c8fde68b98403033e7
+last_input_digest: sha256:2db941d145fb208d1a851df43ebdfdd34b73da6d09971eae3ed306add4de5169
+active_request_id: null
+packets: {}
+answers: {}
+worker_runs:
+- request_id: create-spec-run-0001
+  status: completed
+  input_digest: sha256:d34c137298501327d4b948c4e418489b37795b99bce4e29507e54bcddcb135e2
+  output_digest: null
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:2db941d145fb208d1a851df43ebdfdd34b73da6d09971eae3ed306add4de5169
+  output_digest: null
+  self_write_set:
+  - feature-docs/destructive-guard-resolver-only-evidence/SPEC.md
+artifacts:
+- path: feature-docs/destructive-guard-resolver-only-evidence/SPEC.md
+  sha256: sha256:3360173eb60b3f7e54c24853f91c430d2f7702a05fe11b1c4ae394b4c92ba737
+  produced_by: create-spec-run-0002
+patches: []
+progress_fingerprint: null
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

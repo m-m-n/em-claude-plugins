@@ -1,0 +1,333 @@
+schema_version: 1
+feature: destructive-guard-resolver-only-evidence
+created: '2026-11-28'
+base_branch: main
+goal: |
+  # destructive-guard: 置換本文の最終語を evidence にするため resolver でない形が誤爆する
+
+  ## 現象
+  `destructive-guard.py` の `read_command_name_evidence()` が置換本文の最終語だけを
+  `body.split()[-1]` + `os.path.basename()` で読むため、本文中の任意の語が最終語の位置に
+  来ただけでコマンド名 evidence として採用される。結果、resolver ラッパーではない置換頭部が
+  `deny` に倒れる誤爆が 4 形ある。
+
+  実測（HEAD で deny、基準版 a722550 では allow）:
+  - `$(dirname /opt/rm) -rf <path>`
+  - `$(ls -d /usr/bin/rm) -rf <path>`
+  - `$(readlink -f ./rm) -rf <path>`
+  - `$(basename /a/b git) clean -fd`
+
+  FR11 が除外しようとした「本文中の任意の語が rm/git に一致しても evidence にしない」条件が、
+  その語が最終語のときだけ通ってしまっている。
+
+  ## 再現手順
+  1. feature destructive-guard-command-name-substitution 適用後の destructive-guard.py に対し、上記 4 形を PreToolUse 入力として与える
+  2. 判定が deny になることを確認する
+  3. 基準版 a722550 の同ファイルに同じ入力を与えると allow になることを確認する
+
+  ## 期待する挙動
+  resolver 系ラッパー（which / command -v 等）の引数としてコマンド名が現れた場合だけを
+  evidence として採用し、それ以外の複数語・演算子入りの本文は unreadable（= allow）として扱う。
+  `$(dirname /opt/rm)` のような形は allow に戻る。
+
+  ## 完了の定義
+  - [ ] 上記 4 形が allow に戻る
+  - [ ] `$(which rm) -rf <path>` / `$(command -v rm) -rf <path>` の検知は維持される
+  - [ ] em-workflow/hooks/tests/destructive-guard-cases.json に上記 4 形と正規形の両方のケースが入っている
+  - [ ] `python3 em-workflow/hooks/tests/run-destructive-guard.py` が全件通る
+  - [ ] `python3 -m unittest discover -s tests` の失敗テスト ID 集合が base revision と一致する
+
+  ## 該当箇所
+  em-workflow/hooks/destructive-guard.py:1135 の read_command_name_evidence()。
+  見逃し側（本文に区切り演算子やパイプを含む形、クォートでコマンド名を包んだ形）は基準版でも
+  allow であり、FR3 が対象外と宣言している範囲。今回直すのは誤爆側のみ。
+  fail-closed な ask への転換は NFR3 が禁じている（無人実行で ask は deny に降格するため）。
+
+  ## 実害・発生条件
+  dirname / basename / readlink / ls -d の出力をコマンド語に使う正常な操作が PreToolUse で止まる。
+  無人実行では ask ではなく deny なので、その場で作業が止まる。
+  由来: feature destructive-guard-command-name-substitution の review round 2、security 観点の指摘。
+  severity medium のため auto-fix の候補ゲートに入らず、review_rework_count も cap 1 に達していたため同 feature 内では直せなかった。
+parent_branch: em-workflow/destructive-guard-resolver-only-evidence/integration
+tier: reduced
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.97
+      '2': 0.03
+      '3': 0.0
+    description_plus_code:
+      '0': 0.0
+      '1': 0.92
+      '2': 0.08
+      '3': 0.0
+  at: '2026-11-28T21:20:40+09:00'
+  reductions:
+  - REQUIREMENTS.md
+  - design step
+  - IMPLEMENTATION.md (unless multiple tasks declare the same file)
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    hooks:
+      language: python
+      build_command: ''
+      test_command: python3 em-workflow/hooks/tests/run-destructive-guard.py
+      format_command: ''
+      e2e_test_command: ''
+    tests:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+      e2e_test_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - SPEC.md
+  status: completed
+  completed_at_commit: 0efcb6d6157cd87c9b1af41e786774a529bf2f0b
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: tier reduced により削減。UI を持たないフックのバグ修正
+- id: create-plan
+  artifacts:
+  - VERIFICATION.md
+  - tasks/
+  status: completed
+  completed_at_commit: d87b31cf78594a18194bc1a3d64264ab94e2ca64
+- id: implement
+  status: completed
+  completed_at_commit: b3067762362a8965b51765025b43f81cf5cabb8b
+  base_commit: 8932eefed31a47035146ea21412d8bcfc9fe1cf7
+- id: review
+  status: completed
+  completed_at_commit: d64385233738ebd080c1f566fd4a54c7e23c17fa
+- id: verify
+  status: completed
+  completed_at_commit: 19000a08012844068613b6c56f512e1ec89e30b3
+  result: pass
+  round: 1
+  passed_ids:
+  - TS-1
+  - TS-2
+  - TS-3
+  - TS-4
+  - TS-5
+  - TS-6
+  - TS-7
+  - TS-8
+  - TS-9
+  - TS-10
+  - TS-11
+  - TS-12
+  - TS-13
+  - TS-14
+  - AC-1
+  - AC-2
+  - AC-3
+  - AC-4
+  - AC-5
+  failed_items: []
+- id: retrospect
+  status: completed
+  completed_at_commit: 6db910fb0111eb82d929667d9d186ba749db70c2
+tasks:
+  task0001:
+    title: Restrict substitution-head command-name evidence to resolver forms
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/hooks/destructive-guard.py
+    - em-workflow/hooks/tests/destructive-guard-cases.json
+    - tests/test_destructive_guard_lexer_agreement.py
+    - tests/test_destructive_guard_resolver_evidence.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    status: merged
+    notes: null
+    branch: em-workflow/destructive-guard-resolver-only-evidence/task0001
+review:
+  status: completed
+  rounds_completed: 1
+  perspectives:
+  - comprehensive
+  - security
+  - architecture
+  - spec
+  residual_critical_high: 0
+  needs_rework: false
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
+requirements:
+  FR1:
+    title: evidence を読む本文の形を限定する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-5
+    - TS-6
+    - TS-9
+    - TS-12
+    - TS-13
+    - TS-14
+  FR2:
+    title: それ以外の本文は unreadable
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-7
+    - TS-8
+  FR3:
+    title: 既存の読み取り規則を残す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-9
+    - TS-11
+  FR4:
+    title: unreadable の扱いは変えない
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
+    - TS-6
+    - TS-7
+    - TS-8
+    - TS-9
+    - TS-10
+    - TS-12
+    - TS-13
+    - TS-14
+  FR5:
+    title: ケース表に追加する
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-5
+    - TS-6
+    - TS-7
+    - TS-8
+    - TS-11
+    - TS-12
+    - TS-13
+    - TS-14
+  FR6:
+    title: docstring を直す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-11
+  FR7:
+    title: 既存の単体テストの期待値を 1 つ直す
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-11
+  NFR1:
+    title: evidence を読めない形は allow に倒す。fail-closed の ask を足さない。
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+    - TS-4
+    - TS-7
+    - TS-8
+  NFR2:
+    title: 見逃し側（区切り演算子やパイプを含む本文、クォートでコマンド名を包んだ本文）は対象外のまま。
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests: []
+  NFR3:
+    title: plugin の version は触らない。
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests: []
+  NFR4:
+    title: failed-run-cleanup-guard.py のミラーは変えない。
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests: []
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2
