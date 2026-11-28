@@ -1,0 +1,88 @@
+feature: destructive-guard-resolver-only-evidence
+collected_at: '2026-11-28T23:15:57+09:00'
+session_ids:
+- 01a22282-2e16-77fb-bb59-d1978ae0b4a1.jsonl
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: reduced
+    rationale: description_plus_code の最終読みでバケット 1（ルール追加 + テスト追加の小規模変更）の確率が 0.92 と最大だったため
+      reduced を採用
+    bases:
+    - basis: description_only
+      score:
+        type: score
+        score: 1.03
+        confidence: 0.97
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread
+            across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to
+            an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+            or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.97
+          '2': 0.03
+          '3': 0.0
+      observed_at: '2026-11-28T21:17:30+09:00'
+    - basis: description_plus_code
+      score:
+        type: score
+        score: 1.09
+        confidence: 0.92
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread
+            across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to
+            an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+            or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.92
+          '2': 0.08
+          '3': 0.0
+      observed_at: '2026-11-28T21:20:30+09:00'
+    pre_survey_estimate:
+      files_expected:
+      - em-workflow/hooks/destructive-guard.py
+      - em-workflow/hooks/tests/destructive-guard-cases.json
+      - tests/test_destructive_guard_home_parent_ref.py
+      - tests/test_destructive_guard_lexer_agreement.py
+      - tests/test_destructive_guard_mixed_rm_precedence.py
+      - tests/test_destructive_guard_parent_ref.py
+      - tests/test_destructive_guard_rm_reason_positions.py
+      changed_lines_approx: 40
+      new_functions_needed: 0
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: false
+      spillover_modules:
+      - tests/test_destructive_guard_home_parent_ref.py
+      - tests/test_destructive_guard_lexer_agreement.py
+      - tests/test_destructive_guard_mixed_rm_precedence.py
+      - tests/test_destructive_guard_parent_ref.py
+      - tests/test_destructive_guard_rm_reason_positions.py
+      work_still_required: true
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 5
+      body_change_kind: new_logic
+      change_containment: single_function
+      caller_and_dependency_count: 3
+      changes_external_contract: false
+      changes_behavior: true
+      evidence: 現行フックでは4形すべてがdenyを返した。whichとcommand -vもdenyを返し、6形のうちJSONに登録されているのはwhichだけだった。12636行の関数は本文の最終語を採用する。本番の直接呼び出し元は1つで、直接依存は_ESCAPE_OR_CONTINUATIONとos.path.basenameの2つ。既存テストはprintf
+        rmと未エスケープの改行を含む本文からの抽出にも依存する。全件ランナーは一時ファイルを作るため未実行で、a722550はローカルに存在しなかった
+follow_up_drafts: []
+lessons_candidates:
+- review round 1 の medium 指摘 3 件（daac18f6f1aeabfa / d6c84e92746140be / 320cfabfcdf53e06）は
+  auto-fix 候補ゲート外のため unresolved のまま残った

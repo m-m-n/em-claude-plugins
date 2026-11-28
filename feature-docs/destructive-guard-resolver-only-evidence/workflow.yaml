@@ -138,7 +138,8 @@ workflow:
   - AC-5
   failed_items: []
 - id: retrospect
-  status: pending
+  status: completed
+  completed_at_commit: 6db910fb0111eb82d929667d9d186ba749db70c2
 tasks:
   task0001:
     title: Restrict substitution-head command-name evidence to resolver forms
