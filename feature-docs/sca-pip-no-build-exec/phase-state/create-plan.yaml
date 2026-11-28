@@ -1,7 +1,7 @@
 schema_version: 1
 feature: sca-pip-no-build-exec
 phase: create-plan
-status: applying_patch
+status: completed
 generation: 1
 base_revision: 91a59b045372fd9859a81ed2e0cd9b81267f6d8d
 last_input_digest: sha256:1874655bebaeaea02aae22720fb9a9b86680d80552a640314487fdbeb0e9d77c
