@@ -26,16 +26,30 @@
 #                    flag and value, when present), producing
 #                    machine-readable output while only READING the
 #                    existing lockfile (no install, no lockfile rewrite, no
-#                    formatter run -- NFR2).
+#                    formatter run -- NFR2). An entry that carries
+#                    `target_forms` has no top-level `args`: its arguments
+#                    live inside the form.
 #   target_flag   -- OPTIONAL. The flag scan-dependencies.py places before
 #                    the audited target path it resolves, so the tool binds
 #                    to the REVIEWED project's own dependency set instead of
 #                    defaulting to the ambient environment. The registry
 #                    owns this flag's literal form; the script owns
 #                    resolving which path fills it in. Where the flag and
-#                    its path go is the script's rule per ecosystem: pip's
-#                    come first; cargo's come immediately after the leading
-#                    `audit` subcommand in `args`.
+#                    its path go is the script's rule per ecosystem:
+#                    cargo's come immediately after the leading `audit`
+#                    subcommand in `args`.
+#   target_forms  -- OPTIONAL. A mapping from the name of a target form to
+#                    that form's own `target_flag` and `args`, for a tool
+#                    whose audited target is never a reviewed file. The
+#                    script puts the form's `target_flag`, then the path it
+#                    prepares, then the form's `args`, in that order; the
+#                    entry's flag and arguments come from the form and from
+#                    nowhere else. pip carries exactly one form,
+#                    `prepared_requirements`: pip-audit is started only on a
+#                    requirements file the script writes outside the
+#                    reviewed tree, holding the exact `name==version` pins it
+#                    extracted statically from the reviewed manifest (no
+#                    dependency resolution, no build step, no install).
 #   severity_map  -- maps the tool's own severity vocabulary onto the
 #                    schema's `critical` / `high`; a value absent from this
 #                    map is below threshold.
@@ -70,8 +84,10 @@ ecosystems:
   - ecosystem: pip
     manifests: [pyproject.toml, requirements.txt]
     executable: pip-audit
-    args: [--format, json]
-    target_flag: -r
+    target_forms:
+      prepared_requirements:
+        target_flag: -r
+        args: [--no-deps, --disable-pip, --format, json]
     severity_map: {critical: critical, high: high}
     threshold: {direct_only: true, min_severity: high}
 

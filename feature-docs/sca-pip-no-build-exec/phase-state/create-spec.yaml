@@ -1,0 +1,136 @@
+schema_version: 1
+feature: sca-pip-no-build-exec
+phase: create-spec
+status: completed
+generation: 1
+base_revision: ea7a4ebea25d7935f7cc350afbc50108aa1ab2bb
+last_input_digest: sha256:f1129373e0a4b79d8e66cb4a1245c89376d2f30fc168d66cc54529c5d9bbb44f
+active_request_id: null
+packets:
+  create-spec-q0001:
+    status: answered
+    issued_at: '2026-11-28T15:20:00+09:00'
+    questions:
+    - question_id: q.pip-partial-pins
+      status: answered
+    - question_id: q.requirements-pin-rules
+      status: answered
+    - question_id: q.registry-schema
+      status: answered
+    - question_id: q.spec-reconciliation-site
+      status: answered
+    - question_id: q.version-bump
+      status: answered
+    - question_id: q.other-ecosystems-scope
+      status: answered
+    - question_id: q.design-step
+      status: answered
+answers:
+  q.pip-partial-pins:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-28T15:30:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - pins_plus_skip
+    freeform: null
+    normalized_answer: 'pin 済みエントリは用意したファイルで監査し、除外が 1 件でもあれば固定の skip_reason を付けて skipped:
+      true にする。0 件なら起動せず skip_reason のみ'
+    resolution_note: 'Codex 相談で pins_plus_skip を推奨（検出結果を残しつつ監査範囲の不足を機械判定できる）。オーケストレーターも同意。注意:
+      未固定の宣言だけの pyproject.toml は起動せず skipped になる（harness entry: codex、1 turn、Opus
+      escalation なし）'
+  q.requirements-pin-rules:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-28T15:30:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - strict_reuse_lockfile_rule
+    freeform: null
+    normalized_answer: lockfile と同じ厳格ルール（name==version のみ。マーカー・ワイルドカード・===・範囲・-e・URL・ローカルパスは除外。-r
+      はルート内のみ、-c は開かない）
+    resolution_note: 'Codex 相談で strict を推奨。注意: _pip_pin_is_valid はワイルドカードを排除しないため、抽出時に別途判定する（harness
+      entry: codex、1 turn、Opus escalation なし）'
+  q.registry-schema:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-28T15:30:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - per_form_table
+    freeform: null
+    normalized_answer: pip エントリに形式ごとのテーブルを持たせ、--no-deps --disable-pip をレジストリ側に移す
+    resolution_note: 'Codex 相談で per_form_table を推奨。オーケストレーターも同意（harness entry: codex、1
+      turn、Opus escalation なし）'
+  q.spec-reconciliation-site:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-28T15:30:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - supersede_in_this_spec
+    freeform: null
+    normalized_answer: review-sca-axis の文書は触らず、この feature の SPEC に FR1 の pip コマンド形の置き換えと
+      NFR2 への当てはめを書く
+    resolution_note: 'worker の暫定案は amend_review_sca_axis だったが、Codex は先例（sca-python-lockfile-audit
+      の SPEC が pip 起動形式を自 SPEC で定めた）を根拠に supersede_in_this_spec を推奨。書き込み範囲が狭く、検証根拠が変更と一緒に読めるため、比較してこちらを採用（harness
+      entry: codex、1 turn、Opus escalation なし）'
+  q.version-bump:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-28T15:30:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - leave_to_actions
+    freeform: null
+    normalized_answer: version は手で変えない。main への push 時に Actions が patch を上げる。この受け入れ条件は
+      SPEC から外す
+    resolution_note: 'Codex 相談で leave_to_actions を推奨（既存の起動方法の是正で minor/major に当たらない。プロジェクトルール
+      core-plugin-version-bump に従う）（harness entry: codex、1 turn、Opus escalation なし）'
+  q.other-ecosystems-scope:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-28T15:30:00+09:00'
+    source: batch-codex-consultation
+    answer_mode: single_select
+    selected_option_ids:
+    - record_and_file_followup
+    freeform: null
+    normalized_answer: npm / cargo / go の確認結果を SPEC に事実として記録し、見つかったリスクは別タスクとして起票する。実装範囲は
+      pip に限る
+    resolution_note: 'Codex 相談で record_and_file_followup を推奨（go の実行有無は起動設定だけでは確定できないため、記録して別タスク化）（harness
+      entry: codex、1 turn、Opus escalation なし）'
+  q.design-step:
+    packet_id: create-spec-q0001
+    answered_at: '2026-11-28T15:30:00+09:00'
+    source: batch-decision-table
+    answer_mode: single_select
+    selected_option_ids:
+    - decide_autonomously
+    freeform: null
+    normalized_answer: design_step_recommendation（skip）をそのまま採る
+    resolution_note: 'batch-policies.yaml create-spec.design-step: decide_autonomously'
+worker_runs:
+- request_id: create-spec-run-0001
+  status: needs_user_input
+  input_digest: sha256:d06b9a1a99156f731fedb38f1f9529beb94f42bfae96139a49bf11becefd39e5
+  output_digest: sha256:9441c87bc7f4c60a3efa64cacbba9d65ead6f8e24b3ef65350ee94d8dcc5883a
+- request_id: create-spec-run-0002
+  status: completed
+  input_digest: sha256:98f58c44417cc28edeadb61acb0344cde4c73756154f52392b7d1d3c2dc95570
+  output_digest: sha256:e46e7cd93586726e6f9b3282bf3fac42e7ad56a0cc2e33b73f2c3f96243a0cfc
+- request_id: create-spec-run-0003
+  status: completed
+  input_digest: sha256:f1129373e0a4b79d8e66cb4a1245c89376d2f30fc168d66cc54529c5d9bbb44f
+  output_digest: sha256:d7e75bf1e12f7f7f640bd41074152deb5b8d138bb7424edf9a2f38dfb78b5520
+artifacts:
+- path: feature-docs/sca-pip-no-build-exec/REQUIREMENTS.md
+  sha256: sha256:9c0cb0d3f769ecfdd6132e1ccb4510394a7fb5bf8066ee19682a95c0f13eaaa3
+  produced_by: create-spec-run-0003
+- path: feature-docs/sca-pip-no-build-exec/SPEC.md
+  sha256: sha256:4a138a08c73ddb5467e70df297204d507b589a7ac65910dca6d2184c59d48ce7
+  produced_by: create-spec-run-0003
+patches: []
+progress_fingerprint: sha256:036297183c627c9dfe9c088eb5497f6f7b4b2bd882cc344564b3b701cc81f2b5
+stale_redispatch_count: 0
+resolved_input_cache: {}
+last_error: null

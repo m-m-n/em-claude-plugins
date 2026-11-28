@@ -9,7 +9,10 @@ Covers the task's Acceptance Criteria
   literal values pinned from the behavior before the isolation change, and
   the environment each scanner receives is the runner's environment
   restricted to the pass-through keys, with that ecosystem's existing pins
-  applied, nothing added and nothing missing.
+  applied, nothing added and nothing missing. (sca-pip-no-build-exec moved the
+  pip requirements / pyproject jobs to the prepared-requirements argument
+  form that the lockfile job already had; their working directory and
+  environment pins are unchanged.)
 - AC-2 (FR10, FR11): `ECOSYSTEM_ENV_PINS` equals a literal snapshot of its
   content before the isolation change, for every ecosystem key.
 - AC-3 (FR11): the npm, cargo, pip and go child processes each receive the
@@ -113,6 +116,12 @@ CLEAN_PAYLOADS = {
 PYPROJECT_DJANGO = (
     '[tool.poetry]\nname = "demo"\nversion = "0.1.0"\n\n'
     '[tool.poetry.dependencies]\npython = "^3.9"\ndjango = ">=3.2"\n'
+)
+# A manifest that states an exact pin: the pip requirements / pyproject jobs
+# audit only the pins the manifest states (sca-pip-no-build-exec).
+PYPROJECT_DJANGO_PINNED = (
+    '[project]\nname = "demo"\nversion = "0.1.0"\n'
+    'dependencies = ["django==3.2.0"]\n'
 )
 POETRY_LOCK_DJANGO = (
     "[[package]]\n"
@@ -315,38 +324,52 @@ class TestAC1GoJobIsUnchanged(ScanHarness):
 
 
 class TestAC1PipJobIsUnchanged(ScanHarness):
-    def test_ac1_pip_requirements_file_runs_in_the_project_root_with_its_literal_argv(self):
+    def assertPreparedFormCall(self, call):
+        """The launch is [-r, <prepared file>, --no-deps, --disable-pip,
+        --format, json] from the project root; the prepared file sits in the
+        temp parent and is gone after the scan."""
+        argv = call["argv"]
+        self.assertEqual(len(argv), 6, argv)
+        self.assertEqual(argv[0], "-r")
+        self.assertEqual(argv[2:], ["--no-deps", "--disable-pip", "--format", "json"])
+        prepared = Path(argv[1])
+        self.assertEqual(prepared.parent, self.temp_parent)
+        self.assertRegex(prepared.name, r"^pip-lockfile-.+\.txt$")
+        self.assertFalse(prepared.exists(), "the prepared file was left behind")
+        self.assertEqual(call["cwd"], self.real())
+
+    def test_ac1_pip_requirements_file_runs_in_the_project_root_with_the_prepared_form(self):
         self.write("req/requirements.txt", "django==3.2.0\n")
         self.install("pip-audit")
         result = self.scan(["req/requirements.txt"])
         self.assertFalse(result["skipped"], result)
         call = self.only_launch("pip-audit")
-        self.assertEqual(call["argv"], ["-r", "req/requirements.txt", "--format", "json"])
-        self.assertEqual(call["cwd"], self.real())
+        self.assertPreparedFormCall(call)
+        self.assertNotIn("req/requirements.txt", call["argv"])
 
     def test_ac1_pip_requirements_file_at_the_root(self):
         self.write("requirements.txt", "django==3.2.0\n")
         self.install("pip-audit")
         self.scan(["requirements.txt"])
         call = self.only_launch("pip-audit")
-        self.assertEqual(call["argv"], ["-r", "requirements.txt", "--format", "json"])
-        self.assertEqual(call["cwd"], self.real())
+        self.assertPreparedFormCall(call)
+        self.assertNotIn("requirements.txt", call["argv"])
 
-    def test_ac1_pip_pyproject_audits_its_directory_as_a_bare_target(self):
-        self.write("lock/pyproject.toml", PYPROJECT_DJANGO)
+    def test_ac1_pip_pyproject_runs_in_the_project_root_with_the_prepared_form(self):
+        self.write("lock/pyproject.toml", PYPROJECT_DJANGO_PINNED)
         self.install("pip-audit")
         self.scan(["lock/pyproject.toml"])
         call = self.only_launch("pip-audit")
-        self.assertEqual(call["argv"], ["lock", "--format", "json"])
-        self.assertEqual(call["cwd"], self.real())
+        self.assertPreparedFormCall(call)
+        self.assertNotIn("lock", call["argv"])
 
-    def test_ac1_pip_pyproject_at_the_root_audits_the_current_directory(self):
-        self.write("pyproject.toml", PYPROJECT_DJANGO)
+    def test_ac1_pip_pyproject_at_the_root_never_audits_the_current_directory(self):
+        self.write("pyproject.toml", PYPROJECT_DJANGO_PINNED)
         self.install("pip-audit")
         self.scan(["pyproject.toml"])
         call = self.only_launch("pip-audit")
-        self.assertEqual(call["argv"], [".", "--format", "json"])
-        self.assertEqual(call["cwd"], self.real())
+        self.assertPreparedFormCall(call)
+        self.assertNotIn(".", call["argv"])
 
     def test_ac1_pip_lockfile_audits_a_prepared_file_from_the_project_root(self):
         self.write("lock/pyproject.toml", PYPROJECT_DJANGO)
@@ -369,6 +392,13 @@ class TestAC1PipJobIsUnchanged(ScanHarness):
         self.write("requirements.txt", "django==3.2.0\n")
         self.install("pip-audit")
         self.scan(["requirements.txt"])
+        call = self.only_launch("pip-audit")
+        self.assertEqual(call["env"], self.expected_env("pip"))
+
+    def test_ac1_pip_pyproject_environment_is_the_runners_with_the_existing_pip_pins(self):
+        self.write("pyproject.toml", PYPROJECT_DJANGO_PINNED)
+        self.install("pip-audit")
+        self.scan(["pyproject.toml"])
         call = self.only_launch("pip-audit")
         self.assertEqual(call["env"], self.expected_env("pip"))
 

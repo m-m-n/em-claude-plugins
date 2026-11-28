@@ -133,16 +133,26 @@ def _parse_flow_mapping(value):
     return result
 
 
+def _parse_value(value):
+    if value.startswith("["):
+        return _parse_flow_list(value)
+    if value.startswith("{"):
+        return _parse_flow_mapping(value)
+    return value
+
+
 def parse_vuln_scanners_yaml(text):
     """Restricted-subset parser for vuln-scanners.yaml's `ecosystems:` list.
-    Returns a list of per-ecosystem dicts. Raises ValueError if no
-    top-level `ecosystems:` key is found or a line inside the block
-    violates the expected nesting."""
+    Returns a list of per-ecosystem dicts. A key with no value opens a nested
+    block mapping whose keys sit two columns deeper (pip's `target_forms`
+    table: the form name at indent 6, its keys at indent 8). Raises
+    ValueError if no top-level `ecosystems:` key is found or a line inside
+    the block violates the expected nesting."""
     lines = text.splitlines()
     ecosystems = []
     in_block = False
     saw_block = False
-    current = None
+    stack = []  # (indent of the key, the mapping it opened), innermost last
 
     for raw in lines:
         line = raw.split("#", 1)[0].rstrip()
@@ -165,12 +175,15 @@ def parse_vuln_scanners_yaml(text):
                 raise ValueError(f"expected an ecosystem list item, got: {raw!r}")
             current = {"ecosystem": stripped[len("- ecosystem:"):].strip()}
             ecosystems.append(current)
+            stack = [(2, current)]
             continue
 
-        if current is None:
+        if not stack:
             raise ValueError(f"attribute line before any ecosystem: {raw!r}")
 
-        if indent != 4:
+        while len(stack) > 1 and indent <= stack[-1][0]:
+            stack.pop()
+        if indent != 2 + 2 * len(stack):
             raise ValueError(f"unexpected indentation: {raw!r}")
 
         key, sep, value = stripped.partition(":")
@@ -178,12 +191,13 @@ def parse_vuln_scanners_yaml(text):
         value = value.strip()
         if not sep:
             raise ValueError(f"malformed line: {raw!r}")
-        if value.startswith("["):
-            current[key] = _parse_flow_list(value)
-        elif value.startswith("{"):
-            current[key] = _parse_flow_mapping(value)
+        container = stack[-1][1]
+        if value == "":
+            child = {}
+            container[key] = child
+            stack.append((indent, child))
         else:
-            current[key] = value
+            container[key] = _parse_value(value)
 
     if not saw_block:
         raise ValueError("no top-level `ecosystems:` key found")
@@ -247,8 +261,22 @@ class TestVulnScannersRegistryStructure(unittest.TestCase):
     def test_args_is_non_empty_list_per_ecosystem(self):
         for name, entry in self.by_name.items():
             with self.subTest(ecosystem=name):
-                self.assertIsInstance(entry["args"], list)
-                self.assertTrue(entry["args"])
+                if name == "pip":
+                    # pip's flag and arguments live in its target-form table.
+                    self.assertNotIn("args", entry)
+                    args = entry["target_forms"]["prepared_requirements"]["args"]
+                else:
+                    args = entry["args"]
+                self.assertIsInstance(args, list)
+                self.assertTrue(args)
+
+    def test_pip_entry_carries_its_arguments_in_the_target_form_table(self):
+        pip = self.by_name["pip"]
+        self.assertEqual(list(pip["target_forms"]), ["prepared_requirements"])
+        self.assertEqual(
+            pip["target_forms"]["prepared_requirements"],
+            {"target_flag": "-r", "args": ["--no-deps", "--disable-pip", "--format", "json"]},
+        )
 
     def test_severity_map_maps_critical_and_high(self):
         for name, entry in self.by_name.items():
@@ -274,6 +302,24 @@ class TestVulnScannersParserDetectsMalformedInput(unittest.TestCase):
     def test_malformed_list_item_raises(self):
         with self.assertRaises(ValueError):
             parse_vuln_scanners_yaml("ecosystems:\n  - not_ecosystem: npm\n")
+
+    def test_a_nested_block_is_read_and_a_misindented_one_raises(self):
+        nested = (
+            "ecosystems:\n  - ecosystem: pip\n    target_forms:\n"
+            "      form:\n        target_flag: -r\n        args: [a, b]\n"
+            "    executable: pip-audit\n"
+        )
+        parsed = parse_vuln_scanners_yaml(nested)
+        self.assertEqual(
+            parsed,
+            [{
+                "ecosystem": "pip",
+                "target_forms": {"form": {"target_flag": "-r", "args": ["a", "b"]}},
+                "executable": "pip-audit",
+            }],
+        )
+        with self.assertRaises(ValueError):
+            parse_vuln_scanners_yaml(nested.replace("        target_flag", "          target_flag"))
 
 
 # ---------------------------------------------------------------------------
@@ -310,7 +356,9 @@ class TestEcosystemSelectionAndCommandAssembly(unittest.TestCase):
         expected_commands = {
             "npm": ["npm", "audit", "--json", "--workspaces=false"],
             "cargo": ["cargo-audit", "audit", "--json"],
-            "pip": ["pip-audit", "--format", "json"],
+            # pip's flag and arguments belong to its target form; the command
+            # builder yields the executable only.
+            "pip": ["pip-audit"],
             "go": ["govulncheck", "-json", "./..."],
         }
         for name, expected_cmd in expected_commands.items():
@@ -906,8 +954,8 @@ class TestPipNormalizationRealInputContract(unittest.TestCase):
             "[project]\n"
             'name = "demo"\n'
             "dependencies = [\n"
-            '    "django>=3.2",\n'
-            '    "requests>=2.25",\n'
+            '    "django==3.2.0",\n'
+            '    "requests==2.25.0",\n'
             "]\n"
         )
         result = _run_scan_with_stub(

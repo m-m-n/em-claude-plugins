@@ -1,0 +1,131 @@
+feature: sca-pip-no-build-exec
+collected_at: '2026-11-28T20:31:09+09:00'
+session_ids:
+- 01a221eb-56a0-711a-bf2e-99e9615e65fa
+signals:
+  review_critical_high: []
+  conflict_reworks: []
+  file_prediction_misses: []
+  verification_failures: []
+  discretionary_perspectives: []
+  declined_findings: []
+  tier_decision:
+    tier: full
+    rationale: description_plus_code の最終読みで bucket 2（新ロジック・複数モジュール・外部契約の変更）が 0.93、score
+      2.07 となり full を採用
+    bases:
+    - basis: description_only
+      score:
+        type: score
+        score: 2.09
+        confidence: 0.89
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread
+            across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to
+            an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+            or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.01
+          '2': 0.89
+          '3': 0.1
+      observed_at: '2026-11-28T15:05:30+09:00'
+    - basis: description_plus_code
+      score:
+        type: score
+        score: 2.07
+        confidence: 0.93
+        legend:
+          '0': 'Only a wording or rule-text change: no new logic, and no test change.'
+          '1': A rule addition combined with a test addition, or a small change spread
+            across a few files together with a small test change.
+          '2': New logic, a change reaching across several modules, or a change to
+            an external contract.
+          '3': 'A broad cross-cutting change: new files, new modules, a new dependency,
+            or a change to the architecture.'
+        probabilities:
+          '0': 0.0
+          '1': 0.0
+          '2': 0.93
+          '3': 0.07
+      observed_at: '2026-11-28T15:10:40+09:00'
+    pre_survey_estimate:
+      files_expected:
+      - em-workflow/references/vuln-scanners.yaml
+      - em-workflow/scripts/scan-dependencies.py
+      - tests/test_sca_scan_invocation.py
+      - tests/test_sca_scan_normalization.py
+      - tests/test_sca_scan_job_grouping.py
+      - tests/test_sca_per_project_scan_binding.py
+      - tests/test_sca_run_scan_plan_units.py
+      - tests/test_sca_scan_unchanged_surfaces.py
+      - tests/test_scan_dependencies_pip_directness.py
+      - tests/test_scan_dependencies_pyproject_directness.py
+      - feature-docs/review-sca-axis/SPEC.md
+      - feature-docs/review-sca-axis/VERIFICATION.md
+      - em-workflow/.claude-plugin/plugin.json
+      - .claude-plugin/marketplace.json
+      changed_lines_approx: 280
+      new_functions_needed: 2
+      new_files_needed: 0
+      new_dependencies_needed: 0
+      covering_tests_exist: true
+      spillover_modules:
+      - npm
+      - cargo
+      - go
+      - tests/test_sca_pip_lockfile_audit.py
+      - tests/test_sca_scan_execution.py
+      work_still_required: true
+      test_change_kind: new_behavior_tests
+      added_test_cases_approx: 6
+      body_change_kind: new_logic
+      change_containment: multiple_modules
+      caller_and_dependency_count: 10
+      changes_external_contract: true
+      changes_behavior: true
+      evidence:
+      - 'em-workflow/references/vuln-scanners.yaml:70-76 の現行 pip エントリは executable:
+        pip-audit、args: [--format, json]、target_flag: -r'
+      - em-workflow/scripts/scan-dependencies.py:1087-1090,1202-1209,1222-1237 では、レビュー対象ルートを
+        cwd とし、requirements.txt は -r <変更ファイル>、pyproject.toml は . または親ディレクトリへの位置引数に変換する。両形式に同じ
+        args を追加する
+      - em-workflow/scripts/scan-dependencies.py:3793-3800 では、対象マニフェストから固定版の一覧を作る処理を挟まず、現行の引数でスキャナーを起動する。feature-docs/review-sca-axis/reviews/round2.yaml:113-141
+        は両形式のビルドコード実行リスクと対策の未解決を記録する
+      - em-workflow/scripts/scan-dependencies.py:1020-1023,1033-1062,1527-1536 では、許可した環境変数と絶対
+        PATH を組み立て、PIP_CONFIG_FILE と PIP_INDEX_URL を固定して引数配列で起動する
+      - em-workflow/scripts/scan-dependencies.py:934-940,2711-2764,2785-2808,3317-3337
+        では、変更一覧にある poetry.lock または Pipfile.lock を優先して静的に読み、生成した name==version の一時ファイルを監査する。1223-1230
+        でこの経路に --no-deps --disable-pip を付ける
+      - tests/test_sca_scan_invocation.py:293-308,365-402,554-568 は両形式の引数とレジストリ全体を固定する。現行
+        forbidden_tokens は install、--fix、-o、--output、--require-hashes の5個で、--no-deps
+        と --disable-pip は別のテストでロックファイル経路に限定する
+      - tests/test_sca_scan_normalization.py:247-251,301-318 は args のリスト型と pip-audit
+        --format json を固定する。904-919 は範囲指定を含む pyproject.toml をスタブで監査して検出結果を確認する
+      - tests/test_sca_scan_job_grouping.py:209-220、tests/test_sca_per_project_scan_binding.py:1059-1067、tests/test_sca_run_scan_plan_units.py:694-711、tests/test_sca_scan_unchanged_surfaces.py:317-349
+        にも現行の pip 引数を固定するテストがある
+      - tests/test_scan_dependencies_pip_directness.py:663-684 と tests/test_scan_dependencies_pyproject_directness.py:504-525
+        は静的に解釈できない入力でも現行の実行経路を通す。tests/test_sca_pip_lockfile_audit.py:736-745 には変換不能時の固定理由と起動なしを確認する既存テストがある
+      - feature-docs/review-sca-axis/SPEC.md:43-47 は FR1 のコマンド、182-185 は NFR2 の読み取り専用制約を定める。VERIFICATION.md:59
+        は現行のファイル指定とディレクトリ指定を検証対象とし、tasks/task0010.md:134-146 は対策を復旧作業の対象外としている
+      - em-workflow/scripts/scan-dependencies.py:4048-4052 は --registry による上書きを公開する。3994-4006
+        は固定理由を集約し、em-workflow/references/review-output-schema.json:28 は skip_reason
+        に文字列または null を許容する
+      - em-workflow/references/vuln-scanners.yaml:48-68,78-83 と em-workflow/scripts/scan-dependencies.py:3570-3579,3728-3751
+        では、npm は隔離先のマニフェストとロックファイルで audit を実行し、Cargo は隔離先の Cargo.lock を --file で読む。Go
+        は対象ディレクトリで govulncheck -json ./... を起動し、1024-1029 で GOFLAGS=-mod=readonly
+        を設定する
+      - em-workflow/.claude-plugin/plugin.json:7 と .claude-plugin/marketplace.json:27
+        の現行 em-workflow バージョンはともに 0.5.16
+      - 呼び出し関係の10件は、em-workflow/scripts/scan-dependencies.py:839,1065,1153,3771 の4関数に直接つながる同スクリプト内の別関数を重複なく数えた
+      - 変更行数・関数数・追加テスト数は、em-workflow/scripts/scan-dependencies.py:2617-2627,2785-2808
+        の読み取りと一時ファイル生成を再利用し、固定版の一覧を作れない入力をスキップする場合の概算
+follow_up_drafts: []
+lessons_candidates:
+- 'task0001 は 1 回目の implementer が merged イベントを残さず停止し（journal: implementer stopped
+  without a merged event）、batch の自動 retry 1 回でマージまで到達した'
+- review round 1 で medium の指摘 11 件が unresolved のまま残り、triage で後続タスクとして起票された（critical/high
+  は 0 件）

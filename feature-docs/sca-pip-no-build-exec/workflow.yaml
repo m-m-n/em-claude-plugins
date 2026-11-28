@@ -1,0 +1,363 @@
+schema_version: 1
+feature: sca-pip-no-build-exec
+created: '2026-11-28'
+base_branch: main
+goal: '# em-workflow SCA 軸の pip 経路でレビュー対象のビルドコードが実行されうる問題を塞ぐ
+
+
+  ## やりたいこと
+
+
+  `em-workflow` の SCA 軸（軸 2）の pip 経路で、`pip-audit` がレビュー対象プロジェクトのビルドコードを実行しうる問題を、正しい形で塞ぐ。
+
+
+  ## 背景
+
+
+  review-sca-axis のレビュー round 2 で security 観点（codex）が high として検出した指摘（stable_id `2febcb34aa888ac7`）:
+
+
+  > `pip-audit` は `-r requirements.txt` 形式と、プロジェクトディレクトリ指定形式の両方で依存解決を行い build backend を走らせる。レビュー対象プロジェクトに local / editable / sdist 依存があると、`setup.py` や PEP 517 フックがレビュアープロセスの権限で実行される。`build_child_env` のサニタイズ・`PIP_CONFIG_FILE=/dev/null`・`PIP_INDEX_URL` の固定・argv 配列での起動は、設定汚染とインジェクションには効くが、ローカルコード実行には効かない。
+
+
+  round 2 の auto-fix はレジストリ（`em-workflow/references/vuln-scanners.yaml`）の pip エントリの `args` に `--no-deps --disable-pip` を足したが、これは不完全な適用だった:
+
+
+  - レジストリの `args` は pip の 2 つのターゲット形式（`-r <file>` と `<dir>`）で共有されるため、`--no-deps` がディレクトリ指定形式にも乗ってしまう。`--no-deps` は `-r` 形式でしか成立しないので、適用された変更はこの緩和策の正しい実装になっていない。
+
+  - テストピン側（`tests/test_sca_scan_invocation.py` / `tests/test_sca_scan_normalization.py`）が同時に更新されず、`python3 -m unittest discover -s tests` が 9 件失敗する状態になった。`--no-deps` は同ファイルの forbidden_tokens にも入っている。
+
+
+  verify フェーズの rework（task0010）で、レジストリは SPEC の `pip-audit --format json` の形に戻す。緩和策そのものは未対応のまま残るため、本タスクとして切り出す。
+
+
+  ## 受け入れ条件 / 完了の定義
+
+
+  - [ ] pip 経路が、レビュー対象プロジェクトの build backend / `setup.py` を実行しない形で監査できること
+
+  - [ ] ターゲット形式ごとに引数を出し分けられるようにする（レジストリのスキーマ変更を伴う可能性が高い）。1 本の `args` を 2 形式で共有する現在の形では緩和策を正しく置けない
+
+  - [ ] 静的に抽出した完全に pin された依存インベントリを監査する形にするか、それが作れない入力には機械可読な `skip_reason` を返す
+
+  - [ ] `tests/test_sca_scan_invocation.py` の forbidden_tokens を含むテストピンを、選んだ形に合わせて更新する
+
+  - [ ] FR1（`pip-audit --format json` というコマンド形の記述）と NFR2 に対する整合を SPEC 側で決着させる
+
+  - [ ] `em-workflow/.claude-plugin/plugin.json` と `.claude-plugin/marketplace.json` の version を同じ値で上げる
+
+
+  ## 制約・前提
+
+
+  - レジストリ（`vuln-scanners.yaml`）とテストピンは同一の変更で両方を触る。片側だけの適用が今回の不整合の原因
+
+  - 他エコシステム（npm / cargo / go）の同種のリスクも同じ機会に確認する
+
+
+  ## 追加指示（起動時）
+
+
+  - 実装完了後、integration ブランチを remote に push し、base_branch に対して gh pr create で PR を作る。integration ブランチはローカル・リモートともに残す（base_branch へ自動マージしない）
+
+  - 不明点は Codex に相談し、比較してより良いと判断した選択肢を採用する
+
+  - その議論の内容を Notion に記録する
+
+  '
+parent_branch: em-workflow/sca-pip-no-build-exec/integration
+tier: full
+tier_decision:
+  by: orchestrator
+  confidence:
+    description_only:
+      '0': 0.0
+      '1': 0.01
+      '2': 0.89
+      '3': 0.1
+    description_plus_code:
+      '0': 0.0
+      '1': 0.0
+      '2': 0.93
+      '3': 0.07
+  at: '2026-11-28T15:11:00+09:00'
+  reductions: []
+project:
+  license: none
+  design_system:
+    kind: none
+    paths: []
+  components:
+    main:
+      language: python
+      build_command: ''
+      test_command: python3 -m unittest discover -s tests
+      format_command: ''
+workflow:
+- id: create-spec
+  artifacts:
+  - REQUIREMENTS.md
+  - SPEC.md
+  status: completed
+  completed_at_commit: eb03da3de69d8810b02307fbec226eb525b98170
+- id: design
+  artifacts:
+  - DESIGN.md
+  - design/
+  status: skipped
+  skipped_reason: 'UI が無い（プラグイン内部のスクリプト・レジストリ・テストの変更）。create-spec.design-step: decide_autonomously → analyst の推奨どおり skip、design-system 候補 0 件'
+- id: create-plan
+  artifacts:
+  - IMPLEMENTATION.md
+  - VERIFICATION.md
+  - THREAT-MODEL.md
+  - tasks/
+  status: completed
+  completed_at_commit: 276765bd7df49350dd4feffacd579c85e2f09d11
+- id: implement
+  status: completed
+  base_commit: 525372bf130a76fe7796c07c44f485842dc169fa
+  completed_at_commit: f23318b2eea8802b42bc5fd72257777080e4ce3a
+- id: review
+  status: completed
+  completed_at_commit: 6d674b5cc1223a26a2f31ea44d16808c2ae74a2f
+- id: verify
+  status: completed
+  result: pass
+  round: 1
+  passed_ids:
+  - TS-1
+  - TS-2
+  - TS-3
+  - TS-4
+  - TS-5
+  - TS-6
+  - TS-7
+  - TS-8
+  - TS-9
+  - AC-1
+  - AC-2
+  - AC-3
+  - AC-4
+  - AC-5
+  - AC-6
+  - AC-7
+  - AC-8
+  - AC-9
+  - AC-10
+  failed_items: []
+  completed_at_commit: 3382fc558df1354722e38ddcf43c208c0028a214
+- id: retrospect
+  status: completed
+  completed_at_commit: 7977fca3d424ea3d09efc6286b4eb32714550b89
+tasks:
+  task0001:
+    title: pip routes audit only a prepared pinned inventory
+    plan: tasks/task0001.md
+    files:
+    - em-workflow/scripts/scan-dependencies.py
+    - em-workflow/references/vuln-scanners.yaml
+    - tests/test_sca_pip_manifest_prepared_audit.py
+    - tests/test_sca_scan_invocation.py
+    - tests/test_sca_scan_normalization.py
+    - tests/test_sca_scan_job_grouping.py
+    - tests/test_sca_run_scan_plan_units.py
+    - tests/test_sca_scan_unchanged_surfaces.py
+    - tests/test_sca_per_project_scan_binding.py
+    - tests/test_sca_scanner_project_config_isolation.py
+    - tests/test_scan_dependencies_pip_directness.py
+    - tests/test_scan_dependencies_pyproject_directness.py
+    - tests/test_sca_scan_execution.py
+    skills:
+    - backend-impl
+    domains:
+    - input-handling
+    - external-io
+    - api-contract
+    - config-infra
+    complexity: high
+    requirements:
+    - FR1
+    - FR2
+    - FR3
+    - FR4
+    - FR5
+    - FR6
+    - FR7
+    - NFR1
+    - NFR2
+    - NFR3
+    - NFR4
+    - NFR5
+    - NFR6
+    status: merged
+    branch: em-workflow/sca-pip-no-build-exec/task0001
+    notes: null
+review:
+  status: completed
+  rounds_completed: 1
+  plan:
+    floor:
+    - comprehensive
+    - security
+    - performance
+    - architecture
+    - spec
+    discretionary: []
+    cross_validation: true
+  perspectives:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  residual_critical_high: 0
+  needs_rework: false
+requirements:
+  FR1:
+    title: Prepared-inventory audit on every pip route
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-3
+  FR2:
+    title: Pin extraction rule
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-2
+    - TS-3
+  FR3:
+    title: Partly pinnable and unpinnable inputs
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-3
+    - TS-4
+  FR4:
+    title: Lockfile route
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-5
+  FR5:
+    title: Per-target-form arguments in the registry
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-6
+  FR6:
+    title: Fixed skip tokens
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-3
+    - TS-4
+  FR7:
+    title: Test pins updated in the same change
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-9
+  FR8:
+    title: FR1/NFR2 reconciliation in this SPEC
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  FR9:
+    title: Other-ecosystem check
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks: []
+    tests: []
+  NFR1:
+    title: No reviewed-project code execution
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-1
+    - TS-2
+    - TS-3
+  NFR2:
+    title: Read-only discipline
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-7
+  NFR3:
+    title: Existing isolation unchanged
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-5
+    - TS-9
+  NFR4:
+    title: Untrusted text
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-8
+  NFR5:
+    title: Determinism
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-3
+  NFR6:
+    title: Tests
+    status: ok
+    tbd_reason: null
+    excluded_reason: null
+    tasks:
+    - task0001
+    tests:
+    - TS-9
+batch:
+  review_rework_count: 0
+  verify_rework:
+    rounds: 0
+    failed_id_counts: {}
+  infra_resume:
+    rounds: 0
+    cap: 2

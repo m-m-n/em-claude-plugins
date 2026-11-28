@@ -407,7 +407,10 @@ class TestCombinedSkipReasonIsDeterministic(unittest.TestCase):
         "  - ecosystem: pip\n"
         "    manifests: [requirements.txt]\n"
         "    executable: pip-audit\n"
-        "    args: [--format, json]\n"
+        "    target_forms:\n"
+        "      prepared_requirements:\n"
+        "        target_flag: -r\n"
+        "        args: [--no-deps, --disable-pip, --format, json]\n"
         "    severity_map: {critical: critical, high: high}\n"
         "    threshold: {direct_only: true, min_severity: high}\n"
     )
@@ -442,6 +445,11 @@ class TestCombinedSkipReasonIsDeterministic(unittest.TestCase):
         self.assertTrue(r2["skipped"])
         self.assertEqual(r1["skip_reason"], r2["skip_reason"])
         self.assertIn("+", r1["skip_reason"])
+        # pip's entry (the target-form shape) is valid and only its tool is
+        # absent, so its reason is the not-found one rather than a validation
+        # failure.
+        self.assertIn("pip_tool_not_found", r1["skip_reason"])
+        self.assertNotIn("pip_target_forms_invalid", r1["skip_reason"])
         self.assertEqual(len(r1["findings"]), 1)
         self.assertEqual(len(r2["findings"]), 1)
 
