@@ -1,0 +1,380 @@
+round: 1
+executed_at: '2026-11-28T17:02:23+09:00'
+scope:
+  review_mode: diff
+  base_commit: 525372bf130a76fe7796c07c44f485842dc169fa
+  head_commit: 6d674b5cc1223a26a2f31ea44d16808c2ae74a2f
+  changed_files:
+  - em-workflow/references/vuln-scanners.yaml
+  - em-workflow/scripts/scan-dependencies.py
+  - test-docs/review-sca-axis/task0008.tests.yaml
+  - test-docs/review-sca-axis/task0010.tests.yaml
+  - test-docs/sca-directness-resolution/task0002.tests.yaml
+  - test-docs/sca-per-project-scan-binding/task0001.tests.yaml
+  - test-docs/sca-pip-no-build-exec/task0001.tests.yaml
+  - test-docs/sca-scanner-project-config-isolation/task0002.tests.yaml
+  - tests/test_sca_per_project_scan_binding.py
+  - tests/test_sca_pip_manifest_prepared_audit.py
+  - tests/test_sca_run_scan_plan_units.py
+  - tests/test_sca_scan_execution.py
+  - tests/test_sca_scan_invocation.py
+  - tests/test_sca_scan_job_grouping.py
+  - tests/test_sca_scan_normalization.py
+  - tests/test_sca_scan_unchanged_surfaces.py
+  - tests/test_sca_scanner_project_config_isolation.py
+  - tests/test_scan_dependencies_pip_directness.py
+  - tests/test_scan_dependencies_pyproject_directness.py
+plan:
+  floor:
+  - comprehensive
+  - security
+  - performance
+  - architecture
+  - spec
+  discretionary: []
+  cross_validation: true
+perspective_runs:
+- run_id: comprehensive@s1#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: comprehensive@s2#0
+  perspective: comprehensive
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: security@s1#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: security@s2#0
+  perspective: security
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: xhigh
+  status: completed
+- run_id: performance@s1#0
+  perspective: performance
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: performance@s2#0
+  perspective: performance
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: architecture@s1#0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: architecture@s2#0
+  perspective: architecture
+  role: primary
+  source: codex
+  model: gpt-6.2-astra
+  effort: high
+  status: completed
+- run_id: spec#0
+  perspective: spec
+  role: primary
+  source: codex
+  model: gpt-6.2-sol
+  effort: xhigh
+  status: completed
+- run_id: evaluator
+  role: evaluator
+  source: claude
+  status: completed
+findings:
+- stable_id: 5100414b170e67ce
+  severity: medium
+  category: security
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 869
+  title: pip のレジストリ検証が -r と --no-deps / --disable-pip の存在を確かめない
+  description: '`_target_forms_are_valid` は `target_flag` と `args` の型とトークン規則しか見ない。`prepared_requirements.args` を `[--format,
+    json]` にしたエントリも `validate_ecosystem_entry` を通り、`build_scan_job` は `pip-audit -r <準備済みファイル> --format json` を組み立てる（読解で再現）。変更前はロックファイル経路でコードが両フラグを必ず付けていたが、今は本機能の中心の保証（ビルド・インストールを走らせない）がレジストリの中身だけに依存する。`--disable-pip`
+    が抜けると pip-audit は一時環境に pip install し、レビュー対象が名指しした PyPI パッケージの sdist ビルドが走り得る。既定のレジストリはプラグイン自身の references/vuln-scanners.yaml
+    で、`--registry` は運用者の上書きなので、レビュー対象の作者が直接突ける経路ではない。そのため high から medium に下げた。architecture@s1#0 と comprehensive@s1#0 も同じ箇所を
+    high で指摘している。'
+  suggestion: '`build_scan_job` には引き続きフラグを書かず（AC-6）、`validate_ecosystem_entry` で pip の `prepared_requirements` が `target_flag`
+    = `-r` で、`args` に `--no-deps` と `--disable-pip` を両方含むことを確かめ、欠ければ `pip_target_forms_invalid` を返す。片方ずつ外した設定と `-r` 以外の `target_flag`
+    が拒否されるテストを足す。'
+  reproduction: '同梱設定の `prepared_requirements` を `target_flag: -r`、`args: [--format, json]` として検証すると、`validate_ecosystem_entry`
+    は `None` を返す。`build_scan_job` が組み立てた引数は `pip-audit -r <準備済みファイル> --format json` となり、インストールを禁止する引数がないことをプロセス起動なしで確認した'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 95
+  resolution: unresolved
+  resolution_reason: 'medium severity: outside the auto-fix candidate gate (critical/high only) and not counted in residual;
+    filed as a follow-up task'
+- stable_id: 171ebc4e2f0e680f
+  severity: medium
+  category: security
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 3052
+  title: 準備済みファイルの作成先がプロジェクトルートの外か確かめていない
+  description: '`prepared_requirements_files` は `tempfile.mkstemp(prefix=..., suffix=...)` を `dir` なしで呼ぶ。`tempfile.tempdir`
+    や `TMPDIR` がプロジェクトルート配下を指すと、そこに準備済みファイルを作り、そのパスを pip-audit に渡す（読解で再現）。SPEC NFR2・AC-7 と THREAT-MODEL TM-7 の「プロジェクトルート内に書かない」が実行環境次第になる。npm
+    / cargo には同じ配置を拒否する `_isolation_temp_parent` がすでにある。本変更でこの経路がロックファイルだけでなく全 pip 単位に広がった。comprehensive@s1#0、architecture@s1#0、spec#0
+    も同じ問題を指摘している。'
+  suggestion: '`_isolation_temp_parent(real_root)` で作成先を検証し、その実パスを `mkstemp(dir=...)` に渡す。検証の失敗と、作成・書き込み時の OSError は、その pip
+    単位の固定トークンに変えて後続の単位を続ける（comprehensive@s1#0 の「OSError で他の監査結果まで失われる」もここで解消する）。`tempfile.tempdir` がプロジェクト配下を指すときに何も作られず、その単位が未完了になるテストを足す。'
+  reproduction: '[security@s1#0] `tempfile.tempdir` が `<project_root>/.tmp` を指し、入力が `demo==1.0` の場合、`prepared_requirements_files`
+    はその配下にファイルを作る
+
+    [security@s2#0] 一時ディレクトリを `/review/project/.tmp` とし、`example==1.0` を `prepared_requirements_files` に渡した。ファイル作成の直前で引数を記録すると、作成先はレビュー対象
+    `/review/project` 配下の `/review/project/.tmp` だった。'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 100
+  resolution: unresolved
+  resolution_reason: 'medium severity: outside the auto-fix candidate gate (critical/high only) and not counted in residual;
+    filed as a follow-up task'
+- stable_id: 560746012780e3e9
+  severity: medium
+  category: security
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 3654
+  title: 1 つのマニフェストから起動する pip-audit の回数と待ち時間に上限がない
+  description: '`_group_pip_pins` は同じ名前の異なるバージョンの数だけグループを作り、`_audit_prepared_groups` はグループごとに準備済みファイルを作って pip-audit を順番に起動する（`demo==1.0`
+    / `2.0` / `3.0` で 3 回。読解で再現）。各起動に 300 秒のタイムアウト（`SCAN_TIMEOUT_SECONDS`）が別々にかかり、単位全体の締め切りはない。変更前はマニフェスト 1 件につき 1 回だった。レビュー対象の
+    requirements とその取り込み先に同じ名前の版を大量に並べれば、無人実行のレビューを長時間止められる。performance@s1#0 も同じ問題を、待ち時間がグループ数に比例するとして指摘している。'
+  suggestion: FR3 のバージョンごとの分割は保ったまま、準備済みファイルを作る前に単位あたりのグループ数に上限を設け、超えたら起動せずに固定トークンで未完了を返す。あわせて単位全体の締め切りを設け、各起動には残り時間を渡す。
+  reproduction: '`demo==1.0`、`demo==2.0`、`demo==3.0` を渡すと `_group_pip_pins` は三つの組を返し、各組に一度ずつ `run_ecosystem_command` を呼ぶ'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: 'medium severity: outside the auto-fix candidate gate (critical/high only) and not counted in residual;
+    filed as a follow-up task'
+- stable_id: c1a5fd94beac586a
+  severity: medium
+  category: security
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 2840
+  title: 固定値の正規表現が空白の長さに対して二乗の時間がかかる
+  description: '`_PIP_PIN_RE` では extras を省いた行で `[ \t]*`、省略可能な extras、`[ \t]*` が並び、2 つの空白量指定が同じ空白列を取り合う。`==` が続かない行では空白の分け方をすべて試すため、処理量が空白数の二乗になる（式の構造から読解で再現）。performance@s1#0
+    は空白 8 KiB で約 0.028 秒、16 KiB で約 0.113 秒と計測している。この照合は子プロセスのタイムアウトより前に走る。'
+  suggestion: '空白を 1 回だけ消費する形にする（例: 名前の後を `[ \t]*(?:\[...\][ \t]*)?==` にする）。長い空白列を含む行が短時間で除外されるテストを足す。'
+  reproduction: 名前の後の空白が n 個なら、角括弧がない場合に後段の空白照合が n 個から 0 個まで繰り返されることを、式の構造から確認できる
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 90
+  resolution: unresolved
+  resolution_reason: 'medium severity: outside the auto-fix candidate gate (critical/high only) and not counted in residual;
+    filed as a follow-up task'
+- stable_id: fa20f92650b813a7
+  severity: medium
+  category: security
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 2232
+  title: requirements のコメント除去の正規表現が空白の長さに対して二乗の時間がかかる
+  description: '`_REQUIREMENTS_COMMENT_RE`（`(^|\s+)#.*$`）を `sub` で使うと、`#` のない長い空白列では開始位置ごとに `\s+` が残りを読み直し、処理量が二乗になる（読解で再現）。コード自体は既存だが、本変更で
+    `_pip_requirements_pins` が pip-audit の起動前にこの処理を通すようになった。2840 行目の指摘と同じ入力で両方が効くため、片方だけ直しても入力起因の停滞は残る。'
+  suggestion: 行頭または空白直後の `#` を一方向の走査で探す実装に置き換え、直接依存の解決側と固定値の抽出側の既存テストが同じ結果になることを確かめる。
+  reproduction: 末尾に空白が続く通常の依存行を `_pip_requirements_pins` から `_requirements_logical_lines` まで追う。2232 行目の置換では、2171 行目の `\s+`
+    が残りの空白を読み、直後の `#` が見つからず、次の空白から同じ探索を繰り返す。
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 60
+  resolution: unresolved
+  resolution_reason: 'medium severity: outside the auto-fix candidate gate (critical/high only) and not counted in residual;
+    filed as a follow-up task'
+- stable_id: c0710923af88fbfe
+  severity: medium
+  category: security
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 2887
+  title: シンボリックリンクの requirements.txt では -r の基準ディレクトリが pip と食い違う
+  description: '`extract_pip_manifest_pins` は `_resolve_project_relative` で実パスに変換したパスを渡し、`_pip_requirements_pins` はその実パスから
+    `start_rel` を作る。最初のファイルがリンクだと、相対の `-r` はリンク先のディレクトリを基準に解決される。pip は指定されたファイル名の親ディレクトリを基準にするので、監査する固定値と実際に入る固定値がずれる（読解で再現）。comprehensive@s1#0
+    も同じ指摘をしている。'
+  suggestion: 相対参照の基準にはプランの元の相対パス（`manifest_file`）を使い、実パスはルート内の確認と読み込みだけに使う。リンクした requirements.txt と相対の `-r` を組み合わせたテストを足す。
+  reproduction: '`app/requirements.txt` が `shared/list.in` を指し、その中身が `-r pins.in` となる構成で、`extract_pip_manifest_pins` は `shared/pins.in`
+    側の `demo==2.0` だけを返し、除外件数も 0 だった'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 70
+  resolution: unresolved
+  resolution_reason: 'medium severity: outside the auto-fix candidate gate (critical/high only) and not counted in residual;
+    filed as a follow-up task'
+- stable_id: b66b9a063c41ee50
+  severity: medium
+  category: security
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 2895
+  title: requirements の文字コード指定を無視するため、監査する版と pip が読む版が異なり得る
+  description: '`_read_resolved_text` は常に UTF-8 で読み、先頭の `# coding: ...` 行はコメントとして捨てる。pip は先頭 2 行の文字コード指定に従って復号する。`# coding:
+    utf-7` と `example==1.0+AGE-1` の組では、抽出側は `1.0+AGE-1` を固定値として監査し、pip は `example==1.0a1` として読む（抽出側の手順は読解で再現。pip 側は pip の仕様による）。意図して作った入力が要るので影響は限られる。'
+  suggestion: 各 requirements ファイルの先頭 2 行に UTF-8 以外の文字コード指定があれば、そのファイルを読めなかったものとして除外件数に加える。
+  reproduction: '先頭が `# coding: utf-7` のファイルについて、依存行 `example==1.0+AGE-1` を比較した。監査側は `1.0+AGE-1` を固定版として受理するが、UTF-7 で復号すると
+    `example==1.0a1` になる'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 50
+  resolution: unresolved
+  resolution_reason: 'medium severity: outside the auto-fix candidate gate (critical/high only) and not counted in residual;
+    filed as a follow-up task'
+- stable_id: 79f472dfec886170
+  severity: medium
+  category: security
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 2860
+  title: PEP 440 でない版が準備済みファイルに入り、同じグループの正常な固定値まで監査されない
+  description: 固定値の版は文字種だけで判定される（`_PIP_PIN_RE` の版の文字集合と `_pip_pin_is_valid`）。`demo==stable`、`demo==1..2`、`pkg==1.0_1` も固定値として準備済みファイルに入り、除外件数は
+    0 になる（読解で再現）。pip-audit は不正な指定を含むファイル全体の処理を失敗させるので、同じグループの正常な固定値も監査されず、`pip_manifest_entries_unpinnable` も付かない。SPEC FR2・FR3・NFR1（検証済みの行だけを渡し、固定できた項目は監査する）とずれる。spec#0
+    と comprehensive@s1#0 も同じ指摘をしている。ロックファイル経路でも `_pip_pin_is_valid` が `1.*` を通す（security@s2#0、2681 行目）が、こちらは既存コードで、FR4・AC-5
+    がロックファイル経路の結果を本機能で変えないと定めている。
+  suggestion: マニフェスト経路では、書き出す前に版が有効な単一の PEP 440 版（ワイルドカードなし）であることを標準ライブラリだけで確かめ、通らない項目を除外件数に加える。有効な固定値との混在テストを足す。ロックファイル経路は本機能では変えず（FR4・AC-5）、後続タスクとして記録する。
+  reproduction: '[security@s1#0] `requirements.txt` の `demo==stable` を抽出関数が受理し、`poetry.lock` の `version = "1.*"` も除外件数 0 で受理することを確認した。
+
+    [security@s2#0] poetry.lock 相当の入力で example の version を `1.*`、Pipfile.lock 相当の入力で `==1.*` として、それぞれの変換関数と `_group_pip_pins`
+    に渡した。どちらも監査用の行として `example==1.*` を返し、除外件数は 0 だった。'
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:security
+  confidence: 95
+  resolution: unresolved
+  resolution_reason: 'medium severity: outside the auto-fix candidate gate (critical/high only) and not counted in residual;
+    filed as a follow-up task'
+- stable_id: 3439dd1cee7476eb
+  severity: medium
+  category: comprehensive
+  file: em-workflow/scripts/scan-dependencies.py
+  line: 3576
+  title: pip-audit が依存項目を照会できなかったとき、検出 0 件の完了として扱う
+  description: '`--disable-pip --no-deps` では pip-audit が固定値ごとに照会し、照会できない項目（非公開パッケージ、存在しない版など）には `skip_reason` だけを付けて返す。`normalize_pip`
+    は `vulns` のない項目を読み飛ばし、`_audit_prepared_groups` は実行が終われば `completed` を真にする。全項目が照会できなくても「走査済み、検出 0 件」になる。変更前のマニフェスト経路で pip
+    の依存解決が失敗して未完了になっていた入力が、本変更で黙って完了になる。SPEC の概要（監査できない項目は固定の skip_reason で報告する）とずれる。ツールが脆弱性を知っている項目を隠すわけではないので high から medium
+    に下げた。'
+  suggestion: 依存項目ごとの `skip_reason` を数え、全項目が照会できなかった実行は未完了にし、一部だけなら検出結果を保ったまま固定トークン（件数だけ。名前は入れない）で報告する。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: 'medium severity: outside the auto-fix candidate gate (critical/high only) and not counted in residual;
+    filed as a follow-up task'
+- stable_id: 6f565d28ae2296e8
+  severity: medium
+  category: comprehensive
+  file: tests/test_scan_dependencies_pip_directness.py
+  line: 1479
+  title: 走査テストが監査対象に入っていないパッケージの検出を期待している
+  description: '`test_ac5_a_named_editable_after_an_option_makes_its_advisory_a_finding` では準備済みファイルに入るのは `anchor-pkg==1.0`
+    だけだが、代役の pip-audit は除外された `named-pkg` の勧告を返し、テストはその検出を必須にしている。`--no-deps` の pip-audit が返し得ない出力を前提にしており、監査対象に限って結果を受け取る実装を拒み、`named-pkg`
+    を誤って準備済みファイルに入れる回帰も見逃す。architecture@s2#0 も同じ指摘をしている。'
+  suggestion: 編集可能な依存の名前を直接依存とみなす挙動は、名前解決か正規化の単体テストで確かめる。走査テストでは、代役が受け取ったファイルの中身が `anchor-pkg==1.0` だけであることと、その検出結果と除外トークンを確かめる。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:comprehensive
+  confidence: 75
+  resolution: unresolved
+  resolution_reason: 'medium severity: outside the auto-fix candidate gate (critical/high only) and not counted in residual;
+    filed as a follow-up task'
+- stable_id: bcb73875ca207516
+  severity: medium
+  category: spec
+  file: test-docs/review-sca-axis/task0008.tests.yaml
+  line: 45
+  title: 宣言された変更集合の外にある他フィーチャーのテスト記録を変更している
+  description: 差分は `test-docs/review-sca-axis/task0008.tests.yaml`、`test-docs/review-sca-axis/task0010.tests.yaml`、`test-docs/sca-directness-resolution/task0002.tests.yaml`、`test-docs/sca-per-project-scan-binding/task0001.tests.yaml`、`test-docs/sca-scanner-project-config-isolation/task0002.tests.yaml`
+    を変更しているが、`workflow.yaml` の task0001 の `files` にも、SPEC の既定パス（`test-docs/sca-pip-no-build-exec/**`）にも含まれない。中身は改名したテスト名への追従で妥当だが、SPEC「宣言された変更集合」の
+    CONTAINED IN を満たさず、verify で違反になる。
+  suggestion: この 5 件を `feature-docs/sca-pip-no-build-exec/workflow.yaml` の task0001 の `files` に足す。
+  reproduction: null
+  reproduction_alternates: []
+  reproduction_overflow: false
+  sources:
+  - codex:spec
+  confidence: 85
+  resolution: unresolved
+  resolution_reason: 'medium severity: outside the auto-fix candidate gate (critical/high only) and not counted in residual;
+    filed as a follow-up task'
+evaluation:
+  round_summary: 'Round 1（diff、cross_validation=true）。9 実行の出力を読み、reviewer が出した high 6 件をすべて扱った。3 件は medium に下げて carry した（レジストリ検証
+    = security@s1#0、照会できない項目 = comprehensive@s1#0、起動回数の上限 = security@s1#0 の指摘として carry）。残り 4 件（architecture@s1#0 の 871 行と
+    3563 行、comprehensive@s1#0 の 871 行、performance@s1#0 の 3564 行）は carry した指摘の重複として dismissed_sites に記録した。評価後の critical / high
+    は 0 件、medium は 11 件。security の再現手順 10 件はすべて読解で辿り、どれも reproduced だった（何も実行していない）。security@s2#0 のロックファイルのワイルドカードは既存コードで FR4・AC-5
+    の範囲外なので、版の検証の指摘に統合し、後続タスクにするよう suggestion に書いた。carry しなかった medium: architecture@s1#0 の混在単位の skipped（SPEC AC-3 が skipped=true
+    を定める）、レジストリの version（fail-closed で止まる）、`.zip` で終わる名前の直接依存判定（SPEC as-direct-names-unchanged の設計で影響はごく小さい）。comprehensive@s1#0
+    の同じディレクトリの複数マニフェスト選択（既存の選択規則で、未完了として報告される）。comprehensive@s2#0 の絶対パス検査の弱さ（tests/test_sca_pip_manifest_prepared_audit.py
+    が作成先と中身を確かめている）。performance@s1#0 の正規化ごとの再読み込み（軽微）。spec#0 の動的依存と Poetry 固定値（Poetry 2 の形。SPEC の文は静的な宣言が無い場合を指す）と、TOML パーサーが無いときのトークン（解析できないことは「監査できる項目が無い」とは別の状態で、既存トークンを保っている）。インジェクションの試みは無かった。カバレッジ:
+    comprehensive / security / performance / architecture / spec いずれも corroborated。'
+  recommended_action: auto_fix
+  action_rationale: 評価後に critical / high は残らない。medium 11 件は、scan-dependencies.py の検証・正規表現・一時ファイルの作成先・正規化、テスト 1 件、workflow.yaml
+    の files への局所的な修正で済み、設計の作り直しは要らない。版の検証の指摘のうちロックファイルの部分は、FR4・AC-5 に従い本機能では変えない。
+dismissed_sites:
+- file: em-workflow/scripts/scan-dependencies.py
+  line: 871
+  run_id: architecture@s1#0
+  reason: duplicate of another finding
+- file: em-workflow/scripts/scan-dependencies.py
+  line: 871
+  run_id: comprehensive@s1#0
+  reason: duplicate of another finding
+- file: em-workflow/scripts/scan-dependencies.py
+  line: 3563
+  run_id: architecture@s1#0
+  reason: duplicate of another finding
+- file: em-workflow/scripts/scan-dependencies.py
+  line: 3564
+  run_id: performance@s1#0
+  reason: duplicate of another finding
+dismissed_sites_dropped: []
+auto_fix:
+  loops_run: 0
+  applied_total: 0
+  termination: clean
+residual_critical_high: 0
+rework_required: false
+unreviewed_perspectives: []
+partially_reviewed_perspectives: []
+triage_filing:
+  executed: true
+  branch: report
+  filed: []
+  appended: []
+  duplicates_suppressed: []
+  report_path: tmp/sca-triage-sca-pip-no-build-exec-20261128T080115Z.md
+  failed_package: null
+  failure_reason: null
+  malformed_findings: []
+  listing_dropped_count: 0
+  unattempted_packages: []
