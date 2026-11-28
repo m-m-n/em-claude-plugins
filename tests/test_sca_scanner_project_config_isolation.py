@@ -1027,18 +1027,28 @@ class TestBuildScanJobIsPureWithPreparedInputs(unittest.TestCase):
                     )
 
     def test_ac7_pip_and_go_jobs_ignore_prepared_inputs(self):
-        for name, manifest in (("pip", "requirements.txt"), ("go", "svc/go.mod")):
+        # pip's job is built for a prepared requirements file (its own,
+        # separate input); the npm / cargo isolation inputs change nothing.
+        for name, manifest, extra in (
+            ("pip", "requirements.txt", {"prepared_file": "/tmp/prepared-pins.txt"}),
+            ("go", "svc/go.mod", {}),
+        ):
             with self.subTest(ecosystem=name):
-                plain = SCAN.build_scan_job(self.entries[name], manifest, "/proj", f"/x/{name}")
+                plain = SCAN.build_scan_job(self.entries[name], manifest, "/proj", f"/x/{name}", **extra)
                 given = SCAN.build_scan_job(
-                    self.entries[name], manifest, "/proj", f"/x/{name}", prepared_inputs=prepared_inputs("npm")
+                    self.entries[name], manifest, "/proj", f"/x/{name}",
+                    prepared_inputs=prepared_inputs("npm"), **extra,
                 )
                 self.assertEqual(plain, given)
         self.assertEqual(
             SCAN.build_scan_job(self.entries["go"], "svc/go.mod", "/proj", "/x/go")["cwd"], "/proj/svc"
         )
         self.assertEqual(
-            SCAN.build_scan_job(self.entries["pip"], "requirements.txt", "/proj", "/x/pip")["cwd"], "/proj"
+            SCAN.build_scan_job(
+                self.entries["pip"], "requirements.txt", "/proj", "/x/pip",
+                prepared_file="/tmp/prepared-pins.txt",
+            )["cwd"],
+            "/proj",
         )
 
 

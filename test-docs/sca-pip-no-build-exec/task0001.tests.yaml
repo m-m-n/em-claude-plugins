@@ -1,0 +1,264 @@
+task_id: task0001
+baseline_failures: []          # before any edit: python3 -m unittest discover -s tests -> Ran 17715 tests, OK (no failing test)
+final_failures: []             # re-executed after the implementation and the record: python3 -m unittest discover -s tests -> Ran 17808 tests, OK (skipped=1), exit 0
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_sca_scan_invocation.TestPipTargetFormRegistry.test_the_restricted_parser_reads_the_nested_form
+      - tests.test_sca_scan_invocation.TestPipTargetFormRegistry.test_the_script_loader_reads_the_same_form
+      - tests.test_sca_scan_invocation.TestPipTargetFormRegistry.test_the_whole_pip_entry_equals_its_literal_through_the_loader
+      - tests.test_sca_scan_invocation.TestPipTargetFormRegistry.test_the_form_table_holds_exactly_one_form
+      - tests.test_sca_scan_invocation.TestPipTargetFormRegistry.test_the_pip_entry_text_is_a_block_style_nested_mapping
+      - tests.test_sca_scan_invocation.TestPipTargetFormRegistry.test_the_npm_cargo_and_go_entry_texts_equal_their_pinned_literals
+      - tests.test_sca_scan_invocation.TestPipTargetFormRegistry.test_the_restricted_parser_can_tell_a_missing_nested_value_apart
+      - tests.test_sca_scan_invocation.TestPipTargetFormRegistry.test_the_header_names_target_forms_and_keeps_its_ownership_phrases
+      - tests.test_sca_scan_invocation.TestPipTargetFormRegistry.test_the_header_keeps_the_cargo_sentence_and_drops_the_old_pip_sentence
+      - tests.test_sca_scan_normalization.TestVulnScannersRegistryStructure.test_pip_entry_carries_its_arguments_in_the_target_form_table
+      - tests.test_sca_scan_normalization.TestVulnScannersRegistryStructure.test_args_is_non_empty_list_per_ecosystem
+      - tests.test_sca_scan_normalization.TestVulnScannersParserDetectsMalformedInput.test_a_nested_block_is_read_and_a_misindented_one_raises
+    red_confirmed: true
+    red_reason: >-
+      Run against a copy of the scripts, registry and tests at the task's base HEAD with the new and
+      changed test modules laid over it (no implementation present). The loader-based tests failed
+      with KeyError: 'target_forms' (the base pip entry has a top-level args / target_flag and no
+      target_forms), the header test failed with AssertionError: 'target_forms' not found in the
+      registry header text, and the registry-structure tests of the normalization module failed
+      (the base pip entry has a top-level args and no target_forms table). Already green at the base,
+      so not red evidence: test_the_npm_cargo_and_go_entry_texts_equal_their_pinned_literals (a pin
+      that those three entries stay byte-identical) and
+      test_a_nested_block_is_read_and_a_misindented_one_raises (a property of the test module's own
+      parser).
+  AC-2:
+    tests:
+      - tests.test_sca_scan_invocation.TestTargetFormValidation.test_the_shipped_entries_validate
+      - tests.test_sca_scan_invocation.TestTargetFormValidation.test_each_form_violation_yields_the_fixed_reason
+      - tests.test_sca_scan_invocation.TestTargetFormValidation.test_a_token_with_a_shell_metacharacter_is_rejected_in_the_flag_and_in_every_arg
+      - tests.test_sca_scan_invocation.TestTargetFormValidation.test_a_token_starting_with_a_path_separator_is_rejected
+      - tests.test_sca_scan_invocation.TestTargetFormValidation.test_a_well_formed_variation_still_validates
+      - tests.test_sca_scan_invocation.TestTargetFormValidation.test_the_old_top_level_shape_is_not_a_valid_pip_entry
+      - tests.test_sca_scan_invocation.TestTargetFormValidation.test_the_checks_that_exist_keep_their_order_and_reasons
+      - tests.test_sca_scan_invocation.TestTargetFormValidation.test_the_other_ecosystems_keep_their_validation_reasons
+      - tests.test_sca_scan_invocation.TestTargetFormValidation.test_an_entry_that_carries_target_forms_is_checked_for_any_ecosystem
+      - tests.test_sca_scan_invocation.TestTargetFormValidation.test_an_npm_cargo_or_go_entry_needs_no_target_forms
+      - tests.test_sca_scan_invocation.TestAnInvalidPipFormStartsNoScanner.test_planning_gives_the_reason_once_and_no_plan
+      - tests.test_sca_scan_invocation.TestAnInvalidPipFormStartsNoScanner.test_run_scan_reports_the_reason_and_starts_no_scanner
+      - tests.test_sca_scan_invocation.TestAnInvalidPipFormStartsNoScanner.test_the_shipped_registry_does_launch_the_scanner
+    red_confirmed: true
+    red_reason: >-
+      Against the base copy test_each_form_violation_yields_the_fixed_reason and
+      test_a_token_with_a_shell_metacharacter_is_rejected_in_the_flag_and_in_every_arg failed with
+      KeyError: 'target_forms' (the base pip entry has no target_forms to mutate), and
+      test_run_scan_reports_the_reason_and_starts_no_scanner failed with a summary diff that lacks
+      the expected '+ pip_target_forms_invalid' line (the base validator has no target-form check).
+      Already green at the base, so not red evidence but pins that nothing existing changed:
+      test_the_shipped_entries_validate, test_the_checks_that_exist_keep_their_order_and_reasons,
+      test_the_other_ecosystems_keep_their_validation_reasons,
+      test_an_npm_cargo_or_go_entry_needs_no_target_forms and the control
+      test_the_shipped_registry_does_launch_the_scanner.
+  AC-3:
+    tests:
+      - tests.test_sca_pip_manifest_prepared_audit.TestPipJobFromThePreparedRequirementsForm.test_every_target_gets_the_prepared_requirements_vector
+      - tests.test_sca_pip_manifest_prepared_audit.TestPipJobFromThePreparedRequirementsForm.test_no_argv_element_names_the_project_root_or_the_reviewed_file
+      - tests.test_sca_pip_manifest_prepared_audit.TestPipJobFromThePreparedRequirementsForm.test_without_a_prepared_file_every_target_is_rejected
+      - tests.test_sca_pip_manifest_prepared_audit.TestPipJobFromThePreparedRequirementsForm.test_an_entry_without_the_form_is_rejected
+      - tests.test_sca_pip_manifest_prepared_audit.TestPipJobFromThePreparedRequirementsForm.test_the_argv_follows_the_entry_that_is_passed_in
+      - tests.test_sca_pip_manifest_prepared_audit.TestPipJobFromThePreparedRequirementsForm.test_the_job_form_is_built_without_reading_writing_or_launching
+      - tests.test_sca_pip_manifest_prepared_audit.TestPipJobFromThePreparedRequirementsForm.test_the_source_of_build_scan_job_names_neither_pip_flag
+      - tests.test_sca_pip_manifest_prepared_audit.TestPipJobFromThePreparedRequirementsForm.test_the_directory_and_reviewed_file_forms_no_longer_exist
+      - tests.test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_a_requirements_file_is_never_the_audited_target
+      - tests.test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_a_nested_requirements_path_is_the_label_only
+      - tests.test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_a_pyproject_toml_never_audits_a_directory
+      - tests.test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_a_changed_lockfile_gets_the_same_job_form
+      - tests.test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_the_job_is_built_even_when_the_prepared_path_does_not_exist
+      - tests.test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_a_manifest_without_a_prepared_file_is_rejected
+      - tests.test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_the_directory_and_reviewed_file_forms_are_gone
+      - tests.test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_every_pip_job_carries_the_prepared_file_and_both_flags
+      - tests.test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_target_is_never_absent_never_the_ambient_environment
+      - tests.test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_no_argument_form_installs_or_writes_a_resolution_artifact
+      - tests.test_sca_scan_job_grouping.TestArgumentVectorsFromTheRealRegistry.test_pip_vectors_are_the_prepared_requirements_form_for_every_manifest
+      - tests.test_sca_scan_unchanged_surfaces.TestAC1PipJobIsUnchanged.test_ac1_pip_requirements_file_runs_in_the_project_root_with_the_prepared_form
+      - tests.test_sca_scan_unchanged_surfaces.TestAC1PipJobIsUnchanged.test_ac1_pip_requirements_file_at_the_root
+      - tests.test_sca_scan_unchanged_surfaces.TestAC1PipJobIsUnchanged.test_ac1_pip_pyproject_runs_in_the_project_root_with_the_prepared_form
+      - tests.test_sca_scan_unchanged_surfaces.TestAC1PipJobIsUnchanged.test_ac1_pip_pyproject_at_the_root_never_audits_the_current_directory
+      - tests.test_sca_run_scan_plan_units.TestWhatRunScanLaunches.test_pip_runs_from_the_project_root_whatever_the_target_directory
+      - tests.test_sca_run_scan_plan_units.TestWhatRunScanLaunches.test_a_pip_pyproject_target_is_audited_through_a_prepared_file_too
+    red_confirmed: true
+    red_reason: >-
+      Against the base copy test_every_target_gets_the_prepared_requirements_vector failed on the argv
+      comparison (got ['/x/pip-audit', '-r', 'requirements.txt', '--format', 'json'], wanted
+      ['/x/pip-audit', '-r', '/scratch/pip-prepared-0001.txt', '--no-deps', '--disable-pip',
+      '--format', 'json']), test_the_source_of_build_scan_job_names_neither_pip_flag failed with
+      AssertionError: '--no-deps' unexpectedly found in the build_scan_job source,
+      test_the_directory_and_reviewed_file_forms_no_longer_exist failed with 'True is not false'
+      (_pip_target exists at the base), and the unchanged-surfaces test failed with
+      AssertionError: 4 != 6 : ['-r', 'requirements.txt', '--format', 'json']. Green at the base and
+      kept as pins of the lockfile job form, which does not change:
+      test_a_changed_lockfile_gets_the_same_job_form,
+      test_the_job_is_built_even_when_the_prepared_path_does_not_exist,
+      test_target_is_never_absent_never_the_ambient_environment and
+      test_no_argument_form_installs_or_writes_a_resolution_artifact.
+  AC-4:
+    tests:
+      - tests.test_sca_pip_manifest_prepared_audit.TestRequirementsPinRule.test_a_pin_line_gives_exactly_its_canonical_pin
+      - tests.test_sca_pip_manifest_prepared_audit.TestRequirementsPinRule.test_a_line_that_is_not_a_pin_adds_to_the_excluded_count_only
+      - tests.test_sca_pip_manifest_prepared_audit.TestRequirementsPinRule.test_options_that_carry_no_requirement_add_nothing
+      - tests.test_sca_pip_manifest_prepared_audit.TestRequirementsPinRule.test_a_pin_in_an_in_root_include_is_extracted
+      - tests.test_sca_pip_manifest_prepared_audit.TestRequirementsPinRule.test_an_include_is_taken_relative_to_the_including_file
+      - tests.test_sca_pip_manifest_prepared_audit.TestRequirementsPinRule.test_mixed_fixture_counts_each_excluded_line_once
+      - tests.test_sca_pip_manifest_prepared_audit.TestRequirementsPinRule.test_a_target_that_cannot_be_read_counts_one
+      - tests.test_sca_pip_manifest_prepared_audit.TestRequirementsPinRule.test_an_unreadable_include_counts_one_and_the_rest_is_still_extracted
+      - tests.test_sca_pip_manifest_prepared_audit.TestRequirementsPinRule.test_a_byte_order_mark_does_not_hide_the_first_line
+      - tests.test_sca_pip_manifest_prepared_audit.TestRequirementsPinRule.test_a_nested_target_is_extracted_from_its_own_path
+      - tests.test_sca_pip_manifest_prepared_audit.TestRequirementsPinRule.test_the_same_input_gives_the_same_output
+      - tests.test_sca_pip_manifest_prepared_audit.TestRequirementsWalkContainment.test_only_in_root_files_are_opened_and_each_exactly_once
+      - tests.test_sca_pip_manifest_prepared_audit.TestRequirementsWalkContainment.test_a_constraint_file_and_an_outside_file_are_never_opened
+      - tests.test_sca_pip_manifest_prepared_audit.TestRequirementsWalkContainment.test_a_symlink_include_leaving_the_root_is_never_opened
+      - tests.test_sca_pip_manifest_prepared_audit.TestRequirementsWalkContainment.test_an_include_cycle_ends
+      - tests.test_sca_pip_manifest_prepared_audit.TestRequirementsWalkContainment.test_nothing_is_written_no_process_starts_and_no_network_is_used
+      - tests.test_sca_pip_manifest_prepared_audit.TestRequirementsExtractionNeverRaises.test_random_text_never_raises
+      - tests.test_sca_pip_manifest_prepared_audit.TestRequirementsExtractionNeverRaises.test_random_bytes_never_raise
+      - tests.test_sca_pip_manifest_prepared_audit.TestRequirementsExtractionNeverRaises.test_malformed_targets_never_raise
+      - tests.test_sca_pip_manifest_prepared_audit.TestRequirementsExtractionNeverRaises.test_a_missing_project_root_never_raises
+    red_confirmed: true
+    red_reason: >-
+      Against the base copy every test in these classes failed with AttributeError: module has no
+      attribute 'extract_pip_manifest_pins' (the extraction component does not exist at the base).
+  AC-5:
+    tests:
+      - tests.test_sca_pip_manifest_prepared_audit.TestPyprojectExtraction.test_project_dependencies_follow_the_requirements_pin_rule
+      - tests.test_sca_pip_manifest_prepared_audit.TestPyprojectExtraction.test_a_nested_pyproject_is_extracted_from_its_own_path
+      - tests.test_sca_pip_manifest_prepared_audit.TestPyprojectExtraction.test_poetry_entries_are_pins_only_for_an_exact_string_value
+      - tests.test_sca_pip_manifest_prepared_audit.TestPyprojectExtraction.test_the_python_entry_is_ignored_and_not_counted
+      - tests.test_sca_pip_manifest_prepared_audit.TestPyprojectExtraction.test_tables_the_resolver_never_reads_contribute_nothing
+      - tests.test_sca_pip_manifest_prepared_audit.TestPyprojectExtraction.test_unexpected_shapes_each_add_one_excluded_item
+      - tests.test_sca_pip_manifest_prepared_audit.TestPyprojectExtraction.test_a_static_list_beats_a_dynamic_entry
+      - tests.test_sca_pip_manifest_prepared_audit.TestPyprojectExtraction.test_no_declaration_gives_no_pins_and_a_zero_count
+      - tests.test_sca_pip_manifest_prepared_audit.TestPyprojectExtraction.test_a_file_that_cannot_be_used_gives_no_pins_and_a_count_of_one
+      - tests.test_sca_pip_manifest_prepared_audit.TestPyprojectExtraction.test_a_missing_toml_parser_gives_no_pins_and_a_count_of_one
+      - tests.test_sca_pip_manifest_prepared_audit.TestPyprojectExtraction.test_a_pyproject_read_opens_only_that_file_for_reading
+      - tests.test_sca_pip_manifest_prepared_audit.TestPyprojectExtraction.test_random_toml_never_raises
+      - tests.test_sca_pip_manifest_prepared_audit.TestPyprojectExtraction.test_a_deeply_nested_array_never_raises
+    red_confirmed: true
+    red_reason: >-
+      Against the base copy every test in this class failed with AttributeError: module has no
+      attribute 'extract_pip_manifest_pins' (the extraction component does not exist at the base).
+  AC-6:
+    tests:
+      - tests.test_sca_pip_manifest_prepared_audit.TestPinnedUnitsLaunchOnPreparedFiles.test_a_fully_pinned_requirements_unit_launches_once_with_the_sorted_canonical_pins
+      - tests.test_sca_pip_manifest_prepared_audit.TestPinnedUnitsLaunchOnPreparedFiles.test_the_launched_argv_is_the_prepared_requirements_form_from_the_project_root
+      - tests.test_sca_pip_manifest_prepared_audit.TestPinnedUnitsLaunchOnPreparedFiles.test_a_pinned_pyproject_unit_launches_once_with_its_pins
+      - tests.test_sca_pip_manifest_prepared_audit.TestPinnedUnitsLaunchOnPreparedFiles.test_a_poetry_exact_pin_unit_launches_once
+      - tests.test_sca_pip_manifest_prepared_audit.TestPinnedUnitsLaunchOnPreparedFiles.test_findings_carry_the_reviewed_manifest_as_their_file
+      - tests.test_sca_pip_manifest_prepared_audit.TestPinnedUnitsLaunchOnPreparedFiles.test_a_pin_in_an_in_root_include_is_audited
+      - tests.test_sca_pip_manifest_prepared_audit.TestMixedUnits.test_a_mixed_requirements_unit_audits_its_pins_and_reports_the_entries_token
+      - tests.test_sca_pip_manifest_prepared_audit.TestMixedUnits.test_a_mixed_pyproject_unit_audits_its_pins_and_reports_the_entries_token
+      - tests.test_sca_pip_manifest_prepared_audit.TestMixedUnits.test_the_lockfile_note_never_appears_for_a_manifest_unit
+      - tests.test_sca_pip_manifest_prepared_audit.TestMixedUnits.test_a_failed_launch_of_a_mixed_unit_reports_the_run_reason_and_completes_nothing
+      - tests.test_sca_pip_manifest_prepared_audit.TestUnitsWithNoAuditableItem.test_a_requirements_unit_without_a_pin_never_starts_the_scanner
+      - tests.test_sca_pip_manifest_prepared_audit.TestUnitsWithNoAuditableItem.test_a_pyproject_unit_without_a_pin_never_starts_the_scanner
+      - tests.test_sca_pip_manifest_prepared_audit.TestUnitsWithNoAuditableItem.test_a_missing_target_file_reports_the_unpinnable_token_alone
+      - tests.test_sca_pip_manifest_prepared_audit.TestUnitsWithNoAuditableItem.test_a_missing_toml_parser_is_reported_before_any_extraction
+      - tests.test_sca_pip_manifest_prepared_audit.TestUnitsWithNoAuditableItem.test_a_missing_toml_parser_does_not_affect_a_requirements_unit
+      - tests.test_sca_pip_manifest_prepared_audit.TestUnitsWithNoAuditableItem.test_the_unit_does_not_complete_so_pip_is_not_counted_as_scanned
+      - tests.test_sca_run_scan_plan_units.TestWhatRunScanLaunches.test_a_pip_pyproject_without_a_pin_launches_nothing
+      - tests.test_sca_run_scan_plan_units.TestRunScanLaunchesThePlansBuildScanJobsReturns.test_a_pip_plan_is_launched_for_its_own_target_not_for_a_reselected_one
+      - tests.test_scan_dependencies_pyproject_directness.TestIncompleteSets.test_scan_unit_with_dynamic_dependencies_reports_the_unpinnable_token
+      - tests.test_scan_dependencies_pyproject_directness.TestIncompleteSets.test_an_incomplete_set_with_an_exact_pin_elsewhere_still_launches_the_unit
+      - tests.test_scan_dependencies_pip_directness.TestUndeterminedNote.test_the_note_adds_no_skip_reason_of_its_own
+    red_confirmed: true
+    red_reason: >-
+      Against the base copy test_a_fully_pinned_requirements_unit_launches_once_with_the_sorted_canonical_pins
+      failed because the stub's recorded -r file held the reviewed file's raw lines (AssertionError:
+      Lists differ: ['Requests[security]==2.31.0', 'Django == 3.2.0 --hash=sha256:aa'] !=
+      ['django==3.2.0', 'requests==2.31.0']), the mixed-unit test failed on the same comparison
+      (['django==3.2.0', 'flask>=2', '-e .'] != ['django==3.2.0']), the poetry exact-pin test failed
+      because no finding carried svc/pyproject.toml, and the no-pin tests failed with 'False is not
+      true : pip-audit was launched' (the base launches pip-audit on a file with only bare names).
+      Green at the base, so not red evidence:
+      test_findings_carry_the_reviewed_manifest_as_their_file,
+      test_a_failed_launch_of_a_mixed_unit_reports_the_run_reason_and_completes_nothing,
+      test_a_missing_toml_parser_is_reported_before_any_extraction and
+      test_a_missing_toml_parser_does_not_affect_a_requirements_unit (the TOML-parser check that
+      already ran first).
+  AC-7:
+    tests:
+      - tests.test_sca_pip_manifest_prepared_audit.TestOneNameAtTwoVersions.test_two_prepared_files_and_two_launches_in_group_order
+      - tests.test_sca_pip_manifest_prepared_audit.TestOneNameAtTwoVersions.test_scanning_the_same_input_twice_is_byte_identical
+      - tests.test_sca_pip_manifest_prepared_audit.TestOneNameAtTwoVersions.test_one_run_that_does_not_complete_leaves_the_other_findings
+      - tests.test_sca_pip_manifest_prepared_audit.TestOneNameAtTwoVersions.test_every_run_that_does_not_complete_reports_its_reason_once
+      - tests.test_sca_pip_manifest_prepared_audit.TestUntrustedTextStaysOutOfTheResult.test_neither_skip_reason_nor_summary_carries_a_name_a_path_or_the_root
+      - tests.test_sca_pip_manifest_prepared_audit.TestUntrustedTextStaysOutOfTheResult.test_a_unit_with_nothing_to_audit_leaks_nothing_either
+    red_confirmed: true
+    red_reason: >-
+      Against the base copy test_two_prepared_files_and_two_launches_in_group_order failed with
+      AssertionError: 1 != 2 (one launch on the reviewed file instead of two prepared files), the
+      other tests of TestOneNameAtTwoVersions failed on the same launch count, and the leak tests
+      failed with AssertionError: None != 'pip_manifest_entries_unpinnable' and
+      None != 'pip_manifest_unpinnable' (the base reports no manifest token).
+      test_scanning_the_same_input_twice_is_byte_identical was green at the base (the base scan is
+      deterministic too) and is kept as the determinism pin.
+  AC-8:
+    tests:
+      - tests.test_sca_pip_manifest_prepared_audit.TestPreparedFilesAreOwnerOnlyAndRemoved.test_normal_completion
+      - tests.test_sca_pip_manifest_prepared_audit.TestPreparedFilesAreOwnerOnlyAndRemoved.test_a_launch_that_does_not_complete
+      - tests.test_sca_pip_manifest_prepared_audit.TestPreparedFilesAreOwnerOnlyAndRemoved.test_an_exception_in_the_execution_step_propagates_and_the_files_are_removed
+      - tests.test_sca_pip_manifest_prepared_audit.TestPreparedFilesAreOwnerOnlyAndRemoved.test_the_prepared_files_live_in_the_redirected_temporary_directory
+    red_confirmed: true
+    red_reason: >-
+      Against the base copy the tests failed (AssertionError: 1 != 2 for the number of recorded
+      prepared files after a normal completion; AssertionError: 0 != 2 for the prepared files present
+      at the moment the injected exception fires): the base creates no prepared file for a
+      requirements or pyproject unit, so there is nothing to be owner-only or removed.
+  AC-9:
+    tests:
+      - tests.test_sca_pip_lockfile_audit
+      - tests.test_sca_scan_invocation.TestPipInvariantsUnchanged.test_allowed_executables_are_unchanged
+      - tests.test_sca_scan_invocation.TestPipInvariantsUnchanged.test_ecosystem_lockfiles_are_unchanged
+      - tests.test_sca_scan_invocation.TestPipInvariantsUnchanged.test_pip_child_environment_pins_are_unchanged
+      - tests.test_sca_scan_unchanged_surfaces.TestAC1PipJobIsUnchanged.test_ac1_pip_lockfile_audits_a_prepared_file_from_the_project_root
+      - tests.test_sca_scan_unchanged_surfaces.TestAC1PipJobIsUnchanged.test_ac1_pip_environment_is_the_runners_with_the_existing_pip_pins
+      - tests.test_sca_scan_unchanged_surfaces.TestAC1PipJobIsUnchanged.test_ac1_pip_lockfile_environment_is_the_runners_with_the_existing_pip_pins
+      - tests.test_sca_scan_unchanged_surfaces.TestAC2EnvPinsKeepEveryEcosystemValue
+      - tests.test_scan_dependencies_pip_directness.TestUndeterminedNote.test_the_note_follows_the_unpinnable_note_of_a_lockfile_unit
+    red_confirmed: false
+    red_reason: >-
+      The lockfile route behaves as it did before this task and must stay that way, so these tests
+      were green against the base copy and stay green: there is no failing check to observe before
+      the implementation. They are regression guards. tests/test_sca_pip_lockfile_audit.py is unedited
+      (git diff against the base is empty); the executable-allowlist, lockfile-set and pip
+      environment-pin tests keep their expected values. All of them were observed to pass after the
+      implementation.
+  AC-10:
+    tests:
+      - tests.test_sca_scan_normalization.TestEcosystemSelectionAndCommandAssembly.test_command_assembled_from_registry_tool_and_args
+      - tests.test_sca_scan_normalization.TestPipNormalizationRealInputContract.test_pyproject_toml_pep621_dependencies_resolve_direct_names
+      - tests.test_sca_scan_job_grouping.TestChildEnvironmentPins.test_non_go_job_envs_gain_no_go_variables
+      - tests.test_sca_scan_job_grouping.TestPlanningIsPure.test_build_scan_job_completes_for_root_and_nested_targets
+      - tests.test_sca_per_project_scan_binding.TestBuildScanJobWorkingDirectoryAndPrecondition.test_every_pip_form_keeps_the_project_root_as_the_working_directory
+      - tests.test_sca_per_project_scan_binding.TestPipGroupsKeepTheirExistingBehavior.test_pip_is_audited_once_per_group_with_lockfile_first_selection
+      - tests.test_sca_per_project_scan_binding.TestPipGroupsKeepTheirExistingBehavior.test_a_requirements_file_and_a_pyproject_of_one_directory_make_one_launch
+      - tests.test_sca_scanner_project_config_isolation.TestBuildScanJobIsPureWithPreparedInputs.test_ac7_pip_and_go_jobs_ignore_prepared_inputs
+      - tests.test_sca_scan_execution.TestCombinedSkipReasonIsDeterministic.test_partial_coverage_combined_reason_is_order_independent
+      - tests.test_scan_dependencies_pyproject_directness.TestUnexpectedShapes.test_a_scan_returns_normally_for_each_unexpected_shape
+      - tests.test_scan_dependencies_pyproject_directness.TestIncompleteSets.test_scan_unit_with_invalid_toml_reports_the_unpinnable_token
+      - tests.test_scan_dependencies_pip_directness.TestUndeterminedNote
+      - tests.test_scan_dependencies_pip_directness.TestStandardLibraryOnly
+      - tests.test_scan_dependencies_pyproject_directness.TestStandardLibraryOnly
+      - tests.test_sca_scan_invocation.TestPipJobAuditsTheReviewedProject.test_no_argument_form_installs_or_writes_a_resolution_artifact
+    red_confirmed: true
+    red_reason: >-
+      The old-pip-shape tests rewritten in this task are the executable part of this criterion.
+      Against the base copy the rewritten tests that name the new shape failed, for example
+      test_command_assembled_from_registry_tool_and_args (AssertionError: Lists differ:
+      ['pip-audit', '--format', 'json'] != ['pip-audit']), test_pip_is_audited_once_per_group_with_lockfile_first_selection
+      (AssertionError: 4 != 6 : ['-r', 'req/requirements.txt', '--format', 'json']),
+      test_scan_unit_with_invalid_toml_reports_the_unpinnable_token and
+      test_a_scan_returns_normally_for_each_unexpected_shape. In the other direction, the old versions
+      of these tests failed once the implementation was in place (the pip argv pins, the registry
+      literal and the unpinned pyproject / requirements fixtures) until they were updated, and they
+      pass now. The rest of the IDs listed here (the pep621 fixture, the job-environment, the plan
+      purity, the isolation, the working-directory, the one-launch and the partial-coverage tests)
+      were already green at the base: they were edited to pass a prepared file or a pin and are
+      not red evidence by themselves. The stdlib-only checks and the forbidden_tokens tuple (its text is
+      unchanged) are guards that are green before and after, and the full-suite exit status was
+      already 0 at the base, so that part of the criterion has no red.

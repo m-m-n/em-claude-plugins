@@ -13,7 +13,11 @@ Covers the task's Acceptance Criteria
 - AC-2 (FR3, TS-19): the Poetry tables count (except `python`); optional
   dependencies, dependency groups and Poetry group tables do not.
 - AC-3 (FR5, TM-5, TS-8, TS-20): every unresolvable declaration marks the set
-  incomplete without skipping the scan unit.
+  incomplete without skipping the scan unit. (sca-pip-no-build-exec: a unit is
+  launched only on the exact pins it states, so a declaration with no exact pin
+  reports `pip_manifest_unpinnable` and launches nothing, and one that also
+  states a pin audits it and reports `pip_manifest_entries_unpinnable`; the
+  direct-name expectations themselves are unchanged.)
 - AC-4 (NFR3, TM-4, TS-25): unexpected shapes never raise; the set is
   incomplete.
 - AC-5 (FR6, NFR4, TM-6, TS-15): without tomllib a pyproject.toml unit reports
@@ -66,6 +70,8 @@ SCAN = _load_script()
 HIGH_VECTOR = "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"
 
 PIP_TOML_PARSER_UNAVAILABLE = "pip_toml_parser_unavailable"
+UNPINNABLE = "pip_manifest_unpinnable"
+ENTRIES_UNPINNABLE = "pip_manifest_entries_unpinnable"
 
 
 # ---------------------------------------------------------------------------
@@ -201,6 +207,13 @@ class ProjectCase(unittest.TestCase):
     def assertCompletedWithoutSkip(self, result):
         self.assertFalse(result["skipped"], result)
         self.assertIsNone(result["skip_reason"], result)
+
+    def assertUnpinnable(self, result):
+        """No exact pin: nothing is launched and the unit reports the one
+        fixed manifest token."""
+        self.assertTrue(result["skipped"], result)
+        self.assertEqual(result["skip_reason"], UNPINNABLE)
+        self.assertNotLaunched()
 
 
 def finding_packages(result):
@@ -341,7 +354,7 @@ class TestPyprojectDirectNames(ProjectCase):
         # AC-1 through the scan: a severity-high advisory for requests and one
         # for django each produce a finding (the single-quoted spelling),
         # while a transitive package stays out.
-        self.write("pyproject.toml", project_table("dependencies = ['requests[socks]>=2', 'django==3.2.0']"))
+        self.write("pyproject.toml", project_table("dependencies = ['requests[socks]==2.31.0', 'django==3.2.0']"))
         self.install_pip_audit([vulnerable("requests"), vulnerable("django"), vulnerable("urllib3")])
         result = self.scan(["pyproject.toml"])
         self.assertCompletedWithoutSkip(result)
@@ -421,7 +434,7 @@ class TestPoetryAndNonDeclarationTables(ProjectCase):
         self.assertResolved(self.resolve(text), {"a"}, True)
 
     def test_a_scan_does_not_report_a_package_only_in_an_optional_table(self):
-        text = project_table("dependencies = ['a']\n\n[project.optional-dependencies]\nextra = ['opt-pkg']\n")
+        text = project_table("dependencies = ['a==1.0']\n\n[project.optional-dependencies]\nextra = ['opt-pkg']\n")
         self.write("pyproject.toml", text)
         self.install_pip_audit([vulnerable("a"), vulnerable("opt-pkg")])
         result = self.scan(["pyproject.toml"])
@@ -501,31 +514,47 @@ class TestIncompleteSets(ProjectCase):
                 result = self.resolve(project_table(f"dependencies = ['a>=1', '{item}', 'b']"))
                 self.assertResolved(result, {"a", "b"}, False)
 
-    def _assert_scan_runs_without_skip(self, changed_file="pyproject.toml"):
+    def _assert_scan_reports_unpinnable(self, changed_file="pyproject.toml"):
+        # The declaration is unresolvable, so the unit has no exact pin to
+        # audit: pip-audit is not started and the unit reports the fixed token.
         self.install_pip_audit([vulnerable("django")])
         result = self.scan([changed_file])
-        self.assertCompletedWithoutSkip(result)
-        self.assertEqual(len(self.calls()), 1, "the scan unit must still launch pip-audit")
+        self.assertUnpinnable(result)
 
-    def test_scan_unit_with_dynamic_dependencies_is_not_skipped(self):
+    def test_scan_unit_with_dynamic_dependencies_reports_the_unpinnable_token(self):
         self.write("pyproject.toml", '[project]\nname = "demo"\ndynamic = ["dependencies"]\n')
-        self._assert_scan_runs_without_skip()
+        self._assert_scan_reports_unpinnable()
 
-    def test_scan_unit_without_any_declaration_is_not_skipped(self):
+    def test_scan_unit_without_any_declaration_reports_the_unpinnable_token(self):
         self.write("pyproject.toml", PYPROJECT_HEADER)
-        self._assert_scan_runs_without_skip()
+        self._assert_scan_reports_unpinnable()
 
-    def test_scan_unit_with_invalid_toml_is_not_skipped(self):
+    def test_scan_unit_with_invalid_toml_reports_the_unpinnable_token(self):
         self.write("pyproject.toml", "[project\n")
-        self._assert_scan_runs_without_skip()
+        self._assert_scan_reports_unpinnable()
 
-    def test_scan_unit_with_an_unreadable_manifest_is_not_skipped(self):
-        path = self.write("pyproject.toml", project_table("dependencies = ['a']"))
+    def test_scan_unit_with_an_unreadable_manifest_reports_the_unpinnable_token(self):
+        path = self.write("pyproject.toml", project_table("dependencies = ['a==1.0']"))
         path.chmod(0)
         self.addCleanup(path.chmod, stat.S_IRUSR | stat.S_IWUSR)
         if os.access(path, os.R_OK):
             self.skipTest("file permissions are not enforced for this user")
-        self._assert_scan_runs_without_skip()
+        self._assert_scan_reports_unpinnable()
+
+    def test_an_incomplete_set_with_an_exact_pin_elsewhere_still_launches_the_unit(self):
+        # Dynamic dependencies leave the direct names incomplete, and the
+        # Poetry exact pin is the one auditable item: the unit launches, keeps
+        # its findings and reports the entries token for the dynamic item.
+        self.write(
+            "pyproject.toml",
+            '[project]\nname = "demo"\ndynamic = ["dependencies"]\n'
+            '[tool.poetry.dependencies]\ndjango = "==3.2.0"\n',
+        )
+        self.install_pip_audit([vulnerable("django")])
+        result = self.scan(["pyproject.toml"])
+        self.assertEqual(len(self.calls()), 1, "the scan unit must still launch pip-audit")
+        self.assertEqual(finding_packages(result), ["django"])
+        self.assertEqual(result["skip_reason"], ENTRIES_UNPINNABLE)
 
     def test_a_poetry_lock_unit_reads_the_sibling_pyproject_through_the_same_resolver(self):
         self.write("poetry.lock", poetry_lock_text({"django": "3.2.0"}))
@@ -592,12 +621,15 @@ class TestUnexpectedShapes(ProjectCase):
                 result = self.scan(["pyproject.toml"])
                 self.assertEqual(result["findings"], [])
                 self.assertIn("summary", result)
+                self.assertUnpinnable(result)
 
     def test_a_scan_returns_normally_for_a_non_string_item(self):
-        self.write("pyproject.toml", project_table("dependencies = ['django', 5]"))
+        self.write("pyproject.toml", project_table("dependencies = ['django==3.2.0', 5]"))
         self.install_pip_audit([vulnerable("django")])
         result = self.scan(["pyproject.toml"])
-        self.assertCompletedWithoutSkip(result)
+        # The non-string item is left out of the pins; the exact pin is audited.
+        self.assertEqual(result["skip_reason"], ENTRIES_UNPINNABLE)
+        self.assertEqual(len(self.calls()), 1)
         self.assertEqual(finding_packages(result), ["django"])
 
 
@@ -639,8 +671,10 @@ class TestTomlParserUnavailable(ProjectCase):
         self.assertEqual(result["skip_reason"], PIP_TOML_PARSER_UNAVAILABLE)
         calls = self.calls()
         self.assertEqual(len(calls), 1, calls)
-        self.assertIn("-r", calls[0]["argv"])
-        self.assertIn("tools/requirements.txt", calls[0]["argv"])
+        # The requirements unit is audited through a prepared file: the
+        # reviewed path is never part of the scanner's argument vector.
+        self.assertEqual(calls[0]["argv"][1], "-r")
+        self.assertNotIn("tools/requirements.txt", calls[0]["argv"])
         self.assertNotIn("svc", calls[0]["argv"])
         # The completed unit's finding survives the skip of the other unit.
         self.assertEqual(finding_packages(result), ["django"])
@@ -649,7 +683,7 @@ class TestTomlParserUnavailable(ProjectCase):
     def test_the_skip_follows_the_binding_at_call_time(self):
         # The same module: with the parser the unit completes, and with the
         # binding replaced by None the very next scan skips.
-        self.write("pyproject.toml", project_table("dependencies = ['django']"))
+        self.write("pyproject.toml", project_table("dependencies = ['django==3.2.0']"))
         self.install_pip_audit([vulnerable("django")])
         first = self.scan(["pyproject.toml"])
         self.assertCompletedWithoutSkip(first)
@@ -759,7 +793,7 @@ class TestLockfileTokensWithoutTomllib(ProjectCase):
 
     def test_requirements_units_in_subdirectories_never_report_the_parser_skip(self):
         self.write("a/requirements.txt", "django==3.2.0\n")
-        self.write("b/requirements.txt", "requests\n")
+        self.write("b/requirements.txt", "requests==2.31.0\n")
         self.install_pip_audit([vulnerable("django")])
         result = self.scan_without_tomllib(["a/requirements.txt", "b/requirements.txt"])
         self.assertCompletedWithoutSkip(result)

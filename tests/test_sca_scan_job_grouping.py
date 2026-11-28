@@ -7,8 +7,10 @@ Covers task0001 Acceptance Criteria
 (feature-docs/sca-per-project-scan-binding/tasks/task0001.md):
 
 - AC-1: with the real registry, the npm job's argument vector carries
-  `--workspaces=false` as its third registry argument; cargo, go and pip
-  vectors are unchanged.
+  `--workspaces=false` as its third registry argument; cargo and go vectors
+  are unchanged. (pip's vector is the prepared-requirements form for every
+  manifest since sca-pip-no-build-exec; the form is declared in the
+  registry's `target_forms` table.)
 - AC-2: the go job's child environment pins GOWORK=off, GOFLAGS=-mod=readonly,
   GOENV=off and GOPROXY at its existing value, whatever the caller's
   environment carries; npm / cargo / pip pins equal their previous values.
@@ -45,7 +47,7 @@ from the prepared isolation paths of its group (`prepared_inputs`), so every
 npm / cargo `build_scan_job` call below passes one -- a nominal value,
 because construction is pure and never touches those paths. cargo's argument
 vector carries the registry-declared `--file <copy>` right after `audit`;
-npm's, go's and pip's are unchanged.
+npm's and go's are unchanged.
 
 Test Notes: the script is loaded by file path (its name contains a hyphen),
 following the sibling `tests/test_sca_scan_*.py` modules. No real scanner is
@@ -206,19 +208,17 @@ class TestArgumentVectorsFromTheRealRegistry(unittest.TestCase):
         job = SCAN.build_scan_job(self.entries["go"], "go.mod", "/proj", "/x/govulncheck")
         self.assertEqual(job["argv"], ["/x/govulncheck", "-json", "./..."])
 
-    def test_pip_vectors_are_unchanged(self):
+    def test_pip_vectors_are_the_prepared_requirements_form_for_every_manifest(self):
+        # sca-pip-no-build-exec: the reviewed requirements file and the project
+        # directory are no longer targets; every pip job audits a prepared file.
         pip = self.entries["pip"]
-        requirements = SCAN.build_scan_job(pip, "requirements.txt", "/proj", "/x/pip-audit")
-        pyproject = SCAN.build_scan_job(pip, "pyproject.toml", "/proj", "/x/pip-audit")
-        lockfile = SCAN.build_scan_job(
-            pip, "poetry.lock", "/proj", "/x/pip-audit", prepared_file=self.PREPARED
-        )
-        self.assertEqual(requirements["argv"], ["/x/pip-audit", "-r", "requirements.txt", "--format", "json"])
-        self.assertEqual(pyproject["argv"], ["/x/pip-audit", ".", "--format", "json"])
-        self.assertEqual(
-            lockfile["argv"],
-            ["/x/pip-audit", "-r", self.PREPARED, "--no-deps", "--disable-pip", "--format", "json"],
-        )
+        expected = ["/x/pip-audit", "-r", self.PREPARED, "--no-deps", "--disable-pip", "--format", "json"]
+        for manifest in ("requirements.txt", "pyproject.toml", "poetry.lock", "Pipfile.lock"):
+            with self.subTest(manifest=manifest):
+                job = SCAN.build_scan_job(
+                    pip, manifest, "/proj", "/x/pip-audit", prepared_file=self.PREPARED
+                )
+                self.assertEqual(job["argv"], expected)
 
     def test_plans_carry_the_absolute_executable_the_job_argv0_is_built_from(self):
         # The argument vectors of the jobs run_scan builds from these plans are
@@ -320,6 +320,7 @@ class TestChildEnvironmentPins(unittest.TestCase):
                 job = SCAN.build_scan_job(
                     self.entries[name], manifest, "/proj", f"/x/{name}", environ=self.HOSTILE,
                     prepared_inputs=_nominal_prepared(manifest),
+                    prepared_file="/tmp/prepared-requirements.txt" if name == "pip" else None,
                 )
                 self.assertFalse([k for k in job["env"] if k.startswith("GO")])
 
@@ -940,6 +941,7 @@ class TestPlanningIsPure(unittest.TestCase):
                 job = SCAN.build_scan_job(
                     entries[name], target, "/definitely/not/there", f"/x/{name}",
                     prepared_inputs=_nominal_prepared(target),
+                    prepared_file="/prepared/pip-0001.txt" if name == "pip" else None,
                 )
                 self.assertEqual(job["manifest"], target)
 
