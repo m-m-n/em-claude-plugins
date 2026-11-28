@@ -1,16 +1,16 @@
 schema_version: 1
 feature: destructive-guard-resolver-only-evidence
 phase: create-plan
-status: dispatched
+status: pending
 generation: 1
 base_revision: cf12d88d043060249299739b6d7adddead59b83f
 last_input_digest: sha256:8be81f9cfcfcd7bba43efa2fa1534f07445759f370cce65c16cf969b34dcf0dd
-active_request_id: create-plan-run-0001
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
 - request_id: create-plan-run-0001
-  status: dispatched
+  status: stale
   input_digest: sha256:8be81f9cfcfcd7bba43efa2fa1534f07445759f370cce65c16cf969b34dcf0dd
   dispatch_digest_inputs:
     em-workflow/references/contracts/planner-contract.md: sha256:18464486c0546613d92935cba80087c4980d3791d41838162d23840e431da515
@@ -23,9 +23,15 @@ worker_runs:
     em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
     feature-docs/destructive-guard-resolver-only-evidence/SPEC.md: sha256:3360173eb60b3f7e54c24853f91c430d2f7702a05fe11b1c4ae394b4c92ba737
     feature-docs/destructive-guard-resolver-only-evidence/workflow.yaml: sha256:47fd8f75788b9f565a119d1a0fe9c736b5d0d966fa969f56b9213401cf8ca5ce
+  note: SPEC.md amended by the orchestrator after Codex consultation; artifacts discarded
+    unrecorded
 artifacts: []
 other_feature_doc_fixes: []
-orchestrator_doc_edits: []
+orchestrator_doc_edits:
+- path: feature-docs/destructive-guard-resolver-only-evidence/SPEC.md
+  sha256: sha256:4e9c2ae2c948edb7dcc0b5dde90bf8759ea0cfaedd34d88069a8251205cf1ef0
+  reason: planner run-0001 の未解決点を Codex に相談した結果（選択肢 C）、resolver 形に which のパス形・-a・--
+    と command -v -- を加え、HEAD で deny だった 3 形を deny ケースとして固定した
 patches: []
 stale_redispatch_count: 0
 resolved_input_cache: {}

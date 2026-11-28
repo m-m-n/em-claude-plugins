@@ -34,3 +34,28 @@ records:
   resolution_note: 'Q3 先頭語がパス形（/usr/bin/which）の扱い。選択肢: A=受け付けない、B=basename で受け付ける。Codex
     は A（同じ動作の実行ファイルか静的に確認できない）。採用: A。選ばなかった: B。追加の指摘: 改行で区切られた本文は単一呼び出しでないため unreadable
     にする→FR2 に反映。Opus escalation: 実行なし'
+- question_id: create-plan.planner-open-question.nfr-manual-verification
+  packet_id: null
+  answered_at: '2026-11-28T21:46:51+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: 手動の変更範囲レビューを維持（Codex A）
+  normalized_answer: 手動の変更範囲レビューを維持（Codex A）
+  resolution_note: 'Q NFR2/NFR3/NFR4 に TS が無い点。選択肢: A=VERIFICATION.md の手動変更範囲レビューで確認、B=自動チェックを足す。Codex
+    は A（NFR3/NFR4 は差分で直接確認でき、NFR2 はケース表と実装差分で検知・ask が増えていないことを確認すればよい）。採用: A。選ばなかった:
+    B。Opus escalation: 実行なし'
+- question_id: create-plan.planner-open-question.resolver-form-regression
+  packet_id: null
+  answered_at: '2026-11-28T21:46:51+09:00'
+  source: batch-codex-consultation
+  answer_mode: freeform
+  selected_option_ids: []
+  freeform: SPEC を改訂して which のパス形・-a・-- と command -v -- を受け付け、再計画する（Codex C）
+  normalized_answer: SPEC を改訂して which のパス形・-a・-- と command -v -- を受け付け、再計画する（Codex
+    C）
+  resolution_note: 'Q SPEC の絞り込みで HEAD では deny の $(which -a rm) / $(/usr/bin/which
+    rm) / $(command -v -- rm) が allow に変わる点。選択肢: A=残余リスクとして受容、B=走行を止めて人が SPEC を決める、C=オーケストレーターが
+    SPEC を改訂し再計画。Codex は 1 回目に B（検知の後退で緩和策が無い）、無人実行を前提にした 2 回目で C（判定に使うのは resolver
+    の唯一のオペランドだけなので誤爆 4 形は allow のまま、区切り・パイプ・引用符は対象外のまま、ask を足さない。-a と -- の併用は -a --
+    NAME の順に限り、3 形を deny の回帰テストに入れる）。採用: C。選ばなかった: A, B。Opus escalation: 実行なし'

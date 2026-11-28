@@ -2,7 +2,7 @@
 
 ## Overview
 
-destructive-guard の置換頭部コマンド名 evidence の読み取り（`read_command_name_evidence()`）で、resolver でない置換本文が rm / git の evidence になり deny に倒れる誤爆をなくす。evidence として読む本文を `which NAME` / `command -v NAME` / `printf NAME` の形に限定し、それ以外の本文は unreadable とする。`$(which rm)` / `$(command -v rm)` / `$(printf rm)` の検知は維持する。
+destructive-guard の置換頭部コマンド名 evidence の読み取り（`read_command_name_evidence()`）で、resolver でない置換本文が rm / git の evidence になり deny に倒れる誤爆をなくす。evidence として読む本文を `which [-a] [--] NAME` / `command -v [--] NAME` / `printf NAME` の形に限定し、それ以外の本文は unreadable とする。`$(which rm)` / `$(command -v rm)` / `$(printf rm)` の検知は維持する。
 
 ## Objectives
 
@@ -13,13 +13,17 @@ destructive-guard の置換頭部コマンド名 evidence の読み取り（`rea
 
 ### Functional Requirements
 
-- **FR1: evidence を読む本文の形を限定する** — `read_command_name_evidence()` は、継続行（バックスラッシュ + 改行）を取り除き前後の空白を落とした本文を、スペースとタブで分割する。語の並びが `which NAME` / `command -v NAME` / `printf NAME` のどれかに一致するときだけ、NAME の basename をコマンド名として返す。先頭語と `-v` は完全一致で比べる。NAME はちょうど 1 語。
+- **FR1: evidence を読む本文の形を限定する** — `read_command_name_evidence()` は、継続行（バックスラッシュ + 改行）を取り除き前後の空白を落とした本文を、スペースとタブで分割する。語の並びが次のどれかに一致するときだけ、NAME の basename をコマンド名として返す。NAME はちょうど 1 語。
+    - `which NAME` / `which -a NAME` / `which -- NAME` / `which -a -- NAME`（`-a` と `--` を両方置くときはこの順）。先頭語は `which` との完全一致か、basename が `which` のパス形（`/usr/bin/which`）
+    - `command -v NAME` / `command -v -- NAME`。`command` と `-v` は完全一致で比べる
+    - `printf NAME`。`printf` は完全一致で比べる
+    - `-a` と `--` も完全一致で比べる
 - **FR2: それ以外の本文は unreadable** — FR1 の形に一致しない本文は `None`（unreadable）を返す。対象は次のとおり。
     - 先頭語が FR1 の語以外の本文（`dirname` / `basename` / `readlink` / `ls -d` / `echo` / `type` など）
     - 1 語だけの本文（`rm`）
     - オペランドが 2 語以上の本文（`which ls rm`）
-    - FR1 にない option 語を含む本文（`which -a rm`）
-    - 先頭語がパス形の本文（`/usr/bin/which rm`）
+    - FR1 にない option 語、または FR1 にない順序の option 語を含む本文（`which -s rm`、`which -- -a rm`、`command -V rm`）
+    - 先頭語が basename `which` 以外のパス形の本文（`/usr/bin/command -v rm`、`/usr/bin/printf rm`）
     - 継続行の除去後に改行が残る本文
 - **FR3: 既存の読み取り規則を残す** — RAW_BODY が `None`、空、空白だけのときは unreadable。NAME が `-` で始まるときは unreadable。NAME の basename が空のときは unreadable。継続行の除去は今と同じ（`which r\<改行>m` は `rm`）。文字列処理だけで、置換の評価・プロセス起動・ファイルシステム参照をしない。
 - **FR4: unreadable の扱いは変えない** — `route_substitution_headed_statement()` は今と同じく、evidence が rm なら rm 経路、git なら git 経路に入り、それ以外と `None` では経路に入らない（allow。ask へは倒さない）。evidence が rm でない文の plain route は今どおり実行される。
@@ -34,6 +38,9 @@ destructive-guard の置換頭部コマンド名 evidence の読み取り（`rea
     - deny:
         - `$(command -v rm) -rf /home/user/valuable`
         - `$(command -v git) reset --hard HEAD`
+        - `$(which -a rm) -rf /home/user/valuable`
+        - `$(/usr/bin/which rm) -rf /home/user/valuable`
+        - `$(command -v -- rm) -rf /home/user/valuable`
 - **FR6: docstring を直す** — `read_command_name_evidence()` の docstring の読み取り手順（「LAST word」を取る 2〜4 番）を FR1〜FR3 に合わせて書き直す。`route_substitution_headed_statement()` の docstring を直す場合は、tests が固定している語句（`held`、`one ordinal`）を残し、`tests/test_destructive_guard_rm_reason_positions.py` の STALE パターンに一致する語句を入れない。
 - **FR7: 既存の単体テストの期待値を 1 つ直す** — `tests/test_destructive_guard_lexer_agreement.py` の `H.read_command_name_evidence("which a\\\\\nm")` の期待値を `"m"` から `None` に変える。同じテストの `which r\<改行>m` → `"rm"` と、そのコマンドの deny はそのまま。
 
@@ -62,7 +69,8 @@ RAW_BODY
   → 継続行（\ + 改行）を除去し、前後の空白を落とす（FR3）
   → 改行が残る → unreadable（FR2）
   → スペースとタブで分割
-  → 語の並びが which NAME / command -v NAME / printf NAME のどれか（先頭語と -v は完全一致）
+  → 語の並びが which [-a] [--] NAME / command -v [--] NAME / printf NAME のどれか
+     （which は完全一致か basename が which のパス形。それ以外の語は完全一致）
        一致しない → unreadable（FR2）
   → NAME が - で始まる → unreadable（FR3）
   → NAME の basename が空 → unreadable（FR3）
@@ -126,6 +134,9 @@ path that never materializes is not a violation.
 - [ ] TS-8 (allow): `$(rm) -rf /home/user/valuable`
 - [ ] TS-9 (既存・維持): cases.json の `$(which ...)` ケースと `$(printf rm)` ケース
 - [ ] TS-10 (既存・維持): `$(true) rm -rf /home/user/valuable` は plain route で deny
+- [ ] TS-12 (deny, rm-recursive): `$(which -a rm) -rf /home/user/valuable`
+- [ ] TS-13 (deny, rm-recursive): `$(/usr/bin/which rm) -rf /home/user/valuable`
+- [ ] TS-14 (deny, rm-recursive): `$(command -v -- rm) -rf /home/user/valuable`
 
 ### スイート全体
 
@@ -139,7 +150,7 @@ path that never materializes is not a violation.
 ## Success Criteria
 
 - [ ] AC-1: `$(dirname /opt/rm) -rf /home/user/valuable`、`$(ls -d /usr/bin/rm) -rf /home/user/valuable`、`$(readlink -f ./rm) -rf /home/user/valuable`、`$(basename /a/b git) clean -fd` が allow。
-- [ ] AC-2: `$(which rm) -rf /home/user/valuable`、`` `which rm` -rf /home/user/valuable ``、`$(command -v rm) -rf /home/user/valuable`、`$(which git) reset --hard HEAD`、`$(printf rm) -rf ...` が deny で、既存ケースは今と同じ判定と理由 ID。
+- [ ] AC-2: `$(which rm) -rf /home/user/valuable`、`` `which rm` -rf /home/user/valuable ``、`$(command -v rm) -rf /home/user/valuable`、`$(which git) reset --hard HEAD`、`$(printf rm) -rf ...`、`$(which -a rm) -rf /home/user/valuable`、`$(/usr/bin/which rm) -rf /home/user/valuable`、`$(command -v -- rm) -rf /home/user/valuable` が deny で、既存ケースは今と同じ判定と理由 ID。
 - [ ] AC-3: `destructive-guard-cases.json` に FR5 のケースが入っている。
 - [ ] AC-4: `python3 em-workflow/hooks/tests/run-destructive-guard.py` が全件通る。
 - [ ] AC-5: `python3 -m unittest discover -s tests` の失敗テスト ID 集合が base revision と一致する。
@@ -148,7 +159,7 @@ path that never materializes is not a violation.
 
 - 「which / command -v 等」の範囲は which / command -v とし、既存テストが固定している printf を互換のために残す。type / echo は含めない（Codex 相談で決定）。
 - resolver のオペランドはちょうど 1 語。2 語以上は unreadable。
-- resolver 語はパス形（`/usr/bin/which`）を受け付けず、完全一致で比べる（Codex 相談で決定）。
+- `which` は basename が `which` のパス形も受け付け、option 語 `-a` と終端語 `--` を受け付ける。`command -v` は `--` を受け付ける。`-a` と `--` を両方置く形は `-a -- NAME` の順に限る（create-plan 中の Codex 相談で決定）。
 - lexer_agreement の期待値 `"m"` を `None` に変える（Codex 相談で決定）。
 - `$(printf rm)` を rm evidence とする既存の deny / ask ケースは変わらない。
 - evidence が `None` の文は plain route が今どおり走る。
