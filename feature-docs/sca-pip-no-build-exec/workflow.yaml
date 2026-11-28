@@ -139,7 +139,8 @@ tasks:
     - NFR4
     - NFR5
     - NFR6
-    status: pending
+    status: in_progress
+    branch: em-workflow/sca-pip-no-build-exec/task0001
     notes: null
 review:
   status: pending
