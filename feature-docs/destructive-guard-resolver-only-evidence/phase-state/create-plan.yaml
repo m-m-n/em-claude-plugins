@@ -1,11 +1,11 @@
 schema_version: 1
 feature: destructive-guard-resolver-only-evidence
 phase: create-plan
-status: pending
+status: dispatched
 generation: 1
 base_revision: cf12d88d043060249299739b6d7adddead59b83f
-last_input_digest: sha256:8be81f9cfcfcd7bba43efa2fa1534f07445759f370cce65c16cf969b34dcf0dd
-active_request_id: null
+last_input_digest: sha256:6ca683366c75edae9db5b40e049b5fcb0f55537a33ea27d1402af66d97504e89
+active_request_id: create-plan-run-0002
 packets: {}
 answers: {}
 worker_runs:
@@ -25,6 +25,20 @@ worker_runs:
     feature-docs/destructive-guard-resolver-only-evidence/workflow.yaml: sha256:47fd8f75788b9f565a119d1a0fe9c736b5d0d966fa969f56b9213401cf8ca5ce
   note: SPEC.md amended by the orchestrator after Codex consultation; artifacts discarded
     unrecorded
+- request_id: create-plan-run-0002
+  status: dispatched
+  input_digest: sha256:6ca683366c75edae9db5b40e049b5fcb0f55537a33ea27d1402af66d97504e89
+  dispatch_digest_inputs:
+    em-workflow/references/contracts/planner-contract.md: sha256:18464486c0546613d92935cba80087c4980d3791d41838162d23840e431da515
+    em-workflow/references/impl-skills.yaml: sha256:6b372678cdbbeb88b30c34d151c843e1a7072dd021a2ef1ac5fbaafae0bd67c2
+    em-workflow/references/license-compat.md: sha256:52a07c5d0199a693958d0c9ec4768e8aa248cf95bdb9172dec75296aac5980be
+    em-workflow/references/review-rules.yaml: sha256:56fbc7788c9bf3d2ccd2ef0be569a94e1854e12c177dcc5fa69b96ee4b95c931
+    em-workflow/references/templates/task-plan.md: sha256:55eb61de4f1fb012275915f2f1aa689accca46ef30c5d6f8407f655da6cbb814
+    em-workflow/references/templates/threat-model.md: sha256:6943baf20f089b2ab7a6d0d6b4842a6b7075325a747827b9225304881e0b1278
+    em-workflow/references/workflow-schema.md: sha256:5bd8500c203c4f17cde4193ee43d561073fe7f47099d61a55eb593e098881d87
+    em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
+    feature-docs/destructive-guard-resolver-only-evidence/SPEC.md: sha256:4e9c2ae2c948edb7dcc0b5dde90bf8759ea0cfaedd34d88069a8251205cf1ef0
+    feature-docs/destructive-guard-resolver-only-evidence/workflow.yaml: sha256:47fd8f75788b9f565a119d1a0fe9c736b5d0d966fa969f56b9213401cf8ca5ce
 artifacts: []
 other_feature_doc_fixes: []
 orchestrator_doc_edits:
