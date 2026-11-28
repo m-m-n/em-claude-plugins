@@ -1,0 +1,106 @@
+task_id: task0001
+baseline_failures: []          # 4a, before any edit: python3 em-workflow/hooks/tests/run-destructive-guard.py -> 1737/1737 passed; python3 -m unittest discover -s tests -> Ran 17715 tests, OK (skipped=1)
+final_failures: []             # re-executed after the implementation and after this record: run-destructive-guard.py -> 1748/1748 passed (1737 + 11 new cases); python3 -m unittest discover -s tests -> Ran 17731 tests, OK (skipped=1) (17715 + 15 new methods + 1 record-resolution test generated for this record)
+acceptance_tests:
+  AC-1:
+    tests:
+      - tests.test_destructive_guard_resolver_evidence.TestAcceptedShapes.test_the_reader_returns_the_command_name_of_every_resolver_form
+      - tests.test_destructive_guard_resolver_evidence.TestAcceptedShapes.test_the_named_forms_of_the_criterion_return_rm_or_git
+    red_confirmed: false
+    red_reason: >
+      Every body the criterion lists is a resolver form whose last word is NAME,
+      so the base reader (which took the last word) already returned the same
+      name for each of them; both tests passed against the unchanged hook, in
+      the run that made the AC-2 and AC-6 tests fail. The behavior pre-existed
+      and this task narrows what else is read, so no red state occurred for
+      this criterion. The tests guard against the narrowing dropping a form.
+  AC-2:
+    tests:
+      - tests.test_destructive_guard_resolver_evidence.TestUnreadableShapes.test_a_body_that_is_not_a_resolver_form_is_unreadable
+    red_confirmed: true
+    red_reason: >
+      Run against the unchanged reader, 38 table rows failed with
+      AssertionError: 'rm' is not None (or 'git' / 'm' / 'ls' where the last
+      word was another name), among them dirname /opt/rm, ls -d /usr/bin/rm,
+      readlink -f ./rm, basename /a/b git, echo rm, type rm, a lone rm, which
+      ls rm, which -s rm, which -- -a rm, command -V rm, /usr/bin/command -v rm
+      and /usr/bin/printf rm. They pass after the change.
+  AC-3:
+    tests:
+      - tests.test_destructive_guard_resolver_evidence.TestUnreadableInputs.test_an_absent_empty_or_whitespace_only_body_is_unreadable
+      - tests.test_destructive_guard_resolver_evidence.TestUnreadableInputs.test_a_name_that_cannot_be_a_command_name_is_unreadable
+      - tests.test_destructive_guard_resolver_evidence.TestReaderIsPureStringProcessing.test_no_process_and_no_file_system_access
+      - tests.test_destructive_guard_resolver_evidence.TestReaderIsPureStringProcessing.test_a_substitution_written_in_the_body_is_not_evaluated
+    red_confirmed: false
+    red_reason: >
+      FR3 keeps the existing reading rules (absent / empty / whitespace-only
+      body, a NAME that begins with `-`, a NAME whose last path segment is
+      empty, string processing only), so the base reader already satisfied
+      every row; the four tests passed against the unchanged hook and no red
+      state occurred for this criterion. They pin the rules the new reading
+      flow must not lose.
+  AC-4:
+    tests:
+      - tests.test_destructive_guard_lexer_agreement.TestLineContinuationBeforeOpenersAndInWords.test_a_command_name_read_from_a_substitution_is_read_past_a_pair
+    red_confirmed: true
+    red_reason: >
+      With the expectation for the body `which a`, two backslashes, a newline
+      and `m` changed from "m" to None and the reader unchanged, the test
+      failed with AssertionError: 'm' is not None. The `which r` + backslash
+      + newline + `m` reads-as-rm assertion and the deny of its command are
+      untouched and pass before and after.
+  AC-5:
+    tests:
+      - tests.test_destructive_guard_resolver_evidence.TestCaseTable.test_the_case_table_holds_the_fr5_cases
+      - tests.test_destructive_guard_resolver_evidence.TestCaseTable.test_each_fr5_command_has_one_expected_verdict
+      - tests.test_destructive_guard_resolver_evidence.TestCasesAgainstTheHook.test_the_fr5_cases_get_the_table_verdict
+      - tests.test_destructive_guard_resolver_evidence.TestCasesAgainstTheHook.test_the_resolver_forms_and_the_plain_route_keep_their_verdict
+      - tests.test_destructive_guard_resolver_evidence.TestCasesAgainstTheHook.test_an_unreadable_body_is_allowed_and_never_asked
+    red_confirmed: true
+    red_reason: >
+      The eleven cases were added to the case table first and
+      python3 em-workflow/hooks/tests/run-destructive-guard.py ran against the
+      unchanged hook: 1742/1748 passed and the six allow cases FAILED with
+      got=deny (rm-recursive for dirname / ls -d / readlink -f / which ls rm /
+      $(rm), git-clean for basename /a/b git). The unit tests were then run
+      against a copy of the base hook and the base case table: both
+      TestCaseTable tests failed because the table held none of the eleven
+      commands, and test_the_fr5_cases_get_the_table_verdict and
+      test_an_unreadable_body_is_allowed_and_never_asked failed with
+      AssertionError: 'deny' != 'allow' on the six allow commands. The five
+      deny cases and test_the_resolver_forms_and_the_plain_route_keep_their_verdict
+      already passed on the base hook (the resolver forms and the plain route
+      are kept behavior); they are regression pins.
+  AC-6:
+    tests:
+      - tests.test_destructive_guard_resolver_evidence.TestReaderDocstring.test_the_old_last_word_step_is_gone
+      - tests.test_destructive_guard_resolver_evidence.TestReaderDocstring.test_the_docstring_states_the_resolver_forms_and_the_unreadable_rules
+      - tests.test_destructive_guard_resolver_evidence.TestReaderDocstring.test_the_routing_docstring_keeps_the_phrases_the_tests_pin
+      - tests.test_destructive_guard_rm_reason_positions.TestNumberingDescriptionsAreCurrent
+    red_confirmed: true
+    red_reason: >
+      Against the unchanged docstring, test_the_old_last_word_step_is_gone
+      failed with AssertionError: 'LAST word' unexpectedly found, and
+      test_the_docstring_states_the_resolver_forms_and_the_unreadable_rules
+      failed on the missing phrases `command -v`, `printf`, `-a`, `--`, `NAME`
+      and `spaces and tabs`. The routing function's docstring is not edited, so
+      test_the_routing_docstring_keeps_the_phrases_the_tests_pin and the
+      existing test_destructive_guard_rm_reason_positions class (STALE
+      patterns, `one ordinal`) passed before and after: those two are pins, not
+      red evidence.
+  AC-7:
+    tests:
+      - tests.test_guard_deferral_parity
+    red_confirmed: false
+    red_reason: >
+      The criterion is a comparison of the failing and erroring test IDs of
+      python3 -m unittest discover -s tests with those recorded at the base
+      commit, plus "failed-run-cleanup-guard.py is not changed"; there is no
+      single executable check that can be made to fail first. A dedicated new
+      module is out of scope, but the existing tests.test_guard_deferral_parity
+      (which feeds a fixed corpus to both destructive-guard.py and
+      failed-run-cleanup-guard.py and asserts the superset invariant between
+      them) detects a drift between the two guards; no red state occurred for
+      this change. The base run had no failing and no erroring test and the
+      run after the change has none either; git shows no change to
+      failed-run-cleanup-guard.py.

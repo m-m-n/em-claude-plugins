@@ -7047,7 +7047,7 @@ class TestLineContinuationBeforeOpenersAndInWords(unittest.TestCase):
         # is, which names the command (`$(which r<pair>m) -R ...`), is read
         # with the pairs taken out as well.
         self.assertEqual(H.read_command_name_evidence("which r\\\nm"), "rm")
-        self.assertEqual(H.read_command_name_evidence("which a\\\\\nm"), "m")
+        self.assertIsNone(H.read_command_name_evidence("which a\\\\\nm"))
         command = "$(which r\\\nm) -R /home/user/valuable"
         self.assertEqual(self.verdicts(command), ("deny", "deny"))
 
