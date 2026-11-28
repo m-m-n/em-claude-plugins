@@ -1,7 +1,7 @@
 schema_version: 1
 feature: sca-pip-no-build-exec
 phase: create-spec
-status: dispatching
+status: completed
 generation: 1
 base_revision: ea7a4ebea25d7935f7cc350afbc50108aa1ab2bb
 last_input_digest: sha256:f1129373e0a4b79d8e66cb4a1245c89376d2f30fc168d66cc54529c5d9bbb44f
