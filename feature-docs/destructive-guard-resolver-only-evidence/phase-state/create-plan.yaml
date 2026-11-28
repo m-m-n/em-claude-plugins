@@ -1,11 +1,11 @@
 schema_version: 1
 feature: destructive-guard-resolver-only-evidence
 phase: create-plan
-status: dispatched
+status: applying_patch
 generation: 1
 base_revision: cf12d88d043060249299739b6d7adddead59b83f
 last_input_digest: sha256:6ca683366c75edae9db5b40e049b5fcb0f55537a33ea27d1402af66d97504e89
-active_request_id: create-plan-run-0002
+active_request_id: null
 packets: {}
 answers: {}
 worker_runs:
@@ -26,7 +26,7 @@ worker_runs:
   note: SPEC.md amended by the orchestrator after Codex consultation; artifacts discarded
     unrecorded
 - request_id: create-plan-run-0002
-  status: dispatched
+  status: completed
   input_digest: sha256:6ca683366c75edae9db5b40e049b5fcb0f55537a33ea27d1402af66d97504e89
   dispatch_digest_inputs:
     em-workflow/references/contracts/planner-contract.md: sha256:18464486c0546613d92935cba80087c4980d3791d41838162d23840e431da515
@@ -39,7 +39,21 @@ worker_runs:
     em-workflow/skills/plan-writing/SKILL.md: sha256:737b3e84404bb5b80210a14ea8c16fe3e9af8abc3455c6579f5bc5247db390d0
     feature-docs/destructive-guard-resolver-only-evidence/SPEC.md: sha256:4e9c2ae2c948edb7dcc0b5dde90bf8759ea0cfaedd34d88069a8251205cf1ef0
     feature-docs/destructive-guard-resolver-only-evidence/workflow.yaml: sha256:47fd8f75788b9f565a119d1a0fe9c736b5d0d966fa969f56b9213401cf8ca5ce
-artifacts: []
+  output_digest: sha256:96cc0f65028be6ab453cfd124dca9ae248be8fb67076e8918de86e11b144a5fc
+  self_write_set:
+  - feature-docs/destructive-guard-resolver-only-evidence/THREAT-MODEL.md
+  - feature-docs/destructive-guard-resolver-only-evidence/VERIFICATION.md
+  - feature-docs/destructive-guard-resolver-only-evidence/tasks/task0001.md
+artifacts:
+- path: feature-docs/destructive-guard-resolver-only-evidence/THREAT-MODEL.md
+  sha256: sha256:59ad1b4b66aa88d9d93984645e805696115d575b1de15351e5f6fe4069c33295
+  produced_by: create-plan-run-0002
+- path: feature-docs/destructive-guard-resolver-only-evidence/VERIFICATION.md
+  sha256: sha256:56a6319237e7deef9064406abcacbfbbaa1fb80ca59da20d26c705fc780db920
+  produced_by: create-plan-run-0002
+- path: feature-docs/destructive-guard-resolver-only-evidence/tasks/task0001.md
+  sha256: sha256:3b21c70291d0a135946ed57f76fa67ee85697ed5d8960ae773b8b695f80c34de
+  produced_by: create-plan-run-0002
 other_feature_doc_fixes: []
 orchestrator_doc_edits:
 - path: feature-docs/destructive-guard-resolver-only-evidence/SPEC.md
